@@ -397,6 +397,7 @@
       <div id="voice-lobby">
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
           <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
+          <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
           <details id="room-settings" name="game-panels">
             <summary class="hud-option" title="Configurações" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></summary>
             <div class="hud-panel sound-settings-content" id="room-settings-content">
@@ -453,6 +454,20 @@
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <div id="market-body"></div>
         <p id="market-feedback" role="status"></p>
+      </dialog>
+      <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item">
+        <h2 id="equip-purchase-title">Equipar agora?</h2>
+        <p id="equip-purchase-item"></p>
+        <div class="equip-purchase-actions">
+          <button type="button" class="hud-button" id="equip-purchase-yes">Sim</button>
+          <button type="button" class="hud-button hud-button--secondary" id="equip-purchase-no" autofocus>Não</button>
+        </div>
+      </dialog>
+      <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title">
+        <header><h2 id="action-shortcuts-title">Atalhos de teclado</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form></header>
+        <p>Use os números para agir. Use ← e → para mudar de página.</p>
+        <div class="shortcut-list"></div>
+        <nav class="shortcut-pages" aria-label="Páginas de ações" hidden></nav>
       </dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
         <header><h2 id="gameplay-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>

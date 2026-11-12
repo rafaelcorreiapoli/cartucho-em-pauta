@@ -213,11 +213,13 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     rooms.push(passenger);
     const snapshots = new Map<string,Player>();
     const views = new Map<string,PlenaryView>();
+    const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
+      peer.onMessage('gear-purchased',(item:{id:number;kind:string})=>purchases.set(peer.sessionId,item));
       for (const message of ['players','photo-state','gameplay-feedback','item-obtained']) peer.onMessage(message,()=>{});
     }
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
@@ -235,7 +237,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>gameplay()?.dialogue?.shop===true);
     carrier.send('gameplay',{kind:'shop-buy',target:'baton',token:gameplay()?.dialogue?.token});
     await wait(()=>gameplay()?.inventory.some(item=>item.kind==='baton')===true);
-    carrier.send('gameplay',{kind:'equip',item:gameplay()?.inventory.find(item=>item.kind==='baton')?.id});
+    const purchase = purchases.get(carrier.sessionId);
+    expect(purchase).toEqual(gameplay()?.inventory.find(item=>item.kind==='baton'));
+    expect(purchases.has(passenger.sessionId)).toBe(false);
+    carrier.send('gameplay',{kind:'equip',item:purchase?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
     for (let token=1;token<=4;token++) {
       carrier.send('gameplay',{kind:'attack',token});

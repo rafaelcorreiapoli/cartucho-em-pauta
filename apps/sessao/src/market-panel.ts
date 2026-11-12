@@ -1,5 +1,6 @@
+import { markShortcut } from './action-shortcuts';
 import { equipment, gearKinds } from './equipment';
-import { objects, type GameplayAction } from './gameplay';
+import { objects, type GameplayAction, type WorldItem } from './gameplay';
 import { button, contactFace, glyph, node } from './gameplay-ui';
 import { npcs } from './npcs';
 import type { PlenaryView } from './plenary';
@@ -10,6 +11,23 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const heading = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('#market-body')!;
   const feedback = dialog.querySelector<HTMLElement>('#market-feedback')!;
+  const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
+  const purchasedName = prompt.querySelector('#equip-purchase-item')!;
+  const yes = prompt.querySelector<HTMLButtonElement>('#equip-purchase-yes')!;
+  const no = prompt.querySelector<HTMLButtonElement>('#equip-purchase-no')!;
+  if (!yes.hasAttribute('aria-keyshortcuts')) {
+    markShortcut(yes,'1');
+    markShortcut(no,'2');
+  }
+  let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
+  yes.onclick = () => {
+    const item = purchase?.id;
+    prompt.close();
+    if (item!==undefined) send({kind:'equip',item});
+  };
+  no.onclick = () => prompt.close();
+  const dismissPurchase = () => { purchase = undefined; };
+  prompt.addEventListener('close',dismissPurchase);
   let token:number|undefined;
   let dismissed = false;
   let last = '';
@@ -18,10 +36,20 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     dismissed = true;
     send({kind:'dialogue-close'});
   };
-  dialog.addEventListener('close',close);
+  dialog.addEventListener('cancel',close);
+  dialog.addEventListener('submit',close);
 
   return {
     render(view:PlenaryView) {
+      const inventory = view.gameplay?.inventory ?? [];
+      if (view.phase!=='negotiation' || view.gameplay?.vitality?.recovery ||
+        (prompt.open && !inventory.some(item=>item.id===purchase?.id))) {
+        purchase = undefined;
+        if (prompt.open) prompt.close();
+      } else if (!prompt.open && purchase && inventory.some(item=>item.id===purchase?.id)) {
+        purchasedName.textContent = objects[purchase.kind].name;
+        prompt.showModal();
+      }
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
       if (!state) {
         token = undefined;
@@ -31,9 +59,12 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         if (dialog.open) dialog.close();
         return;
       }
-      if (dismissed || (token!==undefined && !dialog.open)) return;
+      if (dismissed) {
+        if (state.token===token || state.shop) return;
+        dismissed = false;
+      }
       const wallet = view.politics?.wallet ?? 0;
-      const owned = [...(view.gameplay?.inventory ?? []),...(view.gameplay?.equipped ?? [])];
+      const owned = [...inventory,...(view.gameplay?.equipped ?? [])];
       const key = JSON.stringify([state.token,state.options,wallet,owned.map(item=>item.kind)]);
       if (key===last) return;
       last = key;
@@ -47,8 +78,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         line.append(contactFace({id:state.npc,name:npc.name,character:npc.character}),node('p',state.text));
         const choices = node('div');
         choices.className = 'market-choices';
-        for (const option of state.options) {
+        for (const [index,option] of state.options.entries()) {
           const choice = button(option.label,()=>send({kind:'dialogue-choice',target:option.id,token:state.token}));
+          markShortcut(choice,String(index+1));
           choices.append(choice);
         }
         body.replaceChildren(line,choices);
@@ -60,7 +92,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       funds.prepend(glyph('wallet'));
       const products = node('div');
       products.className = 'market-products';
-      for (const kind of gearKinds) {
+      for (const [index,kind] of gearKinds.entries()) {
         const product = equipment[kind];
         const item = objects[kind];
         const card = node('article');
@@ -75,10 +107,14 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         const buy = button(hasItem ? 'Adquirido' : `Comprar · ${money(product.price)}`,
           ()=>send({kind:'shop-buy',target:kind,token:state.token}));
         buy.disabled = hasItem || wallet<product.price;
+        if (!buy.disabled) markShortcut(buy,String(index+1));
         card.append(art,node('h3',item.name),node('p',item.description),buy);
         products.append(card);
       }
       body.replaceChildren(funds,products);
+    },
+    purchased(item:Pick<WorldItem,'id'|'kind'>) {
+      purchase = item;
     },
     feedback(message:string) {
       if (!dialog.open) return false;
@@ -86,7 +122,12 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       return true;
     },
     destroy() {
-      dialog.removeEventListener('close',close);
+      prompt.removeEventListener('close',dismissPurchase);
+      purchase = undefined;
+      prompt.close();
+      yes.onclick = no.onclick = null;
+      dialog.removeEventListener('cancel',close);
+      dialog.removeEventListener('submit',close);
       dialog.close();
     },
   };

@@ -2,6 +2,7 @@ import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
 import { canUseGameplayAction, needsFieldToken, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
+import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
@@ -34,6 +35,9 @@ export class SessionRoom extends Room {
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
+        if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
+          this.clients.getById(event.actor)?.send('gear-purchased',{id:event.item,kind:event.kind});
+        }
       },
     };
   }

@@ -1,3 +1,4 @@
+import { bindActionShortcuts } from './action-shortcuts';
 import { needsFieldToken, type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
@@ -178,6 +179,7 @@ async function connect(join: () => Promise<Room>) {
     };
     closeDetails();
     const hudListeners = new AbortController();
+    bindActionShortcuts(session,hudListeners.signal);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
         !session.querySelector('details[name="game-panels"][open]')) return;
@@ -212,6 +214,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       if (gameplay.photoState(photos)) audio.shutter();
     });
+    joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
