@@ -496,3 +496,63 @@
   #session { --hud-top-row: 184px; }
   #congress-dock { top: calc(var(--hud-edge) + 96px); }
 }
+
+#left-hud, #right-hud { display: contents; }
+
+@media (min-width: 921px) {
+  #session { --hud-side: clamp(270px, 27vw, 420px); }
+
+  #left-hud, #right-hud {
+    position: absolute;
+    top: var(--hud-edge);
+    width: var(--hud-side);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.25vw, 20px);
+    pointer-events: none;
+  }
+  #left-hud { left: var(--hud-edge); }
+  #right-hud { right: var(--hud-edge); align-items: flex-end; }
+  #session[data-phase="lobby"] #right-hud { top: auto; bottom: var(--hud-edge); }
+
+  #left-hud > .hud-module,
+  #session #right-hud > #election-dock,
+  #session #right-hud > #voice-dock {
+    position: relative;
+    inset: auto;
+    pointer-events: auto;
+  }
+
+  #profile-dock, #legislative-dock, #congress-dock, #session #election-dock {
+    font-size: .96rem;
+  }
+  .profile-summary { padding: .75rem .85rem; gap: .75rem; }
+  .profile-summary .portrait { --portrait-size: 54px; }
+  .profile-copy { gap: .18rem; }
+  #hud-nick { font-size: 1.2rem; }
+  #hud-office { font-size: .86rem; }
+  .profile-values { gap: .25rem .6rem; }
+  .profile-summary .profile-help { width: 20px; height: 21px; }
+
+  #legislative-dock { padding: .8rem .9rem; }
+  #legislative-dock > summary { gap: .65rem; }
+  .project-header-label > strong { font-size: 1.12rem; }
+  #legislative-dock .bill-heading { margin-top: .7rem; }
+  #legislative-dock #bill { font-size: clamp(1.3rem, 1.65vw, 1.65rem); }
+  #legislative-dock #bill-round { font-size: .76rem; }
+  #legislative-dock .project-phase { margin: .45rem 0 .6rem; font-size: .94rem; }
+  #legislative-dock #impact { gap: .55rem; margin-top: .65rem; }
+  #legislative-dock .impact-card { padding: .55rem .65rem; }
+  #legislative-dock .impact-card h3 { font-size: .88rem; margin-bottom: .45rem; }
+  #legislative-dock .impact-values > span { font-size: .92rem; }
+  #legislative-dock #last-vote { margin-top: .8rem; }
+
+  #congress-dock { padding: .58rem; }
+  #congress-heading { font-size: 1.08rem; margin-bottom: .45rem; }
+  #congress-dock .resource { padding: .4rem .5rem .5rem; }
+  #congress-dock .resource label { font-size: .88rem; }
+  .resource-readout strong { font-size: 1.35rem; }
+  #session #election-dock > summary { padding: .65rem .7rem; gap: .6rem; }
+  #current-office { font-size: .83rem; }
+  #election-timer { font-size: .88rem; }
+}
