@@ -1,0 +1,22 @@
+{
+  "name": "@cartuchao/sessao",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5175",
+    "server": "bun server/index.ts",
+    "build": "vite build",
+    "check": "tsc --noEmit && bun test && bun run build"
+  },
+  "dependencies": {
+    "@colyseus/bun-websockets": "0.18.4",
+    "@colyseus/sdk": "0.18.9",
+    "colyseus": "0.18.11",
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
+  }
+}

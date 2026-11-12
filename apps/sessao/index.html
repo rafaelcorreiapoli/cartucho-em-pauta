@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Presidente da Sessão</title>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Presidente da Sessão</h1>
+      <p>Protótipo multiplayer · Até 6 jogadores</p>
+    </header>
+    <form id="lobby">
+      <button id="create" type="button">Criar sala</button>
+      <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
+      <button type="submit">Entrar</button>
+    </form>
+    <div id="connection" role="status"></div>
+    <section id="session" hidden>
+      <div id="room-bar">
+        <button id="invite" type="button">Copiar link</button>
+        <button id="leave" type="button">Sair</button>
+      </div>
+      <div id="characters" role="group" aria-label="Personagem"></div>
+      <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
+      <p>WASD, setas ou toque no chão pra andar.</p>
+    </section>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

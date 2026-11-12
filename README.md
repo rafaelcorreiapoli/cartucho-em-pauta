@@ -7,6 +7,7 @@ Portal e jogos de sátira política brasileira, com builds e deploys independent
 | Cartucho | `apps/cartucho` | `npm ci` | `npm run check` |
 | Base Aliada, incluindo o servidor | `apps/brwars` | `bun install --frozen-lockfile` | `bun run check` |
 | Cartas Marcadas | `apps/brspire` | `bun install --frozen-lockfile` | `bun run check` |
+| Presidente da Sessão (POC) | `apps/sessao` | `bun install --frozen-lockfile` | `bun run check` |
 
 Execute os comandos no diretório do app, com Node.js 24 para o Cartucho e Bun 1.4.4 para os jogos. O Base Aliada mantém seu workspace interno para o cliente web, o servidor e a simulação. Cada app mantém seu lockfile.
 
