@@ -1,0 +1,12 @@
+[build]
+  command = "bun run build"
+  publish = "apps/web/dist"
+
+[build.environment]
+  VITE_ENABLE_ONLINE = "true"
+  VITE_GAME_SERVER = "wss://brwars-server.fly.dev"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

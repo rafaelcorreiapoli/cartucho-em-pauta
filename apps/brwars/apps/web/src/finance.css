@@ -1,0 +1,725 @@
+.rts-game.economy-enabled {
+  grid-template-rows: var(--rail-height) minmax(0, 1fr) var(--deck-height);
+}
+.finance-ribbon {
+  min-height: 0;
+  padding: 3px 10px;
+  background: linear-gradient(#24321f, #1a2918);
+  border-bottom: 2px ridge #7c8055;
+  z-index: 5;
+  color: #d3d8b1;
+  overflow: hidden;
+  box-shadow: 0 3px 7px #0005;
+  font-variant-numeric: tabular-nums;
+}
+.contract-ledger {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  min-width: 0;
+}
+.contract-lane {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.contract-lane::-webkit-scrollbar {
+  display: none;
+}
+.ledger-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 104px;
+  border: 0;
+  background: none;
+  color: #a8b58d;
+  padding: 0 4px;
+  text-align: left;
+}
+.ledger-label > svg {
+  width: 22px;
+  height: 22px;
+  color: #b9bc85;
+}
+.ledger-label > span {
+  font-size: 7px;
+  letter-spacing: 0.7px;
+}
+.empty-contract {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  color: #839575;
+  background: transparent;
+  border: 0;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.empty-contract > svg {
+  width: 13px;
+  height: 13px;
+}
+.contract-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 136px;
+  min-width: 136px;
+  min-height: 0;
+  padding: 2px 6px 4px 2px;
+  border: 1px solid #79615870;
+  border-radius: 3px;
+  background: linear-gradient(#33402e, #23311f);
+  text-align: left;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+.contract-chip > .command-portrait-image {
+  height: 28px;
+  width: 28px;
+  flex: 0 0 28px;
+  border-radius: 2px;
+}
+.contract-chip > div {
+  min-width: 0;
+  flex: 1;
+}
+.contract-chip strong {
+  display: block;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.1;
+  color: #f38f80;
+}
+.contract-chip strong > small {
+  font-size: 7px;
+  margin-left: 2px;
+  opacity: 0.8;
+}
+.contract-chip > div > span {
+  display: block;
+  font-size: 6px;
+  line-height: 1.3;
+  color: #aeb69c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.contract-chip.investment {
+  border-color: #537b5d70;
+}
+.contract-chip.investment strong {
+  color: #92d9a2;
+}
+.contract-chip > i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #101a10;
+}
+.contract-chip > i > em {
+  display: block;
+  height: 100%;
+  background: #ca7867;
+  transition: width 0.1s linear;
+}
+.contract-chip.investment > i > em {
+  background: #80c691;
+}
+.contract-chip[aria-expanded='true'] {
+  border-color: #e2ca83;
+}
+.contract-chip.overdue {
+  border-color: #e99858;
+}
+.contract-warning {
+  width: 12px;
+  height: 12px;
+  color: #edaf6b;
+  flex-shrink: 0;
+}
+.contract-popover {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 260px;
+  padding: 14px 12px 12px;
+  color: #ced3b4;
+  background: linear-gradient(#35462b, #1b2e19);
+  border: 1px solid #a3a66b;
+  box-shadow: 0 6px 20px #0008;
+  border-radius: 3px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.contract-popover > strong {
+  font-size: 13px;
+  color: #f0dfa6;
+  padding-right: 22px;
+}
+.contract-popover > small {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #a9b894;
+}
+.contract-popover > button:not(.contract-popover-close) {
+  padding: 7px;
+  border: 1px solid #9ca66d;
+  background: #4b6036;
+  color: #f0e3b6;
+  margin-top: 3px;
+}
+.contract-popover-close {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  border: 0;
+  background: none;
+  padding: 2px;
+  color: #c5cda8;
+}
+.contract-popover-close > svg {
+  width: 15px;
+  height: 15px;
+}
+.contract-popover .positive {
+  color: #92d9a2;
+}
+.contract-popover .negative {
+  color: #f38f80;
+}
+.tax-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 124px;
+  width: 124px;
+  padding: 0 6px;
+  height: 34px;
+  border-right: 1px solid #59604455;
+  font-variant-numeric: tabular-nums;
+}
+.tax-control > svg {
+  width: 17px;
+  height: 17px;
+  color: #bfc68d;
+  flex-shrink: 0;
+}
+.tax-control > div > small {
+  display: block;
+  color: #a7b38b;
+  letter-spacing: 0.6px;
+  font-size: 6px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.tax-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.tax-stepper > button {
+  width: 18px;
+  height: 19px;
+  border: 1px solid #7b8654;
+  background: #34472b;
+  padding: 1px;
+  display: grid;
+  place-items: center;
+}
+.tax-stepper > button > svg {
+  width: 10px;
+  height: 10px;
+}
+.tax-stepper > output {
+  display: block;
+  width: 47px;
+  text-align: center;
+  font-size: 12px;
+  color: #eadba9;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.bank-actions {
+  display: grid;
+  grid-template-rows: 20px minmax(0, 1fr);
+  gap: 4px;
+  min-height: 0;
+}
+.bank-actions > [role='tablist'] {
+  display: flex;
+  gap: 4px;
+}
+.bank-actions [role='tab'] {
+  flex: 1;
+  background: #24381e;
+  border: 1px solid #62744b;
+  color: #aebc93;
+  font-size: 8px;
+}
+.bank-actions [role='tab'][aria-selected='true'] {
+  background: #56623a;
+  color: #ecdfa5;
+  border-color: #b3ac6b;
+}
+.bank-offers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  min-height: 0;
+}
+.bank-offers > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #79804e;
+  background: linear-gradient(#455633, #293d22);
+  color: #d7d7ab;
+  min-height: 0;
+}
+.bank-offers strong {
+  font-size: 8px;
+}
+.bank-offers strong > svg {
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+}
+.bank-offers span {
+  font-size: 8px;
+  color: #efd393;
+}
+.bank-offers small {
+  font-size: 6px;
+  color: #aeba8d;
+}
+.bank-offers button:disabled {
+  opacity: 0.4;
+}
+.bank-summary {
+  display: grid;
+  gap: 7px;
+  font-size: 10px;
+  color: #c5cca3;
+}
+.bank-summary > strong {
+  font-size: 13px;
+  color: #efdda1;
+}
+.bank-summary > small {
+  font-size: 8px;
+  color: #a6b28b;
+}
+
+@media (max-width: 1450px) {
+  .resource-rail .resource {
+    flex-basis: 108px;
+    width: 108px;
+    min-width: 108px;
+    padding: 0 12px;
+    gap: 7px;
+  }
+  .resource-rail .resource.gold {
+    flex-basis: 128px;
+    width: 128px;
+    min-width: 128px;
+  }
+  .resource-rail .game-logo {
+    padding-right: 12px;
+    font-size: 23px;
+  }
+}
+@media (max-width: 1100px) {
+  .resource-rail .resource[data-hud-tooltip='Trabalhadores no território'] {
+    display: none;
+  }
+  .contract-chip {
+    flex-basis: 126px;
+    min-width: 126px;
+  }
+  .ledger-label {
+    flex-basis: 92px;
+  }
+}
+@media (max-width: 850px) {
+  .resource-rail .resource {
+    flex-basis: 84px;
+    width: 84px;
+    min-width: 84px;
+    padding: 0 7px;
+  }
+  .resource-rail .resource.gold {
+    flex-basis: 100px;
+    width: 100px;
+    min-width: 100px;
+  }
+  .tax-control {
+    flex-basis: 110px;
+    width: 110px;
+    padding: 0 2px;
+    gap: 2px;
+  }
+  .tax-control > svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+@media (max-width: 650px) {
+  .contract-chip {
+    flex-basis: 118px;
+    min-width: 118px;
+  }
+  .ledger-label {
+    flex-basis: 28px;
+    padding: 0;
+  }
+  .ledger-label > span {
+    display: none;
+  }
+  .ledger-label > svg {
+    width: 20px;
+  }
+  .bank-offers strong {
+    font-size: 7px;
+  }
+  .tax-control > svg {
+    display: none;
+  }
+  .tax-control {
+    flex-basis: 90px;
+    width: 90px;
+  }
+}
+
+/* Contracts are floating command portraits, without a ribbon or reserved map space. */
+.finance-ribbon {
+  position: absolute;
+  left: 10px;
+  top: calc(var(--rail-height) + 9px);
+  width: max-content;
+  max-width: calc(100% - 20px);
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 7;
+}
+.contract-ledger {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.contract-lane {
+  height: 56px;
+  flex-shrink: 0;
+  gap: 5px;
+  pointer-events: none;
+  max-width: calc(100vw - 20px);
+}
+.contract-lane > * {
+  pointer-events: auto;
+}
+.ledger-label {
+  width: 22px;
+  min-width: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  justify-content: center;
+  background: radial-gradient(#17291288, transparent 70%);
+}
+.ledger-label > span {
+  display: none;
+}
+.ledger-label > svg {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 2px #000);
+}
+.contract-chip,
+.contract-chip.investment {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  flex: 0 0 56px;
+  display: block;
+  position: relative;
+  padding: 0;
+  border: 1px solid #a0ac7955;
+  border-radius: 2px;
+  background: none;
+  box-shadow: 0 2px 5px #0003;
+  overflow: hidden;
+}
+.contract-chip > .command-portrait-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.contract-chip > div {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(transparent, #09170de8 25%, #09170df5);
+  padding: 3px 1px 1px;
+}
+.contract-chip strong {
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: -0.15px;
+  text-shadow: 0 1px 1px #000;
+}
+.contract-chip strong > small {
+  font-size: 6px;
+  margin-left: 1px;
+}
+.contract-chip > div > span {
+  display: none;
+}
+.contract-chip > i {
+  height: 3px;
+}
+.contract-chip .contract-warning {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  filter: drop-shadow(0 1px 2px #000);
+}
+.contract-chip.overdue {
+  border-color: #e99858;
+}
+.contract-chip[aria-expanded='true'] {
+  border-color: #e2ca83;
+}
+@media (max-width: 650px) {
+  .finance-ribbon {
+    left: 6px;
+    max-width: calc(100% - 12px);
+  }
+  .contract-lane {
+    height: 48px;
+    max-width: calc(100vw - 12px);
+  }
+  .contract-chip,
+  .contract-chip.investment {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    flex-basis: 48px;
+  }
+  .contract-chip strong {
+    font-size: 7px;
+  }
+  .ledger-label {
+    width: 18px;
+    min-width: 18px;
+    flex-basis: 18px;
+  }
+}
+
+.world-status-hud {
+  position: absolute;
+  z-index: 20;
+  left: 10px;
+  top: calc(var(--rail-height) + 9px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: calc(100% - 20px);
+  pointer-events: none;
+}
+.world-status-hud .finance-ribbon {
+  position: relative;
+  left: auto;
+  top: auto;
+  max-width: 100%;
+}
+.global-upgrade-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: 100%;
+}
+.upgrade-category {
+  width: max-content;
+  max-width: 100%;
+}
+.upgrade-category > small {
+  display: block;
+  color: #e8e8bc;
+  text-shadow: 0 1px 3px #000;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 3px;
+}
+.upgrade-category > div {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 100%;
+  pointer-events: auto;
+}
+.global-upgrade-chip {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 1px solid #9ca66b;
+  background: linear-gradient(transparent, #13200b66);
+  box-shadow: 0 1px 3px #0008;
+  pointer-events: auto;
+}
+.global-upgrade-chip .command-portrait-image {
+  width: 100%;
+  height: 100%;
+}
+.global-upgrade-chip > span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  background: linear-gradient(transparent, #101808ef);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ead999;
+  padding-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.global-upgrade-chip em {
+  font-size: 9px;
+  font-style: normal;
+  color: #b9bb98;
+}
+.map-building-overlays {
+  overflow: clip;
+}
+
+.resource.popularity-resource {
+  min-width: 136px;
+}
+.popularity-resource small {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  letter-spacing: 0.5px;
+}
+.popularity-resource small > i {
+  font-size: 8px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  min-width: 38px;
+}
+.popularity-resource .negative,
+.resource.popularity-resource.in-crisis > svg,
+.resource.popularity-resource.in-crisis b {
+  color: #ed9a83;
+}
+.popularity-resource .positive {
+  color: #afd78c;
+}
+
+.hero-roster-hud {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  width: max-content;
+  max-width: 100%;
+}
+.hero-roster-card {
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 76px;
+  padding: 0 0 14px;
+  border: 1px solid #9ca66b;
+  background: radial-gradient(ellipse at center, #4b5d3580, #14230d50);
+  box-shadow: 0 2px 4px #0006;
+  color: #f1e3ad;
+  cursor: pointer;
+}
+.hero-roster-card > .unit-portrait-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.2s;
+}
+.hero-roster-card.fallen > .unit-portrait-image {
+  opacity: 0.28;
+}
+.hero-roster-card[aria-disabled='true'] {
+  cursor: default;
+}
+.hero-roster-card:hover,
+.hero-roster-card:focus-visible {
+  border-color: #f4d780;
+  outline: 1px solid #f4d78088;
+}
+.hero-roster-level {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  background: #13200de8;
+  box-shadow: 0 1px 2px #0008;
+  color: #f3d987;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.hero-roster-bars {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  display: grid;
+  gap: 2px;
+}
+.hero-roster-bars > div {
+  height: 5px;
+  background: #11190d;
+  border: 1px solid #a6ab7b80;
+  overflow: hidden;
+}
+.hero-roster-bars i {
+  display: block;
+  height: 100%;
+}
+.hero-roster-bars .xp i {
+  background: #af80e7;
+}

@@ -1,0 +1,355 @@
+.modal-backdrop.lobby-backdrop {
+  z-index: 110;
+}
+
+.game-dialog.lobby-dialog {
+  width: min(820px, 100%);
+  max-width: none;
+  padding: 22px 28px;
+  text-align: left;
+}
+
+.game-dialog.lobby-dialog.invitation-dialog {
+  width: min(480px, 100%);
+}
+
+.lobby {
+  display: grid;
+  gap: 14px;
+}
+
+.lobby h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #e9d793;
+  font:
+    700 17px 'Barlow Condensed',
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lobby-back {
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  padding: 4px 0;
+  color: #c2cca5;
+  background: none;
+  border: 0;
+}
+
+.lobby-modes,
+.lobby-maps {
+  display: grid;
+  gap: 10px;
+}
+
+.lobby-modes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lobby-modes button,
+.lobby-maps button {
+  background: #23351e;
+  border: 1px solid #61764b;
+  color: #e9e8c4;
+  text-align: left;
+}
+
+.lobby-modes button {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 135px;
+  padding: 16px;
+}
+
+.lobby-modes svg {
+  width: 28px;
+  height: 28px;
+  color: #ebcb71;
+}
+
+.lobby-modes strong {
+  font:
+    700 26px 'Barlow Condensed',
+    sans-serif;
+}
+
+.lobby small {
+  color: #b7c49d;
+}
+
+.lobby-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.lobby-toolbar > .primary-button,
+.lobby-toolbar > .outline-button {
+  width: auto;
+  height: 38px;
+  padding-block: 0;
+  margin: 0;
+}
+
+.lobby-field {
+  display: grid;
+  flex: 1 1 160px;
+  gap: 5px;
+  color: #d2d9b8;
+  font-size: 12px;
+}
+
+.lobby-field input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  color: #f2e8bc;
+  background: #142511;
+  border: 1px solid #65794b;
+  font: inherit;
+}
+
+.lobby-setup,
+.lobby-join,
+.lobby-password {
+  display: grid;
+  gap: 10px;
+}
+
+.lobby-setup {
+  gap: 8px;
+}
+
+.lobby-setup .faction-choices {
+  margin: 0;
+}
+
+.lobby-setup .faction-choices button {
+  padding: 10px 12px;
+}
+
+.lobby-setup .faction-choices strong {
+  margin: 4px 0;
+}
+
+.lobby-password {
+  padding: 10px;
+  border: 1px solid #556840;
+  background: #1b2c17;
+}
+
+.lobby-field > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lobby-password {
+  grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
+  align-items: end;
+}
+
+.lobby-lock-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  color: #d8deb9;
+  background: #283c20;
+  border: 1px solid #65794b;
+}
+
+.lobby-lock-toggle[aria-pressed='true'] {
+  color: #ffe5a0;
+  border-color: #c8ab62;
+}
+
+.lobby-password input:disabled {
+  opacity: 0.55;
+}
+
+.lobby-maps {
+  grid-template-columns: repeat(auto-fit, minmax(min(128px, 100%), 1fr));
+}
+
+.lobby-maps button {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  padding: 0;
+}
+
+.lobby-maps button[aria-pressed='true'] {
+  border-color: #f4d678;
+  box-shadow: 0 0 0 1px #f4d678;
+}
+
+.lobby-maps img {
+  width: 100%;
+  aspect-ratio: 2.4;
+  object-fit: cover;
+  background: #52663a;
+}
+
+.lobby-maps strong {
+  padding: 7px;
+  font-size: 12px;
+}
+
+.lobby-rooms {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-rooms:empty {
+  display: none;
+}
+
+.lobby-room {
+  display: grid;
+  grid-template-columns: 82px minmax(100px, 1fr) minmax(110px, auto) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px;
+  background: #21331b;
+  border: 1px solid #536740;
+}
+
+.lobby-room img {
+  width: 82px;
+  aspect-ratio: 2;
+  object-fit: cover;
+  background: #52663a;
+}
+
+.lobby-room-title,
+.lobby-room-details {
+  display: grid;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+
+.lobby-room-details strong,
+.lobby-room-lock {
+  font-size: 11px;
+}
+
+.lobby-room-details [data-faction='left'] {
+  color: #f5a793;
+}
+
+.lobby-room-details [data-faction='right'] {
+  color: #ccda8f;
+}
+
+.lobby-room-lock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e6cc86;
+}
+
+.lobby-room .outline-button {
+  margin: 0;
+  padding-inline: 8px;
+}
+
+.lobby-join {
+  padding: 12px;
+  border: 1px solid #786b43;
+  background: #222c18;
+}
+
+.lobby-invite summary {
+  color: #b7c49d;
+  cursor: pointer;
+}
+
+.lobby-invite form {
+  margin-top: 8px;
+}
+
+.lobby .lobby-error {
+  color: #ffc0a3;
+  margin: 0;
+}
+
+@media (max-width: 620px) {
+  .game-dialog.lobby-dialog {
+    padding: 20px;
+  }
+
+  .lobby-room {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .lobby-room img {
+    width: 60px;
+  }
+
+  .lobby-room-details {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .lobby-room-lock {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .lobby-room .outline-button {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}
+
+.rts-game[data-pre-match='true'] {
+  background: #151b11 url('/assets/lobby-showdown.webp') center / cover no-repeat;
+}
+
+.rts-game[data-pre-match='true']
+  > :is(.resource-rail, .warzone, .command-deck, .world-status-hud, .global-spellbar) {
+  visibility: hidden;
+}
+
+.rts-game[data-pre-match='true'] .modal-backdrop.lobby-backdrop,
+.arena-overlay.lobby-waiting {
+  background: #11190f24;
+  backdrop-filter: none;
+}
+
+.arena-overlay.lobby-waiting {
+  position: fixed;
+  z-index: 100;
+}
+
+.lobby-waiting .outline-button {
+  margin-top: 14px;
+}
+
+.rts-game[data-pre-match='true'] .lobby-dialog:has(.lobby-modes) {
+  width: min(620px, 100%);
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .rts-game[data-pre-match='true'] {
+    background-position: center top;
+    background-size: 100% auto;
+  }
+}

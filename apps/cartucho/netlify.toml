@@ -1,0 +1,15 @@
+[build]
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/jogar/brspire"
+  to = "/jogar/brspire.html"
+  status = 200
+
+[[redirects]]
+  from = "/jogar/brwars"
+  to = "/jogar/brwars.html"
+  status = 200

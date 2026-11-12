@@ -1,0 +1,195 @@
+:root {
+  --edge-left: max(clamp(10px, 3vw, 44px), env(safe-area-inset-left));
+  --edge-right: max(clamp(10px, 3vw, 44px), env(safe-area-inset-right));
+  --edge-top: calc(8px + env(safe-area-inset-top));
+}
+
+.combat-resources {
+  inset: var(--edge-top) auto auto var(--edge-left);
+  max-width: calc(100% - var(--edge-left) - var(--edge-right) - 52px);
+  flex-wrap: wrap;
+}
+
+.settings-trigger {
+  top: var(--edge-top);
+  right: var(--edge-right);
+  width: 44px;
+  height: 44px;
+}
+
+.resource-relics {
+  max-width: calc(100vw - var(--edge-left) - var(--edge-right));
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.resource-relics > * { flex-shrink: 0; }
+
+.campaign-destinations { display: none; }
+
+.item-details p { line-height: 1.45; }
+.item-details-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.item-details-actions button { min-height: 44px; }
+
+@media (max-width: 700px), (max-width: 1024px) and (max-height: 580px), (max-width: 1024px) and (pointer: coarse) {
+  :root {
+    --battle-card-width: clamp(126px, 32vw, 143px);
+    --battle-card-height: 204px;
+  }
+
+  body { min-width: 0; }
+  .game { grid-template-rows: minmax(290px, 1fr) auto; }
+  .game .arena { grid-template-rows: auto minmax(0, 1fr) minmax(32px, auto); }
+  .game .encounter { margin-top: calc(var(--edge-top) + 78px); }
+  .game .encounter h1 { font-size: clamp(24px, 5vw, 34px); }
+  .game .fighters {
+    gap: clamp(8px, 3vw, 32px);
+    padding-inline: var(--edge-left) var(--edge-right);
+  }
+  .game .hero { flex-basis: 26%; }
+  .game .rivals { width: min(70%, 560px); gap: clamp(4px, 1.4vw, 14px); }
+  .game .rival { grid-template-columns: minmax(0, 1fr); }
+  .game .fighter-name { overflow-wrap: anywhere; }
+  .game { --fighter-height: clamp(82px, 16dvh, 160px); }
+  .game :is(.hero-stage, .rival-stage) { height: var(--fighter-height); }
+  .game .rival-stage { width: 100%; aspect-ratio: auto; }
+  .game .rival-sheet {
+    inset-inline: 0;
+    width: min(100%, var(--fighter-height));
+    height: auto;
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+  .fighter-effects { gap: 2px; }
+  .fighter-effect > .game-icon { width: 15px; height: 15px; }
+  .fighter-effect b { font-size: 12px; }
+  .game .intent { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+  .resource-items :is(button, i), .resource-relics > button { width: 29px; }
+  .game .feedback { padding-inline: var(--edge-left) var(--edge-right); }
+
+  .game .table {
+    height: auto;
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    grid-template-rows: 46px calc(var(--card-height) + 18px);
+    gap: 10px 14px;
+    padding: 7px var(--edge-right) max(8px, env(safe-area-inset-bottom)) var(--edge-left);
+    align-items: center;
+  }
+  .game :is(.player-tools, .turn-tools) { display: contents; }
+  .game .energy { grid-area: 1 / 1; width: 42px; }
+  .game .draw-pile { grid-area: 1 / 2; }
+  .game .discard-pile { grid-area: 1 / 3; }
+  .game :is(.draw-pile, .discard-pile) { width: 27px; }
+  .game :is(.draw-pile, .discard-pile) > b { right: -5px; bottom: -4px; }
+  .game .turn-tools > .primary {
+    grid-area: 1 / 4;
+    justify-self: end;
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: 15px;
+  }
+  .game .hand {
+    grid-area: 2 / 1 / 3 / -1;
+    align-self: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    justify-content: safe center;
+    gap: 8px;
+    padding: 5px 2px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #95805d transparent;
+  }
+  .game .hand-slot + .hand-slot { margin-left: 0; }
+  .game .hand-slot .card,
+  .game .hand-slot .card:enabled[aria-pressed="true"],
+  .game .hand-slot:is(:hover, :focus-within) .card:enabled { transform: none; }
+  .game .hand-slot .card:disabled { opacity: .66; }
+  .game .hand-slot :is(.card[aria-pressed="true"], .card:focus-visible) {
+    outline-offset: -4px;
+    border-color: #9cfff0;
+    box-shadow: inset 0 0 0 2px #48baaf;
+  }
+  .game .hand kbd { display: none; }
+  :is(.hand-slot, .reward-cards, .event-card-picker, .shop-stock, .album-cards, .lobby-deck) .card {
+    grid-template-rows: minmax(54px, 1fr) auto;
+  }
+  .shop-stock .card { grid-template-rows: minmax(54px, 1fr) auto auto; }
+  .card-copy { min-block-size: 92px; gap: 3px; }
+  .card-copy strong { --card-title-size: 15px; }
+  .card-stats { line-height: 1.14; }
+  .outcome .relic-rewards { max-block-size: none; overflow: visible; }
+  .outcome :is(.primary, .secondary), .campaign :is(.primary, .secondary),
+  .campaign-route-options button, .lobby :is(.primary, .secondary), .shop .secondary {
+    min-height: 44px;
+  }
+  .campaign {
+    grid-template-columns: minmax(0, 440px);
+    gap: 14px;
+    padding: calc(var(--edge-top) + 76px) var(--edge-right)
+      max(16px, env(safe-area-inset-bottom)) var(--edge-left);
+  }
+  .campaign:has(.campaign-route-picker) { padding-top: calc(var(--edge-top) + 48px); }
+  .campaign-destinations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .campaign-destinations [aria-pressed="true"] {
+    color: #292116;
+    background: var(--gold);
+  }
+  .campaign-opponents ul { grid-template-columns: repeat(4, minmax(0, 100px)); }
+  .campaign-rival-name { font-size: 12px; overflow-wrap: anywhere; }
+  .campaign-map-legend { padding: 3px 5px; }
+  .lobby { padding-top: calc(var(--edge-top) + 46px); }
+  .lobby-details, .lobby-deck-scroll { min-width: 0; }
+  .lobby-deck-scroll { max-block-size: min(45dvh, 360px); }
+  .event-scene { padding-top: calc(var(--edge-top) + 74px); }
+  .shop { padding-top: calc(var(--edge-top) + 74px); }
+  .shop-removal select { font-size: 16px; min-height: 44px; }
+}
+
+@media (max-width: 365px) {
+  .combat-resources { gap: 5px; padding-right: 5px; }
+  .resource-items { gap: 2px; padding: 2px; }
+  .resource-portrait { width: 26px; }
+  .resource-items :is(button, i) { width: 24px; }
+  .game .intent { font-size: 9px; }
+  .lobby-details { --details-padding: 10px; }
+  .lobby-bio { grid-template-columns: auto minmax(0, 1fr); }
+  .lobby-bio > .lobby-hero-health { grid-column: 2; }
+}
+
+@media (orientation: landscape) and (min-width: 600px) and (max-width: 1024px) and (max-height: 500px) {
+  .game {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-rows: minmax(280px, 1fr);
+  }
+  .game .table {
+    align-content: center;
+    padding-top: calc(var(--edge-top) + 45px);
+    padding-left: 8px;
+  }
+  .game .fighters { padding-right: 8px; }
+  .game .feedback { padding-right: 8px; }
+}
+
+.hand-card-preview.card {
+  position: fixed;
+  z-index: 8;
+  max-width: none;
+  grid-template-rows: minmax(54px, 1fr) auto;
+  transform-origin: top left;
+  transition: none;
+  pointer-events: none;
+  border-color: #9cfff0;
+  box-shadow: 0 0 0 2px #48baaf, 0 0 22px #50e0cf80, 0 12px 25px #060d09de;
+}
+
+.hand-card-preview.card[data-discarding] {
+  border-color: #ff8f91;
+  box-shadow: 0 0 0 2px #cf454b, 0 0 22px #ef4f5780, 0 12px 25px #060d09de;
+}
+
+.hand-card-preview kbd { display: none; }
