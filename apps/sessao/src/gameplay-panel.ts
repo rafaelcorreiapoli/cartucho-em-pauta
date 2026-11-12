@@ -1,6 +1,5 @@
 import { offices } from './elections';
 import { setCharacterPortrait } from './character-art';
-import { canPocket, type CashDrop } from './cash-drops';
 import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
@@ -46,7 +45,7 @@ function itemName(item:Pick<WorldItem,'kind'|'document'>) {
   return item.document?.title ?? objects[item.kind].name;
 }
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, carry:(id:number)=>void, notify:(text:string)=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
@@ -334,19 +333,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       nearbyButton.hidden = true;
       setNearbyExpanded(false);
     },
-    nearby(cash:CashDrop | undefined, player:Motion | undefined, exploring:boolean) {
+    nearby(player:Motion | undefined, exploring:boolean) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
         collectedArea = undefined;
       }
       const state = exploring ? previous?.gameplay : undefined;
-      const key = JSON.stringify(state ? [cash?.id,state.nearby,state.stored,state.filed,state.locations] : null);
+      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
       const tiles:HTMLButtonElement[] = [];
       if (state) {
-        if (cash) tiles.push(itemButton(cash.kind,objects[cash.kind].name,'Carregar',
-          ()=>pickUp(player=>canPocket(player,cash),()=>carry(cash.id))));
         for (const item of state.nearby) {
           tiles.push(itemButton(item.kind,itemName(item),'Pegar',
             ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id}))));

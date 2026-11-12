@@ -1,16 +1,22 @@
-import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { localPerception, type Motion, type Player } from '../src/map';
+import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStand, HEIGHT, localPerception, WIDTH, type Motion, type Player } from '../src/map';
+import { findRoute } from '../src/navigation';
 import type { Office } from '../src/elections';
 
-type Place = {holder:string} | {ground:Motion} | {storage:string} | {filed:true};
+type GroundPlace = {ground:Motion; expires?:number};
+type Place = {holder:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
 type Call = {from:string; to:string; connected:boolean; expires:number};
 type Puzzle = {tiles:number[]; progress:number; start:number; last:number; witnesses:Set<string>};
 export type GameplayWorld = {
-  players:Player[]; now:number; cashVisible:(player:Player)=>ObjectKind[]; office:(id:string)=>Office|undefined;
+  players:Player[]; now:number; office:(id:string)=>Office|undefined;
   voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
 };
+const cashKinds = ['briefcase','underwear','bundle'] as const;
+const mapEntrance = {x:140,y:146};
+const maxGroundItems = 36;
+const cashLifetime = 55_000;
 const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
@@ -21,11 +27,16 @@ export class Gameplay {
   private puzzles = new Map<string,Puzzle>();
   private serial = 0;
 
-  reset() {
+  private random = Math.random;
+  private nextCashSpawn = Infinity;
+
+  reset(now:number,random = Math.random) {
     this.items.clear();
     this.requests.clear();
     this.calls.clear();
     this.puzzles.clear();
+    this.random = random;
+    this.nextCashSpawn = now+4000+random()*8000;
   }
 
   private inventory(id:string) {
@@ -48,9 +59,9 @@ export class Gameplay {
     this.clearRequests(item.data.id);
   }
 
-  private create(kind:ObjectKind, player:Player) {
+  private create(kind:ObjectKind, place:Place) {
     const data:WorldItem = {id:++this.serial,kind};
-    this.items.set(data.id,{data,place:{holder:player.id}});
+    this.items.set(data.id,{data,place});
     return data;
   }
 
@@ -66,25 +77,52 @@ export class Gameplay {
       .map(other => other.id);
   }
 
-  collectCash(player:Player, take:()=>('briefcase'|'underwear'|'bundle'|undefined), world:GameplayWorld) {
-    if (!this.available(player.id)) return 'Inventário cheio.';
-    const kind = take();
-    if (!kind) return 'Aproxime-se do objeto.';
-    this.event(world,player,'collected',this.create(kind,player));
-    return 'Objeto coletado.';
+  private groundPlace(kind:ObjectKind, {x,y}:Motion, now:number):GroundPlace {
+    return {ground:{x,y},expires:cashAmount(kind) ? now+cashLifetime : undefined};
   }
 
-  tick(world:GameplayWorld, allowCalls:boolean) {
+  private groundItems(now:number) {
+    return [...this.items.values()].flatMap(({data,place}) =>
+      'ground' in place && (place.expires ?? Infinity)>now ? [{...data,...place.ground}] : []);
+  }
+
+  private visibleGround(player:Motion,now:number) {
+    return this.groundItems(now).filter(item=>localPerception(player,item).visible);
+  }
+
+  private spawnCash(now:number) {
+    if (now<this.nextCashSpawn) return;
+    this.nextCashSpawn = now+8000+this.random()*10000;
+    const ground = this.groundItems(now);
+    if (ground.length>=maxGroundItems || ground.filter(item=>cashAmount(item.kind)).length>=8) return;
+    for (let attempt=0;attempt<16;attempt++) {
+      const x = 24+Math.floor(this.random()*(WIDTH-48));
+      const y = 24+Math.floor(this.random()*(HEIGHT-48));
+      if (!canStand(x,y) || !canStand(x-8,y+6) || !canStand(x+8,y+6) ||
+        ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
+      const last = findRoute(mapEntrance,{x,y}).at(-1);
+      if (last?.x!==x || last.y!==y) continue;
+      const kind = cashKinds[Math.floor(this.random()*cashKinds.length)];
+      this.create(kind,this.groundPlace(kind,{x,y},now));
+      return;
+    }
+  }
+
+  tick(world:GameplayWorld, exploring:boolean) {
+    for (const item of this.items.values()) {
+      if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
+    }
+    if (exploring) this.spawnCash(world.now);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     for (const call of new Set(this.calls.values())) {
-      if (!allowCalls || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
+      if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
         this.endCall(call,world);
       }
     }
     for (const [id,puzzle] of this.puzzles) {
       const player = world.players.find(person => person.id===id);
       if (player) for (const witness of this.observers(world,player)) puzzle.witnesses.add(witness);
-      if (allowCalls && world.now-puzzle.start<60_000) continue;
+      if (exploring && world.now-puzzle.start<60_000) continue;
       this.puzzles.delete(id);
       if (player) this.event(world,player,'game-stopped',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
     }
@@ -99,7 +137,7 @@ export class Gameplay {
       this.event(world,player,'game-stopped',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
     }
     if (!permanent) return;
-    for (const item of this.inventory(player.id)) this.move(item,{ground:{x:player.x,y:player.y}});
+    for (const item of this.inventory(player.id)) this.move(item,this.groundPlace(item.data.kind,player,world.now));
     for (const [id,request] of this.requests) {
       if (request.from===player.id || request.to===player.id) this.requests.delete(id);
     }
@@ -116,8 +154,7 @@ export class Gameplay {
   view(player:Player, world:GameplayWorld):GameplayView {
     const {id} = player;
     const nearbyLocations = locations(player);
-    const ground = [...this.items.values()].flatMap(({data,place}) =>
-      'ground' in place && localPerception(player,place.ground).visible ? [{...data,...place.ground}] : []);
+    const ground = this.visibleGround(player,world.now);
     const requests = [...this.requests.values()].flatMap(request => {
       if (request.to!==id) return [];
       const item = this.items.get(request.item);
@@ -131,7 +168,7 @@ export class Gameplay {
       contacts:world.players.filter(other => other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
-      ground:ground.map(({id:objectId,kind,x,y}) => ({id:objectId,kind,x,y})),
+      ground:ground.map(({id,kind,x,y,document}) => ({id,kind,x,y,title:document?.title})),
       stored:[...this.items.values()].filter(({place}) =>
         'storage' in place && nearbyLocations.some(key => key===place.storage)).map(({data})=>data),
       filed:nearbyLocations.includes('protocol') ? [...this.items.values()].filter(item=>'filed' in item.place).map(item=>item.data) : [],
@@ -196,17 +233,13 @@ export class Gameplay {
       }
       case 'photo': {
         if (!this.available(id)) return 'Inventário cheio.';
-        const data = this.create('photo',player);
+        const data = this.create('photo',{holder:id});
         const [place] = locations(player);
         data.photo = {
           at:world.now,location:place ? terminals[place].title : `Mapa (${Math.round(player.x)}, ${Math.round(player.y)})`,
           people:world.players.filter(person => localPerception(player,person).visible)
             .map(person => ({id:person.id,name:person.nick,character:person.character})),
-          objects:[
-            ...world.cashVisible(player).map(kind=>objects[kind].name),
-            ...[...this.items.values()].flatMap(({data,place}) =>
-              'ground' in place && localPerception(player,place.ground).visible ? [objects[data.kind].name] : []),
-          ],
+          objects:this.visibleGround(player,world.now).map(item=>item.document?.title ?? objects[item.kind].name),
         };
         this.event(world,player,'photo',data);
         return 'Foto guardada no inventário.';
@@ -225,7 +258,7 @@ export class Gameplay {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
       if (this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
-      const data = this.create(terminal.supply,player);
+      const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
         const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && world.office(person.id)===template.office) ?
@@ -241,7 +274,7 @@ export class Gameplay {
     }
     if (action.kind==='accept' || action.kind==='decline') return this.respond(player,action,world);
     const item = action.item===undefined ? undefined : this.items.get(action.item);
-    if (!item) return 'Objeto indisponível.';
+    if (!item || ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now)) return 'Objeto indisponível.';
     const {data} = item;
     if (action.kind==='collect' || action.kind==='recover') {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
@@ -251,7 +284,9 @@ export class Gameplay {
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
-    if (!('holder' in item.place) || item.place.holder!==id) return 'O objeto não está com você.';
+    const pocketing = action.kind==='use' && cashAmount(data.kind)!==undefined &&
+      'ground' in item.place && canReachObject(player,item.place.ground);
+    if (!pocketing && (!('holder' in item.place) || item.place.holder!==id)) return 'O objeto não está com você.';
     const definition = objects[data.kind];
     switch (action.kind) {
       case 'offer':
@@ -268,8 +303,8 @@ export class Gameplay {
         return 'Pedido enviado.';
       }
       case 'drop':
-        if ([...this.items.values()].filter(({place})=>'ground' in place).length>=36) return 'Há objetos demais no chão.';
-        this.move(item,{ground:{x:player.x,y:player.y}});
+        if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
+        this.move(item,this.groundPlace(item.data.kind,player,world.now));
         this.event(world,player,'dropped',data);
         return 'Objeto largado.';
       case 'store':

@@ -1,14 +1,13 @@
 import { stations } from './plenary';
-import { cashItems } from './cash-drops';
 import type { Office } from './elections';
 import { localPerception, type Motion } from './map';
 import type { Contact } from './politics';
 
 export const objects = {
   coffee:{name:'Cafezinho',portrait:'retrato-cafezinho.webp',description:'Café da firma, forte o bastante para encerrar uma CPI.',use:'consume'},
-  briefcase:{name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',use:'cash',amount:cashItems.briefcase.amount},
-  underwear:{name:'Cueca com dólares',portrait:'retrato-cueca.webp',description:'Reserva cambial de uso pessoal.',use:'cash',amount:cashItems.underwear.amount},
-  bundle:{name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',use:'cash',amount:cashItems.bundle.amount},
+  briefcase:{name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',use:'cash',amount:3},
+  underwear:{name:'Cueca com dólares',portrait:'retrato-cueca.webp',description:'Reserva cambial de uso pessoal.',use:'cash',amount:2},
+  bundle:{name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',use:'cash',amount:1},
   document:{name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
   gift:{name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
   photo:{name:'Fotografia',portrait:'retrato-fotografia.webp',description:'Registro feito com a câmera do celular.',destructible:true},
@@ -20,12 +19,18 @@ export const documentTemplates = {
 } as const;
 
 export type ObjectKind = keyof typeof objects;
+
+export function cashAmount(kind:ObjectKind) {
+  const item = objects[kind];
+  return 'amount' in item ? item.amount : undefined;
+}
 export type DocumentData = {
   author:string; title:string; edited:boolean; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
 export type Photo = {at:number; location:string; people:(Contact & {character:number})[]; objects:string[]};
 export type WorldItem = {id:number; kind:ObjectKind; document?:DocumentData; photo?:Photo};
+export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export type PhoneGame = {tiles?:number[]; total:number; progress:number; elapsed:number};
@@ -38,7 +43,7 @@ export const gameplayActions = ['supply','collect','offer','sign-request','accep
   'call','answer','hangup','game-start','game-stop','game-tile','photo'] as const;
 export type GameplayAction = {kind:typeof gameplayActions[number]; item?:number; target?:string; place?:string; tile?:number};
 export type GameplayView = {
-  contacts:Contact[]; inventory:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:(WorldItem & Motion)[]; stored:WorldItem[]; filed:WorldItem[];
+  contacts:Contact[]; inventory:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   requests:ItemRequest[]; call?:PhoneCall; game?:PhoneGame; locations:string[];
 };
 export type GameplayEvent = {

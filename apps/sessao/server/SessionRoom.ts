@@ -58,7 +58,7 @@ export class SessionRoom extends Room {
     });
     this.onMessage('start-match', (client, count:unknown) => {
       if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
-        this.gameplay.reset();
+        this.gameplay.reset(this.clock.currentTime);
         void this.lock();
       }
     });
@@ -83,17 +83,6 @@ export class SessionRoom extends Room {
       if (this.match.phase!=='negotiation' && ['call','answer','game-start','game-tile','photo'].includes(action.kind)) return;
       const text = this.gameplay.act(player,action,world);
       if (text) client.send('gameplay-feedback',text);
-    });
-    this.onMessage('carry-cash',(client,id:unknown) => {
-      const player = this.players.get(client.sessionId)?.player;
-      const world = this.gameplayWorld();
-      if (!player || typeof id!=='number' || !Number.isSafeInteger(id) || this.match.phase!=='negotiation') return;
-      const text = this.gameplay.collectCash(player,()=>this.match.takeCash(player,id,world.now),world);
-      if (text) client.send('gameplay-feedback',text);
-    });
-    this.onMessage('pocket-cash',(client, id:unknown) => {
-      const player = this.players.get(client.sessionId)?.player;
-      if (player && typeof id==='number' && Number.isSafeInteger(id)) this.match.pocketCash(player,id,this.clock.currentTime);
     });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
@@ -151,7 +140,7 @@ export class SessionRoom extends Room {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
-        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players),state.player);
+        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {

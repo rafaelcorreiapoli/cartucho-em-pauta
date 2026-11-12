@@ -198,15 +198,13 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
-    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,cash=>{
-      joined.send('carry-cash',cash);
-    },message=>hud.notify('Objetos e celular',message));
+    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
     },activity => joined.send('room-activity',activity),drop => {
-      joined.send('pocket-cash',drop);
+      joined.send('gameplay',{kind:'use',item:drop});
       map.focus({preventScroll:true});
     },gameplay.nearby);
     joined.onMessage('item-obtained',(pickup:boolean)=>{
@@ -242,7 +240,6 @@ async function connect(join: () => Promise<Room>) {
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
-      game?.setCashDrops(view.drops);
       game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;

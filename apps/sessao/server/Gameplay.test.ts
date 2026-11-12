@@ -9,7 +9,7 @@ function setup() {
   const events:GameplayEvent[] = [];
   const game = new Gameplay();
   const world:GameplayWorld = {players:[alice,bob,watcher],now:0,voice:()=>true,office:()=>undefined,
-    cashVisible:()=>[],earn:()=>{},publish:event=>events.push(event)};
+    earn:()=>{},publish:event=>events.push(event)};
   return {alice,bob,watcher,events,game,world};
 }
 
@@ -70,4 +70,64 @@ test('calls require consent and photos only list visible players', () => {
   game.tick(world,false);
   expect(game.callPeer(alice.id)).toBeUndefined();
   expect(game.view(bob,world).call).toBeUndefined();
+});
+
+test('spawned and dropped cash share visibility, custody and redemption', () => {
+  const {alice,bob,watcher,game,world} = setup();
+  const values = [0,0,.14,.172,0];
+  const credits:number[] = [];
+  world.earn = (_id,amount) => credits.push(amount);
+  Object.assign(alice,{x:140,y:146});
+  Object.assign(bob,{x:151,y:146});
+  Object.assign(watcher,{x:400,y:146});
+  game.reset(1000,()=>values.shift() ?? .5);
+  world.now = 4999;
+  game.tick(world,true);
+  expect(game.view(alice,world).ground).toEqual([]);
+
+  world.now = 5000;
+  game.tick(world,true);
+  const [item] = game.view(alice,world).nearby;
+  expect(item).toMatchObject({kind:'briefcase',x:151,y:146});
+  expect(game.view(watcher,world).ground).toEqual([]);
+  game.act(watcher,{kind:'use',item:item.id},world);
+  expect(credits).toEqual([]);
+
+  game.act(alice,{kind:'collect',item:item.id},world);
+  expect(game.view(alice,world).inventory[0]?.id).toBe(item.id);
+  expect(game.view(bob,world).ground).toEqual([]);
+  game.act(alice,{kind:'drop',item:item.id},world);
+  expect(game.view(bob,world).nearby[0]).toMatchObject({id:item.id,kind:item.kind,x:140,y:146});
+  game.act(bob,{kind:'use',item:item.id},world);
+  game.act(alice,{kind:'use',item:item.id},world);
+  expect(credits).toEqual([3]);
+  expect(game.view(bob,world).ground).toEqual([]);
+});
+
+test('cash on the ground expires after the same interval on spawn or drop', () => {
+  const {alice,game,world} = setup();
+  const values = [0,0,.14,.172,.99];
+  Object.assign(alice,{x:140,y:146});
+  game.reset(0,()=>values.shift() ?? .5);
+  world.now = 4000;
+  game.tick(world,true);
+  const [item] = game.view(alice,world).nearby;
+  expect(item.kind).toBe('bundle');
+  world.now = 59000;
+  expect(game.act(alice,{kind:'collect',item:item.id},world)).toBe('Objeto indisponível.');
+  expect(game.view(alice,world).ground).toEqual([]);
+
+  const nextValues = [0,0,.14,.172,.99];
+  game.reset(0,()=>nextValues.shift() ?? .5);
+  world.now = 4000;
+  game.tick(world,true);
+  const [next] = game.view(alice,world).nearby;
+  game.act(alice,{kind:'collect',item:next.id},world);
+  world.now = 10000;
+  game.act(alice,{kind:'drop',item:next.id},world);
+  world.now = 64999;
+  expect(game.view(alice,world).nearby[0]?.id).toBe(next.id);
+  world.now = 65000;
+  expect(game.act(alice,{kind:'use',item:next.id},world)).toBe('Objeto indisponível.');
+  expect(game.view(alice,world).ground).toEqual([]);
 });

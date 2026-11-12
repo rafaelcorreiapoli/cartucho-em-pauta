@@ -1,7 +1,6 @@
-import { objects, type WorldItem } from './gameplay';
+import { objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { cashItems, type CashDrop } from './cash-drops';
 import { characterArt, characterSheets } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
@@ -25,8 +24,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   fog.setAttribute('aria-hidden','true');
   parent.append(fog);
   let players: Player[] = [];
-  let drops: CashDrop[] = [];
-  let groundItems: (WorldItem & Motion)[] = [];
+  let groundItems: GroundItem[] = [];
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -61,8 +59,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
-    private groundMarkers = new Map<number,Phaser.GameObjects.Text>();
-    private cashSprites = new Map<number,Phaser.GameObjects.Sprite>();
+    private groundMarkers = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text}>();
+    private renderedGround?:GroundItem[];
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
@@ -71,7 +69,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
     preload() {
       for (const {key,path} of characterSheets) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
-      this.load.spritesheet('cash-drops','assets/dinheiro-no-mapa.png',{frameWidth:64,frameHeight:64});
+      for (const [kind,{portrait}] of Object.entries(objects)) {
+        this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
+      }
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
@@ -140,36 +140,28 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
     }
 
-    private renderCashDrops(time:number) {
-      for (const [id,sprite] of this.cashSprites) {
-        if (drops.some(drop => drop.id===id)) continue;
-        sprite.destroy();
-        this.cashSprites.delete(id);
-      }
-      for (const drop of drops) {
-        let sprite = this.cashSprites.get(drop.id);
-        if (!sprite) {
-          sprite = this.add.sprite(drop.x,drop.y,'cash-drops',cashItems[drop.kind].frame)
-            .setOrigin(.5,.72).setDisplaySize(28,28).setDepth(drop.y-1);
-          this.cashSprites.set(drop.id,sprite);
-        }
-        sprite.y = drop.y+Math.sin(time/230+drop.id)*2;
-      }
-    }
-
     private renderGroundItems() {
-      for (const [id,marker] of this.groundMarkers) {
-        if (groundItems.some(item => item.id===id)) continue;
+      if (this.renderedGround===groundItems) return;
+      this.renderedGround = groundItems;
+      const visible = new Set(groundItems.map(item=>item.id));
+      for (const [id,{marker}] of this.groundMarkers) {
+        if (visible.has(id)) continue;
         marker.destroy();
         this.groundMarkers.delete(id);
       }
       for (const item of groundItems) {
-        if (this.groundMarkers.has(item.id)) continue;
-        const marker = this.add.text(item.x,item.y-4,objects[item.kind].name,{
-          fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#f8dea0',backgroundColor:'#17342a',
-          padding:{x:3,y:1},resolution:this.textResolution,
-        }).setOrigin(.5,1).setDepth(item.y);
-        this.groundMarkers.set(item.id,marker);
+        const existing = this.groundMarkers.get(item.id);
+        if (existing) {
+          existing.marker.setPosition(item.x,item.y).setDepth(item.y-1);
+          continue;
+        }
+        const icon = this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,.8).setDisplaySize(20,20);
+        const label = this.add.text(0,4,item.title ?? objects[item.kind].name,{
+          fontFamily:'system-ui',fontSize:'5px',color:'#fff5df',backgroundColor:'rgba(14,25,20,0.68)',
+          padding:{x:2,y:1},align:'center',wordWrap:{width:76},resolution:this.textResolution,
+        }).setOrigin(.5,0);
+        const marker = this.add.container(item.x,item.y,[icon,label]).setDepth(item.y-1);
+        this.groundMarkers.set(item.id,{marker,label});
       }
     }
 
@@ -194,7 +186,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         manual = keys.size>0;
       }
-      this.renderCashDrops(time);
       this.renderGroundItems();
       const now = performance.now();
       const ownPlayer = local.state?.player;
@@ -213,6 +204,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (resolution!==this.textResolution) {
         this.textResolution = resolution;
         for (const label of this.mapLabels) label.setResolution(resolution);
+        for (const {label} of this.groundMarkers.values()) label.setResolution(resolution);
         for (const view of this.views.values()) {
           view.label.setResolution(resolution);
           view.office.setResolution(resolution);
@@ -318,8 +310,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       players = snapshot;
       history.add(snapshot,performance.now());
     },
-    setGroundItems(items:(WorldItem & Motion)[]) { groundItems = items; },
-    setCashDrops(next:CashDrop[]) { drops = next; },
+    setGroundItems(items:GroundItem[]) { groundItems = items; },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },

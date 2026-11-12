@@ -8,7 +8,6 @@ import {
 import { localPerception, type Player } from '../src/map';
 import { HEARING_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
-import { CashDrops } from './CashDrops';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
 const clamp = (value:number) => Math.max(0,Math.min(100,value));
@@ -24,7 +23,6 @@ export class PlenaryMatch {
   private votes = new Map<string,Vote>();
   private infiltrators = new Set<string>();
   private economy = new PoliticalEconomy();
-  private cashDrops = new CashDrops();
   private election = new ElectionCycle();
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
@@ -56,7 +54,6 @@ export class PlenaryMatch {
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.economy.reset(contacts,random);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
-    this.cashDrops.reset(now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingUsed = false;
     this.hearingTarget = this.hearingResult = undefined;
@@ -146,7 +143,6 @@ export class PlenaryMatch {
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
     return {
       players:players.filter(player => this.electorate.has(player.id)),now,
-      cashVisible:player=>this.cashDrops.visibleTo(player,now).map(drop=>drop.kind),
       office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };
@@ -154,16 +150,6 @@ export class PlenaryMatch {
 
   canHandleObjects(id:string, now:number) {
     return this.electorate.has(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
-  }
-
-  takeCash(player:Player, drop:number, now:number) {
-    if (this.phase==='negotiation' && this.canHandleObjects(player.id,now)) return this.cashDrops.take(drop,player,now)?.kind;
-  }
-
-  pocketCash(player:Player, drop:number, now:number) {
-    if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(player.id)) return;
-    const amount = this.cashDrops.pocket(drop,player,now);
-    if (amount) this.economy.earn(player.id,amount);
   }
 
   vote(id:string, vote:Vote, now:number) {
@@ -282,10 +268,7 @@ export class PlenaryMatch {
     if (this.phase!=='ballot' && !(this.phase==='negotiation' && now>=this.ends)) {
       this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
     }
-    if (now<this.ends) {
-      if (this.phase==='negotiation') this.cashDrops.advance(now);
-      return;
-    }
+    if (now<this.ends) return;
     if (this.phase==='hearing') {
       const target = this.hearingTarget!;
       const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
@@ -346,7 +329,7 @@ export class PlenaryMatch {
     this.reason = reason;
   }
 
-  view(id:string, ids:string[], now:number, contacts:Contact[] = [], player?:Player): PlenaryView {
+  view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     return {
       phase:this.phase,round:this.round,remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
@@ -357,7 +340,6 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
-      drops:role && player && this.phase==='negotiation' ? this.cashDrops.visibleTo(player,now) : [],
       politics:role ? this.economy.view(id,contacts,this.round,!this.hearingUsed,id => this.canVote(id)) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,

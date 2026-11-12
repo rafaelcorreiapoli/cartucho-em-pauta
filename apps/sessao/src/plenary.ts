@@ -1,5 +1,4 @@
 import type { GameplayView } from './gameplay';
-import type { CashDrop } from './cash-drops';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
 import { roomActivities } from './room-activities';
@@ -36,6 +35,6 @@ export type PlenaryView = {
   role?:Role; solo:boolean; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
-  gameplay?:GameplayView; drops:CashDrop[]; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
+  gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
   yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string;
 };

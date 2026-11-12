@@ -1,5 +1,5 @@
 import { hudConsumesKeys } from './game-keys';
-import { canPocket, cashItems, type CashDrop } from './cash-drops';
+import { canReachObject, cashAmount, type GroundItem } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import type { Motion, Player } from './map';
@@ -10,7 +10,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
-  renderNearby:(cash:CashDrop | undefined,player:Motion | undefined,exploring:boolean) => void) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
@@ -51,8 +51,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const interviewHint = element('interview-hint');
   const pocket = element<HTMLButtonElement>('pocket-cash');
   const pocketReward = element('pocket-reward');
-  let nearbyDrop:CashDrop | undefined;
-  pocket.onclick = () => { if (nearbyDrop) pocketCash(nearbyDrop.id); };
+  let nearbyCash:GroundItem | undefined;
+  pocket.onclick = () => { if (nearbyCash) pocketCash(nearbyCash.id); };
   function addStationButton(action:{station:Station; icon:string; label:string}) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -205,14 +205,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     for (const {button,activity} of activityButtons) {
       button.hidden = !exploring || !own || Math.hypot(own.x-activity.x,own.y-activity.y)>STATION_RADIUS;
     }
-    nearbyDrop = exploring && own ? view.drops.find(drop => canPocket(own!,drop)) : undefined;
-    pocket.hidden = !nearbyDrop;
-    renderNearby(nearbyDrop,own,exploring);
+    const player = own;
+    nearbyCash = exploring && player ? view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
+    const amount = nearbyCash && cashAmount(nearbyCash.kind);
+    pocket.hidden = !amount;
+    renderNearby(player,exploring);
     const nearbyObjects = !nearbyToggle.hidden;
-    if (nearbyDrop) pocketReward.textContent = `+${money(cashItems[nearbyDrop.kind].amount)}`;
+    if (amount) pocketReward.textContent = `+${money(amount)}`;
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
     stations.hidden = (!exploring && view?.phase!=='ballot') ||
-      (!nearbyObjects && !nearbyDrop && !hasAction && interviewHint.hidden);
+      (!nearbyObjects && pocket.hidden && !hasAction && interviewHint.hidden);
     refreshActionKeys();
   }
 
