@@ -24,7 +24,7 @@ export const privateOffices = locations.map(({x,y,inside,shared},index)=>{
     bounds:[x,y,officeWidth,officeHeight] as Rect,
     door:[center-doorWidth/2,inside===1 ? y-doorHeight : y+officeHeight,doorWidth,doorHeight] as Rect,
     inside,shared:new Set<SharedWall>(shared),spawn:{x:center,y:y+58},
-    safe:{x:x+22,y:y+42},cabinet:{x:x+107,y:y+42},decor:{x:center,y:y+57},
+    safe:{x:x+22,y:y+42},cabinet:{x:x+107,y:y+42},
   };
 });
 export const officeFixtures = {
@@ -51,19 +51,23 @@ export const officeGoods = {
 } as const;
 export type OfficeGood = keyof typeof officeGoods;
 export const officeFurniture = {
-  officeChair:{sprite:'gabinete-poltrona.webp',width:32,height:30,anchor:.8},
+  officeChair:{sprite:'gabinete-poltrona.webp',width:28,height:26,anchor:.8},
   officeRug:{sprite:'gabinete-tapete.webp',width:48,height:16,anchor:.5},
-  officeTv:{sprite:'gabinete-tv.webp',width:37,height:26,anchor:.83},
+  officeTv:{sprite:'gabinete-tv.webp',width:32,height:23,anchor:.83},
 } as const;
 export type OfficeFurniture = keyof typeof officeFurniture;
 export const decorSlots = ['officeTv','officeRug','officeChair','portrait'] as const;
 export type OfficeDecor = typeof decorSlots[number];
-export function decorPoint(layout:OfficeLayout, kind:OfficeDecor):Motion {
-  const {x,y} = layout.decor;
-  if (kind==='officeRug') return {x,y};
-  if (kind==='officeTv') return {x:x-23,y:y-26};
-  if (kind==='officeChair') return {x:x+23,y:y-26};
-  return {x,y:Math.max(layout.bounds[1]+9,y-22)};
+const decorOffsets:Record<OfficeDecor,Motion> = {
+  officeTv:{x:23,y:76},
+  officeChair:{x:106,y:76},
+  officeRug:{x:officeWidth/2,y:59},
+  portrait:{x:officeWidth/2,y:19},
+};
+
+export function decorPoint({bounds:[x,y]}:OfficeLayout, kind:OfficeDecor):Motion {
+  const offset = decorOffsets[kind];
+  return {x:x+offset.x,y:y+offset.y};
 }
 export const isOfficeFurniture = (kind:string):kind is OfficeFurniture => Object.hasOwn(officeFurniture,kind);
 
