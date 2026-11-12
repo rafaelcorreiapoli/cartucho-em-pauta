@@ -70,15 +70,102 @@ h1 em { font-style: normal; color: var(--lime); }
 .games { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
 .game { --accent: var(--lime); display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--panel); }
 .spire { --accent: var(--gold); }
-.cover { container-type: inline-size; position: relative; isolation: isolate; overflow: hidden; height: clamp(146px, 17vw, 210px); background: repeating-linear-gradient(135deg, transparent 0 12px, #d7ec8512 12px 13px), radial-gradient(ellipse at center, #61783b, #303b2c 75%); border-bottom: 1px solid var(--line); }
-.spire .cover { background: repeating-radial-gradient(ellipse at 50% 85%, transparent 0 22px, #ffd47329 23px 24px), radial-gradient(ellipse at center, #7a693d, #383f28 80%); }
-.cover-name { position: absolute; z-index: 1; top: 13%; width: 100%; text-align: center; font: 900 clamp(1.25rem,12cqi,4.25rem)/.95 var(--display); color: #fff6d7; text-shadow: 3px 4px #232f1d; }
-.cover img { position: absolute; height: 82%; width: 49%; bottom: -15%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 4px 7px #1621199c); }
-.cover-left { left: 1%; rotate: -10deg; }
-.cover-right { right: 0; scale: -1 1; rotate: 9deg; }
-.deck { position: absolute; left: 37%; top: 27%; width: 29%; height: 84%; border: 2px solid #f9d38899; outline: 5px solid #253620aa; outline-offset: -8px; border-radius: 5px; background: repeating-linear-gradient(45deg,#625331 0 6px,#514629 6px 12px); }
-.deck-left { rotate: -21deg; translate: -24% 9%; }
-.deck-right { rotate: 22deg; translate: 28% 9%; }
+.cover {
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  height: clamp(146px, 19vw, 232px);
+  border-bottom: 1px solid var(--line);
+  background: #303b2c url("assets/capas/avenida.webp") center / cover;
+}
+.spire .cover { background-image: url("assets/capas/plenario.webp"); }
+.cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#142017b5, transparent 65%);
+}
+.cover-name {
+  position: absolute;
+  z-index: 2;
+  inset: 9% 0 auto;
+  text-align: center;
+  font: 900 clamp(1.25rem, 12cqi, 4.25rem)/.95 var(--display);
+  color: #fff6d7;
+  text-shadow: 0 2px 4px #13190d, 2px 3px #232f1d;
+}
+.cover-building {
+  position: absolute;
+  height: 59%;
+  width: 38%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(2px 6px 4px #161b10a8);
+}
+.cover-bank { left: 4%; bottom: 11%; }
+.cover-media { right: 3%; bottom: 21%; }
+.cover-barracks { left: 28%; bottom: 4%; height: 64%; width: 44%; }
+.cover-hand { position: absolute; inset: 31% 6% 0; }
+.cover-card {
+  --edge: #d5b879;
+  --rim: #8b743f;
+  --dark: #4e4027;
+  position: absolute;
+  top: 12%;
+  left: 9%;
+  width: 31%;
+  height: 83%;
+  padding: 3px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  border: 1px solid #e8c18c;
+  border-radius: 6px;
+  background: linear-gradient(155deg, var(--edge), var(--rim) 35%, var(--dark));
+  color: #fff1d3;
+  box-shadow: 0 5px 10px #060d09c9;
+  text-align: center;
+  rotate: -13deg;
+}
+.cover-card-defense {
+  --edge: #9bbba1;
+  --rim: #4e8276;
+  --dark: #203d37;
+  left: 60%;
+  rotate: 13deg;
+}
+.cover-card-attack {
+  --edge: #e19c68;
+  --rim: #ac5f43;
+  --dark: #563026;
+  z-index: 1;
+  top: 2%;
+  left: 34.5%;
+  rotate: 0deg;
+}
+.cover-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--dark);
+  border-radius: 3px;
+}
+.cover-card-cost {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: grid;
+  place-items: center;
+  width: 1.3em;
+  aspect-ratio: 1;
+  border: 1px solid #ffe2a8;
+  border-radius: 50%;
+  background: #573824;
+  font: 800 clamp(.57rem, 3.2cqi, .95rem)/1 var(--display);
+}
+.cover-card-type { font: 800 clamp(.44rem, 2cqi, .65rem)/1.2 var(--display); text-transform: uppercase; }
+.cover-card strong { font: 800 clamp(.53rem, 3.3cqi, 1rem)/1.1 var(--display); }
 .game-body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
 .game-body h3 { font-size: 2.05rem; line-height: .97; margin: 7px 0; }
 .game-body p { color: var(--muted); font-size: .91rem; margin: 1px 0 16px; }

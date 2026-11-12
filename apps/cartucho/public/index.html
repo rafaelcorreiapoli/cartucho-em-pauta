@@ -42,32 +42,56 @@
     <div class="arcade">
       <section class="catalog" id="jogos" aria-labelledby="catalog-title">
         <div class="section-title"><span aria-hidden="true">▦</span><h2 id="catalog-title">JOGOS EM PAUTA</h2></div>
-        <div class="filters" role="group" aria-label="Filtrar por categoria">
+        <div class="filters" role="group" aria-label="Filtrar jogos">
           <button type="button" data-category="todos" aria-pressed="true">Todos</button>
           <button type="button" data-category="estrategia" aria-pressed="false">Estratégia</button>
           <button type="button" data-category="cartas" aria-pressed="false">Cartas</button>
           <button type="button" data-category="roguelike" aria-pressed="false">Roguelike</button>
+          <button type="button" data-category="mobile" aria-pressed="false">Mobile</button>
+          <button type="button" data-category="online" aria-pressed="false">Online</button>
         </div>
         <p id="filter-status" class="sr-only" aria-live="polite"></p>
         <div class="games">
-          <article class="game wars" data-game="brwars" data-categories="estrategia">
+          <article class="game wars" data-game="brwars" data-categories="estrategia online">
             <div class="cover" aria-hidden="true">
-              <span class="cover-name">BASE ALIADA</span><img class="cover-left" src="assets/che.webp" alt=""><img class="cover-right" src="assets/pavanato.webp" alt="">
+              <span class="cover-name">BASE ALIADA</span>
+              <img class="cover-building cover-bank" src="assets/capas/banco.webp" alt="" loading="lazy">
+              <img class="cover-building cover-media" src="assets/capas/midia.webp" alt="" loading="lazy">
+              <img class="cover-building cover-barracks" src="assets/capas/quartel.webp" alt="" loading="lazy">
             </div>
             <div class="game-body">
-              <p class="tag">ESTRATÉGIA EM TEMPO REAL</p>
+              <p class="tag">ESTRATÉGIA EM TEMPO REAL · ONLINE 1V1</p>
               <h3>Base Aliada</h3>
               <p>Erga sua base, movimente a economia e leve a disputa pelo poder em Brasília ao campo de batalha.</p>
               <a class="button game-play" href="/jogar/brwars" aria-label="Jogar Base Aliada">Jogar agora <span aria-hidden="true">→</span></a>
             </div>
           </article>
-          <article class="game spire" data-game="brspire" data-categories="cartas roguelike">
+          <article class="game spire" data-game="brspire" data-categories="cartas roguelike mobile">
             <div class="cover" aria-hidden="true">
-              <span class="deck deck-left"></span><span class="deck deck-right"></span>
-              <span class="cover-name">CARTAS MARCADAS</span><img class="cover-left" src="assets/dilma.webp" alt=""><img class="cover-right" src="assets/stalin.webp" alt="">
+              <span class="cover-name">CARTAS MARCADAS</span>
+              <div class="cover-hand">
+                <div class="cover-card cover-card-tactic">
+                  <img src="assets/capas/ano-de-eleicao.webp" alt="" loading="lazy">
+                  <span class="cover-card-cost">3</span>
+                  <span class="cover-card-type">Tática</span>
+                  <strong>Ano de Eleição</strong>
+                </div>
+                <div class="cover-card cover-card-defense">
+                  <img src="assets/capas/estocar-vento.webp" alt="" loading="lazy">
+                  <span class="cover-card-cost">1</span>
+                  <span class="cover-card-type">Defesa</span>
+                  <strong>Estocar Vento</strong>
+                </div>
+                <div class="cover-card cover-card-attack">
+                  <img src="assets/capas/pedalada-fiscal.webp" alt="" loading="lazy">
+                  <span class="cover-card-cost">1</span>
+                  <span class="cover-card-type">Ataque</span>
+                  <strong>Pedalada Fiscal</strong>
+                </div>
+              </div>
             </div>
             <div class="game-body">
-              <p class="tag">CARTAS · ROGUELIKE</p>
+              <p class="tag">CARTAS · ROGUELIKE · MOBILE E DESKTOP</p>
               <h3>Cartas Marcadas</h3>
               <p>Monte seu baralho e encare os figurões da política. No quebra-pau do plenário, cada carta conta.</p>
               <a class="button game-play" href="/jogar/brspire" aria-label="Jogar Cartas Marcadas">Jogar agora <span aria-hidden="true">→</span></a>
