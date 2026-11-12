@@ -59,7 +59,10 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
     const view = match.view(host.id,ids,now);
     expect(view.outcome?.passed).toBe(round===0);
     expect(view.outcomes.map(result => result.round)).toEqual(Array.from({length:round+1},(_,index) => index));
-    if (round===0) expect(view.budget).toBe(20);
+    if (round===0) {
+      expect(view.budget).toBe(20);
+      expect(view.outcome?.applied).toEqual({budget:-12,stability:14});
+    }
   }
   expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump'});
 });

@@ -123,7 +123,7 @@
             <p class="hud-feedback" id="bill-objection" hidden></p>
             <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
             <div id="proposal">
-              <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2><p class="project-phase">Fase: <strong id="phase"></strong></p></div>
+              <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2><p id="bill-description"></p><p class="project-phase">Fase: <strong id="phase"></strong></p></div>
               <div id="impact" aria-label="Impacto de cada decisão">
                 <div class="impact-card">
                   <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
@@ -313,6 +313,11 @@
         </aside>
         <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
       </div>
+      <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title">
+        <header><h2 id="result-title">Resultados</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar resultados"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <div id="result-content"></div>
+        <form method="dialog"><button class="hud-button">Continuar</button></form>
+      </dialog>
       <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title">
         <header>
           <h2 id="campaign-title"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</h2>

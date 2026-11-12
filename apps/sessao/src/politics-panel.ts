@@ -116,13 +116,14 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
 
   function updateControls() {
     const politics = view?.politics;
-    if (!politics || view?.phase!=='negotiation') return;
-    el('cabinet-form').hidden = !at('cabinet') || view.election?.personal?.office!=='deputy' || politics.grantUsed || politics.suspended;
+    if (!politics || !view) return;
+    const exploring = view.phase==='negotiation';
+    el('cabinet-form').hidden = !exploring || !at('cabinet') || view.election?.personal?.office!=='deputy' || politics.grantUsed || politics.suspended;
     el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
-    el('campaign').hidden = !at('press');
+    el('campaign').hidden = !exploring || !at('press');
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
-    el('hearing-form').hidden = !at('panel') || !politics.canCallHearing;
-    el<HTMLButtonElement>('publish').disabled = !at('press') || !dossier.value;
+    el('hearing-form').hidden = !exploring || !at('panel') || !politics.canCallHearing;
+    el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
     el('trade-controls').hidden = !target.value;
     el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet===0 || politics.paymentsLeft===0;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
@@ -175,9 +176,9 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       view = next;
       const p = view.politics;
       dock.hidden = !p;
-      trade.hidden = !p || view.phase!=='negotiation';
+      trade.hidden = !p || (view.phase!=='negotiation' && view.phase!=='ballot');
       if (!p) return;
-      const active = view.phase==='negotiation';
+      const active = view.phase==='negotiation' || view.phase==='ballot';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
       el('trade-balance').textContent = money(p.wallet);

@@ -3,11 +3,11 @@ import Phaser from 'phaser';
 import { cashItems, type CashDrop } from './cash-drops';
 import { characterArt, characterSheets } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
-import { stations, STATION_RADIUS, type Phase, type Station } from './plenary';
+import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, NAMES, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, inPlenary, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; nextStep:number };
 const stationColor = 0x79ebdf;
@@ -26,6 +26,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let players: Player[] = [];
   let drops: CashDrop[] = [];
   let negotiating = false;
+  let plenaryView:PlenaryView | undefined;
   let running = false;
   let resizeObserver:ResizeObserver | undefined;
   let titles = new Map<string,Office>();
@@ -55,6 +56,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   window.addEventListener('blur',stop,options);
 
   class Plenary extends Phaser.Scene {
+    private doors!: Phaser.GameObjects.Graphics;
+    private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
     private cashSprites = new Map<number,Phaser.GameObjects.Sprite>();
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
@@ -88,6 +91,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this);
+      this.doors = this.add.graphics().setDepth(1);
+      for (const [x,y,w,h] of PLENARY_DOORS) {
+        this.doors.fillStyle(0x774740).fillRect(x,y,w,h).fillStyle(0xe8aa75).fillRect(x,y+2,w,2);
+      }
+      this.board = this.add.text(240,25,'',{
+        fontFamily:'system-ui',fontSize:'6px',color:'#d6ffd0',backgroundColor:'#111e19',
+        align:'center',padding:{x:4,y:2},resolution:3,
+      }).setOrigin(.5,0).setDepth(HEIGHT+10);
       for (const {x,y} of Object.values(stations)) {
         this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
@@ -164,6 +175,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.renderCashDrops(time);
       const now = performance.now();
       const ownPlayer = local.state?.player;
+      const inSession = !!local.state?.plenary;
+      this.doors.setVisible(inSession);
+      const agenda = plenaryView && bills[plenaryView.round];
+      this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Painel de votação');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;
       const cssHeight = parent.clientHeight || 1;
@@ -199,7 +214,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {id,character,direction,moving} = player;
         const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
-        if (running && !own && ownPlayer && Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=VISION_RADIUS) {
+        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=VISION_RADIUS)) {
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
@@ -220,7 +235,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.views.set(id,view);
         }
         const {sprite,label,office} = view;
-        const blend = own ? 1-Math.exp(-delta/20) : 1;
+        const blend = own && Math.hypot(sprite.x-player.x,sprite.y-player.y)<40 ? 1-Math.exp(-delta/20) : 1;
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
@@ -250,6 +265,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
             const radius = VISION_RADIUS*cssZoom;
             fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
+            fog.style.clipPath = '';
+            if (inSession) {
+              const [left,top,width,height] = PLENARY_BOUNDS;
+              const x1 = (screenX+(left-x)*zoom)/density, x2 = x1+width*cssZoom;
+              const y1 = (screenY+(top-y)*zoom)/density, y2 = y1+height*cssZoom;
+              fog.style.background = '#000b';
+              fog.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x2}px ${y1}px, ${x2}px ${y2}px, ${x1}px ${y2}px, ${x1}px ${y1}px)`;
+            }
             fog.hidden = false;
           }
         }
@@ -271,7 +294,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     setCashDrops(next:CashDrop[]) { drops = next; },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHeadY() { return scene.sys.isActive() ? scene.playerHeadY() : undefined; },
-    reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
+    setPlenaryView(view:PlenaryView) { plenaryView = view; },
+    reconcile(snapshot: ControlState) {
+      if (!!snapshot.plenary!==!!local.state?.plenary) {
+        stop();
+        destination = undefined;
+        history.clear();
+      }
+      local.reconcile(snapshot);
+    },
     setMatchPhase(phase:Phase) {
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';

@@ -135,6 +135,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
       element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
       element('bill').textContent = hearing ? hearing.target : bills[round].name;
+      element('bill-description').textContent = hearing ? '' : bills[round].description;
       element('impact').hidden = !!hearing;
       showImpact('yes',view.yes);
       showImpact('no',view.no);

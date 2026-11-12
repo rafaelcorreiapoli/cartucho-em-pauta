@@ -48,6 +48,9 @@ test('repeat elections pay the completed office once and fill seats even with on
   const elected = election.view('a',rules.interval,popularity,true);
   expect(elected.cycle).toBe(2);
   expect(elected.result?.offices).toHaveLength(6);
+  const percentages = elected.result!.offices.map(({percentage}) => percentage);
+  expect(percentages.every(value => value>0 && value<=100)).toBe(true);
+  expect(percentages.reduce((total,value) => total+value,0)).toBeCloseTo(100,-1);
   expect(new Set(elected.offices.map(({id}) => id)).size).toBe(6);
   expect(elected.offices.filter(({office}) => office==='president')).toEqual([{id:'a',name:'A',office:'president'}]);
   expect(elected.offices.filter(({office}) => office==='senator')).toHaveLength(2);

@@ -4,6 +4,13 @@ export const SPEED = 88;
 export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
+export const PLENARY_BOUNDS = [148,10,184,104] as const;
+export const PLENARY_DOORS:Rect[] = [[177,114,26,11],[217,114,46,11],[277,114,26,11]];
+export const PLENARY_SEATS = [
+  {x:192,y:76},{x:223,y:76},{x:286,y:76},
+  {x:196,y:112},{x:246,y:112},{x:296,y:112},
+] as const;
+
 export const walls: Rect[] = [
   [0,0,960,10], [0,530,960,10], [0,10,10,520], [950,10,10,520],
   [470,10,10,115], [470,161,10,98],
@@ -15,17 +22,18 @@ export const walls: Rect[] = [
   [316,270,10,65], [316,374,10,18], [592,270,10,65], [592,374,10,18],
   [316,403,10,65], [316,507,10,23], [592,403,10,65], [592,507,10,23],
   [139,10,9,115], [332,10,9,115],
-  [10,114,49,11], [93,114,124,11], [263,114,121,11], [419,114,51,11],
+  [10,114,49,11], [93,114,84,11], [203,114,14,11], [263,114,14,11], [303,114,81,11], [419,114,51,11],
   [187,161,9,98], [282,161,9,98],
   [10,161,59,11], [105,161,113,11], [262,161,106,11], [404,161,66,11],
 ];
 export const desks = [
-  [48,65],[373,65],[169,84],[266,84],[63,217],[342,217],
+  [48,65],[373,65],[151,43],[284,43],[151,84],[284,84],[63,217],[342,217],
   [526,60],[786,59],[609,214],[851,210],[105,334],[404,331],[766,330],
   [128,460],[433,460],[713,460],[822,463],
 ] as const;
 export const furnishings = [
   {frame:0, area:[197,33,86,29], footprint:10},
+  {frame:1, area:[253,64,15,13], footprint:5},
   {frame:3, area:[16,21,25,34], footprint:9},
   {frame:3, area:[444,18,24,32], footprint:9},
   {frame:3, area:[301,28,22,28], footprint:7},
@@ -58,7 +66,15 @@ export function canStand(x: number, y: number) {
     x + 6 <= left || x - 6 >= left + width || y <= top || y - 7 >= top + height);
 }
 
-export function move(player: Player, input: Motion, seconds: number) {
+export function inPlenary({x,y}:Motion) {
+  const [left,top,width,height] = PLENARY_BOUNDS;
+  return x>=left+6 && x<=left+width-6 && y>=top+7 && y<=top+height;
+}
+export function canStandInPlenary(x:number,y:number) {
+  return inPlenary({x,y}) && canStand(x,y);
+}
+
+export function move(player: Player, input: Motion, seconds: number, stand = canStand) {
   const length = Math.hypot(input.x,input.y);
   if (!length) {
     player.moving = false;
@@ -67,8 +83,8 @@ export function move(player: Player, input: Motion, seconds: number) {
   const dx = input.x / Math.max(1,length) * SPEED * seconds;
   const dy = input.y / Math.max(1,length) * SPEED * seconds;
   const {x,y} = player;
-  if (canStand(x+dx,y)) player.x += dx;
-  if (canStand(player.x,y+dy)) player.y += dy;
+  if (stand(x+dx,y)) player.x += dx;
+  if (stand(player.x,y+dy)) player.y += dy;
   player.direction = Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
   player.moving = x !== player.x || y !== player.y;
 }

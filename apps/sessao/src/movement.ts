@@ -1,17 +1,17 @@
-import { HEIGHT, WIDTH, move, type Motion, type Player } from './map';
+import { canStandInPlenary, HEIGHT, WIDTH, move, type Motion, type Player } from './map';
 import { findRoute, followRoute } from './navigation';
 
 export const STEP_MS = 50;
 export const STEP_SECONDS = STEP_MS / 1000;
 export const MAX_QUEUED_INPUTS = 8;
-export type MovementInput = { seq: number; motion?: Motion; destination?: Motion };
-export type ControlState = { player: Player; route: Motion[]; ack: number };
+export type MovementInput = { seq: number; plenary?:boolean; motion?: Motion; destination?: Motion };
+export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean };
 
 export function applyInput(state: ControlState, input: MovementInput) {
-  if (input.destination) state.route = findRoute(state.player,input.destination);
+  if (input.destination) state.route = findRoute(state.player,input.destination,state.plenary);
   if (input.motion) {
     state.route = [];
-    move(state.player,input.motion,STEP_SECONDS);
+    move(state.player,input.motion,STEP_SECONDS,state.plenary ? canStandInPlenary : undefined);
   } else {
     followRoute(state.player,state.route,STEP_SECONDS);
   }
@@ -28,18 +28,19 @@ export function readInput(data: unknown): MovementInput | undefined {
   if (!data || typeof data !== 'object' || !('seq' in data) ||
       typeof data.seq !== 'number' || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
   const seq = data.seq;
+  const plenary = 'plenary' in data && data.plenary===true;
   if ('destination' in data) {
     const destination = point(data.destination);
     if (destination && destination.x>=0 && destination.y>=0 && destination.x<WIDTH && destination.y<HEIGHT) {
-      return {seq,destination};
+      return {seq,destination,plenary};
     }
     return;
   }
   if ('motion' in data) {
     const motion = point(data.motion);
     const clamp = (value: number) => Math.max(-1,Math.min(1,value));
-    if (motion) return {seq,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
+    if (motion) return {seq,plenary,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
     return;
   }
-  return {seq};
+  return {seq,plenary};
 }

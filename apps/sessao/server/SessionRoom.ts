@@ -2,7 +2,7 @@ import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
-import { localPerception, NAMES, type Player } from '../src/map';
+import { localPerception, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
@@ -76,7 +76,7 @@ export class SessionRoom extends Room {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
       const queue = this.movementQueue.get(client.sessionId);
-      if (!input || !state || !queue || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
+      if (!input || !state || !queue || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
     });
@@ -96,6 +96,15 @@ export class SessionRoom extends Room {
       const running = this.match.running;
       const now = this.clock.currentTime;
       this.match.advance(now);
+      const plenary = this.match.phase==='ballot';
+      for (const [index,[id,state]] of [...this.players].entries()) {
+        if (!!state.plenary===plenary) continue;
+        state.plenary = plenary;
+        state.route = [];
+        state.player.moving = false;
+        this.movementQueue.get(id)?.splice(0);
+        if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
+      }
       if (running && !this.match.running) void this.unlock();
       const speaker = this.match.speaker(now);
       const ids = players.map(({id}) => id);
@@ -111,7 +120,7 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const nearby = players.map(player => ({player,...localPerception(state.player,player)}));
-          client.send('players',nearby.filter(entry => entry.visible).map(entry => entry.player));
+          client.send('players',plenary ? players.filter(inPlenary) : nearby.filter(entry => entry.visible).map(entry => entry.player));
           if (view.phase==='negotiation' && this.voice.has(id)) client.send('voice-range',nearby
             .map(entry => entry.player.id===speaker ? {...entry,volume:1} : entry)
             .filter(({player,volume}) => player.id!==id && volume>0 && this.voice.has(player.id))
@@ -135,6 +144,22 @@ export class SessionRoom extends Room {
     };
     this.players.set(client.sessionId,{player,route:[],ack:0});
     this.movementQueue.set(client.sessionId,[]);
+  }
+
+  async onDrop(client:Client) {
+    if (!this.match.running) return;
+    this.leaveVoice(client.sessionId);
+    this.movementQueue.get(client.sessionId)?.splice(0);
+    const state = this.players.get(client.sessionId);
+    if (state) {
+      state.route = [];
+      state.player.moving = false;
+    }
+    await this.allowReconnection(client,30);
+  }
+
+  onReconnect(client:Client) {
+    this.lastMatchView.delete(client.sessionId);
   }
 
   onLeave(client: Client) {

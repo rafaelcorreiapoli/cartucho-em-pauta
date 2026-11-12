@@ -16,12 +16,13 @@ export type ElectionAction =
   | {kind:'advertise' | 'speech' | 'interview' | 'object'};
 
 export type Assignment = {id:string; name:string; office:Office};
+export type Elected = Assignment & {character:number; race:Office; percentage:number};
 export type Poll = {id:string; name:string; character:number; race:Office; estimate:number; trend:number; supports?:string};
 export type ElectionView = {
   cycle:number; remaining:number; registrationOpen:boolean;
   offices:Assignment[]; polls:Poll[];
   personal?:{office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean; interviewed:boolean; salary:number};
-  result?:{cycle:number; offices:Assignment[]; previous?:Office; salary:number};
+  result?:{cycle:number; offices:Elected[]; previous?:Office; salary:number};
   broadcast?:{id:string; name:string; remaining:number};
   notice?:{seq:number; text:string};
   objection?:string;

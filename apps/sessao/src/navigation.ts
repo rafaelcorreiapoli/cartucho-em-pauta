@@ -1,30 +1,31 @@
 import { js as EasyStar } from 'easystarjs';
-import { canStand, HEIGHT, SPEED, WIDTH, type Motion, type Player } from './map';
+import { canStand, canStandInPlenary, HEIGHT, SPEED, WIDTH, type Motion, type Player } from './map';
 
 const cellSize = 4;
 const toWorld = (point:Motion):Motion => ({x:point.x*cellSize+2,y:point.y*cellSize+2});
-const grid = Array.from({length:Math.floor(HEIGHT/cellSize)},(_,y) =>
+const makeGrid = (stand:typeof canStand) => Array.from({length:Math.floor(HEIGHT/cellSize)},(_,y) =>
   Array.from({length:WIDTH/cellSize},(_,x) => {
     const point = toWorld({x,y});
-    return canStand(point.x,point.y) ? 0 : 1;
+    return stand(point.x,point.y) ? 0 : 1;
   }));
 const search = new EasyStar();
-search.setGrid(grid);
+const worldGrid = makeGrid(canStand);
+const plenaryGrid = makeGrid(canStandInPlenary);
 search.setAcceptableTiles(0);
 search.enableSync();
 search.enableDiagonals();
 search.disableCornerCutting();
 
-function clearSegment(from:Motion,to:Motion) {
+function clearSegment(from:Motion,to:Motion,stand:typeof canStand) {
   const steps = Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.y-from.y)));
   for (let step=1;step<=steps;step++) {
     const t = step/steps;
-    if (!canStand(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)) return false;
+    if (!stand(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t)) return false;
   }
   return true;
 }
 
-function closestCell(point:Motion, requireClear:boolean) {
+function closestCell(point:Motion, requireClear:boolean, grid:number[][], stand:typeof canStand) {
   const col = Math.floor(point.x/cellSize);
   const row = Math.floor(point.y/cellSize);
   let best:Motion|undefined;
@@ -34,7 +35,7 @@ function closestCell(point:Motion, requireClear:boolean) {
       if (grid[y]?.[x]!==0) continue;
       const world = toWorld({x,y});
       const distance = Math.hypot(point.x-world.x,point.y-world.y);
-      if (distance<bestDistance && (!requireClear || clearSegment(point,world))) {
+      if (distance<bestDistance && (!requireClear || clearSegment(point,world,stand))) {
         best = {x,y};
         bestDistance = distance;
       }
@@ -43,23 +44,27 @@ function closestCell(point:Motion, requireClear:boolean) {
   return best;
 }
 
-export function findRoute(from:Motion,to:Motion):Motion[] {
-  if (clearSegment(from,to)) return [to];
-  const start = closestCell(from,true);
-  const end = closestCell(to,canStand(to.x,to.y));
+export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
+  const stand = plenary ? canStandInPlenary : canStand;
+  const grid = plenary ? plenaryGrid : worldGrid;
+  if (plenary && !stand(to.x,to.y)) return [];
+  if (clearSegment(from,to,stand)) return [to];
+  const start = closestCell(from,true,grid,stand);
+  const end = closestCell(to,stand(to.x,to.y),grid,stand);
   if (!start || !end) return [];
   const points:Motion[] = [];
+  search.setGrid(grid);
   search.findPath(start.x,start.y,end.x,end.y,path => {
     if (path) points.push(...(path.length ? path.map(toWorld) : [toWorld(start)]));
   });
   search.calculate();
   const last = points.at(-1);
-  if (last && clearSegment(last,to)) points.push(to);
+  if (last && clearSegment(last,to,stand)) points.push(to);
   const route:Motion[] = [];
   let anchor = from;
   for (let index=0;index<points.length;) {
     let next = index;
-    while (next+1<points.length && clearSegment(anchor,points[next+1])) next++;
+    while (next+1<points.length && clearSegment(anchor,points[next+1],stand)) next++;
     anchor = points[next];
     route.push(anchor);
     index = next+1;

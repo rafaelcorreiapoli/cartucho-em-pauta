@@ -253,8 +253,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
           notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Resultado eleitoral' : 'Eleições',notice.text);
         }
+        if (view.phase==='negotiation' && view.remaining<=30 && previous.remaining>30) {
+          notify('Convocação',`Sessão no Plenário em ${view.remaining} s.`);
+        }
         if (view.phase!==previous.phase && (view.phase==='ballot' || view.phase==='hearing')) {
-          notify('Votação aberta',element('bill').textContent ?? '',true);
+          notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
+            view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : element('bill').textContent ?? '',true);
         }
         if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);

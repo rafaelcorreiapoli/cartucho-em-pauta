@@ -12,21 +12,23 @@ export class PredictedMovement {
 
   input(command: Omit<MovementInput,'seq'>) {
     if (!this.state || this.pending.length >= 20) return;
-    const input = {seq:++this.seq,...command};
+    const input = {seq:++this.seq,...command,plenary:this.state.plenary};
     this.pending.push(input);
     applyInput(this.state,input);
     this.send(input);
   }
 
   reconcile(snapshot: ControlState) {
-    this.pending = this.pending.filter(input => input.seq>snapshot.ack);
-    this.state = { player:{...snapshot.player}, route:[...snapshot.route], ack:snapshot.ack };
+    this.pending = this.pending.filter(input => input.seq>snapshot.ack && !!input.plenary===!!snapshot.plenary);
+    this.state = {...snapshot,player:{...snapshot.player},route:[...snapshot.route]};
     for (const input of this.pending) applyInput(this.state,input);
   }
 }
 
 export class PlayerHistory {
   private snapshots: {at:number; players:Player[]}[] = [];
+
+  clear() { this.snapshots = []; }
 
   add(players: Player[], at: number) {
     this.snapshots.push({at,players});

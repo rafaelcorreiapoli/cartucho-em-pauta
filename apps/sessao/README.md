@@ -34,10 +34,29 @@ permitem protocolar uma emenda que troca estabilidade por economia, auditar os
 valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer no
 painel uma vez por projeto para que o custo aparente de aprovar seja menor.
 
-Na votação, todos voltam a se ouvir e têm 35 segundos para aprovar ou rejeitar.
-O projeto precisa de mais da metade dos jogadores a favor. O resultado usa os
-valores reais, mesmo se a fraude não for descoberta. No fim, a sala mostra quem
-era o infiltrado e permite jogar de novo.
+A convocação aparece quando faltam 30 segundos. Ao abrir a votação, o servidor
+reúne os jogadores nos seis pontos de chegada do Plenário, limpa as rotas anteriores
+e fecha as três portas. Durante os 35 segundos de votação, os jogadores podem
+andar, conversar por voz geral e negociar com quem estiver próximo. Todos na sala
+ficam visíveis entre si e os corredores permanecem sob o fog of war.
+
+O Plenário aproveita o mapa e os móveis existentes, com mesa diretora, tribuna,
+assentos laterais e painel ligado ao projeto e cronômetro do HUD. A discussão e o
+voto compartilham o mesmo temporizador. O servidor decide o confinamento para
+movimento manual e por clique. Após a apuração, as portas e a voz por proximidade
+voltam a funcionar e cada jogador permanece onde estava. O placar aparece em um
+modal e também fica no histórico. As regras atuais de voto, fraude, orçamento e
+estabilidade continuam sendo processadas pelo servidor.
+
+Uma queda de conexão reserva o lugar por 30 segundos. A reconexão automática
+do Colyseus restaura o mesmo participante, seu voto e sua posição atual. A entrada
+de novos participantes durante a partida segue o bloqueio existente da sala.
+Esta versão ainda não tem inventário, atordoamento, ligações ou escutas.
+
+Se a apuração eleitoral vencer durante a votação legislativa, ela aguarda a saída
+do Plenário. Seu modal mostra os eleitos e as porcentagens calculadas a partir da
+força apurada em cada disputa. Quando um eleito ocupa outro cargo por redistribuição
+de vagas, o modal indica a disputa de origem dos votos.
 
 ## Dinheiro, popularidade e provas
 

@@ -165,13 +165,15 @@ export class PlenaryMatch {
   }
 
   contacts(player:Player, players:Player[]): Contact[] {
-    return this.phase==='negotiation' ? players.filter(other => this.nearby(player,other))
+    return this.phase==='negotiation' || this.phase==='ballot' ? players.filter(other => this.nearby(player,other))
       .map(({id}) => ({id,name:this.economy.name(id)})) : [];
   }
 
   politics(player:Player, action:PoliticsAction, players:Player[], now:number) {
     const {id} = player;
-    if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id)) return;
+    const privateDeal = action.kind==='transfer' || action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
+    if ((this.phase!=='negotiation' && !(this.phase==='ballot' && privateDeal)) ||
+      now>=this.ends || !this.electorate.has(id)) return;
     const near = (target:string) => players.some(other => other.id===target && this.nearby(player,other));
     switch (action.kind) {
       case 'grant': {
@@ -259,7 +261,9 @@ export class PlenaryMatch {
 
   advance(now:number) {
     if (!this.running) return;
-    this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
+    if (this.phase!=='ballot' && !(this.phase==='negotiation' && now>=this.ends)) {
+      this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
+    }
     if (now<this.ends) {
       if (this.phase==='negotiation') this.cashDrops.advance(now);
       return;
@@ -295,9 +299,13 @@ export class PlenaryMatch {
     const impact = this.impact(passed ? 'yes' : 'no');
     const balance = this.budget+impact.budget;
     this.economy.billResult(this.votes,passed,bills[this.round].yes.stability>0);
+    const previous = {budget:this.budget,stability:this.stability};
     this.budget = clamp(balance);
     this.stability = clamp(this.stability+impact.stability+Math.min(0,balance)*2);
-    this.outcomes.push({round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud});
+    this.outcomes.push({round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
+      applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
+    this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
+    this.economy.cancelOffers();
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else if (this.round===bills.length-1) {
       this.finish(this.stability>=45 ? 'Parlamentar' : this.infiltrators.size ? 'Infiltrado' : undefined,

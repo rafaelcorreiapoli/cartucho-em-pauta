@@ -1,3 +1,4 @@
+import { showNewResults } from './results';
 import { setCharacterPortrait } from './character-art';
 import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
@@ -163,6 +164,7 @@ function showLobby(message: string) {
   game = undefined;
   room = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
+  document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   session.hidden = true;
   landing.hidden = false;
   status.textContent = message;
@@ -222,12 +224,14 @@ async function connect(join: () => Promise<Room>) {
         audio.cue('cash');
         hud.showIncome(income,game?.playerHeadY());
       }
-      previousView = view;
       panel.render(view);
       political.render(view);
       election.render(view);
       hud.render(view);
+      showNewResults(view,previousView);
+      previousView = view;
       game?.setCashDrops(view.drops);
+      game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
@@ -238,7 +242,7 @@ async function connect(join: () => Promise<Room>) {
       phase = view.phase;
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      voiceToggle.title = negotiating ? 'Voz por proximidade' : 'Voz geral da sala';
+      voiceToggle.title = negotiating ? 'Voz por proximidade' : phase==='ballot' ? 'Voz geral no Plenário' : 'Voz geral da sala';
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
@@ -280,6 +284,7 @@ async function connect(join: () => Promise<Room>) {
         return slot;
       }));
     });
+    joined.onReconnect(() => { if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hud.destroy();
       if (room!==joined) return;
