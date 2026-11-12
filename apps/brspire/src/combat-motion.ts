@@ -275,10 +275,16 @@ export function lungeAt(attacker: HTMLElement, defender: HTMLElement, impactTime
   const to = defender.getBoundingClientRect();
   const distance = (to.left + to.width / 2) - (from.left + from.width / 2);
   const advance = Math.sign(distance) * Math.min(Math.abs(distance) * .44, 96);
-  const duration = impactTime + 205;
+  const recoveryTime = 205;
+  const peak = `${advance}px -3px`;
+  const duration = impactTime + recoveryTime;
   attacker.animate([
     { translate: "0 0" },
-    { translate: `${advance}px -3px`, offset: impactTime / duration, easing: "ease-out" },
+    { translate: peak, offset: impactTime / duration, easing: "ease-out" },
     { translate: "0 0" },
   ], { duration, easing: "ease-in-out" });
+  return (updatedSprite: HTMLElement) => updatedSprite.animate(
+    [{ translate: peak }, { translate: "0 0" }],
+    { duration: recoveryTime, easing: "ease-out" },
+  );
 }
