@@ -3,6 +3,7 @@ import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/a
 const files = {
   music:'corredores-de-brasilia.mp3',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
+  summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav',
   foot1:'passo-1.wav', foot2:'passo-2.wav', foot3:'passo-3.wav', foot4:'passo-4.wav',
 } as const;

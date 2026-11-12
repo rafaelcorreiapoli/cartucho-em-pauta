@@ -898,12 +898,31 @@
 #result-content section { margin: .65rem 0; padding: .75rem; border-radius: 8px; background: #142522; }
 #result-content h4:not(:first-child) { margin-top: .6rem; }
 .result-winner { display: flex; align-items: center; gap: .55rem; margin-bottom: .3rem; }
-.result-winner .portrait { flex: none; border-radius: 6px; background-color: #294d3d; }
-.result-winner small, .project-result-tally small { display: block; }
-.result-winner strong { margin-left: auto; }
-.result-winner strong, .project-result-tally strong { font: 900 1.35rem/1 var(--party-display); color: var(--party-gold); }
-.project-result-tally { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; text-align: center; }
-.project-result-tally span { padding: .5rem; border-radius: 6px; background: #1e4037; }
-.project-result-tally span + span { background: #472d2d; }
+.result-winner .portrait { --portrait-size: 54px; flex: none; border-radius: 6px; background-color: #294d3d; }
+.result-winner small { display: block; }
+.result-winner strong { margin-left: auto; font: 900 2rem/1 var(--party-display); color: var(--party-gold); }
+#result-content h4 { display: flex; align-items: center; gap: .4rem; }
+#result-content .project-verdict[data-effect="gain"] { color: var(--party-mint); }
+#result-content .project-verdict[data-effect="loss"] { color: var(--party-coral); }
+.project-result-tally, .project-result-impacts { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.project-result-impacts { margin-top: .65rem; }
+.result-metric {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: .2rem .5rem;
+  padding: .65rem .4rem;
+  border-radius: 8px;
+  background: #193329;
+}
+.project-result-tally .result-metric[data-effect="gain"] { background: #1e4037; }
+.project-result-tally .result-metric[data-effect="loss"] { background: #472d2d; }
+.result-metric .hud-glyph { width: 1.5rem; height: 1.5rem; }
+.result-metric strong { font: 900 2rem/1 var(--party-display); font-variant-numeric: tabular-nums; }
+.project-result-tally strong { font-size: 3rem; }
+.result-metric small { grid-column: 1 / -1; text-align: center; color: var(--hud-paper); }
+.result-metric[data-effect="gain"] { color: var(--party-mint); }
+.result-metric[data-effect="loss"] { color: var(--party-coral); }
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }

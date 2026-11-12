@@ -215,7 +215,7 @@ async function connect(join: () => Promise<Room>) {
     let rosterKey = '';
     let previousView:PlenaryView | undefined;
     joined.onMessage('plenary',(view: PlenaryView) => {
-      if (previousView && view.election?.result && view.election.result.cycle!==previousView.election?.result?.cycle) audio.cue('election');
+      if (view.phase==='negotiation' && view.remaining<=30 && (previousView?.remaining ?? 0)>30) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
       const pastIncome = previousView?.politics?.walletIncome ?? 0;
@@ -228,7 +228,8 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       hud.render(view);
-      showNewResults(view,previousView);
+      const resultSound = showNewResults(view,previousView);
+      if (resultSound) audio.cue(resultSound);
       previousView = view;
       game?.setCashDrops(view.drops);
       game?.setPlenaryView(view);
