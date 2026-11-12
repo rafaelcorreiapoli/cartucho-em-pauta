@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
-import { decorPoint, decorSlots, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
-import { canStand, localPerception, type Player } from '../src/map';
+import { decorPoint, decorSlots, eastAnnex, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
+import { canStand, localPerception, wallBetween, type Player } from '../src/map';
 import { MAX_PLAYERS } from '../src/plenary';
-import { findRoute } from '../src/navigation';
+import { clearSegment, findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
 import { npcs } from '../src/npcs';
 import { terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
@@ -61,6 +61,14 @@ test('every seat has a unique reachable office, independent of office in Congres
   game.leave(owner,world,false);
   expect(game.view(owner,world).ownOffice).toBe(id);
 },15_000);
+
+test('the main corridor keeps its full opening through the east annex',()=>{
+  for (const y of [132,143,154]) {
+    const corridor = {x:930,y}, end = {x:eastAnnex.right-6,y};
+    expect(clearSegment(corridor,end,canStand)).toBe(true);
+    expect(wallBetween(corridor,end)).toBe(false);
+  }
+});
 
 test('cash can only be converted once at the owners safe, with interruption and photo evidence',()=>{
   const {players:[owner,visitor],game,world,credit,events,act,tick} = setup();

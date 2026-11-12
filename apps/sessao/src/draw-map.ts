@@ -36,11 +36,10 @@ export function drawMap(scene: Phaser.Scene) {
   };
 
   fill(0x172722,0,0,960,541);
-  floor([10,108,940,64],0x757f78,23,18);
+  floor([10,108,eastAnnex.right-10,64],0x757f78,23,18);
   floor([10,259,940,11],0x757f78,23,11);
   floor([10,392,940,11],0x757f78,23,11);
-  rug(14,130,932,23);
-  floor([eastAnnex.left,eastAnnex.top,eastAnnex.right-eastAnnex.left,eastAnnex.bottom-eastAnnex.top],0x757f78,23,18);
+  rug(14,130,eastAnnex.right-28,23);
   rooms.forEach(({bounds,color}) => floor(bounds,color,24,8));
   rug(156,16,168,95);
   fill(0x24473e,278,552,404,185);

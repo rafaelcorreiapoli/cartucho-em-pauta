@@ -12,10 +12,10 @@ const locations = [
   {x:341,y:172,inside:1,shared:['east','back']},
   {x:65,y:541,inside:1,shared:[]},
   {x:766,y:541,inside:1,shared:[]},
-  {x:960,y:20,inside:-1,shared:['west','east','back']},
+  {x:960,y:27,inside:-1,shared:['west','east','back']},
 ] as const satisfies readonly {x:number;y:number;inside:1|-1;shared:readonly SharedWall[]}[];
 
-export const eastAnnex = {left:960,right:1089,top:20,bottom:154,opening:[125,154]} as const;
+export const eastAnnex = {left:960,right:1089,top:27,bottom:161,opening:[125,161]} as const;
 
 export const privateOffices = locations.map(({x,y,inside,shared},index)=>{
   const center = x+64.5;
