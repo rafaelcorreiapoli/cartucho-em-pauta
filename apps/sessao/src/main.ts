@@ -181,6 +181,10 @@ async function connect(join: () => Promise<Room>) {
     session.hidden = false;
     setup.hidden = false;
     const roomBar = document.querySelector<HTMLElement>('#room-bar')!;
+    const roomSettings = document.querySelector<HTMLDetailsElement>('#room-settings')!;
+    const roomSettingsContent = document.querySelector<HTMLElement>('#room-settings-content')!;
+    roomSettings.hidden = true;
+    roomSettings.open = false;
     setup.before(roomBar);
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
@@ -222,8 +226,14 @@ async function connect(join: () => Promise<Room>) {
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
-      if (matchRunning) document.querySelector('#profile-dock .module-content')!.append(roomBar);
-      else setup.before(roomBar);
+      if (matchRunning) {
+        if (roomBar.parentElement!==roomSettingsContent) roomSettingsContent.append(roomBar);
+        roomSettings.hidden = false;
+      } else {
+        roomSettings.hidden = true;
+        roomSettings.open = false;
+        setup.before(roomBar);
+      }
       if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {

@@ -1,19 +1,17 @@
 import { offices } from './elections';
-import { NAMES, type Player } from './map';
+import type { Player } from './map';
 import { AGENDA_REWARD, agendas, money } from './politics';
 import type { PlenaryView } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string) {
-  const session = element('session');
   const profile = element<HTMLDetailsElement>('profile-dock');
   profile.querySelector('summary')!.onclick = event => {
     if (event.target instanceof Element && event.target.closest('.profile-help')) event.preventDefault();
   };
   const agendaSummary = element('agenda-dock').querySelector('summary')!;
   const notices = element('hud-notices');
-  const compact = element<HTMLButtonElement>('compact-hud');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('[data-action]')];
@@ -43,14 +41,6 @@ export function createMatchHud(id:string) {
 
   profile.open = false;
   element<HTMLDetailsElement>('agenda-dock').open = false;
-  try { session.classList.toggle('compact-hud',localStorage.getItem('sessao-compact-hud')==='true'); } catch {}
-  compact.setAttribute('aria-pressed',String(session.classList.contains('compact-hud')));
-  compact.onclick = () => {
-    const enabled = session.classList.toggle('compact-hud');
-    compact.setAttribute('aria-pressed',String(enabled));
-    try { localStorage.setItem('sessao-compact-hud',String(enabled)); } catch {}
-  };
-
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
     timers.delete(node);
@@ -99,13 +89,7 @@ export function createMatchHud(id:string) {
         const office = personal?.office;
         const power = office ? offices[office].power : 'Você pode acompanhar a pesquisa como assessor.';
         element('office-power').dataset.help = power;
-        element('mandate-power').textContent = power;
         element('office-salary').textContent = personal ? money(personal.salary) : '—';
-        const result = view.election?.result;
-        const mandateResult = element('mandate-result');
-        mandateResult.hidden = !result?.previous || !office;
-        mandateResult.textContent = result?.previous && office
-          ? `Última eleição: ${offices[result.previous].name} → ${offices[office].name}. Salário recebido: ${money(result.salary)}.` : '';
         const label = element('hud-office');
         label.textContent = office ? offices[office].name : 'Assessor';
         label.dataset.office = office ?? 'advisor';
@@ -120,7 +104,6 @@ export function createMatchHud(id:string) {
         element('agenda-mission').dataset.done = String(politics.goalMet);
         element('mission-progress').textContent = politics.agendaPaid ? 'Prêmio recebido' : politics.goalMet ? 'Meta atingida' : progress;
         element('mission-reward').textContent = `+${money(AGENDA_REWARD)}`;
-        element('profile-agenda').textContent = `Agenda pessoal · ${agendas[politics.agenda]}`;
       }
 
       if (previous) {
@@ -148,7 +131,6 @@ export function createMatchHud(id:string) {
       if (own) {
         element('hud-nick').textContent = own.nick;
         element('hud-portrait').style.setProperty('--portrait-row',String(own.character*3));
-        element('hud-skin').textContent = `Skin · ${NAMES[own.character]}`;
       }
       actions();
     },

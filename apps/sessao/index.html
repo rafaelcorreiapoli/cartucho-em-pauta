@@ -101,6 +101,10 @@
             <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
           </div>
         </details>
+        <details id="room-settings" name="game-panels" hidden>
+          <summary class="hud-option">Sala</summary>
+          <div class="hud-panel sound-settings-content" id="room-settings-content"></div>
+        </details>
         <span id="voice-status" role="status"></span>
       </aside>
       <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
@@ -141,17 +145,12 @@
           <div class="hud-panel module-content">
             <section class="profile-mandate" aria-labelledby="mandate-heading">
               <h2 id="mandate-heading">Seu mandato</h2>
-              <p id="mandate-power"></p>
               <div class="profile-salary">
                 <button class="resource-help profile-help" type="button" aria-label="Como funciona o salário" data-help="O salário é a remuneração por um ciclo completo no cargo. Ele entra na carteira na apuração da eleição e é proporcional ao tempo no cargo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-salary"/></svg></button>
                 <span>Salário do mandato</span><strong id="office-salary"></strong>
               </div>
-              <p id="mandate-result" hidden></p>
             </section>
-            <p id="hud-skin"></p>
             <div class="private-role"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="role"></strong><span id="role-goal"></span></div>
-            <p id="profile-agenda"></p>
-            <button id="compact-hud" class="hud-button hud-button--secondary" type="button" aria-pressed="false">HUD reduzido</button>
           </div>
         </details>
         <details id="legislative-dock" class="hud-module" open>

@@ -191,10 +191,7 @@
 #session[data-phase="lobby"] #voice-dock .voice-settings-content,
 #session[data-phase="lobby"] #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
 #session[data-phase="finished"] :is(#profile-dock,#congress-dock) { display: none; }
-#session[data-phase="finished"] #legislative-dock { top: auto; bottom: calc(var(--hud-edge) + 46px); }
 
-.compact-hud #agenda-dock > summary span:not(.sr-only) { display: none; }
-.compact-hud .profile-summary .portrait { --portrait-size: 32px; }
 
 @media (max-width: 760px) {
   #session { --hud-side: min(47vw, 230px); --hud-top-row: 160px; }
@@ -482,8 +479,7 @@
   background: #182d25;
 }
 .profile-mandate h2 { margin: 0; font-size: .9rem; color: var(--party-gold); }
-.profile-mandate p { line-height: 1.35; }
-.profile-salary { padding-top: .3rem; border-top: 1px solid #a99c7144; }
+.profile-salary { margin-top: .25rem; }
 .profile-salary strong { margin-left: auto; color: var(--party-gold); white-space: nowrap; }
 
 @media (max-width: 380px) {
@@ -492,3 +488,12 @@
   #profile-dock .profile-summary .profile-help { width: 15px; }
   #profile-dock .profile-values { flex-wrap: wrap; row-gap: 0; }
 }
+
+#room-settings > summary { min-height: 38px; font-size: .75rem; list-style: none; }
+#room-settings > summary::-webkit-details-marker { display: none; }
+#room-settings #room-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin: 0;
+}
+#room-settings #room-label { grid-column: 1 / -1; margin-bottom: .2rem; }
