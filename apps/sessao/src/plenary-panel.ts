@@ -40,6 +40,10 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       if (next.phase!==view?.phase) {
         element<HTMLDetailsElement>('project-details').open = next.phase==='ballot' || next.phase==='hearing';
       }
+      const newResult = next.outcome && next.outcome.round!==view?.outcome?.round;
+      const lastVote = element<HTMLDetailsElement>('last-vote');
+      if (newResult) lastVote.open = true;
+      else if (!next.outcome || (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing'))) lastVote.open = false;
       view = next;
       const {phase,remaining,role,players,host,outcome,round} = view;
       const hearing = view.hearing;
@@ -70,10 +74,28 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       stability.dataset.low = String(view.stability<45);
       element('budget').textContent = String(view.budget);
       element<HTMLProgressElement>('budget-meter').value = view.budget;
-      element('last-vote').hidden = !outcome;
-      element('outcome-summary').textContent = outcome ? `${outcome.passed ? 'Aprovado' : 'Rejeitado'} · ${bills[outcome.round].name}` : '';
-      const result = outcome ? `${bills[outcome.round].name}: ${outcome.passed ? 'aprovado' : 'rejeitado'} (${outcome.yes} a favor, ${outcome.no} contra; precisava de ${outcome.needed} a favor).${outcome.deficit ? ` Déficit de ${outcome.deficit}: −${outcome.deficit*2} de estabilidade.` : ''}${outcome.fraud ? ' O painel desse projeto foi fraudado.' : ''}` : '';
-      if (element('outcome').textContent!==result) element('outcome').textContent = result;
+      lastVote.hidden = !outcome;
+      if (outcome && newResult) {
+        const bill = bills[outcome.round].name;
+        const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
+        lastVote.dataset.result = outcome.passed ? 'passed' : 'failed';
+        element('outcome-summary').textContent = verdict;
+        element('outcome-bill').textContent = bill;
+        for (const side of ['yes','no'] as const) {
+          element(`outcome-${side}`).textContent = String(outcome[side]);
+          element(`outcome-mini-${side}`).textContent = String(outcome[side]);
+        }
+        const noVotes = outcome.yes+outcome.no===0;
+        const threshold = outcome.needed===1 ? '1 voto a favor para passar' : `${outcome.needed} votos a favor para passar`;
+        element('outcome-threshold').textContent = noVotes ? `Ninguém votou · ${threshold}` : threshold;
+        const details = [
+          outcome.deficit ? `Déficit: −${outcome.deficit*2} de estabilidade` : '',
+          outcome.fraud ? 'O painel foi fraudado' : '',
+        ].filter(Boolean);
+        element('outcome').textContent = details.join(' · ');
+        element('outcome').hidden = !details.length;
+        element('outcome-announcement').textContent = `${bill}: ${outcome.passed ? 'aprovado' : 'rejeitado'}. ${outcome.yes} a favor, ${outcome.no} contra.`;
+      }
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';

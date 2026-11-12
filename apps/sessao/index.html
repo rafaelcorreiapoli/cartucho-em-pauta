@@ -147,14 +147,10 @@
           </div>
           <p class="hud-feedback" id="bill-objection" hidden></p>
           <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
-          <details id="last-vote" hidden>
-            <summary id="outcome-summary"></summary>
-            <p id="outcome"></p>
-          </details>
           <div id="proposal">
             <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2></div>
             <details id="project-details">
-              <summary>Impacto e andamento <span id="impact-preview"></span></summary>
+              <summary>O que está em jogo <span id="impact-preview"></span></summary>
             <div id="impact" aria-label="Impacto de cada decisão">
               <div class="impact-card">
                 <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
@@ -184,6 +180,28 @@
               </div>
             </div>
           </div>
+          <details id="last-vote" class="vote-result" hidden>
+            <summary>
+              <span class="vote-result-title"><strong id="outcome-summary"></strong><span id="outcome-bill"></span></span>
+              <span class="vote-mini-score" aria-hidden="true"><b id="outcome-mini-yes"></b><span>×</span><b id="outcome-mini-no"></b></span>
+            </summary>
+            <div class="vote-result-body">
+              <div class="vote-scoreboard">
+                <div class="vote-team vote-team-yes">
+                  <span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg> A favor</span>
+                  <strong id="outcome-yes"></strong>
+                </div>
+                <span class="vote-versus" aria-hidden="true">×</span>
+                <div class="vote-team vote-team-no">
+                  <span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg> Contra</span>
+                  <strong id="outcome-no"></strong>
+                </div>
+              </div>
+              <p id="outcome-threshold"></p>
+              <p id="outcome" hidden></p>
+            </div>
+          </details>
+          <div id="outcome-announcement" class="sr-only" role="status"></div>
         </section>
         <section id="congress-dock" class="hud-module" aria-labelledby="congress-heading">
           <h2 id="congress-heading">Parlamento</h2>
