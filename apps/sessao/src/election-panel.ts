@@ -122,7 +122,9 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
           heading.dataset.office = office;
           const list = document.createElement('ol');
           list.dataset.office = office;
-          for (const candidate of election.polls.filter(candidate => candidate.race===office)) {
+          list.setAttribute('role','list');
+          const candidates = election.polls.filter(candidate => candidate.race===office);
+          for (const [index,candidate] of candidates.entries()) {
             const row = document.createElement('li');
             const trend = candidate.trend ? `${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : '';
             const label = document.createElement('div');
@@ -145,6 +147,8 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
             meter.setAttribute('aria-label',`Intenção de voto de ${candidate.name}`);
             const card = document.createElement('div');
             card.className = 'poll-card';
+            const avatar = document.createElement('span');
+            avatar.className = 'poll-avatar';
             const portrait = document.createElement('span');
             portrait.className = 'portrait';
             portrait.setAttribute('aria-hidden','true');
@@ -152,7 +156,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
             const details = document.createElement('div');
             details.className = 'poll-details';
             details.append(label,meter);
-            card.append(portrait,details);
+            const rank = document.createElement('span');
+            rank.className = 'poll-rank';
+            rank.dataset.rank = String(index+1);
+            rank.textContent = `${index+1}º`;
+            avatar.append(portrait,rank);
+            card.append(avatar,details);
             row.append(card);
             if (candidate.supports) {
               const support = document.createElement('small');

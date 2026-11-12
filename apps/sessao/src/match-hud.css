@@ -838,7 +838,27 @@
   #social-docks .social-empty { padding: 1rem .65rem; gap: .45rem; }
 }
 
-.poll-card { display: flex; align-items: center; gap: .55rem; }
+#election-polls ol { list-style: none; padding-left: 0; }
+.poll-card { display: flex; align-items: center; gap: .8rem; }
+.poll-avatar { position: relative; flex: none; display: block; }
+.poll-avatar .portrait { display: block; }
+.poll-rank {
+  position: absolute;
+  top: -.22rem;
+  right: -.3rem;
+  min-width: 1.4rem;
+  padding: .2rem .24rem;
+  border: 1px solid #142522;
+  border-radius: 5px;
+  background: #43554d;
+  color: #fff4df;
+  font: 900 .72rem/1 var(--party-display);
+  text-align: center;
+  box-shadow: 0 2px 4px #0a1a16a0;
+}
+.poll-rank[data-rank="1"] { background: #f2cc74; color: #31270d; }
+.poll-rank[data-rank="2"] { background: #d6e0e4; color: #26343c; }
+.poll-rank[data-rank="3"] { background: #d39566; color: #382416; }
 .poll-card .portrait {
   --portrait-size: 40px;
   flex: none;
