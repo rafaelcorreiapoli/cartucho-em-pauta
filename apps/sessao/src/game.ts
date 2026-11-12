@@ -1,3 +1,5 @@
+import { npcs } from './npcs';
+import { binocularBonus } from './equipment';
 import { objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
@@ -9,9 +11,9 @@ import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, inPlenary, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, inPlenary, localPerception, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -71,6 +73,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private marker!: Phaser.GameObjects.Ellipse;
+    private npcViews:{sprite:Phaser.GameObjects.Sprite;label:Phaser.GameObjects.Text}[] = [];
 
 
     preload() {
@@ -116,6 +119,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
+      this.npcViews = Object.values(npcs).map(npc=>{
+        const {sheet,frame} = characterArt(npc.character);
+        const sprite = this.add.sprite(npc.x,npc.y,sheet.key,frame+npc.direction*4)
+          .setOrigin(.5,1).setScale(.295).setDepth(npc.y).setTint(0xffd7a2);
+        const label = this.add.text(npc.x,npc.y+5,npc.label,{fontFamily:'system-ui',fontSize:'7px',
+          color:'#ffe4a1',backgroundColor:'#142820ee',padding:{x:3,y:1},resolution:3})
+          .setOrigin(.5,0).setDepth(HEIGHT+10);
+        return {sprite,label};
+      });
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
@@ -231,6 +243,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.renderDecorations();
       const now = performance.now();
       const ownPlayer = local.state?.player;
+      const binoculars = plenaryView?.gameplay?.equipped?.some(item=>item.kind==='binoculars');
+      const visionRadius = VISION_RADIUS+(binoculars ? binocularBonus : 0);
+      for (const {sprite,label} of this.npcViews) {
+        const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
+        sprite.setVisible(visible);
+        label.setVisible(visible);
+      }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
       const agenda = plenaryView && bills[plenaryView.round];
@@ -275,7 +294,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {id,character,direction,moving} = player;
         const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
-        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=VISION_RADIUS)) {
+        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=visionRadius)) {
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
@@ -310,9 +329,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
           view.nextStep = time+290;
         } else if (!moving) view.nextStep = 0;
+        if (latest.hit!==undefined && latest.hit!==view.lastHit) view.flashUntil = time+240;
+        view.lastHit = latest.hit;
+        if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
+        else sprite.clearTint();
+        sprite.setRotation(latest.knockedOut ? -Math.PI/2 : 0).setAlpha(latest.knockedOut ? .68 : 1);
         sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
         label.setVisible(true).setPosition(x,y+2).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
-          .setColor('#fff7df');
+          .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed;
         const symbol = exposed && itemSymbols[exposed.kind];
         view.carried.setVisible(!!exposed && !symbol);
@@ -321,7 +345,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (symbol) view.symbol.setText(symbol).setPosition(x,y-42);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,y+12)
-          .setText(title ? offices[title].name : 'Assessor')
+          .setText(latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
@@ -337,7 +361,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (running) {
             const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
             const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
-            const radius = VISION_RADIUS*cssZoom;
+            const radius = visionRadius*cssZoom;
             fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
             fog.style.clipPath = '';
             if (inSession) {

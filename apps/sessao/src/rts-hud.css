@@ -468,3 +468,48 @@
 .equipment-empty .hud-glyph { color: var(--party-gold); }
 
 #world [data-context-hidden="true"] { display: none !important; }
+
+#field-actions {
+  display: flex;
+  gap: .45rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+#field-actions:empty { display: none; }
+.personal-resources .vitality {
+  color: #ffc3a7;
+  gap: .4rem;
+}
+.vitality progress {
+  width: 3.3rem;
+  height: .45rem;
+  accent-color: #e98473;
+}
+#market-dialog {
+  width: min(640px, calc(100vw - 3rem));
+  max-height: calc(100vh - 3rem);
+  padding: 1.25rem;
+  color: #f9e9c8;
+}
+#market-dialog header, .market-line, .market-wallet {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+}
+#market-dialog header { justify-content: space-between; }
+#market-dialog h2, #market-dialog h3, #market-dialog p { margin: 0; }
+#market-body { margin-top: 1.1rem; }
+.market-line .phone-contact-face { flex: 0 0 56px; width: 56px; height: 56px; }
+.market-choices { display: grid; gap: .55rem; margin-top: 1rem; }
+.market-wallet { color: #f6d183; font-weight: 750; }
+.market-products { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin-top: .65rem; }
+.market-products article {
+  display: grid;
+  gap: .45rem;
+  align-content: start;
+  padding: .8rem;
+  background: #142d25;
+  border-radius: .65rem;
+}
+.market-art { font-size: 1.8rem; }
+#market-feedback:not(:empty) { margin-top: .8rem; }

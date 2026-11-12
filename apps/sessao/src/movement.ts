@@ -8,6 +8,12 @@ export type MovementInput = { seq: number; plenary?:boolean; motion?: Motion; de
 export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean };
 
 export function applyInput(state: ControlState, input: MovementInput) {
+  if (state.player.knockedOut) {
+    state.route = [];
+    state.player.moving = false;
+    state.ack = input.seq;
+    return;
+  }
   if (input.destination) state.route = findRoute(state.player,input.destination,state.plenary);
   if (input.motion) {
     state.route = [];

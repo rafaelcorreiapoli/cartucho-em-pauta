@@ -104,6 +104,7 @@
             </button>
             <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
             <div id="station-shortcuts"></div>
+            <div id="field-actions"></div>
             <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
           </div>
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
@@ -116,8 +117,8 @@
         <div id="room-setup">
           <h2 class="hud-title">Sala de articulação</h2>
           <ul id="room-roster" aria-label="Jogadores na sala"></ul>
-          <p>Escolha sua skin</p>
-          <div id="characters" role="group" aria-label="Skin"></div>
+          <p>Escolha seu personagem</p>
+          <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
         <div id="briefing" class="compact-heading"><span>3 projetos · Meta de estabilidade: 45</span><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a sessão" data-help="Negocie, vote e preserve a estabilidade do Congresso. No multiplayer, a infiltração tenta derrubá-la. Você pode iniciar sozinho para testar.">?</button></div>
         <label id="infiltrator-setup" hidden>Infiltrados
@@ -132,6 +133,7 @@
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
           <div class="personal-resources">
+            <span id="vitality" class="vitality" hidden><span aria-hidden="true">♥</span><strong id="vitality-number"></strong><progress id="vitality-meter" aria-label="Pontos de vida"></progress></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
           </div>
@@ -446,6 +448,11 @@
           <label>Apoio público <select id="endorsement"></select></label>
           <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
         </form>
+      </dialog>
+      <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
+        <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <div id="market-body"></div>
+        <p id="market-feedback" role="status"></p>
       </dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
         <header><h2 id="gameplay-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>

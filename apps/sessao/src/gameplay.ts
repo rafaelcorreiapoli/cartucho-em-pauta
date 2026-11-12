@@ -1,3 +1,4 @@
+import type { DialogueView, NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
 import { localPerception, type Motion } from './map';
@@ -14,6 +15,10 @@ export const objects = {
   gift:{exposable:true,name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-documento.webp',description:'Uma reserva que os outros podem ignorar.'},
+  binoculars:{name:'Binóculo',portrait:'retrato-presente.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
+  voiceModulator:{name:'Modulador de voz',portrait:'retrato-presente.webp',description:'Distorce sua voz até a bateria acabar.'},
+  vest:{name:'Colete',portrait:'retrato-presente.webp',description:'Reduz em 35% o dano físico recebido.'},
+  baton:{name:'Porrete',portrait:'retrato-presente.webp',description:'Golpeia um jogador próximo.'},
   pizza:{exposable:true,name:'Pizza parlamentar',portrait:'retrato-presente.webp',description:'Seis fatias para dividir no Cafezinho.',use:'consume'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'|'cash'; amount?:number; destructible?:boolean}>;
 
@@ -46,9 +51,9 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','buy'] as const;
+  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close','shop-buy','equip','unequip','toggle-modulator','attack','aid'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
-export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection};
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
 
 export function isPhoneAction(action:GameplayAction):action is PhoneAction {
@@ -56,7 +61,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 }
 
 const articulationActions = new Set<GameplayActionKind>([
-  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish',
+  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','equip','unequip','toggle-modulator','attack','aid',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
@@ -64,11 +69,14 @@ export function canUseGameplayAction(action:GameplayAction, articulating:boolean
 }
 export type GameplayView = {
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
+  npcNearby?:NpcId[]; dialogue?:DialogueView;
+  vitality?:{hp:number; max:number; recovery:number};
+  modulator?:{active:boolean; battery:number; recharge:number};
   exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {
-  type:'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice';
-  actor:string; target?:string; item?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; photo?:Photo; place?:string; replaced?:boolean;
+  type:'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided';
+  actor:string; target?:string; item?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; damage?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 
 export function readGameplayAction(raw:unknown):GameplayAction | undefined {
@@ -80,6 +88,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
     item:'item' in raw && typeof raw.item==='number' && Number.isSafeInteger(raw.item) ? raw.item : undefined,
     target:'target' in raw && typeof raw.target==='string' ? raw.target : undefined,
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,
+    token:'token' in raw && typeof raw.token==='number' && Number.isSafeInteger(raw.token) ? raw.token : undefined,
     direction:'direction' in raw ? snakeDirections.find(direction=>direction===raw.direction) : undefined,
   };
 }

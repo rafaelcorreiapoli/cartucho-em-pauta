@@ -38,6 +38,8 @@ export class PoliticalEconomy {
     }
   }
 
+  wallet(id:string) { return this.accounts.get(id)?.wallet ?? 0; }
+
   popularity(id:string) { return this.accounts.get(id)?.popularity ?? 0; }
 
   changePopularity(id:string, amount:number) {

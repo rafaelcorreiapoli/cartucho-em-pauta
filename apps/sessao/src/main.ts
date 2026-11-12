@@ -1,3 +1,5 @@
+import { characterStats } from './character-stats';
+import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { showNewResults } from './results';
@@ -63,6 +65,8 @@ const buttons = NAMES.map((name,index) => {
   setCharacterPortrait(portrait,index);
   portrait.setAttribute('aria-hidden','true');
   button.append(portrait,name);
+  const stats = characterStats[index];
+  button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
   button.setAttribute('aria-pressed','false');
   button.onclick = () => {
     room?.send('character',index);
@@ -75,6 +79,13 @@ const voiceLabel = voiceToggle.querySelector('span')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 let voice: RoomVoice | undefined;
+let disguiseActive = false;
+
+function applyVoiceEquipment(current:RoomVoice|undefined) {
+  void current?.setDisguise(disguiseActive ? {pitch:-6,style:'radio'} : undefined)?.catch(()=>{
+    if (current===voice) voiceStatus.textContent = 'Não foi possível ativar o modulador.';
+  });
+}
 let matchRunning = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
@@ -109,6 +120,7 @@ voiceToggle.onclick = async () => {
     voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
     voiceStatus.textContent = '';
     voiceLeave.hidden = false;
+    applyVoiceEquipment(current);
   } catch (error) {
     if (current !== voice) return;
     voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
@@ -128,6 +140,7 @@ function showLobby(message: string) {
   audio.leave();
   voice?.stop(false);
   voice = undefined;
+  disguiseActive = false;
   matchRunning = false;
   resetVoiceButtons();
   game?.destroy();
@@ -176,6 +189,7 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
+    const market = createMarketPanel(action=>joined.send('gameplay',action));
     const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
@@ -184,7 +198,11 @@ async function connect(join: () => Promise<Room>) {
     },activity => joined.send('room-activity',activity),drop => {
       joined.send('gameplay',{kind:'use',item:drop});
       map.focus({preventScroll:true});
-    },gameplay.nearby);
+    },gameplay.nearby,action=>{
+      audio.stationClick();
+      joined.send('gameplay',action);
+      map.focus({preventScroll:true});
+    });
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       if (gameplay.photoState(photos)) audio.shutter();
     });
@@ -192,7 +210,9 @@ async function connect(join: () => Promise<Room>) {
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
     });
-    joined.onMessage('gameplay-feedback',(message:string)=>gameplay.feedback(message));
+    joined.onMessage('gameplay-feedback',(message:string)=>{
+      if (!market.feedback(message)) gameplay.feedback(message);
+    });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -216,6 +236,12 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       gameplay.render(view);
+      market.render(view);
+      const disguise = view.gameplay?.modulator?.active ?? false;
+      if (disguiseActive!==disguise) {
+        disguiseActive = disguise;
+        applyVoiceEquipment(voice);
+      }
       hud.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = showNewResults(view,previousView);
@@ -277,6 +303,7 @@ async function connect(join: () => Promise<Room>) {
       panel.destroy();
       hud.destroy();
       gameplay.destroy();
+      market.destroy();
       if (room!==joined) return;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');

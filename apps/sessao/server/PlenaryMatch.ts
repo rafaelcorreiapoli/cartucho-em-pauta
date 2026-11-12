@@ -145,7 +145,7 @@ export class PlenaryMatch {
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
     return {
       players:players.filter(player => this.electorate.has(player.id)),now,
-      started:this.started,spend:(id,amount)=>this.economy.spend(id,amount),
+      started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
       office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };

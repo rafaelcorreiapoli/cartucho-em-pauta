@@ -1,3 +1,4 @@
+import { isGear } from './equipment';
 import { createPhoneSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
@@ -147,6 +148,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   function render() {
     const view = previous;
     const state = view?.gameplay;
+    if (dialog.open && state?.vitality?.recovery) dialog.close();
     if (!dialog.open || !state || !view) return;
     const phone = !selection && decorationId===undefined && !equipmentOpen;
     const selected = selection;
@@ -168,7 +170,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = equipmentOpen ? state.equipped : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
+    const visible = equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
@@ -188,6 +190,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         for (const gear of equipped) {
           const row = node('li');
           row.append(itemArt(gear.kind),node('strong',itemName(gear)));
+          if (phase==='negotiation' && !state.vitality?.recovery) {
+            row.append(button('Desequipar',()=>send({kind:'unequip',item:gear.id})));
+            if (gear.kind==='voiceModulator' && state.modulator) {
+              const {active,battery,recharge} = state.modulator;
+              const toggle = button(active ? `Desligar · ${battery}s` : recharge ? `Recarga · ${recharge}s` : 'Ligar modulador',
+                ()=>send({kind:'toggle-modulator'}));
+              toggle.disabled = recharge>0;
+              row.append(toggle);
+            }
+          }
           list.append(row);
         }
         cards.push(list);
@@ -204,6 +216,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         card.append(button(label,() => send({kind,item:item.id,target:target.value,place})));
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
+        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         if ('use' in definition) act(definition.use==='cash' ? 'Embolsar' : item.kind==='pizza' ? 'Comer pizza' : 'Tomar café','use');
         if ('exposable' in definition) {
           const exposed = state.exposed===item.id;

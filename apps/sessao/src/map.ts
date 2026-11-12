@@ -1,3 +1,5 @@
+import { npcs } from './npcs';
+
 export const WIDTH = 960;
 export const HEIGHT = 759;
 export const SPEED = 88;
@@ -55,12 +57,13 @@ export const furnishings = [
 ] satisfies {frame:number; area:Rect; footprint:number}[];
 const obstacles = [
   ...walls,
+  ...Object.values(npcs).map(({x,y}):Rect => [x-5,y-5,10,5]),
   ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
   ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
@@ -84,8 +87,8 @@ export function move(player: Player, input: Motion, seconds: number, stand = can
     player.moving = false;
     return;
   }
-  const dx = input.x / Math.max(1,length) * SPEED * seconds;
-  const dy = input.y / Math.max(1,length) * SPEED * seconds;
+  const dx = input.x / Math.max(1,length) * (player.speed ?? SPEED) * seconds;
+  const dy = input.y / Math.max(1,length) * (player.speed ?? SPEED) * seconds;
   const {x,y} = player;
   if (stand(x+dx,y)) player.x += dx;
   if (stand(player.x,y+dy)) player.y += dy;
@@ -96,26 +99,28 @@ export function move(player: Player, input: Motion, seconds: number, stand = can
 export const VISION_RADIUS = 86;
 const HEARING_RADIUS = 114;
 
-function wallBetween(a: Motion, b: Motion) {
-  return walls.some(([x,y,w,h]) => {
-    const interval = (start:number, end:number, min:number, max:number) => {
-      if (start===end) return start>=min && start<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
-      const first = (min-start)/(end-start), last = (max-start)/(end-start);
-      return [Math.min(first,last),Math.max(first,last)];
-    };
-    const [x0,x1] = interval(a.x,b.x,x,x+w);
-    const [y0,y1] = interval(a.y,b.y,y,y+h);
-    return Math.max(0,x0,y0)<=Math.min(1,x1,y1);
-  });
+function segmentIntersects(a:Motion, b:Motion, [x,y,w,h]:Rect) {
+  const interval = (start:number, end:number, min:number, max:number) => {
+    if (start===end) return start>=min && start<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
+    const first = (min-start)/(end-start), last = (max-start)/(end-start);
+    return [Math.min(first,last),Math.max(first,last)];
+  };
+  const [x0,x1] = interval(a.x,b.x,x,x+w);
+  const [y0,y1] = interval(a.y,b.y,y,y+h);
+  return Math.max(0,x0,y0)<=Math.min(1,x1,y1);
 }
 
-export function localPerception(a: Motion, b: Motion) {
+export function obstacleBetween(a:Motion, b:Motion) {
+  return obstacles.some(rect=>segmentIntersects(a,b,rect));
+}
+
+export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
   const distance = Math.hypot(a.x-b.x,a.y-b.y);
-  if (distance>=HEARING_RADIUS) return {visible:false,volume:0};
-  const wall = wallBetween(a,b);
+  if (distance>=Math.max(vision,HEARING_RADIUS)) return {visible:false,volume:0};
+  const wall = walls.some(rect=>segmentIntersects(a,b,rect));
   return {
-    visible:distance<VISION_RADIUS && !wall,
-    volume:Math.round(20 * Math.min(1,(HEARING_RADIUS-distance)/85) * (wall ? .2 : 1))/20,
+    visible:distance<vision && !wall,
+    volume:Math.round(20 * Math.max(0,Math.min(1,(HEARING_RADIUS-distance)/85)) * (wall ? .2 : 1))/20,
   };
 }
 

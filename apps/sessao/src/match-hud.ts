@@ -1,8 +1,10 @@
+import { npcs } from './npcs';
+import { button as hudButton, glyph as hudGlyph } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, type GroundItem } from './gameplay';
+import { canReachObject, cashAmount, type GameplayAction, type GroundItem } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
-import type { Motion, Player } from './map';
+import { obstacleBetween, type Motion, type Player } from './map';
 import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
@@ -10,7 +12,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:GameplayAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
@@ -90,7 +92,38 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     button.onclick = () => sendActivity(station);
     return {button,station};
   });
+  const fieldActions = element('field-actions');
+  const vitality = element('vitality');
+  const vitalityNumber = element('vitality-number');
+  const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
+  let fieldKey = '';
+  let roster:Player[] = [];
   let own:Player | undefined;
+  function renderField(view:PlenaryView|undefined, player:Player|undefined) {
+    const actions:{label:string; icon:string; action:GameplayAction}[] = [];
+    if (view?.gameplay && player) {
+      for (const target of view.gameplay.npcNearby ?? []) {
+        actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
+      }
+      const armed = view.gameplay.equipped?.some(item=>item.kind==='baton');
+      for (const target of roster) {
+        if (target.id===id || !canReachObject(player,target) || obstacleBetween(player,target)) continue;
+        if (target.knockedOut && Math.hypot(player.x-target.x,player.y-target.y)<=20) {
+          actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
+        } else if (armed && !target.knockedOut) {
+          actions.push({label:`Golpear ${target.nick}`,icon:'alert',action:{kind:'attack',target:target.id}});
+        }
+      }
+    }
+    const key = JSON.stringify(actions);
+    if (key===fieldKey) return;
+    fieldKey = key;
+    fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
+      const control = hudButton(label,()=>sendField(action));
+      control.prepend(hudGlyph(icon));
+      return control;
+    }));
+  }
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const unavailable = '[hidden], [data-context-hidden="true"]';
@@ -195,8 +228,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
 
   function actions(view:PlenaryView | undefined = previous) {
-    const exploring = view?.phase==='negotiation';
     const player = own;
+    const exploring = view?.phase==='negotiation' && !player?.knockedOut;
+    renderField(exploring ? view : undefined,player);
     let context:Station | undefined;
     let best = STATION_RADIUS;
     if (exploring && player) {
@@ -226,7 +260,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
-    stations.hidden = !exploring || (nearbyToggle.hidden && pocket.hidden && !hasAction && !hint);
+    stations.hidden = !exploring || (nearbyToggle.hidden && pocket.hidden && !hasAction && !hint && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 
@@ -308,10 +342,18 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           notify(title,completed.map(missionTitle).join(' · '));
         }
       }
+      const hp = view.gameplay?.vitality;
+      vitality.hidden = !hp;
+      if (hp) {
+        vitalityMeter.max = hp.max;
+        vitalityMeter.value = hp.hp;
+        vitalityNumber.textContent = hp.recovery ? `Nocaute · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
+      }
       previous = view;
       actions(view);
     },
     players(players:Player[]) {
+      roster = players;
       own = players.find(player => player.id===id);
       if (own) {
         element('hud-nick').textContent = own.nick;
@@ -336,6 +378,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       stations.hidden = pocket.hidden = true;
       pocket.onclick = null;
       shortcuts.replaceChildren();
+      fieldActions.replaceChildren();
+      vitality.hidden = true;
     },
   };
 }

@@ -51,7 +51,7 @@ estabilidade continuam sendo processadas pelo servidor.
 Uma queda de conexão reserva o lugar por 30 segundos. A reconexão automática
 do Colyseus restaura o mesmo participante, seu voto e sua posição atual. A entrada
 de novos participantes durante a partida segue o bloqueio existente da sala.
-Atordoamento e escutas ainda não fazem parte do jogo.
+Um personagem nocauteado recupera parte dos PV antes da votação obrigatória.
 
 Se a apuração eleitoral vencer durante a votação legislativa, ela aguarda a saída
 do Plenário. Seu modal mostra os eleitos e as porcentagens calculadas a partir da
@@ -79,9 +79,15 @@ a única votação de cassação da sessão. A voz é geral durante a reunião.
 Cassar um parlamentar custa 12 de estabilidade. A pessoa cassada fica como
 assessora: conversa, negocia e investiga, mas perde voto, verba e sabotagem.
 
+## Mercado e equipamentos
+
+No Apoio Técnico, aproxime-se do **Seu Balcão** e use o atalho indicado para conversar. Abra o catálogo, compre um equipamento e selecione-o no inventário para equipar. O botão **Equipamentos** permite desequipar e controlar o modulador. O binóculo amplia a visão, o colete reduz o dano, e o porrete oferece uma ação contextual quando outro jogador está ao alcance.
+
+Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica temporariamente nocauteado. Ele recupera parte dos PV em oito segundos ou pode ser socorrido por alguém próximo. Durante a recuperação há proteção temporária contra novos golpes.
+
 ## Voz da sala
 
-Depois de entrar numa sala, clique em **Ativar voz** e permita o microfone. Todos que ativarem a voz na mesma sala podem conversar. Para experimentar o efeito ao vivo, marque **Ativar disfarce** e ajuste o tom e o timbre. O navegador transforma o áudio enviado aos outros jogadores. Use **Silenciar microfone** para continuar ouvindo ou **Sair da voz** para desligar o microfone e o áudio da sala. A lista de falantes e o nome verde no mapa reagem ao áudio.
+Depois de entrar numa sala, clique em **Ativar voz** e permita o microfone. Todos que ativarem a voz na mesma sala podem conversar. Para disfarçar a voz em partida, equipe o modulador comprado no mercado e ligue-o no painel de equipamentos. O navegador transforma o áudio enviado aos outros jogadores enquanto a bateria durar. Use **Silenciar microfone** para continuar ouvindo ou **Sair da voz** para desligar o microfone e o áudio da sala. A lista de falantes e o nome verde no mapa reagem ao áudio.
 
 Para testar em duas abas no mesmo computador, use localhost e fones de ouvido. Para amigos em outros dispositivos, sirva o cliente por HTTPS e configure `VITE_GAME_SERVER` com o endereço seguro do servidor. A voz usa WebRTC e STUN por padrão. Se a rede bloquear a ligação direta, configure `VITE_VOICE_ICE_SERVERS` com a lista JSON de servidores ICE do seu provedor TURN. Variáveis `VITE_*` são visíveis ao cliente. Use credenciais de teste com validade curta.
 

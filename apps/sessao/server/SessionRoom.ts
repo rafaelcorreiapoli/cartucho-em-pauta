@@ -1,3 +1,4 @@
+import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
 import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
@@ -29,7 +30,7 @@ export class SessionRoom extends Room {
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
         const pickup = event.type==='collected' || event.type==='recovered';
-        const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : undefined;
+        const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
       },
     };
@@ -44,7 +45,9 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
-    this.gameplay.reset(now);
+    const players = [...this.players.values()].map(state=>state.player);
+    this.gameplay.reset(now,Math.random,players);
+    for (const player of players) player.speed = undefined;
     void this.unlock();
   }
 
@@ -67,22 +70,24 @@ export class SessionRoom extends Room {
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
     this.onMessage('start-match', (client, count:unknown) => {
-      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
-        this.gameplay.reset(this.clock.currentTime);
+      const players = [...this.players.values()].map(state=>state.player);
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
+        this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        for (const player of players) player.speed = characterStats[player.character].speed;
         this.matchObjectsActive = true;
         void this.lock();
       }
     });
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
-      if (player && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
+      if (player && !player.knockedOut && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
         const result = this.match.act(player,action,this.clock.currentTime);
         if (result) client.send('audit-result',result);
       }
     });
     this.onMessage('room-activity', (client, activity:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
+      if (!player || player.knockedOut || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
     });
@@ -97,7 +102,7 @@ export class SessionRoom extends Room {
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player) return;
+      if (!action || !player || player.knockedOut) return;
       const now = this.clock.currentTime;
       this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
       this.resetFinishedMatch(now);
@@ -105,7 +110,7 @@ export class SessionRoom extends Room {
     this.onMessage('election', (client, raw:unknown) => {
       const action = readElectionAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (action && player) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      if (action && player && !player.knockedOut) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
     });
     this.onMessage('bill-vote', (client, vote:unknown) => {
       if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
@@ -128,7 +133,10 @@ export class SessionRoom extends Room {
       for (const [id,state] of this.players) {
         const input = this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);
-        else state.player.moving = false;
+        else {
+          state.player.moving = false;
+          if (state.player.knockedOut) state.route = [];
+        }
       }
       const players = [...this.players.values()].map(state => state.player);
       const now = this.clock.currentTime;
@@ -171,7 +179,7 @@ export class SessionRoom extends Room {
           this.lastMatchView.set(id,key);
         }
         if (this.match.running) {
-          const nearby = players.map(player => ({player,...localPerception(state.player,player)}));
+          const nearby = players.map(player => ({player,...localPerception(state.player,player,this.gameplay.vision(id))}));
           client.send('players',plenary ? players.filter(inPlenary) : nearby.filter(entry => entry.visible).map(entry => entry.player));
           if (view.phase==='negotiation' && this.voice.has(id)) client.send('voice-range',nearby
             .map(entry => entry.player.id===speaker || entry.player.id===this.gameplay.callPeer(id) ? {...entry,volume:1} : entry)

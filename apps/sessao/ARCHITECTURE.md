@@ -13,6 +13,8 @@ O Vite carrega `src/main.ts`, que cria o jogo Phaser, os painéis HTML e a conex
 | Missões ativas, concluídas, contadores e prêmios | `PersonalAgenda` pertence a cada conta. Lê saldo e popularidade da economia e devolve o prêmio na liquidação. |
 | Custódia de itens e documentos, instalações e pedidos de transferência | `Gameplay` guarda o local de cada item, revalida o alcance e muda a custódia uma vez. Dinheiro gerado pelo mapa e largado por jogadores usa a mesma representação. |
 | Fotos, cópias, apresentações e publicação | `PhotoAlbum` controla o acesso e usa `InformationRequests` para os pedidos. A cena da foto é capturada a partir da percepção do servidor. |
+| NPCs, diálogo e compras | `npcs.ts` define o vendedor estático. `NpcDialogues` mantém sessões privadas e valida escolhas e tokens de compra. `Gameplay` valida a compra e usa a economia e a custódia já existentes. |
+| Equipamentos e combate | `Gameplay` mantém a custódia de inventário e equipamento no mesmo registro. `VoiceEquipment` controla bateria e recarga. `Combat` controla dano, proteção, nocaute e recuperação. `character-stats.ts` define os atributos base e `SessionRoom` aplica a velocidade no início da partida. |
 | Chamadas e Snake | `PhoneSession` controla convites, conexões e tabuleiros. `snake.ts` contém as regras do tabuleiro. A sala controla sinalização, presença e alcance de voz. `voice.ts` opera o WebRTC no cliente. |
 | Câmera, sprites e HUD | `game.ts` renderiza o mapa e usa `network-movement.ts` para predição e reconciliação. Os painéis traduzem ações em comandos e desenham o estado recebido. `phone-photos.ts` controla a seleção no álbum e a prévia da câmera. |
 
@@ -30,7 +32,7 @@ Chamadas e Snake encerram ao sair da articulação ou ao perder a conexão. Uma 
 - **Missão.** Defina o rótulo e o prêmio em `src/politics.ts`. Use `PersonalAgenda` para o progresso e o baralho, ou `photo-missions.ts` para fatos observáveis em fotos. Reaproveite eventos existentes quando registrarem o fato necessário.
 - **Evento.** Declare o fato em `GameplayEvent` e publique após a mutação bem-sucedida. Derive qualquer resposta ao cliente na projeção do destinatário.
 - **Política.** Coloque regras de fase e voto em `PlenaryMatch`, regras de candidatura ou cargo em `ElectionCycle` e débitos, créditos e provas em `PoliticalEconomy`.
-- **NPC.** Hoje os pontos fixos de interação estão em `room-activities.ts` e `plenary.ts`. Um NPC interativo pode começar com os mesmos comandos contextuais e a validação espacial no servidor. Ainda não há estado de NPC em execução.
+- **NPC.** Adicione a entidade estática e os nós de diálogo em `npcs.ts`. O HUD oferece a interação próxima, e `NpcDialogues` revalida alcance, sessão e condições das escolhas.
 
 `bun run --cwd apps/sessao check` roda TypeScript, Bun Test e o build do Vite. Os testes da sala usam clientes Colyseus reais contra um processo Bun local. Os testes de domínio controlam tempo, aleatoriedade e posição para verificar transições e reenvios.
 
