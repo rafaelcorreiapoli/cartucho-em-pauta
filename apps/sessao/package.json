@@ -12,6 +12,7 @@
     "@colyseus/bun-websockets": "0.18.4",
     "@colyseus/sdk": "0.18.9",
     "colyseus": "0.18.11",
+    "easystarjs": "^0.4.4",
     "phaser": "4.2.1"
   },
   "devDependencies": {

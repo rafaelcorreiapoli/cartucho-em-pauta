@@ -33,7 +33,7 @@ export type Player = { id: string; character: number; x: number; y: number; dire
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
-function canStand(x: number, y: number) {
+export function canStand(x: number, y: number) {
   return obstacles.every(([left, top, width, height]) =>
     x + 6 <= left || x - 6 >= left + width || y <= top || y - 7 >= top + height);
 }

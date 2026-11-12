@@ -50,7 +50,8 @@ async function connect(join: () => Promise<Room>) {
     lobby.hidden = true;
     session.hidden = false;
     status.textContent = `Sala ${joined.roomId}`;
-    game = createGame(map,joined.sessionId,motion => joined.send('move',motion));
+    game = createGame(map,joined.sessionId,motion => joined.send('move',motion),
+      point => joined.send('destination',point));
     joined.onMessage('players',(players: Player[]) => {
       game?.update(players);
       const self = players.find(player => player.id===joined.sessionId);

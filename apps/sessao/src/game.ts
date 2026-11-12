@@ -8,21 +8,19 @@ const directions = new Map(Object.entries({
   arrowup:[0,-1], w:[0,-1], arrowdown:[0,1], s:[0,1],
 }));
 
-export function createGame(parent: HTMLElement, ownId: string, send: (motion: Motion) => void) {
+export function createGame(parent: HTMLElement, ownId: string, send: (motion: Motion) => void, goTo: (point:Motion) => void) {
   let players: Player[] = [];
-  let target: Motion | undefined;
+  let manual = false;
   const keys = new Set<string>();
   const listeners = new AbortController();
   const options = { signal: listeners.signal };
   const stop = () => {
     keys.clear();
-    target = undefined;
   };
   parent.addEventListener('keydown', event => {
     const key = event.key.toLowerCase();
     if (!directions.has(key)) return;
     event.preventDefault();
-    target = undefined;
     keys.add(key);
   }, options);
   parent.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), options);
@@ -51,7 +49,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
-        target = {x:pointer.worldX,y:pointer.worldY};
+        keys.clear();
+        manual = false;
+        goTo({x:pointer.worldX,y:pointer.worldY});
       });
     }
     update(time: number, delta: number) {
@@ -64,17 +64,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
           motion.x += x;
           motion.y += y;
         }
-        if (target) {
-          const dx = target.x-own.x;
-          const dy = target.y-own.y;
-          const distance = Math.hypot(dx,dy);
-          if (distance<4) target = undefined;
-          else {
-            motion.x = dx/distance;
-            motion.y = dy/distance;
-          }
-        }
-        send(motion);
+        if (keys.size || manual) send(motion);
+        manual = keys.size>0;
       }
 
       for (const [id,view] of this.views) {

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
-import type { Player } from '../src/map';
+import { canStand, type Player } from '../src/map';
 
 test('two clients share movement, collision and character changes in a room', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
@@ -22,11 +22,16 @@ test('two clients share movement, collision and character changes in a room', as
     const second = await new Client(endpoint).joinById(first.roomId);
     rooms.push(second);
     let seen: Player[] = [];
-    second.onMessage('players',(players: Player[]) => { seen = players; });
+    const observed: Player[] = [];
+    second.onMessage('players',(players: Player[]) => {
+      seen = players;
+      const player = players.find(player => player.id===first.sessionId);
+      if (player) observed.push(player);
+    });
     first.onMessage('players',() => {});
     const findFirst = () => seen.find(player => player.id===first.sessionId);
     const until = async (ready: () => boolean) => {
-      for (let attempt=0;attempt<30;attempt++) {
+      for (let attempt=0;attempt<85;attempt++) {
         if (ready()) return;
         await Bun.sleep(35);
       }
@@ -45,6 +50,10 @@ test('two clients share movement, collision and character changes in a room', as
     expect(end.y).toBeLessThan(start.y);
     expect(end.y).toBeGreaterThanOrEqual(132);
     expect(end.x).toBe(start.x);
+    first.send('destination',{x:240,y:70});
+    await until(() => Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1);
+    expect(observed.some(player => player.x>=223 && player.x<=257 && player.y<132 && player.y>114)).toBe(true);
+    expect(observed.every(player => canStand(player.x,player.y))).toBe(true);
     await first.leave();
     await until(() => seen.length===1 && seen[0].id===second.sessionId);
   } finally {
