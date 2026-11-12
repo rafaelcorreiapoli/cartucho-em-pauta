@@ -7,6 +7,8 @@ export const PAYMENTS_PER_ROUND = 6;
 export const splits = [0,1,2,3] as const;
 export type Split = typeof splits[number];
 
+export const AGENDA_REWARD = 2;
+
 export const agendas = {
   fortuna: 'Termine com R$ 120 mil na carteira',
   campanha: 'Termine com 65 de popularidade',
@@ -21,7 +23,7 @@ export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; a
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
 export type PoliticsView = {
-  wallet:number; popularity:number; agenda:Agenda; agendaProgress:{current:number; target:number}; goalMet:boolean; grantUsed:boolean;
+  wallet:number; popularity:number; agenda:Agenda; agendaProgress:{current:number; target:number}; goalMet:boolean; agendaPaid:boolean; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(Contact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;

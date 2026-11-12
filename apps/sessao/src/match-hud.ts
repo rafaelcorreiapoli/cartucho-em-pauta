@@ -1,6 +1,6 @@
 import { offices } from './elections';
 import { NAMES, type Player } from './map';
-import { agendas, money } from './politics';
+import { AGENDA_REWARD, agendas, money } from './politics';
 import type { PlenaryView } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -104,6 +104,9 @@ export function createMatchHud(id:string) {
         element('agenda-progress').textContent = status;
         agendaSummary.setAttribute('aria-label',`Agenda pessoal · ${status}`);
         element('agenda').textContent = agendas[politics.agenda];
+        element('agenda-mission').dataset.done = String(politics.goalMet);
+        element('mission-progress').textContent = politics.agendaPaid ? 'Prêmio recebido' : politics.goalMet ? 'Meta atingida' : progress;
+        element('mission-reward').textContent = `+${money(AGENDA_REWARD)}`;
         element('profile-agenda').textContent = `Agenda pessoal · ${agendas[politics.agenda]}`;
       }
 

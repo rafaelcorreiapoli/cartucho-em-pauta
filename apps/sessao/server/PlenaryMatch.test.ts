@@ -1,3 +1,4 @@
+import { PoliticalEconomy } from './PoliticalEconomy';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
@@ -155,4 +156,16 @@ test('only a full room may choose two infiltrators', () => {
   const short = new PlenaryMatch();
   short.start(host.id,people,0,() => .9,2);
   expect(ids.filter(id => short.view(id,ids,0).role==='Infiltrado')).toHaveLength(1);
+});
+
+test('completed personal missions pay only once at settlement', () => {
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'A'},{id:'b',name:'B'}],() => 0);
+  economy.paySalary('a',4);
+  const view = (id:string) => economy.view(id,[],1,false,() => true);
+  expect(view('a')).toMatchObject({wallet:12,goalMet:true,agendaPaid:false});
+  economy.settleAgendas(['a','b']);
+  economy.settleAgendas(['a','b']);
+  expect(view('a')).toMatchObject({wallet:14,goalMet:true,agendaPaid:true});
+  expect(view('b')).toMatchObject({wallet:8,goalMet:false,agendaPaid:false});
 });

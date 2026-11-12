@@ -1,9 +1,9 @@
-import { agendas, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact,
+import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact,
   type Evidence, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
 
 type Account = {
-  wallet:number; popularity:number; agenda:Agenda; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
+  wallet:number; popularity:number; agenda:Agenda; agendaPaid:boolean; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
   payers:Set<string>; passed:number; rejected:number; exposed:number; known:Set<number>; suspended:boolean;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
@@ -26,7 +26,7 @@ export class PoliticalEconomy {
     const deck = Object.keys(agendas) as Agenda[];
     for (const contact of contacts) {
       const [agenda] = deck.splice(Math.floor(random()*deck.length),1);
-      this.accounts.set(contact.id,{wallet:8,popularity:40,agenda,grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
+      this.accounts.set(contact.id,{wallet:8,popularity:40,agenda,agendaPaid:false,grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
         payers:new Set(),passed:0,rejected:0,exposed:0,known:new Set(),suspended:false});
     }
   }
@@ -188,16 +188,31 @@ export class PoliticalEconomy {
     }
   }
 
+  private agendaProgress(account:Account) {
+    return {
+      fortuna:[account.wallet,12], campanha:[account.popularity,65], articulacao:[account.payers.size,2],
+      projetos:[account.passed,2], oposicao:[account.rejected,2], escandalo:[account.exposed,1],
+    }[account.agenda];
+  }
+
+  settleAgendas(players:Iterable<string>) {
+    for (const id of players) {
+      const account = this.accounts.get(id);
+      if (!account || account.agendaPaid) continue;
+      const [current,target] = this.agendaProgress(account);
+      if (current<target) continue;
+      account.agendaPaid = true;
+      account.wallet += AGENDA_REWARD;
+    }
+  }
+
   view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
     const {wallet,popularity,agenda,grantUsed,suspended} = account;
-    const [current,target] = {
-      fortuna:[wallet,12], campanha:[popularity,65], articulacao:[account.payers.size,2],
-      projetos:[account.passed,2], oposicao:[account.rejected,2], escandalo:[account.exposed,1],
-    }[agenda];
+    const [current,target] = this.agendaProgress(account);
     return {
-      wallet,popularity,agenda,agendaProgress:{current,target},goalMet:current>=target,grantUsed,suspended,campaigned:account.campaignRound===round,
+      wallet,popularity,agenda,agendaProgress:{current,target},goalMet:current>=target,agendaPaid:account.agendaPaid,grantUsed,suspended,campaigned:account.campaignRound===round,
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
       directory:[...this.contacts.values()].map(contact => ({

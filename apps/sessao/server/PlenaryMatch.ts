@@ -263,6 +263,7 @@ export class PlenaryMatch {
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
   private finish(winner:Role | undefined, reason:string) {
+    this.economy.settleAgendas(this.electorate);
     this.phase = 'finished';
     this.winner = winner;
     this.reason = reason;
