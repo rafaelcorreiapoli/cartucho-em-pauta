@@ -1,3 +1,4 @@
+import type { GameplayWorld } from './Gameplay';
 import { offices, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
@@ -140,6 +141,23 @@ export class PlenaryMatch {
       case 'gallery': return {activity,text:`Sua popularidade com o público está em ${this.popularity(id)} de 100.`};
       default: return {activity};
     }
+  }
+
+  gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
+    return {
+      players:players.filter(player => this.electorate.has(player.id)),now,
+      cashVisible:player=>this.cashDrops.visibleTo(player,now).map(drop=>drop.kind),
+      office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
+      publish:event=>this.economy.recordGameplay(event),
+    };
+  }
+
+  canHandleObjects(id:string, now:number) {
+    return this.electorate.has(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+  }
+
+  takeCash(player:Player, drop:number, now:number) {
+    if (this.phase==='negotiation' && this.canHandleObjects(player.id,now)) return this.cashDrops.take(drop,player,now)?.kind;
   }
 
   pocketCash(player:Player, drop:number, now:number) {

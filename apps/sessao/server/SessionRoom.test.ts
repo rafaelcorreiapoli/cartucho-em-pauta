@@ -101,6 +101,17 @@ test('clients share movement and voice, then receive private roles and payments'
     expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
     await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
+    first.onMessage('gameplay-feedback',() => {});
+    second.onMessage('gameplay-feedback',() => {});
+    first.send('gameplay',{kind:'call',target:second.sessionId});
+    await until(() => secondView?.gameplay?.call?.state==='incoming');
+    second.send('gameplay',{kind:'answer'});
+    await until(() => secondView?.gameplay?.call?.state==='connected' &&
+      secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
+    expect(secondRange.filter(([peer]) => peer===first.sessionId)).toHaveLength(1);
+    second.send('gameplay',{kind:'hangup'});
+    await until(() => !secondView?.gameplay?.call &&
+      secondRange.some(([peer,volume]) => peer===first.sessionId && volume<1));
     second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
     await until(() => secondView?.politics?.wallet===6 && thirdView?.politics?.wallet===10);
     expect(firstView!.politics?.wallet).toBe(8);

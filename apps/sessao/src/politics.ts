@@ -10,6 +10,12 @@ export type Split = typeof splits[number];
 export const AGENDA_REWARD = 2;
 
 export const agendas = {
+  protocolo:'Protocole um documento com os carimbos e assinaturas pedidos.',
+  entrega:'Entregue cafezinho a três jogadores diferentes.',
+  sigilo:'Largue um objeto sem testemunhas.',
+  joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
+  fotografia:'Tire uma foto com outro jogador visível.',
+
   fortuna: 'Aumente sua carteira',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',

@@ -1,12 +1,20 @@
+import type { GameplayEvent } from '../src/gameplay';
 import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact,
   type Evidence, type Mission, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
 
 type Account = {
   wallet:number; walletIncome:number; popularity:number; missions:Mission[]; completed:Mission[]; missionDeck:Agenda[]; missionsPaid:boolean; nextMissionId:number; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
-  missionPayers:Set<string>; known:Set<number>; suspended:boolean;
+  missionPayers:Set<string>; missionCoffee:Set<string>; known:Set<number>; suspended:boolean;
 };
+const activityMissions = {
+  protocolo:(event:GameplayEvent) => event.type==='filed',
+  sigilo:(event:GameplayEvent) => event.type==='dropped' && !event.witnesses.length,
+  joguinho:(event:GameplayEvent) => event.type==='game-won' && !event.witnesses.length,
+  fotografia:(event:GameplayEvent) => event.type==='photo' && event.witnesses.length>0,
+} satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 const missionTargets:Record<Agenda,number> = {
+  protocolo:1, entrega:3, sigilo:1, joguinho:1, fotografia:1,
   fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1, cafe:1, leitura:1, credencial:1,
 };
 const activeMissionCount = 3;
@@ -28,12 +36,14 @@ export class PoliticalEconomy {
     this.offers.clear();
     this.serial = 0;
     const deck = (Object.keys(agendas) as Agenda[]).filter(kind =>
-      kind!=='cafe' && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
+      kind!=='cafe' && kind!=='entrega' && !Object.hasOwn(activityMissions,kind) && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
     for (const contact of contacts) {
       const offset = Math.floor(random()*deck.length);
+      const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
       const account:Account = {
-        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...deck.slice(offset),...deck.slice(0,offset)],
-        missionsPaid:false,nextMissionId:0,missionPayers:new Set(),
+        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...ordered.slice(0,2),'protocolo','sigilo','joguinho',...ordered.slice(2),
+          ...(contacts.length>1 ? ['fotografia'] as const : []),...(contacts.length>=4 ? ['entrega'] as const : [])],
+        missionsPaid:false,nextMissionId:0,missionPayers:new Set(),missionCoffee:new Set(),
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
       };
@@ -212,6 +222,22 @@ export class PoliticalEconomy {
     }
   }
 
+  recordGameplay(event:GameplayEvent) {
+    const account = this.accounts.get(event.actor);
+    if (!account) return;
+    const gains:Partial<Record<Agenda,number>> = {};
+    for (const [mission,matches] of Object.entries(activityMissions)) {
+      if (matches(event)) gains[mission as Agenda] = 1;
+    }
+    if (event.kind==='coffee') {
+      if (event.type==='used') gains.cafe = 1;
+      if (event.type==='transferred' && event.target && account.missions.some(mission=>mission.kind==='entrega')) {
+        account.missionCoffee.add(event.target);
+      }
+    }
+    this.progressMissions(account,gains);
+  }
+
   recordActivity(id:string, kind:'auditoria' | 'cafe' | 'leitura' | 'credencial' | 'emenda') {
     const account = this.accounts.get(id);
     if (account) this.progressMissions(account,{[kind]:1});
@@ -227,6 +253,7 @@ export class PoliticalEconomy {
       if (kind==='fortuna') target = Math.max(target,account.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,account.popularity+15));
       if (kind==='articulacao') account.missionPayers.clear();
+      if (kind==='entrega') account.missionCoffee.clear();
       account.missions.push({id:++account.nextMissionId,kind,current:0,target});
     }
   }
@@ -235,6 +262,7 @@ export class PoliticalEconomy {
     if (mission.kind==='fortuna') return account.wallet;
     if (mission.kind==='campanha') return account.popularity;
     if (mission.kind==='articulacao') return account.missionPayers.size;
+    if (mission.kind==='entrega') return account.missionCoffee.size;
     return mission.current;
   }
 

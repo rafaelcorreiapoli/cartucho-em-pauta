@@ -51,7 +51,7 @@ estabilidade continuam sendo processadas pelo servidor.
 Uma queda de conexão reserva o lugar por 30 segundos. A reconexão automática
 do Colyseus restaura o mesmo participante, seu voto e sua posição atual. A entrada
 de novos participantes durante a partida segue o bloqueio existente da sala.
-Esta versão ainda não tem inventário, atordoamento, ligações ou escutas.
+Atordoamento e escutas ainda não fazem parte do jogo.
 
 Se a apuração eleitoral vencer durante a votação legislativa, ela aguarda a saída
 do Plenário. Seu modal mostra os eleitos e as porcentagens calculadas a partir da
@@ -148,3 +148,32 @@ bate-papo continua geral durante as votações, mesmo com a visão local.
 No desenvolvimento, `bun run server` reinicia o servidor quando o código
 muda. Como as salas ficam em memória, é preciso criar outra sala após
 esse reinício.
+
+## Objetos e celular
+
+No Cafezinho, na Secretaria e no Credenciamento, use **Objetos próximos**
+para recolher café, formulários e presentes. Maletas, cuecas e maços podem
+ser embolsados na hora ou carregados para entregar, guardar ou depositar
+na Tesouraria. O Inventário comporta seis objetos. Quem receber uma oferta
+ou pedido de assinatura pode inspecionar o objeto e aceitar ou recusar.
+Pagamentos e ofertas de objetos são independentes.
+
+Os formulários da Secretaria têm combinações diferentes de carimbos e
+assinaturas. Inspecione o documento para ver o que falta, peça assinaturas
+a jogadores próximos e visite os balcões indicados. O Protocolo mantém os
+documentos aceitos no registro do balcão. O Arquivo e o Gabinete B têm compartimentos compartilhados,
+acessíveis a quem estiver perto.
+
+O **Celular** abre Telefone, Joguinhos, Câmera, Notícias e Eleições. Ative
+a voz para ligar. Após o atendimento, feche ou reabra o celular conforme
+necessário para continuar andando ou encerrar a ligação. A ligação usa
+o mesmo áudio e a mesma modulação do VoIP. Ela se encerra ao entrar no
+Plenário. A câmera gera uma ficha visual negociável com os retratos e
+objetos que estavam visíveis, o local e o momento da captura. Notícias e
+Eleições usam os registros públicos e a pesquisa já existentes.
+
+O servidor emite eventos de interação com posição, horário e testemunhas
+calculadas pela visibilidade do mapa. A agenda usa esses eventos para
+missões de protocolo, entrega, fotografia e ações sem testemunhas.
+Pedidos entre jogadores aparecem apenas para quem os recebeu. O jogo da
+memória considera testemunhas durante toda a rodada.

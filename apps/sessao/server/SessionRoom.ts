@@ -1,3 +1,5 @@
+import { readGameplayAction } from '../src/gameplay';
+import { Gameplay } from './Gameplay';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
@@ -15,6 +17,12 @@ export class SessionRoom extends Room {
   maxMessagesPerSecond = 100;
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
+
+  private gameplay = new Gameplay();
+  private gameplayWorld() {
+    return this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
+      id=>this.voice.has(id));
+  }
 
   private match = new PlenaryMatch();
   private lastMatchView = new Map<string,string>();
@@ -40,7 +48,10 @@ export class SessionRoom extends Room {
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
     this.onMessage('start-match', (client, count:unknown) => {
-      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) void this.lock();
+      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
+        this.gameplay.reset();
+        void this.lock();
+      }
     });
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
@@ -54,6 +65,22 @@ export class SessionRoom extends Room {
       if (!player || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
+    });
+    this.onMessage('gameplay',(client, raw:unknown) => {
+      const action = readGameplayAction(raw);
+      const player = this.players.get(client.sessionId)?.player;
+      const world = this.gameplayWorld();
+      if (!action || !player || !this.match.canHandleObjects(player.id,world.now)) return;
+      if (this.match.phase!=='negotiation' && ['call','answer','game-start','game-tile','photo'].includes(action.kind)) return;
+      const text = this.gameplay.act(player,action,world);
+      if (text) client.send('gameplay-feedback',text);
+    });
+    this.onMessage('carry-cash',(client,id:unknown) => {
+      const player = this.players.get(client.sessionId)?.player;
+      const world = this.gameplayWorld();
+      if (!player || typeof id!=='number' || !Number.isSafeInteger(id) || this.match.phase!=='negotiation') return;
+      const text = this.gameplay.collectCash(player,()=>this.match.takeCash(player,id,world.now),world);
+      if (text) client.send('gameplay-feedback',text);
     });
     this.onMessage('pocket-cash',(client, id:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
@@ -106,6 +133,9 @@ export class SessionRoom extends Room {
         if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
       }
       if (running && !this.match.running) void this.unlock();
+      const world = this.gameplayWorld();
+      this.gameplay.tick(world,this.match.phase==='negotiation');
+      for (const player of players) player.phone = this.match.running && this.gameplay.phoneActive(player.id);
       const speaker = this.match.speaker(now);
       const ids = players.map(({id}) => id);
       for (const client of this.clients) {
@@ -113,6 +143,7 @@ export class SessionRoom extends Room {
         const state = this.players.get(id);
         if (!state) continue;
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players),state.player);
+        if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
@@ -122,7 +153,7 @@ export class SessionRoom extends Room {
           const nearby = players.map(player => ({player,...localPerception(state.player,player)}));
           client.send('players',plenary ? players.filter(inPlenary) : nearby.filter(entry => entry.visible).map(entry => entry.player));
           if (view.phase==='negotiation' && this.voice.has(id)) client.send('voice-range',nearby
-            .map(entry => entry.player.id===speaker ? {...entry,volume:1} : entry)
+            .map(entry => entry.player.id===speaker || entry.player.id===this.gameplay.callPeer(id) ? {...entry,volume:1} : entry)
             .filter(({player,volume}) => player.id!==id && volume>0 && this.voice.has(player.id))
             .map(({player,volume}) => [player.id,volume]));
         } else client.send('players',players);
@@ -149,6 +180,8 @@ export class SessionRoom extends Room {
   async onDrop(client:Client) {
     if (!this.match.running) return;
     this.leaveVoice(client.sessionId);
+    const player = this.players.get(client.sessionId)?.player;
+    if (player) this.gameplay.leave(player,this.gameplayWorld(),false);
     this.movementQueue.get(client.sessionId)?.splice(0);
     const state = this.players.get(client.sessionId);
     if (state) {
@@ -165,6 +198,8 @@ export class SessionRoom extends Room {
   onLeave(client: Client) {
     this.leaveVoice(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
+    const player = this.players.get(client.sessionId)?.player;
+    if (player) this.gameplay.leave(player,this.gameplayWorld(),true);
     const running = this.match.running;
     this.match.leave(client.sessionId,this.clock.currentTime);
     if (running && !this.match.running) void this.unlock();

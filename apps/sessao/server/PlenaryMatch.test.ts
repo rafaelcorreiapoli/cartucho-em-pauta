@@ -196,6 +196,9 @@ test('activities only count while their mission is active and replacements get a
   economy.audit('a',0);
   expect(missions().completed.map(mission => mission.kind)).toEqual(['auditoria']);
   economy.recordActivity('a','emenda');
+  for (const type of ['filed','dropped','game-won'] as const) {
+    economy.recordGameplay({type,actor:'a',position:{x:0,y:0},at:0,witnesses:[]});
+  }
   economy.billResult(new Map([['a','yes']]),true,true);
   economy.earn('a',4);
   economy.changePopularity('a',25);

@@ -1,3 +1,4 @@
+import { objects, type WorldItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { cashItems, type CashDrop } from './cash-drops';
@@ -25,6 +26,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   parent.append(fog);
   let players: Player[] = [];
   let drops: CashDrop[] = [];
+  let groundItems: (WorldItem & Motion)[] = [];
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -59,6 +61,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
+    private groundMarkers = new Map<number,Phaser.GameObjects.Text>();
     private cashSprites = new Map<number,Phaser.GameObjects.Sprite>();
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
@@ -154,6 +157,22 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
     }
 
+    private renderGroundItems() {
+      for (const [id,marker] of this.groundMarkers) {
+        if (groundItems.some(item => item.id===id)) continue;
+        marker.destroy();
+        this.groundMarkers.delete(id);
+      }
+      for (const item of groundItems) {
+        if (this.groundMarkers.has(item.id)) continue;
+        const marker = this.add.text(item.x,item.y-4,objects[item.kind].name,{
+          fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#f8dea0',backgroundColor:'#17342a',
+          padding:{x:3,y:1},resolution:this.textResolution,
+        }).setOrigin(.5,1).setDepth(item.y);
+        this.groundMarkers.set(item.id,marker);
+      }
+    }
+
     update(time: number, delta: number) {
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
@@ -176,6 +195,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         manual = keys.size>0;
       }
       this.renderCashDrops(time);
+      this.renderGroundItems();
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const inSession = !!local.state?.plenary;
@@ -250,7 +270,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.nextStep = time+290;
         } else if (!moving) view.nextStep = 0;
         sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setVisible(true).setPosition(x,y+2).setText(player.nick)
+        label.setVisible(true).setPosition(x,y+2).setText(player.phone ? `☎ ${player.nick}` : player.nick)
           .setColor('#fff7df');
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,y+12)
@@ -298,6 +318,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       players = snapshot;
       history.add(snapshot,performance.now());
     },
+    setGroundItems(items:(WorldItem & Motion)[]) { groundItems = items; },
     setCashDrops(next:CashDrop[]) { drops = next; },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },

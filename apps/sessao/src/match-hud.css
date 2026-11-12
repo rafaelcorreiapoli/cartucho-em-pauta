@@ -926,3 +926,53 @@
 .result-metric[data-effect="loss"] { color: var(--party-coral); }
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }
+
+#gameplay-tools {
+  position: absolute;
+  right: var(--hud-edge);
+  bottom: calc(var(--hud-edge) + 58px);
+  display: flex;
+  gap: .5rem;
+  z-index: 3;
+}
+#gameplay-tools button { display: flex; align-items: center; gap: .35rem; }
+#inventory-count { color: var(--party-gold); font-size: 1rem; }
+#object-request {
+  position: absolute;
+  right: var(--hud-edge);
+  bottom: calc(var(--hud-edge) + 110px);
+  width: min(var(--hud-side), calc(100vw - 2 * var(--hud-edge)));
+  max-height: 48dvh;
+  overflow: auto;
+  padding: .65rem;
+  z-index: 5;
+}
+#gameplay-dialog {
+  width: min(540px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 1.2rem;
+  border: 1px solid #9b9767;
+  border-radius: 12px;
+  background: #193329;
+  color: var(--hud-paper);
+}
+#gameplay-dialog::backdrop { background: #081510b8; }
+#gameplay-dialog header { display: flex; align-items: center; justify-content: space-between; }
+#gameplay-title { margin: 0 0 .55rem; font: 850 1.35rem/1.2 var(--party-display); }
+#gameplay-feedback:empty { display: none; }
+#gameplay-feedback { color: var(--party-gold); }
+#phone-apps, #gameplay-body, .phone-tiles { display: flex; flex-wrap: wrap; gap: .55rem; }
+#gameplay-body { align-items: center; margin-top: .65rem; }
+#gameplay-target-label { display: grid; gap: .25rem; margin-top: .65rem; }
+.object-card { width: 100%; background: #142522; border-radius: 8px; padding: .7rem; }
+.object-card h3 { display: flex; align-items: center; gap: .4rem; margin: 0; font: 800 1.05rem/1.2 var(--party-display); }
+.object-card h3 .hud-glyph { color: var(--party-gold); }
+.object-card button { margin: .4rem .3rem 0 0; }
+.object-card details { margin-top: .35rem; }
+.object-card summary { cursor: pointer; }
+.phone-tiles button { min-width: 42px; font-size: 1.2rem; }
+
+.phone-photo { margin: .65rem 0 0; padding: .65rem; border-radius: 8px; background: #244037; }
+.phone-photo-people { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
+.phone-photo-people > span { display: grid; justify-items: center; gap: .2rem; }
+.phone-photo .portrait { display: block; }

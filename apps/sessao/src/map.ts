@@ -60,7 +60,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; phone?:boolean };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 

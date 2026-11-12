@@ -1,3 +1,4 @@
+import { createGameplayPanel } from './gameplay-panel';
 import { showNewResults } from './results';
 import { setCharacterPortrait } from './character-art';
 import type { RoomActivityResult } from './room-activities';
@@ -205,6 +206,11 @@ async function connect(join: () => Promise<Room>) {
       joined.send('pocket-cash',drop);
       map.focus({preventScroll:true});
     });
+    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,()=>{
+      const cash = hud.nearbyCash();
+      if (cash!==undefined) joined.send('carry-cash',cash);
+    },message=>hud.notify('Objetos e celular',message));
+    joined.onMessage('gameplay-feedback',(message:string)=>gameplay.feedback(message));
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -228,6 +234,8 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       hud.render(view);
+      gameplay.render(view);
+      game?.setGroundItems(view.gameplay?.ground ?? []);
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
@@ -288,6 +296,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onReconnect(() => { if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hud.destroy();
+      gameplay.destroy();
       if (room!==joined) return;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');

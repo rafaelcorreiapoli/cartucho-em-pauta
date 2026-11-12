@@ -183,9 +183,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     nearbyDrop = exploring && own ? view.drops.find(drop => canPocket(own!,drop)) : undefined;
     pocket.hidden = !nearbyDrop;
+    element('carry-cash').hidden = !nearbyDrop;
+    const world = view?.gameplay;
+    const nearbyObjects = !!world && (world.locations.length>0 || world.nearby.length>0);
+    element('nearby-objects').hidden = !nearbyObjects;
     if (nearbyDrop) pocketReward.textContent = `+${money(cashItems[nearbyDrop.kind].amount)}`;
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
-    stations.hidden = !exploring || (!nearbyDrop && !hasAction && interviewHint.hidden);
+    stations.hidden = (!exploring && view?.phase!=='ballot') ||
+      (!nearbyObjects && !nearbyDrop && !hasAction && interviewHint.hidden);
     let index = 0;
     for (const {button,badge} of actionKeys) {
       const number = !button.disabled && !button.closest('[hidden]') ? ++index : 0;
@@ -198,6 +203,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
 
   return {
+    nearbyCash:() => nearbyDrop?.id,
     notify,
     showIncome(amount:number, head:{x:number;y:number} | undefined) {
       const total = amount+Number(incomeEffect?.dataset.amount ?? 0);

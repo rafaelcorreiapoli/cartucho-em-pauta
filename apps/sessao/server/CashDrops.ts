@@ -44,10 +44,15 @@ export class CashDrops {
       .map(({drop}) => drop);
   }
 
-  pocket(id:number, player:Motion, now:number) {
+  take(id:number, player:Motion, now:number) {
     const item = this.drops.get(id);
     if (!item || item.expires<=now || !canPocket(player,item.drop)) return;
     this.drops.delete(id);
-    return cashItems[item.drop.kind].amount;
+    return item.drop;
+  }
+
+  pocket(id:number, player:Motion, now:number) {
+    const drop = this.take(id,player,now);
+    return drop && cashItems[drop.kind].amount;
   }
 }
