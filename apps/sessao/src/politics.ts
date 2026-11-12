@@ -15,6 +15,23 @@ export const agendas = {
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
   fotografia:'Tire uma foto com outro jogador visível.',
+  flagra:'Peguei no flagra! Fotografe alguém com uma maleta exposta.',
+  selfie:'Tire selfies com três parlamentares diferentes.',
+  presidenteFoto:'Tire uma selfie com o presidente.',
+  celularFoto:'Fotografe alguém jogando no celular na Antecâmara ou nas Comissões.',
+  reuniaoFoto:'Fotografe dois colegas no mesmo gabinete ou na Antecâmara.',
+  dossieFoto:'Fotografe o mesmo parlamentar em três ambientes diferentes.',
+  apresentarFoto:'Mostre a alguém uma fotografia com um objeto exposto.',
+  entregaFoto:'Fotografe dois colegas durante a entrega de um objeto exposto.',
+  publicouSelfie:'Publique uma selfie sua com pelo menos dois colegas.',
+  retrato:'Instale seu retrato no Congresso.',
+  autorretrato:'Tire uma selfie ao lado do seu retrato.',
+  reforma:'Substitua o retrato de outro parlamentar pelo seu.',
+  reserva:'Reserve uma cadeira no Cafezinho com uma placa VIP.',
+  fiscalVip:'Fotografe alguém na área VIP de outro parlamentar.',
+  mandaVip:'Substitua a placa VIP de outro parlamentar pela sua.',
+  fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',
+  pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
 
   fortuna: 'Aumente sua carteira',
   campanha: 'Aumente sua popularidade',
@@ -30,6 +47,8 @@ export const agendas = {
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
 } as const;
 export type Agenda = keyof typeof agendas;
+const caprichos = new Set<Agenda>(['selfie','presidenteFoto','retrato','autorretrato','reforma','reserva','mandaVip']);
+export const missionReward = (kind:Agenda) => caprichos.has(kind) ? 0 : AGENDA_REWARD;
 export type Mission = {id:number; kind:Agenda; current:number; target:number};
 export const missionTitle = ({kind,target}:Mission) => kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : agendas[kind];

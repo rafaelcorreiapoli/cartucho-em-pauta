@@ -974,10 +974,6 @@
 .object-card summary { cursor: pointer; }
 .phone-tiles button { min-width: 42px; font-size: 1.2rem; }
 
-.phone-photo { margin: .65rem 0 0; padding: .65rem; border-radius: 8px; background: #244037; }
-.phone-photo-people { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
-.phone-photo-people > span { display: grid; justify-items: center; gap: .2rem; }
-.phone-photo .portrait { display: block; }
 
 #item-slots {
   display: grid;
@@ -1198,3 +1194,48 @@ button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-o
 #gameplay-body :is(.phone-answer,.phone-hangup) { display: flex; align-items: center; gap: .4rem; }
 #gameplay-body .phone-answer { background: #275f43; border-color: #7bd0a1; color: #f0fff3; }
 #gameplay-body .phone-hangup { background: #663b3c; border-color: #d88c8d; color: #fff2e9; }
+
+#phone-apps { grid-template-columns: repeat(6,minmax(0,1fr)); }
+.phone-app[data-app="album"] .phone-app-icon { background: linear-gradient(150deg,#e3d4ff,#a896cf); color:#3b3053; }
+.camera-preview, .album-photo canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 152 / 128;
+  border-radius: 9px;
+  background: #0d1f18;
+}
+.camera-preview {
+  border: 2px solid #96d8af;
+  box-shadow: 0 0 0 3px #182922;
+}
+.album-grid, .photo-contacts {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  width: 100%;
+  gap: .45rem;
+}
+.album-tile {
+  min-width: 0;
+  padding: .28rem;
+  text-align: left;
+  border: 1px solid #749f86;
+  border-radius: 10px;
+  background: #203c32;
+  color: var(--hud-paper);
+  cursor: pointer;
+}
+.album-tile:hover { border-color: var(--party-gold); }
+.album-photo { margin: 0; width: 100%; }
+.album-photo figcaption { padding: .3rem; font-size: .72rem; }
+.album-photo-full figcaption { font-size: .85rem; }
+.album-photo-full small { display: block; padding: .2rem .3rem; }
+.photo-contact {
+  display: grid;
+  justify-items: center;
+  gap: .25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.photo-contact[aria-pressed="true"] { border-color: var(--party-mint); background: #294d3c; }
+.photo-contact .portrait { --portrait-size: 38px; }
+.item-art-symbol { font-size: var(--item-art,1.25rem); color: #ffda86; line-height: 1; }

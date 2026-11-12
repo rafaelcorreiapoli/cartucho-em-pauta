@@ -102,7 +102,9 @@ test('clients share movement and voice, then receive private roles and payments'
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
     await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
     first.onMessage('gameplay-feedback',() => {});
+    first.onMessage('photo-state',() => {});
     second.onMessage('gameplay-feedback',() => {});
+    second.onMessage('photo-state',() => {});
     first.send('gameplay',{kind:'call',target:second.sessionId});
     await until(() => secondView?.gameplay?.call?.state==='incoming');
     second.send('gameplay',{kind:'answer'});

@@ -1,7 +1,11 @@
 import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { canStand, HEIGHT, localPerception, WIDTH, type Motion, type Player } from '../src/map';
+import { canStand, HEIGHT, localPerception, roomAt, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import type { Office } from '../src/elections';
+import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
+import { installationSites, shop, type Installable } from '../src/installations';
+import { stations } from '../src/plenary';
+import { PhotoAlbum } from './PhotoAlbum';
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | GroundPlace | {storage:string} | {filed:true};
@@ -11,7 +15,7 @@ type Call = {from:string; to:string; connected:boolean; expires:number};
 type Puzzle = {tiles:number[]; progress:number; start:number; last:number; witnesses:Set<string>};
 export type GameplayWorld = {
   players:Player[]; now:number; office:(id:string)=>Office|undefined;
-  voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
+  started?:number; spend?:(id:string,amount:number)=>boolean; voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
 };
 const cashKinds = ['briefcase','underwear','bundle'] as const;
 const mapEntrance = {x:140,y:146};
@@ -26,12 +30,24 @@ export class Gameplay {
   private calls = new Map<string,Call>();
   private puzzles = new Map<string,Puzzle>();
   private serial = 0;
+  private exposed = new Map<string,number>();
+  private album = new PhotoAlbum();
+  private installations = new Map<string,Decoration>();
+  private servings = new Map<number,Set<string>>();
+  private clearedSites = new Map<string,{by:string;owner:string}>();
+  private transfers: (Photo['transfers'][number] & {at:number; point:Motion; destination:Motion})[] = [];
 
   private random = Math.random;
   private nextCashSpawn = Infinity;
 
   reset(now:number,random = Math.random) {
     this.items.clear();
+    this.album.reset();
+    this.exposed.clear();
+    this.installations.clear();
+    this.servings.clear();
+    this.clearedSites.clear();
+    this.transfers = [];
     this.requests.clear();
     this.calls.clear();
     this.puzzles.clear();
@@ -46,6 +62,7 @@ export class Gameplay {
   private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
 
   private move(item:Item, place:Place) {
+    this.hide(item);
     item.place = place;
     this.clearRequests(item.data.id);
   }
@@ -55,8 +72,18 @@ export class Gameplay {
   }
 
   private remove(item:Item) {
+    this.hide(item);
     this.items.delete(item.data.id);
     this.clearRequests(item.data.id);
+  }
+
+  private hide(item:Item) {
+    if ('holder' in item.place && this.exposed.get(item.place.holder)===item.data.id) this.exposed.delete(item.place.holder);
+  }
+
+  visibleItem(id:string) {
+    const item = this.items.get(this.exposed.get(id) ?? -1);
+    return item && {id:item.data.id,kind:item.data.kind};
   }
 
   private create(kind:ObjectKind, place:Place) {
@@ -65,10 +92,10 @@ export class Gameplay {
     return data;
   }
 
-  private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string, duration?:number, observed?:Set<string>) {
+  private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string, duration?:number, observed?:Set<string>, facts?:Pick<GameplayEvent,'photo'|'place'|'replaced'>) {
     world.publish({
       type,actor:actor.id,target,item:item?.id,kind:item?.kind,at:world.now,position:{x:actor.x,y:actor.y},duration,
-      witnesses:[...(observed ?? new Set(this.observers(world,actor,target)))],
+      witnesses:[...(observed ?? new Set(this.observers(world,actor,target)))],...facts,
     });
   }
 
@@ -109,6 +136,8 @@ export class Gameplay {
   }
 
   tick(world:GameplayWorld, exploring:boolean) {
+    this.album.tick(world.now);
+    this.transfers = this.transfers.filter(event=>world.now-event.at<=2400);
     for (const item of this.items.values()) {
       if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
     }
@@ -129,6 +158,7 @@ export class Gameplay {
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
+    this.album.leave(player.id,permanent);
     const call = this.calls.get(player.id);
     if (call) this.endCall(call,world);
     const puzzle = this.puzzles.get(player.id);
@@ -144,12 +174,15 @@ export class Gameplay {
   }
 
   inCall(id:string) { return !!this.calls.get(id)?.connected; }
-  phoneActive(id:string) { return this.inCall(id) || this.puzzles.has(id); }
+  phoneActivity(id:string) { return this.puzzles.has(id) ? 'game' : this.inCall(id) ? 'call' : undefined; }
 
   callPeer(id:string) {
     const call = this.calls.get(id);
     if (call?.connected) return call.from===id ? call.to : call.from;
   }
+
+  get photoRevision() { return this.album.revision; }
+  photoView(id:string,now:number) { return this.album.view(id,now); }
 
   view(player:Player, world:GameplayWorld):GameplayView {
     const {id} = player;
@@ -165,6 +198,10 @@ export class Gameplay {
     const peer = call && world.players.find(other => other.id===(call.from===id ? call.to : call.from));
     const game = this.puzzles.get(id);
     return {
+      exposed:this.exposed.get(id),
+      decorations:[...this.installations.values()].filter(item=>localPerception(player,item).visible),
+      interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
+      installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
       contacts:world.players.filter(other => other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
@@ -231,25 +268,109 @@ export class Gameplay {
         this.event(world,player,'game-won',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
         return 'Rodada concluída!';
       }
-      case 'photo': {
-        if (!this.available(id)) return 'Inventário cheio.';
-        const data = this.create('photo',{holder:id});
-        const [place] = locations(player);
-        data.photo = {
-          at:world.now,location:place ? terminals[place].title : `Mapa (${Math.round(player.x)}, ${Math.round(player.y)})`,
-          people:world.players.filter(person => localPerception(player,person).visible)
-            .map(person => ({id:person.id,name:person.nick,character:person.character})),
-          objects:this.visibleGround(player,world.now).map(item=>item.document?.title ?? objects[item.kind].name),
-        };
-        this.event(world,player,'photo',data);
-        return 'Foto guardada no inventário.';
-      }
+
     }
+  }
+
+  private capture(player:Player, selfie:boolean, world:GameplayWorld) {
+    const {x,y} = player;
+    const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
+      .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
+        character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
+        exposed:this.visibleItem(person.id),phone:this.phoneActivity(person.id)}));
+    const ids = new Set(people.map(person=>person.id));
+    const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
+    const result = this.album.capture(player.id,world.now,id=>({
+      id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
+      center:{x,y},location:roomAt(player),selfie,people,
+      ground:this.visibleGround(player,world.now).filter(item=>inPhotoFrame(player,item))
+        .map(({id,kind,x,y,document})=>({id,kind,x,y,title:document?.title})),
+      decorations:[...this.installations.values()].filter(item=>inPhotoFrame(player,item)).map(item=>({...item})),
+      transfers:this.transfers.filter(event=>world.now-event.at<=2400 && ids.has(event.from) && ids.has(event.to) &&
+        inPhotoFrame(player,event.point) && inPhotoFrame(player,event.destination) &&
+        stillAt(event.from,event.point) && stillAt(event.to,event.destination)).map(({from,to,item,kind})=>({from,to,item,kind})),
+    }));
+    if (typeof result==='string') return result;
+    this.event(world,player,'photo',undefined,undefined,undefined,new Set([...ids].filter(id=>id!==player.id)),{photo:result});
+    return 'Foto guardada no álbum.';
+  }
+
+  private changeInstallation(player:Player,action:GameplayAction,world:GameplayWorld) {
+    const siteKey = action.kind==='install' ? action.place : [...this.installations].find(([,item])=>item.id===action.item)?.[0];
+    const site = installationSites[siteKey as keyof typeof installationSites];
+    if (!siteKey || !site || !canReachObject(player,site.point)) return 'Aproxime-se do local.';
+    const placed = this.installations.get(siteKey);
+    if (action.kind==='install') {
+      const item = this.items.get(action.item ?? -1);
+      if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return 'Objeto indisponível.';
+      if (placed?.kind==='pizza') return 'Já tem pizza na mesa.';
+      if (placed && placed.owner.id===player.id) return 'Você já ocupou este lugar.';
+      this.remove(item);
+      const cleared = this.clearedSites.get(siteKey);
+      this.clearedSites.delete(siteKey);
+      const replaced = placed?.owner.id ?? (cleared?.by===player.id ? cleared.owner : undefined);
+      this.installations.set(siteKey,{x:site.point.x,y:site.point.y,id:item.data.id,kind:site.kind,owner:{id:player.id,name:player.nick},
+        character:player.character,slices:site.kind==='pizza' ? 6 : undefined});
+      this.event(world,player,'installed',item.data,replaced,undefined,undefined,{place:siteKey,replaced:!!replaced});
+      return placed ? 'Objeto substituído.' : 'Objeto instalado.';
+    }
+    if (!placed) return 'Objeto indisponível.';
+    const data = {id:placed.id,kind:placed.kind};
+    if (action.kind==='slice') {
+      if (placed.kind!=='pizza' || !placed.slices) return 'A pizza acabou.';
+      let served = this.servings.get(placed.id);
+      if (!served) this.servings.set(placed.id,served=new Set());
+      if (served.has(player.id)) return 'Você já pegou uma fatia desta pizza.';
+      served.add(player.id);
+      placed.slices--;
+      const host = world.players.find(person=>person.id===placed.owner.id);
+      this.event(world,player,'used',data,placed.owner.id);
+      if (host && host.id!==player.id) this.event(world,host,'slice',data,player.id);
+      if (!placed.slices) {
+        this.installations.delete(siteKey);
+        this.servings.delete(placed.id);
+      }
+      return 'Fatia servida.';
+    }
+    if (action.kind==='mark') {
+      if (placed.kind!=='portrait' || placed.marked || placed.owner.id===player.id) return 'Este retrato não pode ser rabiscado.';
+      placed.marked = true;
+      this.event(world,player,'marked',data,placed.owner.id,undefined,undefined,{place:siteKey});
+      return 'Retrato rabiscado.';
+    }
+    if (!this.available(player.id)) return 'Inventário cheio.';
+    this.installations.delete(siteKey);
+    this.servings.delete(placed.id);
+    this.items.set(data.id,{data,place:{holder:player.id}});
+    if (placed.owner.id!==player.id) this.clearedSites.set(siteKey,{by:player.id,owner:placed.owner.id});
+    this.event(world,player,'uninstalled',data,placed.owner.id,undefined,undefined,{place:siteKey});
+    return 'Objeto retirado.';
   }
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
     const {id} = player;
-    if (['call','answer','hangup','game-start','game-stop','game-tile','photo'].includes(action.kind)) {
+    if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
+    if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {
+      return this.album.act(player,action,world.players,world.now,canReachObject(player,stations.press),
+        (type,photo,actor,target)=>this.event(world,actor,type,undefined,target,undefined,undefined,{photo}));
+    }
+    if (action.kind==='conceal') {
+      this.exposed.delete(id);
+      return 'Objeto guardado.';
+    }
+    if (action.kind==='buy') {
+      const kind = action.target as Installable;
+      const station = kind==='pizza' ? stations.coffee : stations.credentials;
+      if (!Object.hasOwn(shop,kind) || !canReachObject(player,station)) return 'Aproxime-se do balcão.';
+      if (!this.available(id)) return 'Inventário cheio.';
+      if (this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
+      if (!world.spend?.(id,shop[kind])) return 'Saldo insuficiente.';
+      const item = this.create(kind,{holder:id});
+      this.event(world,player,'collected',item);
+      return 'Compra guardada no inventário.';
+    }
+    if (['install','uninstall','mark','slice'].includes(action.kind)) return this.changeInstallation(player,action,world);
+    if (['call','answer','hangup','game-start','game-stop','game-tile'].includes(action.kind)) {
       return this.phone(player,action,world);
     }
     const place = locations(player).find(key => key===action.place);
@@ -289,6 +410,12 @@ export class Gameplay {
     if (!pocketing && (!('holder' in item.place) || item.place.holder!==id)) return 'O objeto não está com você.';
     const definition = objects[data.kind];
     switch (action.kind) {
+      case 'expose':
+        if (!('exposable' in definition)) return 'Este objeto fica guardado.';
+        if (this.exposed.get(id)===data.id) return 'Objeto já exposto.';
+        this.exposed.set(id,data.id);
+        this.event(world,player,'exposed',data);
+        return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
         const target = world.players.find(person => person.id===action.target && person.id!==id && canReachObject(player,person));
@@ -378,6 +505,10 @@ export class Gameplay {
     }
     if (request.kind==='offer') {
       if (!this.available(player.id)) return 'Inventário cheio.';
+      if (this.visibleItem(owner.id)?.id===item.data.id) {
+        this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
+        if (this.transfers.length>16) this.transfers.shift();
+      }
       this.move(item,{holder:player.id});
       this.event(world,owner,'transferred',item.data,player.id);
       return 'Objeto recebido.';

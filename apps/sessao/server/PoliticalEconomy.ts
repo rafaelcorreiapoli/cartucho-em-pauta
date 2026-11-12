@@ -1,20 +1,20 @@
 import type { GameplayEvent } from '../src/gameplay';
-import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact, type DirectoryContact,
+import { agendas, missionReward, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact, type DirectoryContact,
   type Evidence, type Mission, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
+import { applyFacts, photoMissions } from './photo-missions';
 
 type Account = {
   wallet:number; walletIncome:number; popularity:number; missions:Mission[]; completed:Mission[]; missionDeck:Agenda[]; missionsPaid:boolean; nextMissionId:number; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
-  missionPayers:Set<string>; missionCoffee:Set<string>; known:Set<number>; suspended:boolean;
+  photoFacts:Map<number,Map<string,Set<string>>>; selfieBonus:boolean; missionPayers:Set<string>; missionCoffee:Set<string>; known:Set<number>; suspended:boolean;
 };
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
   sigilo:(event:GameplayEvent) => event.type==='dropped' && !event.witnesses.length,
   joguinho:(event:GameplayEvent) => event.type==='game-won' && !event.witnesses.length,
-  fotografia:(event:GameplayEvent) => event.type==='photo' && event.witnesses.length>0,
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
-const missionTargets:Record<Agenda,number> = {
-  protocolo:1, entrega:3, sigilo:1, joguinho:1, fotografia:1,
+const missionTargets:Partial<Record<Agenda,number>> = {
+  protocolo:1, entrega:3, sigilo:1, joguinho:1,
   fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1, cafe:1, leitura:1, credencial:1,
 };
 const activeMissionCount = 3;
@@ -27,6 +27,7 @@ export class PoliticalEconomy {
   private published = new Set<number>();
   private offers = new Map<number,Offer>();
   private serial = 0;
+  private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number) {
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
@@ -35,15 +36,19 @@ export class PoliticalEconomy {
     this.published.clear();
     this.offers.clear();
     this.serial = 0;
+    this.scandalPizzas.clear();
     const deck = (Object.keys(agendas) as Agenda[]).filter(kind =>
-      kind!=='cafe' && kind!=='entrega' && !Object.hasOwn(activityMissions,kind) && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
+      kind!=='cafe' && kind!=='entrega' && !Object.hasOwn(activityMissions,kind) && !Object.hasOwn(photoMissions,kind) && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
+    const visualDeck = (Object.keys(photoMissions) as (keyof typeof photoMissions)[])
+      .filter(kind=>photoMissions[kind].players<=contacts.length);
     for (const contact of contacts) {
       const offset = Math.floor(random()*deck.length);
       const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
       const account:Account = {
-        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...ordered.slice(0,2),'protocolo','sigilo','joguinho',...ordered.slice(2),
-          ...(contacts.length>1 ? ['fotografia'] as const : []),...(contacts.length>=4 ? ['entrega'] as const : [])],
-        missionsPaid:false,nextMissionId:0,missionPayers:new Set(),missionCoffee:new Set(),
+        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...ordered.slice(0,2),
+          ...(contacts.length>1 ? visualDeck.slice(0,3) : []),'protocolo','sigilo','joguinho',...ordered.slice(2),
+          ...visualDeck.slice(contacts.length>1 ? 3 : 0),...(contacts.length>=4 ? ['entrega'] as const : [])],
+        missionsPaid:false,nextMissionId:0,photoFacts:new Map(),selfieBonus:false,missionPayers:new Set(),missionCoffee:new Set(),
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
       };
@@ -71,6 +76,13 @@ export class PoliticalEconomy {
     if (!account) return;
     this.credit(account,amount);
     this.progressMissions(account);
+  }
+
+  spend(id:string,amount:number) {
+    const account = this.accounts.get(id);
+    if (!account || amount>account.wallet) return false;
+    account.wallet -= amount;
+    return true;
   }
 
   spendOnElection(id:string, amount:number, kind:string, cycle:number) {
@@ -229,6 +241,26 @@ export class PoliticalEconomy {
     for (const [mission,matches] of Object.entries(activityMissions)) {
       if (matches(event)) gains[mission as Agenda] = 1;
     }
+    if (event.kind==='pizza' && event.item!==undefined) {
+      if (event.type==='installed' && [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer')) {
+        this.scandalPizzas.add(event.item);
+      }
+      if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
+    }
+    for (const mission of account.missions) {
+      const rule = photoMissions[mission.kind as keyof typeof photoMissions];
+      if (!rule || (mission.kind==='pizzada' && !this.scandalPizzas.has(event.item ?? -1))) continue;
+      const facts = rule.facts(event);
+      if (!facts.length) continue;
+      let seen = account.photoFacts.get(mission.id);
+      if (!seen) account.photoFacts.set(mission.id,seen=new Map());
+      gains[mission.kind] = Math.max(0,applyFacts(seen,facts)-mission.current);
+    }
+    if (event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
+      event.photo.people.some(person=>person.id!==event.actor) && !account.selfieBonus) {
+      account.selfieBonus = true;
+      account.popularity = cap(account.popularity+4);
+    }
     if (event.kind==='coffee') {
       if (event.type==='used') gains.cafe = 1;
       if (event.type==='transferred' && event.target && account.missions.some(mission=>mission.kind==='entrega')) {
@@ -249,7 +281,7 @@ export class PoliticalEconomy {
         (kind!=='campanha' || account.popularity<100));
       const [kind] = account.missionDeck.splice(index,1);
       account.missionDeck.push(kind);
-      let target = missionTargets[kind];
+      let target = photoMissions[kind as keyof typeof photoMissions]?.target ?? missionTargets[kind] ?? 1;
       if (kind==='fortuna') target = Math.max(target,account.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,account.popularity+15));
       if (kind==='articulacao') account.missionPayers.clear();
@@ -270,7 +302,10 @@ export class PoliticalEconomy {
     for (const mission of account.missions) {
       const current = this.missionProgress(account,mission)+(gains[mission.kind] ?? 0);
       mission.current = Math.min(current,mission.target);
-      if (current>=mission.target) account.completed.push({...mission});
+      if (current>=mission.target) {
+        account.photoFacts.delete(mission.id);
+        account.completed.push({...mission});
+      }
     }
     account.missions = account.missions.filter(mission => mission.current<mission.target);
     this.fillMissions(account);
@@ -282,7 +317,7 @@ export class PoliticalEconomy {
       if (!account || account.missionsPaid) continue;
       for (const mission of account.missions) mission.current = this.missionProgress(account,mission);
       account.missionsPaid = true;
-      this.credit(account,AGENDA_REWARD*account.completed.length);
+      this.credit(account,account.completed.reduce((total,mission)=>total+missionReward(mission.kind),0));
     }
   }
 

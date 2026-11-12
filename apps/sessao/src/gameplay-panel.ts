@@ -1,3 +1,7 @@
+import { installationSites, shop } from './installations';
+import { decorationLabel, itemSymbols } from './photo-renderer';
+import { emptyPhotoAccess, PHOTO_LIMIT, type PhotoAccessView, type Photo, type PhotoScene } from './photography';
+import { money } from './politics';
 import { offices } from './elections';
 import { setCharacterPortrait } from './character-art';
 import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
@@ -10,6 +14,7 @@ const apps = {
   'Telefone':'handset',
   'Joguinhos':'gamepad',
   'Câmera':'camera',
+  'Álbum':'album',
   'Notícias':'document',
   'Eleições':'ballot',
 } as const;
@@ -23,6 +28,12 @@ function node<K extends keyof HTMLElementTagNameMap>(tag:K,text = '') {
 }
 
 function itemArt(kind:ObjectKind) {
+  if (itemSymbols[kind]) {
+    const symbol = node('span',itemSymbols[kind]);
+    symbol.className = 'item-art-symbol';
+    symbol.setAttribute('aria-hidden','true');
+    return symbol;
+  }
   const portrait = node('img');
   portrait.className = 'item-portrait';
   portrait.src = import.meta.env.BASE_URL+'assets/'+objects[kind].portrait;
@@ -45,7 +56,7 @@ function itemName(item:Pick<WorldItem,'kind'|'document'>) {
   return item.document?.title ?? objects[item.kind].name;
 }
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
@@ -62,7 +73,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let inventoryKey = '';
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
+  let photos = emptyPhotoAccess;
   let app:App = 'Telefone';
+  let photoId:number | undefined;
+  let photoRecipient:string | undefined;
+  let decorationId:number | undefined;
+  let showing = false;
+  let cameraPreview:HTMLCanvasElement | undefined;
+  const previewTimer = window.setInterval(()=>{
+    if (dialog.open && cameraPreview?.isConnected) drawPhoto(cameraPreview);
+  },150);
   let previous:PlenaryView | undefined;
   let renderKey = '';
   let targetKey = '';
@@ -90,35 +110,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     );
     if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: ${offices[doc.requiredOffice].name}`));
     if ('amount' in definition) summary.append(node('p',`R$ ${definition.amount*10} mil`));
-    if (item.photo) {
-      const photo = node('figure');
-      photo.className = 'phone-photo';
-      const group = node('div');
-      group.className = 'phone-photo-people';
-      for (const person of item.photo.people) {
-        const face = node('span');
-        face.className = 'portrait';
-        face.setAttribute('aria-hidden','true');
-        setCharacterPortrait(face,person.character);
-        const entry = node('span');
-        entry.append(face,node('small',person.name));
-        group.append(entry);
-      }
-      photo.append(group,node('figcaption',`${item.photo.location} · ${Math.floor(item.photo.at/1000)} s`));
-      if (item.photo.objects.length) photo.append(node('p',item.photo.objects.join(', ')));
-      summary.append(photo);
-    }
     card.append(heading,summary);
     return card;
   }
 
-  function open(item?:typeof selection) {
+  function open(item?:typeof selection, decoration?:number) {
     selection = item;
+    decorationId = decoration;
+    const object = !!item || decoration!==undefined;
+    photoRecipient = undefined;
     feedback.textContent = '';
     renderKey = '';
-    element('gameplay-title').textContent = item ? 'Objeto' : 'Celular';
-    navigation.hidden = !!item;
-    dialog.dataset.mode = item ? 'item' : 'phone';
+    element('gameplay-title').textContent = object ? 'Objeto' : 'Celular';
+    navigation.hidden = object;
+    dialog.dataset.mode = object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -126,7 +131,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const appButtons = (Object.keys(apps) as App[]).map(title => {
     const tile = button(title,() => {
       if (app==='Joguinhos' && title!=='Joguinhos') send({kind:'game-stop'});
+      if (showing) closePresentation();
       app = title;
+      photoId = photoRecipient = undefined;
       feedback.textContent = '';
       render();
     });
@@ -172,10 +179,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const view = previous;
     const state = view?.gameplay;
     if (!dialog.open || !state || !view) return;
-    const phone = !selection;
+    const phone = !selection && decorationId===undefined;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
-    if (selection && !item) {
+    const decoration = state.decorations.find(item=>item.id===decorationId);
+    if ((selection && !item) || (decorationId!==undefined && !decoration)) {
       dialog.close();
       return;
     }
@@ -191,13 +199,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = selection ? [item,state.locations,contacts.length] :
+    const visible = selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
+      app==='Álbum' ? [photos.album.map(({photo})=>photo.id),photos.publicPhotos.map(photo=>photo.id),showing && photos.shown,photoId,photoRecipient,contacts,state.locations.includes('press')] :
+      app==='Câmera' ? photos.album.length :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] : app==='Joguinhos' ? state.game && [state.game.tiles,state.game.progress,state.game.elapsed*1000<PHONE_PREVIEW_MS] :
-      app==='Notícias' ? view.politics?.ledger : app==='Eleições' ? view.election?.polls : null;
-    const nextKey = JSON.stringify([selection,app,phase,visible]);
+      app==='Notícias' ? [view.politics?.ledger,photos.publicPhotos.map(photo=>photo.id),photoId] : app==='Eleições' ? view.election?.polls : null;
+    const nextKey = JSON.stringify([selection,decorationId,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
+    cameraPreview = undefined;
     const cards:HTMLElement[] = [];
     if (item) {
       const card = objectCard(item);
@@ -205,7 +216,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         card.append(button(label,() => send({kind,item:item.id,target:target.value,place})));
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
-        if ('use' in definition) act(definition.use==='cash' ? 'Embolsar' : 'Tomar café','use');
+        if ('use' in definition) act(definition.use==='cash' ? 'Embolsar' : item.kind==='pizza' ? 'Comer pizza' : 'Tomar café','use');
+        if ('exposable' in definition) {
+          const exposed = state.exposed===item.id;
+          act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');
+        }
+        if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
+          if (item.kind!==site.kind) continue;
+          const label = item.kind==='pizza' ? 'Servir na mesa' : 'Instalar ou substituir';
+          if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
+        }
         if (contacts.length) {
           act('Oferecer','offer');
           if (item.document) act('Pedir assinatura','sign-request');
@@ -219,6 +239,23 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
           if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
+        }
+      }
+      cards.push(card);
+    }
+    if (decoration) {
+      const card = node('article');
+      card.className = 'object-card';
+      card.append(node('h3',decorationLabel(decoration)));
+      if (decoration.kind==='portrait') card.append(contactFace({...decoration.owner,character:decoration.character}));
+      if (decoration.marked) card.append(node('p','Retrato rabiscado'));
+      if (decoration.kind==='vip') card.append(node('p','Área reservada por '+decoration.owner.name));
+      const control = (label:string,kind:GameplayAction['kind'])=>button(label,()=>send({kind,item:decoration.id}));
+      if (phase==='negotiation') {
+        if (decoration.kind==='pizza') card.append(control('Pegar uma fatia','slice'));
+        else {
+          if (decoration.kind==='portrait' && !decoration.marked && decoration.owner.id!==ownId) card.append(control('Rabiscar','mark'));
+          card.append(control('Retirar','uninstall'));
         }
       }
       cards.push(card);
@@ -265,8 +302,55 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           cards.push(tiles,button('Parar',()=>send({kind:'game-stop'})));
         }
       }
-      if (app==='Câmera' && phase==='negotiation') cards.push(button('Tirar foto',()=>send({kind:'photo'})));
+      if (app==='Câmera') {
+        cameraPreview = node('canvas');
+        cameraPreview.className = 'camera-preview';
+        cameraPreview.setAttribute('aria-label','Enquadramento da câmera');
+        drawPhoto(cameraPreview);
+        cards.push(cameraPreview);
+        const capture = (label:string,kind:'photo'|'selfie') => {
+          const shutter = button(label,()=>send({kind}));
+          shutter.disabled = phase!=='negotiation' || photos.album.length>=PHOTO_LIMIT;
+          shutter.prepend(glyph('camera'));
+          return shutter;
+        };
+        cards.push(capture('Tirar foto','photo'),capture('Selfie','selfie'));
+        cards.push(button(`Abrir álbum · ${photos.album.length}/${PHOTO_LIMIT}`,()=>{app='Álbum';render();}));
+      }
+      if (app==='Álbum') {
+        const entry = photos.album.find(entry=>entry.photo.id===photoId);
+        if (showing && photos.shown) {
+          cards.push(photoView(photos.shown,true),button('Fechar apresentação',closePresentation));
+        } else if (entry) {
+          cards.push(button('Voltar ao álbum',()=>{photoId=photoRecipient=undefined;render();}),photoView(entry.photo,true));
+          cards.push(node('p',entry.access==='original' ? 'Original' : 'Cópia verificada'));
+          if (contacts.length) {
+            const list = node('div');
+            list.className = 'photo-contacts';
+            for (const person of contacts) {
+              const choice = button(person.name,()=>{photoRecipient=person.id;render();});
+              choice.classList.add('photo-contact');
+              choice.setAttribute('aria-pressed',String(photoRecipient===person.id));
+              choice.prepend(contactFace(directory.find(contact=>contact.id===person.id) ?? person));
+              list.append(choice);
+            }
+            cards.push(list);
+          }
+          if (contacts.some(person=>person.id===photoRecipient)) {
+            for (const [kind,label] of [['info-show','Mostrar'],['info-copy','Enviar cópia']] as const) {
+              cards.push(button(label,()=>send({kind,item:entry.photo.id,target:photoRecipient})));
+            }
+          }
+          if (state.locations.includes('press') && phase==='negotiation' && !photos.publicPhotos.some(photo=>photo.id===entry.photo.id)) {
+            cards.push(button('Publicar nas Notícias',()=>send({kind:'photo-publish',item:entry.photo.id})));
+          }
+          cards.push(button('Excluir do meu álbum',()=>send({kind:'photo-delete',item:entry.photo.id})));
+        } else cards.push(photoGrid(photos.album.map(entry=>entry.photo),'O álbum está vazio.'));
+      }
       if (app==='Notícias') {
+        const current = photos.publicPhotos.find(photo=>photo.id===photoId);
+        if (current) cards.push(button('Voltar às Notícias',()=>{photoId=undefined;render();}),photoView(current,true));
+        else if (photos.publicPhotos.length) cards.push(photoGrid(photos.publicPhotos,''));
         const ledger = view.politics?.ledger ?? [];
         for (const record of ledger.slice().reverse()) {
           const name = view.politics?.directory.find(person=>person.id===record.from)?.name ?? 'Parlamentar';
@@ -280,6 +364,46 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     body.replaceChildren(...(cards.length ? cards : [node('p',phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.')]));
     if (focused) body.querySelector<HTMLButtonElement>('button')?.focus();
+  }
+
+  function photoView(photo:Photo, full:boolean) {
+    const figure = node('figure');
+    figure.className = full ? 'album-photo album-photo-full' : 'album-photo';
+    const canvas = node('canvas');
+    canvas.setAttribute('role','img');
+    canvas.setAttribute('aria-label',`${photo.selfie ? 'Selfie' : 'Foto'} em ${photo.location} · ${photo.people.map(person=>person.name).join(', ')}`);
+    drawPhoto(canvas,photo);
+    figure.append(canvas,node('figcaption',full ? `${photo.author.name} · ${photo.location} · ${Math.floor(photo.at/1000)} s` : photo.location));
+    if (full) {
+      const facts = photo.people.map(person=>person.name+(person.exposed ? ` · ${objects[person.exposed.kind].name}` : ''));
+      if (facts.length) figure.append(node('small',facts.join(' / ')));
+      for (const handoff of photo.transfers) {
+        const from = photo.people.find(person=>person.id===handoff.from)?.name;
+        const to = photo.people.find(person=>person.id===handoff.to)?.name;
+        figure.append(node('small',`Entrega recente · ${from} → ${to} · ${objects[handoff.kind].name}`));
+      }
+    }
+    return figure;
+  }
+
+  function photoGrid(photos:Photo[], empty:string) {
+    if (!photos.length) return node('p',empty);
+    const grid = node('div');
+    grid.className = 'album-grid';
+    for (const photo of [...photos].reverse()) {
+      const tile = button('',()=>{photoId=photo.id;render();});
+      tile.className = 'album-tile';
+      tile.setAttribute('aria-label',`Abrir fotografia ${photo.id} · ${photo.location}`);
+      tile.append(photoView(photo,false));
+      grid.append(tile);
+    }
+    return grid;
+  }
+
+  function closePresentation() {
+    showing = false;
+    send({kind:'info-close'});
+    render();
   }
 
   function itemButton(kind:ObjectKind, name:string, verb:string, action:()=>void) {
@@ -321,7 +445,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   phoneButton.onclick = () => open();
-  const closed = () => { if (previous?.gameplay?.game) send({kind:'game-stop'}); };
+  const closed = () => {
+    if (previous?.gameplay?.game) send({kind:'game-stop'});
+    if (showing) closePresentation();
+  };
   dialog.addEventListener('close',closed);
 
   return {
@@ -339,7 +466,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         collectedArea = undefined;
       }
       const state = exploring ? previous?.gameplay : undefined;
-      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations] : null);
+      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,photos.album.length] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
       const tiles:HTMLButtonElement[] = [];
@@ -356,7 +483,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
             ()=>send({kind:'recover',item:item.id}),
           )));
         }
+        if (state.locations.includes('press') && photos.album.length) {
+          tiles.push(itemButton('portrait','Álbum para a Imprensa','Abrir',()=>{app='Álbum';photoId=undefined;open();}));
+        }
+        for (const decoration of state.interactive) {
+          tiles.push(itemButton(decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id)));
+        }
         for (const place of state.locations) {
+          for (const kind of place==='coffee' ? ['pizza'] as const : place==='credentials' ? ['portrait','vip'] as const : []) {
+            tiles.push(itemButton(kind,`${objects[kind].name} · ${money(shop[kind])}`,'Comprar',
+              ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind}))));
+          }
           const terminal = terminals[place as keyof typeof terminals];
           if (!('supply' in terminal)) continue;
           const take = (target?:string) => pickUp(player=>canReachObject(player,terminal.point),
@@ -380,6 +517,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render(view:PlenaryView) {
       const call = view.gameplay?.call;
       const incoming = view.gameplay?.requests.at(0);
+      const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
       if (view.phase!=='negotiation') pendingPickup = undefined;
@@ -395,11 +533,18 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         open();
       }
       const requestBox = element('object-request');
-      const requestKey = String(incoming?.id ?? '');
+      const requestKey = information ? `info-${information.id}` : String(incoming?.id ?? '');
       if (requestKey!==requestBox.dataset.request) {
         requestBox.dataset.request = requestKey;
-        requestBox.hidden = !incoming;
-        if (incoming) {
+        requestBox.hidden = !incoming && !information;
+        if (information) {
+          const card = node('article');
+          card.className = 'object-card';
+          card.append(node('p',`${information.from.name} quer ${information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.`),
+            button('Aceitar',()=>send({kind:'info-accept',item:information.id})),
+            button('Recusar',()=>send({kind:'info-decline',item:information.id})));
+          requestBox.replaceChildren(card);
+        } else if (incoming) {
           const item = incoming.item;
           const card = objectCard(item);
           card.prepend(node('p',`${incoming.from.name} ${incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}`));
@@ -410,12 +555,28 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
+    photoState(next:PhotoAccessView) {
+      const captured = next.album.some(({photo,access})=>access==='original' && !photos.album.some(entry=>entry.photo.id===photo.id));
+      const presented = next.shown && next.shown.id!==photos.shown?.id;
+      photos = next;
+      if (presented) {
+        showing = true;
+        app = 'Álbum';
+        open();
+      }
+      if (previous) this.render(previous);
+      if (captured && cameraPreview?.isConnected) {
+        cameraPreview.animate([{filter:'brightness(3)'},{filter:'brightness(1)'}],{duration:220});
+      }
+      return captured;
+    },
     feedback(text:string) {
       pendingPickup = undefined;
       if (dialog.open) feedback.textContent = text;
       else notify(text);
     },
     destroy() {
+      window.clearInterval(previewTimer);
       dialog.removeEventListener('close',closed);
       dialog.close();
       tools.hidden = element('object-request').hidden = true;

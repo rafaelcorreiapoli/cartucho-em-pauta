@@ -60,7 +60,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; phone?:boolean };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
@@ -117,4 +117,29 @@ export function localPerception(a: Motion, b: Motion) {
     visible:distance<VISION_RADIUS && !wall,
     volume:Math.round(20 * Math.min(1,(HEARING_RADIUS-distance)/85) * (wall ? .2 : 1))/20,
   };
+}
+
+export const rooms = [
+  {name:'Gabinete A', bounds:[10,10,129,104], color:0xb69c75},
+  {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
+  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
+  {name:'Gabinete B', bounds:[341,10,129,104], color:0xaf9a79},
+  {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
+  {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
+  {name:'Gabinete C', bounds:[291,172,179,87], color:0xa38863},
+  {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
+  {name:'Controladoria', bounds:[713,10,237,104], color:0x527473},
+  {name:'Apoio Técnico', bounds:[480,172,223,87], color:0x777d75},
+  {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
+  {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
+  {name:'Biblioteca', bounds:[326,270,266,122], color:0x9b8161},
+  {name:'Comissões', bounds:[602,270,348,122], color:0x637b69},
+  {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
+  {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:'Galeria', bounds:[602,403,348,127], color:0x56736e},
+] satisfies {name:string; bounds:Rect; color:number}[];
+
+export function roomAt({x,y}:Motion) {
+  return rooms.find(({bounds:[left,top,width,height]})=>
+    x>=left && x<left+width && y>=top && y<top+height)?.name ?? 'Corredor';
 }

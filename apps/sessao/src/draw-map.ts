@@ -1,25 +1,5 @@
 import type Phaser from 'phaser';
-import { desks, furnishings, walls, PLENARY_BOUNDS, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
-
-const rooms = [
-  {name:'Gabinete A', bounds:[10,10,129,104], color:0xb69c75},
-  {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
-  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
-  {name:'Gabinete B', bounds:[341,10,129,104], color:0xaf9a79},
-  {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
-  {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
-  {name:'Gabinete C', bounds:[291,172,179,87], color:0xa38863},
-  {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
-  {name:'Controladoria', bounds:[713,10,237,104], color:0x527473},
-  {name:'Apoio Técnico', bounds:[480,172,223,87], color:0x777d75},
-  {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
-  {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
-  {name:'Biblioteca', bounds:[326,270,266,122], color:0x9b8161},
-  {name:'Comissões', bounds:[602,270,348,122], color:0x637b69},
-  {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
-  {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
-  {name:'Galeria', bounds:[602,403,348,127], color:0x56736e},
-] satisfies {name:string; bounds:Rect; color:number}[];
+import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene) {
   const graphics = scene.add.graphics();
