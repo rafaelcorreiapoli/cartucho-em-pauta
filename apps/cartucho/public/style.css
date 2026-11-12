@@ -70,15 +70,14 @@ h1 em { font-style: normal; color: var(--lime); }
 .games { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
 .game { --accent: var(--lime); display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--panel); }
 .spire { --accent: var(--gold); }
-.cover { position: relative; isolation: isolate; overflow: hidden; height: clamp(146px, 17vw, 210px); background: repeating-linear-gradient(135deg, transparent 0 12px, #d7ec8512 12px 13px), radial-gradient(ellipse at center, #61783b, #303b2c 75%); border-bottom: 1px solid var(--line); }
-.spire .cover { background: repeating-radial-gradient(ellipse at 50% 85%, transparent 0 22px, #ffd47329 23px 24px), radial-gradient(ellipse at center, #7a693d, #383f28 80%); }
-.cover-name { position: absolute; z-index: 1; top: 13%; width: 100%; text-align: center; font: 900 clamp(2.8rem,5vw,5.2rem)/.85 var(--display); color: #fff6d7; text-shadow: 3px 4px #232f1d; }
-.cover img { position: absolute; height: 82%; width: 49%; bottom: -15%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 4px 7px #1621199c); }
-.cover-left { left: 1%; rotate: -10deg; }
-.cover-right { right: 0; scale: -1 1; rotate: 9deg; }
-.deck { position: absolute; left: 37%; top: 27%; width: 29%; height: 84%; border: 2px solid #f9d38899; outline: 5px solid #253620aa; outline-offset: -8px; border-radius: 5px; background: repeating-linear-gradient(45deg,#625331 0 6px,#514629 6px 12px); }
-.deck-left { rotate: -21deg; translate: -24% 9%; }
-.deck-right { rotate: 22deg; translate: 28% 9%; }
+.cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
 .game-body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
 .game-body h3 { font-size: 2.05rem; line-height: .97; margin: 7px 0; }
 .game-body p { color: var(--muted); font-size: .91rem; margin: 1px 0 16px; }
@@ -125,8 +124,6 @@ footer .brand { font-size: 1.25rem; }
   .top .brand { font-size: 1.12rem; }
   nav { gap: 12px; }
   .games { grid-template-columns: 1fr; }
-  .cover { height: 166px; }
-  .cover-name { font-size: 3.6rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

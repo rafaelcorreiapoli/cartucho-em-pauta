@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#172219">
-  <meta name="description" content="Jogue BR Wars e BRSpire no Cartucho em Pauta, o arcade de sátira política brasileira.">
+  <meta name="description" content="Explore o catálogo de jogos de sátira política brasileira do Cartucho em Pauta.">
   <title>Cartucho em Pauta | Sátira política brasileira em jogo</title>
   <link rel="icon" href="assets/cartucho.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
       <div class="hero-copy">
         <p class="eyebrow"><span aria-hidden="true">✦</span> SÁTIRA POLÍTICA BRASILEIRA</p>
         <h1 id="hero-title">BRASÍLIA<br><em>EM JOGO.</em></h1>
-        <p class="intro">O poder subiu à cabeça. Agora subiu de fase. Reencontre as figuras da política brasileira no campo de batalha e no baralho.</p>
+        <p class="intro">O poder subiu à cabeça. Agora subiu de fase. Explore jogos inspirados nos personagens e nas confusões da política brasileira.</p>
         <a class="button primary" href="#jogos"><span aria-hidden="true">▶</span> Escolher um jogo <span aria-hidden="true">↓</span></a>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -42,35 +42,32 @@
     <div class="arcade">
       <section class="catalog" id="jogos" aria-labelledby="catalog-title">
         <div class="section-title"><span aria-hidden="true">▦</span><h2 id="catalog-title">JOGOS EM PAUTA</h2></div>
-        <div class="filters" role="group" aria-label="Filtrar por categoria">
+        <div class="filters" role="group" aria-label="Filtrar jogos">
           <button type="button" data-category="todos" aria-pressed="true">Todos</button>
           <button type="button" data-category="estrategia" aria-pressed="false">Estratégia</button>
           <button type="button" data-category="cartas" aria-pressed="false">Cartas</button>
           <button type="button" data-category="roguelike" aria-pressed="false">Roguelike</button>
+          <button type="button" data-category="mobile" aria-pressed="false">Mobile</button>
+          <button type="button" data-category="online" aria-pressed="false">Online</button>
         </div>
         <p id="filter-status" class="sr-only" aria-live="polite"></p>
         <div class="games">
-          <article class="game wars" data-game="brwars" data-categories="estrategia">
-            <div class="cover" aria-hidden="true">
-              <span class="cover-name">BR WARS</span><img class="cover-left" src="assets/che.webp" alt=""><img class="cover-right" src="assets/pavanato.webp" alt="">
-            </div>
+          <article class="game wars" data-game="brwars" data-categories="estrategia online">
+            <img class="cover" src="assets/capas/base-aliada.webp" alt="Banco, quartel e estação de rádio numa base em miniatura." width="1000" height="563" loading="lazy">
             <div class="game-body">
-              <p class="tag">ESTRATÉGIA EM TEMPO REAL</p>
-              <h3>BR Wars</h3>
+              <p class="tag">ESTRATÉGIA EM TEMPO REAL · ONLINE 1V1</p>
+              <h3>Base Aliada</h3>
               <p>Erga sua base, movimente a economia e leve a disputa pelo poder em Brasília ao campo de batalha.</p>
-              <a class="button game-play" href="/jogar/brwars" aria-label="Jogar BR Wars">Jogar agora <span aria-hidden="true">→</span></a>
+              <a class="button game-play" href="/jogar/brwars" aria-label="Jogar Base Aliada">Jogar agora <span aria-hidden="true">→</span></a>
             </div>
           </article>
-          <article class="game spire" data-game="brspire" data-categories="cartas roguelike">
-            <div class="cover" aria-hidden="true">
-              <span class="deck deck-left"></span><span class="deck deck-right"></span>
-              <span class="cover-name">BRSpire</span><img class="cover-left" src="assets/dilma.webp" alt=""><img class="cover-right" src="assets/stalin.webp" alt="">
-            </div>
+          <article class="game spire" data-game="brspire" data-categories="cartas roguelike mobile">
+            <img class="cover" src="assets/capas/cartas-marcadas.webp" alt="As cartas Ano de Eleição, Pedalada Fiscal e Estocar Vento abertas em leque." width="1000" height="563" loading="lazy">
             <div class="game-body">
-              <p class="tag">CARTAS · ROGUELIKE</p>
-              <h3>BRSpire</h3>
+              <p class="tag">CARTAS · ROGUELIKE · MOBILE E DESKTOP</p>
+              <h3>Cartas Marcadas</h3>
               <p>Monte seu baralho e encare os figurões da política. No quebra-pau do plenário, cada carta conta.</p>
-              <a class="button game-play" href="/jogar/brspire" aria-label="Jogar BRSpire">Jogar agora <span aria-hidden="true">→</span></a>
+              <a class="button game-play" href="/jogar/brspire" aria-label="Jogar Cartas Marcadas">Jogar agora <span aria-hidden="true">→</span></a>
             </div>
           </article>
         </div>
