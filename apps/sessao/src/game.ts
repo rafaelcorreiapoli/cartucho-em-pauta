@@ -379,7 +379,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
-            .setScale(profile.size/view.weapon.width).setPosition(spriteX+pose.handX,spriteY+pose.handY)
+            .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
         label.setVisible(true).setPosition(x,labelY).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)

@@ -1,8 +1,8 @@
-import { weapons, type WeaponKind } from '../src/weapons';
+import { weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
 import { canReachObject } from '../src/gameplay';
 import { aidRadius } from '../src/medical';
-import { type Player } from '../src/map';
+import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
 const recoveryTime = 8_000;
 const recoveryShield = 4_000;
@@ -73,7 +73,7 @@ export class Combat {
       const elapsed = now-swing.startedAt;
       if (exploring && state.pending && elapsed>=profile.impactMs) {
         state.pending = false;
-        const target = callbacks.canHit?.(player)===false ? undefined : this.findTarget(player,players,now,callbacks.canHit);
+        const target = callbacks.canHit?.(player)===false ? undefined : this.findTarget(player,swing,players,now,callbacks.canHit);
         if (target) {
           const damage = this.damage(player,target,callbacks.armored?.(target) ?? false,now,swing.weapon);
           callbacks.hit?.(player,target,damage);
@@ -95,12 +95,12 @@ export class Combat {
     attacker.swing = {weapon,startedAt:now,angle:Combat.facingAngles[attacker.direction ?? 0]};
   }
 
-  private findTarget<T extends Combatant>(attacker:T, players:T[], now:number, canHit?:(player:T)=>boolean) {
-    const {weapon,angle} = attacker.swing!;
-    const {reach,arc} = weapons[weapon];
-    const facingX = Math.cos(angle);
-    const facingY = Math.sin(angle);
-    const minimumDot = Math.cos(arc/2);
+  private findTarget<T extends Combatant>(attacker:T, swing:WeaponSwing, players:T[], now:number, canHit?:(player:T)=>boolean) {
+    if (attacker.knockedOut || attacker.carrying) return;
+    const {hitRadius} = weapons[swing.weapon];
+    const {handle,tip} = weaponImpactSegment(swing);
+    const facingX = Math.cos(swing.angle);
+    const facingY = Math.sin(swing.angle);
     let nearest: T | undefined;
     let nearestDistance = Infinity;
     for (const candidate of players) {
@@ -108,9 +108,12 @@ export class Combat {
       const x = candidate.x-attacker.x;
       const y = candidate.y-attacker.y;
       const distance = Math.hypot(x,y);
-      if (distance>=nearestDistance || x*facingX+y*facingY<distance*minimumDot ||
-          !canReachObject(attacker,candidate,{radius:reach,clearFloor:true,handsFree:true}) ||
+      if (distance>=nearestDistance || x*facingX+y*facingY<0 ||
           (this.vitality.get(candidate.id)?.protectedUntil ?? 0)>now) continue;
+
+      // Player positions are at their feet. The weapon crosses the visible torso above them.
+      if (!segmentIntersects(handle,tip,[x-7-hitRadius,y-30-hitRadius,14+hitRadius*2,27+hitRadius*2]) ||
+          obstacleBetween(attacker,candidate)) continue;
       nearest = candidate;
       nearestDistance = distance;
     }

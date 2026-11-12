@@ -328,3 +328,19 @@ test('a swing can miss or hit the closest player in its arc at the impact frame'
   expect(combat.view(ahead,1590).hp).toBe(120);
   expect(combat.view(closer,1590).hp).toBe(94);
 });
+
+test('the visible tip of the baton hits beyond the old range and misses beyond the sprite', () => {
+  const attacker = {...player('Alice',140,146),direction:1};
+  const target = player('Alvo',181,146);
+  const combat = new Combat();
+
+  combat.attack(attacker,100);
+  combat.tick([attacker,target],240,true);
+  expect(combat.view(target,240).hp).toBe(94);
+
+  target.x = 188;
+  combat.attack(attacker,1400);
+  combat.tick([attacker,target],1540,true);
+  expect(combat.view(target,1540).hp).toBe(94);
+  expect(target.hit).toBeUndefined();
+});

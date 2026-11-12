@@ -105,7 +105,7 @@ export function move(player: Player, input: Motion, seconds: number, stand = can
 export const VISION_RADIUS = 86;
 const HEARING_RADIUS = 114;
 
-function segmentIntersects(a:Motion, b:Motion, [x,y,w,h]:Rect) {
+export function segmentIntersects(a:Motion, b:Motion, [x,y,w,h]:Rect) {
   const interval = (start:number, end:number, min:number, max:number) => {
     if (start===end) return start>=min && start<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
     const first = (min-start)/(end-start), last = (max-start)/(end-start);

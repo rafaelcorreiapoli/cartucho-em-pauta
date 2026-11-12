@@ -6,7 +6,7 @@ export const weapons = {
     arc:1.9,
     swingMs:320,
     impactMs:140,
-    reach:24,
+    hitRadius:2.5,
     cooldown:1_250,
     damage:12,
     strengthScale:.28,
@@ -25,13 +25,26 @@ export function weaponPose(swing:WeaponSwing, progress:number) {
   const strike = progress<.26 ? -.2-.8*progress/.26 :
     progress<.6 ? -1+2*(progress-.26)/.34 : 1-(progress-.6)/.4;
   const angle = swing.angle+side*strike*arc*.5;
-  const extension = 7+6*Math.sin(progress*Math.PI);
+  const swingStrength = Math.sin(progress*Math.PI);
+  const extension = 7+6*swingStrength;
+  const lungeX = horizontal*swingStrength*3;
+  const lungeY = vertical*swingStrength*3;
   return {
     angle,facing,
-    handX:Math.cos(angle)*extension,
-    handY:-16+Math.sin(angle)*extension*.55,
+    handX:lungeX+Math.cos(angle)*extension,
+    handY:lungeY-16+Math.sin(angle)*extension*.55,
     lean:horizontal*strike*.16,
-    lungeX:horizontal*Math.sin(progress*Math.PI)*3,
-    lungeY:vertical*Math.sin(progress*Math.PI)*3,
+    lungeX,lungeY,
+  };
+}
+
+export function weaponImpactSegment(swing:WeaponSwing) {
+  const {size,grip,impactMs,swingMs} = weapons[swing.weapon];
+  const {handX,handY,angle} = weaponPose(swing,impactMs/swingMs);
+  const offsetX = Math.cos(angle)*size;
+  const offsetY = Math.sin(angle)*size;
+  return {
+    handle:{x:handX-offsetX*grip,y:handY-offsetY*grip},
+    tip:{x:handX+offsetX*(1-grip),y:handY+offsetY*(1-grip)},
   };
 }
