@@ -8,7 +8,6 @@ import { HEIGHT, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; nextStep:number };
 const stationColor = 0x79ebdf;
-const stationOutline = [5,0, 31,0, 36,5, 36,13, 31,18, 5,18, 0,13, 0,5];
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -51,7 +50,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private views = new Map<string,View>();
-    private stationMarkers: Phaser.GameObjects.Polygon[] = [];
+    private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private marker!: Phaser.GameObjects.Ellipse;
@@ -81,7 +80,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       syncCanvas();
       this.mapLabels = drawMap(this);
       for (const {x,y} of Object.values(stations)) {
-        this.stationMarkers.push(this.add.polygon(x,y,stationOutline,stationColor,.16)
+        this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
@@ -99,7 +98,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     pulseStation(key:Station) {
       const {x,y} = stations[key];
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const pulse = this.add.polygon(x,y,stationOutline,stationColor,.24)
+      const pulse = this.add.ellipse(x,y,44,26,stationColor,.24)
         .setStrokeStyle(2,stationColor).setDepth(2);
       this.tweens.add({
         targets:pulse,scale:reduced ? 1 : 2.8,alpha:0,duration:560,ease:'Cubic.Out',
@@ -177,8 +176,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             label:this.add.text(player.x,player.y+2,'',{
               fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
-            office:this.add.text(player.x,player.y+14,'',{
-              fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',stroke:'#152522',strokeThickness:2,
+            office:this.add.text(player.x,player.y+12,'',{
+              fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',stroke:'#152522',strokeThickness:1.5,
               resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
           };
@@ -199,7 +198,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         label.setVisible(true).setPosition(x,y+2).setText(player.nick)
           .setColor('#fff7df');
         const title = titles.get(id);
-        office.setVisible(running || !!title).setPosition(x,y+14)
+        office.setVisible(running || !!title).setPosition(x,y+12)
           .setText(title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving) sprite.play(`${character}-${row}`,true);

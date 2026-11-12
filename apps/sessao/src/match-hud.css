@@ -153,29 +153,22 @@
 #agenda-dock strong { font-size: .73rem; color: var(--hud-gold); }
 #agenda-dock .module-content { bottom: calc(100% + 6px); left: 0; }
 
-#session #stations {
-  top: 50%;
-  left: 50%;
-  z-index: 3;
-  width: max-content;
-  max-width: calc(100vw - 2 * var(--hud-edge));
-  margin-top: clamp(42px, 8vh, 84px);
-  padding: .85rem 1.15rem 1.15rem;
-  border: 1px solid #c9a857;
-  border-radius: 18px;
-  background: #142c22f7;
-  box-shadow: 0 7px 0 #0a1713, 0 15px 30px #0007;
+#stations {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  padding: 1.75rem var(--hud-edge) calc(var(--hud-edge) + 46px);
+  background: linear-gradient(to top, #060e0deb, #060e0d9c 62%, transparent);
   text-align: center;
-  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-#station-heading {
-  margin: 0 0 .75rem;
-  color: #ffe4a0;
-  font: 850 clamp(1.2rem, 2.1vw, 1.65rem)/1.1 var(--party-display);
+.station-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .85rem;
 }
-
-.station-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem; }
 #stations .station-grid:not([hidden]), #station-shortcuts { display: contents; }
 
 #stations .hud-button {
@@ -183,9 +176,9 @@
   place-items: center;
   align-content: center;
   gap: .4rem;
-  min-height: 92px;
-  width: clamp(92px, 12vw, 152px);
-  padding: .55rem;
+  min-height: 108px;
+  min-width: clamp(170px, 15vw, 218px);
+  padding: .75rem 1.1rem;
   border: 1px solid #70b889;
   border-radius: 12px;
   background: #295d46;
@@ -194,9 +187,11 @@
   cursor: pointer;
   font: 800 clamp(.9rem, 1.35vw, 1.15rem)/1.1 var(--party-display);
   text-align: center;
+  white-space: nowrap;
+  pointer-events: auto;
   user-select: none;
 }
-#stations .hud-button .hud-glyph { width: 30px; height: 30px; color: #d1ef9c; }
+#stations .hud-button .hud-glyph { width: 40px; height: 40px; color: #d1ef9c; }
 #stations .hud-button small { font-size: .78em; color: #d5e7bf; }
 #stations .hud-button[data-action="fraud"] { background: #6b3a31; border-color: #e7997f; }
 #stations .hud-button[data-action="fraud"] .hud-glyph { color: #ffd1a9; }
@@ -208,8 +203,8 @@
 @media (prefers-reduced-motion: no-preference) {
   #stations:not([hidden]) { animation: station-arrive 170ms ease-out both; }
   @keyframes station-arrive {
-    from { opacity: 0; transform: translate(-50%, 10px) scale(.96); }
-    to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 

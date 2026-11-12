@@ -1,7 +1,7 @@
 import { offices } from './elections';
 import type { Player } from './map';
 import { AGENDA_REWARD, agendas, money } from './politics';
-import { stations as mapStations, type PlenaryView, type Station } from './plenary';
+import type { PlenaryView, Station } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -12,7 +12,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const notices = element('hud-notices');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
-  const stationHeading = element('station-heading');
   const interviewHint = element('interview-hint');
   const quickActions = [
     {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
@@ -92,12 +91,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }
-    const active = stationActions.find(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
-    const station = (active?.dataset.station as Station | undefined) ?? (!interviewHint.hidden ? 'tv' : undefined);
-    stations.hidden = !exploring || !station;
-    if (station && stationHeading.textContent!==mapStations[station].label) {
-      stationHeading.textContent = mapStations[station].label;
-    }
+    const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
+    stations.hidden = !exploring || (!hasAction && interviewHint.hidden);
   }
 
   return {

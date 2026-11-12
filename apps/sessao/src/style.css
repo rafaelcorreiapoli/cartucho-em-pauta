@@ -76,7 +76,6 @@ p { margin:.5rem 0; }
 #proposal p, #outcome, #start-hint { margin:.35rem 0; line-height:1.4; }
 #proposal p:empty, #start-hint:empty { display:none; }
 #stability, #budget { color:#b9d2ba; }
-#stations { border-top:1px solid #9e927a66; margin-top:.5rem; padding-top:.15rem; }
 #stations p, #outcome { font-size:.78rem; }
 #movement-hint {
   position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom));
