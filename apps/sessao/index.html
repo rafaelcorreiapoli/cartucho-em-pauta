@@ -140,17 +140,16 @@
             <button id="compact-hud" class="hud-button hud-button--secondary" type="button" aria-pressed="false">HUD reduzido</button>
           </div>
         </details>
-        <section id="legislative-dock" class="hud-module" aria-label="Projeto legislativo">
-          <div class="match-top">
-            <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span id="phase"></span></span>
+        <details id="legislative-dock" class="hud-module" open>
+          <summary class="match-top">
+            <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projetos</strong><span id="phase"></span></span></span>
             <span class="clock-chip"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg><strong id="clock"></strong></span>
-          </div>
+            <span class="project-chevron" aria-hidden="true"></span>
+          </summary>
           <p class="hud-feedback" id="bill-objection" hidden></p>
           <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
           <div id="proposal">
             <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2></div>
-            <details id="project-details">
-              <summary>O que está em jogo <span id="impact-preview"></span></summary>
             <div id="impact" aria-label="Impacto de cada decisão">
               <div class="impact-card">
                 <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
@@ -168,7 +167,6 @@
               </div>
             </div>
             <p class="hud-feedback" id="clue" role="status" hidden></p>
-            </details>
             <div id="ballot" hidden>
               <div class="ballot-progress">
                 <p id="quorum"></p>
@@ -180,11 +178,10 @@
               </div>
             </div>
           </div>
-          <details id="last-vote" class="vote-result" hidden>
-            <summary>
+          <section id="last-vote" class="vote-result" aria-label="Última votação" hidden>
+            <header>
               <span class="vote-result-title"><strong id="outcome-summary"></strong><span id="outcome-bill"></span></span>
-              <span class="vote-mini-score" aria-hidden="true"><b id="outcome-mini-yes"></b><span>×</span><b id="outcome-mini-no"></b></span>
-            </summary>
+            </header>
             <div class="vote-result-body">
               <div class="vote-scoreboard">
                 <div class="vote-team vote-team-yes">
@@ -200,9 +197,9 @@
               <p id="outcome-threshold"></p>
               <p id="outcome" hidden></p>
             </div>
-          </details>
+          </section>
           <div id="outcome-announcement" class="sr-only" role="status"></div>
-        </section>
+        </details>
         <section id="congress-dock" class="hud-module" aria-labelledby="congress-heading">
           <h2 id="congress-heading">Parlamento</h2>
           <div class="resource-grid">

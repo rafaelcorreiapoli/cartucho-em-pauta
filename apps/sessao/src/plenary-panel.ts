@@ -19,8 +19,8 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
   let own: Player | undefined;
   const count = element<HTMLSelectElement>('infiltrator-count');
   count.value = '1';
-  element<HTMLDetailsElement>('last-vote').open = false;
-  element<HTMLDetailsElement>('project-details').open = false;
+  const projects = element<HTMLDetailsElement>('legislative-dock');
+  projects.open = true;
   start.onclick = () => send('start-match',count.value==='2' ? 2 : 1);
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
@@ -37,13 +37,10 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
 
   return {
     render(next:PlenaryView) {
-      if (next.phase!==view?.phase) {
-        element<HTMLDetailsElement>('project-details').open = next.phase==='ballot' || next.phase==='hearing';
-      }
+      if (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing' ||
+        next.phase==='finished' || view?.phase==='finished')) projects.open = true;
       const newResult = next.outcome && next.outcome.round!==view?.outcome?.round;
-      const lastVote = element<HTMLDetailsElement>('last-vote');
-      if (newResult) lastVote.open = true;
-      else if (!next.outcome || (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing'))) lastVote.open = false;
+      const lastVote = element('last-vote');
       view = next;
       const {phase,remaining,role,players,host,outcome,round} = view;
       const hearing = view.hearing;
@@ -74,7 +71,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       stability.dataset.low = String(view.stability<45);
       element('budget').textContent = String(view.budget);
       element<HTMLProgressElement>('budget-meter').value = view.budget;
-      lastVote.hidden = !outcome;
+      lastVote.hidden = !outcome || phase==='ballot' || phase==='hearing';
       if (outcome && newResult) {
         const bill = bills[outcome.round].name;
         const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
@@ -83,7 +80,6 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         element('outcome-bill').textContent = bill;
         for (const side of ['yes','no'] as const) {
           element(`outcome-${side}`).textContent = String(outcome[side]);
-          element(`outcome-mini-${side}`).textContent = String(outcome[side]);
         }
         const noVotes = outcome.yes+outcome.no===0;
         const threshold = outcome.needed===1 ? '1 voto a favor para passar' : `${outcome.needed} votos a favor para passar`;
@@ -104,7 +100,6 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
       element('bill').textContent = hearing ? hearing.target : bills[round].name;
       element('impact').hidden = !!hearing;
-      element('impact-preview').textContent = hearing ? '' : ` · Estab. ${signed(view.yes.stability)} / ${signed(view.no.stability)}`;
       showImpact('yes',view.yes);
       showImpact('no',view.no);
 
