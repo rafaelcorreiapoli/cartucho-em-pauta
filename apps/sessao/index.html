@@ -103,19 +103,26 @@
           <p>Escolha seu personagem</p>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
-        <p id="briefing">Três projetos entram em pauta. Negociem no mapa e terminem com pelo menos 45 de estabilidade. Um infiltrado quer derrubar a sessão.</p>
+        <p id="briefing">Três projetos entram em pauta. Negociem no mapa e terminem com pelo menos 45 de estabilidade. A infiltração quer derrubar a sessão.</p>
+        <label id="infiltrator-setup" hidden>Infiltrados
+          <select id="infiltrator-count">
+            <option value="1">1 infiltrado</option>
+            <option value="2">2 infiltrados</option>
+          </select>
+        </label>
         <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
         <p id="start-hint"></p>
         <div id="match" hidden>
           <div class="plenary-line"><strong id="role"></strong><span id="phase"></span><strong id="clock"></strong></div>
           <div class="plenary-line"><span id="stability"></span><span id="budget"></span></div>
+          <p id="hearing-result" role="status" hidden></p>
           <p id="outcome" role="status" hidden></p>
           <div id="proposal">
             <h2 id="bill"></h2>
             <p id="impact"></p>
             <p id="clue" role="status" hidden></p>
             <div id="stations">
-              <p>Pontos dourados: Protocolo ao sul, Controladoria a leste e Painel no Plenário.</p>
+              <p>Siga os pontos dourados: Protocolo, Controladoria, Painel, Gabinete B e Imprensa.</p>
               <div class="plenary-line">
                 <button class="hud-button hud-button--secondary" data-action="amendment" type="button">Protocolar emenda</button>
                 <button class="hud-button hud-button--secondary" data-action="audit" type="button">Conferir os números</button>
@@ -133,6 +140,57 @@
           </div>
         </div>
       </section>
+      <details id="politics-dock" class="hud-strip" hidden>
+        <summary class="hud-option"><span>Carteira e dossiê</span><span id="personal-stats"></span></summary>
+        <div class="hud-panel politics-content">
+          <p id="agenda"></p>
+          <p id="politics-hint"></p>
+          <div id="politics-actions">
+            <form id="trade">
+              <label>Jogador próximo <select id="trade-contact"></select></label>
+              <div class="economy-row">
+                <label>Valor em R$ 10 mil <input id="trade-amount" type="number" value="1" min="1" step="1" required></label>
+                <label><input id="trade-private" type="checkbox"> Clandestino</label>
+              </div>
+              <button class="hud-button" id="transfer" type="submit">Transferir</button>
+            </form>
+            <form id="cabinet-form" hidden>
+              <label>Destino da verba <select id="grant-split">
+                <option value="0">Aplicar tudo no gabinete</option>
+                <option value="1">Desviar R$ 10 mil</option>
+                <option value="2">Desviar R$ 20 mil</option>
+                <option value="3">Desviar R$ 30 mil</option>
+              </select></label>
+              <button class="hud-button" id="grant" type="submit">Aplicar verba de R$ 40 mil</button>
+            </form>
+            <button class="hud-button hud-button--secondary" id="campaign" type="button" hidden>Fazer campanha · R$ 20 mil</button>
+            <form id="hearing-form" hidden>
+              <label>Convocar cassação de <select id="hearing-target"></select></label>
+              <button class="hud-button" type="submit">Convocar votação</button>
+            </form>
+          </div>
+          <section id="offer-list" aria-label="Ofertas de documentos"></section>
+          <section aria-label="Provas privadas">
+            <h3>Provas privadas</h3>
+            <p id="empty-evidence">Sem documentos privados.</p>
+            <form id="evidence-form" hidden>
+              <label>Documento <select id="evidence"></select></label>
+              <p id="evidence-detail"></p>
+              <div id="evidence-tools">
+                <label>Preço em R$ 10 mil (0 = grátis) <input id="evidence-price" type="number" value="0" min="0" step="1" required></label>
+                <div class="economy-row">
+                  <button class="hud-button hud-button--secondary" id="share" type="button">Enviar a quem está perto</button>
+                  <button class="hud-button hud-button--secondary" id="publish" type="button">Divulgar na imprensa</button>
+                </div>
+              </div>
+            </form>
+          </section>
+          <details id="ledger">
+            <summary>Registro público</summary>
+            <ul id="public-records"></ul>
+          </details>
+        </div>
+      </details>
       <p id="movement-hint" class="hud-strip">WASD, setas ou toque no chão para andar</p>
     </section>
   </main>

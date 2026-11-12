@@ -3,6 +3,7 @@ import { Room, type Client } from 'colyseus';
 import { localPerception, NAMES, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
+import { readPoliticsAction } from '../src/politics';
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
 
@@ -34,14 +35,19 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
-    this.onMessage('start-match', client => {
-      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime)) void this.lock();
+    this.onMessage('start-match', (client, count:unknown) => {
+      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) void this.lock();
     });
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
       if (player && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
         this.match.act(player,action,this.clock.currentTime);
       }
+    });
+    this.onMessage('politics', (client, raw:unknown) => {
+      const action = readPoliticsAction(raw);
+      const player = this.players.get(client.sessionId)?.player;
+      if (action && player) this.match.politics(player,action,[...this.players.values()].map(state => state.player),this.clock.currentTime);
     });
     this.onMessage('bill-vote', (client, vote:unknown) => {
       if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
@@ -76,7 +82,7 @@ export class SessionRoom extends Room {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
-        const view = this.match.view(id,ids,now);
+        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);

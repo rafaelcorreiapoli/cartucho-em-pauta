@@ -26,16 +26,37 @@ parlamentares ganham se terminarem os três projetos com pelo menos 45 de
 estabilidade; o infiltrado ganha se impedir isso. Se chegar a zero, a partida
 termina na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
 
-Cada projeto começa com 80 segundos de articulação. No mapa, a visão de outros
+Cada projeto começa com 3 minutos e 25 segundos de articulação. No mapa, a visão de outros
 jogadores é local e a voz perde volume com distância e paredes. Os pontos dourados
 permitem protocolar uma emenda que troca estabilidade por economia, auditar os
 valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer no
 painel uma vez por projeto para que o custo aparente de aprovar seja menor.
 
-Na votação, todos voltam a se ouvir e têm 30 segundos para aprovar ou rejeitar.
+Na votação, todos voltam a se ouvir e têm 35 segundos para aprovar ou rejeitar.
 O projeto precisa de mais da metade dos jogadores a favor. O resultado usa os
 valores reais, mesmo se a fraude não for descoberta. No fim, a sala mostra quem
 era o infiltrado e permite jogar de novo.
+
+## Dinheiro, popularidade e provas
+
+Abra **Carteira e dossiê** durante a partida. Cada pessoa começa com R$ 80 mil
+de dinheiro pessoal e recebe uma agenda privada, independente do papel e da
+caricatura. Uma sala cheia pode jogar com um ou dois infiltrados.
+
+Perto de alguém, combine pela voz e transfira dinheiro, com registro público ou
+de forma clandestina. O dinheiro muda de mãos na hora. O voto continua livre.
+Cada jogador pode fazer até seis pagamentos por rodada. No Gabinete B, cada
+participante pode aplicar uma verba pública uma vez na sessão, desviando ou não
+uma parte dela. Aplicar mais dinheiro fortalece a estabilidade; desviar deixa
+rastro. Um ponto do orçamento equivale a R$ 10 mil.
+
+A Controladoria pode revelar um documento por rodada. Compartilhe uma prova
+de graça, ofereça uma venda a alguém próximo ou divulgue o documento na
+Imprensa. Divulgação de escândalos e campanhas afetam a popularidade.
+Com 55 de popularidade, um parlamentar com mandato pode convocar, no Painel,
+a única votação de cassação da sessão. A voz é geral durante a reunião.
+Cassar um parlamentar custa 12 de estabilidade. A pessoa cassada fica como
+assessora: conversa, negocia e investiga, mas perde voto, verba e sabotagem.
 
 ## Voz da sala
 

@@ -1,5 +1,6 @@
 import { Client, type Room } from '@colyseus/sdk';
 import { createGame } from './game';
+import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
@@ -162,8 +163,10 @@ async function connect(join: () => Promise<Room>) {
     session.hidden = false;
     setup.hidden = false;
     roster.replaceChildren();
+    document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     game = createGame(map,joined.sessionId,input => joined.send('input',input));
+    const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
       if (type!=='bill-vote') map.focus({preventScroll:true});
@@ -172,6 +175,7 @@ async function connect(join: () => Promise<Room>) {
     let rosterKey = '';
     joined.onMessage('plenary',(view: PlenaryView) => {
       panel.render(view);
+      political.render(view);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
       if (phase===view.phase) return;
@@ -179,7 +183,7 @@ async function connect(join: () => Promise<Room>) {
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
       voice?.setRange(negotiating ? new Map() : undefined);
-      matchRunning = negotiating || phase==='ballot';
+      matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
       if (negotiating) map.focus({preventScroll:true});
@@ -188,6 +192,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('players',(players: Player[]) => {
       playersInRoom = players;
       panel.players(players);
+      political.players(players);
       game?.update(players);
       updateSpeaking();
       const self = players.find(player => player.id===joined.sessionId);

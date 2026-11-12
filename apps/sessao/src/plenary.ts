@@ -1,12 +1,16 @@
+import type { PoliticsView } from './politics';
+
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 6;
-export const NEGOTIATION_MS = 80_000;
-export const BALLOT_MS = 30_000;
+export const NEGOTIATION_MS = 205_000;
+export const BALLOT_MS = 35_000;
 
 export const stations = {
   amendment: {x:129,y:365,label:'Emenda'},
   audit: {x:808,y:93,label:'Auditoria'},
   panel: {x:240,y:76,label:'Painel'},
+  cabinet: {x:389,y:93,label:'Verba do gabinete'},
+  press: {x:863,y:245,label:'Imprensa'},
 } as const;
 export const STATION_RADIUS = 23;
 export const bills = [
@@ -18,12 +22,13 @@ export const bills = [
 export type Impact = {stability:number; budget:number};
 export type Role = 'Parlamentar' | 'Infiltrado';
 export type Vote = 'yes' | 'no';
-export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'finished';
-export type Action = keyof typeof stations | 'fraud';
+export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
+export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean};
 export type PlenaryView = {
   phase:Phase; round:number; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
+  politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
   yes:Impact; no:Impact; outcome?:Outcome; winner?:Role; reason?:string; infiltratorName?:string;
 };

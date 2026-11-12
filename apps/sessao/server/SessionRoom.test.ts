@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { PlenaryView } from '../src/plenary';
 import { canStand, type Player } from '../src/map';
 
-test('two clients share movement, collision and character changes in a room', async () => {
+test('clients share movement and voice, then receive private roles and payments', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
   const port = reservation.port!;
   await reservation.stop();
@@ -98,6 +98,12 @@ test('two clients share movement, collision and character changes in a room', as
     expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
     await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
+    second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
+    await until(() => secondView?.politics?.wallet===6 && thirdView?.politics?.wallet===10);
+    expect(firstView!.politics?.wallet).toBe(8);
+    expect(firstView!.politics?.evidence).toEqual([]);
+    expect(firstView!.politics?.ledger).toEqual([]);
+    expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     await first.leave();
     await until(() => roster.at(-1)?.length===1);
     expect(roster.at(-1)).toEqual([second.sessionId]);

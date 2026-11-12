@@ -164,7 +164,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
     setMatchPhase(phase:Phase) {
       negotiating = phase==='negotiation';
-      running = negotiating || phase==='ballot';
+      running = negotiating || phase==='ballot' || phase==='hearing';
     },
     setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
