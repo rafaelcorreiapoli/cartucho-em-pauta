@@ -1,10 +1,11 @@
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
-import { Room, type Client } from 'colyseus';
+import { Room, ServerError, type Client } from 'colyseus';
 import { localPerception, NAMES, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
+import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/nick';
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
 
@@ -109,11 +110,16 @@ export class SessionRoom extends Room {
     },STEP_MS);
   }
 
-  onJoin(client: Client) {
+  onJoin(client: Client, options?:{nick?:unknown}) {
+    const nick = readNick(options?.nick);
+    if (!nick) throw new ServerError(INVALID_NICK,nickHint);
+    if ([...this.players.values()].some(({player}) => nickKey(player.nick)===nickKey(nick))) {
+      throw new ServerError(NICK_TAKEN,'Esse nick já está em uso nesta sala.');
+    }
     const occupied = new Set([...this.players.values()].map(({player}) => player.character));
     const character = NAMES.findIndex((_, index) => !occupied.has(index));
     const player: Player = {
-      id:client.sessionId, character:Math.max(0,character), x:140+this.players.size*36, y:146, direction:0, moving:false,
+      id:client.sessionId, nick, character:Math.max(0,character), x:140+this.players.size*36, y:146, direction:0, moving:false,
     };
     this.players.set(client.sessionId,{player,route:[],ack:0});
     this.movementQueue.set(client.sessionId,[]);

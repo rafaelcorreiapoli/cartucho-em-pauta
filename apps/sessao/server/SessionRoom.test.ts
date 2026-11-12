@@ -18,12 +18,14 @@ test('clients share movement and voice, then receive private roles and payments'
       if (await fetch(endpoint+'/health').then(r => r.ok).catch(() => false)) break;
       await Bun.sleep(50);
     }
-    const first = await new Client(endpoint).create('plenary');
+    const first = await new Client(endpoint).create('plenary',{nick:'Rafa'});
     rooms.push(first);
     let firstView: PlenaryView;
     first.onMessage('plenary',(view:PlenaryView) => { firstView = view; });
     first.onMessage('voice-range',() => {});
-    const second = await new Client(endpoint).joinById(first.roomId);
+    await expect(new Client(endpoint).joinById(first.roomId,{nick:'  RAFA  '})).rejects.toThrow('já está em uso');
+    await expect(new Client(endpoint).joinById(first.roomId,{nick:'   '})).rejects.toThrow('Use de 1 a 20');
+    const second = await new Client(endpoint).joinById(first.roomId,{nick:'Bia'});
     rooms.push(second);
     let secondView: PlenaryView;
     let secondRange:[string,number][] = [];
@@ -58,6 +60,7 @@ test('clients share movement and voice, then receive private roles and payments'
     first.send('input',{seq:++seq,motion:{x:0,y:0}});
     await until(() => findFirst()?.moving===false && findFirst()?.character===2);
     const end = findFirst()!;
+    expect(end.nick).toBe('Rafa');
     expect(end.y).toBeLessThan(start.y);
     expect(end.y).toBeGreaterThanOrEqual(132);
     expect(end.x).toBe(start.x);
@@ -85,7 +88,7 @@ test('clients share movement and voice, then receive private roles and payments'
     first.send('voice-signal',{to:second.sessionId,signal});
     await until(() => signals.length===1);
     expect(signals[0]).toEqual({from:first.sessionId,signal});
-    const third = await new Client(endpoint).joinById(first.roomId);
+    const third = await new Client(endpoint).joinById(first.roomId,{nick:'João'});
     rooms.push(third);
     let thirdView: PlenaryView;
     third.onMessage('plenary',(view:PlenaryView) => { thirdView = view; });
@@ -116,6 +119,17 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(() => roster.at(-1)?.length===1);
     expect(roster.at(-1)).toEqual([second.sessionId]);
     await until(() => secondView?.phase==='finished' && seen.length===2 && seen.some(player => player.id===second.sessionId));
+    const solo = await new Client(endpoint).create('plenary',{nick:'Solo'});
+    rooms.push(solo);
+    let soloView:PlenaryView;
+    solo.onMessage('players',() => {});
+    solo.onMessage('control',() => {});
+    solo.onMessage('plenary',(view:PlenaryView) => { soloView = view; });
+    solo.send('start-match',1);
+    await until(() => soloView?.phase==='negotiation');
+    expect(soloView!).toMatchObject({solo:true,role:'Parlamentar',electorate:1,
+      election:{personal:{office:'president'}}});
+
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();

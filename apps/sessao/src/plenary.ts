@@ -1,7 +1,7 @@
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
 
-export const MIN_PLAYERS = 3;
+export const MIN_PLAYERS = 1;
 export const MAX_PLAYERS = 6;
 export const NEGOTIATION_MS = 205_000;
 export const BALLOT_MS = 35_000;
@@ -29,7 +29,7 @@ export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean};
 export type PlenaryView = {
   phase:Phase; round:number; remaining:number; stability:number; budget:number; host?:string;
-  role?:Role; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
+  role?:Role; solo:boolean; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;

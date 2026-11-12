@@ -49,12 +49,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; character: number; x: number; y: number; direction: number; moving: boolean };
-export function playerName(player: Player, players: Player[], alwaysDisambiguate = false) {
-  const name = NAMES[player.character];
-  return alwaysDisambiguate || players.some(other => other.id!==player.id && other.character===player.character) ?
-    `${name} · ${player.id.slice(-4)}` : name;
-}
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 

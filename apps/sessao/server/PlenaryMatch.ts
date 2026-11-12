@@ -4,7 +4,7 @@ import {
   BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, STATION_RADIUS,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
-import { localPerception, playerName, type Player } from '../src/map';
+import { localPerception, type Player } from '../src/map';
 import { HEARING_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -16,6 +16,7 @@ export class PlenaryMatch {
   private ends = 0;
   private stability = 48;
   private budget = 32;
+  private initialPlayers = 0;
   private electorate = new Set<string>();
   private votes = new Map<string,Vote>();
   private infiltrators = new Set<string>();
@@ -43,14 +44,15 @@ export class PlenaryMatch {
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<MIN_PLAYERS || ids[0]!==requester) return false;
     this.electorate = new Set(ids);
+    this.initialPlayers = ids.length;
     const candidates = [...players];
-    const count = players.length===6 && requested===2 ? 2 : 1;
+    const count = ids.length===1 ? 0 : ids.length===6 && requested===2 ? 2 : 1;
     this.infiltrators.clear();
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
-    const contacts = players.map(player => ({id:player.id,name:playerName(player,players)}));
+    const contacts = players.map(player => ({id:player.id,name:player.nick}));
     this.economy.reset(contacts,random);
     this.election.reset(contacts,now,random);
-    this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ');
+    this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingUsed = false;
     this.hearingTarget = this.hearingResult = undefined;
     this.stability = 48;
@@ -77,8 +79,8 @@ export class PlenaryMatch {
     this.votes.delete(id);
     this.election.leave(id,now);
     this.economy.cancelOffers(id);
-    if (![...this.infiltrators].some(infiltrator => this.electorate.has(infiltrator))) this.finish('Parlamentar','Os infiltrados saíram da partida.');
-    else if (this.electorate.size<MIN_PLAYERS) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
+    if (this.infiltrators.size && ![...this.infiltrators].some(infiltrator => this.electorate.has(infiltrator))) this.finish('Parlamentar','Os infiltrados saíram da partida.');
+    else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
   }
 
   act(player:Player, action:Action, now:number) {
@@ -130,7 +132,7 @@ export class PlenaryMatch {
         if (!result) break;
         this.budget -= result.budget;
         this.stability = clamp(this.stability+result.stability);
-        if (!this.stability) this.finish('Infiltrado','O Congresso entrou em colapso.');
+        if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
         break;
       }
       case 'campaign':
@@ -223,7 +225,7 @@ export class PlenaryMatch {
       this.hearingResult = `${this.economy.name(target)}: mandato ${removed ? 'cassado' : 'mantido'} (${yes} votos pela cassação).`;
       this.hearingTarget = undefined;
       this.votes.clear();
-      if (!this.stability) this.finish('Infiltrado','O Congresso entrou em colapso.');
+      if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
       else {
         this.phase = 'negotiation';
         this.ends = now+this.interruptedTime;
@@ -245,9 +247,9 @@ export class PlenaryMatch {
     this.budget = clamp(balance);
     this.stability = clamp(this.stability+impact.stability+Math.min(0,balance)*2);
     this.outcome = {round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud};
-    if (!this.stability) this.finish('Infiltrado','O Congresso entrou em colapso.');
+    if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else if (this.round===bills.length-1) {
-      this.finish(this.stability>=45 ? 'Parlamentar' : 'Infiltrado',
+      this.finish(this.stability>=45 ? 'Parlamentar' : this.infiltrators.size ? 'Infiltrado' : undefined,
         this.stability>=45 ? 'O Congresso terminou a sessão estável.' : 'A sessão terminou abaixo de 45 de estabilidade.');
     } else {
       this.round++;
@@ -270,7 +272,7 @@ export class PlenaryMatch {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     return {
       phase:this.phase,round:this.round,remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
-      stability:this.stability,budget:this.budget,host:ids[0],role,players:ids.length,
+      stability:this.stability,budget:this.budget,host:ids[0],role,solo:this.initialPlayers===1,players:ids.length,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
       amended:this.amended,canFraud:role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,

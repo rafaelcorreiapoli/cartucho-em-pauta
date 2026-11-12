@@ -1,5 +1,5 @@
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
-import { agendas, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
+import { agendas, CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -92,10 +92,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       el('personal-stats').textContent = `${money(p.wallet)} · ${p.popularity} pop.${p.incoming.length ? ' · nova oferta' : ''}`;
       el('agenda').textContent = `${agendas[p.agenda]}. ${p.goalMet ? 'Cumprida.' : 'Em andamento.'}`;
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
-      el('politics-hint').textContent = !active ? p.suspended ? 'Mandato cassado. Você continua na sala como assessor.' : '' :
-        p.suspended ? 'Você está como assessor: ainda pode negociar, investigar e divulgar provas.' :
-        p.contacts.length ? 'Combine pela voz. Transferências não prendem o voto.' :
-        `Negocie com quem estiver perto. Campanha na imprensa; cassação no Painel a partir de ${HEARING_POPULARITY} de popularidade.`;
+      el('politics-hint').textContent = p.suspended ? 'Mandato cassado · assessor' :
+        active ? 'Negociação' : 'Seu dossiê';
       updateOptions(target,[['',p.contacts.length ? 'Selecione um jogador' : 'Ninguém próximo'],
         ...p.contacts.map(({id,name}):[string,string] => [id,name])]);
       updateOptions(nominee,[['','Selecione um jogador'],...p.directory.filter(contact => contact.id!==id && contact.eligible)

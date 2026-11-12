@@ -1,24 +1,45 @@
 import { Client, type Room } from '@colyseus/sdk';
 import { createElectionPanel } from './election-panel';
+import { GameAudio } from './game-audio';
+import { installHudHelp } from './hud-help';
 import { createGame } from './game';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
-import { NAMES, playerName, type Player } from './map';
+import { NAMES, type Player } from './map';
 import type { Disguise } from './live-disguise';
 import { RoomVoice } from './voice';
+import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
+const audio = new GameAudio();
+installHudHelp(document.querySelector('main')!);
+const musicVolume = document.querySelector<HTMLInputElement>('#music-volume')!;
+const effectsVolume = document.querySelector<HTMLInputElement>('#effects-volume')!;
+const soundMute = document.querySelector<HTMLInputElement>('#sound-mute')!;
+const soundPrefs = audio.preferences;
+function syncSoundControls() {
+  const prefs = soundPrefs.getSnapshot();
+  musicVolume.value = String(Math.round(prefs.musicVolume*100));
+  effectsVolume.value = String(Math.round(prefs.sfxVolume*100));
+  soundMute.checked = prefs.muted;
+}
+musicVolume.oninput = () => soundPrefs.update({musicVolume:musicVolume.valueAsNumber/100});
+effectsVolume.oninput = () => soundPrefs.update({sfxVolume:effectsVolume.valueAsNumber/100});
+soundMute.onchange = () => soundPrefs.update({muted:soundMute.checked});
+soundPrefs.subscribe(syncSoundControls);
+syncSoundControls();
 const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const roster = document.querySelector<HTMLUListElement>('#room-roster')!;
 const voiceSettings = document.querySelector<HTMLDetailsElement>('#voice-settings')!;
+const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
@@ -60,14 +81,16 @@ let speaking = new Set<string>();
 let broadcaster: {id:string; name:string} | undefined;
 let matchRunning = false;
 let voiceIsLocal = false;
-let matchNames = new Map<string,string>();
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
+const nicknameStorage = 'cartuchao.sessao.nick';
+try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
+nickInput.oninput = () => nickInput.setCustomValidity('');
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
 function updateSpeaking() {
   const names = playersInRoom.filter(player => speaking.has(player.id)).map(player =>
-    player.id === room?.sessionId ? 'Você' : matchNames.get(player.id) ?? playerName(player,playersInRoom));
+    player.id === room?.sessionId ? 'Você' : player.nick);
   if (broadcaster && speaking.has(broadcaster.id) && !playersInRoom.some(player => player.id===broadcaster!.id)) names.push(broadcaster.name);
   if ([...speaking].some(id => id!==broadcaster?.id && !playersInRoom.some(player => player.id===id))) names.push(voiceIsLocal ? 'voz próxima' : 'voz na sessão');
   const label = names.length ? 'Falando: '+names.join(', ') : '';
@@ -135,6 +158,7 @@ voiceLeave.onclick = () => {
 };
 
 function showLobby(message: string) {
+  audio.leave();
   voice?.stop(false);
   voice = undefined;
   playersInRoom = [];
@@ -157,6 +181,7 @@ async function connect(join: () => Promise<Room>) {
     room = joined;
     voice = new RoomVoice(joined, ids => {
       speaking = ids;
+      audio.setSpeaking(ids.size>0);
       game?.setSpeaking(ids);
       updateSpeaking();
     }, (connected, peers) => {
@@ -167,13 +192,13 @@ async function connect(join: () => Promise<Room>) {
     landing.hidden = true;
     session.dataset.phase = 'lobby';
     voiceIsLocal = false;
-    matchNames = new Map();
     session.hidden = false;
     setup.hidden = false;
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
-    game = createGame(map,joined.sessionId,input => joined.send('input',input));
+    audio.enter();
+    game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -182,16 +207,23 @@ async function connect(join: () => Promise<Room>) {
     });
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';
+    let previousView:PlenaryView | undefined;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      if (previousView && view.election?.result && view.election.result.cycle!==previousView.election?.result?.cycle) audio.cue('election');
+      if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
+      if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
+      previousView = view;
       panel.render(view);
       political.render(view);
       election.render(view);
       broadcaster = view.election?.broadcast;
-      matchNames = new Map((view.phase!=='finished' ? view.politics?.directory ?? [] : []).map(({id,name}) => [id,name]));
-      game?.setNames(matchNames);
+      game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
       if (phase===view.phase) return;
+      if ((phase==='lobby' || phase==='finished') && view.phase==='negotiation') audio.cue('session');
+      else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
+      else if (view.phase==='finished') audio.cue('end');
       phase = view.phase;
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
@@ -217,7 +249,7 @@ async function connect(join: () => Promise<Room>) {
         if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
       }
       if (matchRunning) return;
-      const names = players.map(player => playerName(player,players)+(player.id===joined.sessionId ? ' (você)' : ''));
+      const names = players.map(player => player.nick+(player.id===joined.sessionId ? ' (você)' : ''));
       const key = names.join('|');
       if (rosterKey===key) return;
       rosterKey = key;
@@ -235,18 +267,34 @@ async function connect(join: () => Promise<Room>) {
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');
     });
     map.focus({preventScroll:true});
-  } catch {
-    showLobby('Não foi possível conectar. Confira o código e se o servidor está rodando.');
+  } catch (error) {
+    const reason = error && typeof error==='object' && 'code' in error ? error.code : undefined;
+    showLobby(reason===NICK_TAKEN ? 'Esse nick já está em uso nesta sala. Escolha outro.' :
+      reason===INVALID_NICK ? nickHint : 'Não foi possível conectar. Confira o código e se o servidor está rodando.');
+    if (reason===NICK_TAKEN || reason===INVALID_NICK) nickInput.focus();
   } finally {
     create.disabled = false;
   }
 }
 
-create.onclick = () => void connect(() => client.create('plenary'));
+function nickname() {
+  const nick = readNick(nickInput.value);
+  nickInput.setCustomValidity(nick ? '' : nickHint);
+  if (!nickInput.reportValidity() || !nick) return;
+  nickInput.value = nick;
+  try { localStorage.setItem(nicknameStorage,nick); } catch {}
+  return nick;
+}
+
+create.onclick = () => {
+  const nick = nickname();
+  if (nick) { audio.unlock(); void connect(() => client.create('plenary',{nick})); }
+};
 lobby.onsubmit = event => {
   event.preventDefault();
   const roomId = code.value.trim();
-  if (roomId) void connect(() => client.joinById(roomId));
+  const nick = nickname();
+  if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
 leave.onclick = () => void room?.leave();
 invite.onclick = async () => {

@@ -1,6 +1,6 @@
 # Presidente da Sessão
 
-Jogo de negociação e sabotagem para três a seis pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
+Jogo de negociação e sabotagem para uma a seis pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
 
 ```sh
 bun install --frozen-lockfile
@@ -20,8 +20,10 @@ O lobby mostra quem entrou e permite escolher uma caricatura antes de começar.
 O mapa ocupa toda a janela e a câmera acompanha o personagem entre as alas.
 O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
 
-Crie uma sala, copie o link e reúna de 3 a 6 pessoas. Ativem a voz e iniciem a
-sessão. Um infiltrado é sorteado independentemente do personagem. Os
+Entre com um nick e crie a sala ou use o link de convite. A caricatura é
+uma skin: o mapa, a voz e os avisos usam o nick. O anfitrião pode iniciar
+sozinho para testar sem infiltrado ou convidar até cinco amigos. Ativem
+a voz e iniciem a sessão. No multiplayer, o papel secreto é sorteado independentemente da skin. Os
 parlamentares ganham se terminarem os três projetos com pelo menos 45 de
 estabilidade; o infiltrado ganha se impedir isso. Se chegar a zero, a partida
 termina na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.

@@ -16,9 +16,10 @@
         <p>Três projetos em pauta. Um infiltrado no Congresso. Com quem você fecha o próximo voto?</p>
       </div>
       <div class="hud-panel entrance">
-        <p class="kicker">3 a 6 jogadores</p>
+        <p class="kicker">1 a 6 jogadores</p>
         <h2 class="hud-title">Entre no Congresso</h2>
         <form id="lobby">
+          <label class="nick-field">Seu nick <input id="nick" maxlength="20" autocomplete="nickname" placeholder="Como vão chamar você?" required></label>
           <button class="hud-button" id="create" type="button">Criar sala</button>
           <div class="join-fields">
             <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
@@ -89,6 +90,17 @@
             </div>
           </details>
         </div>
+        <details id="sound-settings">
+          <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg>Áudio</summary>
+          <div class="hud-panel sound-settings-content">
+            <h3>Som do jogo</h3>
+            <label for="music-volume">Música</label>
+            <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
+            <label for="effects-volume">Efeitos e passos</label>
+            <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
+            <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
+          </div>
+        </details>
         <span id="voice-status" role="status"></span>
         <span id="voice-speaking"></span>
       </aside>
@@ -101,10 +113,10 @@
         <div id="room-setup">
           <h2 class="hud-title">Sala de articulação</h2>
           <ul id="room-roster" aria-label="Jogadores na sala"></ul>
-          <p>Escolha seu personagem</p>
-          <div id="characters" role="group" aria-label="Personagem"></div>
+          <p>Escolha sua skin</p>
+          <div id="characters" role="group" aria-label="Skin"></div>
         </div>
-        <p id="briefing">Três projetos entram em pauta. Negociem no mapa e terminem com pelo menos 45 de estabilidade. A infiltração quer derrubar a sessão.</p>
+        <div id="briefing" class="compact-heading"><span>3 projetos · Meta de estabilidade: 45</span><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a sessão" data-help="Negocie, vote e preserve a estabilidade do Congresso. No multiplayer, a infiltração tenta derrubá-la. Você pode iniciar sozinho para testar.">?</button></div>
         <label id="infiltrator-setup" hidden>Infiltrados
           <select id="infiltrator-count">
             <option value="1">1 infiltrado</option>
@@ -158,7 +170,7 @@
             <p class="hud-feedback" id="clue" role="status" hidden></p>
             <div id="stations">
               <div class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>Ações no mapa</div>
-              <p id="station-hint">Aproxime-se de um ponto dourado para agir.</p>
+              <div id="station-hint" class="compact-heading"><span>Pontos dourados no mapa</span><button class="hud-icon-button hud-help" type="button" aria-label="Onde agir" data-help="Vá ao Protocolo para propor emendas, à Controladoria para auditar, ao Gabinete B para usar a verba e à Imprensa para publicar provas.">?</button></div>
               <div class="station-grid">
                 <button class="hud-button hud-button--secondary" data-action="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Emenda<small>Protocolo</small></span></button>
                 <button class="hud-button hud-button--secondary" data-action="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar<small>Controladoria</small></span></button>
@@ -183,15 +195,23 @@
       <details id="election-dock" class="hud-strip" hidden>
         <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span id="current-office"></span><span id="election-timer"></span></summary>
         <div class="hud-panel politics-content">
-          <p id="office-power"></p>
-          <p id="election-wallet"></p>
-          <p id="election-result" hidden></p>
+          <div class="electoral-header">
+            <div><span class="kicker">Seu mandato</span><strong id="office-display"></strong></div>
+            <button class="hud-icon-button hud-help" type="button" aria-label="Poderes e salário do cargo" data-help="Veja o que seu cargo pode fazer." id="office-power">?</button>
+          </div>
+          <div class="electoral-metrics">
+            <div><span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Salário</span><strong id="office-salary"></strong></div>
+            <div><span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Investido</span><strong id="election-wallet"></strong></div>
+          </div>
+          <details id="election-result" hidden>
+            <summary id="election-result-title">Última eleição</summary>
+            <p id="election-result-detail"></p>
+          </details>
           <section aria-label="Pesquisa eleitoral">
-            <h3>Pesquisa eleitoral</h3>
-            <p>Estimativas por cargo. Na apuração, quem não se eleger disputa as vagas restantes.</p>
+            <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="As barras mostram estimativas de intenção de voto por cargo. A apuração usa uma pequena margem de incerteza. Quem não se eleger disputa as vagas restantes.">?</button></div>
             <div id="election-polls"></div>
           </section>
-          <details id="election-actions"><summary class="section-label">Minha campanha</summary>
+          <details id="election-actions"><summary class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</summary>
             <form id="registration">
               <label>Candidatura <select id="election-race">
                 <option value="president">Presidência</option><option value="senator">Senado</option><option value="deputy">Câmara</option>
@@ -209,7 +229,7 @@
               <label>Apoio público <select id="endorsement"></select></label>
               <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
             </form>
-            <p>Propaganda na Imprensa, discurso no Painel e entrevista no estúdio de TV.</p>
+            <div class="compact-heading"><span class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>Campanha no mapa</span><button class="hud-icon-button hud-help" type="button" aria-label="Onde fazer campanha" data-help="Compre propaganda na Imprensa, discurse no Painel ou faça uma entrevista no estúdio de TV. A entrevista exige voz ativa e dura 15 segundos.">?</button></div>
             <div class="economy-row">
               <button class="hud-button hud-button--secondary" id="advertise" type="button">Propaganda · R$ 20 mil</button>
               <button class="hud-button hud-button--secondary" id="speech" type="button">Discursar</button>
@@ -224,7 +244,7 @@
         <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span>Carteira e dossiê</span><span id="personal-stats"></span></summary>
         <div class="hud-panel politics-content">
           <div class="agenda-card"><div class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>Agenda secreta</div><p id="agenda"></p></div>
-          <p id="politics-hint"></p>
+          <div class="compact-heading"><span id="politics-hint"></span><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma cassação, vá ao Painel com 55 de popularidade.">?</button></div>
           <div id="politics-actions">
             <form id="trade">
               <label>Jogador próximo <select id="trade-contact"></select></label>

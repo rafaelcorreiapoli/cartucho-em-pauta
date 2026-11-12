@@ -44,7 +44,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       start.hidden = running || host!==id;
       start.disabled = players<MIN_PLAYERS;
       start.textContent = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
-      element('start-hint').textContent = running ? '' : players<MIN_PLAYERS ? 'São necessários pelo menos 3 jogadores.' :
+      element('start-hint').textContent = running ? '' : players===1 ? 'Teste solo disponível' :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';
@@ -55,7 +55,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('phase').textContent = phase==='finished' ?
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
-        phase==='negotiation' ? 'Articulação' : hearing ? 'Cassação' : 'Votação';
+        phase==='negotiation' ? view.solo ? 'Articulação · solo' : 'Articulação' : hearing ? 'Cassação' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');
       clock.parentElement!.hidden = !running;

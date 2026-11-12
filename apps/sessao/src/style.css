@@ -38,14 +38,14 @@ p { margin:.5rem 0; }
 .entrance .hud-title { font-size:clamp(1.45rem,4vw,2rem); margin:.65rem 0 1.15rem; }
 #lobby { display:grid; gap:1.05rem; }
 .join-fields { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.4rem; align-items:end; }
-.join-fields label { display:grid; gap:.3rem; font-size:.8rem; }
+.join-fields label, .nick-field { display:grid; gap:.3rem; font-size:.8rem; }
 #connection { color:var(--hud-gold); font-size:.85rem; }
 #connection:empty { display:none; }
 
 #session { position:fixed; inset:0; overflow:hidden; isolation:isolate; background:#20312f; }
 #map { position:absolute; inset:0; }
 #map:focus { outline:none; }
-canvas { display:block; touch-action:none; }
+#map canvas { display:block; width:100%; height:100%; touch-action:none; }
 #plenary {
   position:absolute; top:max(12px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left));
   width:min(365px,calc(100% - 24px)); max-height:48dvh; overflow:auto;
@@ -237,3 +237,35 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   #election-dock, #electoral-notice { right:auto; left:max(12px,env(safe-area-inset-left)); }
   #election-dock .politics-content { right:auto; left:0; }
 }
+
+.compact-heading { display:flex; align-items:center; justify-content:space-between; gap:.4rem; margin:.35rem 0; }
+.compact-heading h3 { display:flex; align-items:center; gap:.35rem; margin:0; }
+.hud-help {
+  border-radius:50%; width:22px; height:22px; padding:0; font:800 .72rem/1 system-ui,sans-serif;
+  flex:none;
+}
+.hud-help-popover { position:fixed; z-index:20; padding:.55rem .7rem; width:max-content; max-width:min(290px,calc(100vw - 16px)); font-size:.8rem; line-height:1.45; pointer-events:none; }
+.electoral-header { display:flex; justify-content:space-between; align-items:center; padding:.15rem 0 .45rem; }
+.electoral-header .kicker { display:block; margin:0 0 .12rem; font-size:.6rem; }
+.electoral-header strong { font-size:1.15rem; }
+.electoral-metrics { display:grid; grid-template-columns:1fr 1fr; gap:.35rem; margin-bottom:.65rem; }
+.electoral-metrics div { background:#142124; border:1px solid #9e927a66; padding:.3rem .45rem; border-radius:4px; }
+.electoral-metrics span { display:flex; align-items:center; gap:.28rem; font-size:.66rem; color:#cbd8ca; }
+.electoral-metrics strong { display:block; margin-top:.12rem; font-size:.84rem; }
+[data-office="president"] { color:#ffdb83; --bar-color:#ffdb83; }
+[data-office="senator"] { color:#a8d8ff; --bar-color:#a8d8ff; }
+[data-office="deputy"] { color:#a9efb5; --bar-color:#a9efb5; }
+[data-office] .poll-label { color:var(--hud-paper); }
+.empty-races { display:flex; flex-wrap:wrap; gap:.25rem; }
+.empty-races span { border:1px solid #9e927a55; border-radius:4px; color:#b7c3b5; padding:.18rem .35rem; font-size:.65rem; }
+#registration-hint:empty { display:none; }
+#election-result { border-left:2px solid var(--hud-gold); padding-left:.4rem; margin:.35rem 0 .65rem; }
+#election-result summary { color:var(--hud-gold); }
+#voice-dock { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
+#voice-status:not(:empty), #voice-speaking:not(:empty) { flex-basis:100%; }
+#sound-settings summary { list-style:none; min-height:38px; font-size:.75rem; }
+#sound-settings summary::-webkit-details-marker { display:none; }
+.sound-settings-content { position:absolute; bottom:calc(100% + 6px); left:0; z-index:1; width:min(240px,calc(100vw - 24px)); padding:.65rem; }
+.sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
+.sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }
+.mute-option { display:flex; align-items:center; gap:.35rem; }

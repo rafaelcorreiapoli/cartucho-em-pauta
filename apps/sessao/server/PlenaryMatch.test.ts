@@ -7,14 +7,14 @@ import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
 const ids = ['lula','bolsonaro','trump'];
-const people = ids.map((id,character):Player => ({id,character,x:140+36*character,y:146,direction:0,moving:false}));
+const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','Trump'][character],character,x:140+36*character,y:146,direction:0,moving:false}));
 const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
 test('fraud shows different figures until a player audits and reports it', () => {
   const match = new PlenaryMatch();
   expect(match.start(honest.id,people,0)).toBe(false);
-  expect(match.start(host.id,people.slice(0,2),0)).toBe(false);
+  expect(match.start(host.id,[],0)).toBe(false);
   expect(match.start(host.id,people,0,() => .9)).toBe(true);
   const view = (player:Player) => match.view(player.id,ids,0);
   expect(view(host).role).toBe('Parlamentar');

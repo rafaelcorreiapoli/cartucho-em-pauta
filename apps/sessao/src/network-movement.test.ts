@@ -4,7 +4,7 @@ import { applyInput, type ControlState, type MovementInput } from './movement';
 
 test('prediction starts immediately and replays only the inputs the server has not processed', () => {
   const server: ControlState = {
-    player:{id:'player',character:0,x:140,y:146,direction:0,moving:false}, route:[], ack:0,
+    player:{id:'player',nick:'Player',character:0,x:140,y:146,direction:0,moving:false}, route:[], ack:0,
   };
   const sent: MovementInput[] = [];
   const client = new PredictedMovement(input => sent.push(input));

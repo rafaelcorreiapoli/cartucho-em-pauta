@@ -6,7 +6,7 @@ import { ElectionCycle } from './ElectionCycle';
 import { PlenaryMatch } from './PlenaryMatch';
 
 const people = ['a','b','c','d','e','f'].map(id => ({id,name:id.toUpperCase()}));
-const players = people.slice(0,3).map(({id},character):Player => ({id,character,x:140+character*36,y:146,direction:0,moving:false}));
+const players = people.slice(0,3).map(({id,name},character):Player => ({id,nick:name,character,x:140+character*36,y:146,direction:0,moving:false}));
 const ids = players.map(({id}) => id);
 const at = (player:Player, key:keyof typeof stations):Player => ({...player,...stations[key]});
 

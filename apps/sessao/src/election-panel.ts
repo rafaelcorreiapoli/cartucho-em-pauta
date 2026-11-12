@@ -60,10 +60,14 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       const {remaining,broadcast,result} = election;
       el('current-office').textContent = personal ? offices[personal.office].name : 'Assessor';
       el('election-timer').textContent = view.phase==='finished' ? 'Eleições' : `Eleição em ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
-      el('office-power').textContent = personal ? `${offices[personal.office].power} Salário por mandato: ${money(personal.salary)}.` : 'Você pode acompanhar a pesquisa como assessor.';
-      el('election-wallet').textContent = personal ? `Carteira: ${money(view.politics?.wallet ?? 0)} · Investido neste ciclo: ${money(personal.invested)}.` : '';
+      el('office-display').textContent = personal ? offices[personal.office].name : 'Assessor';
+      el('office-display').dataset.office = personal?.office ?? 'advisor';
+      el('office-power').dataset.help = personal ? offices[personal.office].power : 'Você pode acompanhar a pesquisa como assessor.';
+      el('office-salary').textContent = personal ? money(personal.salary) : '—';
+      el('election-wallet').textContent = personal ? money(personal.invested) : '—';
       el('election-result').hidden = !result;
-      el('election-result').textContent = result ? [
+      el('election-result-title').textContent = result ? `Resultado · Eleição ${result.cycle}` : 'Última eleição';
+      el('election-result-detail').textContent = result ? [
         `Eleição ${result.cycle}: ${result.offices.map(person => `${person.name} (${offices[person.office].name})`).join(', ')}.`,
         result.previous && personal ? `Seu cargo: ${offices[result.previous].name} → ${offices[personal.office].name}. Salário recebido: ${money(result.salary)}.` : '',
       ].join(' ') : '';
@@ -87,7 +91,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         if (personal.race!==lastRace) registration.value = lastRace = personal.race;
         registration.disabled = !election.registrationOpen;
         el<HTMLButtonElement>('register-race').disabled = registration.disabled;
-        el('registration-hint').textContent = election.registrationOpen ? 'Você mantém seu cargo até a apuração.' : 'Candidaturas encerradas.';
+        el('registration-hint').textContent = election.registrationOpen ? '' : 'Candidaturas encerradas.';
         investment.max = String(Math.min(view.politics?.wallet ?? 0,ELECTION_RULES.investmentCap-personal.invested));
         el<HTMLButtonElement>('invest').disabled = Number(investment.max)<1;
       }
@@ -103,11 +107,16 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
         const name = (id:string) => election.offices.find(person => person.id===id)?.name;
-        el('election-polls').replaceChildren(...officeKeys.map(office => {
+        const emptyRaces = document.createElement('div');
+        emptyRaces.className = 'empty-races';
+        const sections:HTMLElement[] = [];
+        for (const office of officeKeys) {
           const section = document.createElement('section');
           const heading = document.createElement('h4');
           heading.textContent = offices[office].name;
+          heading.dataset.office = office;
           const list = document.createElement('ol');
+          list.dataset.office = office;
           for (const candidate of election.polls.filter(candidate => candidate.race===office)) {
             const row = document.createElement('li');
             const trend = candidate.trend>0 ? ` · +${candidate.trend} pp` : candidate.trend<0 ? ` · ${candidate.trend} pp` : '';
@@ -131,13 +140,17 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
             }
             list.append(row);
           }
-          if (!list.children.length) {
-            const empty = document.createElement('p');
-            empty.textContent = 'Sem candidaturas';
-            section.append(heading,empty);
-          } else section.append(heading,list);
-          return section;
-        }));
+          if (list.children.length) {
+            section.append(heading,list);
+            sections.push(section);
+          } else {
+            const empty = document.createElement('span');
+            empty.textContent = `${offices[office].name} · sem candidatos`;
+            emptyRaces.append(empty);
+          }
+        }
+        if (emptyRaces.children.length) sections.push(emptyRaces);
+        el('election-polls').replaceChildren(...sections);
       }
       controls();
     },
