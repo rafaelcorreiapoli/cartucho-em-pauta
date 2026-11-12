@@ -63,6 +63,21 @@ p { margin:.5rem 0; }
 #characters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.4rem; margin:.45rem 0 .85rem; }
 .character-option { flex-direction:column; padding:.45rem .2rem; font-size:.78rem; }
 .character-option .portrait { --portrait-size:64px; }
+@media (min-width: 921px) {
+  #session[data-phase="lobby"] #plenary {
+    width: 720px;
+    padding: 1.35rem;
+  }
+  #characters { gap: .75rem; margin: .65rem 0 1rem; }
+  #characters .character-option {
+    justify-content: flex-start;
+    gap: .5rem;
+    padding: .65rem .45rem;
+    font-size: .9rem;
+    white-space: nowrap;
+  }
+  .character-option .portrait { --portrait-size: clamp(88px, 13vh, 116px); }
+}
 .portrait {
   --portrait-size:46px;
   width:var(--portrait-size); height:var(--portrait-size);
