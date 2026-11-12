@@ -1,3 +1,4 @@
+import { createPhoneSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
@@ -5,19 +6,17 @@ import { emptyPhotoAccess, PHOTO_LIMIT, type PhotoAccessView, type Photo, type P
 import { money } from './politics';
 import { offices } from './elections';
 import { setCharacterPortrait } from './character-art';
-import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const apps = {
-  'Telefone':'handset',
-  'Joguinhos':'gamepad',
-  'Câmera':'camera',
-  'Álbum':'album',
-  'Notícias':'document',
-  'Eleições':'ballot',
+  'Telefone':'app-call',
+  'Joguinhos':'app-games',
+  'Câmera':'app-camera',
+  'Álbum':'app-photos',
 } as const;
 type App = keyof typeof apps;
 type InteractionArea = (player:Motion) => boolean;
@@ -65,7 +64,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
-  const inventoryButton = element<HTMLButtonElement>('open-inventory');
+  const equipmentButton = element<HTMLButtonElement>('open-equipment');
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
   const nearbyItems = element('nearby-items');
@@ -77,13 +76,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let collectedArea:InteractionArea | undefined;
   let photos = emptyPhotoAccess;
   let app:App = 'Telefone';
+  let albumTab:'personal'|'public' = 'personal';
   let photoId:number | undefined;
   let photoRecipient:string | undefined;
   let decorationId:number | undefined;
-  let inventoryOpen = false;
-  let backToInventory = false;
+  let equipmentOpen = false;
   let showing = false;
   let cameraPreview:HTMLCanvasElement | undefined;
+  const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
   const previewTimer = window.setInterval(()=>{
     if (dialog.open && cameraPreview?.isConnected) drawPhoto(cameraPreview);
   },150);
@@ -118,19 +118,18 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     return card;
   }
 
-  function open(item?:typeof selection, decoration?:number, inventory=false, back=false) {
+  function open(item?:typeof selection, decoration?:number, equipment=false) {
     selection = item;
     decorationId = decoration;
-    inventoryOpen = inventory;
-    backToInventory = back;
-    const object = !!item || decoration!==undefined || inventory;
+    equipmentOpen = equipment;
+    const object = !!item || decoration!==undefined;
     highlightSlot();
     photoRecipient = undefined;
     feedback.textContent = '';
     renderKey = '';
-    element('gameplay-title').textContent = inventory ? 'Inventário' : object ? 'Objeto' : 'Celular';
-    navigation.hidden = object;
-    dialog.dataset.mode = object ? 'item' : 'phone';
+    element('gameplay-title').textContent = equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    navigation.hidden = object || equipment;
+    dialog.dataset.mode = equipment ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -140,6 +139,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Joguinhos' && title!=='Joguinhos') send({kind:'game-stop'});
       if (showing) closePresentation();
       app = title;
+      albumTab = 'personal';
       photoId = photoRecipient = undefined;
       feedback.textContent = '';
       render();
@@ -186,7 +186,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const view = previous;
     const state = view?.gameplay;
     if (!dialog.open || !state || !view) return;
-    const phone = !selection && decorationId===undefined && !inventoryOpen;
+    const phone = !selection && decorationId===undefined && !equipmentOpen;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
@@ -206,25 +206,37 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = inventoryOpen ? state.inventory : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
-      app==='Álbum' ? [photos.album.map(({photo})=>photo.id),photos.publicPhotos.map(photo=>photo.id),showing && photos.shown,photoId,photoRecipient,contacts,state.locations.includes('press')] :
+    const visible = equipmentOpen ? state.equipped : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
+      app==='Álbum' ? [albumTab,photos.album.map(({photo})=>photo.id),photos.publicPhotos.map(photo=>photo.id),showing && photos.shown,photoId,photoRecipient,contacts,state.locations.includes('press')] :
       app==='Câmera' ? photos.album.length :
-      app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] : app==='Joguinhos' ? state.game && [state.game.tiles,state.game.progress,state.game.elapsed*1000<PHONE_PREVIEW_MS] :
-      app==='Notícias' ? [view.politics?.ledger,photos.publicPhotos.map(photo=>photo.id),photoId] : app==='Eleições' ? view.election?.polls : null;
-    const nextKey = JSON.stringify([selection,decorationId,inventoryOpen,app,phase,visible]);
+      app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
+      state.game?.status;
+    if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
+    const nextKey = JSON.stringify([selection,decorationId,equipmentOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
     cameraPreview = undefined;
     const cards:HTMLElement[] = [];
-    if (inventoryOpen) {
-      const list = node('div');
-      list.className = 'expanded-inventory';
-      for (const item of state.inventory) list.append(itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'},undefined,false,true)));
-      cards.push(state.inventory.length ? list : node('p','O inventário está vazio.'));
+    if (equipmentOpen) {
+      const equipped = state.equipped ?? [];
+      if (equipped.length) {
+        const list = node('ul');
+        list.className = 'equipment-list';
+        for (const gear of equipped) {
+          const row = node('li');
+          row.append(itemArt(gear.kind),node('strong',itemName(gear)));
+          list.append(row);
+        }
+        cards.push(list);
+      } else {
+        const empty = node('p','Nenhum item equipado.');
+        empty.className = 'equipment-empty';
+        empty.prepend(glyph('inventory'));
+        cards.push(empty);
+      }
     }
     if (item) {
-      if (backToInventory) cards.push(button('Voltar ao inventário',()=>open(undefined,undefined,true)));
       const card = objectCard(item);
       const act = (label:string,kind:GameplayAction['kind'],place?:string) =>
         card.append(button(label,() => send({kind,item:item.id,target:target.value,place})));
@@ -300,20 +312,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       if (app==='Joguinhos') {
         if (phase!=='negotiation') cards.push(node('p','O jogo está disponível durante a articulação.'));
-        else if (!state.game) cards.push(button('Jogar Sequência',()=>send({kind:'game-start'})));
-        else {
-          const game = state.game;
-          const preview = game.elapsed*1000<PHONE_PREVIEW_MS;
-          cards.push(node('p',preview ? 'Memorize a sequência' : `Repita a sequência · ${game.progress}/${game.total}`));
-          cards.push(node('strong',game.tiles ? game.tiles.map(tile=>tile+1).join('  ·  ') : '•  ·  •  ·  •  ·  •  ·  •'));
-          const tiles = node('div');
-          tiles.className = 'phone-tiles';
-          for (let tile=0;tile<4;tile++) {
-            const key = button(String(tile+1),()=>send({kind:'game-tile',tile}));
-            key.disabled = preview;
-            tiles.append(key);
+        else if (!state.game) {
+          const game = button('Snake',()=>send({kind:'game-start'}));
+          game.className = 'snake-launch';
+          game.prepend(glyph('snake'));
+          cards.push(game);
+        } else {
+          cards.push(snake.element);
+          if (state.game.status==='won' || state.game.status==='lost') {
+            cards.push(button('Jogar de novo',()=>send({kind:'game-start'})));
           }
-          cards.push(tiles,button('Parar',()=>send({kind:'game-stop'})));
+          cards.push(button('Voltar aos joguinhos',()=>send({kind:'game-stop'})));
         }
       }
       if (app==='Câmera') {
@@ -329,12 +338,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           return shutter;
         };
         cards.push(capture('Tirar foto','photo'),capture('Selfie','selfie'));
-        cards.push(button(`Abrir álbum · ${photos.album.length}/${PHOTO_LIMIT}`,()=>{app='Álbum';render();}));
+        cards.push(button(`Abrir álbum · ${photos.album.length}/${PHOTO_LIMIT}`,()=>{app='Álbum';albumTab='personal';photoId=undefined;render();}));
       }
       if (app==='Álbum') {
-        const entry = photos.album.find(entry=>entry.photo.id===photoId);
+        const entry = albumTab==='personal' ? photos.album.find(entry=>entry.photo.id===photoId) : undefined;
+        const published = albumTab==='public' ? photos.publicPhotos.find(photo=>photo.id===photoId) : undefined;
+        if (!showing && !entry && !published) {
+          const tabs = node('div');
+          tabs.className = 'album-tabs';
+          for (const [tab,label] of [['personal','Minhas fotos'],['public','Publicadas']] as const) {
+            const switcher = button(label,()=>{albumTab=tab;photoId=photoRecipient=undefined;render();});
+            switcher.setAttribute('aria-pressed',String(albumTab===tab));
+            tabs.append(switcher);
+          }
+          cards.push(tabs);
+        }
         if (showing && photos.shown) {
           cards.push(photoView(photos.shown,true),button('Fechar apresentação',closePresentation));
+        } else if (published) {
+          cards.push(button('Voltar às publicadas',()=>{photoId=undefined;render();}),photoView(published,true));
         } else if (entry) {
           cards.push(button('Voltar ao álbum',()=>{photoId=photoRecipient=undefined;render();}),photoView(entry.photo,true));
           cards.push(node('p',entry.access==='original' ? 'Original' : 'Cópia verificada'));
@@ -356,25 +378,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
             }
           }
           if (state.locations.includes('press') && phase==='negotiation' && !photos.publicPhotos.some(photo=>photo.id===entry.photo.id)) {
-            cards.push(button('Publicar nas Notícias',()=>send({kind:'photo-publish',item:entry.photo.id})));
+            cards.push(button('Publicar foto',()=>send({kind:'photo-publish',item:entry.photo.id})));
           }
           cards.push(button('Excluir do meu álbum',()=>send({kind:'photo-delete',item:entry.photo.id})));
-        } else cards.push(photoGrid(photos.album.map(entry=>entry.photo),'O álbum está vazio.'));
+        } else cards.push(albumTab==='public' ?
+          photoGrid(photos.publicPhotos,'Nenhuma foto publicada.') :
+          photoGrid(photos.album.map(entry=>entry.photo),'O álbum está vazio.'));
       }
-      if (app==='Notícias') {
-        const current = photos.publicPhotos.find(photo=>photo.id===photoId);
-        if (current) cards.push(button('Voltar às Notícias',()=>{photoId=undefined;render();}),photoView(current,true));
-        else if (photos.publicPhotos.length) cards.push(photoGrid(photos.publicPhotos,''));
-        const ledger = view.politics?.ledger ?? [];
-        for (const record of ledger.slice().reverse()) {
-          const name = view.politics?.directory.find(person=>person.id===record.from)?.name ?? 'Parlamentar';
-          cards.push(node('p',`${name} · ${record.kind==='diversion' ? 'Desvio' : 'Pagamento'} publicado · R$ ${record.amount*10} mil`));
-        }
-      }
-      if (app==='Eleições') cards.push(button('Abrir pesquisa eleitoral',() => {
-        dialog.close();
-        element<HTMLDetailsElement>('election-dock').open = true;
-      }));
     }
     body.replaceChildren(...(cards.length ? cards : [node('p',phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.')]));
     if (focused) body.querySelector<HTMLButtonElement>('button')?.focus();
@@ -472,6 +482,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     slot.click();
   };
   document.addEventListener('keydown',onSlotKey);
+  const onSnakeKey = (event:KeyboardEvent) => {
+    if (!dialog.open || dialog.dataset.mode!=='phone' || app!=='Joguinhos' || event.repeat ||
+      event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+    const status = previous?.gameplay?.game?.status;
+    const direction = snakeDirection(event);
+    if (!direction || (status!=='ready' && status!=='playing')) return;
+    event.preventDefault();
+    send({kind:'game-turn',direction});
+  };
+  document.addEventListener('keydown',onSnakeKey);
 
   function setNearbyExpanded(expanded:boolean) {
     nearbyItems.hidden = !expanded;
@@ -486,7 +506,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   phoneButton.onclick = () => open();
-  inventoryButton.onclick = () => open(undefined,undefined,true);
+  equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
     selection = undefined;
     highlightSlot();
@@ -528,7 +548,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           )));
         }
         if (state.locations.includes('press') && photos.album.length) {
-          tiles.push(itemButton('portrait','Álbum para a Imprensa','Abrir',()=>{app='Álbum';photoId=undefined;open();}));
+          tiles.push(itemButton('portrait','Álbum para a Imprensa','Abrir',()=>{app='Álbum';albumTab='personal';photoId=undefined;open();}));
         }
         for (const decoration of state.interactive) {
           tiles.push(itemButton(decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id)));
@@ -572,7 +592,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       phoneButton.dataset.call = call?.state ?? '';
       phoneButton.lastChild!.textContent = call?.state==='connected' ? ` Ligação · ${call.peer.name}` :
         call?.state==='incoming' ? ` Chamada · ${call.peer.name}` : ' Celular';
-      if (call?.state==='connected' && old?.call?.state!=='connected' && !selection && app==='Telefone') dialog.close();
+      if (call?.state==='connected' && old?.call?.state!=='connected' && dialog.dataset.mode==='phone' && app==='Telefone') dialog.close();
       if (call?.state==='incoming' && old?.call?.state!=='incoming' && !document.querySelector('dialog:modal')) {
         app = 'Telefone';
         open();
@@ -623,6 +643,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     destroy() {
       window.clearInterval(previewTimer);
       document.removeEventListener('keydown',onSlotKey);
+      document.removeEventListener('keydown',onSnakeKey);
       dialog.removeEventListener('close',closed);
       dialog.close();
       tools.hidden = element('object-request').hidden = true;

@@ -119,11 +119,11 @@ export class PhotoAlbum {
     }
     if (action.kind==='photo-publish') {
       if (!press) return 'Divulgue pela Sala de Imprensa.';
-      if (this.publicPhotos.has(key)) return 'Esta foto já está nas Notícias.';
+      if (this.publicPhotos.has(key)) return 'Esta foto já foi publicada.';
       this.publicPhotos.add(key);
       this.revision++;
       publish('photo-published',photo,player);
-      return 'Fotografia publicada nas Notícias.';
+      return 'Fotografia publicada no álbum público.';
     }
     const target = players.find(person=>person.id===action.target && person.id!==player.id && canReachObject(player,person));
     if (!target) return 'Aproxime-se do destinatário.';

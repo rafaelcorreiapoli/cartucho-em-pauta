@@ -3,6 +3,7 @@ import type { Office } from './elections';
 import { localPerception, type Motion } from './map';
 import type { Decoration, Photo } from './photography';
 import type { Contact } from './politics';
+import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 
 export const objects = {
   coffee:{exposable:true,name:'Cafezinho',portrait:'retrato-cafezinho.webp',description:'Café da firma, forte o bastante para encerrar uma CPI.',use:'consume'},
@@ -35,20 +36,18 @@ export type WorldItem = {id:number; kind:ObjectKind; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
-export type PhoneGame = {tiles?:number[]; total:number; progress:number; elapsed:number};
 export const canReachObject = (player:Motion,point:Motion) =>
   Math.hypot(player.x-point.x,player.y-point.y)<=24 && localPerception(player,point).visible;
 
 export const INVENTORY_SLOTS = 6;
-export const PHONE_PREVIEW_MS = 3000;
 export const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
-  'call','answer','hangup','game-start','game-stop','game-tile','photo','selfie','expose','conceal',
+  'call','answer','hangup','game-start','game-stop','game-turn','photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','buy'] as const;
-export type GameplayAction = {kind:typeof gameplayActions[number]; item?:number; target?:string; place?:string; tile?:number};
+export type GameplayAction = {kind:typeof gameplayActions[number]; item?:number; target?:string; place?:string; direction?:SnakeDirection};
 export type GameplayView = {
-  contacts:Contact[]; inventory:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
-  exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:PhoneGame; locations:string[];
+  contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
+  exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {
   type:'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice';
@@ -62,7 +61,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
     item:'item' in raw && typeof raw.item==='number' && Number.isSafeInteger(raw.item) ? raw.item : undefined,
     target:'target' in raw && typeof raw.target==='string' ? raw.target : undefined,
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,
-    tile:'tile' in raw && typeof raw.tile==='number' && Number.isInteger(raw.tile) ? raw.tile : undefined,
+    direction:'direction' in raw ? snakeDirections.find(direction=>direction===raw.direction) : undefined,
   };
 }
 

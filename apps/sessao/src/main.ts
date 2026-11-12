@@ -14,7 +14,6 @@ import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { NAMES, type Player } from './map';
-import type { Disguise } from './live-disguise';
 import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
@@ -46,7 +45,6 @@ const landing = document.querySelector<HTMLElement>('#landing')!;
 const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const roster = document.querySelector<HTMLUListElement>('#room-roster')!;
-const voiceSettings = document.querySelector<HTMLDetailsElement>('#voice-settings')!;
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
@@ -76,13 +74,6 @@ const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
 const voiceLabel = voiceToggle.querySelector('span')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
-const liveEnabled = document.querySelector<HTMLInputElement>('#live-disguise-enabled')!;
-const livePitch = document.querySelector<HTMLInputElement>('#live-pitch')!;
-const livePitchValue = document.querySelector<HTMLOutputElement>('#live-pitch-value')!;
-const liveStyle = document.querySelector<HTMLSelectElement>('#live-style')!;
-const disguiseIndicator = document.querySelector<HTMLElement>('#voice-disguise-indicator')!;
-const liveStatus = document.querySelector<HTMLElement>('#live-disguise-status')!;
-let disguiseRevision = 0;
 let voice: RoomVoice | undefined;
 let matchRunning = false;
 let room: Room | undefined;
@@ -92,39 +83,12 @@ try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
 nickInput.oninput = () => nickInput.setCustomValidity('');
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
-async function updateDisguise() {
-  const current = voice;
-  if (!current?.active) return;
-  const revision = ++disguiseRevision;
-  const pitch = livePitch.valueAsNumber;
-  livePitchValue.value = `${pitch>0 ? '+' : ''}${pitch} ${Math.abs(pitch)===1 ? 'semitom' : 'semitons'}`;
-  livePitch.disabled = liveStyle.disabled = !liveEnabled.checked;
-  liveStatus.textContent = liveEnabled.checked ? 'Aplicando disfarce…' : '';
-  try {
-    await current.setDisguise(liveEnabled.checked ? {pitch,style:liveStyle.value as Disguise['style']} : undefined);
-    if (revision===disguiseRevision) {
-      liveStatus.textContent = liveEnabled.checked ? 'Disfarce ativo' : '';
-      disguiseIndicator.hidden = !liveEnabled.checked;
-    }
-  } catch {
-    if (revision===disguiseRevision) liveStatus.textContent = 'Falha no disfarce. Desative para voltar à voz original.';
-  }
-}
-liveEnabled.onchange = liveStyle.onchange = () => void updateDisguise();
-livePitch.oninput = () => void updateDisguise();
-
 function resetVoiceButtons() {
   voiceToggle.disabled = false;
   voiceToggle.dataset.voice = 'off';
   voiceLabel.textContent = voiceToggle.title = 'Ativar voz';
-  voiceSettings.hidden = true;
-  voiceSettings.open = false;
+  voiceLeave.hidden = true;
   voiceStatus.textContent = '';
-  ++disguiseRevision;
-  disguiseIndicator.hidden = true;
-  liveEnabled.checked = false;
-  livePitch.disabled = liveStyle.disabled = true;
-  liveStatus.textContent = '';
 }
 
 voiceToggle.onclick = async () => {
@@ -144,7 +108,7 @@ voiceToggle.onclick = async () => {
     voiceToggle.dataset.voice = 'live';
     voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
     voiceStatus.textContent = '';
-    voiceSettings.hidden = false;
+    voiceLeave.hidden = false;
   } catch (error) {
     if (current !== voice) return;
     voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
@@ -206,12 +170,6 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    const roomBar = document.querySelector<HTMLElement>('#room-bar')!;
-    const roomSettings = document.querySelector<HTMLDetailsElement>('#room-settings')!;
-    const roomSettingsContent = document.querySelector<HTMLElement>('#room-settings-content')!;
-    roomSettings.hidden = true;
-    roomSettings.open = false;
-    setup.before(roomBar);
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
@@ -282,16 +240,8 @@ async function connect(join: () => Promise<Room>) {
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
-      if (matchRunning) {
-        if (voiceDock.parentElement!==voiceHost) voiceHost.append(voiceDock);
-        if (roomBar.parentElement!==roomSettingsContent) roomSettingsContent.append(roomBar);
-        roomSettings.hidden = false;
-      } else {
-        voiceLobby.append(voiceDock);
-        roomSettings.hidden = true;
-        roomSettings.open = false;
-        setup.before(roomBar);
-      }
+      const voiceMount = matchRunning ? voiceHost : voiceLobby;
+      if (voiceDock.parentElement!==voiceMount) voiceMount.append(voiceDock);
       if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));
@@ -369,7 +319,7 @@ invite.onclick = async () => {
   try {
     await navigator.clipboard.writeText(url.href);
     invite.textContent = 'Link copiado';
-    setTimeout(() => { invite.textContent = 'Copiar link'; },1500);
+    setTimeout(() => { invite.textContent = 'Convidar'; },1500);
   } catch {
     window.prompt('Link da sala',url.href);
   }

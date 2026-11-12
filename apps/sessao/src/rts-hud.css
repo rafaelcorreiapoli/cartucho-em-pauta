@@ -318,8 +318,7 @@
 }
 #command-deck #voice-host { position: relative; display: flex; padding-left: 4px; border-left: 1px solid var(--command-divider); }
 #command-deck #social-docks { width: auto; }
-#command-deck #voice-dock, #command-deck #voice-bar { flex-wrap: nowrap; }
-#command-deck #voice-bar { gap: 4px; }
+#command-deck #voice-dock { flex-wrap: nowrap; }
 #command-deck :is(#gameplay-tools button,#social-docks .social-trigger,#voice-dock button,#voice-dock summary) {
   display: flex;
   justify-content: center;
@@ -345,10 +344,6 @@
 #command-deck #voice-toggle[data-voice="live"] { color: var(--party-mint); }
 #command-deck #voice-toggle[data-voice="muted"] { color: var(--party-coral); }
 #command-deck #voice-toggle > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#command-deck #voice-settings > summary { font-size: 10px; }
-#command-deck #voice-dock summary > .voice-option-label { display: none; }
-#command-deck #voice-disguise-indicator { font-size: 0; }
-#command-deck #voice-disguise-indicator::before { content: "●"; font-size: 8px; color: var(--party-mint); }
 #command-deck #politics-dock:has(#personal-stats:not(:empty)) > summary::after {
   content: "";
   position: absolute;
@@ -369,7 +364,7 @@
   border-radius: 6px;
   background: #203a30;
 }
-#command-deck #voice-dock :is(.voice-settings-content,.sound-settings-content) { inset: auto 0 calc(100% + 8px) auto; }
+#command-deck #voice-dock .sound-settings-content { inset: auto 0 calc(100% + 8px) auto; }
 #command-deck #social-docks .politics-content { inset: auto 0 calc(100% + 8px) auto; }
 
 #world #stations {
@@ -451,21 +446,25 @@
 }
 
 #command-deck #legislative-dock:has(#project-outcome-brief:not([hidden])) #project-session-result { display: none; }
-.expanded-inventory {
+#gameplay-dialog[data-mode="equipment"] { width: min(350px,calc(100vw - 2rem)); }
+.equipment-list {
   display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: 8px;
+  gap: .4rem;
   width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.expanded-inventory .item-tile { aspect-ratio: 1.3; --item-art: 45px; padding: 6px 6px 30px; }
-.expanded-inventory .item-caption {
-  position: absolute;
-  inset: auto 0 0;
-  padding: 6px;
-  border-radius: 0 0 7px 7px;
-  background: #0a1b16e8;
-  color: var(--hud-paper);
-  font: 600 11px/1.2 system-ui,sans-serif;
+.equipment-list li, .equipment-empty {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  padding: .65rem .75rem;
+  border-radius: 7px;
+  background: #142923;
 }
+.equipment-empty { margin: 0; color: #c4d3c2; }
+.equipment-empty .hud-glyph { color: var(--party-gold); }
 
 #world [data-context-hidden="true"] { display: none !important; }

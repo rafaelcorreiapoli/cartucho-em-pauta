@@ -1,4 +1,4 @@
-import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { canStand, HEIGHT, localPerception, roomAt, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import type { Office } from '../src/elections';
@@ -6,13 +6,14 @@ import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../
 import { installationSites, shop, type Installable } from '../src/installations';
 import { stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
+import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
 type Call = {from:string; to:string; connected:boolean; expires:number};
-type Puzzle = {tiles:number[]; progress:number; start:number; last:number; witnesses:Set<string>};
+type PhoneRound = {snake:SnakeRound; start:number; witnesses:Set<string>};
 export type GameplayWorld = {
   players:Player[]; now:number; office:(id:string)=>Office|undefined;
   started?:number; spend?:(id:string,amount:number)=>boolean; voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
@@ -28,7 +29,7 @@ export class Gameplay {
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
   private calls = new Map<string,Call>();
-  private puzzles = new Map<string,Puzzle>();
+  private phoneGames = new Map<string,PhoneRound>();
   private serial = 0;
   private exposed = new Map<string,number>();
   private album = new PhotoAlbum();
@@ -50,7 +51,7 @@ export class Gameplay {
     this.transfers = [];
     this.requests.clear();
     this.calls.clear();
-    this.puzzles.clear();
+    this.phoneGames.clear();
     this.random = random;
     this.nextCashSpawn = now+4000+random()*8000;
   }
@@ -148,24 +149,41 @@ export class Gameplay {
         this.endCall(call,world);
       }
     }
-    for (const [id,puzzle] of this.puzzles) {
+    for (const [id,game] of this.phoneGames) {
       const player = world.players.find(person => person.id===id);
-      if (player) for (const witness of this.observers(world,player)) puzzle.witnesses.add(witness);
-      if (exploring && world.now-puzzle.start<60_000) continue;
-      this.puzzles.delete(id);
-      if (player) this.event(world,player,'game-stopped',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
+      if (!exploring || !player) {
+        if (player) this.stopPhoneGame(player,world);
+        else this.phoneGames.delete(id);
+        continue;
+      }
+      if (!this.playingPhoneGame(game)) continue;
+      for (const witness of this.observers(world,player)) game.witnesses.add(witness);
+      if (world.now-game.start>=60_000) game.snake.status = 'lost';
+      else stepSnake(game.snake,world.now);
+      if (!this.playingPhoneGame(game)) {
+        this.event(world,player,game.snake.status==='won' ? 'game-won' : 'game-stopped',
+          undefined,undefined,world.now-game.start,game.witnesses);
+      }
     }
+  }
+
+  private playingPhoneGame(game:PhoneRound | undefined) {
+    return game?.snake.status==='ready' || game?.snake.status==='playing';
+  }
+
+  private stopPhoneGame(player:Player, world:GameplayWorld) {
+    const game = this.phoneGames.get(player.id);
+    if (game && this.playingPhoneGame(game)) {
+      this.event(world,player,'game-stopped',undefined,undefined,world.now-game.start,game.witnesses);
+    }
+    this.phoneGames.delete(player.id);
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.album.leave(player.id,permanent);
     const call = this.calls.get(player.id);
     if (call) this.endCall(call,world);
-    const puzzle = this.puzzles.get(player.id);
-    if (puzzle) {
-      this.puzzles.delete(player.id);
-      this.event(world,player,'game-stopped',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
-    }
+    this.stopPhoneGame(player,world);
     if (!permanent) return;
     for (const item of this.inventory(player.id)) this.move(item,this.groundPlace(item.data.kind,player,world.now));
     for (const [id,request] of this.requests) {
@@ -174,7 +192,7 @@ export class Gameplay {
   }
 
   inCall(id:string) { return !!this.calls.get(id)?.connected; }
-  phoneActivity(id:string) { return this.puzzles.has(id) ? 'game' : this.inCall(id) ? 'call' : undefined; }
+  phoneActivity(id:string) { return this.playingPhoneGame(this.phoneGames.get(id)) ? 'game' : this.inCall(id) ? 'call' : undefined; }
 
   callPeer(id:string) {
     const call = this.calls.get(id);
@@ -196,7 +214,7 @@ export class Gameplay {
     });
     const call = this.calls.get(id);
     const peer = call && world.players.find(other => other.id===(call.from===id ? call.to : call.from));
-    const game = this.puzzles.get(id);
+    const game = this.phoneGames.get(id)?.snake;
     return {
       exposed:this.exposed.get(id),
       decorations:[...this.installations.values()].filter(item=>localPerception(player,item).visible),
@@ -211,7 +229,7 @@ export class Gameplay {
       filed:nearbyLocations.includes('protocol') ? [...this.items.values()].filter(item=>'filed' in item.place).map(item=>item.data) : [],
       requests,
       call:call && peer ? {peer:{id:peer.id,name:peer.nick},state:call.connected ? 'connected' : call.from===id ? 'outgoing' : 'incoming'} : undefined,
-      game:game && {tiles:world.now-game.start<PHONE_PREVIEW_MS ? game.tiles : undefined,total:game.tiles.length,progress:game.progress,elapsed:Math.floor((world.now-game.start)/1000)},
+      game:game && {body:game.body,food:game.food,score:game.score,status:game.status},
       locations:nearbyLocations,
     };
   }
@@ -246,27 +264,17 @@ export class Gameplay {
         if (call) this.endCall(call,world,player);
         return 'Ligação encerrada.';
       case 'game-start':
-        if (this.puzzles.has(id)) return;
-        this.puzzles.set(id,{tiles:Array.from({length:5},()=>Math.floor(Math.random()*4)),progress:0,start:world.now,last:world.now,witnesses:new Set(this.observers(world,player))});
+        if (this.playingPhoneGame(this.phoneGames.get(id))) return;
+        this.phoneGames.set(id,{snake:createSnake(world.now),start:world.now,witnesses:new Set(this.observers(world,player))});
         this.event(world,player,'game-started');
         return;
       case 'game-stop':
-      case 'game-tile': {
-        const puzzle = this.puzzles.get(id);
-        if (!puzzle) return;
-        if (action.kind==='game-stop') {
-          this.puzzles.delete(id);
-          this.event(world,player,'game-stopped',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
-          return;
-        }
-        if (world.now-puzzle.start<PHONE_PREVIEW_MS || world.now-puzzle.last<120 || action.tile===undefined) return;
-        puzzle.last = world.now;
-        puzzle.progress = action.tile===puzzle.tiles[puzzle.progress] ? puzzle.progress+1 : 0;
-        if (puzzle.progress<puzzle.tiles.length) return;
-        this.puzzles.delete(id);
-        for (const witness of this.observers(world,player)) puzzle.witnesses.add(witness);
-        this.event(world,player,'game-won',undefined,undefined,world.now-puzzle.start,puzzle.witnesses);
-        return 'Rodada concluída!';
+        this.stopPhoneGame(player,world);
+        return;
+      case 'game-turn': {
+        const game = this.phoneGames.get(id);
+        if (game && action.direction) turnSnake(game.snake,action.direction,world.now);
+        return;
       }
 
     }
@@ -370,7 +378,7 @@ export class Gameplay {
       return 'Compra guardada no inventário.';
     }
     if (['install','uninstall','mark','slice'].includes(action.kind)) return this.changeInstallation(player,action,world);
-    if (['call','answer','hangup','game-start','game-stop','game-tile'].includes(action.kind)) {
+    if (['call','answer','hangup','game-start','game-stop','game-turn'].includes(action.kind)) {
       return this.phone(player,action,world);
     }
     const place = locations(player).find(key => key===action.place);
