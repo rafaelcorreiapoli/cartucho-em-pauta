@@ -30,6 +30,11 @@ const obstacles = [
 ];
 
 export type Player = { id: string; character: number; x: number; y: number; direction: number; moving: boolean };
+export function playerName(player: Player, players: Player[]) {
+  const name = NAMES[player.character];
+  return players.some(other => other.id!==player.id && other.character===player.character) ?
+    `${name} · ${player.id.slice(-4)}` : name;
+}
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 

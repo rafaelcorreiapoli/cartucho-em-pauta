@@ -54,7 +54,24 @@ test('two clients share movement, collision and character changes in a room', as
     await until(() => Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1);
     expect(observed.some(player => player.x>=223 && player.x<=257 && player.y<132 && player.y>114)).toBe(true);
     expect(observed.every(player => canStand(player.x,player.y))).toBe(true);
+    const roster: string[][] = [];
+    const signals: unknown[] = [];
+    first.onMessage('voice-roster',() => {});
+    second.onMessage('voice-roster',(ids: string[]) => roster.push(ids));
+    second.onMessage('voice-signal',(signal: unknown) => signals.push(signal));
+    second.send('voice-join');
+    await until(() => roster.at(-1)?.length===1);
+    const signal = {description:{type:'offer',sdp:'voice test'}};
+    first.send('voice-signal',{to:second.sessionId,signal});
+    first.send('voice-join');
+    await until(() => roster.at(-1)?.length===2);
+    expect(signals).toHaveLength(0);
+    first.send('voice-signal',{to:second.sessionId,signal});
+    await until(() => signals.length===1);
+    expect(signals[0]).toEqual({from:first.sessionId,signal});
     await first.leave();
+    await until(() => roster.at(-1)?.length===1);
+    expect(roster.at(-1)).toEqual([second.sessionId]);
     await until(() => seen.length===1 && seen[0].id===second.sessionId);
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));

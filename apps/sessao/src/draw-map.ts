@@ -67,7 +67,7 @@ export function drawMap(scene: Phaser.Scene) {
   for (const {name,bounds:[x,y,w]} of rooms) {
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:'8px',fontStyle:'bold',color:'#fff4dc',
-      backgroundColor:'#263a31',padding:{x:5,y:2},
+      backgroundColor:'#263a31',resolution:3,padding:{x:5,y:2},
     }).setOrigin(.5,0).setDepth(300);
   }
 }

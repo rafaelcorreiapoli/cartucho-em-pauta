@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { drawMap } from './draw-map';
-import { HEIGHT, NAMES, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, playerName, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text };
 const directions = new Map(Object.entries({
@@ -10,6 +10,7 @@ const directions = new Map(Object.entries({
 
 export function createGame(parent: HTMLElement, ownId: string, send: (motion: Motion) => void, goTo: (point:Motion) => void) {
   let players: Player[] = [];
+  let speaking = new Set<string>();
   let manual = false;
   const keys = new Set<string>();
   const listeners = new AbortController();
@@ -33,7 +34,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
     private lastSent = -Infinity;
 
     preload() {
-      this.load.spritesheet('players','assets/sprites-hd.png',{frameWidth:64,frameHeight:64});
+      this.load.spritesheet('players','assets/sprites-hd.png',{frameWidth:128,frameHeight:128});
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
@@ -80,9 +81,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
         let view = this.views.get(id);
         if (!view) {
           view = {
-            sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.59),
+            sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
-              fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,
+              fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:3,
             }).setOrigin(.5,0).setDepth(500),
           };
           this.views.set(id,view);
@@ -93,7 +94,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
         sprite.setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setPosition(x,y+2).setText(NAMES[character]);
+        label.setPosition(x,y+2).setText(playerName(player,players))
+          .setColor(speaking.has(id) ? '#adff91' : '#fff7df');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
           sprite.anims.stop();
@@ -105,11 +107,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
   }
   const game = new Phaser.Game({
     type:Phaser.AUTO,width:WIDTH*2,height:HEIGHT*2,parent,
-    pixelArt:true,roundPixels:true,backgroundColor:'#20312f',scene:Plenary,
+    antialias:true,roundPixels:false,backgroundColor:'#20312f',scene:Plenary,
     scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
   });
   return {
     update(snapshot: Player[]) { players = snapshot; },
+    setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();
       game.destroy(true);

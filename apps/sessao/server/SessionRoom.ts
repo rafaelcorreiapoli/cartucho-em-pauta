@@ -1,16 +1,35 @@
+import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, type Client } from 'colyseus';
 import { HEIGHT, idle, move, NAMES, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute, followRoute } from './navigation';
 
 export class SessionRoom extends Room {
   maxClients = 6;
-  maxMessagesPerSecond = 40;
+  maxMessagesPerSecond = 100;
   private players = new Map<string, Player>();
   private movementInputs = new Map<string, { motion: Motion; received: number }>();
 
   private routes = new Map<string,Motion[]>();
 
+  private voice = new Set<string>();
+
+  private leaveVoice(id: string) {
+    if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
+  }
+
   onCreate() {
+    this.onMessage('voice-join', client => {
+      this.voice.add(client.sessionId);
+      this.broadcast('voice-roster', [...this.voice]);
+    });
+    this.onMessage('voice-leave', client => this.leaveVoice(client.sessionId));
+    this.onMessage('voice-signal', (client, message: unknown) => {
+      if (!this.voice.has(client.sessionId) || !message || typeof message !== 'object' ||
+        !('to' in message) || !('signal' in message) || typeof message.to !== 'string' ||
+        message.to === client.sessionId || !this.voice.has(message.to)) return;
+      const signal = readVoiceSignal(message.signal);
+      if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
+    });
     this.onMessage('move', (client, data: unknown) => {
       if (!data || typeof data !== 'object' || !('x' in data) || !('y' in data)) return;
       const {x,y} = data;
@@ -55,6 +74,7 @@ export class SessionRoom extends Room {
   }
 
   onLeave(client: Client) {
+    this.leaveVoice(client.sessionId);
     this.players.delete(client.sessionId);
     this.routes.delete(client.sessionId);
     this.movementInputs.delete(client.sessionId);
