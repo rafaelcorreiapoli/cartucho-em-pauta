@@ -45,7 +45,6 @@ export class ElectionCycle {
 
   private senateSeats(count:number) { return Math.min(Math.floor(count/3),Math.max(0,count-2)); }
   private noise() { return (this.random()-.5)*4; }
-  get number() { return this.cycle; }
   office(id:string) { return this.people.get(id)?.office; }
   registrationOpen(now:number) { return now<this.due-rules.registrationLock; }
   open(now:number) { return now<this.due; }

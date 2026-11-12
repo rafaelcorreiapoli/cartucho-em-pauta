@@ -1,23 +1,17 @@
-import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { canStand, HEIGHT, localPerception, roomAt, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
-import type { Office } from '../src/elections';
 import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
 import { installationSites, shop, type Installable } from '../src/installations';
 import { stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
-import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
+import { PhoneSession } from './PhoneSession';
+import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
-type Call = {from:string; to:string; connected:boolean; expires:number};
-type PhoneRound = {snake:SnakeRound; start:number; witnesses:Set<string>};
-export type GameplayWorld = {
-  players:Player[]; now:number; office:(id:string)=>Office|undefined;
-  started?:number; spend?:(id:string,amount:number)=>boolean; voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
-};
 const cashKinds = ['briefcase','underwear','bundle'] as const;
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
@@ -28,8 +22,7 @@ const locations = (player:Player) => terminalKeys.filter(key => canReachObject(p
 export class Gameplay {
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
-  private calls = new Map<string,Call>();
-  private phoneGames = new Map<string,PhoneRound>();
+  private phone = new PhoneSession();
   private serial = 0;
   private exposed = new Map<string,number>();
   private album = new PhotoAlbum();
@@ -50,8 +43,7 @@ export class Gameplay {
     this.clearedSites.clear();
     this.transfers = [];
     this.requests.clear();
-    this.calls.clear();
-    this.phoneGames.clear();
+    this.phone.reset();
     this.random = random;
     this.nextCashSpawn = now+4000+random()*8000;
   }
@@ -93,16 +85,9 @@ export class Gameplay {
     return data;
   }
 
-  private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string, duration?:number, observed?:Set<string>, facts?:Pick<GameplayEvent,'photo'|'place'|'replaced'>) {
-    world.publish({
-      type,actor:actor.id,target,item:item?.id,kind:item?.kind,at:world.now,position:{x:actor.x,y:actor.y},duration,
-      witnesses:[...(observed ?? new Set(this.observers(world,actor,target)))],...facts,
-    });
-  }
-
-  private observers(world:GameplayWorld, actor:Player, target?:string) {
-    return world.players.filter(other => other.id!==actor.id && other.id!==target && localPerception(other,actor).visible)
-      .map(other => other.id);
+  private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
+    facts?:Partial<Pick<GameplayEvent,'photo'|'place'|'replaced'|'witnesses'>>) {
+    publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
   private groundPlace(kind:ObjectKind, {x,y}:Motion, now:number):GroundPlace {
@@ -144,46 +129,12 @@ export class Gameplay {
     }
     if (exploring) this.spawnCash(world.now);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
-    for (const call of new Set(this.calls.values())) {
-      if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
-        this.endCall(call,world);
-      }
-    }
-    for (const [id,game] of this.phoneGames) {
-      const player = world.players.find(person => person.id===id);
-      if (!exploring || !player) {
-        if (player) this.stopPhoneGame(player,world);
-        else this.phoneGames.delete(id);
-        continue;
-      }
-      if (!this.playingPhoneGame(game)) continue;
-      for (const witness of this.observers(world,player)) game.witnesses.add(witness);
-      if (world.now-game.start>=60_000) game.snake.status = 'lost';
-      else stepSnake(game.snake,world.now);
-      if (!this.playingPhoneGame(game)) {
-        this.event(world,player,game.snake.status==='won' ? 'game-won' : 'game-stopped',
-          undefined,undefined,world.now-game.start,game.witnesses);
-      }
-    }
-  }
-
-  private playingPhoneGame(game:PhoneRound | undefined) {
-    return game?.snake.status==='ready' || game?.snake.status==='playing';
-  }
-
-  private stopPhoneGame(player:Player, world:GameplayWorld) {
-    const game = this.phoneGames.get(player.id);
-    if (game && this.playingPhoneGame(game)) {
-      this.event(world,player,'game-stopped',undefined,undefined,world.now-game.start,game.witnesses);
-    }
-    this.phoneGames.delete(player.id);
+    this.phone.tick(world,exploring);
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.album.leave(player.id,permanent);
-    const call = this.calls.get(player.id);
-    if (call) this.endCall(call,world);
-    this.stopPhoneGame(player,world);
+    this.phone.leave(player,world);
     if (!permanent) return;
     for (const item of this.inventory(player.id)) this.move(item,this.groundPlace(item.data.kind,player,world.now));
     for (const [id,request] of this.requests) {
@@ -191,13 +142,8 @@ export class Gameplay {
     }
   }
 
-  inCall(id:string) { return !!this.calls.get(id)?.connected; }
-  phoneActivity(id:string) { return this.playingPhoneGame(this.phoneGames.get(id)) ? 'game' : this.inCall(id) ? 'call' : undefined; }
-
-  callPeer(id:string) {
-    const call = this.calls.get(id);
-    if (call?.connected) return call.from===id ? call.to : call.from;
-  }
+  phoneActivity(id:string) { return this.phone.activity(id); }
+  callPeer(id:string) { return this.phone.callPeer(id); }
 
   get photoRevision() { return this.album.revision; }
   photoView(id:string,now:number) { return this.album.view(id,now); }
@@ -212,9 +158,6 @@ export class Gameplay {
       const from = world.players.find(other => other.id===request.from);
       return item && from ? [{id:request.id,kind:request.kind,item:item.data,from:{id:from.id,name:from.nick}}] : [];
     });
-    const call = this.calls.get(id);
-    const peer = call && world.players.find(other => other.id===(call.from===id ? call.to : call.from));
-    const game = this.phoneGames.get(id)?.snake;
     return {
       exposed:this.exposed.get(id),
       decorations:[...this.installations.values()].filter(item=>localPerception(player,item).visible),
@@ -228,56 +171,9 @@ export class Gameplay {
         'storage' in place && nearbyLocations.some(key => key===place.storage)).map(({data})=>data),
       filed:nearbyLocations.includes('protocol') ? [...this.items.values()].filter(item=>'filed' in item.place).map(item=>item.data) : [],
       requests,
-      call:call && peer ? {peer:{id:peer.id,name:peer.nick},state:call.connected ? 'connected' : call.from===id ? 'outgoing' : 'incoming'} : undefined,
-      game:game && {body:game.body,food:game.food,score:game.score,status:game.status},
+      ...this.phone.view(id,world.players),
       locations:nearbyLocations,
     };
-  }
-
-  private endCall(call:Call, world:GameplayWorld, actor?:Player) {
-    this.calls.delete(call.from);
-    this.calls.delete(call.to);
-    const player = actor ?? world.players.find(person => person.id===call.from);
-    if (player && call.connected) this.event(world,player,'hung-up',undefined,player.id===call.from ? call.to : call.from);
-  }
-
-  private phone(player:Player, action:GameplayAction, world:GameplayWorld) {
-    const id = player.id;
-    const call = this.calls.get(id);
-    switch (action.kind) {
-      case 'call': {
-        const target = world.players.find(person => person.id===action.target && person.id!==id);
-        if (!target || !world.voice(id) || !world.voice(target.id)) return 'Os dois jogadores precisam ativar a voz.';
-        if (call || this.calls.has(target.id)) return 'Linha ocupada.';
-        const next = {from:id,to:target.id,connected:false,expires:world.now+20_000};
-        this.calls.set(id,next);
-        this.calls.set(target.id,next);
-        return 'Chamando…';
-      }
-      case 'answer':
-        if (!call || call.to!==id || call.connected || call.expires<=world.now ||
-          !world.voice(id) || !world.voice(call.from)) return 'Chamada indisponível.';
-        call.connected = true;
-        this.event(world,player,'called',undefined,call.from);
-        return 'Ligação atendida.';
-      case 'hangup':
-        if (call) this.endCall(call,world,player);
-        return 'Ligação encerrada.';
-      case 'game-start':
-        if (this.playingPhoneGame(this.phoneGames.get(id))) return;
-        this.phoneGames.set(id,{snake:createSnake(world.now),start:world.now,witnesses:new Set(this.observers(world,player))});
-        this.event(world,player,'game-started');
-        return;
-      case 'game-stop':
-        this.stopPhoneGame(player,world);
-        return;
-      case 'game-turn': {
-        const game = this.phoneGames.get(id);
-        if (game && action.direction) turnSnake(game.snake,action.direction,world.now);
-        return;
-      }
-
-    }
   }
 
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
@@ -299,14 +195,15 @@ export class Gameplay {
         stillAt(event.from,event.point) && stillAt(event.to,event.destination)).map(({from,to,item,kind})=>({from,to,item,kind})),
     }));
     if (typeof result==='string') return result;
-    this.event(world,player,'photo',undefined,undefined,undefined,new Set([...ids].filter(id=>id!==player.id)),{photo:result});
+    this.event(world,player,'photo',undefined,undefined,{photo:result,witnesses:[...ids].filter(id=>id!==player.id)});
     return 'Foto guardada no álbum.';
   }
 
   private changeInstallation(player:Player,action:GameplayAction,world:GameplayWorld) {
     const siteKey = action.kind==='install' ? action.place : [...this.installations].find(([,item])=>item.id===action.item)?.[0];
+    if (!siteKey || !Object.hasOwn(installationSites,siteKey)) return 'Aproxime-se do local.';
     const site = installationSites[siteKey as keyof typeof installationSites];
-    if (!siteKey || !site || !canReachObject(player,site.point)) return 'Aproxime-se do local.';
+    if (!canReachObject(player,site.point)) return 'Aproxime-se do local.';
     const placed = this.installations.get(siteKey);
     if (action.kind==='install') {
       const item = this.items.get(action.item ?? -1);
@@ -319,7 +216,7 @@ export class Gameplay {
       const replaced = placed?.owner.id ?? (cleared?.by===player.id ? cleared.owner : undefined);
       this.installations.set(siteKey,{x:site.point.x,y:site.point.y,id:item.data.id,kind:site.kind,owner:{id:player.id,name:player.nick},
         character:player.character,slices:site.kind==='pizza' ? 6 : undefined});
-      this.event(world,player,'installed',item.data,replaced,undefined,undefined,{place:siteKey,replaced:!!replaced});
+      this.event(world,player,'installed',item.data,replaced,{place:siteKey,replaced:!!replaced});
       return placed ? 'Objeto substituído.' : 'Objeto instalado.';
     }
     if (!placed) return 'Objeto indisponível.';
@@ -343,7 +240,7 @@ export class Gameplay {
     if (action.kind==='mark') {
       if (placed.kind!=='portrait' || placed.marked || placed.owner.id===player.id) return 'Este retrato não pode ser rabiscado.';
       placed.marked = true;
-      this.event(world,player,'marked',data,placed.owner.id,undefined,undefined,{place:siteKey});
+      this.event(world,player,'marked',data,placed.owner.id,{place:siteKey});
       return 'Retrato rabiscado.';
     }
     if (!this.available(player.id)) return 'Inventário cheio.';
@@ -351,7 +248,7 @@ export class Gameplay {
     this.servings.delete(placed.id);
     this.items.set(data.id,{data,place:{holder:player.id}});
     if (placed.owner.id!==player.id) this.clearedSites.set(siteKey,{by:player.id,owner:placed.owner.id});
-    this.event(world,player,'uninstalled',data,placed.owner.id,undefined,undefined,{place:siteKey});
+    this.event(world,player,'uninstalled',data,placed.owner.id,{place:siteKey});
     return 'Objeto retirado.';
   }
 
@@ -360,7 +257,7 @@ export class Gameplay {
     if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
     if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {
       return this.album.act(player,action,world.players,world.now,canReachObject(player,stations.press),
-        (type,photo,actor,target)=>this.event(world,actor,type,undefined,target,undefined,undefined,{photo}));
+        (type,photo,actor,target)=>this.event(world,actor,type,undefined,target,{photo}));
     }
     if (action.kind==='conceal') {
       this.exposed.delete(id);
@@ -378,9 +275,7 @@ export class Gameplay {
       return 'Compra guardada no inventário.';
     }
     if (['install','uninstall','mark','slice'].includes(action.kind)) return this.changeInstallation(player,action,world);
-    if (['call','answer','hangup','game-start','game-stop','game-turn'].includes(action.kind)) {
-      return this.phone(player,action,world);
-    }
+    if (isPhoneAction(action)) return this.phone.act(player,action,world);
     const place = locations(player).find(key => key===action.place);
     const terminal = place && terminals[place];
     if (action.kind==='supply') {

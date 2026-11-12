@@ -1,4 +1,4 @@
-import type { GameplayWorld } from './Gameplay';
+import type { GameplayWorld } from './gameplay-world';
 import { offices, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
@@ -233,7 +233,7 @@ export class PlenaryMatch {
   electionAction(player:Player, action:ElectionAction, now:number, hasVoice:boolean) {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id) || !this.election.open(now)) return;
-    const spend = (amount:number) => this.economy.spendOnElection(id,amount,action.kind,this.election.number);
+    const spend = (amount:number) => this.economy.spend(id,amount);
     switch (action.kind) {
       case 'run': this.election.run(id,action.office,now); break;
       case 'invest': this.election.invest(id,action.amount,spend); break;

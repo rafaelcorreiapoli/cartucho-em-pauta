@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { Gameplay, type GameplayWorld } from './Gameplay';
+import { Gameplay } from './Gameplay';
+import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
 import type { Player } from '../src/map';
 
@@ -70,6 +71,22 @@ test('calls require consent and photos only list visible players', () => {
   game.tick(world,false);
   expect(game.callPeer(alice.id)).toBeUndefined();
   expect(game.view(bob,world).call).toBeUndefined();
+});
+
+test('phone sessions keep Snake private and clear it when a player disconnects', () => {
+  const {alice,bob,events,game,world} = setup();
+  game.act(alice,{kind:'game-start'},world);
+  game.act(alice,{kind:'game-start'},world);
+  expect(game.phoneActivity(alice.id)).toBe('game');
+  expect(game.view(alice,world).game?.status).toBe('ready');
+  expect(game.view(bob,world).game).toBeUndefined();
+  world.now = 1000;
+  game.leave(alice,world,false);
+  game.tick(world,true);
+  expect(game.view(alice,world).game).toBeUndefined();
+  expect(game.phoneActivity(alice.id)).toBeUndefined();
+  expect(events.map(event=>event.type)).toEqual(['game-started','game-stopped']);
+  expect(events.at(-1)?.duration).toBe(1000);
 });
 
 test('spawned and dropped cash share visibility, custody and redemption', () => {
