@@ -120,8 +120,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(secondPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([second.sessionId]);
     expect(thirdPhotos?.album ?? []).toEqual([]);
     first.send('gameplay',{kind:'call',target:second.sessionId});
-    await until(() => secondView?.gameplay?.call?.state==='incoming');
-    expect(firstView!.gameplay?.call?.state).toBe('outgoing');
+    await until(() => secondView?.gameplay?.call?.state==='incoming' && firstView?.gameplay?.call?.state==='outgoing');
     expect(thirdView!.gameplay?.call).toBeUndefined();
     second.send('gameplay',{kind:'answer'});
     await until(() => secondView?.gameplay?.call?.state==='connected' &&
@@ -154,6 +153,7 @@ test('clients share movement and voice, then receive private roles and payments'
     newcomer.onMessage('players',() => {});
     newcomer.onMessage('control',() => {});
     newcomer.onMessage('plenary',() => {});
+    newcomer.onMessage('voice-roster',() => {});
     await until(() => secondView?.players===3);
 
     const solo = await new Client(endpoint).create('plenary',{nick:'Solo'});
