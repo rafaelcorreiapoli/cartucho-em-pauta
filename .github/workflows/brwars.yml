@@ -4,12 +4,14 @@ on:
     paths:
       - 'apps/brwars/**'
       - 'packages/personagens/**'
+      - 'packages/hud/**'
       - '.github/workflows/brwars.yml'
   push:
     branches: [main]
     paths:
       - 'apps/brwars/**'
       - 'packages/personagens/**'
+      - 'packages/hud/**'
       - '.github/workflows/brwars.yml'
   workflow_dispatch:
     inputs:

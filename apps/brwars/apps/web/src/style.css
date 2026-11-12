@@ -128,10 +128,7 @@ svg {
   position: absolute;
   inset: 0 0 auto;
   z-index: 5;
-  border-top: 2px solid #767354;
-  border-bottom: 3px ridge #646a48;
-  background: linear-gradient(#3a4431, #252f24 40%, #202a20 85%, #323c2a);
-  box-shadow: 0 4px 12px #0007;
+  border-radius: 0;
 }
 .game-logo {
   display: flex;

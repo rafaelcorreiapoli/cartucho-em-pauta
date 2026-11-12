@@ -18,7 +18,7 @@ export function LoadingScreen({
   const percent = Math.floor(state.progress * 100);
   return (
     <div
-      className="game-loading"
+      className="game-loading hud-loading"
       role="dialog"
       aria-modal="true"
       aria-label="Preparando Base Aliada"
@@ -27,10 +27,10 @@ export function LoadingScreen({
       <div className="loading-emblem">
         <Sword weight="duotone" />
       </div>
-      <h1>
+      <h1 className="hud-loading-title">
         BASE <span>ALIADA</span>
       </h1>
-      <div className="loading-plaque">
+      <div className="hud-loading-content">
         <p role={state.error ? 'alert' : 'status'}>
           {state.error
             ? 'Não foi possível carregar a batalha'
@@ -40,26 +40,30 @@ export function LoadingScreen({
                 ? 'Tudo pronto para a batalha'
                 : state.phase}
         </p>
-        <div
-          className="loading-progress"
-          role="progressbar"
+        <progress
+          className="hud-progress"
           aria-label="Carregamento dos recursos"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-        >
-          <i style={{ width: `${percent}%` }} />
-        </div>
-        <b className="loading-percent">{percent}%</b>
+          max={100}
+          value={percent}
+        />
+        <b className="hud-progress-value" aria-hidden="true">
+          {percent}%
+        </b>
         {state.error ? (
           <>
             <small>Verifique a conexão e tente novamente.</small>
-            <button type="button" onClick={() => window.location.reload()}>
+            <button className="hud-button" type="button" onClick={() => window.location.reload()}>
               Tentar novamente
             </button>
           </>
         ) : (
-          <button ref={button} type="button" disabled={!state.ready || starting} onClick={onStart}>
+          <button
+            className="hud-button"
+            ref={button}
+            type="button"
+            disabled={!state.ready || starting}
+            onClick={onStart}
+          >
             {state.ready ? 'Entrar na batalha' : 'Carregando…'}
           </button>
         )}

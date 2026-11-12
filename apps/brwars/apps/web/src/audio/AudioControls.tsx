@@ -14,7 +14,7 @@ export function AudioControls() {
       }}
     >
       <button
-        className="game-audio-toggle"
+        className="game-audio-toggle hud-icon-button"
         type="button"
         aria-label="Configurações de áudio"
         aria-expanded={open}
@@ -24,7 +24,7 @@ export function AudioControls() {
         {prefs.muted ? '♪̸' : '♫'}
       </button>
       {open && (
-        <section className="game-audio-panel" aria-label="Áudio">
+        <section className="game-audio-panel hud-panel" aria-label="Áudio">
           <header>
             ÁUDIO
             <button type="button" aria-label="Fechar áudio" onClick={() => setOpen(false)}>
@@ -35,6 +35,7 @@ export function AudioControls() {
             Música <output>{Math.round(prefs.musicVolume * 100)}%</output>
             <input
               aria-label="Volume da música"
+              className="hud-range"
               type="range"
               min="0"
               max="1"
@@ -49,6 +50,7 @@ export function AudioControls() {
             Efeitos <output>{Math.round(prefs.sfxVolume * 100)}%</output>
             <input
               aria-label="Volume dos efeitos"
+              className="hud-range"
               type="range"
               min="0"
               max="1"
@@ -60,7 +62,7 @@ export function AudioControls() {
             />
           </label>
           <button
-            className="game-audio-mute"
+            className="game-audio-mute hud-button hud-button--secondary"
             type="button"
             aria-pressed={prefs.muted}
             onClick={() => gameAudio.setPreferences({ muted: !prefs.muted })}
