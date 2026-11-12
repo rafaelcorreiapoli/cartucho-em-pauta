@@ -108,6 +108,10 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 @media (max-width:680px) {
   #landing { grid-template-columns:minmax(0,390px); align-content:center; gap:1.2rem; }
   .landing-title h1 { font-size:clamp(2.7rem,10vw,4.5rem); }
-  #plenary { max-height:38dvh; }
+  #plenary { max-height:36dvh; padding:.55rem .65rem; font-size:.8rem; }
+  #session:is([data-phase="negotiation"],[data-phase="ballot"]) #room-bar { margin-bottom:.35rem; }
+  #session:is([data-phase="negotiation"],[data-phase="ballot"]) #plenary button { min-height:34px; padding:5px 7px; font-size:.76rem; }
+  #proposal p, #outcome { line-height:1.25; }
+  #stations .plenary-line { gap:.25rem; }
   #movement-hint { display:none; }
 }
