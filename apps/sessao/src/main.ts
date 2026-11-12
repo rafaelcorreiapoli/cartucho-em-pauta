@@ -20,6 +20,7 @@ import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
+import './rts-hud.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
@@ -114,7 +115,8 @@ livePitch.oninput = () => void updateDisguise();
 
 function resetVoiceButtons() {
   voiceToggle.disabled = false;
-  voiceLabel.textContent = 'Ativar voz';
+  voiceToggle.dataset.voice = 'off';
+  voiceLabel.textContent = voiceToggle.title = 'Ativar voz';
   voiceSettings.hidden = true;
   voiceSettings.open = false;
   voiceStatus.textContent = '';
@@ -130,7 +132,8 @@ voiceToggle.onclick = async () => {
   if (!current) return;
   if (current.active) {
     current.toggleMute();
-    voiceLabel.textContent = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
+    voiceToggle.dataset.voice = current.muted ? 'muted' : 'live';
+    voiceLabel.textContent = voiceToggle.title = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
     return;
   }
   voiceToggle.disabled = true;
@@ -138,7 +141,8 @@ voiceToggle.onclick = async () => {
   try {
     await current.start();
     if (current !== voice || !current.active) return;
-    voiceLabel.textContent = 'Silenciar microfone';
+    voiceToggle.dataset.voice = 'live';
+    voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
     voiceStatus.textContent = '';
     voiceSettings.hidden = false;
   } catch (error) {
@@ -187,6 +191,21 @@ async function connect(join: () => Promise<Room>) {
     session.dataset.phase = 'lobby';
     session.hidden = false;
     setup.hidden = false;
+    const voiceDock = document.querySelector<HTMLElement>('#voice-dock')!;
+    const voiceLobby = document.querySelector<HTMLElement>('#voice-lobby')!;
+    const voiceHost = document.querySelector<HTMLElement>('#voice-host')!;
+    voiceLobby.append(voiceDock);
+    const closeDetails = () => {
+      for (const panel of session.querySelectorAll<HTMLDetailsElement>('details[name="game-panels"][open]')) panel.open = false;
+    };
+    closeDetails();
+    const hudListeners = new AbortController();
+    document.addEventListener('keydown',event=>{
+      if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
+        !session.querySelector('details[name="game-panels"][open]')) return;
+      closeDetails();
+      map.focus({preventScroll:true});
+    },{signal:hudListeners.signal});
     const roomBar = document.querySelector<HTMLElement>('#room-bar')!;
     const roomSettings = document.querySelector<HTMLDetailsElement>('#room-settings')!;
     const roomSettingsContent = document.querySelector<HTMLElement>('#room-settings-content')!;
@@ -253,17 +272,22 @@ async function connect(join: () => Promise<Room>) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished') audio.cue('end');
       phase = view.phase;
+      closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      voiceToggle.title = negotiating ? 'Voz por proximidade' : phase==='ballot' ? 'Voz geral no Plenário' : 'Voz geral da sala';
+      voiceToggle.setAttribute('aria-description',negotiating ? 'Voz por proximidade' :
+        phase==='ballot' ? 'Voz geral no Plenário' : 'Voz geral da sala');
+      if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
       if (matchRunning) {
+        if (voiceDock.parentElement!==voiceHost) voiceHost.append(voiceDock);
         if (roomBar.parentElement!==roomSettingsContent) roomSettingsContent.append(roomBar);
         roomSettings.hidden = false;
       } else {
+        voiceLobby.append(voiceDock);
         roomSettings.hidden = true;
         roomSettings.open = false;
         setup.before(roomBar);
@@ -299,6 +323,8 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onReconnect(() => { if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
+      hudListeners.abort();
+      panel.destroy();
       hud.destroy();
       gameplay.destroy();
       if (room!==joined) return;

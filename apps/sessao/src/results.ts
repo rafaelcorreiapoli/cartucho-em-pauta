@@ -1,6 +1,6 @@
 import { setCharacterPortrait } from './character-art';
 import { officeKeys, offices, type ElectionView } from './elections';
-import { bills, type Outcome, type PlenaryView } from './plenary';
+import type { PlenaryView } from './plenary';
 
 function node<K extends keyof HTMLElementTagNameMap>(tag:K, text:string) {
   const element = document.createElement(tag);
@@ -16,14 +16,6 @@ function icon(name:string) {
   use.setAttribute('href','#icon-'+name);
   svg.append(use);
   return svg;
-}
-
-function metric(symbol:string, value:string, label:string, effect:string) {
-  const cell = node('div','');
-  cell.className = 'result-metric';
-  cell.dataset.effect = effect;
-  cell.append(icon(symbol),node('strong',value),node('small',label));
-  return cell;
 }
 
 function electionResult(result:NonNullable<ElectionView['result']>) {
@@ -51,40 +43,17 @@ function electionResult(result:NonNullable<ElectionView['result']>) {
   return section;
 }
 
-function projectResult(outcome:Outcome) {
-  const section = document.createElement('section');
-  const tally = document.createElement('div');
-  tally.className = 'project-result-tally';
-  tally.append(metric('check',String(outcome.yes),'A favor','gain'),metric('cross',String(outcome.no),'Contra','loss'));
-  const verdict = node('h4',outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado');
-  verdict.className = 'project-verdict';
-  verdict.dataset.effect = outcome.passed ? 'gain' : 'loss';
-  verdict.prepend(icon(outcome.passed ? 'check' : 'cross'));
-  const impacts = node('div','');
-  impacts.className = 'project-result-impacts';
-  for (const [symbol,label,amount] of [
-    ['shield','Estabilidade',outcome.applied.stability],['wallet','Orçamento',outcome.applied.budget],
-  ] as const) {
-    const signed = amount>0 ? '+'+amount : String(amount);
-    impacts.append(metric(symbol,signed,label,amount>0 ? 'gain' : amount<0 ? 'loss' : 'neutral'));
-  }
-  section.append(node('h3',bills[outcome.round].name),verdict,tally,impacts);
-  return section;
-}
-
 export function showNewResults(view:PlenaryView, previous:PlenaryView | undefined) {
   const election = view.election?.result;
   const electionChanged = election && election.cycle!==previous?.election?.result?.cycle;
   const project = view.outcome;
   const projectChanged = project && project.round!==previous?.outcome?.round;
-  if (!electionChanged && !projectChanged) return;
-
-  const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
-  const content = document.querySelector('#result-content')!;
-  if (!dialog.open) content.replaceChildren();
-  if (projectChanged) content.append(projectResult(project));
-  if (electionChanged) content.append(electionResult(election));
-  document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
-  if (!dialog.open) dialog.showModal();
-  return projectChanged ? project.passed ? 'approved' : 'rejected' : 'election';
+  if (electionChanged) {
+    const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
+    document.querySelector('#result-content')!.replaceChildren(electionResult(election));
+    document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
+    document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
+    if (!dialog.open) dialog.showModal();
+  }
+  return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged ? 'election' : undefined;
 }

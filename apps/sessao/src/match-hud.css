@@ -679,40 +679,8 @@
   #congress-dock { top: calc(var(--hud-edge) + 96px); }
 }
 
-#left-hud, #right-hud { display: contents; }
-
 @media (min-width: 921px) {
   #session { --hud-side: clamp(270px, 26vw, 420px); }
-
-  #hud-notices {
-    position: relative;
-    inset: auto;
-    transform: none;
-    width: 100%;
-  }
-  #left-hud, #right-hud {
-    position: absolute;
-    top: var(--hud-edge);
-    width: var(--hud-side);
-    display: flex;
-    flex-direction: column;
-    gap: clamp(12px, 1.25vw, 20px);
-    pointer-events: none;
-  }
-  #left-hud { left: var(--hud-edge); }
-  #agenda-dock .module-content {
-    max-height: min(48dvh, calc(100dvh - 2 * var(--hud-edge) - var(--left-stack-height, 0px) - 74px));
-  }
-  #right-hud { right: var(--hud-edge); align-items: flex-end; }
-  #session[data-phase="lobby"] #right-hud { top: auto; bottom: var(--hud-edge); }
-
-  #left-hud > .hud-module,
-  #session #right-hud > #election-dock,
-  #session #right-hud > #voice-dock {
-    position: relative;
-    inset: auto;
-    pointer-events: auto;
-  }
 
   #profile-dock, #legislative-dock, #congress-dock, #session #election-dock {
     font-size: .96rem;
@@ -905,28 +873,6 @@
 .result-winner small { display: block; }
 .result-winner strong { margin-left: auto; font: 900 2rem/1 var(--party-display); color: var(--party-gold); }
 #result-content h4 { display: flex; align-items: center; gap: .4rem; }
-#result-content .project-verdict[data-effect="gain"] { color: var(--party-mint); }
-#result-content .project-verdict[data-effect="loss"] { color: var(--party-coral); }
-.project-result-tally, .project-result-impacts { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
-.project-result-impacts { margin-top: .65rem; }
-.result-metric {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: center;
-  align-items: center;
-  gap: .2rem .5rem;
-  padding: .65rem .4rem;
-  border-radius: 8px;
-  background: #193329;
-}
-.project-result-tally .result-metric[data-effect="gain"] { background: #1e4037; }
-.project-result-tally .result-metric[data-effect="loss"] { background: #472d2d; }
-.result-metric .hud-glyph { width: 1.5rem; height: 1.5rem; }
-.result-metric strong { font: 900 2rem/1 var(--party-display); font-variant-numeric: tabular-nums; }
-.project-result-tally strong { font-size: 3rem; }
-.result-metric small { grid-column: 1 / -1; text-align: center; color: var(--hud-paper); }
-.result-metric[data-effect="gain"] { color: var(--party-mint); }
-.result-metric[data-effect="loss"] { color: var(--party-coral); }
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }
 

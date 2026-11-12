@@ -4,7 +4,7 @@ import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import type { Motion, Player } from './map';
 import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
-import { STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -14,11 +14,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
-  const leftHud = element('left-hud');
-  const agendaSpace = new ResizeObserver(() => {
-    agendaDock.style.setProperty('--left-stack-height',`${leftHud.offsetHeight}px`);
-  });
-  agendaSpace.observe(leftHud);
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
@@ -87,21 +82,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         field?.focus();
       } else control.click();
     };
-    return {button,control};
+    return {button,control,station:action.station};
   });
   const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
     const activity = roomActivities[station];
     const button = addStationButton({...activity,station});
     button.onclick = () => sendActivity(station);
-    return {button,activity};
+    return {button,station};
   });
   let own:Player | undefined;
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
+  const unavailable = '[hidden], [data-context-hidden="true"]';
   function refreshActionKeys() {
     let index = 0;
     for (const button of actionButtons()) {
-      const number = !button.disabled && !button.closest('[hidden]') ? ++index : 0;
+      const number = !button.disabled && !button.closest(unavailable) ? ++index : 0;
       const key = number && number<=9 ? String(number) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
@@ -126,7 +122,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) || hudConsumesKeys(event.target)) return;
     const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
-    if (!button || button.disabled || button.closest('[hidden]')) return;
+    if (!button || button.disabled || button.closest(unavailable)) return;
     event.preventDefault();
     button.click();
   }
@@ -134,7 +130,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   function onStationClick(event:MouseEvent) {
     const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
-    if (!button || button.disabled || button.closest('[hidden]')) return;
+    if (!button || button.disabled || button.closest(unavailable)) return;
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       button.animate([
         {filter:'brightness(1.55)',transform:'translateY(4px)'},
@@ -200,23 +196,37 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   function actions(view:PlenaryView | undefined = previous) {
     const exploring = view?.phase==='negotiation';
-    for (const {button,control} of quickActions) {
-      button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
+    const player = own;
+    let context:Station | undefined;
+    let best = STATION_RADIUS;
+    if (exploring && player) {
+      for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
+        const distance = Math.hypot(player.x-point.x,player.y-point.y);
+        if (distance<=best && canReachObject(player,point)) {
+          best = distance;
+          context = key;
+        }
+      }
+    }
+    for (const {button,control,station} of quickActions) {
+      button.hidden = context!==station || control.disabled || !!control.closest('[hidden]') ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }
-    for (const {button,activity} of activityButtons) {
-      button.hidden = !exploring || !own || Math.hypot(own.x-activity.x,own.y-activity.y)>STATION_RADIUS;
+    for (const {button,station} of activityButtons) button.hidden = context!==station;
+    for (const button of stationActions) {
+      button.dataset.contextHidden = String(button.dataset.station!==context);
     }
-    const player = own;
-    nearbyCash = exploring && player ? view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
+    interviewHint.dataset.contextHidden = String(context!=='tv');
+    nearbyCash = exploring && !context && player ?
+      view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
     const amount = nearbyCash && cashAmount(nearbyCash.kind);
     pocket.hidden = !amount;
     renderNearby(player,exploring);
-    const nearbyObjects = !nearbyToggle.hidden;
     if (amount) pocketReward.textContent = `+${money(amount)}`;
-    const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
-    stations.hidden = (!exploring && view?.phase!=='ballot') ||
-      (!nearbyObjects && pocket.hidden && !hasAction && interviewHint.hidden);
+    const hasAction = stationActions.some(button => !button.disabled &&
+      !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
+    const hint = !interviewHint.hidden && context==='tv';
+    stations.hidden = !exploring || (nearbyToggle.hidden && pocket.hidden && !hasAction && !hint);
     refreshActionKeys();
   }
 
@@ -248,6 +258,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     render(view:PlenaryView) {
       const infiltrator = view.role==='Infiltrado';
       roleBadge.hidden = !view.role;
+      element('profile-role-label').textContent = view.role ?? '';
       if (view.role) {
         roleBadge.dataset.role = view.role;
         roleBadge.dataset.help = infiltrator ? 'Infiltrado. Derrube a estabilidade.' : 'Parlamentar. Preserve a estabilidade.';
@@ -269,7 +280,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         renderMissions(politics.missions);
         if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) {
           selectMissionTab(missionTabs[0]);
-          agendaDock.open = true;
+          agendaDock.open = false;
         }
       }
 
@@ -309,8 +320,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions();
     },
     destroy() {
-      agendaSpace.disconnect();
-      agendaDock.style.removeProperty('--left-stack-height');
       for (const node of timers.keys()) remove(node);
       for (const tab of missionTabs) {
         tab.onclick = null;

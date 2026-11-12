@@ -1,3 +1,4 @@
+import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
 import { emptyPhotoAccess, PHOTO_LIMIT, type PhotoAccessView, type Photo, type PhotoScene } from './photography';
@@ -64,6 +65,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
+  const inventoryButton = element<HTMLButtonElement>('open-inventory');
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
   const nearbyItems = element('nearby-items');
@@ -78,6 +80,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let photoId:number | undefined;
   let photoRecipient:string | undefined;
   let decorationId:number | undefined;
+  let inventoryOpen = false;
+  let backToInventory = false;
   let showing = false;
   let cameraPreview:HTMLCanvasElement | undefined;
   const previewTimer = window.setInterval(()=>{
@@ -114,14 +118,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     return card;
   }
 
-  function open(item?:typeof selection, decoration?:number) {
+  function open(item?:typeof selection, decoration?:number, inventory=false, back=false) {
     selection = item;
     decorationId = decoration;
-    const object = !!item || decoration!==undefined;
+    inventoryOpen = inventory;
+    backToInventory = back;
+    const object = !!item || decoration!==undefined || inventory;
+    highlightSlot();
     photoRecipient = undefined;
     feedback.textContent = '';
     renderKey = '';
-    element('gameplay-title').textContent = object ? 'Objeto' : 'Celular';
+    element('gameplay-title').textContent = inventory ? 'Inventário' : object ? 'Objeto' : 'Celular';
     navigation.hidden = object;
     dialog.dataset.mode = object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
@@ -179,7 +186,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const view = previous;
     const state = view?.gameplay;
     if (!dialog.open || !state || !view) return;
-    const phone = !selection && decorationId===undefined;
+    const phone = !selection && decorationId===undefined && !inventoryOpen;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
@@ -199,18 +206,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
+    const visible = inventoryOpen ? state.inventory : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
       app==='Álbum' ? [photos.album.map(({photo})=>photo.id),photos.publicPhotos.map(photo=>photo.id),showing && photos.shown,photoId,photoRecipient,contacts,state.locations.includes('press')] :
       app==='Câmera' ? photos.album.length :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] : app==='Joguinhos' ? state.game && [state.game.tiles,state.game.progress,state.game.elapsed*1000<PHONE_PREVIEW_MS] :
       app==='Notícias' ? [view.politics?.ledger,photos.publicPhotos.map(photo=>photo.id),photoId] : app==='Eleições' ? view.election?.polls : null;
-    const nextKey = JSON.stringify([selection,decorationId,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,decorationId,inventoryOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
     cameraPreview = undefined;
     const cards:HTMLElement[] = [];
+    if (inventoryOpen) {
+      const list = node('div');
+      list.className = 'expanded-inventory';
+      for (const item of state.inventory) list.append(itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'},undefined,false,true)));
+      cards.push(state.inventory.length ? list : node('p','O inventário está vazio.'));
+    }
     if (item) {
+      if (backToInventory) cards.push(button('Voltar ao inventário',()=>open(undefined,undefined,true)));
       const card = objectCard(item);
       const act = (label:string,kind:GameplayAction['kind'],place?:string) =>
         card.append(button(label,() => send({kind,item:item.id,target:target.value,place})));
@@ -424,13 +438,40 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     inventoryKey = key;
     slots.replaceChildren(...Array.from({length:INVENTORY_SLOTS},(_,index) => {
       const item = inventory[index];
-      if (item) return itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'}));
-      const slot = node('span');
-      slot.className = 'item-tile item-tile-empty';
-      slot.setAttribute('aria-hidden','true');
+      const slot = item ? itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'})) : node('span');
+      if (item) {
+        slot.dataset.item = String(item.id);
+        slot.setAttribute('aria-haspopup','dialog');
+        slot.setAttribute('aria-keyshortcuts',`Shift+${index+1}`);
+        slot.title += ` (Shift+${index+1})`;
+      } else {
+        slot.className = 'item-tile item-tile-empty';
+        slot.setAttribute('aria-hidden','true');
+      }
+      const key = node('kbd',`⇧${index+1}`);
+      key.className = 'slot-key';
+      key.setAttribute('aria-hidden','true');
+      slot.append(key);
       return slot;
     }));
+    highlightSlot();
   }
+
+  function highlightSlot() {
+    for (const slot of slots.querySelectorAll('button[data-item]')) {
+      slot.setAttribute('aria-expanded',String(selection?.source==='inventory' && slot.getAttribute('data-item')===String(selection.id)));
+    }
+  }
+
+  const onSlotKey = (event:KeyboardEvent) => {
+    if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
+      event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
+    const slot = slots.children[Number(event.code.at(-1))-1];
+    if (!(slot instanceof HTMLButtonElement)) return;
+    event.preventDefault();
+    slot.click();
+  };
+  document.addEventListener('keydown',onSlotKey);
 
   function setNearbyExpanded(expanded:boolean) {
     nearbyItems.hidden = !expanded;
@@ -445,7 +486,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   phoneButton.onclick = () => open();
+  inventoryButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
+    selection = undefined;
+    highlightSlot();
     if (previous?.gameplay?.game) send({kind:'game-stop'});
     if (showing) closePresentation();
   };
@@ -525,6 +569,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory);
+      phoneButton.dataset.call = call?.state ?? '';
       phoneButton.lastChild!.textContent = call?.state==='connected' ? ` Ligação · ${call.peer.name}` :
         call?.state==='incoming' ? ` Chamada · ${call.peer.name}` : ' Celular';
       if (call?.state==='connected' && old?.call?.state!=='connected' && !selection && app==='Telefone') dialog.close();
@@ -577,6 +622,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     },
     destroy() {
       window.clearInterval(previewTimer);
+      document.removeEventListener('keydown',onSlotKey);
       dialog.removeEventListener('close',closed);
       dialog.close();
       tools.hidden = element('object-request').hidden = true;

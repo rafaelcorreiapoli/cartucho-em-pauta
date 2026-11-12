@@ -239,7 +239,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cssWidth = parent.clientWidth || 1;
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
-      const normalZoom = Math.max(1.5,cssWidth/550,cssHeight/(cssWidth<=680 ? 310 : 360));
+      const normalZoom = Math.max(1.5,Math.min(cssWidth/550,cssHeight/290),cssHeight/(cssWidth<=680 ? 310 : 360));
       const cssZoom = inSession ? Math.min(normalZoom,cssWidth/580,cssHeight/340) : normalZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
