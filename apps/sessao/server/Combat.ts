@@ -144,7 +144,12 @@ export class Combat {
   treat(player:Combatant, amount:number, now:number) {
     const state = this.state(player);
     if (state.recoverAt) this.recover(player,state,now);
-    state.hp = Math.min(this.max(player),state.hp+amount);
+    this.heal(player,amount);
+  }
+
+  heal(player:Combatant, amount:number|'full') {
+    const state = this.state(player);
+    state.hp = amount==='full' ? this.max(player) : Math.min(this.max(player),state.hp+amount);
   }
 
   weaponRecharge(player:Combatant, now:number) {

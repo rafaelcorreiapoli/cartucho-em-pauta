@@ -72,7 +72,11 @@ export type PoliticsAction =
   | {kind:'accept' | 'cancel'; offer:number}
   | {kind:'hearing'; target:string};
 
-export const money = (units:number) => `R$ ${units*10} mil`;
+const reaisFormat = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
+export const money = (units:number) => {
+  const reais = Math.round(units*10_000);
+  return reais%1000===0 ? `R$ ${reais/1000} mil` : `R$ ${reaisFormat.format(reais)}`;
+};
 
 export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   if (!data || typeof data!=='object' || !('kind' in data)) return;

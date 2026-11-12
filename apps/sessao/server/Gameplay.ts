@@ -1,3 +1,5 @@
+import { foods, isFood, type FoodEffect } from '../src/food';
+import { MAX_STAMINA } from '../src/movement';
 import type { DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
@@ -59,6 +61,10 @@ export class Gameplay {
     this.combat.reset(players);
     this.transport.reset();
     this.modulator.reset();
+    for (const player of players) {
+      player.speedModifier = undefined;
+      player.staminaRegenModifier = undefined;
+    }
     this.random = random;
     this.nextCashSpawn = now+4000+random()*8000;
   }
@@ -316,6 +322,7 @@ export class Gameplay {
       served.add(player.id);
       placed.slices--;
       const host = world.players.find(person=>person.id===placed.owner.id);
+      this.consumeFood(player,foods.pizza.effect);
       this.event(world,player,'used',data,placed.owner.id);
       if (host && host.id!==player.id) this.event(world,host,'slice',data,player.id);
       if (!placed.slices) {
@@ -339,13 +346,21 @@ export class Gameplay {
     return 'Objeto retirado.';
   }
 
-  private buyGear(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
+  private consumeFood(player:Player, effect:FoodEffect) {
+    if (effect.hp) this.combat.heal(player,effect.hp);
+    if (effect.stamina) player.stamina = Math.min(MAX_STAMINA,(player.stamina ?? MAX_STAMINA)+effect.stamina);
+    if (effect.speed) player.speedModifier = {factor:effect.speed.factor,remainingMs:effect.speed.durationMs};
+    if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
+  }
+
+  private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
     return this.dialogues.purchase(player,token,()=>{
-      if (!isGear(kind)) return 'Produto indisponível.';
+      const gear = isGear(kind);
+      if (!gear && !isFood(kind)) return 'Produto indisponível.';
       if (!this.available(id)) return 'Inventário cheio.';
-      if ([...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,equipment[kind].price)) return 'Saldo insuficiente.';
+      if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
+      if (!world.spend?.(id,gear ? equipment[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
       const data = this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
     }) ?? 'Compra guardada no inventário.';
@@ -414,7 +429,7 @@ export class Gameplay {
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
-    if (action.kind==='shop-buy') return this.buyGear(player,action.target,action.token,world);
+    if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');
@@ -540,6 +555,7 @@ export class Gameplay {
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
         this.remove(item);
         if ('amount' in definition) world.earn(id,definition.amount);
+        if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
         this.event(world,player,'used',data);
         return 'Objeto utilizado.';
       case 'destroy':

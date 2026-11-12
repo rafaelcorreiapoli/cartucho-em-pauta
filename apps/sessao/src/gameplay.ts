@@ -1,3 +1,4 @@
+import { foods } from './food';
 import type { DialogueView, NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
@@ -7,7 +8,7 @@ import type { Contact } from './politics';
 import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 
 export const objects = {
-  coffee:{exposable:true,name:'Cafezinho',portrait:'retrato-cafezinho.webp',description:'Café da firma, forte o bastante para encerrar uma CPI.',use:'consume'},
+  ...foods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',use:'cash',amount:3},
   underwear:{exposable:true,name:'Cueca com dólares',portrait:'retrato-cueca.webp',description:'Reserva cambial de uso pessoal.',use:'cash',amount:2},
   bundle:{name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',use:'cash',amount:1},
@@ -19,7 +20,6 @@ export const objects = {
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
   baton:{name:'Porrete',portrait:'weapon-baton.webp',description:'Golpeia um jogador próximo.'},
-  pizza:{exposable:true,name:'Pizza parlamentar',portrait:'retrato-presente.webp',description:'Seis fatias para dividir no Cafezinho.',use:'consume'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'|'cash'; amount?:number; destructible?:boolean}>;
 
 export const documentTemplates = {

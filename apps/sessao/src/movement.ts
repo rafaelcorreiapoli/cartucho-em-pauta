@@ -1,5 +1,5 @@
 import { doorDestination } from './interactions';
-import { canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type Player } from './map';
+import { canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type MovementModifier, type Player } from './map';
 import { findRoute, followRoute } from './navigation';
 
 export const STEP_MS = 50;
@@ -13,14 +13,26 @@ export type ControlState = { player: Player; route: Motion[]; ack: number; plena
 
 function recoverStamina(player:Player) {
   if (player.stamina!==undefined && player.stamina<MAX_STAMINA) {
-    player.stamina = Math.min(MAX_STAMINA,player.stamina+staminaRecovery);
+    player.stamina = Math.min(MAX_STAMINA,player.stamina+staminaRecovery*(player.staminaRegenModifier?.factor ?? 1));
   }
+}
+
+function advanceModifier(modifier:MovementModifier|undefined) {
+  if (modifier && modifier.remainingMs>STEP_MS) {
+    return {...modifier,remainingMs:modifier.remainingMs-STEP_MS};
+  }
+}
+
+function advanceModifiers(player:Player) {
+  if (player.speedModifier) player.speedModifier = advanceModifier(player.speedModifier);
+  if (player.staminaRegenModifier) player.staminaRegenModifier = advanceModifier(player.staminaRegenModifier);
 }
 
 export function restMovement(player:Player) {
   player.moving = false;
   player.sprinting = undefined;
   recoverStamina(player);
+  advanceModifiers(player);
 }
 
 export function applyInput(state: ControlState, input: MovementInput) {
@@ -45,6 +57,7 @@ export function applyInput(state: ControlState, input: MovementInput) {
   if (!player.moving) player.sprinting = undefined;
   if (player.sprinting) player.stamina = stamina-staminaDrain;
   else if (!wantsSprint || !player.moving) recoverStamina(player);
+  advanceModifiers(player);
   state.ack = input.seq;
 }
 

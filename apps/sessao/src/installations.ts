@@ -1,3 +1,4 @@
+import { foods } from './food';
 import { stations } from './plenary';
 
 export const installationSites = {
@@ -8,4 +9,4 @@ export const installationSites = {
   pizza:{kind:'pizza',point:stations.coffee,label:'Mesa do Cafezinho'},
 } as const;
 export type Installable = typeof installationSites[keyof typeof installationSites]['kind'];
-export const shop = {pizza:2,portrait:2,vip:1} satisfies Record<Installable,number>;
+export const shop = {pizza:foods.pizza.price,portrait:2,vip:1} satisfies Record<Installable,number>;

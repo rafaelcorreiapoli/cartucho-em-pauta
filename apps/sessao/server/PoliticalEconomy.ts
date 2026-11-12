@@ -73,7 +73,7 @@ export class PoliticalEconomy {
   spend(id:string,amount:number) {
     const account = this.accounts.get(id);
     if (!account || amount>account.wallet) return false;
-    account.wallet -= amount;
+    account.wallet = Math.round((account.wallet-amount)*10_000)/10_000;
     return true;
   }
 

@@ -8,7 +8,8 @@ import { infirmary } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs } from '../src/npcs';
 import { weapons } from '../src/weapons';
-import { applyInput } from '../src/movement';
+import { applyInput, restMovement, STEP_MS } from '../src/movement';
+import { foods, type FoodKind } from '../src/food';
 
 function player(id:string, x:number, y:number, character=0):Player {
   return {id,nick:id,x,y,character,direction:0,moving:false};
@@ -353,3 +354,60 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
   expect(combat.view(target,1540).hp).toBe(94);
   expect(target.hit).toBeUndefined();
 });
+
+
+const consumableCases:[FoodKind,number,number][] = [
+  ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40], ['oneRealMeal',52,40],
+  ['coxinha',42,40], ['coffee',22,70], ['energyDrink',22,40], ['mortadellaRoll',47,50],
+  ['lobster',100,40], ['picanha',92,40],
+];
+
+for (const [kind,hp,stamina] of consumableCases) {
+  test(`${kind} can be bought and consumed once by its owner`,()=>{
+    const {alice,bob,game,world,openShop,balance,events} = setup();
+    balance.set(bob.id,12);
+    game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+    game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+    for (let strike=0;strike<3;strike++) {
+      game.act(alice,{kind:'attack'},world);
+      world.now += weapons.baton.impactMs;
+      game.tick(world,true);
+      world.now += weapons.baton.cooldown;
+      game.tick(world,true);
+    }
+    expect(game.view(bob,world).vitality?.hp).toBe(22);
+    bob.speed = 88;
+    bob.stamina = 40;
+    const token = openShop(bob);
+    const buy = {kind:'shop-buy',target:kind,token} as const;
+    expect(game.act(bob,buy,world)).toBe('Compra guardada no inventário.');
+    expect(game.act(bob,buy,world)).toBe('Abra o catálogo do vendedor.');
+    expect(balance.get(bob.id)).toBeCloseTo(12-foods[kind].price,5);
+    const [item] = game.view(bob,world).inventory;
+    expect(item.kind).toBe(kind);
+    const use = {kind:'use',item:item.id} as const;
+    expect(game.act(alice,use,world)).toBe('O objeto não está com você.');
+    expect(game.act(bob,use,world)).toBe('Objeto utilizado.');
+    expect(game.act(bob,use,world)).toBe('Objeto indisponível.');
+    expect(game.view(bob,world).inventory).toEqual([]);
+    expect(game.view(bob,world).vitality?.hp).toBe(hp);
+    expect(bob.stamina).toBe(stamina);
+    expect(events.filter(event=>event.type==='used' && event.item===item.id)).toHaveLength(1);
+
+    if (kind==='condensedMilk') {
+      const {factor,durationMs} = foods.condensedMilk.effect.speed;
+      expect(movementSpeed(bob)).toBeCloseTo(88*factor);
+      for (let t=0;t<durationMs;t+=STEP_MS) restMovement(bob);
+      expect(movementSpeed(bob)).toBe(88);
+    }
+    if (kind==='energyDrink') {
+      const {factor,durationMs} = foods.energyDrink.effect.staminaRegen;
+      restMovement(bob);
+      expect(bob.stamina).toBe(40+factor);
+      for (let t=STEP_MS;t<durationMs;t+=STEP_MS) restMovement(bob);
+      bob.stamina = 40;
+      restMovement(bob);
+      expect(bob.stamina).toBe(41);
+    }
+  });
+}

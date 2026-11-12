@@ -65,7 +65,8 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; stamina?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
+export type MovementModifier = {factor:number; remainingMs:number};
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
@@ -86,7 +87,7 @@ export function canStandInPlenary(x:number,y:number) {
 export const sprintMultiplier = 1.5;
 
 export function movementSpeed(player:Player) {
-  return (player.speed ?? SPEED)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
+  return (player.speed ?? SPEED)*(player.speedModifier?.factor ?? 1)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
 }
 
 export function move(player: Player, input: Motion, seconds: number, stand = canStand) {

@@ -602,3 +602,15 @@ img.market-art { width: 3rem; height: 2rem; object-fit: contain; }
 #action-shortcuts p { margin-block: .55rem .9rem; }
 .shortcut-list { display: grid; gap: .4rem; }
 .shortcut-pages { margin-top: .7rem; }
+
+
+.market-category, .market-paging {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin-top: .7rem;
+}
+.market-category .hud-button[aria-pressed="true"] { border-color: var(--party-gold); }
+.market-paging { justify-content: space-between; }
+.market-food-effect { color: var(--party-mint); font-size: .83rem; }
+#market-dialog .market-food-effect { margin-top: .3rem; }

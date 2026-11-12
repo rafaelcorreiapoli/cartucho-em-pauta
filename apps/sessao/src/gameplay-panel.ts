@@ -1,3 +1,5 @@
+import { markShortcut } from './action-shortcuts';
+import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
 import { createPhoneSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
@@ -78,6 +80,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       node('p',`Carimbos ${doc.stamps.length}/${doc.requiredStamps.length} · ${doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? `✓ ${stamp}` : stamp).join(', ')}`),
     );
     if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: ${offices[doc.requiredOffice].name}`));
+    if (isFood(item.kind)) summary.append(node('p',`1 un. · ${foods[item.kind].category} · ${describeFood(foods[item.kind].effect)}`));
     if ('amount' in definition) summary.append(node('p',`R$ ${definition.amount*10} mil`));
     card.append(heading,summary);
     return card;
@@ -207,12 +210,19 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     if (item) {
       const card = objectCard(item);
-      const act = (label:string,kind:GameplayAction['kind'],place?:string) =>
-        card.append(button(label,() => send({kind,item:item.id,target:target.value,place})));
+      const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
+        const control = button(label,()=>send({kind,item:item.id,target:target.value,place}));
+        card.append(control);
+        return control;
+      };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
-        if ('use' in definition) act(definition.use==='cash' ? 'Embolsar' : item.kind==='pizza' ? 'Comer pizza' : 'Tomar café','use');
+        if ('use' in definition) {
+          const label = definition.use==='cash' ? 'Embolsar' : item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
+          const use = act(label,'use');
+          if (isFood(item.kind)) markShortcut(use,'1');
+        }
         if ('exposable' in definition) {
           const exposed = state.exposed===item.id;
           act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');

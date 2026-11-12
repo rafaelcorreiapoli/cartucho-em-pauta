@@ -5,7 +5,7 @@ import { objects, type ObjectKind } from './gameplay';
 import { HEIGHT, localPerception, WIDTH } from './map';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type Decoration, type Photo, type PhotoScene } from './photography';
 
-export const itemSymbols:Partial<Record<ObjectKind,string>> = {pizza:'🍕',vip:'★',binoculars:equipment.binoculars.symbol,voiceModulator:equipment.voiceModulator.symbol,vest:equipment.vest.symbol};
+export const itemSymbols:Partial<Record<ObjectKind,string>> = {vip:'★',binoculars:equipment.binoculars.symbol,voiceModulator:equipment.voiceModulator.symbol,vest:equipment.vest.symbol};
 
 export class PhotoRenderer {
   private map?:HTMLImageElement;
