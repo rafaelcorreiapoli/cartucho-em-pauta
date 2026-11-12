@@ -1,3 +1,4 @@
+import { createAudioPreferences, effectiveVolume } from "../../../packages/hud/audio";
 import type { HeroId } from "./heroes";
 
 const files = {
@@ -26,19 +27,24 @@ type Cue = keyof typeof files | HeroVoice;
 export type AudioChannel = "music" | "effects";
 const volumes = { music: 0.34, effects: 0.75 };
 
-function loadPreference(channel: AudioChannel) {
-  try {
-    return localStorage.getItem(`plenario.audio.${channel}`) !== "off";
-  } catch {
-    return true;
-  }
-}
-
 class GameAudio {
-  private prefs = {
-    music: loadPreference("music"),
-    effects: loadPreference("effects"),
-  };
+  private settings = createAudioPreferences(
+    { musicVolume: volumes.music, sfxVolume: volumes.effects, muted: false },
+    {
+      read: () => ({
+        musicVolume: localStorage.getItem("plenario.audio.music") === "off" ? 0 : volumes.music,
+        sfxVolume: localStorage.getItem("plenario.audio.effects") === "off" ? 0 : volumes.effects,
+      }),
+      write: (preferences, previous) => {
+        if (preferences.musicVolume !== previous.musicVolume) {
+          localStorage.setItem("plenario.audio.music", preferences.musicVolume ? "on" : "off");
+        }
+        if (preferences.sfxVolume !== previous.sfxVolume) {
+          localStorage.setItem("plenario.audio.effects", preferences.sfxVolume ? "on" : "off");
+        }
+      },
+    },
+  );
   private context?: AudioContext;
   private gains?: Record<AudioChannel, GainNode>;
   private music?: AudioBufferSourceNode;
@@ -49,21 +55,18 @@ class GameAudio {
   private buffers = new Map<Cue, Promise<AudioBuffer | null>>();
 
   enabled(channel: AudioChannel) {
-    return this.prefs[channel];
+    return this.volume(channel) > 0;
   }
 
   toggle(channel: AudioChannel) {
-    this.prefs[channel] = !this.prefs[channel];
-    try {
-      localStorage.setItem(
-        `plenario.audio.${channel}`,
-        this.prefs[channel] ? "on" : "off",
-      );
-    } catch {
-      // The current session can still control audio if storage is unavailable.
-    }
+    const key = channel === "music" ? "musicVolume" : "sfxVolume";
+    this.settings.update({ [key]: this.enabled(channel) ? 0 : volumes[channel] });
     this.syncVolumes();
     this.unlock();
+  }
+
+  private volume(channel: AudioChannel) {
+    return effectiveVolume(this.settings.getSnapshot(), channel);
   }
 
   prefetch() {
@@ -94,9 +97,7 @@ class GameAudio {
         effects: context.createGain(),
       };
       for (const channel of ["music", "effects"] as const) {
-        this.gains[channel].gain.value = this.prefs[channel]
-          ? volumes[channel]
-          : 0;
+        this.gains[channel].gain.value = this.volume(channel);
         this.gains[channel].connect(context.destination);
       }
       this.prefetch();
@@ -122,12 +123,12 @@ class GameAudio {
   ) {
     const context = this.context;
     const output = this.gains?.effects;
-    if (!context || !output || !this.prefs.effects) return;
+    if (!context || !output || !this.enabled("effects")) return;
     const voiceRequest = this.voiceRequest;
     const isVoice = cue.startsWith("hero/");
     const at = context.currentTime + (options.delay ?? 0);
     void this.buffers.get(cue)?.then((buffer) => {
-      if (!buffer || !this.prefs.effects || context.state === "closed") return;
+      if (!buffer || !this.enabled("effects") || context.state === "closed") return;
       if (isVoice && voiceRequest !== this.voiceRequest) return;
       const source = context.createBufferSource();
       const level = context.createGain();
@@ -171,7 +172,7 @@ class GameAudio {
     if (!this.context || !this.gains) return;
     for (const channel of ["music", "effects"] as const)
       this.gains[channel].gain.setTargetAtTime(
-        this.prefs[channel] ? volumes[channel] : 0,
+        this.volume(channel),
         this.context.currentTime,
         0.04,
       );
@@ -185,13 +186,13 @@ class GameAudio {
       !output ||
       this.music ||
       this.startingMusic ||
-      !this.prefs.music
+      !this.enabled("music")
     )
       return;
     this.startingMusic = true;
     void this.buffers.get("music")?.then((buffer) => {
       this.startingMusic = false;
-      if (!buffer || !this.prefs.music || context.state !== "running") return;
+      if (!buffer || !this.enabled("music") || context.state !== "running") return;
       const source = context.createBufferSource();
       source.buffer = buffer;
       source.loop = true;

@@ -4,12 +4,14 @@ on:
     paths:
       - 'apps/brspire/**'
       - 'packages/personagens/**'
+      - 'packages/hud/**'
       - '.github/workflows/brspire.yml'
   push:
     branches: [main]
     paths:
       - 'apps/brspire/**'
       - 'packages/personagens/**'
+      - 'packages/hud/**'
       - '.github/workflows/brspire.yml'
   workflow_dispatch:
     inputs:

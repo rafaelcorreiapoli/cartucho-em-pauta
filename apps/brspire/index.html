@@ -9,12 +9,12 @@
     <title>Cartas Marcadas — Roguelike de cartas</title>
   </head>
   <body>
-    <main id="loading" aria-labelledby="loading-title">
-      <div class="loading-panel">
-        <h1 id="loading-title">Cartas Marcadas</h1>
+    <main id="loading" class="hud-loading" aria-labelledby="loading-title">
+      <div class="hud-loading-content">
+        <h1 id="loading-title" class="hud-loading-title">Cartas Marcadas</h1>
         <label for="asset-progress">Carregando o jogo</label>
-        <progress id="asset-progress" max="100" value="0"></progress>
-        <span class="loading-percent" aria-hidden="true">0%</span>
+        <progress id="asset-progress" class="hud-progress" max="100" value="0"></progress>
+        <span class="hud-progress-value" aria-hidden="true">0%</span>
       </div>
     </main>
     <div id="app" hidden></div>

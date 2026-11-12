@@ -1,0 +1,9 @@
+{
+  "name": "@cartucho/hud",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./audio": "./audio.ts",
+    "./styles.css": "./styles.css"
+  }
+}

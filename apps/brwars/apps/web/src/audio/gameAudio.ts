@@ -1,3 +1,12 @@
+import {
+  createAudioPreferences,
+  effectiveVolume,
+  sanitizeAudioPreferences,
+  type AudioPreferences,
+} from '../../../../../../packages/hud/audio';
+
+export type { AudioPreferences } from '../../../../../../packages/hud/audio';
+
 export const soundNames = [
   'select',
   'build',
@@ -23,11 +32,6 @@ export const soundNames = [
   'heroDeath',
 ] as const;
 export type SoundEvent = (typeof soundNames)[number];
-export interface AudioPreferences {
-  musicVolume: number;
-  sfxVolume: number;
-  muted: boolean;
-}
 const defaults: AudioPreferences = { musicVolume: 0.22, sfxVolume: 0.5, muted: false };
 const storageKey = 'brwars.audio.v1';
 const files: Record<SoundEvent, string[]> = Object.fromEntries(
@@ -49,19 +53,11 @@ files.globalPower = ['global-power'];
 const combat = new Set<SoundEvent>(['melee', 'ranged', 'death']);
 const base = `${import.meta.env.BASE_URL}audio/`;
 export function sanitizePreferences(value: unknown): AudioPreferences {
-  const data = value && typeof value === 'object' ? (value as Partial<AudioPreferences>) : {};
-  const volume = (v: unknown, fallback: number) =>
-    typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : fallback;
-  return {
-    musicVolume: volume(data.musicVolume, defaults.musicVolume),
-    sfxVolume: volume(data.sfxVolume, defaults.sfxVolume),
-    muted: typeof data.muted === 'boolean' ? data.muted : defaults.muted,
-  };
+  return sanitizeAudioPreferences(value, defaults);
 }
 
 export class GameAudio {
-  private preferences: AudioPreferences = { ...defaults };
-  private listeners = new Set<() => void>();
+  private settings = createAudioPreferences(defaults, storageKey);
   private context?: AudioContext;
   private output?: GainNode;
   private music?: HTMLAudioElement;
@@ -75,34 +71,18 @@ export class GameAudio {
   private detach?: () => void;
   private generation = 0;
 
-  constructor() {
-    try {
-      this.preferences = sanitizePreferences(
-        JSON.parse(localStorage.getItem(storageKey) ?? 'null'),
-      );
-    } catch {
-      /* Storage may be unavailable. */
-    }
+  private get preferences() {
+    return this.settings.getSnapshot();
   }
-  getSnapshot = () => this.preferences;
-  subscribe = (listener: () => void) => {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  };
+
+  getSnapshot = this.settings.getSnapshot;
+  subscribe = this.settings.subscribe;
+
   setPreferences(update: Partial<AudioPreferences>) {
-    this.preferences = sanitizePreferences({ ...this.preferences, ...update });
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(this.preferences));
-    } catch {
-      /* Private mode can deny persistence. */
-    }
-    if (this.output)
-      this.output.gain.value = this.preferences.muted ? 0 : this.preferences.sfxVolume;
+    this.settings.update(update);
+    if (this.output) this.output.gain.value = effectiveVolume(this.preferences, 'effects');
     if (this.preferences.muted) this.stopVoices();
     this.syncMusic();
-    this.listeners.forEach((listener) => listener());
   }
   /** Call from a pointer/key gesture. Audio is never started before this. */
   unlock = async () => {
@@ -113,7 +93,7 @@ export class GameAudio {
         const limiter = this.context.createDynamicsCompressor();
         this.output.connect(limiter);
         limiter.connect(this.context.destination);
-        this.output.gain.value = this.preferences.muted ? 0 : this.preferences.sfxVolume;
+        this.output.gain.value = effectiveVolume(this.preferences, 'effects');
       }
       this.unlocked = true;
       const resumed = this.context.resume();

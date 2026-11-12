@@ -14,10 +14,6 @@ button:is(.resource-health, .resource-money, .draw-pile)[data-hud-help] {
   align-items: center;
   gap: clamp(8px, 1.5vw, 23px);
   padding: 4px 12px 4px 4px;
-  border: 1px solid #9e927a66;
-  border-radius: 8px 4px 10px 4px;
-  background: linear-gradient(105deg, #1c3038f5, #121b22e6);
-  box-shadow: 0 3px 8px #070c0c85;
 }
 .resource-portrait {
   width: clamp(30px, 4vw, 42px);
@@ -524,48 +520,21 @@ button:is(.resource-health, .resource-money, .draw-pile)[data-hud-help] {
   top: 10px;
   right: clamp(10px, 3vw, 44px);
   z-index: 6;
-  display: grid;
-  place-items: center;
   width: 42px;
   height: 42px;
-  border: 1px solid #9e927a;
-  border-radius: 7px;
-  background: #1c3038;
-  color: #ffe5b7;
 }
 .settings-trigger svg { width: 24px; }
-.settings-trigger:hover { background: #345868; }
 .settings-panel {
   width: min(340px, calc(100vw - 30px));
   padding: 21px;
-  border: 2px solid #9e927a;
-  border-radius: 10px;
-  background: linear-gradient(#283c41, #172324);
-  color: var(--paper);
-  box-shadow: 0 8px 35px #090e0dc9;
 }
-.settings-panel::backdrop { background: #07100bd1; }
-.settings-panel h2 {
-  margin: 0 0 13px;
-  font: 800 34px/1 var(--display-font);
-}
+.settings-panel h2 { margin: 0 0 13px; font: 800 34px/1 var(--display-font); }
 .settings-panel .settings-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   width: 100%;
   height: auto;
   margin-bottom: 8px;
-  padding: 9px 10px;
-  border: 1px solid #9e927a80;
-  border-radius: 4px;
-  background: #182a2b;
-  color: var(--paper);
-  font-size: 14px;
 }
-.settings-option b { color: #c2d18f; }
-.settings-option[aria-pressed="false"] b { color: #d8aa91; }
-.settings-panel .secondary { margin-top: 6px; }
+.settings-panel :is(.secondary, .hud-button--secondary) { margin-top: 6px; }
 
 .event-scene {
   overflow-anchor: none;
