@@ -1,0 +1,23 @@
+app = "cartuchao-sessao-poc"
+primary_region = "gru"
+
+[env]
+  PORT = "2568"
+
+[http_service]
+  internal_port = 2568
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "15s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

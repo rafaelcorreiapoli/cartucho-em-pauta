@@ -19,3 +19,15 @@ Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram fei
 Depois de entrar numa sala, clique em **Ativar voz** e permita o microfone. Todos que ativarem a voz na mesma sala podem conversar. Use **Silenciar microfone** para continuar ouvindo ou **Sair da voz** para desligar o microfone e o áudio da sala. A lista de falantes e o nome verde no mapa reagem ao áudio.
 
 Para testar em duas abas no mesmo computador, use localhost e fones de ouvido. Para amigos em outros dispositivos, sirva o cliente por HTTPS e configure `VITE_GAME_SERVER` com o endereço seguro do servidor. A voz usa WebRTC e STUN por padrão. Se a rede bloquear a ligação direta, configure `VITE_VOICE_ICE_SERVERS` com a lista JSON de servidores ICE do seu provedor TURN. Variáveis `VITE_*` são visíveis ao cliente. Use credenciais de teste com validade curta.
+
+## Publicar a POC
+
+No diretório `apps/sessao`, publique o servidor e gere o cliente com o endpoint HTTPS do Fly:
+
+```sh
+flyctl deploy --remote-only --ha=false
+VITE_GAME_SERVER=https://cartuchao-sessao-poc.fly.dev bun run build
+netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist --alias presidente-sessao-poc
+```
+
+O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
