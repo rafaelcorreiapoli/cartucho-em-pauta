@@ -7,6 +7,8 @@ import { STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; nextStep:number };
+const stationColor = 0x79ebdf;
+const stationOutline = [5,0, 31,0, 36,5, 36,13, 31,18, 5,18, 0,13, 0,5];
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -49,7 +51,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private views = new Map<string,View>();
-    private stationMarkers: {ring:Phaser.GameObjects.Ellipse; label:Phaser.GameObjects.Text}[] = [];
+    private stationMarkers: Phaser.GameObjects.Polygon[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private marker!: Phaser.GameObjects.Ellipse;
@@ -78,12 +80,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this);
-      for (const {x,y,label} of Object.values(stations)) {
-        this.stationMarkers.push({
-          ring:this.add.ellipse(x,y,34,16,0xffdc82,.2).setStrokeStyle(1,0xffdc82).setDepth(y-2),
-          label:this.add.text(x,y-13,label,{fontFamily:'system-ui',fontSize:'8px',fontStyle:'bold',
-            backgroundColor:'#263a31',padding:{x:3,y:1},resolution:3}).setOrigin(.5,1).setDepth(HEIGHT+20),
-        });
+      for (const {x,y} of Object.values(stations)) {
+        this.stationMarkers.push(this.add.polygon(x,y,stationOutline,stationColor,.16)
+          .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
@@ -100,8 +99,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     pulseStation(key:Station) {
       const {x,y} = stations[key];
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const pulse = this.add.ellipse(x,y,44,26,0xffdf81,.26)
-        .setStrokeStyle(2,0xffdf81).setDepth(HEIGHT+10);
+      const pulse = this.add.polygon(x,y,stationOutline,stationColor,.24)
+        .setStrokeStyle(2,stationColor).setDepth(2);
       this.tweens.add({
         targets:pulse,scale:reduced ? 1 : 2.8,alpha:0,duration:560,ease:'Cubic.Out',
         onComplete:() => pulse.destroy(),
@@ -141,17 +140,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (resolution!==this.textResolution) {
         this.textResolution = resolution;
         for (const label of this.mapLabels) label.setResolution(resolution);
-        for (const {label} of this.stationMarkers) label.setResolution(resolution);
         for (const view of this.views.values()) {
           view.label.setResolution(resolution);
           view.office.setResolution(resolution);
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
-      for (const [i,station] of Object.values(stations).entries()) {
-        const {ring,label} = this.stationMarkers[i];
-        ring.setVisible(negotiating).setAlpha(ownPlayer && Math.hypot(ownPlayer.x-station.x,ownPlayer.y-station.y)<=STATION_RADIUS ? 1 : .55);
-        label.setVisible(negotiating);
+      for (const marker of this.stationMarkers) {
+        const nearby = ownPlayer && Math.hypot(ownPlayer.x-marker.x,ownPlayer.y-marker.y)<=STATION_RADIUS;
+        marker.setVisible(negotiating).setAlpha(nearby ? 1 : .55);
       }
 
       for (const [id,view] of this.views) {
