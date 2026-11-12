@@ -191,7 +191,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .impact-values > span { color:#ced8d0; font-size:.78rem; }
 [data-effect="gain"] { color:#aee7b3; }
 [data-effect="loss"] { color:#ffc2b2; }
-#stations { padding-top:.35rem; }
 .section-label { color:#d3c29d; font-weight:800; font-size:.7rem; margin-bottom:.25rem; }
 .station-grid > button { display:flex; align-items:center; gap:.4rem; min-height:34px; padding:.3rem .4rem; text-align:left; }
 .station-grid small { display:block; font-size:.65rem; font-weight:550; }
@@ -214,7 +213,7 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 }
 
 #election-actions { margin-top:.55rem; padding:.45rem; border:1px solid #9e927a66; border-radius:5px; }
-#stations .station-grid > button:disabled { display:none; }
+#stations .hud-button:disabled { display:none; }
 #station-hint { color:#c6d1c4; }
 @media (min-width:741px) {
   #session:is([data-phase="negotiation"],[data-phase="ballot"],[data-phase="hearing"]) #plenary {

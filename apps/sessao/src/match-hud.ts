@@ -1,29 +1,39 @@
 import { offices } from './elections';
 import type { Player } from './map';
 import { AGENDA_REWARD, agendas, money } from './politics';
-import type { PlenaryView } from './plenary';
+import { stations as mapStations, type PlenaryView, type Station } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-export function createMatchHud(id:string) {
+export function createMatchHud(id:string, stationFeedback:(station:Station) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaSummary = element('agenda-dock').querySelector('summary')!;
   const notices = element('hud-notices');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
-  const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('[data-action]')];
+  const stationHeading = element('station-heading');
+  const interviewHint = element('interview-hint');
   const quickActions = [
-    {target:'grant',panel:'trade-dock',label:'Verba do gabinete'},
-    {target:'campaign',label:'Campanha · R$ 20 mil'},
-    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação'},
-    {target:'publish',panel:'politics-dock',label:'Divulgar evidência'},
+    {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
+    {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
+    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação',station:'panel',icon:'ballot'},
+    {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
   ].map(action => {
     const control = element<HTMLButtonElement>(action.target);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hud-button hud-button--secondary';
-    button.textContent = action.label;
+    button.dataset.station = action.station;
+    const label = document.createElement('span');
+    label.textContent = action.label;
+    const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    icon.classList.add('hud-glyph');
+    icon.setAttribute('aria-hidden','true');
+    const glyph = document.createElementNS(icon.namespaceURI,'use');
+    glyph.setAttribute('href','#icon-'+action.icon);
+    icon.append(glyph);
+    button.append(icon,label);
     button.onclick = () => {
       if (action.panel) {
         element<HTMLDetailsElement>(action.panel).open = true;
@@ -34,6 +44,19 @@ export function createMatchHud(id:string) {
     shortcuts.append(button);
     return {button,control};
   });
+  const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
+  function onStationClick(event:MouseEvent) {
+    const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
+    if (!button || button.disabled || button.closest('[hidden]')) return;
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      button.animate([
+        {filter:'brightness(1.55)',transform:'translateY(4px)'},
+        {filter:'brightness(1)',transform:'translateY(0)'},
+      ],{duration:230,easing:'ease-out'});
+    }
+    stationFeedback(button.dataset.station as Station);
+  }
+  stations.addEventListener('click',onStationClick,true);
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
@@ -69,12 +92,12 @@ export function createMatchHud(id:string) {
       button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }
-    const hasNearbyAction = [...stationActions,...quickActions.map(action => action.button)]
-      .some(button => !button.hidden && !button.disabled);
-    const electionActions = element('station-election-actions');
-    const hasElectionAction = !electionActions.hidden &&
-      !!electionActions.querySelector('button:not([hidden]):not(:disabled)');
-    stations.hidden = !exploring || (!hasNearbyAction && !hasElectionAction && element('interview-hint').hidden);
+    const active = stationActions.find(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
+    const station = (active?.dataset.station as Station | undefined) ?? (!interviewHint.hidden ? 'tv' : undefined);
+    stations.hidden = !exploring || !station;
+    if (station && stationHeading.textContent!==mapStations[station].label) {
+      stationHeading.textContent = mapStations[station].label;
+    }
   }
 
   return {
@@ -141,6 +164,8 @@ export function createMatchHud(id:string) {
     },
     destroy() {
       for (const node of timers.keys()) remove(node);
+      stations.removeEventListener('click',onStationClick,true);
+      stations.hidden = true;
       shortcuts.replaceChildren();
     },
   };

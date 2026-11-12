@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { offices, type Assignment, type Office } from './elections';
-import { stations, STATION_RADIUS, type Phase } from './plenary';
+import { stations, STATION_RADIUS, type Phase, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
@@ -67,7 +67,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
       }
-      this.cameras.main.setBounds(0,0,WIDTH,HEIGHT);
       const syncCanvas = () => {
         const density = Math.min(2,Math.max(1,window.devicePixelRatio || 1));
         const width = Math.round(parent.clientWidth*density);
@@ -98,6 +97,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       });
     }
+    pulseStation(key:Station) {
+      const {x,y} = stations[key];
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const pulse = this.add.ellipse(x,y,44,26,0xffdf81,.26)
+        .setStrokeStyle(2,0xffdf81).setDepth(HEIGHT+10);
+      this.tweens.add({
+        targets:pulse,scale:reduced ? 1 : 2.8,alpha:0,duration:560,ease:'Cubic.Out',
+        onComplete:() => pulse.destroy(),
+      });
+    }
+
     update(time: number, delta: number) {
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
@@ -207,16 +217,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
             const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
             const radius = VISION_RADIUS*cssZoom;
-            fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #081419b8 ${radius}px)`;
+            fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
             fog.hidden = false;
           }
         }
       }
     }
   }
+  const scene = new Plenary();
   const game = new Phaser.Game({
     type:Phaser.AUTO,parent,
-    antialias:true,roundPixels:false,backgroundColor:'#20312f',scene:Plenary,
+    antialias:true,roundPixels:false,backgroundColor:'#000',scene,
     width:Math.max(1,parent.clientWidth),height:Math.max(1,parent.clientHeight),
     scale:{mode:Phaser.Scale.NONE},
   });
@@ -225,6 +236,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       players = snapshot;
       history.add(snapshot,performance.now());
     },
+    pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
     setMatchPhase(phase:Phase) {
       negotiating = phase==='negotiation';

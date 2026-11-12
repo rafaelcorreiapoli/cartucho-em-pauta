@@ -153,18 +153,65 @@
 #agenda-dock strong { font-size: .73rem; color: var(--hud-gold); }
 #agenda-dock .module-content { bottom: calc(100% + 6px); left: 0; }
 
-#stations {
-  bottom: var(--hud-edge);
+#session #stations {
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  z-index: 3;
+  width: max-content;
   max-width: calc(100vw - 2 * var(--hud-edge));
-  padding: .28rem;
-  margin: 0;
+  margin-top: clamp(42px, 8vh, 84px);
+  padding: .85rem 1.15rem 1.15rem;
+  border: 1px solid #c9a857;
+  border-radius: 18px;
+  background: #142c22f7;
+  box-shadow: 0 7px 0 #0a1713, 0 15px 30px #0007;
+  text-align: center;
+  transform: translateX(-50%);
 }
-#stations .station-grid, #station-shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
-#stations .station-grid:not(:has(button:not([hidden]):not(:disabled))) { display: none; }
-#station-shortcuts:has(button:not([hidden])) { padding: .15rem; }
-#station-shortcuts button { min-height: 32px; padding: .3rem .45rem; }
+
+#station-heading {
+  margin: 0 0 .75rem;
+  color: #ffe4a0;
+  font: 850 clamp(1.2rem, 2.1vw, 1.65rem)/1.1 var(--party-display);
+}
+
+.station-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .7rem; }
+#stations .station-grid:not([hidden]), #station-shortcuts { display: contents; }
+
+#stations .hud-button {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .4rem;
+  min-height: 92px;
+  width: clamp(92px, 12vw, 152px);
+  padding: .55rem;
+  border: 1px solid #70b889;
+  border-radius: 12px;
+  background: #295d46;
+  box-shadow: 0 5px 0 #0b2119;
+  color: #f5ffe9;
+  cursor: pointer;
+  font: 800 clamp(.9rem, 1.35vw, 1.15rem)/1.1 var(--party-display);
+  text-align: center;
+  user-select: none;
+}
+#stations .hud-button .hud-glyph { width: 30px; height: 30px; color: #d1ef9c; }
+#stations .hud-button small { font-size: .78em; color: #d5e7bf; }
+#stations .hud-button[data-action="fraud"] { background: #6b3a31; border-color: #e7997f; }
+#stations .hud-button[data-action="fraud"] .hud-glyph { color: #ffd1a9; }
+#stations .hud-button:hover { filter: brightness(1.22); }
+#stations .hud-button:active { transform: translateY(4px); box-shadow: 0 1px 0 #0b2119; }
+#stations .hud-button:focus-visible { outline: 2px solid #ffdf81; outline-offset: 3px; }
+#interview-hint { margin: 0; color: #e8d8a9; }
+
+@media (prefers-reduced-motion: no-preference) {
+  #stations:not([hidden]) { animation: station-arrive 170ms ease-out both; }
+  @keyframes station-arrive {
+    from { opacity: 0; transform: translate(-50%, 10px) scale(.96); }
+    to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+}
 
 #hud-notices {
   position: absolute;
@@ -213,7 +260,6 @@
     bottom: calc(var(--hud-edge) + 143px);
     width: min(270px, calc(100% - 2 * var(--hud-edge)));
   }
-  #stations { bottom: calc(var(--hud-edge) + 94px); }
   #agenda-dock > summary { gap: .25rem; font-size: .72rem; }
   #agenda-dock > summary strong { font-size: .65rem; }
 }
@@ -427,8 +473,6 @@
 #session #election-dock[data-urgency="high"] { border-color: #ffc579; }
 #agenda-dock { background: #244235f5; border-color: #9b9767; }
 #agenda-dock strong { color: var(--party-gold); }
-#stations .hud-button { background: #275c50; border-color: #76c7aa; color: #eefff6; }
-#stations .hud-button:hover { background: #347763; }
 @media (prefers-reduced-motion: no-preference) {
   #last-vote:not([hidden]) .vote-scoreboard { animation: vote-reveal 180ms ease-out both; }
   @keyframes vote-reveal {
@@ -500,8 +544,14 @@
 #left-hud, #right-hud { display: contents; }
 
 @media (min-width: 921px) {
-  #session { --hud-side: clamp(270px, 27vw, 420px); }
+  #session { --hud-side: clamp(270px, 26vw, 420px); }
 
+  #hud-notices {
+    position: relative;
+    inset: auto;
+    transform: none;
+    width: 100%;
+  }
   #left-hud, #right-hud {
     position: absolute;
     top: var(--hud-edge);
@@ -526,7 +576,7 @@
   #profile-dock, #legislative-dock, #congress-dock, #session #election-dock {
     font-size: .96rem;
   }
-  .profile-summary { padding: .75rem .85rem; gap: .75rem; }
+  .profile-summary { padding: .9rem 1rem; gap: .9rem; }
   .profile-summary .portrait { --portrait-size: 54px; }
   .profile-copy { gap: .18rem; }
   #hud-nick { font-size: 1.2rem; }
@@ -534,7 +584,7 @@
   .profile-values { gap: .25rem .6rem; }
   .profile-summary .profile-help { width: 20px; height: 21px; }
 
-  #legislative-dock { padding: .8rem .9rem; }
+  #legislative-dock { padding: .95rem 1rem; }
   #legislative-dock > summary { gap: .65rem; }
   .project-header-label > strong { font-size: 1.12rem; }
   #legislative-dock .bill-heading { margin-top: .7rem; }

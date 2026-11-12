@@ -90,6 +90,7 @@ export class GameAudio {
   }
 
   cue(name:Cue) { this.play(name,.62,0,1); }
+  stationClick() { this.play('vote',.75,0,1.35); }
   footstep(level:number,pan:number) {
     this.play(footsteps[this.footIndex++ % footsteps.length],level,pan,.94+Math.random()*.12);
   }

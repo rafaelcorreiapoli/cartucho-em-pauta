@@ -192,7 +192,11 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
-    const hud = createMatchHud(joined.sessionId);
+    const hud = createMatchHud(joined.sessionId,station => {
+      audio.stationClick();
+      game?.pulseStation(station);
+      map.focus({preventScroll:true});
+    });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {

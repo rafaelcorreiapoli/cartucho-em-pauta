@@ -7,13 +7,14 @@ export const NEGOTIATION_MS = 205_000;
 export const BALLOT_MS = 35_000;
 
 export const stations = {
-  amendment: {x:129,y:365,label:'Emenda'},
-  audit: {x:808,y:93,label:'Auditoria'},
+  amendment: {x:129,y:365,label:'Protocolo'},
+  audit: {x:808,y:93,label:'Controladoria'},
   panel: {x:240,y:76,label:'Painel'},
-  cabinet: {x:389,y:93,label:'Verba do gabinete'},
+  cabinet: {x:389,y:93,label:'Gabinete'},
   press: {x:863,y:245,label:'Imprensa'},
   tv: {x:915,y:200,label:'TV do Congresso'},
 } as const;
+export type Station = keyof typeof stations;
 export const STATION_RADIUS = 23;
 export const bills = [
   {name:'Auxílio Churrasco', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8}},

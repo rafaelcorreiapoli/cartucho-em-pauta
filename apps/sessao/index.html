@@ -207,24 +207,26 @@
             </ul>
           </div>
         </details>
-            <div id="stations" class="hud-module" aria-label="Ações próximas" hidden>
-              <div class="station-grid">
-                <button class="hud-button hud-button--secondary" data-action="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Emenda<small>Protocolo</small></span></button>
-                <button class="hud-button hud-button--secondary" data-action="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar<small>Controladoria</small></span></button>
-                <button class="hud-button hud-button--secondary" data-action="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Corrigir<small>Painel</small></span></button>
-                <button class="hud-button hud-button--secondary" data-action="fraud" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar<small>Painel</small></span></button>
-              </div>
-              <div class="station-grid" id="station-election-actions" hidden>
-                <button class="hud-button hud-button--secondary" id="advertise" type="button" disabled><span>Propaganda · R$ 20 mil<small>Imprensa</small></span></button>
-                <button class="hud-button hud-button--secondary" id="speech" type="button" disabled><span>Discursar<small>Painel</small></span></button>
-                <button class="hud-button hud-button--secondary" id="interview" type="button" disabled><span>Entrevista ao vivo<small>Estúdio de TV</small></span></button>
-                <button class="hud-button hud-button--secondary" id="object" type="button" disabled><span>Contestar projeto<small>Painel</small></span></button>
-              </div>
-              <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
-              <div id="station-shortcuts"></div>
-            </div>
-        <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
       </div>
+      <section id="stations" class="hud-module" aria-labelledby="station-heading" hidden>
+        <h2 id="station-heading"></h2>
+        <div class="station-actions">
+          <div class="station-grid">
+            <button class="hud-button hud-button--secondary" data-action="amendment" data-station="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Propor emenda</span></button>
+            <button class="hud-button hud-button--secondary" data-action="audit" data-station="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar</span></button>
+            <button class="hud-button hud-button--secondary" data-action="panel" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Corrigir</span></button>
+            <button class="hud-button hud-button--secondary" data-action="fraud" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar</span></button>
+          </div>
+          <div class="station-grid" id="station-election-actions" hidden>
+            <button class="hud-button hud-button--secondary" id="advertise" data-station="press" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span>Propaganda<small>R$ 20 mil</small></span></button>
+            <button class="hud-button hud-button--secondary" id="speech" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Discursar</span></button>
+            <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
+            <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
+          </div>
+          <div id="station-shortcuts"></div>
+        </div>
+        <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
+      </section>
       <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
       <div id="right-hud">
         <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
@@ -302,6 +304,7 @@
           </details>
           <span id="voice-status" role="status"></span>
         </aside>
+        <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
       </div>
       <div id="social-docks">
       <details id="trade-dock" class="social-module" name="game-panels" hidden>
