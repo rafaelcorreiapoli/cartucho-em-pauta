@@ -4,8 +4,8 @@ export const NEGOTIATION_MS = 80_000;
 export const BALLOT_MS = 30_000;
 
 export const stations = {
-  amendment: {x:87,y:245,label:'Emenda'},
-  audit: {x:391,y:245,label:'Auditoria'},
+  amendment: {x:129,y:365,label:'Emenda'},
+  audit: {x:808,y:93,label:'Auditoria'},
   panel: {x:240,y:76,label:'Painel'},
 } as const;
 export const STATION_RADIUS = 23;

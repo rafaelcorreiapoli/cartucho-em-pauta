@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - 'apps/sessao/**'
+      - 'packages/hud/**'
       - '.github/workflows/sessao.yml'
   push:
     branches: [main]
     paths:
       - 'apps/sessao/**'
+      - 'packages/hud/**'
       - '.github/workflows/sessao.yml'
 permissions:
   contents: read

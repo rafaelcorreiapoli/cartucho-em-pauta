@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { BALLOT_MS, NEGOTIATION_MS, stations } from '../src/plenary';
 import { canStand, localPerception, type Player } from '../src/map';
+import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
 const ids = ['lula','bolsonaro','trump'];
@@ -66,4 +67,10 @@ test('nearby voices can carry past a wall without revealing the speaker', () => 
   expect(acrossWall.volume).toBeLessThan(localPerception(listener,{...speaker,x:102}).volume);
   expect(localPerception(listener,at(traitor,'audit'))).toEqual({visible:false,volume:0});
   for (const {x,y} of Object.values(stations)) expect(canStand(x,y)).toBe(true);
+});
+
+test('the new wings and all stations are reachable from the corridor', () => {
+  for (const {x,y} of [...Object.values(stations),{x:860,y:506},{x:449,y:504}]) {
+    expect(findRoute(host,{x,y}).at(-1)).toEqual({x,y});
+  }
 });

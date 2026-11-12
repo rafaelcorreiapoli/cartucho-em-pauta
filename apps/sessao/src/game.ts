@@ -57,13 +57,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
       }
-      this.cameras.main.setZoom(2).centerOn(WIDTH/2,HEIGHT/2);
+      this.cameras.main.setBounds(0,0,WIDTH,HEIGHT);
       drawMap(this);
       for (const {x,y,label} of Object.values(stations)) {
         this.stationMarkers.push({
           ring:this.add.ellipse(x,y,34,16,0xffdc82,.2).setStrokeStyle(1,0xffdc82).setDepth(y-2),
           label:this.add.text(x,y-13,label,{fontFamily:'system-ui',fontSize:'8px',fontStyle:'bold',
-            backgroundColor:'#263a31',padding:{x:3,y:1},resolution:3}).setOrigin(.5,1).setDepth(490),
+            backgroundColor:'#263a31',padding:{x:3,y:1},resolution:3}).setOrigin(.5,1).setDepth(HEIGHT+20),
         });
       }
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
@@ -71,8 +71,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         parent.focus({preventScroll:true});
         keys.clear();
         manual = false;
-        if (pointer.worldX>=0 && pointer.worldX<WIDTH && pointer.worldY>=0 && pointer.worldY<HEIGHT) {
-          destination = {x:pointer.worldX,y:pointer.worldY};
+        const {x,y} = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
+        if (x>=0 && x<WIDTH && y>=0 && y<HEIGHT) {
+          destination = {x,y};
           nextStep = -Infinity;
         }
       });
@@ -100,6 +101,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
+      const camera = this.cameras.main;
+      const zoom = Math.max(1.5,camera.width/550,camera.height/360);
+      if (camera.zoom!==zoom) camera.setZoom(zoom);
       for (const [i,station] of Object.values(stations).entries()) {
         const {ring,label} = this.stationMarkers[i];
         ring.setVisible(negotiating).setAlpha(ownPlayer && Math.hypot(ownPlayer.x-station.x,ownPlayer.y-station.y)<=STATION_RADIUS ? 1 : .55);
@@ -123,7 +127,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
               fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:3,
-            }).setOrigin(.5,0).setDepth(500),
+            }).setOrigin(.5,0).setDepth(HEIGHT+30),
           };
           this.views.set(id,view);
         }
@@ -140,14 +144,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.anims.stop();
           sprite.setFrame(character*12+row*4);
         }
-        if (id===ownId) this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
+        if (own) {
+          this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
+          camera.centerOn(x,y);
+        }
       }
     }
   }
   const game = new Phaser.Game({
-    type:Phaser.AUTO,width:WIDTH*2,height:HEIGHT*2,parent,
+    type:Phaser.AUTO,parent,
     antialias:true,roundPixels:false,backgroundColor:'#20312f',scene:Plenary,
-    scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
+    scale:{mode:Phaser.Scale.RESIZE},
   });
   return {
     update(snapshot: Player[]) {

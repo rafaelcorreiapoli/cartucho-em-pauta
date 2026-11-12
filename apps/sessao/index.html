@@ -8,15 +8,25 @@
 </head>
 <body>
   <main>
-    <header>
-      <h1>Presidente da Sessão</h1>
-      <p>Negociação e sabotagem · 3 a 6 jogadores</p>
-    </header>
-    <form id="lobby">
-      <button id="create" type="button">Criar sala</button>
-      <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
-      <button type="submit">Entrar</button>
-    </form>
+    <section id="landing">
+      <div class="landing-title">
+        <p class="kicker">Cartuchão apresenta</p>
+        <h1>Presidente<br>da Sessão</h1>
+        <p>Três projetos em pauta. Um infiltrado no Congresso. Com quem você fecha o próximo voto?</p>
+      </div>
+      <div class="hud-panel entrance">
+        <p class="kicker">3 a 6 jogadores</p>
+        <h2 class="hud-title">Entre no Congresso</h2>
+        <form id="lobby">
+          <button class="hud-button" id="create" type="button">Criar sala</button>
+          <div class="join-fields">
+            <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
+            <button class="hud-button hud-button--secondary" type="submit">Entrar</button>
+          </div>
+        </form>
+        <p id="connection" role="status"></p>
+      </div>
+    </section>
     <details id="voice-test" hidden>
       <summary>Testar filtro de voz</summary>
       <div class="voice-test-controls">
@@ -39,7 +49,7 @@
         <fieldset id="disguise-controls" hidden>
           <legend>Disfarce genérico</legend>
           <label for="disguise-pitch">Tom <output id="disguise-pitch-value" for="disguise-pitch">−4 semitons</output></label>
-          <input id="disguise-pitch" type="range" min="-12" max="12" step="1" value="-4">
+          <input id="disguise-pitch" class="hud-range" type="range" min="-12" max="12" step="1" value="-4">
           <label for="disguise-style">Timbre</label>
           <select id="disguise-style">
             <option value="preserved">Preservado</option>
@@ -47,41 +57,54 @@
             <option value="radio">Rádio</option>
           </select>
         </fieldset>
-        <button id="voice-record" type="button">Gravar frase</button>
-        <button id="voice-convert" type="button" disabled>Aplicar à gravação</button>
+        <button class="hud-button" id="voice-record" type="button">Gravar frase</button>
+        <button class="hud-button" id="voice-convert" type="button" disabled>Aplicar à gravação</button>
       </div>
       <p id="voice-test-status" role="status"></p>
       <audio id="voice-result" controls hidden aria-label="Gravação com filtro"></audio>
     </details>
-    <div id="connection" role="status"></div>
-    <section id="session" hidden>
-      <div id="room-bar">
-        <button id="invite" type="button">Copiar link</button>
-        <button id="leave" type="button">Sair</button>
-      </div>
-      <div id="voice-bar" aria-label="Voz da sala">
-        <button id="voice-toggle" type="button">Ativar voz</button>
-        <button id="voice-leave" type="button" hidden>Sair da voz</button>
+    <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
+      <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
+      <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
+        <div id="voice-bar">
+          <button class="hud-button" id="voice-toggle" type="button">Ativar voz</button>
+          <details id="voice-settings" hidden>
+            <summary class="hud-option">Ajustes de voz</summary>
+            <div class="hud-panel voice-settings-content">
+              <button class="hud-button hud-button--secondary" id="voice-leave" type="button">Sair da voz</button>
+              <fieldset id="live-disguise">
+                <legend>Disfarce ao vivo</legend>
+                <label><input id="live-disguise-enabled" type="checkbox"> Ativar disfarce</label>
+                <label for="live-pitch">Tom <output id="live-pitch-value" for="live-pitch">−4 semitons</output></label>
+                <input id="live-pitch" class="hud-range" type="range" min="-12" max="12" step="1" value="-4" disabled>
+                <label for="live-style">Timbre</label>
+                <select id="live-style" disabled>
+                  <option value="preserved">Preservado</option>
+                  <option value="shifted">Alterado</option>
+                  <option value="radio">Rádio</option>
+                </select>
+                <span id="live-disguise-status" role="status"></span>
+              </fieldset>
+            </div>
+          </details>
+        </div>
         <span id="voice-status" role="status"></span>
         <span id="voice-speaking"></span>
-      </div>
-      <fieldset id="live-disguise" hidden>
-        <legend>Disfarce de voz ao vivo</legend>
-        <label><input id="live-disguise-enabled" type="checkbox"> Ativar disfarce</label>
-        <label for="live-pitch">Tom <output id="live-pitch-value" for="live-pitch">−4 semitons</output></label>
-        <input id="live-pitch" type="range" min="-12" max="12" step="1" value="-4" disabled>
-        <label for="live-style">Timbre</label>
-        <select id="live-style" disabled>
-          <option value="preserved">Preservado</option>
-          <option value="shifted">Alterado</option>
-          <option value="radio">Rádio</option>
-        </select>
-        <span id="live-disguise-status" role="status"></span>
-      </fieldset>
-      <div id="characters" role="group" aria-label="Personagem"></div>
-      <section id="plenary" aria-label="Sessão legislativa">
+      </aside>
+      <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
+        <div id="room-bar">
+          <span id="room-label" role="status"></span>
+          <button id="invite" class="hud-button hud-button--secondary" type="button">Copiar link</button>
+          <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
+        </div>
+        <div id="room-setup">
+          <h2 class="hud-title">Sala de articulação</h2>
+          <ul id="room-roster" aria-label="Jogadores na sala"></ul>
+          <p>Escolha seu personagem</p>
+          <div id="characters" role="group" aria-label="Personagem"></div>
+        </div>
         <p id="briefing">Três projetos entram em pauta. Negociem no mapa e terminem com pelo menos 45 de estabilidade. Um infiltrado quer derrubar a sessão.</p>
-        <button id="start-match" type="button">Iniciar sessão</button>
+        <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
         <p id="start-hint"></p>
         <div id="match" hidden>
           <div class="plenary-line"><strong id="role"></strong><span id="phase"></span><strong id="clock"></strong></div>
@@ -92,26 +115,25 @@
             <p id="impact"></p>
             <p id="clue" role="status" hidden></p>
             <div id="stations">
-              <p>Converse com quem estiver perto. Aproxime-se de um ponto dourado para agir.</p>
+              <p>Pontos dourados: Protocolo ao sul, Controladoria a leste e Painel no Plenário.</p>
               <div class="plenary-line">
-                <button data-action="amendment" type="button">Protocolar emenda</button>
-                <button data-action="audit" type="button">Conferir os números</button>
-                <button data-action="panel" type="button" hidden>Corrigir o painel</button>
-                <button data-action="fraud" type="button" hidden>Fraudar o painel</button>
+                <button class="hud-button hud-button--secondary" data-action="amendment" type="button">Protocolar emenda</button>
+                <button class="hud-button hud-button--secondary" data-action="audit" type="button">Conferir os números</button>
+                <button class="hud-button hud-button--secondary" data-action="panel" type="button" hidden>Corrigir o painel</button>
+                <button class="hud-button hud-button--secondary" data-action="fraud" type="button" hidden>Fraudar o painel</button>
               </div>
             </div>
             <div id="ballot" hidden>
               <p id="quorum"></p>
               <div class="plenary-line">
-                <button data-vote="yes" aria-pressed="false" type="button">Aprovar</button>
-                <button data-vote="no" aria-pressed="false" type="button">Rejeitar</button>
+                <button class="hud-button" data-vote="yes" aria-pressed="false" type="button">Aprovar</button>
+                <button class="hud-button hud-button--secondary" data-vote="no" aria-pressed="false" type="button">Rejeitar</button>
               </div>
             </div>
           </div>
         </div>
       </section>
-      <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
-      <p>WASD, setas ou toque no chão pra andar.</p>
+      <p id="movement-hint" class="hud-strip">WASD, setas ou toque no chão para andar</p>
     </section>
   </main>
   <script type="module" src="/src/main.ts"></script>

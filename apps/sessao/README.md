@@ -16,6 +16,10 @@ Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram fei
 
 ## Jogar uma sessão
 
+O lobby mostra quem entrou e permite escolher uma caricatura antes de começar.
+O mapa ocupa toda a janela e a câmera acompanha o personagem entre as alas.
+O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
+
 Crie uma sala, copie o link e reúna de 3 a 6 pessoas. Ativem a voz e iniciem a
 sessão. Um infiltrado é sorteado independentemente do personagem. Os
 parlamentares ganham se terminarem os três projetos com pelo menos 45 de

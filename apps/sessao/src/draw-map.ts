@@ -8,6 +8,16 @@ const rooms = [
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Gabinete C', bounds:[291,172,179,87], color:0xa38863},
+  {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
+  {name:'Controladoria', bounds:[713,10,237,104], color:0x527473},
+  {name:'Apoio Técnico', bounds:[480,172,223,87], color:0x777d75},
+  {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
+  {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
+  {name:'Biblioteca', bounds:[326,270,266,122], color:0x9b8161},
+  {name:'Comissões', bounds:[602,270,348,122], color:0x637b69},
+  {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
+  {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:'Galeria', bounds:[602,403,348,127], color:0x56736e},
 ] satisfies {name:string; bounds:[number,number,number,number]; color:number}[];
 
 export function drawMap(scene: Phaser.Scene) {
@@ -41,19 +51,28 @@ export function drawMap(scene: Phaser.Scene) {
   };
 
   fill(0x172722,0,0,WIDTH,HEIGHT);
-  floor([10,114,460,58],0x757f78,23,18);
-  rug(14,130,452,23);
+  floor([10,114,940,58],0x757f78,23,18);
+  floor([10,259,940,11],0x757f78,23,11);
+  floor([10,392,940,11],0x757f78,23,11);
+  rug(14,130,932,23);
   rooms.forEach(({bounds,color},index) => floor(bounds,color,index===1?18:24,index===1?13:8));
   rug(156,16,168,95);
+  rug(617,418,316,102);
+  rug(78,306,135,75);
+  rug(725,32,197,73);
   for (const [x,y,w,h] of walls) {
     fill(0x172723,x,y,w,h);
     fill(0x9aa296,x,y,w,Math.min(2,h));
     fill(0x526b5d,x,y+2,w,Math.min(3,h-2));
-    fill(0x2c453b,x,y+5,w,h-5);
+    if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
   }
-  for (const [x,y] of [[59,114],[217,114],[384,114],[69,161],[218,161],[368,161]]) {
-    fill(0x9b8d6d,x,y+3,x===217||x===218?44:34,3);
+  for (const [x,y,w] of [
+    [59,114,34],[217,114,46],[384,114,35],[69,161,36],[218,161,44],[368,161,36],
+    [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[431,259,47],[658,259,44],
+    [115,392,41],[400,392,46],[780,392,45],
+  ]) {
+    fill(0x9b8d6d,x,y+3,w,3);
   }
 
   for (const [x,y] of desks) {

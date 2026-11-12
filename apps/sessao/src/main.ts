@@ -6,11 +6,17 @@ import type { ControlState } from './movement';
 import { NAMES, playerName, type Player } from './map';
 import type { Disguise } from './live-disguise';
 import { RoomVoice } from './voice';
+import '../../../packages/hud/styles.css';
 import './style.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
 const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
+const landing = document.querySelector<HTMLElement>('#landing')!;
+const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
+const setup = document.querySelector<HTMLElement>('#room-setup')!;
+const roster = document.querySelector<HTMLUListElement>('#room-roster')!;
+const voiceSettings = document.querySelector<HTMLDetailsElement>('#voice-settings')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
@@ -21,12 +27,16 @@ const leave = document.querySelector<HTMLButtonElement>('#leave')!;
 const characters = document.querySelector<HTMLElement>('#characters')!;
 const buttons = NAMES.map((name,index) => {
   const button = document.createElement('button');
-  button.textContent = name;
   button.type = 'button';
+  button.className = 'hud-option character-option';
+  const portrait = document.createElement('span');
+  portrait.className = 'portrait';
+  portrait.style.setProperty('--portrait-row',String(index*3));
+  portrait.setAttribute('aria-hidden','true');
+  button.append(portrait,name);
   button.setAttribute('aria-pressed','false');
   button.onclick = () => {
     room?.send('character',index);
-    map.focus({preventScroll:true});
   };
   characters.append(button);
   return button;
@@ -35,7 +45,6 @@ const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 const voiceSpeaking = document.querySelector<HTMLElement>('#voice-speaking')!;
-const livePanel = document.querySelector<HTMLFieldSetElement>('#live-disguise')!;
 const liveEnabled = document.querySelector<HTMLInputElement>('#live-disguise-enabled')!;
 const livePitch = document.querySelector<HTMLInputElement>('#live-pitch')!;
 const livePitchValue = document.querySelector<HTMLOutputElement>('#live-pitch-value')!;
@@ -79,10 +88,10 @@ livePitch.oninput = () => void updateDisguise();
 function resetVoiceButtons() {
   voiceToggle.disabled = false;
   voiceToggle.textContent = 'Ativar voz';
-  voiceLeave.hidden = true;
+  voiceSettings.hidden = true;
+  voiceSettings.open = false;
   voiceStatus.textContent = '';
   ++disguiseRevision;
-  livePanel.hidden = true;
   liveEnabled.checked = false;
   livePitch.disabled = liveStyle.disabled = true;
   liveStatus.textContent = '';
@@ -102,8 +111,7 @@ voiceToggle.onclick = async () => {
     await current.start();
     if (current !== voice || !current.active) return;
     voiceToggle.textContent = 'Silenciar microfone';
-    voiceLeave.hidden = false;
-    livePanel.hidden = false;
+    voiceSettings.hidden = false;
   } catch (error) {
     if (current !== voice) return;
     voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
@@ -129,7 +137,7 @@ function showLobby(message: string) {
   game = undefined;
   room = undefined;
   session.hidden = true;
-  lobby.hidden = false;
+  landing.hidden = false;
   status.textContent = message;
 }
 
@@ -149,32 +157,32 @@ async function connect(join: () => Promise<Room>) {
         `Voz ativa · ${connected}/${peers} conexões`;
     });
     code.value = joined.roomId;
-    lobby.hidden = true;
+    landing.hidden = true;
+    session.dataset.phase = 'lobby';
     session.hidden = false;
-    characters.hidden = false;
-    status.textContent = `Sala ${joined.roomId}`;
+    setup.hidden = false;
+    roster.replaceChildren();
+    roomLabel.textContent = `Sala ${joined.roomId}`;
     game = createGame(map,joined.sessionId,input => joined.send('input',input));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
       if (type!=='bill-vote') map.focus({preventScroll:true});
     });
     let phase: PlenaryView['phase'] = 'lobby';
-    let count = 1;
-    const updateRoomLabel = () => {
-      const label = `Sala ${joined.roomId} · ${count}/${MAX_PLAYERS} jogadores`;
-      if (status.textContent!==label) status.textContent = label;
-    };
+    let rosterKey = '';
     joined.onMessage('plenary',(view: PlenaryView) => {
       panel.render(view);
-      count = view.players;
-      updateRoomLabel();
+      const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
+      if (roomLabel.textContent!==label) roomLabel.textContent = label;
       if (phase===view.phase) return;
       phase = view.phase;
+      session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot';
       game?.setMatchPhase(phase);
-      characters.hidden = negotiating || phase==='ballot';
+      setup.hidden = matchRunning;
+      if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
     joined.onMessage('players',(players: Player[]) => {
@@ -183,7 +191,20 @@ async function connect(join: () => Promise<Room>) {
       game?.update(players);
       updateSpeaking();
       const self = players.find(player => player.id===joined.sessionId);
-      buttons.forEach((button,index) => button.setAttribute('aria-pressed',String(index===self?.character)));
+      for (const [index,button] of buttons.entries()) {
+        const pressed = String(index===self?.character);
+        if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
+      }
+      if (matchRunning) return;
+      const names = players.map(player => playerName(player,players)+(player.id===joined.sessionId ? ' (você)' : ''));
+      const key = names.join('|');
+      if (rosterKey===key) return;
+      rosterKey = key;
+      roster.replaceChildren(...names.map(name => {
+        const slot = document.createElement('li');
+        slot.textContent = name;
+        return slot;
+      }));
     });
     joined.onLeave(() => {
       if (room===joined) showLobby('Você saiu da sala.');
