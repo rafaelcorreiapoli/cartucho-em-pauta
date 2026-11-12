@@ -60,10 +60,13 @@
     aspect-ratio: 1;
     margin-inline: auto;
   }
-  .fighter-effects { gap: 2px; }
+  .fighter-effects { gap: 3px; }
+  .fighter-effect { gap: 3px; padding-inline: 3px; }
   .fighter-effect > .game-icon { width: 15px; height: 15px; }
   .fighter-effect b { font-size: 12px; }
-  .game .intent { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+  .intent { height: 26px; gap: 3px; padding-inline: 4px; }
+  .intent .game-icon { width: 12px; height: 12px; }
+  .rivals:has(.rival:nth-child(3)) .intent-label { display: none; }
   .resource-items :is(button, i), .resource-relics > button { width: 29px; }
   .game .feedback { padding-inline: var(--edge-left) var(--edge-right); }
 
@@ -111,14 +114,13 @@
     box-shadow: inset 0 0 0 2px #48baaf;
   }
   .game .hand kbd { display: none; }
-  :is(.hand-slot, .reward-cards, .event-card-picker, .shop-stock, .album-cards, .lobby-deck) .card {
+  :is(.hand-slot, .reward-cards, .event-card-picker, .shop-stock, .album-cards, .shop-deck-grid, .lobby-deck) .card {
     grid-template-rows: minmax(54px, 1fr) auto;
   }
   .shop-stock .card { grid-template-rows: minmax(54px, 1fr) auto auto; }
   .card-copy { min-block-size: 92px; gap: 3px; }
   .card-copy strong { --card-title-size: 15px; }
   .card-stats { line-height: 1.14; }
-  .outcome .relic-rewards { max-block-size: none; overflow: visible; }
   .outcome :is(.primary, .secondary), .campaign :is(.primary, .secondary),
   .campaign-route-options button, .lobby :is(.primary, .secondary), .shop .secondary {
     min-height: 44px;
@@ -147,7 +149,6 @@
   .lobby-deck-scroll { max-block-size: min(45dvh, 360px); }
   .event-scene { padding-top: calc(var(--edge-top) + 74px); }
   .shop { padding-top: calc(var(--edge-top) + 74px); }
-  .shop-removal select { font-size: 16px; min-height: 44px; }
 }
 
 @media (max-width: 365px) {
@@ -155,7 +156,8 @@
   .resource-items { gap: 2px; padding: 2px; }
   .resource-portrait { width: 26px; }
   .resource-items :is(button, i) { width: 24px; }
-  .game .intent { font-size: 9px; }
+  .intent { gap: 2px; padding-inline: 3px; font-size: 12px; }
+  .intent .game-icon { width: 10px; height: 10px; }
   .lobby-details { --details-padding: 10px; }
   .lobby-bio { grid-template-columns: auto minmax(0, 1fr); }
   .lobby-bio > .lobby-hero-health { grid-column: 2; }

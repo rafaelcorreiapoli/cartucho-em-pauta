@@ -39,7 +39,6 @@ import {
   finishRivals,
   rivalIntent,
   pendingAttackPenaltyTargets,
-  injunctionType,
   MAX_MORAL,
   newRun,
   playCard,
@@ -58,6 +57,7 @@ import {
   presentCard,
 } from "./combat-motion";
 import { heroStatuses, rivalStatuses } from "./combat-status";
+import { intentLabels, rivalIntentBadge } from "./rival-intent";
 import { HeroSprite } from "./sprite";
 import { installHandPreview } from "./hand-preview";
 import { heroes, isHeroId, type HeroId, type Faction } from "./heroes";
@@ -65,6 +65,7 @@ import { lobbyScreen, type LobbyStep } from "./lobby";
 import { campaignHeroPosition, campaignMap } from "./campaign";
 import { campaignEvent } from "./campaign-event";
 import { loadGameAssets } from "./loading";
+import { readAutosave, writeAutosave, type Autosave } from "./autosave";
 import "./style.css";
 import "./combat-hud.css";
 import "./shop.css";
@@ -93,10 +94,31 @@ app.innerHTML = `
     <header><h2 id="album-title">Álbum de cartas</h2><button class="secondary" data-action="close-album">Voltar</button></header>
     <div class="album-cards"></div>
   </dialog>
+  <dialog class="card-album shop-deck-dialog" aria-labelledby="shop-deck-title">
+    <header>
+      <h2 id="shop-deck-title" tabindex="-1" autofocus>Remover uma carta</h2>
+      <button type="button" class="secondary" data-action="close-shop-deck">Voltar</button>
+    </header>
+    <div class="shop-deck-filter">
+      <label for="shop-deck-search">Buscar no baralho</label>
+      <input id="shop-deck-search" type="search" placeholder="Nome da carta" autocomplete="off">
+    </div>
+    <div class="shop-deck-grid" aria-label="Cartas do baralho"></div>
+    <p class="shop-deck-empty" role="status" hidden>Nenhuma carta encontrada.</p>
+    <footer>
+      <span class="shop-deck-selection" role="status"></span>
+      <button type="button" class="primary" data-action="confirm-shop-removal" disabled>
+        Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}
+      </button>
+    </footer>
+  </dialog>
   <section class="combat-resources" aria-label="Recursos da sessão" hidden></section>
   <main class="lobby" aria-labelledby="lobby-title"></main>
   <main class="campaign" aria-labelledby="campaign-title" hidden></main>
-  <main class="shop" aria-labelledby="shop-title" hidden></main>
+  <main class="shop" aria-labelledby="shop-title" hidden>
+    <div class="shop-content"></div>
+    <p class="shop-feedback" role="status"></p>
+  </main>
   <main class="event-scene" aria-labelledby="event-title" hidden></main>
   <main class="game" hidden>
     <section class="arena" aria-label="Confronto">
@@ -121,6 +143,9 @@ app.innerHTML = `
 
 const view = {
   shop: app.querySelector<HTMLElement>(".shop")!,
+  shopContent: app.querySelector<HTMLElement>(".shop-content")!,
+  shopFeedback: app.querySelector<HTMLElement>(".shop-feedback")!,
+  shopDeck: app.querySelector<HTMLDialogElement>(".shop-deck-dialog")!,
   event: app.querySelector<HTMLElement>(".event-scene")!,
   resources: app.querySelector<HTMLElement>(".combat-resources")!,
   campaign: app.querySelector<HTMLElement>(".campaign")!,
@@ -150,18 +175,6 @@ const hero = new HeroSprite(
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const compactCombat = matchMedia("(max-width: 700px), (max-width: 1024px) and (max-height: 580px), (max-width: 1024px) and (pointer: coarse)");
 const clearHandPreview = installHandPreview(view.hand, compactCombat);
-const intentLabels = {
-  attack: "Ataque", guard: "Guarda", rally: "Força", stamp: "Bloqueio",
-  counter: "Contra-ataque", predict: "Previsão", teamGuard: "Guarda em equipe",
-  heal: "Cura", summon: "Reforço", doubleGuard: "Dobrar Guarda",
-  injunction: "Liminar", jingle: "Força em equipe", research: "Pesquisa", wait: "Interrompido",
-};
-const intentIcons = {
-  ...glyph, rally: glyph.strength, stamp: glyph.draw, counter: glyph.attack, predict: glyph.rally,
-  teamGuard: glyph.guard, heal: glyph.health, summon: glyph.rally,
-  doubleGuard: glyph.guard, injunction: glyph.draw, jingle: glyph.strength,
-  research: glyph.draw, wait: glyph.guard,
-};
 let run = newRun();
 let selectedDifficulty: Difficulty = "normal";
 let choosingStage = false;
@@ -171,6 +184,23 @@ let message = "Escolha um personagem para começar.";
 let busy = false;
 let impact: string[] = [];
 let acting: string | undefined;
+let mapSelection: number | undefined;
+let pickingEventCard = false;
+let pendingEndTurn = false;
+let shopRemoval: Autosave["shopRemoval"];
+
+function checkpoint() {
+  writeAutosave({
+    run,
+    lobby: lobbyStep ? { step: lobbyStep, faction: selectedFaction, selectedHero, previewHero } : undefined,
+    mapSelection: choosingStage ? mapSelection : undefined,
+    eventView: view.event.hidden ? undefined : { pickingCard: pickingEventCard },
+    selectedCard,
+    shopRemoval,
+    pendingEndTurn,
+    message,
+  });
+}
 
 function meter(moral: number, max: number) {
   return `<div class="health-line">
@@ -180,11 +210,23 @@ function meter(moral: number, max: number) {
   </div>`;
 }
 
+function hudDetails(name: string, description: string, value: string | number) {
+  return `type="button" data-hud-help data-action="item-details" aria-haspopup="dialog"
+    aria-label="${name}, ${value}" ${itemTooltip({ name, description })}`;
+}
+
 function renderResources() {
+  const moneyHelp = run.money < 0
+    ? `Use moedas na loja. Se o saldo continuar negativo após a recompensa da luta, a dívida é quitada e você perde ${DEBT_MORAL_LOSS} de Moral.`
+    : "Use moedas na loja para comprar cartas e itens ou remover uma carta do baralho.";
   view.resources.innerHTML = `
     <img class="resource-portrait" src="${asset(`${run.hero}-portrait`)}" alt="${heroes[run.hero].name}">
-    <span class="resource-health" title="Moral"><i aria-hidden="true">${glyph.health}</i><b>${run.moral}/${MAX_MORAL}</b></span>
-    <span class="resource-money" data-debt="${run.money < 0}" title="${run.money < 0 ? `Dívida. Perde ${DEBT_MORAL_LOSS} de Moral se terminar o combate no negativo.` : "Dinheiro"}"><i aria-hidden="true">${glyph.gold}</i><b>${run.money}</b></span>
+    <button class="resource-health" ${hudDetails("Moral", "É a vida do herói. Se chegar a zero, a sessão acaba.", `${run.moral} de ${MAX_MORAL}`)}>
+      <i aria-hidden="true">${glyph.health}</i><b>${run.moral}/${MAX_MORAL}</b>
+    </button>
+    <button class="resource-money" data-debt="${run.money < 0}" ${hudDetails("Moedas", moneyHelp, run.money)}>
+      <i aria-hidden="true">${glyph.gold}</i><b>${run.money}</b>
+    </button>
     ${run.temporaryCoins ? `<span class="resource-temporary-money" title="Moedas temporárias deste combate">+${run.temporaryCoins} temp.</span>` : ""}
     <span class="resource-items" aria-label="Consumíveis">
       ${Array.from({ length: consumableSlots }, (_, index) => {
@@ -298,6 +340,7 @@ window.addEventListener("resize", fitCardTitles);
 void document.fonts.ready.then(fitCardTitles);
 
 function render(pendingDraw = 0) {
+  checkpoint();
   clearHandPreview();
   const encounter = encounters[run.stage];
   const activeHero = heroes[run.hero];
@@ -306,9 +349,9 @@ function render(pendingDraw = 0) {
   renderResources();
   view.encounter.innerHTML = `<span>${encounter.subtitle}</span><h1 tabindex="-1">${encounter.name}</h1>`;
   const penaltyTargets = pendingAttackPenaltyTargets(run);
-  view.hero.innerHTML = `${meter(run.moral, MAX_MORAL)}
-    ${heroStatuses(run, Boolean(run.rightEffects.weakenAttack && !penaltyTargets.length))}
-    <strong class="fighter-name">${activeHero.name}</strong>`;
+  view.hero.innerHTML = `<strong class="fighter-name">${activeHero.name}</strong>
+    ${meter(run.moral, MAX_MORAL)}
+    ${heroStatuses(run, Boolean(run.rightEffects.weakenAttack && !penaltyTargets.length))}`;
   view.rivals.innerHTML = run.rivals
     .map((rival) => {
       const penalty = penaltyTargets.find(({ id }) => id === rival.id);
@@ -323,34 +366,21 @@ function render(pendingDraw = 0) {
           : active
             ? "attack"
             : "idle";
-      const intentText = intent.kind === "predict"
-        ? `${intent.label} · Guarda ${intent.guardValue ?? intent.value} se você se defender / Ataque ${intent.value} se ficar sem Guarda`
-        : intent.kind === "teamGuard" ? `${intent.label ?? "Guarda em equipe"} · +${intent.value} de Guarda para todos os rivais vivos`
-        : intent.kind === "guard" ? `${intent.label ?? "Guarda"} · +${intent.value} de Guarda para si`
-        : intent.kind === "stamp" ? `${intent.label ?? "Bloqueio"} · Bloqueia a primeira carta do próximo turno`
-        : intent.kind === "injunction" ? `Bloqueia ${injunctionType(rival.step) === "offensive" ? "Ataques" : "Defesas"} no próximo turno`
-        : intent.kind === "research" ? "Pesquisa suas cartas de Ataque e Defesa"
-        : intent.kind === "wait" ? intent.label
-        : intent.kind === "summon" ? "Convoca um reforço do MTST"
-        : `${intent.label ?? intentLabels[intent.kind]} ${intent.value}`;
-      const intentSummary = intent.kind === "predict"
-        ? `Guarda / Ataque ${intent.value}`
-        : intent.kind === "teamGuard" ? `${intent.label ?? "Guarda"} ${intent.value} · equipe`
-        : intent.kind === "guard" ? `${intent.label ?? "Guarda"} ${intent.value}`
-        : intent.kind === "stamp" ? "Bloqueia 1ª carta" : intentText;
+      const predictedPenalty = penaltyTargets[0]?.id === rival.id ? run.rightEffects.weakenAttack : 0;
+      const badge = rivalIntentBadge(intent, rival.step, Math.max(0, intent.value + rival.bonus - predictedPenalty), Boolean(rival.moral));
       const sprite = rival.sprite
         ? `<img class="rival-hero-frame rival-unique-frame" data-pose="${pose}" ${hit && !rival.moral ? "data-falling" : ""} src="${asset(`${rival.sprite}-${pose}`)}" alt="">`
         : heroes[run.hero].faction === "right"
         ? `<img class="rival-hero-frame" src="${asset(`${rival.id}-${{ idle: "idle", attack: "5", hit: "9", defeat: "15" }[pose]}`)}" alt="">`
         : `<span class="rival-sprite rival-sheet" data-pose="${pose}" ${hit && !rival.moral ? "data-falling" : ""} style="--idle-image:url('${asset(`rival-${rival.id}-idle`)}');--rival-atlas:url('${asset(`rival-${rival.id}-sheet`)}')"></span>`;
-      return `<div class="rival ${rival.moral ? "" : "defeated"} ${hit ? "impact" : ""} ${active ? "acting" : ""}" data-rival="${rival.id}">
-      <button class="rival-target" data-action="target" data-value="${rival.id}" ${!rival.moral || !targetMode ? "disabled" : ""} aria-label="${rival.name}. Moral ${rival.moral}. ${rival.moral ? intentText : "Derrotado"}">
-      <span class="intent ${intent.kind}" title="${intentText}"><i aria-hidden="true">${intentIcons[intent.kind]}</i> ${intentSummary}</span>
+      return `<div class="rival ${rival.moral ? "" : "defeated"} ${hit ? "impact" : ""}" data-rival="${rival.id}">
+      ${badge.html}
+      <button class="rival-target" data-action="target" data-value="${rival.id}" ${!rival.moral || !targetMode ? "disabled" : ""} aria-label="${rival.name}. Moral ${rival.moral}. ${rival.moral ? badge.label : "Derrotado"}">
       <span class="rival-stage">${sprite}</span>
+      <strong class="fighter-name">${rival.name}</strong>
       ${meter(rival.moral, rival.maxMoral)}
       </button>
       ${rivalStatuses(run, rival, penalty)}
-      <strong class="fighter-name">${rival.name}</strong>
     </div>`;
     })
     .join("");
@@ -374,22 +404,27 @@ function render(pendingDraw = 0) {
   }).join("");
   view.hand.scrollLeft = handScroll;
   view.playerTools.innerHTML = `
-    <div class="energy" role="img" aria-label="Energia ${run.energy} de ${TURN_ENERGY}" title="Energia">
+    <button class="energy" data-faction="${activeHero.faction}"
+      ${hudDetails("Energia", `Use Energia para jogar cartas. Você começa cada turno com ${TURN_ENERGY}, mais os bônus ativos.`, `${run.energy} de ${TURN_ENERGY}`)}>
+      <span class="energy-emblem" aria-hidden="true"></span>
       <b>${run.energy}/${TURN_ENERGY}</b>
-    </div>
-    <div class="draw-pile" role="img" aria-label="Pilha de compra, ${run.draw.length} cartas" title="Pilha de compra" data-empty="${run.draw.length === 0}">
+    </button>
+    <button class="draw-pile" data-empty="${run.draw.length === 0}"
+      ${hudDetails("Pilha de compra", "Mostra quantas cartas ainda podem ser compradas. Ao esvaziar, o descarte é embaralhado para repor a pilha.", `${run.draw.length} cartas`)}>
       <span class="card-back" aria-hidden="true"><span>${heroes[run.hero].faction === "right" ? "◆" : "☭"}</span></span>
       <b aria-hidden="true">${run.draw.length}</b>
-    </div>`;
+    </button>`;
   const canEndTurn = !busy && !discarding && run.phase === "player";
   const onlyEndTurn = canEndTurn &&
     !run.hand.some((_, index) => canPlayCard(run, index)) &&
     !run.consumables.some((_, index) => canUseConsumable(run, index));
   view.turnTools.innerHTML = `
-    <button class="primary" data-action="end" data-only-action="${onlyEndTurn}" ${canEndTurn ? "" : "disabled"}>Encerrar turno <span>${run.turn}</span></button>
-    <div class="discard-pile" role="img" aria-label="Pilha de descarte, ${run.discard.length} cartas" title="Pilha de descarte">
+    <button class="primary" data-action="end" data-only-action="${onlyEndTurn}" ${canEndTurn ? "" : "disabled"}
+      ${itemTooltip({ name: "Encerrar turno", description: "Descarta as cartas restantes da mão e passa a vez aos rivais." })}>Encerrar turno <span>${run.turn}</span></button>
+    <button class="discard-pile"
+      ${hudDetails("Pilha de descarte", "Recebe cartas usadas ou descartadas. Elas voltam à pilha de compra quando ela esvazia. Cartas exauridas ficam fora até o fim da luta.", `${run.discard.length} cartas`)}>
       <span aria-hidden="true">▱</span><b aria-hidden="true">${run.discard.length}</b>
-    </div>`;
+    </button>`;
   view.rivals.classList.toggle("targeting", targetMode);
   const showingOutcome = !busy && ["reward", "won", "lost"].includes(run.phase);
   const choosingRelic = run.phase === "reward" && run.bosses.includes(run.stage);
@@ -398,9 +433,9 @@ function render(pendingDraw = 0) {
     : choosingRelic
       ? `
     <div class="result-heading"><small>Chefe derrotado</small><h2>${run.relicRewards.length ? "Escolha uma relíquia" : "Coleção completa"}</h2></div>
-    <div class="shop-items relic-rewards">${run.relicRewards.map((id) => {
+    <div class="relic-rewards">${run.relicRewards.map((id) => {
       const item = relics[id];
-      return `<button class="secondary shop-item" data-action="reward-relic" data-value="${id}">
+      return `<button class="relic-choice" data-action="reward-relic" data-value="${id}">
         <img class="item-art" src="${asset(item.image)}" alt=""><strong>${item.name}</strong><small>${item.description}</small>
       </button>`;
     }).join("")}</div>
@@ -594,21 +629,7 @@ async function useCard(index: number, target?: string) {
   const drawn = active.hand.length - previousHand + 1;
   selectedCard = undefined;
   busy = true;
-  const dismiss = await presentCard(source, view.arena, view.fx);
-  if (run !== active) return;
-
-  if (damage.length) {
-    hero.play("attack");
-    const defender = !card.all && damage.length === 1 ? rivalStage(damage[0].id) : null;
-    if (defender) lungeAt(view.heroStage.querySelector(".hero-sprite")!, defender, ATTACK_WINDUP_MS);
-    gameAudio.play("attack");
-    await wait(ATTACK_WINDUP_MS);
-    if (run !== active) return;
-  }
-  if (playedId === "entrarOGrosso" || playedId === "entrarOGrosso+") gameAudio.playHeroVoice("lula", "entrar-o-grosso");
-  if (card.exhaust) gameAudio.play("exhaust");
-  const cardExit = dismiss(card.exhaust);
-  impact = damage.map(({ id }) => id);
+  pendingEndTurn = Boolean(card.endTurn && active.phase === "player");
   message = `${card.name}. ${[
     damage.length
       ? `${damage.reduce((sum, hit) => sum + hit.damage, 0)} de dano à Moral`
@@ -630,6 +651,22 @@ async function useCard(index: number, target?: string) {
   ]
     .filter(Boolean)
     .join(" · ")}.`;
+  checkpoint();
+  const dismiss = await presentCard(source, view.arena, view.fx);
+  if (run !== active) return;
+
+  if (damage.length) {
+    hero.play("attack");
+    const defender = !card.all && damage.length === 1 ? rivalStage(damage[0].id) : null;
+    if (defender) lungeAt(view.heroStage.querySelector(".hero-sprite")!, defender, ATTACK_WINDUP_MS);
+    gameAudio.play("attack");
+    await wait(ATTACK_WINDUP_MS);
+    if (run !== active) return;
+  }
+  if (playedId === "entrarOGrosso" || playedId === "entrarOGrosso+") gameAudio.playHeroVoice("lula", "entrar-o-grosso");
+  if (card.exhaust) gameAudio.play("exhaust");
+  const cardExit = dismiss(card.exhaust);
+  impact = damage.map(({ id }) => id);
   render(drawn);
   showPlayerGains(before);
   if (card.election) statusBurst(view.fx, view.heroStage, [{ kind: "gold", text: "Ano de Eleição" }]);
@@ -655,12 +692,13 @@ async function useCard(index: number, target?: string) {
     gameAudio.stopHeroVoice();
     gameAudio.play("eventSuccess");
   }
-  if (card.endTurn && active.phase === "player") await endPlayerTurn();
+  if (pendingEndTurn) await endPlayerTurn();
   else showDraw(drawn);
 }
 
 async function endPlayerTurn() {
   if (busy || !endTurn(run)) return;
+  pendingEndTurn = false;
   gameAudio.play("click");
   const active = run;
   selectedCard = undefined;
@@ -674,15 +712,22 @@ async function endPlayerTurn() {
   }
   message = "Turno dos rivais.";
   render();
+  await resolveRivalTurn(active);
+}
+
+async function resolveRivalTurn(active: typeof run) {
   await wait(250);
   if (run !== active) return;
   for (const rival of active.rivals) {
-    if (!rival.moral) continue;
+    if (!rival.moral || rival.step >= active.turn) continue;
+    let recoverAttack: ReturnType<typeof lungeAt>;
     if (rivalIntent(active, rival, true).kind === "attack") {
       acting = rival.id;
       render();
+      const attacker = rivalStage(rival.id)?.querySelector<HTMLElement>(".rival-sprite, .rival-hero-frame");
+      if (attacker) recoverAttack = lungeAt(attacker, view.heroStage, ATTACK_WINDUP_MS);
       gameAudio.play("attack", { gain: 0.8 });
-      await wait(245);
+      await wait(ATTACK_WINDUP_MS);
       if (run !== active) return;
       acting = undefined;
     }
@@ -700,7 +745,11 @@ async function endPlayerTurn() {
     if (!active.moral) hero.play("death");
     else if (damage) hero.play("hit");
     render();
-    if (intent.kind === "attack") showImpact(view.heroStage, result);
+    if (intent.kind === "attack") {
+      const attacker = rivalStage(rival.id)?.querySelector<HTMLElement>(".rival-sprite, .rival-hero-frame");
+      if (attacker) recoverAttack?.(attacker);
+      showImpact(view.heroStage, result);
+    }
     for (const [index, other] of active.rivals.entries()) {
       if (!other.moral) continue;
       const effects: CombatEffect[] = [];
@@ -729,17 +778,18 @@ async function endPlayerTurn() {
   acting = undefined;
   const before = { ...playerCombatStats(active), energy: TURN_ENERGY };
   const turnStart = finishRivals(active);
+  if (active.phase === "player")
+    message = active.lockedCardType ? `${active.lockedCardType === "offensive" ? "Ataques bloqueados" : "Defesas bloqueadas"} neste turno.` : active.firstCardLocked ? "A primeira carta está bloqueada neste turno." : `Turno ${active.turn}. Escolha seus personagens.`;
+  if (turnStart?.moralCost) message = `Cloroquina · −${turnStart.moralCost} de Moral.`;
+  if (turnStart?.damage.length) message = "Patriota do Caminhão · O caminhão chegou.";
+  checkpoint();
   if (turnStart?.moralCost) hero.play(!active.moral ? "death" : "hit");
   if (turnStart?.debtPaid) {
     await showDebtSettlement(turnStart.debtPaid, turnStart.debtDamage, active.moral);
     if (run !== active) return;
   }
-  if (active.phase === "player")
-    message = active.lockedCardType ? `${active.lockedCardType === "offensive" ? "Ataques bloqueados" : "Defesas bloqueadas"} neste turno.` : active.firstCardLocked ? "A primeira carta está bloqueada neste turno." : `Turno ${active.turn}. Escolha seus personagens.`;
-  if (turnStart?.moralCost) message = `Cloroquina · −${turnStart.moralCost} de Moral.`;
   if (turnStart?.damage.length) {
     impact = turnStart.damage.map(({ id }) => id);
-    message = "Patriota do Caminhão · O caminhão chegou.";
     render();
     for (const hit of turnStart.damage) {
       const stage = view.rivals.querySelector<HTMLElement>(`[data-rival="${hit.id}"] .rival-stage`);
@@ -802,6 +852,7 @@ function showLobby(step: LobbyStep, focus = true, heroId?: HeroId) {
   }
   fitCardTitles();
   if (focus) view.lobby.querySelector("h1")?.focus({ preventScroll: true });
+  checkpoint();
 }
 
 function startSession(heroId: HeroId) {
@@ -815,6 +866,7 @@ function startSession(heroId: HeroId) {
     run.relics = loadout.getAll("relic") as RelicId[];
   }
   selectedCard = undefined;
+  pendingEndTurn = false;
   busy = false;
   impact = [];
   acting = undefined;
@@ -832,6 +884,7 @@ function showCampaign(selection?: number, previousPaper?: DOMRect) {
   if (selection === undefined) window.scrollTo(0, 0);
   if (run.conquered.length) gameAudio.stopHeroVoice();
   const selected = selection ?? availableDestinations(run)[0] ?? 0;
+  mapSelection = selected;
   choosingStage = true;
   view.event.hidden = true;
   view.shop.hidden = true;
@@ -847,6 +900,7 @@ function showCampaign(selection?: number, previousPaper?: DOMRect) {
   }
   renderResources();
   view.campaign.querySelector("h1")?.focus({ preventScroll: true });
+  checkpoint();
 }
 
 function animateCampaignOpening(previous: DOMRect) {
@@ -888,20 +942,22 @@ function enterStage() {
   choosingStage = false;
   view.campaign.hidden = true;
   if (run.phase === "event") {
-    view.event.hidden = false;
-    view.event.style.setProperty("--arena-image", `url('${asset(encounters[run.stage].arena)}')`);
     showEvent();
     return;
   }
   view.game.hidden = false;
   render();
   view.encounter.querySelector("h1")?.focus({ preventScroll: true });
-  gameAudio.playHeroVoice(run.hero, "intro");
+  gameAudio.stopHeroVoice();
   showPlayerGains({ guard: 0, strength: 0, health: run.moral, energy: TURN_ENERGY, gold: run.money });
   showDraw();
 }
 
 function showEvent(pickCard = false) {
+  view.event.hidden = false;
+  view.event.style.setProperty("--arena-image", `url('${asset(encounters[run.stage].arena)}')`);
+  pickingEventCard = pickCard;
+  checkpoint();
   const previousHeight = run.eventResult
     ? view.event.querySelector(".event-panel")?.getBoundingClientRect().height
     : undefined;
@@ -917,59 +973,80 @@ function showEvent(pickCard = false) {
   view.event.querySelector("h1")?.focus({ preventScroll: Boolean(run.eventResult) });
 }
 
+let shopFeedbackTimer: number | undefined;
+
 function showShop(purchased?: string) {
   choosingStage = false;
   view.campaign.hidden = true;
   view.shop.hidden = false;
+  checkpoint();
   if (!purchased) window.scrollTo(0, 0);
   renderResources();
-  view.shop.innerHTML = `
+  const focusedOffer = purchased && view.shop.contains(document.activeElement)
+    ? document.activeElement?.closest<HTMLButtonElement>("button[data-action]")
+    : null;
+  view.shopContent.innerHTML = `
     <header class="shop-header">
-      <img src="${asset("shop-merchant")}" alt="Um mascate exibe uma carta na sua banca.">
-      <h1 id="shop-title" tabindex="-1">Banca do Mascate</h1>
-    </header>
-    <section class="shop-section" aria-labelledby="shop-cards-title">
-      <h2 id="shop-cards-title">Cartas</h2>
-      <div class="shop-stock">
-      ${run.shopOffers.map(({ card, price, sold }) => cardTile(card, "buy-shop-card", card, {
-        disabled: sold || run.money < price,
-        shopLabel: sold ? "Vendida" : `<span aria-hidden="true">${glyph.gold}</span> ${price} <small>moedas</small>`,
-      })).join("")}
+      <img src="${asset("shop-merchant")}" alt="">
+      <div class="shop-header-caption">
+        <h1 id="shop-title" tabindex="-1">Banca do Mascate</h1>
+        <button type="button" class="secondary" data-action="leave-shop">Voltar ao mapa →</button>
       </div>
-    </section>
-    ${(["consumable", "relic"] as const).map((kind) => `
-      <section class="shop-section" aria-labelledby="shop-${kind}-title">
-        <h2 id="shop-${kind}-title">${kind === "consumable" ? "Consumíveis" : "Relíquias"}</h2>
-        <div class="shop-items">
-          ${run.itemOffers.map((offer, index) => {
-            if (offer.kind !== kind) return "";
-            const item = offer.kind === "relic" ? relics[offer.id] : consumables[offer.id];
-            const full = offer.kind === "consumable" && run.consumables.length >= consumableSlots;
-            return `<button class="secondary shop-item" data-action="buy-shop-item" data-value="${index}"
-              ${offer.sold || full || run.money < item.price ? "disabled" : ""}>
-              <img class="item-art" src="${asset(item.image)}" alt=""><strong>${item.name}</strong>
-              <small>${item.description}</small>
-              <em>${item.flavor}</em>
-              <b>${offer.sold ? "Vendido" : full ? "Inventário cheio" : `${glyph.gold} ${item.price}`}</b>
-            </button>`;
-          }).join("")}
-        </div>
-      </section>`).join("")}
-    <section class="shop-section" aria-labelledby="shop-remove-title">
-      <h2 id="shop-remove-title">Remover uma carta</h2>
-      <form class="shop-removal" data-shop-removal>
-        <label for="shop-remove-card">Uma remoção por visita</label>
-        <select id="shop-remove-card" name="card" aria-label="Carta do baralho para remover" required ${canRemoveShopCard(run) ? "" : "disabled"}>
-          <option value="" selected disabled>Escolha uma carta do baralho</option>
-          ${run.deck.map((id, index) => `<option value="${index}">${cardDefinition(id).name}</option>`).join("")}
-        </select>
-        <button type="submit" class="secondary" ${canRemoveShopCard(run) ? "" : "disabled"}>${run.shopRemovedCard ? "Remoção usada" : `Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}</button>
-      </form>
-    </section>
-    <p class="shop-feedback" role="status">${purchased ? `${purchased}` : ""}</p>
-    <button class="secondary" data-action="leave-shop">Voltar ao mapa →</button>`;
+    </header>
+    <div class="shop-shelves">
+      <div class="shop-shelf shop-card-shelf">
+        <section class="shop-section" aria-labelledby="shop-cards-title">
+          <h2 id="shop-cards-title" tabindex="-1">Cartas</h2>
+          <div class="shop-stock">
+            ${run.shopOffers.map(({ card, price, sold }) => cardTile(card, "buy-shop-card", card, {
+              disabled: sold || run.money < price,
+              shopLabel: sold ? "Vendida" : `<span aria-hidden="true">${glyph.gold}</span> ${price} <small>moedas</small>`,
+            })).join("")}
+          </div>
+        </section>
+        <section class="shop-removal" aria-labelledby="shop-remove-title">
+          <div>
+            <h2 id="shop-remove-title" tabindex="-1">Remover uma carta</h2>
+            <p>Uma remoção por visita</p>
+          </div>
+          <button type="button" class="secondary" data-action="open-shop-deck" aria-haspopup="dialog"
+            ${canRemoveShopCard(run) ? "" : "disabled"}>
+            ${run.shopRemovedCard ? "Remoção usada" : `Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}
+          </button>
+        </section>
+      </div>
+      ${(["relic", "consumable"] as const).map((kind) => {
+        const offers = run.itemOffers.map((offer, index) => {
+          if (offer.kind !== kind) return "";
+          const item = offer.kind === "relic" ? relics[offer.id] : consumables[offer.id];
+          const full = offer.kind === "consumable" && run.consumables.length >= consumableSlots;
+          return `<button type="button" class="shop-item" data-action="buy-shop-item" data-value="${index}"
+            ${offer.sold || full || run.money < item.price ? "disabled" : ""}>
+            <img class="item-art" src="${asset(item.image)}" alt="">
+            <strong>${item.name}</strong>
+            <small>${item.description}</small>
+            <b class="shop-price">${offer.sold ? "Vendido" : full ? "Sem vaga" : `${glyph.gold} ${item.price} <small>moedas</small>`}</b>
+          </button>`;
+        }).join("");
+        return `<section class="shop-section shop-${kind}-shelf" aria-labelledby="shop-${kind}-title">
+          <h2 id="shop-${kind}-title" tabindex="-1">${kind === "consumable" ? "Consumíveis" : "Relíquias"}</h2>
+          ${offers ? `<div class="shop-items">${offers}</div>` : '<p class="shop-empty">Sem ofertas nesta visita.</p>'}
+        </section>`;
+      }).join("")}
+    </div>`;
+  window.clearTimeout(shopFeedbackTimer);
+  view.shopFeedback.textContent = purchased ?? "";
+  if (purchased) {
+    shopFeedbackTimer = window.setTimeout(() => { view.shopFeedback.textContent = ""; }, 3500);
+  }
   fitCardTitles();
-  view.shop.querySelector<HTMLElement>(purchased ? "[data-action=leave-shop]" : "h1")?.focus({ preventScroll: true });
+  if (!purchased) {
+    view.shop.querySelector("h1")?.focus({ preventScroll: true });
+  } else if (focusedOffer) {
+    const section = focusedOffer.closest("section");
+    const sectionTitle = section?.getAttribute("aria-labelledby");
+    if (sectionTitle) document.getElementById(sectionTitle)?.focus({ preventScroll: true });
+  }
 }
 
 view.album.addEventListener("close", () => {
@@ -977,21 +1054,58 @@ view.album.addEventListener("close", () => {
   view.settings.querySelector<HTMLElement>('[data-action="open-album"]')?.focus();
 });
 
-app.addEventListener("submit", (event) => {
-  const form = event.target;
-  if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-shop-removal")) return;
-  event.preventDefault();
-  const value = new FormData(form).get("card");
-  if (typeof value !== "string" || !value) return;
-  const index = Number(value);
-  const card = run.deck[index];
-  if (!card || !removeShopCard(run, index)) return;
-  gameAudio.play("click");
-  showShop(`${cardDefinition(card).name} saiu do baralho.`);
+const shopSearch = view.shopDeck.querySelector<HTMLInputElement>("input")!;
+const shopDeckGrid = view.shopDeck.querySelector<HTMLElement>(".shop-deck-grid")!;
+const shopDeckEmpty = view.shopDeck.querySelector<HTMLElement>(".shop-deck-empty")!;
+const shopDeckSelection = view.shopDeck.querySelector<HTMLElement>(".shop-deck-selection")!;
+const confirmRemoval = view.shopDeck.querySelector<HTMLButtonElement>('[data-action="confirm-shop-removal"]')!;
+const searchKey = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR").trim();
+
+function updateShopDeck() {
+  if (!shopRemoval) return;
+  const query = searchKey(shopRemoval.query);
+  let visibleCards = 0;
+  for (const tile of shopDeckGrid.querySelectorAll<HTMLButtonElement>(".card")) {
+    const index = Number(tile.dataset.value);
+    const match = searchKey(cardDefinition(run.deck[index]).name).includes(query);
+    tile.hidden = !match;
+    if (match) visibleCards++;
+    else if (shopRemoval.selected === index) shopRemoval.selected = undefined;
+    tile.setAttribute("aria-pressed", String(shopRemoval.selected === index));
+  }
+  const selected = shopRemoval.selected !== undefined ? run.deck[shopRemoval.selected] : undefined;
+  shopDeckSelection.textContent = selected ? cardDefinition(selected).name : "Escolha uma carta";
+  confirmRemoval.disabled = !selected;
+  shopDeckEmpty.hidden = visibleCards > 0;
+  fitCardTitles();
+  checkpoint();
+}
+
+function openShopDeck(state: NonNullable<Autosave["shopRemoval"]> = { query: "" }) {
+  if (!canRemoveShopCard(run)) return;
+  shopRemoval = state;
+  shopSearch.value = state.query;
+  shopDeckGrid.innerHTML = run.deck.map((id, index) => cardTile(id, "select-shop-removal", index)).join("");
+  view.shopDeck.showModal();
+  shopDeckGrid.scrollTop = 0;
+  updateShopDeck();
+}
+
+shopSearch.addEventListener("input", () => {
+  if (!shopRemoval) return;
+  shopRemoval.query = shopSearch.value;
+  updateShopDeck();
+  shopDeckGrid.scrollTop = 0;
+});
+
+view.shopDeck.addEventListener("close", () => {
+  if (!shopRemoval) return;
+  shopRemoval = undefined;
+  checkpoint();
 });
 
 function showItemDetails(button: HTMLButtonElement, index?: number) {
-  if (busy && !view.game.hidden && !button.classList.contains("fighter-effect")) return;
+  if (busy && !view.game.hidden && !button.matches(".fighter-effect, .intent, [data-hud-help]")) return;
   const usable = index !== undefined && !busy && !choosingStage && canUseConsumable(run, index);
   view.itemDetails.innerHTML = `
     <h2 id="item-details-title"></h2>
@@ -1059,6 +1173,8 @@ app.addEventListener("click", (event) => {
   } else if (action === "difficulty" && lobbyStep === "hero" && !previewHero &&
     (value === "easy" || value === "normal" || value === "hard")) {
     selectedDifficulty = value;
+    run.difficulty = value;
+    checkpoint();
     gameAudio.play("click");
     for (const button of view.lobby.querySelectorAll<HTMLButtonElement>('[data-action="difficulty"]')) {
       button.setAttribute("aria-pressed", String(button.dataset.value === value));
@@ -1070,6 +1186,7 @@ app.addEventListener("click", (event) => {
       gameAudio.playHeroVoice(value, "selection");
     } else {
       selectedHero = value;
+      checkpoint();
       gameAudio.play("click");
       for (const choice of view.lobby.querySelectorAll<HTMLButtonElement>('[data-action="select-hero"]')) {
         choice.setAttribute("aria-pressed", String(choice.dataset.value === value));
@@ -1088,7 +1205,12 @@ app.addEventListener("click", (event) => {
     gameAudio.stopHeroVoice();
     view.settings.close();
     view.fx.replaceChildren();
-    run = newRun();
+    run = newRun(undefined, "lula", selectedDifficulty);
+    selectedCard = undefined;
+    pendingEndTurn = false;
+    busy = false;
+    impact = [];
+    acting = undefined;
     debugLoadouts = {};
     showLobby("faction");
   } else if (action === "preview-route" && choosingStage && run.routes[Number(value)]) {
@@ -1113,6 +1235,24 @@ app.addEventListener("click", (event) => {
     choosingStage = false;
     if (run.phase === "shop") showShop();
     else enterStage();
+  } else if (action === "open-shop-deck") {
+    gameAudio.play("click");
+    openShopDeck();
+  } else if (action === "close-shop-deck") {
+    view.shopDeck.close();
+  } else if (action === "select-shop-removal" && shopRemoval) {
+    gameAudio.play("click");
+    const index = Number(value);
+    shopRemoval.selected = shopRemoval.selected === index ? undefined : index;
+    updateShopDeck();
+  } else if (action === "confirm-shop-removal" && shopRemoval?.selected !== undefined) {
+    const index = shopRemoval.selected;
+    const card = run.deck[index];
+    if (!card || !removeShopCard(run, index)) return;
+    shopRemoval = undefined;
+    view.shopDeck.close();
+    gameAudio.play("click");
+    showShop(`${cardDefinition(card).name} saiu do baralho.`);
   } else if (action === "buy-shop-card" && value && buyShopCard(run, value as CardId)) {
     gameAudio.play("click");
     showShop(`${cards[value as CardId].name} entrou no baralho.`);
@@ -1177,7 +1317,7 @@ app.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (view.settings.open || view.album.open || view.outcome.open || view.itemDetails.open) return;
+  if (view.settings.open || view.album.open || view.outcome.open || view.itemDetails.open || view.shopDeck.open) return;
   if (lobbyStep) {
     if (lobbyStep === "hero" && event.key === "Escape") {
       gameAudio.stopHeroVoice();
@@ -1224,4 +1364,48 @@ document.addEventListener("keydown", () => gameAudio.unlock(), {
 });
 refreshAudioControls();
 installItemTooltip(app);
-showLobby("faction", false);
+restoreSession();
+
+function restoreSession() {
+  const saved = readAutosave();
+  if (!saved) {
+    showLobby("faction", false);
+    return;
+  }
+
+  run = saved.run;
+  selectedDifficulty = run.difficulty;
+  message = saved.message;
+  if (saved.lobby) {
+    selectedFaction = saved.lobby.faction;
+    selectedHero = saved.lobby.selectedHero;
+    showLobby(saved.lobby.step, false, saved.lobby.previewHero);
+    return;
+  }
+
+  lobbyStep = undefined;
+  hero.select(run.hero);
+  view.lobby.hidden = true;
+  view.reset.hidden = false;
+  view.resources.hidden = false;
+  if (run.phase === "map") {
+    const selections = run.routeNumber === null ? run.routes.map((_, index) => index) : availableDestinations(run);
+    showCampaign(selections.includes(saved.mapSelection ?? -1) ? saved.mapSelection : (selections[0] ?? 0));
+  } else if (run.phase === "shop") {
+    showShop();
+    if (saved.shopRemoval) openShopDeck(saved.shopRemoval);
+  } else if (run.phase === "event" || (run.phase === "lost" && saved.eventView && run.eventResult)) {
+    showEvent(Boolean(saved.eventView?.pickingCard && canResolveSpecialEvent(run)));
+  } else {
+    view.game.hidden = false;
+    pendingEndTurn = saved.pendingEndTurn && run.phase === "player";
+    if (run.phase === "player" && saved.selectedCard !== undefined && canPlayCard(run, saved.selectedCard)) {
+      selectedCard = saved.selectedCard;
+    }
+    busy = run.phase === "rivals";
+    if (run.phase === "lost") hero.play("death");
+    render();
+    if (busy) void resolveRivalTurn(run);
+    else if (pendingEndTurn) void endPlayerTurn();
+  }
+}

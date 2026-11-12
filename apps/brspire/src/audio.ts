@@ -15,13 +15,11 @@ const files = {
 } as const;
 
 type HeroVoice = `hero/${HeroId}/${string}.mp3`;
-type VoiceMoment = "selection" | "intro" | "entrar-o-grosso";
-const entrarOGrossoClip = "hero/lula/07.mp3";
+type VoiceMoment = "selection" | "entrar-o-grosso";
 const heroVoices: Partial<Record<HeroId, Record<VoiceMoment, readonly HeroVoice[]>>> = {
   lula: {
     selection: ["hero/lula/01.mp3"],
-    intro: [entrarOGrossoClip],
-    "entrar-o-grosso": [entrarOGrossoClip],
+    "entrar-o-grosso": ["hero/lula/07.mp3"],
   },
 };
 type Cue = keyof typeof files | HeroVoice;

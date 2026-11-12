@@ -893,14 +893,18 @@ function stockShop(run: Run) {
   const random = { seed: (run.seed ^ 0x9e3779b9 ^ run.stage) >>> 0 };
   const hero = heroes[run.hero];
   const pool = hero.faction === "right" ? rightRewardPool : rewardPool;
-  const [signature] = shuffle<CardId>(random, hero.signatures);
-  const selection = [...shuffle(random, pool).slice(0, 4), signature];
+  const candidates = shuffle(random, pool);
+  const variety = (["offensive", "defensive", "tactical"] as const).flatMap((type) => {
+    const card = candidates.find((id) => cardType(cardDefinition(id)) === type);
+    return card ? [card] : [];
+  });
+  const selection = [...new Set([...variety, ...candidates])].slice(0, 3);
   run.shopOffers = selection.map((card) => ({ card, price: shopPrices[card] ?? 55, sold: false }));
   const availableRelics = availableRelicsFor(run);
   const availableConsumables = (Object.keys(consumables) as ConsumableId[]).filter((id) =>
     hero.faction === "left" || !leftBuildConsumables.includes(id));
   run.itemOffers = [
-    ...shuffle(random, availableRelics).slice(0, 2).map((id) => ({ kind: "relic" as const, id, sold: false })),
+    ...shuffle(random, availableRelics).slice(0, 3).map((id) => ({ kind: "relic" as const, id, sold: false })),
     ...availableConsumables.map((id) => ({ kind: "consumable" as const, id, sold: false })),
   ];
   run.phase = "shop";

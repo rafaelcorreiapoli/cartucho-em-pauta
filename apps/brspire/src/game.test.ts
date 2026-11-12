@@ -448,7 +448,9 @@ test("shop purchases debit the balance once and add the card to the next encount
   run.conquered = run.order.slice(0, run.order.indexOf(shop));
   expect(chooseDestination(run, shop)).toBe(true);
   expect(String(run.phase)).toBe("shop");
-  expect(run.shopOffers).toHaveLength(5);
+  expect(run.shopOffers).toHaveLength(3);
+  expect(new Set(run.shopOffers.map(({ card }) => card)).size).toBe(3);
+  expect(run.itemOffers.filter(({ kind }) => kind === "relic")).toHaveLength(3);
   const offer = run.shopOffers[0];
   expect(buyShopCard(run, offer.card)).toBe(false);
   run.money = offer.price;
