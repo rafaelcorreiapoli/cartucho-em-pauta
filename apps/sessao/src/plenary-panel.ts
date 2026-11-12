@@ -57,7 +57,6 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('role').textContent = role ?? '';
       element('role-goal').textContent = running ? role==='Infiltrado' ? 'Derrube a estabilidade' : 'Preserve a estabilidade' : '';
       element('role').parentElement!.dataset.role = role ?? '';
-      element('project-solo').hidden = !view.solo;
       const sessionResult = element('project-session-result');
       sessionResult.hidden = phase!=='finished';
       sessionResult.textContent = phase==='finished' ?
