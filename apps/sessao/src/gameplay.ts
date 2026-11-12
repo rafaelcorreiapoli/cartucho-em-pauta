@@ -108,7 +108,7 @@ export const terminals = {
   press:{point:stations.press,title:'Imprensa'},
   coffee:{point:stations.coffee,title:'Cafezinho',supply:'coffee'},
   secretary:{point:stations.secretary,title:'Secretaria',supply:'document',stamp:'Secretaria'},
-  cabinet:{point:stations.cabinet,title:'Gabinete 02',stamp:'Gabinete'},
+  cabinet:{point:stations.cabinet,title:'Mesa de Verbas',stamp:'Gabinete'},
   archive:{point:stations.archive,title:'Arquivo',storage:true},
   credentials:{point:stations.credentials,title:'Credenciamento',supply:'gift'},
   treasury:{point:{x:500,y:494},title:'Tesouraria'},

@@ -26,7 +26,9 @@ export const walls: Rect[] = [
   [814,270,10,133],
   [316,270,10,65], [316,374,10,18], [592,270,10,65], [592,374,10,18],
   [316,403,10,65], [316,507,10,23], [592,403,10,65], [592,507,10,23],
-  [960,10,176,10],[1126,20,10,144],[960,164,176,10],
+  [eastAnnex.left,10,eastAnnex.right-eastAnnex.left+10,10],
+  [eastAnnex.right,eastAnnex.top,10,eastAnnex.bottom-eastAnnex.top],
+  [eastAnnex.left,eastAnnex.bottom,eastAnnex.right-eastAnnex.left+10,10],
   [139,10,9,115], [332,10,9,115],
   [139,114,38,11], [203,114,14,11], [263,114,14,11], [303,114,38,11],
   [187,161,9,98], [282,161,9,98],
@@ -41,7 +43,7 @@ export const walls: Rect[] = [
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
-  [128,460],[433,460],[713,460],[822,463],
+  [128,460],[354,430],[433,460],[713,460],[822,463],
   [274,614],[274,677],[643,614],[643,677],
   ...Object.values(npcs).map(({counter:{x,y}})=>[x,y] as const),
 ] as const;
@@ -88,7 +90,7 @@ export function blockedBy(rect:Rect,x:number,y:number) {
 }
 
 export function canStand(x: number, y: number) {
-  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (y<eastAnnex.top || y>eastAnnex.bottom))) return false;
+  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom))) return false;
   if (y>541 && (x<274 || x>686) && !privateOffices.some(({bounds:[left,top,width,height]})=>top>=541 && x>=left && x<=left+width && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
 }

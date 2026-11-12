@@ -4,7 +4,7 @@ import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { npcs } from './npcs';
 import { binocularBonus } from './equipment';
-import { objects, type GroundItem } from './gameplay';
+import { canReachObject, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
@@ -340,8 +340,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
       for (const marker of this.stationMarkers) {
-        const nearby = ownPlayer && Math.hypot(ownPlayer.x-marker.x,ownPlayer.y-marker.y)<=STATION_RADIUS;
-        marker.setVisible(negotiating).setAlpha(nearby ? 1 : .55);
+        const nearby = ownPlayer && canReachObject(ownPlayer,marker,{radius:STATION_RADIUS,handsFree:true});
+        marker.setVisible(negotiating && !!nearby);
       }
 
       for (const [id,view] of this.views) {

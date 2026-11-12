@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { npcs, snackBar } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
+import { roomActivities } from './room-activities';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
@@ -39,7 +40,7 @@ export function drawMap(scene: Phaser.Scene) {
   floor([10,259,940,11],0x757f78,23,11);
   floor([10,392,940,11],0x757f78,23,11);
   rug(14,130,932,23);
-  floor([eastAnnex.left,eastAnnex.top,166,eastAnnex.bottom-eastAnnex.top],0x757f78,23,18);
+  floor([eastAnnex.left,eastAnnex.top,eastAnnex.right-eastAnnex.left,eastAnnex.bottom-eastAnnex.top],0x757f78,23,18);
   rooms.forEach(({bounds,color}) => floor(bounds,color,24,8));
   rug(156,16,168,95);
   fill(0x24473e,278,552,404,185);
@@ -98,7 +99,11 @@ export function drawMap(scene: Phaser.Scene) {
   const tribune = scene.add.text(570,591,'TRIBUNA',{
     fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
   }).setOrigin(.5,0).setDepth(HEIGHT+20);
-  return [tribune,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  const budgetDesk = scene.add.text(roomActivities.cabinet.x,405,'MESA DE VERBAS',{
+    fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',color:'#fff4dc',
+    backgroundColor:'#263a31aa',resolution:3,padding:{x:4,y:2},
+  }).setOrigin(.5,0).setDepth(1);
+  return [tribune,budgetDesk,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},
