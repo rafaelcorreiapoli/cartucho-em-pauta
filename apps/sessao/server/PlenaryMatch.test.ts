@@ -85,7 +85,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
   const accounts = [host,honest,traitor].map(player => view(player).politics!);
-  expect(new Set(accounts.map(account => account.agenda)).size).toBe(3);
+  for (const account of accounts) expect(account.missions.active).toHaveLength(3);
   expect(view(host).politics?.wallet).toBe(8);
   match.politics(host,{kind:'grant',diverted:3},people,1); // Too far from the cabinet.
   expect(view(host).budget).toBe(32);
@@ -160,16 +160,47 @@ test('only a full room may choose two infiltrators', () => {
   expect(ids.filter(id => short.view(id,ids,0).role==='Infiltrado')).toHaveLength(1);
 });
 
-test('completed personal missions pay only once at settlement', () => {
+test('personal missions refill immediately and pay once at settlement', () => {
   const economy = new PoliticalEconomy();
   economy.reset([{id:'a',name:'A'},{id:'b',name:'B'}],() => 0);
+  const view = (id:string) => economy.view(id,[],1,false,() => true)!;
+  const initial = view('a').missions.active;
+  expect(initial.map(mission => mission.kind)).toEqual(['fortuna','campanha','projetos']);
   economy.paySalary('a',4);
-  const view = (id:string) => economy.view(id,[],1,false,() => true);
-  expect(view('a')).toMatchObject({wallet:12,goalMet:true,agendaPaid:false});
+  economy.changePopularity('a',25);
+  const {active,completed,paid} = view('a').missions;
+  expect(active).toHaveLength(3);
+  expect(new Set(active.map(mission => mission.kind)).size).toBe(3);
+  expect(active.map(mission => mission.id)).toEqual([initial[2].id,4,5]);
+  expect(completed.map(mission => mission.kind)).toEqual(['fortuna','campanha']);
+  expect(paid).toBe(false);
+  expect(view('a').wallet).toBe(12);
+
   economy.settleAgendas(['a','b']);
   economy.settleAgendas(['a','b']);
-  expect(view('a')).toMatchObject({wallet:14,goalMet:true,agendaPaid:true});
-  expect(view('b')).toMatchObject({wallet:8,goalMet:false,agendaPaid:false});
+  expect(view('a')).toMatchObject({wallet:16,missions:{paid:true,completed}});
+  expect(view('b')).toMatchObject({wallet:8,missions:{completed:[]}});
+});
+
+test('an audit replaces a solo mission once per round and repeats with a fresh ID', () => {
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'A'}],() => .6);
+  const missions = () => economy.view('a',[],0,false,() => true)!.missions;
+  expect(missions().active.map(mission => mission.kind)).toEqual(['auditoria','emenda','votacao']);
+  economy.audit('a',0);
+  economy.audit('a',0);
+  expect(missions().completed.map(mission => mission.kind)).toEqual(['auditoria']);
+  economy.amended('a');
+  economy.billResult(new Map([['a','yes']]),true,true);
+  economy.paySalary('a',4);
+  economy.changePopularity('a',25);
+  const nextAudit = missions().active.find(mission => mission.kind==='auditoria')!;
+  expect(nextAudit.id).toBeGreaterThan(missions().completed[0].id);
+  economy.audit('a',0);
+  expect(missions().active).toContainEqual(nextAudit);
+  economy.audit('a',1);
+  expect(missions().completed.at(-1)?.id).toBe(nextAudit.id);
+  expect(missions().active).toHaveLength(3);
 });
 
 test('the Controladoria returns feedback for each audit, even without new records', () => {

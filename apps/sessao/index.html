@@ -194,17 +194,22 @@
         <details id="agenda-dock" class="hud-module" name="game-panels">
           <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Agenda pessoal</span><strong id="agenda-progress"></strong></summary>
           <div class="hud-panel module-content agenda-panel">
-            <header class="social-header"><h2>Missões pessoais</h2></header>
-            <ul class="agenda-list">
-              <li id="agenda-mission">
+            <h2>Missões pessoais</h2>
+            <ul class="agenda-list" id="missions-active"></ul>
+            <div id="missions-history" hidden>
+              <h3>Concluídas</h3>
+              <ul class="agenda-list" id="missions-completed"></ul>
+            </div>
+            <template id="agenda-mission">
+              <li>
                 <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
-                <div class="mission-copy"><strong id="agenda"></strong><small id="mission-progress"></small></div>
+                <div class="mission-copy"><strong></strong><small></small></div>
                 <span class="mission-reward" title="Prêmio pago ao fim da sessão">
                   <svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-                  <span id="mission-reward"></span>
+                  <span></span>
                 </span>
               </li>
-            </ul>
+            </template>
           </div>
         </details>
       </div>

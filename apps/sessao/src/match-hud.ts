@@ -1,6 +1,6 @@
 import { offices } from './elections';
 import type { Player } from './map';
-import { AGENDA_REWARD, agendas, money } from './politics';
+import { AGENDA_REWARD, missionTitle, money, type Mission, type PoliticsView } from './politics';
 import type { PlenaryView, Station } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -8,7 +8,10 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
-  const agendaSummary = element('agenda-dock').querySelector('summary')!;
+  const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
+  const activeMissions = element('missions-active');
+  const completedMissions = element('missions-completed');
+  let missionRenderKey = '';
   const notices = element('hud-notices');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
@@ -85,6 +88,26 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
   }
 
+  function renderMissions(missions:PoliticsView['missions']) {
+    const key = JSON.stringify(missions);
+    if (key===missionRenderKey) return;
+    missionRenderKey = key;
+    element('agenda-progress').textContent = `${missions.active.length} ativas`;
+    element('missions-history').hidden = !missions.completed.length;
+    function row(mission:Mission, done:boolean) {
+      const node = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
+      node.dataset.done = String(done);
+      node.querySelector('strong')!.textContent = missionTitle(mission);
+      const progress = mission.kind==='fortuna' ? `${money(mission.current)} / ${money(mission.target)}` :
+        `${mission.current} / ${mission.target}`;
+      node.querySelector('small')!.textContent = done ? missions.paid ? 'Prêmio recebido' : 'Prêmio no fim da sessão' : progress;
+      node.querySelector('.mission-reward span')!.textContent = `+${money(AGENDA_REWARD)}`;
+      return node;
+    }
+    activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));
+    completedMissions.replaceChildren(...missions.completed.slice().reverse().map(mission => row(mission,true)));
+  }
+
   function actions(view:PlenaryView | undefined = previous) {
     const exploring = view?.phase==='negotiation';
     for (const {button,control} of quickActions) {
@@ -118,15 +141,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
-        const {current,target} = politics.agendaProgress;
-        const progress = politics.agenda==='fortuna' ? `${money(current)} / ${money(target)}` : `${current}/${target}`;
-        const status = politics.goalMet ? 'Cumprida' : progress;
-        element('agenda-progress').textContent = status;
-        agendaSummary.setAttribute('aria-label',`Agenda pessoal · ${status}`);
-        element('agenda').textContent = agendas[politics.agenda];
-        element('agenda-mission').dataset.done = String(politics.goalMet);
-        element('mission-progress').textContent = politics.agendaPaid ? 'Prêmio recebido' : politics.goalMet ? 'Meta atingida' : progress;
-        element('mission-reward').textContent = `+${money(AGENDA_REWARD)}`;
+        renderMissions(politics.missions);
       }
 
       if (previous) {
@@ -144,7 +159,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           const change = politics.wallet-past.wallet;
           notify('Carteira atualizada',`${change>0 ? '+' : '−'}${money(Math.abs(change))}`);
         }
-        if (politics?.goalMet && past && !past.goalMet) notify('Agenda cumprida',agendas[politics.agenda]);
+        const completed = politics && past ? politics.missions.completed.slice(past.missions.completed.length) : [];
+        if (view.phase!=='finished' && completed.length) {
+          const title = completed.length===1 ? 'Missão cumprida' : `${completed.length} missões cumpridas`;
+          notify(title,completed.map(missionTitle).join(' · '));
+        }
       }
       previous = view;
       actions(view);

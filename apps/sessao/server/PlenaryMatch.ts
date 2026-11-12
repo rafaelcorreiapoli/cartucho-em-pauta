@@ -93,7 +93,10 @@ export class PlenaryMatch {
       if (action==='audit') return {text:'Chegue mais perto do ponto da Controladoria.',critical:false};
       return;
     }
-    if (action==='amendment') this.amended = true;
+    if (action==='amendment' && !this.amended) {
+      this.amended = true;
+      this.economy.amended(player.id);
+    }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
       this.audits.clear();

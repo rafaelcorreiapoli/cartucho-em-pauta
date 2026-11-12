@@ -65,7 +65,7 @@ test('a new president can be an infiltrator without exposing either role or carr
   expect(view('c').role).toBe('Infiltrado');
   const original = view('a').election!.offices.find(({office}) => office==='president')!;
   const challenger = players[2];
-  const agenda = view(challenger.id).politics?.agenda;
+  const missionIds = view(challenger.id).politics?.missions.active.map(mission => mission.id);
   const incumbent = players.find(player => player.id===original.id)!;
   match.advance(NEGOTIATION_MS);
   for (const {id} of players) match.vote(id,'yes',NEGOTIATION_MS+1);
@@ -79,7 +79,8 @@ test('a new president can be an infiltrator without exposing either role or carr
   const after = view(challenger.id,rules.interval);
   expect(after.election?.personal?.office).toBe('president');
   expect(after.role).toBe('Infiltrado');
-  expect(after.politics).toMatchObject({agenda,wallet:offices.deputy.salary});
+  expect(after.politics?.wallet).toBe(offices.deputy.salary);
+  expect(after.politics?.missions.active.map(mission => mission.id)).toEqual(missionIds);
   const budget = after.budget;
   match.politics(at(challenger,'cabinet'),{kind:'grant',diverted:3},players,rules.interval+1);
   expect(view(challenger.id,rules.interval+1).budget).toBe(budget);

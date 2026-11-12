@@ -10,20 +10,26 @@ export type Split = typeof splits[number];
 export const AGENDA_REWARD = 2;
 
 export const agendas = {
-  fortuna: 'Termine com R$ 120 mil na carteira',
-  campanha: 'Termine com 65 de popularidade',
+  fortuna: 'Aumente sua carteira',
+  campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
   projetos: 'Vote a favor de dois projetos aprovados',
   oposicao: 'Vote contra dois projetos rejeitados',
+  auditoria: 'Faça uma auditoria na Controladoria',
+  emenda: 'Apresente uma emenda no Protocolo',
+  votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
 } as const;
 export type Agenda = keyof typeof agendas;
+export type Mission = {id:number; kind:Agenda; current:number; target:number};
+export const missionTitle = ({kind,target}:Mission) => kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
+  kind==='campanha' ? `Chegue a ${target} de popularidade` : agendas[kind];
 export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversion';
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
 export type PoliticsView = {
-  wallet:number; popularity:number; agenda:Agenda; agendaProgress:{current:number; target:number}; goalMet:boolean; agendaPaid:boolean; grantUsed:boolean;
+  wallet:number; popularity:number; missions:{active:Mission[]; completed:Mission[]; paid:boolean}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(Contact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
