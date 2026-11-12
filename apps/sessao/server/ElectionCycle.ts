@@ -2,6 +2,7 @@ import { ELECTION_RULES as rules, offices, officeKeys, type Assignment, type Ele
 import type { Contact } from '../src/politics';
 
 type Candidate = Contact & {
+  character:number;
   office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean;
   interviewed:boolean; support?:string; incumbent:number; scandal:number;
   noise:number; tie:number; payStarted:number; accrued:number;
@@ -22,7 +23,7 @@ export class ElectionCycle {
   private objected = false;
   private random = Math.random;
 
-  reset(contacts:Contact[], now:number, random:()=>number) {
+  reset(contacts:(Contact & {character?:number})[], now:number, random:()=>number) {
     this.people.clear();
     this.cycle = 1;
     this.due = now+rules.interval;
@@ -37,7 +38,7 @@ export class ElectionCycle {
     for (let i=0;pool.length;i++) {
       const contact = pool.splice(Math.floor(random()*pool.length),1)[0];
       const office = i===0 ? 'president' : i<=senators ? 'senator' : 'deputy';
-      this.people.set(contact.id,{...contact,office,race:office,invested:0,advertised:false,spoke:false,
+      this.people.set(contact.id,{...contact,character:contact.character ?? 0,office,race:office,invested:0,advertised:false,spoke:false,
         interviewed:false,incumbent:0,scandal:0,noise:this.noise(),tie:random(),payStarted:now,accrued:0});
     }
   }
@@ -161,7 +162,7 @@ export class ElectionCycle {
       const sum = estimates.reduce((total,{score}) => total+score,0);
       return estimates.sort((a,b) => b.score-a.score || a.person.tie-b.person.tie).map(({person,score}) => {
         const estimate = Math.round(score/sum*100);
-        return {id:person.id,name:person.name,race,estimate,trend:estimate-(this.previousPoll.get(person.id) ?? estimate),supports:person.support};
+        return {id:person.id,name:person.name,character:person.character,race,estimate,trend:estimate-(this.previousPoll.get(person.id) ?? estimate),supports:person.support};
       });
     });
   }

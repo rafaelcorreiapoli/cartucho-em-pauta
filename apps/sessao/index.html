@@ -265,25 +265,7 @@
               <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="As barras mostram estimativas de intenção de voto por cargo. A apuração usa uma pequena margem de incerteza. Quem não se eleger disputa as vagas restantes.">?</button></div>
               <div id="election-polls"></div>
             </section>
-            <details id="election-actions"><summary class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</summary>
-              <form id="registration">
-                <label>Candidatura <select id="election-race">
-                  <option value="president">Presidência</option><option value="senator">Senado</option><option value="deputy">Câmara</option>
-                </select></label>
-                <button class="hud-button" id="register-race" type="submit">Confirmar candidatura</button>
-              </form>
-              <p id="registration-hint"></p>
-              <form id="invest-form">
-                <label>Investir em campanha (R$ 10 mil por unidade)
-                  <input id="investment" type="number" value="1" min="1" step="1" required>
-                </label>
-                <button class="hud-button" id="invest" type="submit">Investir</button>
-              </form>
-              <form id="support-form">
-                <label>Apoio público <select id="endorsement"></select></label>
-                <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
-              </form>
-            </details>
+            <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
           </div>
         </details>
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
@@ -328,6 +310,29 @@
         </aside>
         <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
       </div>
+      <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title">
+        <header>
+          <h2 id="campaign-title"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</h2>
+          <button id="close-campaign" class="hud-icon-button" type="button" aria-label="Fechar campanha"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button>
+        </header>
+        <form id="registration">
+          <label>Candidatura <select id="election-race">
+            <option value="president">Presidência</option><option value="senator">Senado</option><option value="deputy">Câmara</option>
+          </select></label>
+          <button class="hud-button" id="register-race" type="submit">Confirmar candidatura</button>
+        </form>
+        <p id="registration-hint"></p>
+        <form id="invest-form">
+          <label>Investir em campanha (R$ 10 mil por unidade)
+            <input id="investment" type="number" value="1" min="1" step="1" required>
+          </label>
+          <button class="hud-button" id="invest" type="submit">Investir</button>
+        </form>
+        <form id="support-form">
+          <label>Apoio público <select id="endorsement"></select></label>
+          <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
+        </form>
+      </dialog>
       <div id="social-docks">
       <details id="trade-dock" class="social-module" name="game-panels" hidden>
         <summary class="social-trigger"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Negociação</summary>

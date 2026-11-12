@@ -1,3 +1,4 @@
+import { hudConsumesKeys } from './game-keys';
 import { canPocket, cashItems, type CashDrop } from './cash-drops';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
@@ -81,8 +82,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   });
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
-      event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) ||
-      (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))) return;
+      event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) || hudConsumesKeys(event.target)) return;
     const button = actionKeys.find(action => action.button.getAttribute('aria-keyshortcuts')===event.key)?.button;
     if (!button || button.disabled || button.closest('[hidden]')) return;
     event.preventDefault();

@@ -1,3 +1,4 @@
+import { setCharacterPortrait } from './character-art';
 import { ELECTION_RULES, officeKeys, offices, type ElectionAction, type Office } from './elections';
 import type { Player } from './map';
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
@@ -20,7 +21,10 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   let candidatesKey = '';
   dock.hidden = notice.hidden = true;
   dock.open = false;
-  el<HTMLDetailsElement>('election-actions').open = false;
+  const campaign = el<HTMLDialogElement>('campaign-dialog');
+  const openCampaign = el<HTMLButtonElement>('election-actions');
+  openCampaign.onclick = () => campaign.showModal();
+  el('close-campaign').onclick = () => campaign.close();
   investment.value = '1';
   el<HTMLFormElement>('registration').onsubmit = event => {
     event.preventDefault();
@@ -57,6 +61,8 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       view = next;
       const election = view.election, personal = election?.personal;
       dock.hidden = !election;
+      openCampaign.hidden = !election?.canCampaign;
+      if (openCampaign.hidden && campaign.open) campaign.close();
       if (!election) return;
       const {remaining,broadcast,result} = election;
       const race = personal && election.polls.filter(candidate => candidate.race===personal.race);
@@ -76,7 +82,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       ].join(' ') : '';
       if (result && result.cycle!==lastResult) {
         lastResult = result.cycle;
-        dock.open = false;
+        if (!campaign.open) dock.open = false;
       }
       if (broadcast) {
         notice.hidden = false;
@@ -86,7 +92,6 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         notice.hidden = true;
         notice.textContent = '';
       }
-      el('election-actions').hidden = !election.canCampaign;
       if (personal) {
         if (personal.race!==lastRace) registration.value = lastRace = personal.race;
         registration.disabled = !election.registrationOpen;
@@ -138,11 +143,21 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
             meter.max = 100;
             meter.value = candidate.estimate;
             meter.setAttribute('aria-label',`Intenção de voto de ${candidate.name}`);
-            row.append(label,meter);
+            const card = document.createElement('div');
+            card.className = 'poll-card';
+            const portrait = document.createElement('span');
+            portrait.className = 'portrait';
+            portrait.setAttribute('aria-hidden','true');
+            setCharacterPortrait(portrait,candidate.character);
+            const details = document.createElement('div');
+            details.className = 'poll-details';
+            details.append(label,meter);
+            card.append(portrait,details);
+            row.append(card);
             if (candidate.supports) {
               const support = document.createElement('small');
               support.textContent = `Apoia ${name(candidate.supports)}`;
-              row.append(support);
+              details.append(support);
             }
             list.append(row);
           }

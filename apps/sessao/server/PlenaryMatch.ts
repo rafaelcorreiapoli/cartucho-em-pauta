@@ -54,7 +54,7 @@ export class PlenaryMatch {
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
     const contacts = players.map(player => ({id:player.id,name:player.nick}));
     this.economy.reset(contacts,random);
-    this.election.reset(contacts,now,random);
+    this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.cashDrops.reset(now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingUsed = false;

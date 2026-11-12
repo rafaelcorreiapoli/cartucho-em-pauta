@@ -224,7 +224,7 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   .bill-heading { margin-top:.45rem; }
 }
 
-#election-actions { margin-top:.55rem; padding:.45rem; border:1px solid #9e927a66; border-radius:5px; }
+#election-actions { display:flex; align-items:center; gap:.5rem; margin-top:.75rem; width:100%; }
 #stations .hud-button:disabled { display:none; }
 #station-hint { color:#c6d1c4; }
 @media (min-width:741px) {

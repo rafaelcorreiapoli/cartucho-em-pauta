@@ -1,3 +1,4 @@
+import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { cashItems, type CashDrop } from './cash-drops';
 import { characterArt, characterSheets } from './character-art';
@@ -39,7 +40,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   const stop = () => {
     keys.clear();
   };
-  parent.addEventListener('keydown', event => {
+  document.addEventListener('keydown', event => {
+    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
+      (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
     if (!directions.has(key)) return;
     event.preventDefault();
@@ -47,8 +50,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     destination = undefined;
     keys.add(key);
   }, options);
-  parent.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), options);
-  parent.addEventListener('blur',stop,options);
+  document.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), options);
+  document.addEventListener('focusin', event => { if (hudConsumesKeys(event.target)) stop(); }, options);
   window.addEventListener('blur',stop,options);
 
   class Plenary extends Phaser.Scene {

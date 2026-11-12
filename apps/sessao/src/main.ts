@@ -162,6 +162,7 @@ function showLobby(message: string) {
   game?.destroy();
   game = undefined;
   room = undefined;
+  document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
   session.hidden = true;
   landing.hidden = false;
   status.textContent = message;

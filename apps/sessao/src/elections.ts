@@ -16,7 +16,7 @@ export type ElectionAction =
   | {kind:'advertise' | 'speech' | 'interview' | 'object'};
 
 export type Assignment = {id:string; name:string; office:Office};
-export type Poll = {id:string; name:string; race:Office; estimate:number; trend:number; supports?:string};
+export type Poll = {id:string; name:string; character:number; race:Office; estimate:number; trend:number; supports?:string};
 export type ElectionView = {
   cycle:number; remaining:number; registrationOpen:boolean;
   offices:Assignment[]; polls:Poll[];

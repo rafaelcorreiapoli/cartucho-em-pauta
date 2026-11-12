@@ -816,3 +816,36 @@
   #social-docks h3 { font-size: .95rem; }
   #social-docks .social-empty { padding: 1rem .65rem; gap: .45rem; }
 }
+
+.poll-card { display: flex; align-items: center; gap: .55rem; }
+.poll-card .portrait {
+  --portrait-size: 40px;
+  flex: none;
+  border-radius: 6px;
+  background-color: #294d3d;
+}
+.poll-details { min-width: 0; flex: 1; }
+
+#campaign-dialog {
+  width: min(480px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 1.2rem;
+  border: 1px solid #9b9767;
+  border-radius: 12px;
+  background: #193329;
+  color: var(--hud-paper);
+}
+#campaign-dialog::backdrop { background: #081510b8; }
+#campaign-dialog header, #campaign-title { display: flex; align-items: center; gap: .65rem; }
+#campaign-dialog header { justify-content: space-between; margin-bottom: 1rem; }
+#campaign-title { margin: 0; font: 850 1.35rem/1.15 var(--party-display); }
+#campaign-title .hud-glyph { color: var(--party-gold); }
+#campaign-dialog form {
+  display: grid;
+  gap: .55rem;
+  margin-top: .65rem;
+  padding: .8rem;
+  border-radius: 8px;
+  background: #142522;
+}
+#campaign-dialog label { display: grid; gap: .4rem; }
