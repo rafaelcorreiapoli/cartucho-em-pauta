@@ -1,6 +1,6 @@
 import { equipment } from './equipment';
 import type Phaser from 'phaser';
-import { characterArt } from './character-art';
+import { characterArt, downedArt } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
 import { HEIGHT, localPerception, WIDTH } from './map';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type Decoration, type Photo, type PhotoScene } from './photography';
@@ -77,16 +77,16 @@ export class PhotoRenderer {
     const labels:{name:string;x:number;y:number}[] = [];
     for (const person of [...scene.people].sort((a,b)=>a.y-b.y || Number(!!a.carried)-Number(!!b.carried))) {
       const {sheet,frame} = characterArt(person.character);
-      const pose = this.textures.getFrame(sheet.key,frame+(person.direction===3 ? 1 : person.direction)*4);
+      const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction) : undefined;
+      const pose = this.textures.getFrame(downed?.key ?? sheet.key,downed?.frame ?? frame+(person.direction===3 ? 1 : person.direction)*4);
       if (!pose) continue;
       const source = pose.source.image as HTMLImageElement;
       const x = person.x-left, y = person.y-top;
       ctx.save();
-      ctx.translate(person.carried ? x-17 : x,person.carried ? y-24 : y);
-      if (person.carried) ctx.rotate(Math.PI/2);
-      else if (person.knockedOut) ctx.rotate(-Math.PI/2);
-      if (person.direction===3) ctx.scale(-1,1);
-      ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38,38,38);
+      ctx.translate(x,person.carried ? y-24 : y);
+      if (downed?.rotation) ctx.rotate(downed.rotation);
+      if (downed?.flipX ?? person.direction===3) ctx.scale(-1,1);
+      ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38*(downed?.originY ?? 1),38,38);
       ctx.restore();
       if (person.exposed) item(person.exposed.kind,x,y-37,13);
       if (person.phone) {

@@ -6,7 +6,7 @@ import { binocularBonus } from './equipment';
 import { objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { characterArt, characterSheets } from './character-art';
+import { bolsonaroFall, characterArt, characterSheets, downedArt } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
@@ -84,7 +84,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of characterSheets) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,bolsonaroFall]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
@@ -376,12 +376,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
-        const spriteX = latest.carried ? x-17 : x+(pose?.lungeX ?? 0);
+        const downed = latest.knockedOut || latest.carried ? downedArt(character,direction) : undefined;
+        const spriteX = x+(pose?.lungeX ?? 0);
         const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? 0);
         const labelY = latest.carried ? y-51 : y+2;
-        sprite.setRotation(latest.carried ? Math.PI/2 : latest.knockedOut ? -Math.PI/2 : pose?.lean ?? 0)
+        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? pose?.lean ?? 0)
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
-        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0)).setFlipX(facing===3);
+        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0))
+          .setFlipX(downed?.flipX ?? facing===3);
         view.health.setVisible(latest.health!==undefined);
         if (latest.health!==undefined) {
           const health = Phaser.Math.Clamp(latest.health,0,1);
@@ -409,10 +411,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         office.setVisible(running || !!title).setPosition(x,labelY+10)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
-        if (moving && !pose) sprite.play(`${character}-${row}`,true);
+        if (moving && !pose && !downed) sprite.play(`${character}-${row}`,true);
         else {
           sprite.anims.stop();
-          sprite.setTexture(sheet.key,frame+row*4);
+          sprite.setTexture(downed?.key ?? sheet.key,downed?.frame ?? frame+row*4);
         }
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);

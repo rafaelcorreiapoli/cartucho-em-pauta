@@ -182,7 +182,10 @@ test('transport is exclusive, follows authoritative movement and drops on valid 
   expect(alice.x-start).toBeCloseTo(movementSpeed(alice)*.05);
   expect(movementSpeed(alice)).toBeCloseTo(88*.65);
   game.tick(world,true);
-  expect(bob).toMatchObject({x:alice.x,y:alice.y,carried:true});
+  expect(bob).toMatchObject({x:alice.x,y:alice.y,direction:1,carried:true});
+  applyInput(control,{seq:2,motion:{x:-1,y:0}});
+  game.tick(world,true);
+  expect(bob).toMatchObject({x:alice.x,y:alice.y,direction:3,carried:true});
   game.act(carol,{kind:'photo'},world);
   expect(game.photoView(carol.id,world.now).album[0]?.photo.people.find(person=>person.id===bob.id))
     .toMatchObject({knockedOut:true,carried:true});
