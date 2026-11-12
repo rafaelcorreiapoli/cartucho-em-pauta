@@ -1,3 +1,10 @@
+button[data-hud-help] { padding: 0; }
+button:is(.resource-health, .resource-money, .draw-pile)[data-hud-help] {
+  border: 0;
+  background: transparent;
+}
+.energy[data-hud-help]:focus-visible b { text-decoration: underline; }
+
 /* Keep session resources over the field. */
 .combat-resources {
   position: absolute;

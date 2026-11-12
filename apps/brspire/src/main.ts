@@ -168,11 +168,23 @@ function meter(moral: number, max: number) {
   </div>`;
 }
 
+function hudDetails(name: string, description: string, value: string | number) {
+  return `type="button" data-hud-help data-action="item-details" aria-haspopup="dialog"
+    aria-label="${name}, ${value}" ${itemTooltip({ name, description })}`;
+}
+
 function renderResources() {
+  const moneyHelp = run.money < 0
+    ? `Use moedas na loja. Se o saldo continuar negativo após a recompensa da luta, a dívida é quitada e você perde ${DEBT_MORAL_LOSS} de Moral.`
+    : "Use moedas na loja para comprar cartas e itens ou remover uma carta do baralho.";
   view.resources.innerHTML = `
     <img class="resource-portrait" src="${asset(`${run.hero}-portrait`)}" alt="${heroes[run.hero].name}">
-    <span class="resource-health" title="Moral"><i aria-hidden="true">${glyph.health}</i><b>${run.moral}/${MAX_MORAL}</b></span>
-    <span class="resource-money" data-debt="${run.money < 0}" title="${run.money < 0 ? `Dívida. Perde ${DEBT_MORAL_LOSS} de Moral se terminar o combate no negativo.` : "Dinheiro"}"><i aria-hidden="true">${glyph.gold}</i><b>${run.money}</b></span>
+    <button class="resource-health" ${hudDetails("Moral", "É a vida do herói. Se chegar a zero, a sessão acaba.", `${run.moral} de ${MAX_MORAL}`)}>
+      <i aria-hidden="true">${glyph.health}</i><b>${run.moral}/${MAX_MORAL}</b>
+    </button>
+    <button class="resource-money" data-debt="${run.money < 0}" ${hudDetails("Moedas", moneyHelp, run.money)}>
+      <i aria-hidden="true">${glyph.gold}</i><b>${run.money}</b>
+    </button>
     ${run.temporaryCoins ? `<span class="resource-temporary-money" title="Moedas temporárias deste combate">+${run.temporaryCoins} temp.</span>` : ""}
     <span class="resource-items" aria-label="Consumíveis">
       ${Array.from({ length: consumableSlots }, (_, index) => {
@@ -349,23 +361,27 @@ function render(pendingDraw = 0) {
   }).join("");
   view.hand.scrollLeft = handScroll;
   view.playerTools.innerHTML = `
-    <div class="energy" data-faction="${activeHero.faction}" role="img" aria-label="Energia ${run.energy} de ${TURN_ENERGY}" title="Energia">
+    <button class="energy" data-faction="${activeHero.faction}"
+      ${hudDetails("Energia", `Use Energia para jogar cartas. Você começa cada turno com ${TURN_ENERGY}, mais os bônus ativos.`, `${run.energy} de ${TURN_ENERGY}`)}>
       <span class="energy-emblem" aria-hidden="true"></span>
       <b>${run.energy}/${TURN_ENERGY}</b>
-    </div>
-    <div class="draw-pile" role="img" aria-label="Pilha de compra, ${run.draw.length} cartas" title="Pilha de compra" data-empty="${run.draw.length === 0}">
+    </button>
+    <button class="draw-pile" data-empty="${run.draw.length === 0}"
+      ${hudDetails("Pilha de compra", "Mostra quantas cartas ainda podem ser compradas. Ao esvaziar, o descarte é embaralhado para repor a pilha.", `${run.draw.length} cartas`)}>
       <span class="card-back" aria-hidden="true"><span>${heroes[run.hero].faction === "right" ? "◆" : "☭"}</span></span>
       <b aria-hidden="true">${run.draw.length}</b>
-    </div>`;
+    </button>`;
   const canEndTurn = !busy && !discarding && run.phase === "player";
   const onlyEndTurn = canEndTurn &&
     !run.hand.some((_, index) => canPlayCard(run, index)) &&
     !run.consumables.some((_, index) => canUseConsumable(run, index));
   view.turnTools.innerHTML = `
-    <button class="primary" data-action="end" data-only-action="${onlyEndTurn}" ${canEndTurn ? "" : "disabled"}>Encerrar turno <span>${run.turn}</span></button>
-    <div class="discard-pile" role="img" aria-label="Pilha de descarte, ${run.discard.length} cartas" title="Pilha de descarte">
+    <button class="primary" data-action="end" data-only-action="${onlyEndTurn}" ${canEndTurn ? "" : "disabled"}
+      ${itemTooltip({ name: "Encerrar turno", description: "Descarta as cartas restantes da mão e passa a vez aos rivais." })}>Encerrar turno <span>${run.turn}</span></button>
+    <button class="discard-pile"
+      ${hudDetails("Pilha de descarte", "Recebe cartas usadas ou descartadas. Elas voltam à pilha de compra quando ela esvazia. Cartas exauridas ficam fora até o fim da luta.", `${run.discard.length} cartas`)}>
       <span aria-hidden="true">▱</span><b aria-hidden="true">${run.discard.length}</b>
-    </div>`;
+    </button>`;
   view.rivals.classList.toggle("targeting", targetMode);
   const showingOutcome = !busy && ["reward", "won", "lost"].includes(run.phase);
   const choosingRelic = run.phase === "reward" && run.bosses.includes(run.stage);
@@ -974,7 +990,7 @@ app.addEventListener("submit", (event) => {
 });
 
 function showItemDetails(button: HTMLButtonElement, index?: number) {
-  if (busy && !view.game.hidden && !button.matches(".fighter-effect, .intent")) return;
+  if (busy && !view.game.hidden && !button.matches(".fighter-effect, .intent, [data-hud-help]")) return;
   const usable = index !== undefined && !busy && !choosingStage && canUseConsumable(run, index);
   view.itemDetails.innerHTML = `
     <h2 id="item-details-title"></h2>
