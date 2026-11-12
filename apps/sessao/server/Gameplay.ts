@@ -223,7 +223,15 @@ export class Gameplay {
   view(player:Player, world:GameplayWorld):GameplayView {
     const {id} = player;
     const nearbyLocations = locations(player);
-    const modulator = this.wearing(id,'voiceModulator');
+    const equipped = this.equipped(id).map(item=>item.data);
+    const voiceGear = equipped.find(item=>item.kind==='voiceModulator');
+    const modulator = voiceGear && this.modulator.view(voiceGear.id,world.now);
+    const equipmentCooldowns:Record<number,number> = {};
+    for (const item of equipped) {
+      const seconds = item.kind==='voiceModulator' ? modulator?.recharge :
+        equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
+      if (seconds) equipmentCooldowns[item.id] = seconds;
+    }
     const ground = this.visibleGround(player,world.now);
     const requests = [...this.requests.values()].flatMap(request => {
       if (request.to!==id) return [];
@@ -233,12 +241,12 @@ export class Gameplay {
     });
     return {
       exposed:this.exposed.get(id),
-      equipped:this.equipped(id).map(item=>item.data),
+      equipped,equipmentCooldowns,
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
-      modulator:modulator ? this.modulator.view(modulator.id,world.now) : undefined,
+      modulator,
       decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),

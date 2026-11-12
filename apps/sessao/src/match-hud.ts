@@ -2,9 +2,9 @@ import { equippedWeapon } from './equipment';
 import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
-import { button as hudButton, glyph as hudGlyph } from './gameplay-ui';
+import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, type GameplayAction, type GroundItem } from './gameplay';
+import { canReachObject, cashAmount, objects, type GameplayAction, type GroundItem, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
@@ -101,6 +101,44 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const vitality = element('vitality');
   const vitalityNumber = element('vitality-number');
   const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
+  const gearStrip = element('equipped-gear');
+  const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
+  const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+  function renderEquipped(state?:GameplayView) {
+    const equipped = state?.equipped ?? [];
+    for (const [id,{tile}] of gearTiles) {
+      if (equipped.some(item=>item.id===id)) continue;
+      tile.remove();
+      gearTiles.delete(id);
+    }
+    for (const item of equipped) {
+      const name = objects[item.kind].name;
+      let entry = gearTiles.get(item.id);
+      if (!entry) {
+        const tile = node('span');
+        tile.className = 'equipped-gear-tile';
+        tile.setAttribute('role','listitem');
+        tile.dataset.kind = item.kind;
+        const timer = node('span');
+        timer.className = 'equipped-gear-timer';
+        timer.setAttribute('aria-hidden','true');
+        tile.append(itemPortrait(item.kind),timer);
+        gearStrip.append(tile);
+        entry = {tile,timer};
+        gearTiles.set(item.id,entry);
+      }
+      const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
+      const time = seconds ? `${secondsLabel.format(seconds)} s` : '';
+      const label = seconds ? `${name} · Recarga: ${time}` : name;
+      if (entry.tile.title===label) continue;
+      entry.timer.textContent = time;
+      entry.timer.hidden = !seconds;
+      entry.tile.title = label;
+      entry.tile.setAttribute('aria-label',label);
+    }
+    gearStrip.hidden = equipped.length===0;
+  }
+
   let fieldKey = '';
   let roster:Player[] = [];
   let own:Player | undefined;
@@ -362,6 +400,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           notify(title,completed.map(missionTitle).join(' · '));
         }
       }
+      renderEquipped(view.gameplay);
       const hp = view.gameplay?.vitality;
       vitality.hidden = !hp;
       if (hp) {
@@ -382,6 +421,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions();
     },
     destroy() {
+      renderEquipped();
       for (const node of timers.keys()) remove(node);
       for (const tab of missionTabs) {
         tab.onclick = null;

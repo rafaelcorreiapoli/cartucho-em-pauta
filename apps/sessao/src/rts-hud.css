@@ -40,6 +40,47 @@
 .personal-resources strong { font-weight: 720; font-variant-numeric: tabular-nums; }
 .personal-resources > span:first-child strong { color: var(--party-gold); }
 .personal-resources > span:last-child strong { color: var(--party-mint); }
+#equipped-gear:not([hidden]) {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 12px;
+  inset-inline-start: clamp(14px,2vw,32px);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+.equipped-gear-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  inline-size: 48px;
+  block-size: 48px;
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid #7c956d;
+  border-radius: 7px;
+  background: radial-gradient(#38523d,#1b3026);
+  pointer-events: auto;
+}
+.equipped-gear-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.equipped-gear-timer:not([hidden]) {
+  position: absolute;
+  inset: 5px;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border-radius: 4px;
+  background: #07130fe5;
+  color: #ffe7a7;
+  font: 800 12px/1 system-ui,sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 #command-strip .resource-help { width: 20px; height: 22px; color: var(--command-muted); }
 #command-strip .resource-help .hud-glyph { width: 15px; height: 15px; }
 

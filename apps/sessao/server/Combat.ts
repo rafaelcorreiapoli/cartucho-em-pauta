@@ -147,6 +147,11 @@ export class Combat {
     state.hp = Math.min(this.max(player),state.hp+amount);
   }
 
+  weaponRecharge(player:Combatant, now:number) {
+    const readyAt = this.vitality.get(player.id)?.attackAt ?? now;
+    return Math.max(0,Math.ceil((readyAt-now)/100)/10);
+  }
+
   view(player:Combatant, now:number) {
     const state = this.vitality.get(player.id);
     return {hp:state?.hp ?? this.max(player),max:this.max(player),

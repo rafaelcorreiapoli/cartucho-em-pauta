@@ -15,9 +15,9 @@ export const objects = {
   gift:{exposable:true,name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-documento.webp',description:'Uma reserva que os outros podem ignorar.'},
-  binoculars:{name:'Binóculo',portrait:'retrato-presente.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
-  voiceModulator:{name:'Modulador de voz',portrait:'retrato-presente.webp',description:'Distorce sua voz até a bateria acabar.'},
-  vest:{name:'Colete',portrait:'retrato-presente.webp',description:'Reduz em 35% o dano físico recebido.'},
+  binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
+  voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
+  vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
   baton:{name:'Porrete',portrait:'weapon-baton.webp',description:'Golpeia um jogador próximo.'},
   pizza:{exposable:true,name:'Pizza parlamentar',portrait:'retrato-presente.webp',description:'Seis fatias para dividir no Cafezinho.',use:'consume'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'|'cash'; amount?:number; destructible?:boolean}>;
@@ -73,6 +73,7 @@ export type GameplayView = {
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};
+  equipmentCooldowns?:Record<number,number>;
   modulator?:{active:boolean; battery:number; recharge:number};
   exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };

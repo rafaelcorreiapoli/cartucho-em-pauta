@@ -6,7 +6,7 @@ import { decorationLabel, itemSymbols } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { offices } from './elections';
-import { button, contactFace, glyph, node } from './gameplay-ui';
+import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
@@ -24,18 +24,13 @@ type App = keyof typeof apps;
 type InteractionArea = (player:Motion) => boolean;
 
 function itemArt(kind:ObjectKind) {
-  if (itemSymbols[kind]) {
+  if (!isGear(kind) && itemSymbols[kind]) {
     const symbol = node('span',itemSymbols[kind]);
     symbol.className = 'item-art-symbol';
     symbol.setAttribute('aria-hidden','true');
     return symbol;
   }
-  const portrait = node('img');
-  portrait.className = 'item-portrait';
-  portrait.src = import.meta.env.BASE_URL+'assets/'+objects[kind].portrait;
-  portrait.alt = '';
-  portrait.draggable = false;
-  return portrait;
+  return itemPortrait(kind);
 }
 
 function itemName(item:Pick<WorldItem,'kind'|'document'>) {

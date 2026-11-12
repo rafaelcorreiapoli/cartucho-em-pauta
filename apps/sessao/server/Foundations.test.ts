@@ -73,6 +73,7 @@ test('equipping changes custody, binocular range and voice battery without stack
   game.act(alice,{kind:'equip',item:binocular.id},world);
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(alice,world).equipped).toEqual([binocular]);
+  expect(game.view(alice,world).equipmentCooldowns).toEqual({});
   expect(game.vision(alice.id)).toBe(VISION_RADIUS+2);
   expect(game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world)).toBe('Você já tem este equipamento.');
   game.act(alice,{kind:'unequip',item:binocular.id},world);
@@ -85,6 +86,7 @@ test('equipping changes custody, binocular range and voice battery without stack
   expect(game.view(alice,world).modulator).toEqual({active:true,battery:25,recharge:0});
   world.now += 25_000;
   expect(game.view(alice,world).modulator).toEqual({active:false,battery:0,recharge:45});
+  expect(game.view(alice,world).equipmentCooldowns).toEqual({[modulator.id]:45});
   expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
   world.now += 45_000;
   expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
@@ -108,6 +110,8 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   expect(game.act(alice,{kind:'attack'},world)).toBeUndefined();
   expect(game.view(bob,world).vitality?.hp).toBe(100);
   expect(game.view(alice,world).vitality?.hp).toBe(120);
+  expect(game.view(alice,world).equipmentCooldowns).toEqual({[weapon.id]:1.3});
+  expect(game.view(bob,world).equipmentCooldowns).toEqual({});
   expect((alice as Player).swing).toEqual({weapon:'baton',startedAt:world.now,angle:0});
   world.now += weapons.baton.impactMs;
   game.tick(world,true);
@@ -116,6 +120,8 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   game.tick(world,true);
   expect((alice as Player).swing).toBeUndefined();
   expect(events.filter(event=>event.type==='hit')).toHaveLength(1);
+  world.now += weapons.baton.cooldown;
+  expect(game.view(alice,world).equipmentCooldowns).toEqual({});
 });
 
 test('combat respects armor, obstacles, cooldown, aid, recovery protection and the plenary transition', () => {

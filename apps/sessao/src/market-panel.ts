@@ -1,7 +1,7 @@
 import { markShortcut } from './action-shortcuts';
 import { equipment, gearKinds } from './equipment';
 import { objects, type GameplayAction, type WorldItem } from './gameplay';
-import { button, contactFace, glyph, node } from './gameplay-ui';
+import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { npcs } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
@@ -96,11 +96,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         const product = equipment[kind];
         const item = objects[kind];
         const card = node('article');
-        const art = 'weapon' in product ? node('img') : node('span',product.symbol);
-        if (art instanceof HTMLImageElement) {
-          art.src = import.meta.env.BASE_URL+'assets/'+item.portrait;
-          art.alt = '';
-        }
+        const art = itemPortrait(kind);
         art.className = 'market-art';
         art.setAttribute('aria-hidden','true');
         const hasItem = owned.some(ownedItem=>ownedItem.kind===kind);
