@@ -83,7 +83,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private marker!: Phaser.GameObjects.Ellipse;
-    private npcViews:{sprite:Phaser.GameObjects.Sprite;label:Phaser.GameObjects.Text}[] = [];
+    private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
 
     preload() {
@@ -141,10 +141,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           ? this.add.sprite(npc.x,npc.y,art.sheet.key,art.frame+npc.direction*4).setTint(0xffd7a2)
           : this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = this.add.text(npc.x,npc.counter.y+24,'sprite' in npc ? npc.name : npc.label,{
+        const label = art ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
-        }).setOrigin(.5,0).setDepth(1);
+        }).setOrigin(.5,0).setDepth(1) : undefined;
         return {sprite,label};
       });
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
@@ -269,7 +269,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const {sprite,label} of this.npcViews) {
         const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
         sprite.setVisible(visible);
-        label.setVisible(visible);
+        label?.setVisible(visible);
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
