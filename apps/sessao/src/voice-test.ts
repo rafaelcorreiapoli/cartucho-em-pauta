@@ -3,6 +3,7 @@ export async function mountVoiceTest() {
   const record = document.querySelector<HTMLButtonElement>('#voice-record')!;
   const convert = document.querySelector<HTMLButtonElement>('#voice-convert')!;
   const select = document.querySelector<HTMLSelectElement>('#voice-model')!;
+  const profile = document.querySelector<HTMLSelectElement>('#voice-profile')!;
   const result = document.querySelector<HTMLAudioElement>('#voice-result')!;
   const status = document.querySelector<HTMLElement>('#voice-test-status')!;
   let recorder: MediaRecorder | undefined;
@@ -24,11 +25,11 @@ export async function mountVoiceTest() {
 
   async function applyVoice() {
     if (!recording) return;
-    record.disabled = convert.disabled = select.disabled = true;
+    record.disabled = convert.disabled = select.disabled = profile.disabled = true;
     clearResult();
     status.textContent = 'Convertendo a voz…';
     try {
-      const response = await fetch('/__voice-lab/'+select.value,{method:'POST',body:recording});
+      const response = await fetch('/__voice-lab/'+select.value+'?profile='+profile.value,{method:'POST',body:recording});
       if (!response.ok) throw new Error(await response.text());
       playbackUrl = URL.createObjectURL(await response.blob());
       result.src = playbackUrl;
@@ -38,7 +39,7 @@ export async function mountVoiceTest() {
       status.textContent = error instanceof Error && error.message ?
         error.message : 'Não foi possível converter a gravação.';
     } finally {
-      record.disabled = convert.disabled = select.disabled = false;
+      record.disabled = convert.disabled = select.disabled = profile.disabled = false;
     }
   }
 
