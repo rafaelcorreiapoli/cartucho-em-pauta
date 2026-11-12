@@ -117,12 +117,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 
 #infiltrator-setup { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.5rem; align-items:center; margin:.5rem 0; }
 #movement-hint { bottom:64px; }
-#politics-dock {
-  position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom));
-  z-index:2; padding:.3rem; font-size:.8rem;
-}
-#politics-dock summary { cursor:pointer; }
-#politics-dock > summary { gap:.6rem; font-size:.78rem; }
 #personal-stats { color:var(--hud-gold); white-space:nowrap; }
 .politics-content {
   position:absolute; bottom:calc(100% + 6px); right:0; width:min(350px,calc(100vw - 24px));
@@ -138,9 +132,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 #politics-hint:empty { display:none; }
 #agenda { color:var(--hud-gold); }
 #public-records { padding-left:1rem; }
-@media (max-width:680px) {
-  #politics-dock { bottom:max(62px,calc(50px + env(safe-area-inset-bottom))); }
-}
 
 #election-dock, #electoral-notice {
   position:absolute; right:max(12px,env(safe-area-inset-right)); top:max(12px,env(safe-area-inset-top));
@@ -159,8 +150,7 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
   #electoral-notice { top:auto; bottom:max(163px,calc(155px + env(safe-area-inset-bottom))); }
 }
 @media (max-width:740px) {
-  #session:has(#politics-dock[open]) #election-dock:not([open]),
-  #session:has(#election-dock[open]) #politics-dock:not([open]) { visibility:hidden; }
+  #session:has(#social-docks details[open]) #election-dock:not([open]) { visibility:hidden; }
 }
 
 .map-fog { position:absolute; z-index:1; inset:0; pointer-events:none; }

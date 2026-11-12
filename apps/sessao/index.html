@@ -189,14 +189,20 @@
           <h2 id="congress-heading">Parlamento</h2>
           <div class="resource-grid">
             <div class="resource stability-resource">
-              <label for="stability-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Estabilidade institucional</span> <strong id="stability"></strong></label>
+              <div class="resource-readout">
+                <button class="resource-help" type="button" aria-label="Como funciona a estabilidade" data-help="A estabilidade mede a capacidade do Parlamento de funcionar. Projetos e decisões podem aumentá-la ou reduzi-la. A meta ao fim da sessão é 45. Se cair a zero, o Parlamento entra em colapso."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg></button>
+                <label for="stability-meter">Estabilidade</label>
+                <strong id="stability"></strong>
+              </div>
               <div class="resource-track"><progress id="stability-meter" max="100" value="48"></progress><span title="Meta: 45"></span></div>
-              <small>Meta: 45 de 100</small>
             </div>
             <div class="resource budget-resource">
-              <label for="budget-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span>Orçamento público</span> <strong id="budget"></strong></label>
+              <div class="resource-readout">
+                <button class="resource-help" type="button" aria-label="Como funciona o orçamento público" data-help="O orçamento público paga projetos e verbas de gabinete. Cada projeto pode aumentar ou reduzir o saldo. Se uma decisão deixar o orçamento negativo, cada ponto de déficit custa 2 pontos de estabilidade."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button>
+                <label for="budget-meter">Orçamento</label>
+                <strong id="budget"></strong>
+              </div>
               <progress id="budget-meter" max="100" value="32"></progress>
-              <small>Verba pública</small>
             </div>
           </div>
         </section>
@@ -265,18 +271,32 @@
         </div>
       </details>
       <div id="social-docks">
-      <details id="trade-dock" class="hud-strip hud-module" name="game-panels" hidden>
-        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Negociação</summary>
-        <div class="hud-panel politics-content">
-          <div class="compact-heading"><span id="politics-hint"></span><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma cassação, vá ao Painel com 55 de popularidade.">?</button></div>
+      <details id="trade-dock" class="social-module" name="game-panels" hidden>
+        <summary class="social-trigger"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Negociação</summary>
+        <div class="politics-content social-panel">
+          <header class="social-header"><div><h2>Negociação</h2><p id="trade-balance"></p></div><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma cassação, vá ao Painel com 55 de popularidade.">?</button></header>
           <div id="politics-actions">
             <form id="trade">
-              <div class="section-label">Jogadores próximos</div><div class="choice-grid" id="trade-contact" role="group" aria-label="Destinatário da transferência"></div>
-              <div class="economy-row">
-                <div class="game-stepper" id="trade-amount" role="group" aria-label="Valor da transferência"></div>
+              <div class="social-empty" id="trade-empty" hidden>
+                <svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>
+                <strong>Ninguém por perto</strong>
+                <p>Aproxime-se de outro jogador para negociar.</p>
               </div>
-              <div class="choice-grid" id="trade-private" role="group" aria-label="Visibilidade da transferência"></div>
-              <button class="hud-button" id="transfer" type="submit">Transferir</button>
+              <div id="trade-recipients" hidden>
+                <h3>Para quem?</h3>
+                <div class="choice-grid" id="trade-contact" role="group" aria-label="Destinatário da transferência"></div>
+              </div>
+              <div id="trade-controls" hidden>
+                <div class="transfer-setting">
+                  <span id="trade-value-label">Valor</span>
+                  <div class="game-stepper" id="trade-amount" role="group" aria-labelledby="trade-value-label"></div>
+                </div>
+                <div class="transfer-setting">
+                  <span id="trade-privacy-label">Registro</span>
+                  <div class="choice-grid" id="trade-private" role="group" aria-labelledby="trade-privacy-label"></div>
+                </div>
+                <button class="hud-button" id="transfer" type="submit">Transferir</button>
+              </div>
             </form>
             <form id="cabinet-form" hidden>
               <div class="section-label">Destino da verba</div>
@@ -291,13 +311,18 @@
           </div>
         </div>
       </details>
-      <details id="politics-dock" class="hud-strip hud-module" name="game-panels" hidden>
-        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Dossiê</span><span id="personal-stats"></span></summary>
-        <div class="hud-panel politics-content">
+      <details id="politics-dock" class="social-module" name="game-panels" hidden>
+        <summary class="social-trigger"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Dossiê</span><span id="personal-stats"></span></summary>
+        <div class="politics-content social-panel">
+          <header class="social-header"><h2>Dossiê</h2></header>
           <section id="offer-list" aria-label="Ofertas de documentos"></section>
           <section aria-label="Provas privadas">
             <h3>Provas privadas</h3>
-            <p id="empty-evidence">Sem documentos privados.</p>
+            <div class="social-empty" id="empty-evidence">
+              <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
+              <strong>Nenhuma prova no dossiê</strong>
+              <p>Audite documentos na Controladoria ou receba provas de outros jogadores.</p>
+            </div>
             <form id="evidence-form" hidden>
               <div class="choice-grid" id="evidence" role="group" aria-label="Selecionar documento"></div>
               <p id="evidence-detail"></p>

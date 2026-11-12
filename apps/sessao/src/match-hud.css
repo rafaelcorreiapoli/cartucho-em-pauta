@@ -58,18 +58,44 @@
   top: var(--hud-edge);
   left: 50%;
   transform: translateX(-50%);
-  width: min(340px, calc(100vw - 2 * (var(--hud-side) + 2 * var(--hud-edge))));
-  padding: .3rem;
+  width: min(428px, calc(100vw - 2 * (var(--hud-side) + 2 * var(--hud-edge))));
+  padding: .42rem;
+  border-color: #ad976d;
+  background: #152421f7;
 }
 #congress-heading {
-  margin: .15rem .4rem .2rem;
-  color: #e5d2a8;
-  font-size: .72rem;
-  line-height: 1.2;
+  margin: .1rem .42rem .36rem;
+  color: #f1dfb7;
+  font-size: .95rem;
+  line-height: 1.1;
 }
-#congress-dock .resource label { white-space: normal; line-height: 1.15; }
-#congress-dock .resource { border: 0; padding: .25rem .4rem; }
-#congress-dock .resource small { display: none; }
+#congress-dock .resource-grid { gap: .3rem; }
+#congress-dock .resource { border: 0; padding: .28rem .42rem .38rem; }
+.resource-readout { display: flex; align-items: center; gap: .28rem; }
+#congress-dock .resource label { white-space: nowrap; font-size: .79rem; }
+.resource-readout strong { margin-left: auto; font-size: 1.2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.resource-help {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 21px;
+  height: 22px;
+  padding: 0;
+  color: #e5d2a8;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: help;
+}
+.resource-help:hover, .resource-help:focus-visible { color: var(--hud-gold); background: #314137; }
+.resource-help:focus-visible { outline: 2px solid var(--hud-gold); }
+#congress-dock .resource progress { height: 7px; }
+@media (min-width: 761px) and (max-width: 920px) {
+  #congress-dock .resource { padding-inline: .2rem; }
+  #congress-dock .resource label { font-size: .7rem; }
+  .resource-readout { gap: .18rem; }
+  .resource-readout strong { font-size: 1rem; }
+}
 #congress-dock:has([data-low="true"]) { border-color: #d78570; }
 
 #legislative-dock {
@@ -128,7 +154,6 @@
 #agenda-dock > summary { padding: .45rem .55rem; gap: .5rem; }
 #agenda-dock strong { font-size: .73rem; color: var(--hud-gold); }
 #agenda-dock .module-content { bottom: calc(100% + 6px); left: 0; }
-#session #politics-dock { right: var(--hud-edge); bottom: var(--hud-edge); visibility: visible; }
 
 #stations {
   bottom: var(--hud-edge);
@@ -210,7 +235,6 @@
   z-index: 3;
 }
 #social-docks:has(details[open]) { z-index: 5; }
-#session #social-docks > details { position: static; }
 #social-docks .politics-content { inset: auto 0 calc(100% + 6px) auto; }
 .choice-grid { display: flex; flex-wrap: wrap; gap: .35rem; }
 .game-choice { display: inline-flex; align-items: center; gap: .45rem; max-width: 100%; overflow-wrap: anywhere; }
@@ -235,3 +259,79 @@
   #social-docks > details > summary { gap: .28rem; padding: .4rem .45rem; }
   #personal-stats:not(:empty) { max-width: 4.8ch; overflow: hidden; text-overflow: ellipsis; }
 }
+
+.social-trigger {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 38px;
+  padding: .45rem .7rem;
+  border: 1px solid #8c835d;
+  border-radius: 6px;
+  background: #142522f5;
+  color: var(--hud-paper);
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.social-trigger::-webkit-details-marker { display: none; }
+.social-trigger:hover, .social-module[open] > .social-trigger {
+  background: #253a31;
+  border-color: #d7b574;
+}
+.social-trigger:focus-visible,
+#social-docks .game-choice:focus-visible,
+#social-docks .game-stepper button:focus-visible {
+  outline: 2px solid var(--hud-gold);
+  outline-offset: 2px;
+}
+#social-docks .social-panel {
+  width: min(350px, calc(100vw - 2 * var(--hud-edge)));
+  padding: .8rem;
+  background: #172824fa;
+  border: 1px solid #9b8b62;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px #06110e80;
+}
+.social-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .65rem; }
+.social-header h2 { margin: 0; font-size: 1.1rem; line-height: 1.15; }
+.social-header p { margin: .25rem 0 0; color: #d6cfb5; font-size: .75rem; }
+#social-docks h3 { margin: 0 0 .4rem; font-size: .8rem; color: #e5d2a8; }
+#social-docks #trade { margin-top: .75rem; }
+.social-empty {
+  display: grid;
+  justify-items: center;
+  gap: .3rem;
+  padding: .9rem .6rem;
+  border: 1px dashed #a99c7169;
+  border-radius: 6px;
+  color: #e5d2a8;
+  background: #12201d;
+  text-align: center;
+}
+.social-empty > svg { width: 22px; height: 22px; color: #c3ac75; }
+.social-empty p { margin: 0; color: #d6cfb5; font-size: .75rem; line-height: 1.35; }
+#social-docks section[aria-label="Provas privadas"] { margin-top: .75rem; }
+#ledger { margin-top: .65rem; }
+#trade-contact .game-choice { min-height: 42px; padding: .2rem .55rem .2rem .25rem; }
+#social-docks .game-choice[aria-pressed="true"]:not(:focus-visible) { outline: none; }
+#social-docks .game-choice[aria-pressed="true"] {
+  background: #384231;
+  border-color: #d7b574;
+  color: #fae0a2;
+}
+#trade-controls { display: grid; gap: .5rem; margin-top: .35rem; }
+.transfer-setting {
+  display: grid;
+  grid-template-columns: 3.35rem minmax(0, 1fr);
+  gap: .45rem;
+  align-items: center;
+  color: #d6cfb5;
+  font-size: .76rem;
+}
+#trade-controls .game-stepper output { flex: 1; min-width: 0; }
+#trade-controls .game-stepper button { user-select: none; }
+#trade-private { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0; padding: 2px; border-radius: 6px; background: #12201d; border: 1px solid #7e76534d; }
+#trade-private .game-choice { justify-content: center; padding: .35rem .2rem; border: 1px solid transparent; background: transparent; min-height: 33px; font-size: .75rem; }
+#trade-private .game-choice[aria-pressed="true"] { background: #384231; border-color: #a79763; }

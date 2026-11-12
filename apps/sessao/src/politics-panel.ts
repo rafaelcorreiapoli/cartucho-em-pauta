@@ -87,7 +87,7 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
   const dock = el<HTMLDetailsElement>('politics-dock');
   const trade = el<HTMLDetailsElement>('trade-dock');
-  const target = picker('trade-contact',updateControls,'Ninguém próximo');
+  const target = picker('trade-contact',updateControls);
   const recipient = picker('evidence-contact',updateControls,'Ninguém próximo');
   const amount = stepper('trade-amount',1,1,money);
   const dossier = picker('evidence',() => { describeSelected(); updateControls(); });
@@ -122,6 +122,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
     el('hearing-form').hidden = !at('panel') || !politics.canCallHearing;
     el<HTMLButtonElement>('publish').disabled = !at('press') || !dossier.value;
+    el('trade-controls').hidden = !target.value;
     el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet===0 || politics.paymentsLeft===0;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
     el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
@@ -163,6 +164,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       return player ? [{value:contact.id,label:contact.name,portrait:player.character}] : [];
     });
     target.update(choices);
+    el('trade-empty').hidden = choices.length>0;
+    el('trade-recipients').hidden = choices.length===0;
     recipient.update(choices);
   }
 
@@ -176,8 +179,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       const active = view.phase==='negotiation';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
-      el('politics-hint').textContent = p.suspended ? 'Mandato cassado · assessor' :
-        active ? 'Negociação' : 'Seu dossiê';
+      el('trade-balance').textContent = `Na carteira · ${money(p.wallet)}`;
       updateContacts();
       nominee.update(p.directory.filter(contact => contact.id!==id && contact.eligible)
         .map(({id,name,popularity}) => ({value:id,label:`${name} · ${popularity} pop.`})));
