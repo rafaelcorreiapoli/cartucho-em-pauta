@@ -6,10 +6,8 @@ import type { PlenaryView } from './plenary';
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string) {
-  const profile = element<HTMLDetailsElement>('profile-dock');
-  profile.querySelector('summary')!.onclick = event => {
-    if (event.target instanceof Element && event.target.closest('.profile-help')) event.preventDefault();
-  };
+  const roleBadge = element<HTMLButtonElement>('profile-role');
+  const roleIcon = roleBadge.querySelector('use')!;
   const agendaSummary = element('agenda-dock').querySelector('summary')!;
   const notices = element('hud-notices');
   const stations = element('stations');
@@ -39,7 +37,6 @@ export function createMatchHud(id:string) {
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
-  profile.open = false;
   element<HTMLDetailsElement>('agenda-dock').open = false;
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
@@ -83,6 +80,14 @@ export function createMatchHud(id:string) {
   return {
     notify,
     render(view:PlenaryView) {
+      const infiltrator = view.role==='Infiltrado';
+      roleBadge.hidden = !view.role;
+      if (view.role) {
+        roleBadge.dataset.role = view.role;
+        roleBadge.dataset.help = infiltrator ? 'Infiltrado. Derrube a estabilidade.' : 'Parlamentar. Preserve a estabilidade.';
+        roleBadge.setAttribute('aria-label',view.role);
+        roleIcon.setAttribute('href',infiltrator ? '#icon-bug' : '#icon-star');
+      }
       const politics = view.politics;
       if (politics) {
         const personal = view.election?.personal;

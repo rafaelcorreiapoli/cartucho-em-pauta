@@ -7,7 +7,7 @@
   <title>Presidente da Sessão</title>
 </head>
 <body>
-  <svg class="hud-symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s7-3 7-9V5l-7-3-7 3v8c0 6 7 9 7 9z"/><path d="m9 12 2 2 4-4"/></symbol><symbol id="icon-salary" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3zM8 7h8M8 11h8M12 15h4"/></symbol><symbol id="icon-wallet" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 10h5v4h-5a2 2 0 0 1 0-4Z"/></symbol><symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="icon-ballot" viewBox="0 0 24 24"><path d="M4 11h16l2 3v6H2v-6zm4-2 4-6 5 3-4 5M8 15h8"/></symbol><symbol id="icon-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zm6-3v15m6-12v15"/></symbol><symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol><symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="icon-cross" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3"/></symbol><symbol id="icon-document" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zm8 0v5h4M9 12h6m-6 4h6"/></symbol><symbol id="icon-alert" viewBox="0 0 24 24"><path d="m12 3 10 17H2zm0 6v5m0 2v1"/></symbol><symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M8 15l4-5 3 3 5-7"/></symbol></svg>
+  <svg class="hud-symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s7-3 7-9V5l-7-3-7 3v8c0 6 7 9 7 9z"/><path d="m9 12 2 2 4-4"/></symbol><symbol id="icon-salary" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3zM8 7h8M8 11h8M12 15h4"/></symbol><symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9-6.2-3.3-6.2 3.3L7 14.2 2 9.3l6.9-1z"/></symbol><symbol id="icon-bug" viewBox="0 0 24 24"><path d="m9 7-2-3m8 3 2-3M6 11l-3-2m15 2 3-2M6 15H3m15 0h3m-15 3-3 2m15-2 3 2"/><rect x="6" y="7" width="12" height="14" rx="6"/><path d="M12 11v10M6 11h12"/></symbol><symbol id="icon-wallet" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 10h5v4h-5a2 2 0 0 1 0-4Z"/></symbol><symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="icon-ballot" viewBox="0 0 24 24"><path d="M4 11h16l2 3v6H2v-6zm4-2 4-6 5 3-4 5M8 15h8"/></symbol><symbol id="icon-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zm6-3v15m6-12v15"/></symbol><symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol><symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="icon-cross" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3"/></symbol><symbol id="icon-document" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zm8 0v5h4M9 12h6m-6 4h6"/></symbol><symbol id="icon-alert" viewBox="0 0 24 24"><path d="m12 3 10 17H2zm0 6v5m0 2v1"/></symbol><symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M8 15l4-5 3 3 5-7"/></symbol></svg>
   <main>
     <section id="landing">
       <div class="landing-title">
@@ -130,29 +130,23 @@
         <p id="start-hint"></p>
       </section>
       <div id="match" hidden>
-        <details id="profile-dock" class="hud-module" name="game-panels">
-          <summary class="profile-summary">
+        <section id="profile-dock" class="hud-module" aria-label="Seu personagem">
+          <div class="profile-summary">
             <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
             <span class="profile-copy">
-              <strong id="hud-nick"></strong>
+              <span class="profile-name">
+                <strong id="hud-nick"></strong>
+                <button id="profile-role" class="resource-help profile-help" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use/></svg></button>
+              </span>
               <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span>
               <span class="profile-values">
                 <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
                 <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
+                <span><button class="resource-help profile-help" type="button" aria-label="Como funciona o salário" data-help="O salário é a remuneração por um ciclo completo no cargo. Ele entra na carteira na apuração da eleição e é proporcional ao tempo no cargo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-salary"/></svg></button><strong id="office-salary"></strong></span>
               </span>
             </span>
-          </summary>
-          <div class="hud-panel module-content">
-            <section class="profile-mandate" aria-labelledby="mandate-heading">
-              <h2 id="mandate-heading">Seu mandato</h2>
-              <div class="profile-salary">
-                <button class="resource-help profile-help" type="button" aria-label="Como funciona o salário" data-help="O salário é a remuneração por um ciclo completo no cargo. Ele entra na carteira na apuração da eleição e é proporcional ao tempo no cargo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-salary"/></svg></button>
-                <span>Salário do mandato</span><strong id="office-salary"></strong>
-              </div>
-            </section>
-            <div class="private-role"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="role"></strong><span id="role-goal"></span></div>
           </div>
-        </details>
+        </section>
         <details id="legislative-dock" class="hud-module" open>
           <summary class="match-top">
             <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projetos</strong></span></span>

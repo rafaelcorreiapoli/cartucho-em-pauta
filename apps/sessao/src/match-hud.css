@@ -42,7 +42,7 @@
   align-items: center;
   gap: .35rem;
 }
-.profile-values { gap: .65rem; font-variant-numeric: tabular-nums; }
+.profile-values { flex-wrap: wrap; gap: .1rem .35rem; font-variant-numeric: tabular-nums; }
 .profile-values > span { white-space: nowrap; }
 .profile-values .hud-glyph { color: #c8bc96; }
 .module-content {
@@ -52,7 +52,6 @@
   padding: .6rem;
 }
 .module-content p { margin: .3rem 0; }
-#profile-dock .module-content { top: calc(100% + 6px); left: 0; }
 
 #congress-dock {
   top: var(--hud-edge);
@@ -185,7 +184,7 @@
 #session #electoral-notice { top: auto; left: auto; right: var(--hud-edge); bottom: calc(var(--hud-edge) + 52px); }
 #movement-hint { display: none; }
 
-#profile-dock[open], #election-dock[open], #agenda-dock[open], #politics-dock[open],
+#election-dock[open], #agenda-dock[open], #politics-dock[open],
 #voice-dock:has(details[open]) { z-index: 5; }
 #session[data-phase="lobby"] #voice-dock { top: auto; bottom: var(--hud-edge); }
 #session[data-phase="lobby"] #voice-dock .voice-settings-content,
@@ -464,23 +463,13 @@
 #legislative-dock[open] .project-chevron { transform: rotate(45deg); }
 #legislative-dock #impact { margin-top: .4rem; }
 
-.profile-office,
-.profile-salary {
+.profile-office {
   display: flex;
   align-items: center;
   gap: .3rem;
 }
 .profile-summary .profile-help { width: 18px; height: 18px; }
 .profile-summary .profile-values > span { gap: .2rem; }
-.profile-mandate {
-  padding: .55rem;
-  border: 1px solid #a99c7169;
-  border-radius: 6px;
-  background: #182d25;
-}
-.profile-mandate h2 { margin: 0; font-size: .9rem; color: var(--party-gold); }
-.profile-salary { margin-top: .25rem; }
-.profile-salary strong { margin-left: auto; color: var(--party-gold); white-space: nowrap; }
 
 @media (max-width: 380px) {
   #profile-dock .profile-summary { gap: .3rem; padding-inline: .35rem; }
@@ -497,3 +486,13 @@
   margin: 0;
 }
 #room-settings #room-label { grid-column: 1 / -1; margin-bottom: .2rem; }
+
+.profile-name { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
+#profile-role { color: #f7d572; }
+#profile-role[data-role="Parlamentar"] .hud-glyph { fill: currentColor; stroke-width: 1.2; }
+#profile-role[data-role="Infiltrado"] { color: #ff8490; }
+
+@media (max-width: 480px) {
+  #session { --hud-top-row: 184px; }
+  #congress-dock { top: calc(var(--hud-edge) + 96px); }
+}

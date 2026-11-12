@@ -70,7 +70,7 @@ p { margin:.5rem 0; }
   background-position:0 calc(-1 * var(--portrait-size) * var(--portrait-row));
 }
 .plenary-line { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .7rem; }
-#role, #clock, #clue { color:var(--hud-gold); }
+#clock, #clue { color:var(--hud-gold); }
 #clock { margin-left:auto; font-variant-numeric:tabular-nums; }
 #bill { margin:.5rem 0 .2rem; font-size:1.1rem; }
 #proposal p, #outcome, #start-hint { margin:.35rem 0; line-height:1.4; }
@@ -159,15 +159,12 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 #map { z-index:0; }
 #plenary { width:min(365px,calc(100% - 24px)); }
-.match-top, .private-role, .resource label, .phase-label, .clock-chip, .section-label,
+.match-top, .resource label, .phase-label, .clock-chip, .section-label,
 .impact-card h3, .impact-values > span, #voice-toggle { display:flex; align-items:center; gap:.35rem; }
 .match-top { justify-content:space-between; gap:.5rem; min-height:26px; }
 .phase-label { text-transform:uppercase; font-size:.72rem; font-weight:850; letter-spacing:.08em; color:#ead7ab; }
 .clock-chip { color:#f7de9e; background:#111d20; padding:.2rem .4rem; border-radius:5px; font-variant-numeric:tabular-nums; }
 .clock-chip[data-urgent="true"] { color:#ffb1a2; }
-.private-role { font-size:.75rem; color:#cdd6c4; padding:.25rem 0; }
-.private-role[data-role="Infiltrado"], .private-role[data-role="Infiltrado"] strong { color:#ffc0ae; }
-#role-goal::before { content:"· "; }
 .resource-grid, #impact, .station-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem; }
 .resource { background:#142124; border:1px solid #4b625c; padding:.35rem .4rem; border-radius:5px; min-width:0; }
 .resource label { font-size:.72rem; white-space:nowrap; }
