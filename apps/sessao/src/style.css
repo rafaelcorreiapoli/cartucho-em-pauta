@@ -213,8 +213,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .ballot-progress { margin-bottom:.4rem; }
 .ballot-progress p { font-size:.75rem; }
 .hud-feedback { padding:.3rem .45rem; border-left:2px solid var(--hud-gold); background:#203331; }
-#last-vote { font-size:.72rem; margin-top:.4rem; }
-#last-vote summary { cursor:pointer; color:#d6d6bd; }
 .agenda-card { border:1px solid #9e927a88; padding:.4rem .5rem; border-radius:5px; }
 .agenda-card p { margin:.3rem 0 0; }
 #election-polls section { padding:.35rem .45rem; margin:.35rem 0; border:1px solid #9e927a66; border-radius:5px; }

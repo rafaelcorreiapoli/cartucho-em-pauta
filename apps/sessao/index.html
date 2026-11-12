@@ -115,7 +115,7 @@
           </section>
           <details id="legislative-dock" class="hud-module" open>
             <summary class="match-top">
-              <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projetos</strong></span></span>
+              <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projeto atual</strong></span></span>
               <span class="clock-chip"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg><strong id="clock"></strong></span>
               <span class="project-chevron" aria-hidden="true"></span>
             </summary>
@@ -152,10 +152,16 @@
                 </div>
               </div>
             </div>
-            <section id="last-vote" class="vote-result" aria-label="Última votação" hidden>
+          </details>
+          <details id="vote-history" class="hud-module" name="game-panels" hidden>
+            <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><strong>Histórico de votações</strong><span id="vote-history-count"></span><span class="project-chevron" aria-hidden="true"></span></summary>
+            <section id="last-vote" class="vote-result" aria-label="Resultado">
               <header>
-                <span class="vote-result-title"><strong id="outcome-summary"></strong><span id="outcome-bill"></span></span>
+                <button type="button" id="vote-prev" aria-label="Votação anterior">‹</button>
+                <span class="vote-result-title" aria-live="polite"><strong id="outcome-summary"></strong><span id="outcome-bill"></span></span>
+                <button type="button" id="vote-next" aria-label="Próxima votação">›</button>
               </header>
+              <div id="vote-pages" role="group"></div>
               <div class="vote-result-body">
                 <div class="vote-scoreboard">
                   <div class="vote-team vote-team-yes">

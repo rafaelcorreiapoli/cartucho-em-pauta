@@ -502,6 +502,20 @@
 #ballot [data-vote="yes"] { background: var(--party-mint); border-color: #62d2a7; color: #15382f; }
 #ballot [data-vote="no"] { background: var(--party-coral); border-color: #de778e; color: #421d32; }
 #ballot [data-vote][aria-pressed="true"] { outline: 2px solid #fff2d3; outline-offset: 2px; }
+#vote-history {
+  left: var(--hud-edge);
+  bottom: calc(var(--hud-edge) + 66px);
+  width: var(--hud-side);
+  padding: .65rem .8rem;
+}
+#vote-history > summary {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font: 800 .95rem/1.15 var(--party-display);
+}
+#vote-history-count { margin-left: auto; color: var(--party-gold); }
+#vote-history[open] .project-chevron { transform: rotate(45deg); }
 #last-vote.vote-result {
   --result-accent: var(--party-mint);
   margin-top: .55rem;
@@ -516,9 +530,25 @@
   justify-content: space-between;
   align-items: center;
   gap: .45rem;
-  padding: .5rem .6rem;
-  list-style: none;
+  padding: .6rem;
+  text-align: center;
   color: #fff1d5;
+}
+#last-vote > header button {
+  flex: none;
+  width: 30px;
+  height: 32px;
+  border: 1px solid #7d946b;
+  border-radius: 6px;
+  background: #142b23;
+  color: var(--party-gold);
+  font: 850 1.3rem/1 var(--party-display);
+  cursor: pointer;
+}
+#last-vote > header button:disabled { opacity: .35; cursor: default; }
+#vote-pages { display: flex; justify-content: center; gap: .35rem; margin: 0 0 .55rem; }
+#vote-pages span { width: 7px; height: 7px; border-radius: 50%; background: #829986; }
+#vote-pages [data-current="true"] { width: 16px; border-radius: 8px; background: var(--party-gold);
 }
 .vote-result-title { display: grid; gap: .1rem; min-width: 0; }
 #outcome-summary {
@@ -537,9 +567,6 @@
 .vote-team-no { background: #472d2d; color: var(--party-coral); }
 .vote-versus { color: #d8cb9d; font-weight: 900; }
 .vote-result-body p { margin: .35rem 0 0; color: #e2e6c9; line-height: 1.3; }
-@media (max-width: 760px) {
-  #legislative-dock:has(#last-vote:not([hidden])) { max-height: 41dvh; }
-}
 
 #profile-dock,
 #congress-dock,
@@ -690,7 +717,6 @@
   #legislative-dock .impact-values > span { font: 850 1.12rem/1.15 var(--party-display); }
   #legislative-dock .impact-values .hud-glyph { width: 19px; height: 19px; }
   #legislative-dock .clock-chip strong { font: 850 1.25rem/1 var(--party-display); }
-  #legislative-dock #last-vote { margin-top: .8rem; }
 
   #congress-dock { padding: .58rem; }
   #congress-heading { font-size: 1.08rem; margin-bottom: .45rem; }

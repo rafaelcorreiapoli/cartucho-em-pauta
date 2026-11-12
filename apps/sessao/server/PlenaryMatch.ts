@@ -37,7 +37,7 @@ export class PlenaryMatch {
   private fraud = false;
   private reportedFraud = false;
   private audits = new Map<string,'clean' | 'fraud'>();
-  private outcome?: Outcome;
+  private outcomes: Outcome[] = [];
   private winner?: Role;
   private reason?: string;
 
@@ -62,7 +62,8 @@ export class PlenaryMatch {
     this.stability = 48;
     this.budget = 32;
     this.round = 0;
-    this.outcome = this.winner = this.reason = undefined;
+    this.outcomes = [];
+    this.winner = this.reason = undefined;
     this.nextRound(now);
     return true;
   }
@@ -296,7 +297,7 @@ export class PlenaryMatch {
     this.economy.billResult(this.votes,passed,bills[this.round].yes.stability>0);
     this.budget = clamp(balance);
     this.stability = clamp(this.stability+impact.stability+Math.min(0,balance)*2);
-    this.outcome = {round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud};
+    this.outcomes.push({round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud});
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else if (this.round===bills.length-1) {
       this.finish(this.stability>=45 ? 'Parlamentar' : this.infiltrators.size ? 'Infiltrado' : undefined,
@@ -335,7 +336,7 @@ export class PlenaryMatch {
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
       hearingResult:this.hearingResult,
-      no:this.impact('no'),outcome:this.outcome,winner:this.winner,reason:this.reason,
+      no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
       infiltratorName:this.phase==='finished' ? this.infiltratorName : undefined,
     };
   }
