@@ -328,7 +328,7 @@ export default function App() {
       {(!loading.ready || (!started && !invitation)) && (
         <LoadingScreen state={loading} onStart={() => void startBattle()} starting={starting} />
       )}
-      <header className="resource-rail">
+      <header className="resource-rail hud-strip">
         <div className="game-logo">
           <Flag weight="fill" />
           <b>

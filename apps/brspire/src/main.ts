@@ -75,21 +75,21 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 const asset = (name: string) =>
   `${import.meta.env.BASE_URL}assets/${name}.webp`;
 app.innerHTML = `
-  <button class="settings-trigger" type="button" data-action="settings" aria-label="Configurações" aria-haspopup="dialog">
+  <button class="settings-trigger hud-icon-button" type="button" data-action="settings" aria-label="Configurações" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
       <path d="m10 2-.6 3.1-2 .9-2.7-1.7-2 2 1.7 2.7-.9 2L.5 12l1 3 3 .3.9 2.1-1.6 2.6 2.2 1.9 2.6-1.6 2.1.8.5 2.9h2.9l.5-3 2.1-.9 2.6 1.6 2-2-1.6-2.7.9-2 3-.6v-2.9l-3-.5-.9-2 1.6-2.7-2-2-2.7 1.7-2.1-.9L13 2z" transform="translate(1 0) scale(.91)"/>
       <circle cx="12" cy="12" r="3"/>
     </svg>
   </button>
-  <dialog class="settings-panel" aria-labelledby="settings-title">
-    <h2 id="settings-title">Configurações</h2>
-    <button class="settings-option audio-toggle" data-action="audio" data-value="music"><span>Música</span><b></b></button>
-    <button class="settings-option audio-toggle" data-action="audio" data-value="effects"><span>Efeitos sonoros</span><b></b></button>
-    <button class="settings-option" data-action="reset" hidden>Começar de novo</button>
-    <button class="settings-option" data-action="open-album">Álbum de cartas</button>
-    <button class="secondary" data-action="close-settings">Fechar</button>
+  <dialog class="settings-panel hud-panel" aria-labelledby="settings-title">
+    <h2 id="settings-title" class="hud-title">Configurações</h2>
+    <button class="settings-option hud-option audio-toggle" data-action="audio" data-value="music"><span>Música</span><b class="hud-option-value"></b></button>
+    <button class="settings-option hud-option audio-toggle" data-action="audio" data-value="effects"><span>Efeitos sonoros</span><b class="hud-option-value"></b></button>
+    <button class="settings-option hud-option" data-action="reset" hidden>Começar de novo</button>
+    <button class="settings-option hud-option" data-action="open-album">Álbum de cartas</button>
+    <button class="hud-button hud-button--secondary" data-action="close-settings">Fechar</button>
   </dialog>
-  <dialog class="settings-panel item-details" aria-labelledby="item-details-title"></dialog>
+  <dialog class="settings-panel hud-panel item-details" aria-labelledby="item-details-title"></dialog>
   <dialog class="card-album" aria-labelledby="album-title">
     <header><h2 id="album-title">Álbum de cartas</h2><button class="secondary" data-action="close-album">Voltar</button></header>
     <div class="album-cards"></div>
@@ -112,7 +112,7 @@ app.innerHTML = `
       </button>
     </footer>
   </dialog>
-  <section class="combat-resources" aria-label="Recursos da sessão" hidden></section>
+  <section class="combat-resources hud-strip" aria-label="Recursos da sessão" hidden></section>
   <main class="lobby" aria-labelledby="lobby-title"></main>
   <main class="campaign" aria-labelledby="campaign-title" hidden></main>
   <main class="shop" aria-labelledby="shop-title" hidden>
@@ -1347,7 +1347,7 @@ document.addEventListener("keydown", (event) => {
 
 const loading = document.querySelector<HTMLElement>("#loading")!;
 const progress = loading.querySelector<HTMLProgressElement>("progress")!;
-const percent = loading.querySelector<HTMLElement>(".loading-percent")!;
+const percent = loading.querySelector<HTMLElement>(".hud-progress-value")!;
 await loadGameAssets(asset, (value) => {
   progress.value = value;
   percent.textContent = `${value}%`;
