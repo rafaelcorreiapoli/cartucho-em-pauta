@@ -42,7 +42,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   function updateControls() {
     const politics = view?.politics;
     if (!politics || view?.phase!=='negotiation') return;
-    el('cabinet-form').hidden = !at('cabinet') || politics.grantUsed || politics.suspended;
+    el('cabinet-form').hidden = !at('cabinet') || view.election?.personal?.office!=='deputy' || politics.grantUsed || politics.suspended;
     el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
     el('campaign').hidden = !at('press');
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
@@ -90,7 +90,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       if (!p) return;
       const active = view.phase==='negotiation';
       el('personal-stats').textContent = `${money(p.wallet)} · ${p.popularity} pop.${p.incoming.length ? ' · nova oferta' : ''}`;
-      el('agenda').textContent = `Agenda secreta: ${agendas[p.agenda]}. ${p.goalMet ? 'Cumprida.' : 'Em andamento.'}`;
+      el('agenda').textContent = `${agendas[p.agenda]}. ${p.goalMet ? 'Cumprida.' : 'Em andamento.'}`;
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
       el('politics-hint').textContent = !active ? p.suspended ? 'Mandato cassado. Você continua na sala como assessor.' : '' :
         p.suspended ? 'Você está como assessor: ainda pode negociar, investigar e divulgar provas.' :

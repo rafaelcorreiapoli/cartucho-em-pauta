@@ -3,7 +3,7 @@ import { stations, STATION_RADIUS, type Phase } from './plenary';
 import { drawMap } from './draw-map';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, playerName, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, playerName, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text };
 const directions = new Map(Object.entries({
@@ -12,6 +12,11 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void) {
+  const fog = document.createElement('div');
+  fog.className = 'map-fog';
+  fog.hidden = true;
+  fog.setAttribute('aria-hidden','true');
+  parent.append(fog);
   let players: Player[] = [];
   let negotiating = false;
   let running = false;
@@ -122,6 +127,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
         const {id,character,direction,moving} = player;
         let view = this.views.get(id);
+        if (running && !own && ownPlayer && Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=VISION_RADIUS) {
+          view?.sprite.setVisible(false);
+          view?.label.setVisible(false);
+          continue;
+        }
         if (!view) {
           view = {
             sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.295),
@@ -136,8 +146,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
-        sprite.setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setPosition(x,y+2).setText(playerName(player,players,running))
+        sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
+        label.setVisible(true).setPosition(x,y+2).setText(playerName(player,players,running))
           .setColor(speaking.has(id) ? '#adff91' : '#fff7df');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
@@ -147,6 +157,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
           camera.centerOn(x,y);
+          if (running) {
+            const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
+            const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
+            const radius = VISION_RADIUS*zoom;
+            fog.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${radius*.86}px, #081419b8 ${radius}px)`;
+            fog.hidden = false;
+          }
         }
       }
     }
@@ -165,11 +182,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     setMatchPhase(phase:Phase) {
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
+      if (!running) fog.hidden = true;
     },
     setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();
       game.destroy(true);
+      fog.remove();
     },
   };
 }

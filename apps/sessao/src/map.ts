@@ -78,7 +78,7 @@ export function move(player: Player, input: Motion, seconds: number) {
   player.moving = x !== player.x || y !== player.y;
 }
 
-const VISION_RADIUS = 86;
+export const VISION_RADIUS = 86;
 const HEARING_RADIUS = 114;
 
 function wallBetween(a: Motion, b: Motion) {

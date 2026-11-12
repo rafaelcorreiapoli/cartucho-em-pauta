@@ -7,6 +7,7 @@
   <title>Presidente da Sessão</title>
 </head>
 <body>
+  <svg class="hud-symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s7-3 7-9V5l-7-3-7 3v8c0 6 7 9 7 9z"/><path d="m9 12 2 2 4-4"/></symbol><symbol id="icon-wallet" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 10h5v4h-5a2 2 0 0 1 0-4Z"/></symbol><symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="icon-ballot" viewBox="0 0 24 24"><path d="M4 11h16l2 3v6H2v-6zm4-2 4-6 5 3-4 5M8 15h8"/></symbol><symbol id="icon-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zm6-3v15m6-12v15"/></symbol><symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol><symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="icon-cross" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol><symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3"/></symbol><symbol id="icon-document" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zm8 0v5h4M9 12h6m-6 4h6"/></symbol><symbol id="icon-alert" viewBox="0 0 24 24"><path d="m12 3 10 17H2zm0 6v5m0 2v1"/></symbol><symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M8 15l4-5 3 3 5-7"/></symbol></svg>
   <main>
     <section id="landing">
       <div class="landing-title">
@@ -67,7 +68,7 @@
       <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
       <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
         <div id="voice-bar">
-          <button class="hud-button" id="voice-toggle" type="button">Ativar voz</button>
+          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
           <details id="voice-settings" hidden>
             <summary class="hud-option">Ajustes de voz</summary>
             <div class="hud-panel voice-settings-content">
@@ -113,37 +114,115 @@
         <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
         <p id="start-hint"></p>
         <div id="match" hidden>
-          <div class="plenary-line"><strong id="role"></strong><span id="phase"></span><strong id="clock"></strong></div>
-          <div class="plenary-line"><span id="stability"></span><span id="budget"></span></div>
-          <p id="hearing-result" role="status" hidden></p>
-          <p id="outcome" role="status" hidden></p>
+          <div class="match-top">
+            <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span id="phase"></span></span>
+            <span class="clock-chip"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg><strong id="clock"></strong></span>
+          </div>
+          <div class="private-role"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="role"></strong><span id="role-goal"></span></div>
+          <div class="resource-grid">
+            <div class="resource stability-resource">
+              <label for="stability-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg>Estabilidade <strong id="stability"></strong></label>
+              <div class="resource-track"><progress id="stability-meter" max="100" value="48"></progress><span title="Meta: 45"></span></div>
+              <small>Meta: 45 de 100</small>
+            </div>
+            <div class="resource budget-resource">
+              <label for="budget-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Orçamento <strong id="budget"></strong></label>
+              <progress id="budget-meter" max="100" value="32"></progress>
+              <small>Verba pública</small>
+            </div>
+          </div>
+          <p class="hud-feedback" id="bill-objection" hidden></p>
+          <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
+          <details id="last-vote" hidden>
+            <summary id="outcome-summary"></summary>
+            <p id="outcome"></p>
+          </details>
           <div id="proposal">
-            <h2 id="bill"></h2>
-            <p id="impact"></p>
-            <p id="clue" role="status" hidden></p>
+            <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2></div>
+            <div id="impact" aria-label="Impacto de cada decisão">
+              <div class="impact-card">
+                <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
+                <div class="impact-values">
+                  <span title="Estabilidade"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="yes-stability"></strong><span class="sr-only"> estabilidade</span></span>
+                  <span title="Orçamento"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="yes-budget"></strong><span class="sr-only"> orçamento</span></span>
+                </div>
+              </div>
+              <div class="impact-card">
+                <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg>Se rejeitar</h3>
+                <div class="impact-values">
+                  <span title="Estabilidade"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="no-stability"></strong><span class="sr-only"> estabilidade</span></span>
+                  <span title="Orçamento"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="no-budget"></strong><span class="sr-only"> orçamento</span></span>
+                </div>
+              </div>
+            </div>
+            <p class="hud-feedback" id="clue" role="status" hidden></p>
             <div id="stations">
-              <p>Siga os pontos dourados: Protocolo, Controladoria, Painel, Gabinete B e Imprensa.</p>
-              <div class="plenary-line">
-                <button class="hud-button hud-button--secondary" data-action="amendment" type="button">Protocolar emenda</button>
-                <button class="hud-button hud-button--secondary" data-action="audit" type="button">Conferir os números</button>
-                <button class="hud-button hud-button--secondary" data-action="panel" type="button" hidden>Corrigir o painel</button>
-                <button class="hud-button hud-button--secondary" data-action="fraud" type="button" hidden>Fraudar o painel</button>
+              <div class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>Ações no mapa</div>
+              <div class="station-grid">
+                <button class="hud-button hud-button--secondary" data-action="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Emenda<small>Protocolo</small></span></button>
+                <button class="hud-button hud-button--secondary" data-action="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar<small>Controladoria</small></span></button>
+                <button class="hud-button hud-button--secondary" data-action="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Corrigir<small>Painel</small></span></button>
+                <button class="hud-button hud-button--secondary" data-action="fraud" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar<small>Painel</small></span></button>
               </div>
             </div>
             <div id="ballot" hidden>
-              <p id="quorum"></p>
-              <div class="plenary-line">
-                <button class="hud-button" data-vote="yes" aria-pressed="false" type="button">Aprovar</button>
-                <button class="hud-button hud-button--secondary" data-vote="no" aria-pressed="false" type="button">Rejeitar</button>
+              <div class="ballot-progress">
+                <p id="quorum"></p>
+                <progress id="vote-progress" aria-label="Participação na votação" max="6" value="0"></progress>
+              </div>
+              <div class="station-grid">
+                <button class="hud-button" data-vote="yes" aria-pressed="false" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Aprovar</span></button>
+                <button class="hud-button hud-button--secondary" data-vote="no" aria-pressed="false" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Rejeitar</span></button>
               </div>
             </div>
           </div>
         </div>
       </section>
-      <details id="politics-dock" class="hud-strip" hidden>
-        <summary class="hud-option"><span>Carteira e dossiê</span><span id="personal-stats"></span></summary>
+      <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
+      <details id="election-dock" class="hud-strip" hidden>
+        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span id="current-office"></span><span id="election-timer"></span></summary>
         <div class="hud-panel politics-content">
-          <p id="agenda"></p>
+          <p id="office-power"></p>
+          <p id="election-wallet"></p>
+          <p id="election-result" hidden></p>
+          <section aria-label="Pesquisa eleitoral">
+            <h3>Pesquisa eleitoral</h3>
+            <p>Estimativas por cargo. Na apuração, quem não se eleger disputa as vagas restantes.</p>
+            <div id="election-polls"></div>
+          </section>
+          <details id="election-actions"><summary class="section-label">Minha campanha</summary>
+            <form id="registration">
+              <label>Candidatura <select id="election-race">
+                <option value="president">Presidência</option><option value="senator">Senado</option><option value="deputy">Câmara</option>
+              </select></label>
+              <button class="hud-button" id="register-race" type="submit">Confirmar candidatura</button>
+            </form>
+            <p id="registration-hint"></p>
+            <form id="invest-form">
+              <label>Investir em campanha (R$ 10 mil por unidade)
+                <input id="investment" type="number" value="1" min="1" step="1" required>
+              </label>
+              <button class="hud-button" id="invest" type="submit">Investir</button>
+            </form>
+            <form id="support-form">
+              <label>Apoio público <select id="endorsement"></select></label>
+              <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
+            </form>
+            <p>Propaganda na Imprensa, discurso no Painel e entrevista no estúdio de TV.</p>
+            <div class="economy-row">
+              <button class="hud-button hud-button--secondary" id="advertise" type="button">Propaganda · R$ 20 mil</button>
+              <button class="hud-button hud-button--secondary" id="speech" type="button">Discursar</button>
+              <button class="hud-button hud-button--secondary" id="interview" type="button">Entrevista ao vivo</button>
+              <button class="hud-button hud-button--secondary" id="object" type="button" hidden>Contestar projeto</button>
+            </div>
+            <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
+          </details>
+        </div>
+      </details>
+      <details id="politics-dock" class="hud-strip" hidden>
+        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span>Carteira e dossiê</span><span id="personal-stats"></span></summary>
+        <div class="hud-panel politics-content">
+          <div class="agenda-card"><div class="section-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>Agenda secreta</div><p id="agenda"></p></div>
           <p id="politics-hint"></p>
           <div id="politics-actions">
             <form id="trade">

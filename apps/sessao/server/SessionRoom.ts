@@ -1,3 +1,4 @@
+import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, type Client } from 'colyseus';
 import { localPerception, NAMES, type Player } from '../src/map';
@@ -19,6 +20,7 @@ export class SessionRoom extends Room {
   private voice = new Set<string>();
 
   private leaveVoice(id: string) {
+    this.match.stopBroadcast(id,this.clock.currentTime);
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
   }
 
@@ -49,6 +51,11 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (action && player) this.match.politics(player,action,[...this.players.values()].map(state => state.player),this.clock.currentTime);
     });
+    this.onMessage('election', (client, raw:unknown) => {
+      const action = readElectionAction(raw);
+      const player = this.players.get(client.sessionId)?.player;
+      if (action && player) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+    });
     this.onMessage('bill-vote', (client, vote:unknown) => {
       if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
     });
@@ -77,6 +84,7 @@ export class SessionRoom extends Room {
       const now = this.clock.currentTime;
       this.match.advance(now);
       if (running && !this.match.running) void this.unlock();
+      const speaker = this.match.speaker(now);
       const ids = players.map(({id}) => id);
       for (const client of this.clients) {
         const id = client.sessionId;
@@ -88,10 +96,11 @@ export class SessionRoom extends Room {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
         }
-        if (view.phase==='negotiation') {
+        if (this.match.running) {
           const nearby = players.map(player => ({player,...localPerception(state.player,player)}));
           client.send('players',nearby.filter(entry => entry.visible).map(entry => entry.player));
-          if (this.voice.has(id)) client.send('voice-range',nearby
+          if (view.phase==='negotiation' && this.voice.has(id)) client.send('voice-range',nearby
+            .map(entry => entry.player.id===speaker ? {...entry,volume:1} : entry)
             .filter(({player,volume}) => player.id!==id && volume>0 && this.voice.has(player.id))
             .map(({player,volume}) => [player.id,volume]));
         } else client.send('players',players);
@@ -114,7 +123,7 @@ export class SessionRoom extends Room {
     this.leaveVoice(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     const running = this.match.running;
-    this.match.leave(client.sessionId);
+    this.match.leave(client.sessionId,this.clock.currentTime);
     if (running && !this.match.running) void this.unlock();
     this.players.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);

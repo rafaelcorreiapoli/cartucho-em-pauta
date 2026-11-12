@@ -1,3 +1,4 @@
+import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
 
 export const MIN_PLAYERS = 3;
@@ -11,6 +12,7 @@ export const stations = {
   panel: {x:240,y:76,label:'Painel'},
   cabinet: {x:389,y:93,label:'Verba do gabinete'},
   press: {x:863,y:245,label:'Imprensa'},
+  tv: {x:915,y:200,label:'TV do Congresso'},
 } as const;
 export const STATION_RADIUS = 23;
 export const bills = [
@@ -29,6 +31,7 @@ export type PlenaryView = {
   phase:Phase; round:number; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
+  election?:ElectionView; billQuorum:number;
   politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
   yes:Impact; no:Impact; outcome?:Outcome; winner?:Role; reason?:string; infiltratorName?:string;
 };

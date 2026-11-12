@@ -1,4 +1,5 @@
 import { Client, type Room } from '@colyseus/sdk';
+import { createElectionPanel } from './election-panel';
 import { createGame } from './game';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
@@ -43,6 +44,7 @@ const buttons = NAMES.map((name,index) => {
   return button;
 });
 const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
+const voiceLabel = voiceToggle.querySelector('span')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 const voiceSpeaking = document.querySelector<HTMLElement>('#voice-speaking')!;
@@ -55,7 +57,9 @@ let disguiseRevision = 0;
 let voice: RoomVoice | undefined;
 let playersInRoom: Player[] = [];
 let speaking = new Set<string>();
+let broadcaster: {id:string; name:string} | undefined;
 let matchRunning = false;
+let voiceIsLocal = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 code.value = new URL(location.href).searchParams.get('sala') || '';
@@ -63,7 +67,8 @@ code.value = new URL(location.href).searchParams.get('sala') || '';
 function updateSpeaking() {
   const names = playersInRoom.filter(player => speaking.has(player.id)).map(player =>
     player.id === room?.sessionId ? 'Você' : playerName(player,playersInRoom,matchRunning));
-  if ([...speaking].some(id => !playersInRoom.some(player => player.id===id))) names.push('voz próxima');
+  if (broadcaster && speaking.has(broadcaster.id) && !playersInRoom.some(player => player.id===broadcaster!.id)) names.push(broadcaster.name);
+  if ([...speaking].some(id => id!==broadcaster?.id && !playersInRoom.some(player => player.id===id))) names.push(voiceIsLocal ? 'voz próxima' : 'voz na sessão');
   const label = names.length ? 'Falando: '+names.join(', ') : '';
   if (voiceSpeaking.textContent !== label) voiceSpeaking.textContent = label;
 }
@@ -88,7 +93,7 @@ livePitch.oninput = () => void updateDisguise();
 
 function resetVoiceButtons() {
   voiceToggle.disabled = false;
-  voiceToggle.textContent = 'Ativar voz';
+  voiceLabel.textContent = 'Ativar voz';
   voiceSettings.hidden = true;
   voiceSettings.open = false;
   voiceStatus.textContent = '';
@@ -103,7 +108,7 @@ voiceToggle.onclick = async () => {
   if (!current) return;
   if (current.active) {
     current.toggleMute();
-    voiceToggle.textContent = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
+    voiceLabel.textContent = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
     return;
   }
   voiceToggle.disabled = true;
@@ -111,7 +116,7 @@ voiceToggle.onclick = async () => {
   try {
     await current.start();
     if (current !== voice || !current.active) return;
-    voiceToggle.textContent = 'Silenciar microfone';
+    voiceLabel.textContent = 'Silenciar microfone';
     voiceSettings.hidden = false;
   } catch (error) {
     if (current !== voice) return;
@@ -160,12 +165,14 @@ async function connect(join: () => Promise<Room>) {
     code.value = joined.roomId;
     landing.hidden = true;
     session.dataset.phase = 'lobby';
+    voiceIsLocal = false;
     session.hidden = false;
     setup.hidden = false;
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     game = createGame(map,joined.sessionId,input => joined.send('input',input));
+    const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
@@ -176,12 +183,16 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('plenary',(view: PlenaryView) => {
       panel.render(view);
       political.render(view);
+      election.render(view);
+      broadcaster = view.election?.broadcast;
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
       if (phase===view.phase) return;
       phase = view.phase;
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
+      voiceIsLocal = negotiating;
+      voiceToggle.title = negotiating ? 'Voz por proximidade' : 'Voz geral da sala';
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
@@ -193,6 +204,7 @@ async function connect(join: () => Promise<Room>) {
       playersInRoom = players;
       panel.players(players);
       political.players(players);
+      election.players(players);
       game?.update(players);
       updateSpeaking();
       const self = players.find(player => player.id===joined.sessionId);
@@ -211,8 +223,12 @@ async function connect(join: () => Promise<Room>) {
         return slot;
       }));
     });
-    joined.onLeave(() => {
-      if (room===joined) showLobby('Você saiu da sala.');
+    joined.onLeave((closeCode,reason) => {
+      election.destroy();
+      if (room!==joined) return;
+      broadcaster = undefined;
+      const outdated = closeCode===4002 && reason?.includes('not registered');
+      showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');
     });
     map.focus({preventScroll:true});
   } catch {

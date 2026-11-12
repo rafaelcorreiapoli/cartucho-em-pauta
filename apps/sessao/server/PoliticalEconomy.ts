@@ -3,7 +3,7 @@ import { agendas, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER
 import type { Vote } from '../src/plenary';
 
 type Account = {
-  wallet:number; popularity:number; agenda:Agenda; grantUsed:boolean; campaignRound:number; auditRound:number; paymentRound:number; payments:number;
+  wallet:number; popularity:number; agenda:Agenda; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
   payers:Set<string>; passed:number; rejected:number; exposed:number; known:Set<number>; suspended:boolean;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
@@ -26,9 +26,29 @@ export class PoliticalEconomy {
     const deck = Object.keys(agendas) as Agenda[];
     for (const contact of contacts) {
       const [agenda] = deck.splice(Math.floor(random()*deck.length),1);
-      this.accounts.set(contact.id,{wallet:8,popularity:40,agenda,grantUsed:false,campaignRound:-1,auditRound:-1,paymentRound:-1,payments:0,
+      this.accounts.set(contact.id,{wallet:8,popularity:40,agenda,grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
         payers:new Set(),passed:0,rejected:0,exposed:0,known:new Set(),suspended:false});
     }
+  }
+
+  popularity(id:string) { return this.accounts.get(id)?.popularity ?? 0; }
+
+  changePopularity(id:string, amount:number) {
+    const account = this.accounts.get(id);
+    if (account) account.popularity = cap(account.popularity+amount);
+  }
+
+  paySalary(id:string, amount:number) {
+    const account = this.accounts.get(id);
+    if (account) account.wallet += amount;
+  }
+
+  spendOnElection(id:string, amount:number, kind:string, cycle:number) {
+    const account = this.accounts.get(id);
+    if (!account || amount>account.wallet) return false;
+    account.wallet -= amount;
+    account.expenses.push({kind,amount,cycle});
+    return true;
   }
 
   name(id:string) { return this.contacts.get(id)?.name ?? 'Jogador'; }
@@ -79,17 +99,21 @@ export class PoliticalEconomy {
     account.popularity = cap(account.popularity+17);
   }
 
-  audit(id:string, round:number) {
+  audit(id:string, round:number, limit=1) {
     const account = this.accounts.get(id);
     if (!account) return;
-    if (account.auditRound===round) return 'Você já encontrou um documento nesta rodada.';
+    if (account.auditRound!==round) {
+      account.auditRound = round;
+      account.audits = 0;
+    }
+    if (account.audits>=limit) return 'Você já atingiu o limite de documentos desta rodada.';
     // Larger diversions are easier to uncover; an audit surfaces one new document.
     const candidate = [...this.records.values()].filter(record => record.kind!=='public-transfer' &&
       !account.known.has(record.id) && !this.published.has(record.id))
       .sort((a,b) => b.amount-a.amount || b.id-a.id)[0];
     if (!candidate) return 'Nenhum registro novo nesta auditoria.';
     account.known.add(candidate.id);
-    account.auditRound = round;
+    account.audits++;
     return 'Documento encontrado. Confira seu dossiê.';
   }
 
@@ -126,13 +150,13 @@ export class PoliticalEconomy {
     if (offer && (offer.from===by || offer.to===by)) this.offers.delete(id);
   }
 
-  publish(id:string, evidence:number) {
+  publish(id:string, evidence:number, president?:string) {
     const account = this.accounts.get(id), record = this.records.get(evidence);
     if (!account?.known.has(evidence) || !record || this.published.has(evidence)) return;
     this.published.add(evidence);
     for (const [key,offer] of this.offers) if (offer.evidence===evidence) this.offers.delete(key);
     const subject = this.accounts.get(record.from);
-    if (subject) subject.popularity = cap(subject.popularity-(record.kind==='diversion' ? 6+record.amount*4 : 8));
+    if (subject) subject.popularity = cap(subject.popularity-(record.kind==='diversion' ? 6+record.amount*4 : 8)-(record.from===president ? 4 : 0));
     if (record.to) {
       const receiver = this.accounts.get(record.to);
       if (receiver) receiver.popularity = cap(receiver.popularity-5);
@@ -141,6 +165,7 @@ export class PoliticalEconomy {
       account.popularity = cap(account.popularity+10);
       account.exposed++;
     }
+    return record;
   }
 
   billResult(votes:Map<string,Vote>, passed:boolean, popular:boolean) {

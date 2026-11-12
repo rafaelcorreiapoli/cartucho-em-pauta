@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5175",
-    "server": "bun server/index.ts",
+    "server": "bun --watch server/index.ts",
     "build": "vite build",
     "check": "tsc --noEmit && bun test && bun run build"
   },

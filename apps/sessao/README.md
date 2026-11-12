@@ -89,3 +89,41 @@ RVC_LAB_DIR=/caminho/do/laboratorio bun run dev --host 127.0.0.1
 Abra **Testar filtro de voz**. Grave até dez segundos, pare a gravação e ouça o resultado. Para comparar, escolha outra voz ou alterne entre **Mais suave** e **Anterior**, depois use **Aplicar à gravação**. O ajuste mais suave reduz ruído, diminui a influência do índice do modelo e preserva mais das consoantes e da dinâmica da gravação. O laboratório roda no servidor de desenvolvimento local. Os arquivos temporários são apagados após a conversão e a gravação não entra na chamada da sala.
 
 Para diagnosticar artefatos, compare **Voz original** com **Disfarce genérico** usando a mesma gravação. O disfarce usa o utilitário [Rubber Band](https://breakfastquay.com/rubberband/) para baixar o tom sem mudar a duração da fala. Instale com `brew install rubberband` no Mac.
+
+## Eleições e cargos
+
+Cada sessão começa com um sorteio de cargos: uma Presidência, uma vaga de
+senador para cada três pessoas (preservando ao menos uma vaga de deputado),
+e as demais vagas de deputado. Isso não depende de personagem, papel ou
+agenda. A cada cinco minutos o jogo apura a eleição sem parar a exploração
+ou a votação em curso. Mudanças de candidatura fecham 20 segundos antes.
+
+O eleitorado é fictício. Popularidade, campanha, propaganda, tribuna, TV,
+apoios públicos, escândalos divulgados e desgaste de reeleições compõem a
+força de cada candidato. O investimento tem teto de R$ 80 mil e retorno
+decrescente. A pesquisa mostra uma estimativa por disputa com margem
+limitada, e a tendência compara com a última amostra. No desempate vale
+o sorteio fixado para a partida. Nenhuma promessa é obrigatória.
+
+Apura-se a Presidência primeiro, depois o Senado. As vagas restantes vão aos
+outros candidatos pela força eleitoral; quem não ganha o cargo disputado
+continua no Congresso. O salário fictício do mandato anterior entra na
+carteira na apuração: R$ 100 mil, R$ 60 mil ou R$ 40 mil, usando a unidade
+de R$ 10 mil da economia do jogo. A campanha reinicia; carteira, provas,
+agenda, popularidade e papel são preservados.
+
+A Presidência pode contestar um projeto por mandato no Painel, exigindo
+mais um voto a favor quando houver margem. Se perder o cargo, a contestação
+perde efeito. Senadores podem encontrar dois documentos por rodada;
+deputados têm acesso à verba do Gabinete B. Na Imprensa há propaganda e
+publicação de provas; no Painel há discurso; na TV um jogador com voz
+ativa pode transmitir para a sala por 15 segundos. Os limites de campanha
+e entrevista valem por ciclo.
+
+A visão é local durante a partida inteira: o mapa escurece fora do círculo
+do personagem, e posições fora da visão não são enviadas ao cliente. O
+bate-papo continua geral durante as votações, mesmo com a visão local.
+
+No desenvolvimento, `bun run server` reinicia o servidor quando o código
+muda. Como as salas ficam em memória, é preciso criar outra sala após
+esse reinício.

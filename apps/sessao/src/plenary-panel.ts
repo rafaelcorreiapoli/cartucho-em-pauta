@@ -6,13 +6,20 @@ const start = element<HTMLButtonElement>('start-match');
 const actions = [...document.querySelectorAll<HTMLButtonElement>('[data-action]')];
 const votes = [...document.querySelectorAll<HTMLButtonElement>('[data-vote]')];
 const signed = (value:number) => value>0 ? '+'+value : String(value);
-const impact = (effect:Impact) => `${signed(effect.stability)} estabilidade, ${signed(effect.budget)} orçamento`;
+function showImpact(prefix:'yes' | 'no', effect:Impact) {
+  for (const key of ['stability','budget'] as const) {
+    const stat = element(`${prefix}-${key}`);
+    stat.textContent = signed(effect[key]);
+    stat.dataset.effect = effect[key]>0 ? 'gain' : effect[key]<0 ? 'loss' : 'neutral';
+  }
+}
 
 export function createPlenaryPanel(id:string, send:(type:string, data?:string|number) => void) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   const count = element<HTMLSelectElement>('infiltrator-count');
   count.value = '1';
+  element<HTMLDetailsElement>('last-vote').open = false;
   start.onclick = () => send('start-match',count.value==='2' ? 2 : 1);
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
@@ -21,8 +28,8 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
     for (const button of actions) {
       const action = button.dataset.action as Action;
       const station = stations[action==='fraud' ? 'panel' : action];
-      button.disabled = !own || Math.hypot(own.x-station.x,own.y-station.y)>STATION_RADIUS ||
-        (action==='amendment' && !!view?.amended);
+      const nearby = !!own && Math.hypot(own.x-station.x,own.y-station.y)<=STATION_RADIUS;
+      button.disabled = !nearby || (action==='amendment' && !!view?.amended);
     }
   }
 
@@ -42,36 +49,55 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
-      element('role').textContent = role ? `Seu papel: ${role}${running ? role==='Infiltrado' ? ' · Derrube a estabilidade' : ' · Preserve a estabilidade' : ''}` : '';
+      element('role').textContent = role ?? '';
+      element('role-goal').textContent = running ? role==='Infiltrado' ? 'Derrube a estabilidade' : 'Preserve a estabilidade' : '';
+      element('role').parentElement!.dataset.role = role ?? '';
       element('phase').textContent = phase==='finished' ?
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
-        phase==='negotiation' ? 'Articulação · voz por proximidade' : hearing ? 'Cassação · voz geral' : 'Votação · voz geral';
+        phase==='negotiation' ? 'Articulação' : hearing ? 'Cassação' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
-      element('stability').textContent = `Estabilidade: ${view.stability}/100 · meta: 45`;
-      element('budget').textContent = `Orçamento: ${view.budget}/100`;
-      element('outcome').hidden = !outcome;
+      const clock = element('clock');
+      clock.parentElement!.hidden = !running;
+      clock.parentElement!.dataset.urgent = String(remaining<=10);
+      element('stability').textContent = String(view.stability);
+      const stability = element<HTMLProgressElement>('stability-meter');
+      stability.value = view.stability;
+      stability.dataset.low = String(view.stability<45);
+      element('budget').textContent = String(view.budget);
+      element<HTMLProgressElement>('budget-meter').value = view.budget;
+      element('last-vote').hidden = !outcome;
+      element('outcome-summary').textContent = outcome ? `${outcome.passed ? 'Aprovado' : 'Rejeitado'} · ${bills[outcome.round].name}` : '';
       const result = outcome ? `${bills[outcome.round].name}: ${outcome.passed ? 'aprovado' : 'rejeitado'} (${outcome.yes} a favor, ${outcome.no} contra; precisava de ${outcome.needed} a favor).${outcome.deficit ? ` Déficit de ${outcome.deficit}: −${outcome.deficit*2} de estabilidade.` : ''}${outcome.fraud ? ' O painel desse projeto foi fraudado.' : ''}` : '';
       if (element('outcome').textContent!==result) element('outcome').textContent = result;
+      const objection = view.election?.objection;
+      element('bill-objection').hidden = !objection || !!hearing || !running;
+      element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      element('bill').textContent = hearing ? `Cassação: ${hearing.target}` : `${round+1}/${bills.length} · ${bills[round].name}`;
+      element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
+      element('bill').textContent = hearing ? hearing.target : bills[round].name;
       element('impact').hidden = !!hearing;
-      element('impact').textContent = `Aprovar: ${impact(view.yes)}. Rejeitar: ${impact(view.no)}.`;
+      showImpact('yes',view.yes);
+      showImpact('no',view.no);
       element('stations').hidden = phase!=='negotiation';
       element('ballot').hidden = phase!=='ballot' && !hearing;
-      element('quorum').textContent = `${view.voted}/${view.electorate} votaram. ${hearing ? 'Para cassar' : 'Para aprovar'}, são necessários ${Math.floor(view.electorate/2)+1} votos a favor. Você pode mudar seu voto até o fim.`;
+      const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
+      element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} votos a favor para ${hearing ? 'cassar' : 'aprovar'}`;
+      const progress = element<HTMLProgressElement>('vote-progress');
+      progress.max = Math.max(1,view.electorate);
+      progress.value = view.voted;
       if (view.politics?.suspended) element('quorum').textContent = 'Seu mandato foi cassado. Você pode conversar e agir como assessor.';
       for (const button of votes) {
         button.disabled = !!view.politics?.suspended;
-        button.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Manter mandato' : 'Rejeitar';
+        button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Manter mandato' : 'Rejeitar';
         button.setAttribute('aria-pressed',String((hearing?.vote ?? view.vote)===button.dataset.vote as Vote));
       }
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
-      const clue = [view.auditNote ?? '', view.amended ? 'Emenda protocolada: economiza 16 e reduz o efeito na estabilidade em 8 se o projeto passar.' : '',
+      const clue = [view.auditNote ?? '', view.amended ? 'Emenda protocolada. Os efeitos já estão atualizados.' : '',
         view.reportedFraud ? 'Fraude denunciada. O painel mostra os números reais.' :
-        view.audit==='fraud' ? 'Sua auditoria descobriu fraude. Estes são os valores reais. Volte ao painel para avisar todos.' :
+        view.audit==='fraud' ? 'Fraude encontrada. Vá ao Painel para corrigir os números.' :
         view.audit==='clean' ? 'A auditoria conferiu os valores do painel.' : '',
         role==='Infiltrado' && !view.canFraud && !view.reportedFraud ? 'Você alterou os números que os outros veem no painel.' : '',
       ].filter(Boolean).join(' ');
