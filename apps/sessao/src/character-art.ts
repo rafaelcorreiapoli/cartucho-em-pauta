@@ -7,13 +7,23 @@ export const characterSheets = [
   {key:'players-expansion',path:'assets/sprites-expansao.png'},
 ] as const;
 
-export const bolsonaroFall = {key:'bolsonaro-fall',path:'assets/bolsonaro-fall.webp'};
+const bolsonaroAttack = {key:'bolsonaro-attack',path:'assets/bolsonaro-attack.webp'};
+const bolsonaroFall = {key:'bolsonaro-fall',path:'assets/bolsonaro-fall.webp'};
+export const combatSheets = [bolsonaroAttack,bolsonaroFall];
 
 export function characterArt(character:number) {
   const expansion = character>=originalCount;
   const sheet = characterSheets[expansion ? 1 : 0];
   const row = (expansion ? character-originalCount : character)*3;
   return {sheet,row,frame:row*4};
+}
+
+export function attackArt(character:number, row:number, progress:number, impactProgress:number) {
+  if (NAMES[character]!=='Bolsonaro') return;
+  // The third frame shows the arm fully extended at the moment of impact.
+  const frame = progress<impactProgress*.55 ? 0 :
+    progress<impactProgress ? 1 : progress<(1+impactProgress)/2 ? 2 : 3;
+  return {key:bolsonaroAttack.key,frame:row*4+frame};
 }
 
 export function downedArt(character:number, direction:number) {

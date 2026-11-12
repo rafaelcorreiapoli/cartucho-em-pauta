@@ -6,7 +6,7 @@ import { binocularBonus } from './equipment';
 import { objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { bolsonaroFall, characterArt, characterSheets, downedArt } from './character-art';
+import { attackArt, characterArt, characterSheets, combatSheets, downedArt } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
@@ -84,7 +84,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,bolsonaroFall]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
@@ -356,6 +356,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const pose = swing && progress<1 && !latest.knockedOut ? weaponPose(swing,progress) : undefined;
         const facing = pose?.facing ?? direction;
         const row = facing===3 ? 1 : facing;
+        const attack = pose && profile ? attackArt(character,row,progress,profile.impactMs/profile.swingMs) : undefined;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
           const level = own ? .46 : Math.max(0,1-distance/75)*.32;
@@ -414,7 +415,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (moving && !pose && !downed) sprite.play(`${character}-${row}`,true);
         else {
           sprite.anims.stop();
-          sprite.setTexture(downed?.key ?? sheet.key,downed?.frame ?? frame+row*4);
+          sprite.setTexture(downed?.key ?? attack?.key ?? sheet.key,downed?.frame ?? attack?.frame ?? frame+row*4);
         }
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
