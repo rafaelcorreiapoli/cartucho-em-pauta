@@ -1,4 +1,4 @@
-# Cartucho em Pauta
+# Cartuchão
 
 Portal e jogos de sátira política brasileira, com builds e deploys independentes.
 
