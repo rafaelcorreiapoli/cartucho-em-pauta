@@ -301,7 +301,7 @@
 #command-deck #ballot { flex: 1 0 auto; display: flex; gap: 6px; align-items: center; margin: 0; }
 #command-deck #ballot .station-grid { display: flex; gap: 5px; }
 #command-deck #ballot .hud-button { min-height: 28px; padding: 4px 7px; font: 700 11px/1.15 system-ui,sans-serif; }
-#command-deck #ballot .hud-button[aria-pressed="true"] { outline: 2px solid var(--party-gold); outline-offset: 1px; }
+#command-deck #ballot .hud-button[aria-pressed="true"] { border-color: var(--party-gold); background: #354337; }
 #command-deck .ballot-progress { min-width: 0; }
 #command-deck #vote-state { margin: 3px 0 0; color: var(--party-gold); font-size: 10px; }
 #command-deck #quorum { margin: 0 0 4px; font-size: 10px; }
@@ -594,7 +594,6 @@
 }
 .market-product-button:disabled { opacity: .58; cursor: default; }
 .market-product-button:not(:disabled):hover { border-color: #d3bc7e; }
-.market-product-button:focus-visible { outline: 2px solid var(--party-gold); outline-offset: 2px; }
 img.market-art {
   justify-self: center;
   align-self: center;
@@ -661,7 +660,6 @@ img.market-art {
   background: #9bac9280;
 }
 .market-page-dot[aria-current="page"]::before { background: var(--party-gold); }
-.market-page-dot:focus-visible, .market-page-arrow:focus-visible { outline: 2px solid var(--party-gold); border-radius: .3rem; }
 
 .action-key {
   display: inline-grid;

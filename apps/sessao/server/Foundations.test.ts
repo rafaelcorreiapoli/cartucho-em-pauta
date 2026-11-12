@@ -357,7 +357,7 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
 
 
 const consumableCases:[FoodKind,number,number][] = [
-  ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40], ['oneRealMeal',52,40],
+  ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40],
   ['coxinha',42,40], ['coffee',22,70], ['energyDrink',22,40], ['mortadellaRoll',47,50],
   ['lobster',100,40], ['picanha',92,40],
 ];

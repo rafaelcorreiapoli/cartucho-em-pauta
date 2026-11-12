@@ -10,7 +10,6 @@ export const foods = {
   pizza:{name:'Pizza',description:'Recupera vida.',portrait:'retrato-pizza.webp',price:2,use:'consume',category:'Comum',effect:{hp:35},exposable:true},
   chocolates:{name:'Caixa de Bombom',description:'Um agrado doce e revigorante.',portrait:'retrato-bombom.webp',price:2,use:'consume',category:'Especial',effect:{hp:40}},
   condensedMilk:{name:'Leite condensado',description:'Muito eficaz. Pesado nas pernas.',portrait:'retrato-leite-condensado.webp',price:2.5,use:'consume',category:'Especial',effect:{hp:60,speed:{factor:.75,durationMs:10_000}}},
-  oneRealMeal:{name:'Prato de R$ 1',description:'Simples, barato e funcional.',portrait:'retrato-prato-um-real.webp',price:.0001,use:'consume',category:'Comum',effect:{hp:30}},
   coxinha:{name:'Coxinha',description:'Lanche rápido.',portrait:'retrato-coxinha.webp',price:.5,use:'consume',category:'Comum',effect:{hp:20}},
   coffee:{name:'Café',description:'Recupera energia rapidamente.',portrait:'retrato-cafe.webp',price:.5,use:'consume',category:'Comum',effect:{stamina:30},exposable:true},
   energyDrink:{name:'Energético',description:'Acelera sua recuperação de energia.',portrait:'retrato-energetico.webp',price:1.5,use:'consume',category:'Especial',effect:{staminaRegen:{factor:1.5,durationMs:20_000}}},

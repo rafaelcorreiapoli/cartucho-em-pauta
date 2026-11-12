@@ -1,8 +1,12 @@
 #session {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   --hud-edge: clamp(10px, 1.2vw, 22px);
   --hud-side: clamp(230px, 22vw, 310px);
   --hud-top-row: 78px;
 }
+
+#session :focus-visible { outline: none; }
 
 #match { display: contents; }
 
@@ -20,10 +24,6 @@
 .hud-module summary { cursor: pointer; }
 .hud-module > summary { list-style: none; }
 .hud-module > summary::-webkit-details-marker { display: none; }
-.hud-module > summary:focus-visible {
-  outline: 2px solid var(--hud-gold);
-  outline-offset: 2px;
-}
 
 #session:is([data-phase="negotiation"],[data-phase="ballot"],[data-phase="hearing"]) #plenary { display: none; }
 
@@ -86,8 +86,7 @@
   background: transparent;
   cursor: help;
 }
-.resource-help:hover, .resource-help:focus-visible { color: var(--hud-gold); background: #314137; }
-.resource-help:focus-visible { outline: 2px solid var(--hud-gold); }
+.resource-help:hover { color: var(--hud-gold); background: #314137; }
 #congress-dock .resource progress { height: 7px; }
 @media (min-width: 761px) and (max-width: 920px) {
   #congress-dock .resource { padding-inline: .2rem; }
@@ -221,7 +220,6 @@
 #stations .hud-button[data-action="fraud"] .hud-glyph { color: #ffd1a9; }
 #stations .hud-button:hover { filter: brightness(1.22); }
 #stations .hud-button:active { transform: translateY(4px); box-shadow: 0 1px 0 #0b2119; }
-#stations .hud-button:focus-visible { outline: 2px solid #ffdf81; outline-offset: 3px; }
 #interview-hint { margin: 0; color: #e8d8a9; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -368,12 +366,6 @@
   background: #253a31;
   border-color: #d7b574;
 }
-.social-trigger:focus-visible,
-#social-docks .game-choice:focus-visible,
-#social-docks .game-stepper button:focus-visible {
-  outline: 2px solid var(--hud-gold);
-  outline-offset: 2px;
-}
 #social-docks .social-panel {
   width: min(350px, calc(100vw - 2 * var(--hud-edge)));
   padding: .8rem;
@@ -403,7 +395,6 @@
 #social-docks section[aria-label="Provas privadas"] { margin-top: .75rem; }
 #ledger { margin-top: .65rem; }
 #trade-contact .game-choice { min-height: 42px; padding: .2rem .55rem .2rem .25rem; }
-#social-docks .game-choice[aria-pressed="true"]:not(:focus-visible) { outline: none; }
 #social-docks .game-choice[aria-pressed="true"] {
   background: #384231;
   border-color: #d7b574;
@@ -519,7 +510,6 @@
 #legislative-dock .impact-card:last-child { border-color: #ae6476; }
 #ballot [data-vote="yes"] { background: var(--party-mint); border-color: #62d2a7; color: #15382f; }
 #ballot [data-vote="no"] { background: var(--party-coral); border-color: #de778e; color: #421d32; }
-#ballot [data-vote][aria-pressed="true"] { outline: 2px solid #fff2d3; outline-offset: 2px; }
 #vote-history {
   left: var(--hud-edge);
   bottom: calc(var(--hud-edge) + 66px);
@@ -785,7 +775,7 @@
     font: 800 .95rem/1.15 var(--party-display);
     white-space: nowrap;
   }
-  #social-docks .social-trigger:is(:hover, :focus-visible),
+  #social-docks .social-trigger:hover,
   #social-docks details[open] > .social-trigger { background: #294334; }
   #social-docks .social-trigger .hud-glyph { width: 20px; height: 20px; }
   #personal-stats:not(:empty) { font-size: .7rem; white-space: normal; }
@@ -941,7 +931,6 @@ button.item-tile {
 }
 button.item-tile:hover { filter: brightness(1.22); }
 button.item-tile:active { transform: translateY(3px); }
-button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-offset: 2px; }
 .item-tile-empty { border: 1px dashed #749d8170; background: #10241f; }
 .item-tile[data-kind="coffee"] { --item-surface: #785239; }
 .item-tile[data-kind="document"] { --item-surface: #4a6879; }
@@ -1074,8 +1063,7 @@ button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-o
 }
 .phone-app[data-app="app-games"] .phone-app-icon { background: linear-gradient(150deg,#ffd774,#d08125); color:#432305; }
 .phone-app[data-app="app-camera"] .phone-app-icon { background: linear-gradient(150deg,#79d9f2,#326fbe); color:#f4fbff; }
-.phone-app[aria-pressed="true"] .phone-app-icon { outline: 2px solid #f9e7ac; outline-offset: 2px; }
-.phone-app:focus-visible { border-radius: 8px; outline: 2px dashed var(--party-gold); outline-offset: 1px; }
+.phone-app[aria-pressed="true"] .phone-app-icon { border-color: #f9e7ac; }
 .phone-app:hover .phone-app-icon { filter: brightness(1.18); }
 .phone-app-icon .hud-glyph { width: 62%; height: 62%; stroke-width: 2; }
 #gameplay-dialog[data-mode="phone"] #gameplay-body {

@@ -34,7 +34,24 @@ function actionName(control:HTMLElement) {
   return copy.textContent?.replace(/\s+/g,' ').trim() || control.title;
 }
 
+function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
+  const selector = ':is(button, summary, input, select, textarea, a[href], [tabindex], [contenteditable="true"]):not(#map)';
+  function update(container:Element) {
+    if (container instanceof HTMLElement && container.matches(selector)) container.tabIndex = -1;
+    for (const control of container.querySelectorAll<HTMLElement>(selector)) control.tabIndex = -1;
+  }
+  update(root);
+  const observer = new MutationObserver(records=>{
+    for (const record of records) {
+      for (const added of record.addedNodes) if (added instanceof Element) update(added);
+    }
+  });
+  observer.observe(root,{childList:true,subtree:true});
+  signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
+}
+
 export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
+  disableHudTabStops(root,signal);
   const launcher = root.querySelector<HTMLButtonElement>('#open-action-shortcuts')!;
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const list = palette.querySelector<HTMLElement>('.shortcut-list')!;

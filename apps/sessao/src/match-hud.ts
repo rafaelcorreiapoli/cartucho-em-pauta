@@ -29,7 +29,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     for (const tab of missionTabs) {
       const active = tab===selected;
       tab.setAttribute('aria-selected',String(active));
-      tab.tabIndex = active ? 0 : -1;
       element(tab.getAttribute('aria-controls')!).hidden = !active;
     }
   }
