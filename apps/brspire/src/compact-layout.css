@@ -60,10 +60,13 @@
     aspect-ratio: 1;
     margin-inline: auto;
   }
-  .fighter-effects { gap: 2px; }
+  .fighter-effects { gap: 3px; }
+  .fighter-effect { gap: 3px; padding-inline: 3px; }
   .fighter-effect > .game-icon { width: 15px; height: 15px; }
   .fighter-effect b { font-size: 12px; }
-  .game .intent { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+  .intent { height: 26px; gap: 3px; padding-inline: 4px; }
+  .intent .game-icon { width: 12px; height: 12px; }
+  .rivals:has(.rival:nth-child(3)) .intent-label { display: none; }
   .resource-items :is(button, i), .resource-relics > button { width: 29px; }
   .game .feedback { padding-inline: var(--edge-left) var(--edge-right); }
 
@@ -155,7 +158,8 @@
   .resource-items { gap: 2px; padding: 2px; }
   .resource-portrait { width: 26px; }
   .resource-items :is(button, i) { width: 24px; }
-  .game .intent { font-size: 9px; }
+  .intent { gap: 2px; padding-inline: 3px; font-size: 12px; }
+  .intent .game-icon { width: 10px; height: 10px; }
   .lobby-details { --details-padding: 10px; }
   .lobby-bio { grid-template-columns: auto minmax(0, 1fr); }
   .lobby-bio > .lobby-hero-health { grid-column: 2; }

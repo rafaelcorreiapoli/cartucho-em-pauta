@@ -80,9 +80,9 @@
 }
 .game .fighter-name {
   display: block;
-  min-height: 2.2em;
+  min-height: 1.2em;
+  padding-top: 2px;
   text-align: center;
-  align-content: center;
   font: 700 clamp(12px, 1.4vw, 17px)/1.1 var(--display-font);
   text-shadow: 0 2px 3px #000;
 }
@@ -117,21 +117,22 @@
   flex-wrap: wrap;
   align-items: center;
   align-content: start;
-  gap: 3px 6px;
-  min-height: 24px;
+  gap: 4px 6px;
+  min-height: 28px;
+  padding: 3px 2px 0;
 }
 .fighter-effect {
   display: inline-flex;
-  align-items: end;
-  gap: 1px;
+  align-items: center;
+  gap: 4px;
   min-height: 24px;
-  padding: 1px 2px;
+  padding: 3px 5px;
   border: 0;
-  border-radius: 4px;
-  background: #101714b0;
+  border-radius: 5px;
+  background: #10171440;
   color: #ece1b4;
 }
-.fighter-effect:hover { background: #101714; }
+.fighter-effect:is(:hover, :focus-visible) { background: #10171480; }
 .fighter-effect > .game-icon { width: 19px; height: 19px; }
 .fighter-effect[data-icon="guard"] { color: #a2e5ee; }
 .fighter-effect[data-icon="strength"] { color: #ff806b; }
@@ -145,6 +146,33 @@
   text-shadow: 0 1px 3px #0a0d09;
 }
 .fighter-effect[data-debuff="true"] b { color: #ffb6a9; }
+
+.intent {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 29px;
+  max-width: 100%;
+  padding: 0 6px;
+  border: 1px solid #e5b27680;
+  border-radius: 5px;
+  background: #25281ef0;
+  color: #fff0da;
+  box-shadow: 0 2px 6px #160e09a6;
+  font: 800 clamp(13px, 1.45vw, 17px)/1 var(--display-font);
+  white-space: nowrap;
+}
+.intent:is(.attack, .counter) { border-color: #ff8876; background: #651f23f2; }
+.intent.predict { border-color: #e7a45a; background: #4f2d1bf2; }
+.intent:is(.guard, .teamGuard, .doubleGuard) { border-color: #83c2cb; background: #1c3b43f2; }
+.intent i { display: flex; flex: none; color: #ffd0a2; }
+.intent:is(.attack, .counter) i, .intent.predict i:first-child { color: #ff9985; }
+.intent:is(.guard, .teamGuard, .doubleGuard) i, .intent.predict i:last-of-type { color: #a2e5ee; }
+.intent-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.intent b { flex: none; font-size: 1em; font-variant-numeric: tabular-nums; }
+.intent-divider { color: #e7bd92; }
 
 .game .table {
   --card-height: var(--battle-card-height);
@@ -197,11 +225,32 @@
   border-radius: 0;
   color: #fff7d9;
   text-shadow: 0 2px 4px #071b13;
-  background: radial-gradient(circle at 47% 38%, #57b690, #235f4c 54%, #16382f 56%, #4f9c7e 68%, #142f2a 72%);
+  grid-template-rows: 44% 1fr;
+  place-content: stretch;
+  place-items: center;
+  background: radial-gradient(circle at 47% 38%, #529362, #2b613d 54%, #193824 56%, #8a793e 68%, #293920 72%);
   clip-path: polygon(50% 0, 88% 18%, 100% 65%, 77% 92%, 50% 100%, 18% 88%, 0 65%, 12% 20%);
   box-shadow: none;
 }
+.game .energy[data-faction="left"] {
+  background: radial-gradient(circle at 47% 38%, #d64d49, #8f272c 54%, #571b24 56%, #c4514c 68%, #46151d 72%);
+}
+.energy-emblem {
+  align-self: end;
+  width: 30%;
+  aspect-ratio: 1;
+  margin-bottom: 2px;
+  background: #ffe7b7;
+}
+.energy[data-faction="left"] .energy-emblem {
+  clip-path: polygon(50% 0, 64% 33%, 100% 36%, 73% 60%, 81% 98%, 50% 78%, 19% 98%, 27% 60%, 0 36%, 36% 33%);
+}
+.energy[data-faction="right"] .energy-emblem {
+  background: #efc85f;
+  clip-path: polygon(50% 4%, 94% 50%, 50% 96%, 6% 50%);
+}
 .game .energy b {
+  align-self: start;
   font-size: clamp(20px, 3.4vw, 40px);
   font-variant-numeric: tabular-nums;
 }
@@ -212,7 +261,6 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
-.game .intent,
 .game .feedback {
   font-family: var(--display-font);
   font-weight: 700;

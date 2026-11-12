@@ -39,7 +39,6 @@ import {
   finishRivals,
   rivalIntent,
   pendingAttackPenaltyTargets,
-  injunctionType,
   MAX_MORAL,
   newRun,
   playCard,
@@ -58,6 +57,7 @@ import {
   presentCard,
 } from "./combat-motion";
 import { heroStatuses, rivalStatuses } from "./combat-status";
+import { intentLabels, rivalIntentBadge } from "./rival-intent";
 import { HeroSprite } from "./sprite";
 import { installHandPreview } from "./hand-preview";
 import { heroes, isHeroId, type HeroId, type Faction } from "./heroes";
@@ -150,18 +150,6 @@ const hero = new HeroSprite(
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const compactCombat = matchMedia("(max-width: 700px), (max-width: 1024px) and (max-height: 580px), (max-width: 1024px) and (pointer: coarse)");
 const clearHandPreview = installHandPreview(view.hand, compactCombat);
-const intentLabels = {
-  attack: "Ataque", guard: "Guarda", rally: "Força", stamp: "Bloqueio",
-  counter: "Contra-ataque", predict: "Previsão", teamGuard: "Guarda em equipe",
-  heal: "Cura", summon: "Reforço", doubleGuard: "Dobrar Guarda",
-  injunction: "Liminar", jingle: "Força em equipe", research: "Pesquisa", wait: "Interrompido",
-};
-const intentIcons = {
-  ...glyph, rally: glyph.strength, stamp: glyph.draw, counter: glyph.attack, predict: glyph.rally,
-  teamGuard: glyph.guard, heal: glyph.health, summon: glyph.rally,
-  doubleGuard: glyph.guard, injunction: glyph.draw, jingle: glyph.strength,
-  research: glyph.draw, wait: glyph.guard,
-};
 let run = newRun();
 let selectedDifficulty: Difficulty = "normal";
 let choosingStage = false;
@@ -306,9 +294,9 @@ function render(pendingDraw = 0) {
   renderResources();
   view.encounter.innerHTML = `<span>${encounter.subtitle}</span><h1 tabindex="-1">${encounter.name}</h1>`;
   const penaltyTargets = pendingAttackPenaltyTargets(run);
-  view.hero.innerHTML = `${meter(run.moral, MAX_MORAL)}
-    ${heroStatuses(run, Boolean(run.rightEffects.weakenAttack && !penaltyTargets.length))}
-    <strong class="fighter-name">${activeHero.name}</strong>`;
+  view.hero.innerHTML = `<strong class="fighter-name">${activeHero.name}</strong>
+    ${meter(run.moral, MAX_MORAL)}
+    ${heroStatuses(run, Boolean(run.rightEffects.weakenAttack && !penaltyTargets.length))}`;
   view.rivals.innerHTML = run.rivals
     .map((rival) => {
       const penalty = penaltyTargets.find(({ id }) => id === rival.id);
@@ -323,34 +311,21 @@ function render(pendingDraw = 0) {
           : active
             ? "attack"
             : "idle";
-      const intentText = intent.kind === "predict"
-        ? `${intent.label} · Guarda ${intent.guardValue ?? intent.value} se você se defender / Ataque ${intent.value} se ficar sem Guarda`
-        : intent.kind === "teamGuard" ? `${intent.label ?? "Guarda em equipe"} · +${intent.value} de Guarda para todos os rivais vivos`
-        : intent.kind === "guard" ? `${intent.label ?? "Guarda"} · +${intent.value} de Guarda para si`
-        : intent.kind === "stamp" ? `${intent.label ?? "Bloqueio"} · Bloqueia a primeira carta do próximo turno`
-        : intent.kind === "injunction" ? `Bloqueia ${injunctionType(rival.step) === "offensive" ? "Ataques" : "Defesas"} no próximo turno`
-        : intent.kind === "research" ? "Pesquisa suas cartas de Ataque e Defesa"
-        : intent.kind === "wait" ? intent.label
-        : intent.kind === "summon" ? "Convoca um reforço do MTST"
-        : `${intent.label ?? intentLabels[intent.kind]} ${intent.value}`;
-      const intentSummary = intent.kind === "predict"
-        ? `Guarda / Ataque ${intent.value}`
-        : intent.kind === "teamGuard" ? `${intent.label ?? "Guarda"} ${intent.value} · equipe`
-        : intent.kind === "guard" ? `${intent.label ?? "Guarda"} ${intent.value}`
-        : intent.kind === "stamp" ? "Bloqueia 1ª carta" : intentText;
+      const predictedPenalty = penaltyTargets[0]?.id === rival.id ? run.rightEffects.weakenAttack : 0;
+      const badge = rivalIntentBadge(intent, rival.step, Math.max(0, intent.value + rival.bonus - predictedPenalty), Boolean(rival.moral));
       const sprite = rival.sprite
         ? `<img class="rival-hero-frame rival-unique-frame" data-pose="${pose}" ${hit && !rival.moral ? "data-falling" : ""} src="${asset(`${rival.sprite}-${pose}`)}" alt="">`
         : heroes[run.hero].faction === "right"
         ? `<img class="rival-hero-frame" src="${asset(`${rival.id}-${{ idle: "idle", attack: "5", hit: "9", defeat: "15" }[pose]}`)}" alt="">`
         : `<span class="rival-sprite rival-sheet" data-pose="${pose}" ${hit && !rival.moral ? "data-falling" : ""} style="--idle-image:url('${asset(`rival-${rival.id}-idle`)}');--rival-atlas:url('${asset(`rival-${rival.id}-sheet`)}')"></span>`;
-      return `<div class="rival ${rival.moral ? "" : "defeated"} ${hit ? "impact" : ""} ${active ? "acting" : ""}" data-rival="${rival.id}">
-      <button class="rival-target" data-action="target" data-value="${rival.id}" ${!rival.moral || !targetMode ? "disabled" : ""} aria-label="${rival.name}. Moral ${rival.moral}. ${rival.moral ? intentText : "Derrotado"}">
-      <span class="intent ${intent.kind}" title="${intentText}"><i aria-hidden="true">${intentIcons[intent.kind]}</i> ${intentSummary}</span>
+      return `<div class="rival ${rival.moral ? "" : "defeated"} ${hit ? "impact" : ""}" data-rival="${rival.id}">
+      ${badge.html}
+      <button class="rival-target" data-action="target" data-value="${rival.id}" ${!rival.moral || !targetMode ? "disabled" : ""} aria-label="${rival.name}. Moral ${rival.moral}. ${rival.moral ? badge.label : "Derrotado"}">
       <span class="rival-stage">${sprite}</span>
+      <strong class="fighter-name">${rival.name}</strong>
       ${meter(rival.moral, rival.maxMoral)}
       </button>
       ${rivalStatuses(run, rival, penalty)}
-      <strong class="fighter-name">${rival.name}</strong>
     </div>`;
     })
     .join("");
@@ -374,7 +349,8 @@ function render(pendingDraw = 0) {
   }).join("");
   view.hand.scrollLeft = handScroll;
   view.playerTools.innerHTML = `
-    <div class="energy" role="img" aria-label="Energia ${run.energy} de ${TURN_ENERGY}" title="Energia">
+    <div class="energy" data-faction="${activeHero.faction}" role="img" aria-label="Energia ${run.energy} de ${TURN_ENERGY}" title="Energia">
+      <span class="energy-emblem" aria-hidden="true"></span>
       <b>${run.energy}/${TURN_ENERGY}</b>
     </div>
     <div class="draw-pile" role="img" aria-label="Pilha de compra, ${run.draw.length} cartas" title="Pilha de compra" data-empty="${run.draw.length === 0}">
@@ -678,11 +654,14 @@ async function endPlayerTurn() {
   if (run !== active) return;
   for (const rival of active.rivals) {
     if (!rival.moral) continue;
+    let recoverAttack: ReturnType<typeof lungeAt>;
     if (rivalIntent(active, rival, true).kind === "attack") {
       acting = rival.id;
       render();
+      const attacker = rivalStage(rival.id)?.querySelector<HTMLElement>(".rival-sprite, .rival-hero-frame");
+      if (attacker) recoverAttack = lungeAt(attacker, view.heroStage, ATTACK_WINDUP_MS);
       gameAudio.play("attack", { gain: 0.8 });
-      await wait(245);
+      await wait(ATTACK_WINDUP_MS);
       if (run !== active) return;
       acting = undefined;
     }
@@ -700,7 +679,11 @@ async function endPlayerTurn() {
     if (!active.moral) hero.play("death");
     else if (damage) hero.play("hit");
     render();
-    if (intent.kind === "attack") showImpact(view.heroStage, result);
+    if (intent.kind === "attack") {
+      const attacker = rivalStage(rival.id)?.querySelector<HTMLElement>(".rival-sprite, .rival-hero-frame");
+      if (attacker) recoverAttack?.(attacker);
+      showImpact(view.heroStage, result);
+    }
     for (const [index, other] of active.rivals.entries()) {
       if (!other.moral) continue;
       const effects: CombatEffect[] = [];
@@ -896,7 +879,7 @@ function enterStage() {
   view.game.hidden = false;
   render();
   view.encounter.querySelector("h1")?.focus({ preventScroll: true });
-  gameAudio.playHeroVoice(run.hero, "intro");
+  gameAudio.stopHeroVoice();
   showPlayerGains({ guard: 0, strength: 0, health: run.moral, energy: TURN_ENERGY, gold: run.money });
   showDraw();
 }
@@ -991,7 +974,7 @@ app.addEventListener("submit", (event) => {
 });
 
 function showItemDetails(button: HTMLButtonElement, index?: number) {
-  if (busy && !view.game.hidden && !button.classList.contains("fighter-effect")) return;
+  if (busy && !view.game.hidden && !button.matches(".fighter-effect, .intent")) return;
   const usable = index !== undefined && !busy && !choosingStage && canUseConsumable(run, index);
   view.itemDetails.innerHTML = `
     <h2 id="item-details-title"></h2>
