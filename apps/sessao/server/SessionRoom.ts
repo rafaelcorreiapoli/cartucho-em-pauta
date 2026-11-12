@@ -1,5 +1,5 @@
 import { emptyPhotoAccess } from '../src/photography';
-import { readGameplayAction } from '../src/gameplay';
+import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
@@ -20,6 +20,7 @@ export class SessionRoom extends Room {
   private movementQueue = new Map<string, MovementInput[]>();
 
   private gameplay = new Gameplay();
+  private matchObjectsActive = false;
   private gameplayWorld() {
     const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
       id=>this.voice.has(id));
@@ -39,6 +40,13 @@ export class SessionRoom extends Room {
   private lastPhotos = new Map<string,{revision:number; key:string}>();
 
   private voice = new Set<string>();
+
+  private resetFinishedMatch(now:number) {
+    if (!this.matchObjectsActive || this.match.running) return;
+    this.matchObjectsActive = false;
+    this.gameplay.reset(now);
+    void this.unlock();
+  }
 
   private leaveVoice(id: string) {
     this.match.stopBroadcast(id,this.clock.currentTime);
@@ -61,6 +69,7 @@ export class SessionRoom extends Room {
     this.onMessage('start-match', (client, count:unknown) => {
       if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
         this.gameplay.reset(this.clock.currentTime);
+        this.matchObjectsActive = true;
         void this.lock();
       }
     });
@@ -80,16 +89,18 @@ export class SessionRoom extends Room {
     this.onMessage('gameplay',(client, raw:unknown) => {
       const action = readGameplayAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      const world = this.gameplayWorld();
-      if (!action || !player || !this.match.canHandleObjects(player.id,world.now)) return;
-      if (this.match.phase!=='negotiation' && ['call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish'].includes(action.kind)) return;
-      const text = this.gameplay.act(player,action,world);
+      if (!action || !player || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+          !canUseGameplayAction(action,this.match.phase==='negotiation')) return;
+      const text = this.gameplay.act(player,action,this.gameplayWorld());
       if (text) client.send('gameplay-feedback',text);
     });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (action && player) this.match.politics(player,action,[...this.players.values()].map(state => state.player),this.clock.currentTime);
+      if (!action || !player) return;
+      const now = this.clock.currentTime;
+      this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
+      this.resetFinishedMatch(now);
     });
     this.onMessage('election', (client, raw:unknown) => {
       const action = readElectionAction(raw);
@@ -120,7 +131,6 @@ export class SessionRoom extends Room {
         else state.player.moving = false;
       }
       const players = [...this.players.values()].map(state => state.player);
-      const running = this.match.running;
       const now = this.clock.currentTime;
       this.match.advance(now);
       const plenary = this.match.phase==='ballot';
@@ -132,10 +142,7 @@ export class SessionRoom extends Room {
         this.movementQueue.get(id)?.splice(0);
         if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
       }
-      if (running && !this.match.running) {
-        this.gameplay.reset(this.clock.currentTime);
-        void this.unlock();
-      }
+      this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
       this.gameplay.tick(world,this.match.phase==='negotiation');
       for (const player of players) {
@@ -216,12 +223,8 @@ export class SessionRoom extends Room {
     this.lastPhotos.delete(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),true);
-    const running = this.match.running;
     this.match.leave(client.sessionId,this.clock.currentTime);
-    if (running && !this.match.running) {
-      this.gameplay.reset(this.clock.currentTime);
-      void this.unlock();
-    }
+    this.resetFinishedMatch(this.clock.currentTime);
     this.players.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }

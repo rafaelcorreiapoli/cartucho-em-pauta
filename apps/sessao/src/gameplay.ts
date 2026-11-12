@@ -40,11 +40,28 @@ export const canReachObject = (player:Motion,point:Motion) =>
   Math.hypot(player.x-point.x,player.y-point.y)<=24 && localPerception(player,point).visible;
 
 export const INVENTORY_SLOTS = 6;
-export const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
-  'call','answer','hangup','game-start','game-stop','game-turn','photo','selfie','expose','conceal',
+const phoneActions = ['call','answer','hangup','game-start','game-stop','game-turn'] as const;
+type PhoneActionKind = typeof phoneActions[number];
+
+const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
+  ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','buy'] as const;
-export type GameplayAction = {kind:typeof gameplayActions[number]; item?:number; target?:string; place?:string; direction?:SnakeDirection};
+type GameplayActionKind = typeof gameplayActions[number];
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection};
+export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
+
+export function isPhoneAction(action:GameplayAction):action is PhoneAction {
+  return phoneActions.some(kind=>kind===action.kind);
+}
+
+const articulationActions = new Set<GameplayActionKind>([
+  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish',
+]);
+
+export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
+  return articulating || !articulationActions.has(action.kind);
+}
 export type GameplayView = {
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
@@ -55,9 +72,11 @@ export type GameplayEvent = {
 };
 
 export function readGameplayAction(raw:unknown):GameplayAction | undefined {
-  if (!raw || typeof raw!=='object' || !('kind' in raw) || !gameplayActions.some(kind => kind===raw.kind)) return;
+  if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
+  const kind = gameplayActions.find(kind=>kind===raw.kind);
+  if (!kind) return;
   return {
-    kind:raw.kind as GameplayAction['kind'],
+    kind,
     item:'item' in raw && typeof raw.item==='number' && Number.isSafeInteger(raw.item) ? raw.item : undefined,
     target:'target' in raw && typeof raw.target==='string' ? raw.target : undefined,
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,

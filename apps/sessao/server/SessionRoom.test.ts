@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
+import type { PhotoAccessView } from '../src/photography';
 import type { PlenaryView } from '../src/plenary';
 import { canStand, type Player } from '../src/map';
 
@@ -96,17 +97,32 @@ test('clients share movement and voice, then receive private roles and payments'
     third.onMessage('control',() => {});
     third.onMessage('voice-roster',() => {});
     await until(() => firstView?.players===3 && secondView?.players===3 && thirdView?.players===3);
+    let firstPhotos:PhotoAccessView | undefined;
+    let secondPhotos:PhotoAccessView | undefined;
+    let thirdPhotos:PhotoAccessView | undefined;
+    const feedback:string[] = [];
+    first.onMessage('gameplay-feedback',(message:string) => feedback.push(message));
+    first.onMessage('photo-state',(view:PhotoAccessView) => { firstPhotos = view; });
+    second.onMessage('gameplay-feedback',() => {});
+    second.onMessage('photo-state',(view:PhotoAccessView) => { secondPhotos = view; });
+    third.onMessage('photo-state',(view:PhotoAccessView) => { thirdPhotos = view; });
     first.send('start-match');
     await until(() => [firstView,secondView,thirdView].every(view => view?.phase==='negotiation'));
     expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
     await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
-    first.onMessage('gameplay-feedback',() => {});
-    first.onMessage('photo-state',() => {});
-    second.onMessage('gameplay-feedback',() => {});
-    second.onMessage('photo-state',() => {});
+    first.send('gameplay',{kind:'install',place:'constructor',item:1});
+    first.send('gameplay',{kind:'photo'});
+    await until(() => feedback.includes('Aproxime-se do local.') && firstPhotos?.album.length===1);
+    second.send('gameplay',{kind:'photo'});
+    await until(() => secondPhotos?.album.length===1);
+    expect(firstPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([first.sessionId]);
+    expect(secondPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([second.sessionId]);
+    expect(thirdPhotos?.album ?? []).toEqual([]);
     first.send('gameplay',{kind:'call',target:second.sessionId});
     await until(() => secondView?.gameplay?.call?.state==='incoming');
+    expect(firstView!.gameplay?.call?.state).toBe('outgoing');
+    expect(thirdView!.gameplay?.call).toBeUndefined();
     second.send('gameplay',{kind:'answer'});
     await until(() => secondView?.gameplay?.call?.state==='connected' &&
       secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
@@ -132,11 +148,20 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(() => roster.at(-1)?.length===1);
     expect(roster.at(-1)).toEqual([second.sessionId]);
     await until(() => secondView?.phase==='finished' && seen.length===2 && seen.some(player => player.id===second.sessionId));
+    await until(() => secondPhotos?.album.length===0);
+    const newcomer = await new Client(endpoint).joinById(second.roomId,{nick:'Nova'});
+    rooms.push(newcomer);
+    newcomer.onMessage('players',() => {});
+    newcomer.onMessage('control',() => {});
+    newcomer.onMessage('plenary',() => {});
+    await until(() => secondView?.players===3);
+
     const solo = await new Client(endpoint).create('plenary',{nick:'Solo'});
     rooms.push(solo);
     let soloView:PlenaryView;
     solo.onMessage('players',() => {});
     solo.onMessage('control',() => {});
+    solo.onMessage('photo-state',() => {});
     solo.onMessage('plenary',(view:PlenaryView) => { soloView = view; });
     solo.send('start-match',1);
     await until(() => soloView?.phase==='negotiation');

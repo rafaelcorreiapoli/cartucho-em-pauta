@@ -1,23 +1,14 @@
 import type { GameplayEvent } from '../src/gameplay';
-import { agendas, missionReward, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact, type DirectoryContact,
-  type Evidence, type Mission, type Offer, type PoliticsView, type Split } from '../src/politics';
+import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+  type Evidence, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
-import { applyFacts, photoMissions } from './photo-missions';
+import { PersonalAgenda } from './PersonalAgenda';
 
 type Account = {
-  wallet:number; walletIncome:number; popularity:number; missions:Mission[]; completed:Mission[]; missionDeck:Agenda[]; missionsPaid:boolean; nextMissionId:number; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
-  photoFacts:Map<number,Map<string,Set<string>>>; selfieBonus:boolean; missionPayers:Set<string>; missionCoffee:Set<string>; known:Set<number>; suspended:boolean;
+  wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda;
+  grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
+  selfieBonus:boolean; known:Set<number>; suspended:boolean;
 };
-const activityMissions = {
-  protocolo:(event:GameplayEvent) => event.type==='filed',
-  sigilo:(event:GameplayEvent) => event.type==='dropped' && !event.witnesses.length,
-  joguinho:(event:GameplayEvent) => event.type==='game-won' && !event.witnesses.length,
-} satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
-const missionTargets:Partial<Record<Agenda,number>> = {
-  protocolo:1, entrega:3, sigilo:1, joguinho:1,
-  fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1, cafe:1, leitura:1, credencial:1,
-};
-const activeMissionCount = 3;
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
 export class PoliticalEconomy {
@@ -37,23 +28,13 @@ export class PoliticalEconomy {
     this.offers.clear();
     this.serial = 0;
     this.scandalPizzas.clear();
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind =>
-      kind!=='cafe' && kind!=='entrega' && !Object.hasOwn(activityMissions,kind) && !Object.hasOwn(photoMissions,kind) && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
-    const visualDeck = (Object.keys(photoMissions) as (keyof typeof photoMissions)[])
-      .filter(kind=>photoMissions[kind].players<=contacts.length);
     for (const contact of contacts) {
-      const offset = Math.floor(random()*deck.length);
-      const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
-      const account:Account = {
-        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...ordered.slice(0,2),
-          ...(contacts.length>1 ? visualDeck.slice(0,3) : []),'protocolo','sigilo','joguinho',...ordered.slice(2),
-          ...visualDeck.slice(contacts.length>1 ? 3 : 0),...(contacts.length>=4 ? ['entrega'] as const : [])],
-        missionsPaid:false,nextMissionId:0,photoFacts:new Map(),selfieBonus:false,missionPayers:new Set(),missionCoffee:new Set(),
-        grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
+      const metrics = {wallet:8,popularity:40};
+      this.accounts.set(contact.id,{
+        ...metrics,walletIncome:0,agenda:new PersonalAgenda(metrics,contacts.length,random),selfieBonus:false,
+        grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
-      };
-      this.fillMissions(account);
-      this.accounts.set(contact.id,account);
+      });
     }
   }
 
@@ -63,7 +44,7 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account) return;
     account.popularity = cap(account.popularity+amount);
-    this.progressMissions(account);
+    account.agenda.progress(account);
   }
 
   private credit(account:Account, amount:number) {
@@ -75,21 +56,13 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account) return;
     this.credit(account,amount);
-    this.progressMissions(account);
+    account.agenda.progress(account);
   }
 
   spend(id:string,amount:number) {
     const account = this.accounts.get(id);
     if (!account || amount>account.wallet) return false;
     account.wallet -= amount;
-    return true;
-  }
-
-  spendOnElection(id:string, amount:number, kind:string, cycle:number) {
-    const account = this.accounts.get(id);
-    if (!account || amount>account.wallet) return false;
-    account.wallet -= amount;
-    account.expenses.push({kind,amount,cycle});
     return true;
   }
 
@@ -119,8 +92,7 @@ export class PoliticalEconomy {
     source.payments++;
     source.wallet -= amount;
     this.credit(recipient,amount);
-    if (recipient.missions.some(mission => mission.kind==='articulacao')) recipient.missionPayers.add(from);
-    this.progressMissions(recipient);
+    recipient.agenda.recordPayment(recipient,from);
     this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
     return true;
   }
@@ -130,7 +102,7 @@ export class PoliticalEconomy {
     if (!account || account.grantUsed || account.suspended || budget<CABINET_GRANT) return;
     account.grantUsed = true;
     this.credit(account,diverted);
-    this.progressMissions(account);
+    account.agenda.progress(account);
     if (diverted>0) this.record('diversion',id,diverted,round);
     return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
   }
@@ -208,7 +180,7 @@ export class PoliticalEconomy {
     }
     if (id!==record.from && id!==record.to) {
       account.popularity = cap(account.popularity+10);
-      this.progressMissions(account,{escandalo:1});
+      account.agenda.progress(account,{escandalo:1});
     }
     return record;
   }
@@ -220,7 +192,7 @@ export class PoliticalEconomy {
       if (passed && vote==='yes') {
         account.popularity = cap(account.popularity+(popular ? 8 : -5));
       }
-      this.progressMissions(account,{
+      account.agenda.progress(account,{
         votacao:1,projetos:Number(passed && vote==='yes'),oposicao:Number(!passed && vote==='no'),
       });
     }
@@ -237,87 +209,29 @@ export class PoliticalEconomy {
   recordGameplay(event:GameplayEvent) {
     const account = this.accounts.get(event.actor);
     if (!account) return;
-    const gains:Partial<Record<Agenda,number>> = {};
-    for (const [mission,matches] of Object.entries(activityMissions)) {
-      if (matches(event)) gains[mission as Agenda] = 1;
-    }
     if (event.kind==='pizza' && event.item!==undefined) {
       if (event.type==='installed' && [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer')) {
         this.scandalPizzas.add(event.item);
       }
       if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
     }
-    for (const mission of account.missions) {
-      const rule = photoMissions[mission.kind as keyof typeof photoMissions];
-      if (!rule || (mission.kind==='pizzada' && !this.scandalPizzas.has(event.item ?? -1))) continue;
-      const facts = rule.facts(event);
-      if (!facts.length) continue;
-      let seen = account.photoFacts.get(mission.id);
-      if (!seen) account.photoFacts.set(mission.id,seen=new Map());
-      gains[mission.kind] = Math.max(0,applyFacts(seen,facts)-mission.current);
-    }
     if (event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
       event.photo.people.some(person=>person.id!==event.actor) && !account.selfieBonus) {
       account.selfieBonus = true;
       account.popularity = cap(account.popularity+4);
     }
-    if (event.kind==='coffee') {
-      if (event.type==='used') gains.cafe = 1;
-      if (event.type==='transferred' && event.target && account.missions.some(mission=>mission.kind==='entrega')) {
-        account.missionCoffee.add(event.target);
-      }
-    }
-    this.progressMissions(account,gains);
+    account.agenda.recordGameplay(account,event,this.scandalPizzas.has(event.item ?? -1));
   }
 
   recordActivity(id:string, kind:'auditoria' | 'cafe' | 'leitura' | 'credencial' | 'emenda') {
     const account = this.accounts.get(id);
-    if (account) this.progressMissions(account,{[kind]:1});
-  }
-
-  private fillMissions(account:Account) {
-    while (account.missions.length<activeMissionCount) {
-      const index = account.missionDeck.findIndex(kind => !account.missions.some(mission => mission.kind===kind) &&
-        (kind!=='campanha' || account.popularity<100));
-      const [kind] = account.missionDeck.splice(index,1);
-      account.missionDeck.push(kind);
-      let target = photoMissions[kind as keyof typeof photoMissions]?.target ?? missionTargets[kind] ?? 1;
-      if (kind==='fortuna') target = Math.max(target,account.wallet+4);
-      if (kind==='campanha') target = Math.min(100,Math.max(target,account.popularity+15));
-      if (kind==='articulacao') account.missionPayers.clear();
-      if (kind==='entrega') account.missionCoffee.clear();
-      account.missions.push({id:++account.nextMissionId,kind,current:0,target});
-    }
-  }
-
-  private missionProgress(account:Account, mission:Mission) {
-    if (mission.kind==='fortuna') return account.wallet;
-    if (mission.kind==='campanha') return account.popularity;
-    if (mission.kind==='articulacao') return account.missionPayers.size;
-    if (mission.kind==='entrega') return account.missionCoffee.size;
-    return mission.current;
-  }
-
-  private progressMissions(account:Account, gains:Partial<Record<Agenda,number>> = {}) {
-    for (const mission of account.missions) {
-      const current = this.missionProgress(account,mission)+(gains[mission.kind] ?? 0);
-      mission.current = Math.min(current,mission.target);
-      if (current>=mission.target) {
-        account.photoFacts.delete(mission.id);
-        account.completed.push({...mission});
-      }
-    }
-    account.missions = account.missions.filter(mission => mission.current<mission.target);
-    this.fillMissions(account);
+    if (account) account.agenda.progress(account,{[kind]:1});
   }
 
   settleAgendas(players:Iterable<string>) {
     for (const id of players) {
       const account = this.accounts.get(id);
-      if (!account || account.missionsPaid) continue;
-      for (const mission of account.missions) mission.current = this.missionProgress(account,mission);
-      account.missionsPaid = true;
-      this.credit(account,account.completed.reduce((total,mission)=>total+missionReward(mission.kind),0));
+      if (account) this.credit(account,account.agenda.settle(account));
     }
   }
 
@@ -327,10 +241,7 @@ export class PoliticalEconomy {
     const {wallet,walletIncome,popularity,grantUsed,suspended} = account;
     return {
       wallet,walletIncome,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
-      missions:{
-        active:account.missions.map(mission => ({...mission,current:account.missionsPaid ? mission.current : this.missionProgress(account,mission)})),
-        completed:account.completed.slice(),paid:account.missionsPaid,
-      },
+      missions:account.agenda.view(account),
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
       directory:[...this.contacts.values()].map(contact => ({
