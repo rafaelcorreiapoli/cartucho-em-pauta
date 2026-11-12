@@ -12,7 +12,22 @@ export const walls: Rect[] = [
   [10,161,59,11], [105,161,113,11], [262,161,106,11], [404,161,66,11],
 ];
 export const desks = [[48,65],[373,65],[169,84],[266,84],[63,217],[342,217]] as const;
-const obstacles = [...walls, ...desks.map(([x,y]): Rect => [x,y+2,45,18])];
+export const furnishings = [
+  {frame:0, area:[197,33,86,29], footprint:10},
+  {frame:3, area:[16,21,25,34], footprint:9},
+  {frame:3, area:[444,18,24,32], footprint:9},
+  {frame:3, area:[301,28,22,28], footprint:7},
+  {frame:4, area:[111,24,23,29], footprint:10},
+  {frame:4, area:[18,192,25,30], footprint:10},
+  {frame:4, area:[441,193,23,28], footprint:10},
+  {frame:5, area:[232,208,16,33], footprint:10},
+] satisfies {frame:number; area:Rect; footprint:number}[];
+const obstacles = [
+  ...walls,
+  ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
+  ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
+    [x,y+height-footprint,width,footprint]),
+];
 
 export type Player = { id: string; character: number; x: number; y: number; direction: number; moving: boolean };
 export type Motion = { x: number; y: number };

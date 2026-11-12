@@ -11,4 +11,4 @@ Em outro terminal, execute `bun run dev` e abra http://localhost:5175. Crie uma 
 
 `bun run check` verifica os tipos, testa dois clientes contra um servidor Bun e gera o build web.
 
-O mapa usa [Office Space Tileset](https://lpc.opengameart.org/content/office-space-tileset), CC0. Os avatares combinam caricaturas geradas com ImageGen e a animação de [Human RPG Character](https://opengameart.org/content/human-rpg-character), CC0.
+Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram feitas de frente, perfil e costas, com duas poses de passada para cada direção, e empacotadas em quadros de 64×64. O perfil é espelhado no jogo para a quarta direção. O mapa usa um atlas de móveis próprio, pisos e paredes montados no Phaser.

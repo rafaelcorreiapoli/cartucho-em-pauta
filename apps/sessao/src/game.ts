@@ -35,8 +35,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
     private lastSent = -Infinity;
 
     preload() {
-      this.load.spritesheet('players','assets/sprites.png',{frameWidth:24,frameHeight:24});
-      this.load.image('office','assets/office.png');
+      this.load.spritesheet('players','assets/sprites-hd.png',{frameWidth:64,frameHeight:64});
+      this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
       for (let character=0;character<3;character++) {
@@ -46,6 +46,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
       }
+      this.cameras.main.setZoom(2).centerOn(WIDTH/2,HEIGHT/2);
       drawMap(this);
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
@@ -88,7 +89,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
         let view = this.views.get(id);
         if (!view) {
           view = {
-            sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1),
+            sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.59),
             label:this.add.text(player.x,player.y+2,'',{
               fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,
             }).setOrigin(.5,0).setDepth(500),
@@ -112,7 +113,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
     }
   }
   const game = new Phaser.Game({
-    type:Phaser.AUTO,width:WIDTH,height:HEIGHT,parent,
+    type:Phaser.AUTO,width:WIDTH*2,height:HEIGHT*2,parent,
     pixelArt:true,roundPixels:true,backgroundColor:'#20312f',scene:Plenary,
     scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
   });
