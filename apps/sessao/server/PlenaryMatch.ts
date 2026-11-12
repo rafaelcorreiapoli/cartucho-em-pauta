@@ -1,11 +1,12 @@
-import type { ElectionAction } from '../src/elections';
+import { offices, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, STATION_RADIUS,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import { localPerception, type Player } from '../src/map';
-import { HEARING_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { HEARING_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
 const clamp = (value:number) => Math.max(0,Math.min(100,value));
@@ -95,7 +96,7 @@ export class PlenaryMatch {
     }
     if (action==='amendment' && !this.amended) {
       this.amended = true;
-      this.economy.amended(player.id);
+      this.economy.recordActivity(player.id,'emenda');
     }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
@@ -110,6 +111,31 @@ export class PlenaryMatch {
       return {text:note ? `${finding} ${note}` : finding,critical:this.fraud && !this.reportedFraud};
     }
     if (action==='panel' && this.audits.get(player.id)==='fraud') this.reportedFraud = true;
+  }
+
+  roomActivity(player:Player, activity:RoomActivity, now:number):RoomActivityResult | undefined {
+    const {id} = player;
+    if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || !this.at(player,activity)) return;
+    const bill = bills[this.round].name;
+    switch (activity) {
+      case 'cabinet': return {activity,text:`O orçamento público está em ${this.budget} de 100.`};
+      case 'coffee':
+        this.economy.recordActivity(id,'cafe');
+        return {activity,text:'Cafezinho tomado. De volta à articulação!'};
+      case 'library':
+        this.economy.recordActivity(id,'leitura');
+        return {activity,text:`Você estudou o projeto ${bill}.`};
+      case 'committees': return {activity,text:`Votos a favor necessários para aprovar ${bill}: ${this.billQuorum()}.`};
+      case 'credentials': {
+        this.economy.recordActivity(id,'credencial');
+        const office = this.election.office(id);
+        return {activity,text:office ? `${this.economy.name(id)} · ${offices[office].name} · Salário de ${money(offices[office].salary)} por mandato.` :
+          `${this.economy.name(id)} · Assessor`};
+      }
+      case 'benches': return {activity,text:`Parlamentares aptos a votar nesta rodada: ${this.votingPlayers()}.`};
+      case 'gallery': return {activity,text:`Sua popularidade com o público está em ${this.popularity(id)} de 100.`};
+      default: return {activity};
+    }
   }
 
   vote(id:string, vote:Vote, now:number) {

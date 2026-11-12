@@ -1,32 +1,33 @@
 import { offices } from './elections';
 import type { Player } from './map';
 import { AGENDA_REWARD, missionTitle, money, type Mission, type PoliticsView } from './politics';
-import type { PlenaryView, Station } from './plenary';
+import { STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-export function createMatchHud(id:string, stationFeedback:(station:Station) => void) {
+export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
+  const agendaDock = element<HTMLDetailsElement>('agenda-dock');
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
+  const missionHistory = element('missions-history');
+  const walletEffects = element('wallet-effects');
+  const walletGain = element<HTMLTemplateElement>('wallet-gain');
+  let incomeEffect:HTMLElement | undefined;
   let missionRenderKey = '';
   const notices = element('hud-notices');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
-  const quickActions = [
-    {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
-    {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
-    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação',station:'panel',icon:'ballot'},
-    {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
-  ].map(action => {
-    const control = element<HTMLButtonElement>(action.target);
+  function addStationButton(action:{station:Station; icon:string; label:string}) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hud-button hud-button--secondary';
     button.dataset.station = action.station;
+    button.hidden = true;
     const label = document.createElement('span');
     label.textContent = action.label;
     const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -36,16 +37,34 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     glyph.setAttribute('href','#icon-'+action.icon);
     icon.append(glyph);
     button.append(icon,label);
+    shortcuts.append(button);
+    return button;
+  }
+
+  const quickActions = ([
+    {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
+    {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
+    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação',station:'panel',icon:'ballot'},
+    {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
+  ] as const).map(action => {
+    const control = element<HTMLButtonElement>(action.target);
+    const button = addStationButton(action);
     button.onclick = () => {
-      if (action.panel) {
+      if ('panel' in action) {
         element<HTMLDetailsElement>(action.panel).open = true;
         const field = control.closest('form')?.querySelector<HTMLElement>('.game-choice');
         field?.focus();
       } else control.click();
     };
-    shortcuts.append(button);
     return {button,control};
   });
+  const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
+    const activity = roomActivities[station];
+    const button = addStationButton({...activity,station});
+    button.onclick = () => sendActivity(station);
+    return {button,activity};
+  });
+  let own:Player | undefined;
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   function onStationClick(event:MouseEvent) {
     const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
@@ -62,7 +81,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
-  element<HTMLDetailsElement>('agenda-dock').open = false;
+  agendaDock.open = false;
+  const showLatestMission = () => { missionHistory.scrollTop = missionHistory.scrollHeight; };
+  agendaDock.addEventListener('toggle',showLatestMission);
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
     timers.delete(node);
@@ -93,7 +114,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (key===missionRenderKey) return;
     missionRenderKey = key;
     element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    element('missions-history').hidden = !missions.completed.length;
+    missionHistory.hidden = !missions.completed.length;
     function row(mission:Mission, done:boolean) {
       const node = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
       node.dataset.done = String(done);
@@ -105,7 +126,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       return node;
     }
     activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));
-    completedMissions.replaceChildren(...missions.completed.slice().reverse().map(mission => row(mission,true)));
+    if (completedMissions.children.length!==missions.completed.length || missions.paid) {
+      completedMissions.replaceChildren(...missions.completed.map(mission => row(mission,true)));
+      showLatestMission();
+    }
   }
 
   function actions(view:PlenaryView | undefined = previous) {
@@ -114,12 +138,35 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }
+    for (const {button,activity} of activityButtons) {
+      button.hidden = !exploring || !own || Math.hypot(own.x-activity.x,own.y-activity.y)>STATION_RADIUS;
+    }
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
     stations.hidden = !exploring || (!hasAction && interviewHint.hidden);
   }
 
   return {
     notify,
+    showIncome(amount:number, headY:number | undefined) {
+      const total = amount+Number(incomeEffect?.dataset.amount ?? 0);
+      incomeEffect?.remove();
+      const effect = walletGain.content.firstElementChild!.cloneNode(true) as HTMLElement;
+      effect.dataset.amount = String(total);
+      if (headY!==undefined) effect.style.top = `${headY}px`;
+      effect.querySelector('strong')!.textContent = `+${money(total)}`;
+      effect.addEventListener('animationend',() => {
+        effect.remove();
+        if (incomeEffect===effect) incomeEffect = undefined;
+      },{once:true});
+      incomeEffect = effect;
+      walletEffects.append(effect);
+    },
+    activityResult({activity,text}:RoomActivityResult) {
+      const info = roomActivities[activity];
+      if (text) notify(info.title,text);
+      if ('panel' in info) element<HTMLDetailsElement>(info.panel).open = true;
+      if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
+    },
     render(view:PlenaryView) {
       const infiltrator = view.role==='Infiltrado';
       roleBadge.hidden = !view.role;
@@ -142,6 +189,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
         renderMissions(politics.missions);
+        if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) agendaDock.open = true;
       }
 
       if (previous) {
@@ -155,9 +203,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
         if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);
-        if (politics && past && politics.wallet!==past.wallet) {
-          const change = politics.wallet-past.wallet;
-          notify('Carteira atualizada',`${change>0 ? '+' : '−'}${money(Math.abs(change))}`);
+        if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
+          notify('Carteira atualizada',`−${money(past.wallet-politics.wallet)}`);
         }
         const completed = politics && past ? politics.missions.completed.slice(past.missions.completed.length) : [];
         if (view.phase!=='finished' && completed.length) {
@@ -169,7 +216,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions(view);
     },
     players(players:Player[]) {
-      const own = players.find(player => player.id===id);
+      own = players.find(player => player.id===id);
       if (own) {
         element('hud-nick').textContent = own.nick;
         element('hud-portrait').style.setProperty('--portrait-row',String(own.character*3));
@@ -178,6 +225,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     destroy() {
       for (const node of timers.keys()) remove(node);
+      agendaDock.removeEventListener('toggle',showLatestMission);
+      incomeEffect?.remove();
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
       shortcuts.replaceChildren();

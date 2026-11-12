@@ -124,7 +124,9 @@
 .election-summary { display: grid; min-width: 0; gap: .12rem; }
 #current-office { color: #d6cfb5; font-size: .69rem; }
 #election-position { font-variant-numeric: tabular-nums; }
-#election-timer { margin-left: auto; white-space: nowrap; }
+.election-clock { display: grid; justify-items: end; gap: .1rem; margin-left: auto; white-space: nowrap; }
+.election-clock small { color: #d6cfb5; font-size: .66rem; }
+#election-timer { line-height: 1; font-variant-numeric: tabular-nums; }
 #election-dock[data-urgency="soon"] { border-color: #bba365; }
 #election-dock[data-urgency="high"] { border-color: #f4cc75; box-shadow: 0 0 0 1px #f4cc7544; }
 
@@ -167,6 +169,8 @@
   bottom: calc(100% + .75rem);
   left: -1px;
   width: var(--hud-side);
+  display: flex;
+  flex-direction: column;
   max-height: 48dvh;
   overflow: auto;
   padding: 1rem;
@@ -224,6 +228,39 @@
   @keyframes station-arrive {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+#wallet-effects { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.wallet-gain {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: .42em;
+  padding: .36em .58em;
+  border: 1px solid #6bcfa5;
+  border-radius: 9px;
+  background: #16392a;
+  color: #b6ffd8;
+  box-shadow: 0 4px 10px #0919119c;
+  font: 900 clamp(1.1rem, 2vw, 1.75rem)/1 var(--party-display);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  animation: wallet-rise 1250ms ease-out both;
+}
+.wallet-gain .hud-glyph { width: 1.2em; height: 1.2em; color: #ffda7a; }
+@keyframes wallet-rise {
+  from { opacity: 1; translate: 0 0; }
+  35% { opacity: 1; }
+  to { opacity: 0; translate: 0 -56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallet-gain { animation-name: wallet-fade; }
+  @keyframes wallet-fade {
+    from, 45% { opacity: 1; }
+    to { opacity: 0; }
   }
 }
 
@@ -393,6 +430,8 @@
   font: 850 1.2rem/1.2 var(--party-display);
 }
 .agenda-panel h3 { margin-top: 1.15rem; font-size: .95rem; color: #c0d5bb; }
+#missions-history { min-height: 3rem; overflow: auto; scrollbar-width: thin; }
+#missions-current { flex-shrink: 0; }
 .agenda-list {
   display: grid;
   gap: .55rem;
@@ -427,9 +466,10 @@
   align-items: center;
   gap: .25rem;
   white-space: nowrap;
-  font-size: .8rem;
+  font: 850 .92rem/1.2 var(--party-display);
   color: var(--hud-gold);
 }
+.mission-reward .hud-glyph { width: 1.25em; height: 1.25em; }
 .agenda-list [data-done="true"] .mission-mark { border-color: #acd4a8; }
 .agenda-list [data-done="true"] .mission-mark svg { visibility: visible; }
 .agenda-list [data-done="true"] .mission-copy strong { text-decoration: line-through; color: #b9c4ad; }
@@ -489,7 +529,8 @@
 .vote-scoreboard { display: grid; grid-template-columns: 1fr auto 1fr; gap: .3rem; align-items: center; text-align: center; }
 .vote-team { display: grid; justify-items: center; gap: .15rem; padding: .45rem .2rem; border-radius: 6px; }
 .vote-team span { display: flex; align-items: center; gap: .2rem; font-weight: 700; white-space: nowrap; }
-.vote-team strong { font: 900 1.7rem/1 var(--party-display); font-variant-numeric: tabular-nums; }
+.vote-team strong { grid-row: 1; font: 900 2rem/1 var(--party-display); font-variant-numeric: tabular-nums; }
+.vote-team .hud-glyph { width: 1.25em; height: 1.25em; }
 .vote-team-yes { background: #193c36; color: var(--party-mint); }
 .vote-team-no { background: #472d2d; color: var(--party-coral); }
 .vote-versus { color: #d8cb9d; font-weight: 900; }
@@ -627,7 +668,11 @@
   .profile-copy { gap: .18rem; }
   #hud-nick { font-size: 1.2rem; }
   #hud-office { font-size: .86rem; }
-  .profile-values { gap: .25rem .6rem; }
+  .profile-values { gap: .3rem .7rem; }
+  .profile-values strong { font: 850 1.05rem/1.15 var(--party-display); }
+  .profile-values .hud-glyph { width: 19px; height: 19px; }
+  #hud-popularity { color: var(--party-mint); }
+  #office-salary { color: #d5c7a2; }
   .profile-summary .profile-help { width: 20px; height: 21px; }
 
   #legislative-dock { padding: .95rem 1rem; }
@@ -639,16 +684,48 @@
   #legislative-dock .project-phase { margin: .45rem 0 .6rem; font-size: .94rem; }
   #legislative-dock #impact { gap: .55rem; margin-top: .65rem; }
   #legislative-dock .impact-card { padding: .55rem .65rem; }
-  #legislative-dock .impact-card h3 { font-size: .88rem; margin-bottom: .45rem; }
-  #legislative-dock .impact-values > span { font-size: .92rem; }
+  #legislative-dock .impact-card h3 { font-size: clamp(.76rem, 1.25vw, .88rem); margin-bottom: .45rem; white-space: nowrap; }
+  #legislative-dock .impact-values > span { font: 850 1.12rem/1.15 var(--party-display); }
+  #legislative-dock .impact-values .hud-glyph { width: 19px; height: 19px; }
+  #legislative-dock .clock-chip strong { font: 850 1.25rem/1 var(--party-display); }
   #legislative-dock #last-vote { margin-top: .8rem; }
 
   #congress-dock { padding: .58rem; }
   #congress-heading { font-size: 1.08rem; margin-bottom: .45rem; }
-  #congress-dock .resource { padding: .4rem .5rem .5rem; }
-  #congress-dock .resource label { font-size: .88rem; }
-  .resource-readout strong { font-size: 1.35rem; }
+  #congress-dock .resource { padding: .55rem .7rem .6rem; }
+  .resource-readout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: .7rem;
+    row-gap: .15rem;
+    margin-bottom: .35rem;
+  }
+  #congress-dock .resource-help {
+    grid-row: span 2;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    background: #244a3b;
+    color: var(--party-mint);
+  }
+  #congress-dock .budget-resource .resource-help { background: #493d25; color: var(--party-gold); }
+  #congress-dock .resource-help .hud-glyph { width: 25px; height: 25px; }
+  #congress-dock .resource label { grid-column: 2; grid-row: 2; font-size: .75rem; }
+  .resource-readout strong {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    color: var(--party-mint);
+    font: 900 2.15rem/.95 var(--party-display);
+  }
+  #congress-dock #budget { color: var(--party-gold); }
+  #congress-dock #stability { color: var(--party-mint); }
+  .stability-resource:has([data-low="true"]) #stability { color: var(--party-coral); }
+  #congress-dock .resource progress { height: 8px; }
   #session #election-dock > summary { padding: .65rem .7rem; gap: .6rem; }
-  #current-office { font-size: .83rem; }
-  #election-timer { font-size: .88rem; }
+  #session #election-dock > summary > .hud-glyph { width: 24px; height: 24px; }
+  #current-office { font-size: .78rem; }
+  #election-position { font: 850 1.17rem/1.1 var(--party-display); }
+  #election-timer { font-size: 1.22rem; }
 }

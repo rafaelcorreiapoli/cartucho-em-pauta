@@ -165,42 +165,62 @@ test('personal missions refill immediately and pay once at settlement', () => {
   economy.reset([{id:'a',name:'A'},{id:'b',name:'B'}],() => 0);
   const view = (id:string) => economy.view(id,[],1,false,() => true)!;
   const initial = view('a').missions.active;
-  expect(initial.map(mission => mission.kind)).toEqual(['fortuna','campanha','projetos']);
+  expect(initial.map(mission => mission.kind)).toEqual(['cafe','fortuna','campanha']);
   economy.paySalary('a',4);
   economy.changePopularity('a',25);
   const {active,completed,paid} = view('a').missions;
   expect(active).toHaveLength(3);
   expect(new Set(active.map(mission => mission.kind)).size).toBe(3);
-  expect(active.map(mission => mission.id)).toEqual([initial[2].id,4,5]);
+  expect(active.map(mission => mission.id)).toEqual([initial[0].id,4,5]);
   expect(completed.map(mission => mission.kind)).toEqual(['fortuna','campanha']);
   expect(paid).toBe(false);
   expect(view('a').wallet).toBe(12);
 
   economy.settleAgendas(['a','b']);
   economy.settleAgendas(['a','b']);
-  expect(view('a')).toMatchObject({wallet:16,missions:{paid:true,completed}});
+  expect(view('a')).toMatchObject({wallet:16,walletIncome:8,missions:{paid:true,completed}});
   expect(view('b')).toMatchObject({wallet:8,missions:{completed:[]}});
 });
 
-test('an audit replaces a solo mission once per round and repeats with a fresh ID', () => {
+test('activities only count while their mission is active and replacements get a fresh ID', () => {
   const economy = new PoliticalEconomy();
-  economy.reset([{id:'a',name:'A'}],() => .6);
+  economy.reset([{id:'a',name:'A'}],() => .74);
   const missions = () => economy.view('a',[],0,false,() => true)!.missions;
-  expect(missions().active.map(mission => mission.kind)).toEqual(['auditoria','emenda','votacao']);
+  expect(missions().active.map(mission => mission.kind)).toEqual(['cafe','auditoria','emenda']);
+  economy.recordActivity('a','leitura');
   economy.audit('a',0);
   economy.audit('a',0);
   expect(missions().completed.map(mission => mission.kind)).toEqual(['auditoria']);
-  economy.amended('a');
+  economy.recordActivity('a','emenda');
   economy.billResult(new Map([['a','yes']]),true,true);
   economy.paySalary('a',4);
   economy.changePopularity('a',25);
+  economy.recordActivity('a','cafe');
+  expect(missions().active.find(mission => mission.kind==='leitura')?.current).toBe(0);
+  economy.recordActivity('a','leitura');
+  expect(missions().completed.at(-1)?.kind).toBe('leitura');
+  economy.recordActivity('a','credencial');
+  economy.recordActivity('a','cafe');
   const nextAudit = missions().active.find(mission => mission.kind==='auditoria')!;
   expect(nextAudit.id).toBeGreaterThan(missions().completed[0].id);
   economy.audit('a',0);
-  expect(missions().active).toContainEqual(nextAudit);
-  economy.audit('a',1);
   expect(missions().completed.at(-1)?.id).toBe(nextAudit.id);
   expect(missions().active).toHaveLength(3);
+});
+
+test('room activities require proximity, and a cafezinho completes its mission', () => {
+  const match = new PlenaryMatch();
+  match.start(host.id,[host],0,() => .4);
+  const missions = () => match.view(host.id,[host.id],1).politics!.missions;
+  expect(missions().active.some(mission => mission.kind==='cafe')).toBe(true);
+  expect(match.roomActivity(host,'coffee',1)).toBeUndefined();
+  const cafe = at(host,'coffee');
+  expect(match.roomActivity(cafe,'coffee',2)?.text).toContain('Cafezinho tomado');
+  expect(missions().completed.map(mission => mission.kind)).toEqual(['cafe']);
+  expect(missions().active).toHaveLength(3);
+  match.roomActivity(cafe,'coffee',3);
+  expect(missions().completed).toHaveLength(1);
+  expect(missions().active.some(mission => mission.kind==='cafe')).toBe(false);
 });
 
 test('the Controladoria returns feedback for each audit, even without new records', () => {

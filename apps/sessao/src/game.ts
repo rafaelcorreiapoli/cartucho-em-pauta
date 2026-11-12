@@ -95,6 +95,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       });
     }
+    playerHeadY() {
+      const camera = this.cameras.main;
+      const height = this.views.get(ownId)?.sprite.displayHeight;
+      if (!height || !camera.width) return;
+      const zoom = camera.zoom*parent.clientWidth/camera.width;
+      return parent.clientHeight/2-(height+5)*zoom;
+    }
+
     pulseStation(key:Station) {
       const {x,y} = stations[key];
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -233,6 +241,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       history.add(snapshot,performance.now());
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
+    playerHeadY() { return scene.sys.isActive() ? scene.playerHeadY() : undefined; },
     reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
     setMatchPhase(phase:Phase) {
       negotiating = phase==='negotiation';

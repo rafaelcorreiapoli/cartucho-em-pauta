@@ -1,3 +1,4 @@
+import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
 import { createElectionPanel } from './election-panel';
@@ -196,7 +197,7 @@ async function connect(join: () => Promise<Room>) {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    });
+    },activity => joined.send('room-activity',activity));
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -210,6 +211,12 @@ async function connect(join: () => Promise<Room>) {
       if (previousView && view.election?.result && view.election.result.cycle!==previousView.election?.result?.cycle) audio.cue('election');
       if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
+      const pastIncome = previousView?.politics?.walletIncome ?? 0;
+      const income = (view.politics?.walletIncome ?? 0)-pastIncome;
+      if (previousView?.politics && income>0) {
+        audio.cue('cash');
+        hud.showIncome(income,game?.playerHeadY());
+      }
       previousView = view;
       panel.render(view);
       political.render(view);
@@ -240,6 +247,7 @@ async function connect(join: () => Promise<Room>) {
       }
       if (negotiating) map.focus({preventScroll:true});
     });
+    joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
       hud.notify('Controladoria',text,critical);
     });

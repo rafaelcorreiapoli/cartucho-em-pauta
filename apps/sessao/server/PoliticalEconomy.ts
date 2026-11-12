@@ -3,11 +3,11 @@ import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARIT
 import type { Vote } from '../src/plenary';
 
 type Account = {
-  wallet:number; popularity:number; missions:Mission[]; completed:Mission[]; missionDeck:Agenda[]; missionsPaid:boolean; nextMissionId:number; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
-  missionPayers:Set<string>; missionAuditRound:number; known:Set<number>; suspended:boolean;
+  wallet:number; walletIncome:number; popularity:number; missions:Mission[]; completed:Mission[]; missionDeck:Agenda[]; missionsPaid:boolean; nextMissionId:number; grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; expenses:{kind:string; amount:number; cycle:number}[]; paymentRound:number; payments:number;
+  missionPayers:Set<string>; known:Set<number>; suspended:boolean;
 };
 const missionTargets:Record<Agenda,number> = {
-  fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1,
+  fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1, cafe:1, leitura:1, credencial:1,
 };
 const activeMissionCount = 3;
 const cap = (value:number) => Math.max(0,Math.min(100,value));
@@ -28,12 +28,12 @@ export class PoliticalEconomy {
     this.offers.clear();
     this.serial = 0;
     const deck = (Object.keys(agendas) as Agenda[]).filter(kind =>
-      contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo'));
+      kind!=='cafe' && (contacts.length>=3 || (kind!=='articulacao' && kind!=='escandalo')));
     for (const contact of contacts) {
       const offset = Math.floor(random()*deck.length);
       const account:Account = {
-        wallet:8,popularity:40,missions:[],completed:[],missionDeck:[...deck.slice(offset),...deck.slice(0,offset)],
-        missionsPaid:false,nextMissionId:0,missionPayers:new Set(),missionAuditRound:-1,
+        wallet:8,walletIncome:0,popularity:40,missions:[],completed:[],missionDeck:['cafe',...deck.slice(offset),...deck.slice(0,offset)],
+        missionsPaid:false,nextMissionId:0,missionPayers:new Set(),
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,expenses:[],paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
       };
@@ -51,10 +51,15 @@ export class PoliticalEconomy {
     this.progressMissions(account);
   }
 
+  private credit(account:Account, amount:number) {
+    account.wallet += amount;
+    account.walletIncome += amount;
+  }
+
   paySalary(id:string, amount:number) {
     const account = this.accounts.get(id);
     if (!account) return;
-    account.wallet += amount;
+    this.credit(account,amount);
     this.progressMissions(account);
   }
 
@@ -91,7 +96,7 @@ export class PoliticalEconomy {
     if (source.payments>=PAYMENTS_PER_ROUND) return false;
     source.payments++;
     source.wallet -= amount;
-    recipient.wallet += amount;
+    this.credit(recipient,amount);
     if (recipient.missions.some(mission => mission.kind==='articulacao')) recipient.missionPayers.add(from);
     this.progressMissions(recipient);
     this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
@@ -102,7 +107,7 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account || account.grantUsed || account.suspended || budget<CABINET_GRANT) return;
     account.grantUsed = true;
-    account.wallet += diverted;
+    this.credit(account,diverted);
     this.progressMissions(account);
     if (diverted>0) this.record('diversion',id,diverted,round);
     return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
@@ -119,10 +124,7 @@ export class PoliticalEconomy {
   audit(id:string, round:number, limit=1) {
     const account = this.accounts.get(id);
     if (!account) return;
-    if (account.missionAuditRound!==round) {
-      account.missionAuditRound = round;
-      this.progressMissions(account,{auditoria:1});
-    }
+    this.recordActivity(id,'auditoria');
     if (account.auditRound!==round) {
       account.auditRound = round;
       account.audits = 0;
@@ -210,9 +212,9 @@ export class PoliticalEconomy {
     }
   }
 
-  amended(id:string) {
+  recordActivity(id:string, kind:'auditoria' | 'cafe' | 'leitura' | 'credencial' | 'emenda') {
     const account = this.accounts.get(id);
-    if (account) this.progressMissions(account,{emenda:1});
+    if (account) this.progressMissions(account,{[kind]:1});
   }
 
   private fillMissions(account:Account) {
@@ -252,16 +254,16 @@ export class PoliticalEconomy {
       if (!account || account.missionsPaid) continue;
       for (const mission of account.missions) mission.current = this.missionProgress(account,mission);
       account.missionsPaid = true;
-      account.wallet += AGENDA_REWARD*account.completed.length;
+      this.credit(account,AGENDA_REWARD*account.completed.length);
     }
   }
 
   view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
-    const {wallet,popularity,grantUsed,suspended} = account;
+    const {wallet,walletIncome,popularity,grantUsed,suspended} = account;
     return {
-      wallet,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
+      wallet,walletIncome,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
       missions:{
         active:account.missions.map(mission => ({...mission,current:account.missionsPaid ? mission.current : this.missionProgress(account,mission)})),
         completed:account.completed.slice(),paid:account.missionsPaid,

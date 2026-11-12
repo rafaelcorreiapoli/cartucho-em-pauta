@@ -65,7 +65,9 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       el('current-office').textContent = personal ? `Disputa · ${offices[personal.race].name}` : 'Eleições';
       el('election-position').textContent = candidate ? `${rank+1}º · ${candidate.estimate}%${candidate.trend ? ` · ${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : ''}` : '';
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
-      el('election-timer').textContent = view.phase==='finished' ? 'Eleições' : `Eleição em ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
+      const timer = el('election-timer');
+      timer.textContent = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
+      timer.parentElement!.hidden = view.phase==='finished';
       el('election-wallet').textContent = personal ? money(personal.invested) : '—';
       el('election-result').hidden = !result;
       el('election-result-title').textContent = result ? `Resultado · Eleição ${result.cycle}` : 'Última eleição';

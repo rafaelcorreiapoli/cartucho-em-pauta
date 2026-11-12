@@ -1,3 +1,4 @@
+import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
@@ -47,6 +48,12 @@ export class SessionRoom extends Room {
         const result = this.match.act(player,action,this.clock.currentTime);
         if (result) client.send('audit-result',result);
       }
+    });
+    this.onMessage('room-activity', (client, activity:unknown) => {
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
+      const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
+      if (result) client.send('room-activity-result',result);
     });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);

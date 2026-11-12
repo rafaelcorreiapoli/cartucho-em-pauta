@@ -15,6 +15,9 @@ export const agendas = {
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
   projetos: 'Vote a favor de dois projetos aprovados',
   oposicao: 'Vote contra dois projetos rejeitados',
+  cafe: 'Tome um cafezinho',
+  leitura: 'Estude o projeto na Biblioteca',
+  credencial: 'Confira sua credencial',
   auditoria: 'Faça uma auditoria na Controladoria',
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
@@ -29,7 +32,7 @@ export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; a
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
 export type PoliticsView = {
-  wallet:number; popularity:number; missions:{active:Mission[]; completed:Mission[]; paid:boolean}; grantUsed:boolean;
+  wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]; paid:boolean}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(Contact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
