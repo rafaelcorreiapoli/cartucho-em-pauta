@@ -18,6 +18,7 @@ export class Transport {
     const pair = {carrier,passenger};
     this.pairs.set(carrier.id,pair);
     carrier.carrying = true;
+    carrier.sprinting = undefined;
     passenger.carried = true;
     this.follow(pair);
     publishGameplay(world,carrier,'character-carried',{target:passenger.id});
@@ -57,6 +58,7 @@ export class Transport {
     passenger.y = carrier.y;
     passenger.direction = carrier.direction;
     passenger.moving = false;
+    passenger.sprinting = undefined;
   }
 
   private release({carrier,passenger}:Pair, world:GameplayWorld) {

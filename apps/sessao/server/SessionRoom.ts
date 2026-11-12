@@ -7,7 +7,7 @@ import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
 import { localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
-import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
+import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
 import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/nick';
@@ -96,7 +96,11 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state=>state.player);
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
-        for (const player of players) player.speed = characterStats[player.character].speed;
+        for (const player of players) {
+          player.speed = characterStats[player.character].speed;
+          player.stamina = MAX_STAMINA;
+          player.sprinting = undefined;
+        }
         this.matchObjectsActive = true;
         void this.lock();
       }
@@ -162,7 +166,7 @@ export class SessionRoom extends Room {
         const input = this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);
         else {
-          state.player.moving = false;
+          restMovement(state.player);
           if (state.player.knockedOut) state.route = [];
         }
       }
@@ -178,6 +182,7 @@ export class SessionRoom extends Room {
         state.plenary = plenary;
         state.route = [];
         state.player.moving = false;
+        state.player.sprinting = undefined;
         this.movementQueue.get(id)?.splice(0);
         if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
       }

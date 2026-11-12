@@ -5,16 +5,35 @@ import { findRoute, followRoute } from './navigation';
 export const STEP_MS = 50;
 export const STEP_SECONDS = STEP_MS / 1000;
 export const MAX_QUEUED_INPUTS = 8;
-export type MovementInput = { seq: number; plenary?:boolean; motion?: Motion; destination?: Motion; door?:number };
+export const MAX_STAMINA = 100;
+const staminaDrain = 25*STEP_SECONDS;
+const staminaRecovery = 20*STEP_SECONDS;
+export type MovementInput = { seq: number; plenary?:boolean; sprint?:true; motion?: Motion; destination?: Motion; door?:number };
 export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean };
+
+function recoverStamina(player:Player) {
+  if (player.stamina!==undefined && player.stamina<MAX_STAMINA) {
+    player.stamina = Math.min(MAX_STAMINA,player.stamina+staminaRecovery);
+  }
+}
+
+export function restMovement(player:Player) {
+  player.moving = false;
+  player.sprinting = undefined;
+  recoverStamina(player);
+}
 
 export function applyInput(state: ControlState, input: MovementInput) {
   if (state.player.knockedOut) {
     state.route = [];
-    state.player.moving = false;
+    restMovement(state.player);
     state.ack = input.seq;
     return;
   }
+  const {player} = state;
+  const stamina = player.stamina ?? MAX_STAMINA;
+  const wantsSprint = input.sprint && !player.carrying;
+  player.sprinting = wantsSprint && stamina>=staminaDrain ? true : undefined;
   const destination = input.door===undefined ? input.destination : doorDestination(state.player,input.door,!!state.plenary);
   if (destination) state.route = findRoute(state.player,destination,state.plenary);
   if (input.motion) {
@@ -23,6 +42,9 @@ export function applyInput(state: ControlState, input: MovementInput) {
   } else {
     followRoute(state.player,state.route,STEP_SECONDS);
   }
+  if (!player.moving) player.sprinting = undefined;
+  if (player.sprinting) player.stamina = stamina-staminaDrain;
+  else if (!wantsSprint || !player.moving) recoverStamina(player);
   state.ack = input.seq;
 }
 
@@ -37,24 +59,25 @@ export function readInput(data: unknown): MovementInput | undefined {
       typeof data.seq !== 'number' || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
   const seq = data.seq;
   const plenary = 'plenary' in data && data.plenary===true;
+  const sprint = 'sprint' in data && data.sprint===true ? true : undefined;
   if ('door' in data) {
     if (typeof data.door==='number' && Number.isInteger(data.door) && data.door>=0 && data.door<PLENARY_DOORS.length) {
-      return {seq,door:data.door,plenary};
+      return {seq,door:data.door,plenary,sprint};
     }
     return;
   }
   if ('destination' in data) {
     const destination = point(data.destination);
     if (destination && destination.x>=0 && destination.y>=0 && destination.x<WIDTH && destination.y<HEIGHT) {
-      return {seq,destination,plenary};
+      return {seq,destination,plenary,sprint};
     }
     return;
   }
   if ('motion' in data) {
     const motion = point(data.motion);
     const clamp = (value: number) => Math.max(-1,Math.min(1,value));
-    if (motion) return {seq,plenary,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
+    if (motion) return {seq,plenary,sprint,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
     return;
   }
-  return {seq,plenary};
+  return {seq,plenary,sprint};
 }

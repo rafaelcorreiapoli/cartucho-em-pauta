@@ -120,7 +120,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
-        if (equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
+        if (!player.knockedOut && equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
         for (const target of roster) {
           if (target.id===id) continue;
           if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
@@ -137,6 +137,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
       const control = hudButton(label,()=>sendField(action));
       control.prepend(hudGlyph(icon));
+      if (action.kind==='attack') control.dataset.key = 'Space';
       return control;
     }));
   }
@@ -146,8 +147,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function refreshActionKeys() {
     let index = 0;
     for (const button of actionButtons()) {
-      const number = !button.disabled && !button.closest(unavailable) ? ++index : 0;
-      const key = number && number<=9 ? String(number) : null;
+      const available = !button.disabled && !button.closest(unavailable);
+      const key = available ? button.dataset.key ?? (++index<=9 ? String(index) : null) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -161,7 +162,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         badge.setAttribute('aria-hidden','true');
         button.append(badge);
       }
-      badge.textContent = key;
+      badge.textContent = key==='Space' ? 'Espaço' : key;
       button.setAttribute('aria-keyshortcuts',key);
     }
   }
@@ -169,8 +170,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.addEventListener('click',refreshActionKeys);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
-      event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) || hudConsumesKeys(event.target)) return;
-    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      event.metaKey || stations.hidden || hudConsumesKeys(event.target)) return;
+    const key = event.code==='Space' ? 'Space' : !event.shiftKey && /^[1-9]$/.test(event.key) ? event.key : undefined;
+    if (!key) return;
+    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
     if (!button || button.disabled || button.closest(unavailable)) return;
     event.preventDefault();
     button.click();

@@ -6,17 +6,17 @@ import { binocularBonus } from './equipment';
 import { objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { attackArt, characterArt, characterSheets, combatSheets, downedArt } from './character-art';
+import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
-import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { MAX_STAMINA, restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
+import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -45,22 +45,28 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let nextStep = -Infinity;
   let manual = false;
   const keys = new Set<string>();
+  const shiftKeys = new Set<string>();
   const listeners = new AbortController();
   const options = { signal: listeners.signal };
   const stop = () => {
     keys.clear();
+    shiftKeys.clear();
   };
   document.addEventListener('keydown', event => {
     if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
       (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
+    if (key==='shift') shiftKeys.add(event.code);
     if (!directions.has(key)) return;
     event.preventDefault();
     if (!keys.size && !manual) nextStep = -Infinity;
     destination = undefined;
     keys.add(key);
   }, options);
-  document.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), options);
+  document.addEventListener('keyup', event => {
+    keys.delete(event.key.toLowerCase());
+    if (event.key==='Shift') shiftKeys.delete(event.code);
+  }, options);
   document.addEventListener('focusin', event => { if (hudConsumesKeys(event.target)) stop(); }, options);
   window.addEventListener('blur',stop,options);
 
@@ -139,6 +145,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
         keys.clear();
+    shiftKeys.clear();
         manual = false;
         const {x,y} = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
         if (x>=0 && x<WIDTH && y>=0 && y<HEIGHT) {
@@ -228,8 +235,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     update(time: number, delta: number) {
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
+        const sprint = shiftKeys.size ? true : undefined;
         if (destination) {
-          local.input({destination});
+          local.input({destination,sprint});
           destination = undefined;
         } else if (keys.size || manual) {
           const motion = {x:0,y:0};
@@ -238,11 +246,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             motion.x += x;
             motion.y += y;
           }
-          local.input({motion});
+          local.input({motion,sprint});
         } else if (local.state.route.length) {
-          local.input({});
+          local.input({sprint});
         } else {
-          local.state.player.moving = false;
+          restMovement(local.state.player);
         }
         manual = keys.size>0;
       }
@@ -323,9 +331,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!view) {
           const track = this.add.rectangle(0,0,19,4,0x101820,.95).setStrokeStyle(.5,0x293641);
           const healthFill = this.add.rectangle(-8.5,0,17,2,0x69d878).setOrigin(0,.5);
+          const staminaTrack = this.add.rectangle(0,4,19,3,0x101820,.95).setStrokeStyle(.5,0x293641);
+          const staminaFill = this.add.rectangle(-8.5,4,17,1.6,0x56b6ff).setOrigin(0,.5);
           view = {
-            health:this.add.container(0,0,[track,healthFill]).setDepth(HEIGHT+25).setVisible(false),
-            healthFill,
+            health:this.add.container(0,0,[track,healthFill,staminaTrack,staminaFill]).setDepth(HEIGHT+25).setVisible(false),
+            healthFill,staminaFill,
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             carried:this.add.image(0,0,'item-briefcase').setDepth(HEIGHT+30).setVisible(false),
@@ -361,37 +371,45 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
           const level = own ? .46 : Math.max(0,1-distance/75)*.32;
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
-          view.nextStep = time+290;
+          view.nextStep = time+290/(player.sprinting ? sprintMultiplier : 1);
         } else if (!moving) view.nextStep = 0;
         if (latest.hit!==undefined && latest.hit!==view.lastHit) {
           view.flashUntil = time+115;
           playCombatSound('impact',x,y);
           if (latest.knockedOut) {
-            this.time.delayedCall(115,()=>{
+            view.fallAt = time;
+            view.hitAt = undefined;
+            this.time.delayedCall(185,()=>{
               if (running) playCombatSound('fall',x,y);
             });
-          }
+          } else view.hitAt = time;
           playBloodImpact(this,x,y-15);
           playComicImpact(this,x,y-54,latest.hit,this.textResolution);
         }
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
-        const downed = latest.knockedOut || latest.carried ? downedArt(character,direction) : undefined;
+        const downed = latest.knockedOut || latest.carried
+          ? downedArt(character,direction,time-(view.fallAt ?? -Infinity))
+          : undefined;
+        if (!downed) view.fallAt = undefined;
+        const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt);
+        const combatArt = downed ?? recoil ?? attack;
         const spriteX = x+(pose?.lungeX ?? 0);
         const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? 0);
         const labelY = latest.carried ? y-51 : y+2;
-        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? pose?.lean ?? 0)
+        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
         sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0))
-          .setFlipX(downed?.flipX ?? facing===3);
+          .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
         view.health.setVisible(latest.health!==undefined);
         if (latest.health!==undefined) {
           const health = Phaser.Math.Clamp(latest.health,0,1);
           let barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
-          while (healthBars.some(bar=>Math.abs(bar.x-x)<19 && Math.abs(bar.y-barY)<5)) barY -= 5;
+          while (healthBars.some(bar=>Math.abs(bar.x-x)<19 && Math.abs(bar.y-barY)<9)) barY -= 9;
           healthBars.push({x,y:barY});
           view.health.setPosition(x,barY);
+          view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? MAX_STAMINA)/MAX_STAMINA,0,1),1);
           view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
         }
         view.weapon.setVisible(!!pose);
@@ -412,10 +430,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         office.setVisible(running || !!title).setPosition(x,labelY+10)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
-        if (moving && !pose && !downed) sprite.play(`${character}-${row}`,true);
-        else {
+        if (moving && !pose && !combatArt) {
+          sprite.play(`${character}-${row}`,true);
+          sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
+        } else {
           sprite.anims.stop();
-          sprite.setTexture(downed?.key ?? attack?.key ?? sheet.key,downed?.frame ?? attack?.frame ?? frame+row*4);
+          sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
         }
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
