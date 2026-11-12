@@ -147,18 +147,72 @@
   gap: 8px 12px;
 }
 
-.shop-removal label {
-  flex-basis: 100%;
-  color: #cfbe9b;
+.shop-removal > span { color: var(--muted); }
+
+.shop-deck-dialog {
+  width: min(880px, calc(100% - 24px));
+  max-height: min(780px, 90dvh);
+  overflow: hidden;
 }
 
-.shop-removal select {
-  min-width: 0;
-  max-width: 100%;
-  padding: 8px 10px;
+.shop-deck-dialog[open] {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.shop-deck-dialog :is(header, footer, .shop-deck-filter) {
+  padding: 12px clamp(12px, 3vw, 22px);
+}
+
+.shop-deck-filter {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+}
+
+.shop-deck-filter input {
+  width: min(100%, 360px);
+  min-height: 44px;
+  padding: 8px 12px;
   border: 1px solid #9f7847;
-  border-radius: 4px;
-  background: #222e27;
+  border-radius: 5px;
+  background: #101916;
   color: var(--paper);
   font: inherit;
+  font-size: 16px;
 }
+
+.shop-deck-grid {
+  grid-area: 3 / 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--battle-card-width));
+  justify-content: center;
+  align-content: start;
+  gap: 12px;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
+
+.shop-deck-grid .card {
+  width: var(--battle-card-width);
+  height: var(--battle-card-height);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.shop-deck-grid .card[hidden] { display: none; }
+.shop-deck-grid .card[aria-pressed="true"] {
+  outline: 2px solid #f9bf78;
+  outline-offset: 2px;
+}
+.shop-deck-empty { grid-area: 3 / 1; margin: 0; padding: 12px 22px; pointer-events: none; }
+.shop-deck-dialog footer {
+  grid-row: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #9f78474d;
+}
+.shop-deck-dialog footer .primary { min-height: 44px; flex: none; }

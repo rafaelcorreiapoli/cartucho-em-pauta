@@ -14,6 +14,7 @@ export type Autosave = {
   lobby?: { step: LobbyStep; faction: Faction; selectedHero?: HeroId; previewHero?: HeroId };
   mapSelection?: number;
   eventView?: { pickingCard: boolean };
+  shopRemoval?: { query: string; selected?: number };
   selectedCard?: number;
   pendingEndTurn: boolean;
   message: string;
@@ -43,7 +44,10 @@ function isAutosave(value: unknown): value is Autosave & { version: number } {
   if (lobby !== undefined && (!lobby || (lobby.step !== "faction" && lobby.step !== "hero") ||
     (lobby.faction !== "left" && lobby.faction !== "right") ||
     [lobby.selectedHero, lobby.previewHero].some((id) => id !== undefined && !isHeroId(id)))) return false;
-  return (eventView === undefined || typeof eventView?.pickingCard === "boolean") &&
+  const { shopRemoval } = save;
+  return (shopRemoval === undefined || (typeof shopRemoval?.query === "string" &&
+    (shopRemoval.selected === undefined || Number.isInteger(shopRemoval.selected)))) &&
+    (eventView === undefined || typeof eventView?.pickingCard === "boolean") &&
     (save.mapSelection === undefined || Number.isInteger(save.mapSelection)) &&
     (save.selectedCard === undefined || Number.isInteger(save.selectedCard));
 }

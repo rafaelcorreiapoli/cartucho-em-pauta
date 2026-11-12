@@ -65,7 +65,7 @@ import { lobbyScreen, type LobbyStep } from "./lobby";
 import { campaignHeroPosition, campaignMap } from "./campaign";
 import { campaignEvent } from "./campaign-event";
 import { loadGameAssets } from "./loading";
-import { readAutosave, writeAutosave } from "./autosave";
+import { readAutosave, writeAutosave, type Autosave } from "./autosave";
 import "./style.css";
 import "./combat-hud.css";
 import "./shop.css";
@@ -93,6 +93,24 @@ app.innerHTML = `
   <dialog class="card-album" aria-labelledby="album-title">
     <header><h2 id="album-title">Álbum de cartas</h2><button class="secondary" data-action="close-album">Voltar</button></header>
     <div class="album-cards"></div>
+  </dialog>
+  <dialog class="card-album shop-deck-dialog" aria-labelledby="shop-deck-title">
+    <header>
+      <h2 id="shop-deck-title" tabindex="-1" autofocus>Remover uma carta</h2>
+      <button type="button" class="secondary" data-action="close-shop-deck">Voltar</button>
+    </header>
+    <div class="shop-deck-filter">
+      <label for="shop-deck-search">Buscar no baralho</label>
+      <input id="shop-deck-search" type="search" placeholder="Nome da carta" autocomplete="off">
+    </div>
+    <div class="shop-deck-grid" aria-label="Cartas do baralho"></div>
+    <p class="shop-deck-empty" role="status" hidden>Nenhuma carta encontrada.</p>
+    <footer>
+      <span class="shop-deck-selection" role="status"></span>
+      <button type="button" class="primary" data-action="confirm-shop-removal" disabled>
+        Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}
+      </button>
+    </footer>
   </dialog>
   <section class="combat-resources" aria-label="Recursos da sessão" hidden></section>
   <main class="lobby" aria-labelledby="lobby-title"></main>
@@ -122,6 +140,7 @@ app.innerHTML = `
 
 const view = {
   shop: app.querySelector<HTMLElement>(".shop")!,
+  shopDeck: app.querySelector<HTMLDialogElement>(".shop-deck-dialog")!,
   event: app.querySelector<HTMLElement>(".event-scene")!,
   resources: app.querySelector<HTMLElement>(".combat-resources")!,
   campaign: app.querySelector<HTMLElement>(".campaign")!,
@@ -163,6 +182,7 @@ let acting: string | undefined;
 let mapSelection: number | undefined;
 let pickingEventCard = false;
 let pendingEndTurn = false;
+let shopRemoval: Autosave["shopRemoval"];
 
 function checkpoint() {
   writeAutosave({
@@ -171,6 +191,7 @@ function checkpoint() {
     mapSelection: choosingStage ? mapSelection : undefined,
     eventView: view.event.hidden ? undefined : { pickingCard: pickingEventCard },
     selectedCard,
+    shopRemoval,
     pendingEndTurn,
     message,
   });
@@ -988,14 +1009,13 @@ function showShop(purchased?: string) {
       </section>`).join("")}
     <section class="shop-section" aria-labelledby="shop-remove-title">
       <h2 id="shop-remove-title">Remover uma carta</h2>
-      <form class="shop-removal" data-shop-removal>
-        <label for="shop-remove-card">Uma remoção por visita</label>
-        <select id="shop-remove-card" name="card" aria-label="Carta do baralho para remover" required ${canRemoveShopCard(run) ? "" : "disabled"}>
-          <option value="" selected disabled>Escolha uma carta do baralho</option>
-          ${run.deck.map((id, index) => `<option value="${index}">${cardDefinition(id).name}</option>`).join("")}
-        </select>
-        <button type="submit" class="secondary" ${canRemoveShopCard(run) ? "" : "disabled"}>${run.shopRemovedCard ? "Remoção usada" : `Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}</button>
-      </form>
+      <div class="shop-removal">
+        <span>Uma remoção por visita</span>
+        <button type="button" class="secondary" data-action="open-shop-deck" aria-haspopup="dialog"
+          ${canRemoveShopCard(run) ? "" : "disabled"}>
+          ${run.shopRemovedCard ? "Remoção usada" : `Remover carta · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}
+        </button>
+      </div>
     </section>
     <p class="shop-feedback" role="status">${purchased ? `${purchased}` : ""}</p>
     <button class="secondary" data-action="leave-shop">Voltar ao mapa →</button>`;
@@ -1008,17 +1028,54 @@ view.album.addEventListener("close", () => {
   view.settings.querySelector<HTMLElement>('[data-action="open-album"]')?.focus();
 });
 
-app.addEventListener("submit", (event) => {
-  const form = event.target;
-  if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-shop-removal")) return;
-  event.preventDefault();
-  const value = new FormData(form).get("card");
-  if (typeof value !== "string" || !value) return;
-  const index = Number(value);
-  const card = run.deck[index];
-  if (!card || !removeShopCard(run, index)) return;
-  gameAudio.play("click");
-  showShop(`${cardDefinition(card).name} saiu do baralho.`);
+const shopSearch = view.shopDeck.querySelector<HTMLInputElement>("input")!;
+const shopDeckGrid = view.shopDeck.querySelector<HTMLElement>(".shop-deck-grid")!;
+const shopDeckEmpty = view.shopDeck.querySelector<HTMLElement>(".shop-deck-empty")!;
+const shopDeckSelection = view.shopDeck.querySelector<HTMLElement>(".shop-deck-selection")!;
+const confirmRemoval = view.shopDeck.querySelector<HTMLButtonElement>('[data-action="confirm-shop-removal"]')!;
+const searchKey = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR").trim();
+
+function updateShopDeck() {
+  if (!shopRemoval) return;
+  const query = searchKey(shopRemoval.query);
+  let visibleCards = 0;
+  for (const tile of shopDeckGrid.querySelectorAll<HTMLButtonElement>(".card")) {
+    const index = Number(tile.dataset.value);
+    const match = searchKey(cardDefinition(run.deck[index]).name).includes(query);
+    tile.hidden = !match;
+    if (match) visibleCards++;
+    else if (shopRemoval.selected === index) shopRemoval.selected = undefined;
+    tile.setAttribute("aria-pressed", String(shopRemoval.selected === index));
+  }
+  const selected = shopRemoval.selected !== undefined ? run.deck[shopRemoval.selected] : undefined;
+  shopDeckSelection.textContent = selected ? cardDefinition(selected).name : "Escolha uma carta";
+  confirmRemoval.disabled = !selected;
+  shopDeckEmpty.hidden = visibleCards > 0;
+  fitCardTitles();
+  checkpoint();
+}
+
+function openShopDeck(state: NonNullable<Autosave["shopRemoval"]> = { query: "" }) {
+  if (!canRemoveShopCard(run)) return;
+  shopRemoval = state;
+  shopSearch.value = state.query;
+  shopDeckGrid.innerHTML = run.deck.map((id, index) => cardTile(id, "select-shop-removal", index)).join("");
+  view.shopDeck.showModal();
+  shopDeckGrid.scrollTop = 0;
+  updateShopDeck();
+}
+
+shopSearch.addEventListener("input", () => {
+  if (!shopRemoval) return;
+  shopRemoval.query = shopSearch.value;
+  updateShopDeck();
+  shopDeckGrid.scrollTop = 0;
+});
+
+view.shopDeck.addEventListener("close", () => {
+  if (!shopRemoval) return;
+  shopRemoval = undefined;
+  checkpoint();
 });
 
 function showItemDetails(button: HTMLButtonElement, index?: number) {
@@ -1152,6 +1209,24 @@ app.addEventListener("click", (event) => {
     choosingStage = false;
     if (run.phase === "shop") showShop();
     else enterStage();
+  } else if (action === "open-shop-deck") {
+    gameAudio.play("click");
+    openShopDeck();
+  } else if (action === "close-shop-deck") {
+    view.shopDeck.close();
+  } else if (action === "select-shop-removal" && shopRemoval) {
+    gameAudio.play("click");
+    const index = Number(value);
+    shopRemoval.selected = shopRemoval.selected === index ? undefined : index;
+    updateShopDeck();
+  } else if (action === "confirm-shop-removal" && shopRemoval?.selected !== undefined) {
+    const index = shopRemoval.selected;
+    const card = run.deck[index];
+    if (!card || !removeShopCard(run, index)) return;
+    shopRemoval = undefined;
+    view.shopDeck.close();
+    gameAudio.play("click");
+    showShop(`${cardDefinition(card).name} saiu do baralho.`);
   } else if (action === "buy-shop-card" && value && buyShopCard(run, value as CardId)) {
     gameAudio.play("click");
     showShop(`${cards[value as CardId].name} entrou no baralho.`);
@@ -1216,7 +1291,7 @@ app.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (view.settings.open || view.album.open || view.outcome.open || view.itemDetails.open) return;
+  if (view.settings.open || view.album.open || view.outcome.open || view.itemDetails.open || view.shopDeck.open) return;
   if (lobbyStep) {
     if (lobbyStep === "hero" && event.key === "Escape") {
       gameAudio.stopHeroVoice();
@@ -1292,6 +1367,7 @@ function restoreSession() {
     showCampaign(selections.includes(saved.mapSelection ?? -1) ? saved.mapSelection : (selections[0] ?? 0));
   } else if (run.phase === "shop") {
     showShop();
+    if (saved.shopRemoval) openShopDeck(saved.shopRemoval);
   } else if (run.phase === "event" || (run.phase === "lost" && saved.eventView && run.eventResult)) {
     showEvent(Boolean(saved.eventView?.pickingCard && canResolveSpecialEvent(run)));
   } else {
