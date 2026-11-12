@@ -36,6 +36,17 @@
             <option value="classic">Anterior</option>
           </select>
         </label>
+        <fieldset id="disguise-controls" hidden>
+          <legend>Disfarce genérico</legend>
+          <label for="disguise-pitch">Tom <output id="disguise-pitch-value" for="disguise-pitch">−4 semitons</output></label>
+          <input id="disguise-pitch" type="range" min="-12" max="12" step="1" value="-4">
+          <label for="disguise-style">Timbre</label>
+          <select id="disguise-style">
+            <option value="preserved">Preservado</option>
+            <option value="shifted">Alterado</option>
+            <option value="radio">Rádio</option>
+          </select>
+        </fieldset>
         <button id="voice-record" type="button">Gravar frase</button>
         <button id="voice-convert" type="button" disabled>Aplicar à gravação</button>
       </div>

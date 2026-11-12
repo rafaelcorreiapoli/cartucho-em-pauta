@@ -39,10 +39,17 @@ export function voiceLab(directory: string): Plugin {
         if (req.method!=='POST') return reply(405);
         const [path,query] = (req.url ?? '').split('?',2);
         const voice = path.slice(1);
-        const natural = new URLSearchParams(query).get('profile')!=='classic';
+        const options = new URLSearchParams(query);
+        const natural = options.get('profile')!=='classic';
         const generic = voice==='disfarce';
         const reference = voice==='original';
         if (!generic && !reference && !Object.hasOwn(models,voice)) return reply(404);
+        const pitch = Number(options.get('pitch') ?? '-4');
+        const style = options.get('style') ?? 'preserved';
+        if (generic && (!Number.isInteger(pitch) || pitch < -12 || pitch > 12 ||
+          !['preserved','shifted','radio'].includes(style))) {
+          return reply(400,'Escolha um tom e um timbre válidos.');
+        }
         if (busy) return reply(409,'Já tem uma conversão em andamento. Tente novamente.');
         if (Number(req.headers['content-length'])>limit) return reply(413,'A gravação é grande demais.');
 
@@ -71,8 +78,19 @@ export function voiceLab(directory: string): Plugin {
           ],{timeout:10000});
           let result = input;
           if (generic) {
-            await run('rubberband',['--fine','--formant','--pitch','-4',input,output],{timeout:10000});
-            result = output;
+            if (pitch !== 0) {
+              const formants = style==='preserved' ? ['--formant'] : [];
+              await run('rubberband',['--fine',...formants,'--pitch',String(pitch),input,output],{timeout:10000});
+              result = output;
+            }
+            if (style==='radio') {
+              const radio = join(temporary,'radio.wav');
+              await run('ffmpeg',[
+                '-nostdin','-v','error','-i',result,'-af',
+                'highpass=f=400,lowpass=f=2900,acompressor=threshold=0.12:ratio=4',radio,
+              ],{timeout:10000});
+              result = radio;
+            }
           } else if (!reference) {
             const [model,index] = models[voice as keyof typeof models];
             await run(join(engine,'.venv/bin/python'),[
