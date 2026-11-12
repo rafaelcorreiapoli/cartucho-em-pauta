@@ -700,6 +700,9 @@
     pointer-events: none;
   }
   #left-hud { left: var(--hud-edge); }
+  #agenda-dock .module-content {
+    max-height: min(48dvh, calc(100dvh - 2 * var(--hud-edge) - var(--left-stack-height, 0px) - 74px));
+  }
   #right-hud { right: var(--hud-edge); align-items: flex-end; }
   #session[data-phase="lobby"] #right-hud { top: auto; bottom: var(--hud-edge); }
 
@@ -936,7 +939,6 @@
   z-index: 3;
 }
 #gameplay-tools button { display: flex; align-items: center; gap: .35rem; }
-#inventory-count { color: var(--party-gold); font-size: 1rem; }
 #object-request {
   position: absolute;
   right: var(--hud-edge);
@@ -976,3 +978,236 @@
 .phone-photo-people { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
 .phone-photo-people > span { display: grid; justify-items: center; gap: .2rem; }
 .phone-photo .portrait { display: block; }
+
+#item-slots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: .45rem;
+  margin: 0 1rem .9rem;
+}
+
+.item-tile {
+  --item-art: 2rem;
+  --item-ink: #ffe7a8;
+  --item-surface: #40624b;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid #92b9889e;
+  border-radius: 8px;
+  color: var(--item-ink);
+  background: radial-gradient(ellipse at 50% 37%, var(--item-surface), #172f27 80%);
+}
+button.item-tile {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: filter 140ms ease, transform 140ms ease;
+}
+button.item-tile:hover { filter: brightness(1.22); }
+button.item-tile:active { transform: translateY(3px); }
+button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-offset: 2px; }
+.item-tile-empty { border: 1px dashed #749d8170; background: #10241f; }
+.item-tile[data-kind="coffee"] { --item-surface: #785239; --item-ink: #ffe0b2; }
+.item-tile[data-kind="document"] { --item-surface: #4a6879; --item-ink: #e0f3ff; }
+.item-tile[data-kind="gift"] { --item-surface: #6e4652; --item-ink: #ffc8b8; }
+.item-tile[data-kind="photo"] { --item-surface: #46666a; --item-ink: #bcf1ea; }
+.item-tile > .hud-glyph { width: var(--item-art); height: var(--item-art); }
+.item-sprite {
+  display: inline-block;
+  flex: none;
+  width: var(--item-art, 1.6rem);
+  aspect-ratio: 1;
+  background: url('/assets/dinheiro-no-mapa.png') calc(var(--item-frame) * 50%) center / 300% 100% no-repeat;
+}
+#item-slots .item-caption { display: none; }
+#nearby-items {
+  order: -1;
+  flex: 0 1 100%;
+  display: flex;
+  justify-content: center;
+  justify-content: safe center;
+  gap: .65rem;
+  max-width: min(100%, 680px);
+  margin-inline: max(0px, (100% - 680px) / 2);
+  padding: .25rem;
+  overflow-x: auto;
+  pointer-events: auto;
+}
+#nearby-items .item-tile {
+  --item-art: 3rem;
+  flex: 0 0 104px;
+  padding-bottom: 1.35rem;
+  box-shadow: 0 4px 0 #0b2119;
+}
+#nearby-items .item-sprite { --item-art: 3.75rem; }
+#nearby-items .item-caption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: .65rem .3rem .35rem;
+  border-radius: 0 0 7px 7px;
+  background: linear-gradient(transparent, #0a1b16 48%);
+  color: var(--hud-paper);
+  font: 800 .76rem/1.05 var(--party-display);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+#nearby-items .station-key { top: .24rem; right: .24rem; }
+#stations #nearby-objects { min-width: 150px; }
+#stations #nearby-objects[aria-expanded="true"] { border-color: #9bca98; }
+@media (prefers-reduced-motion: reduce) {
+  button.item-tile { transition: none; }
+}
+
+.item-portrait {
+  display: block;
+  width: var(--item-art, 1.8rem);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+#nearby-items .item-portrait { --item-art: 4.65rem; }
+#nearby-items .item-tile:has(.item-portrait) { padding-bottom: 1rem; }
+
+#gameplay-dialog[data-mode="phone"] {
+  width: min(368px, calc((100dvh - 2rem) * 9 / 16), calc(100vw - 1.5rem));
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  align-content: start;
+  padding: 1.35rem .8rem 1.45rem;
+  border: 7px solid #1b2421;
+  border-radius: 33px;
+  background: radial-gradient(ellipse at top left, #345d47, #112721 72%);
+  box-shadow: 0 0 0 2px #759587, 0 18px 60px #000a;
+}
+#gameplay-dialog[data-mode="phone"]:not([open]) { display: none; }
+#gameplay-dialog[data-mode="phone"]::before {
+  content: "";
+  position: absolute;
+  top: .42rem;
+  left: 50%;
+  width: 55px;
+  height: 5px;
+  border-radius: 99px;
+  background: #0b1713;
+  transform: translateX(-50%);
+}
+#gameplay-dialog[data-mode="phone"]::after {
+  content: "";
+  position: absolute;
+  bottom: .48rem;
+  left: 50%;
+  width: 76px;
+  height: 4px;
+  border-radius: 99px;
+  background: #9bb5a3a8;
+  transform: translateX(-50%);
+}
+#gameplay-dialog[data-mode="phone"] > header { padding: 0 .2rem .7rem; }
+#gameplay-dialog[data-mode="phone"] #gameplay-title { margin: 0; font-size: 1.2rem; }
+#phone-apps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .22rem;
+  padding: .55rem .25rem;
+  border-radius: 14px;
+  background: #0d251c99;
+}
+.phone-app {
+  display: grid;
+  justify-items: center;
+  gap: .38rem;
+  min-width: 0;
+  padding: .2rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--hud-paper);
+  font: 800 clamp(.57rem, 1.2vw, .7rem)/1.1 var(--party-display);
+  cursor: pointer;
+}
+.phone-app-icon {
+  display: grid;
+  place-items: center;
+  width: min(100%, 45px);
+  aspect-ratio: 1;
+  border: 1px solid #fff4;
+  border-radius: 11px;
+  background: linear-gradient(150deg, #baf89b, #51b97f);
+  color: #163922;
+  box-shadow: 0 3px 0 #071710;
+}
+.phone-app[data-app="gamepad"] .phone-app-icon { background: linear-gradient(150deg, #ffe293, #e5a749); color: #4a2c15; }
+.phone-app[data-app="camera"] .phone-app-icon { background: linear-gradient(150deg, #b4edee, #67adb9); color: #14323f; }
+.phone-app[data-app="document"] .phone-app-icon { background: linear-gradient(150deg, #ffc6a4, #ef9876); color: #542a20; }
+.phone-app[data-app="ballot"] .phone-app-icon { background: linear-gradient(150deg, #f6efbe, #c9be76); color: #383518; }
+.phone-app[aria-pressed="true"] .phone-app-icon { outline: 2px solid #f9e7ac; outline-offset: 2px; }
+.phone-app:focus-visible { border-radius: 8px; outline: 2px dashed var(--party-gold); outline-offset: 1px; }
+.phone-app:hover .phone-app-icon { filter: brightness(1.18); }
+.phone-app-icon .hud-glyph { width: 62%; height: 62%; stroke-width: 2; }
+#gameplay-dialog[data-mode="phone"] #gameplay-body {
+  grid-row: 4;
+  align-content: start;
+  align-items: stretch;
+  overflow: auto;
+  min-height: 0;
+  padding: .2rem .2rem .45rem;
+}
+#gameplay-dialog[data-mode="phone"] #gameplay-body > :is(h3,p) { flex-basis: 100%; margin: .25rem 0; }
+#gameplay-dialog[data-mode="phone"] #gameplay-body h3 { font: 850 1.25rem/1.15 var(--party-display); }
+.phone-contacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  gap: .55rem;
+}
+.phone-contact {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  gap: .3rem;
+  padding: .55rem .3rem .45rem;
+  border: 1px solid #6a987c;
+  border-radius: 10px;
+  background: #1c3d31;
+  color: var(--hud-paper);
+  cursor: pointer;
+}
+.phone-contact:hover { background: #295b42; }
+.phone-contact strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phone-contact-face {
+  --portrait-size: 60px;
+  display: grid;
+  place-items: center;
+  width: var(--portrait-size);
+  height: var(--portrait-size);
+  border-radius: 9px;
+  background-color: #345948;
+  font: 850 1.5rem/1 var(--party-display);
+}
+.phone-contact .phone-contact-dial {
+  position: absolute;
+  top: .4rem;
+  right: .4rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--party-mint);
+}
+.phone-caller {
+  display: grid;
+  justify-items: center;
+  flex-basis: 100%;
+  gap: .45rem;
+  padding: .65rem 0;
+}
+.phone-caller .phone-contact-face { --portrait-size: 84px; }
+.phone-caller strong { font: 850 1.4rem/1.1 var(--party-display); }
+.phone-caller > span:last-child { color: var(--party-mint); }
+#gameplay-body :is(.phone-answer,.phone-hangup) { display: flex; align-items: center; gap: .4rem; }
+#gameplay-body .phone-answer { background: #275f43; border-color: #7bd0a1; color: #f0fff3; }
+#gameplay-body .phone-hangup { background: #663b3c; border-color: #d88c8d; color: #fff2e9; }

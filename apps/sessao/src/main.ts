@@ -198,6 +198,9 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
+    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,cash=>{
+      joined.send('carry-cash',cash);
+    },message=>hud.notify('Objetos e celular',message));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -205,11 +208,7 @@ async function connect(join: () => Promise<Room>) {
     },activity => joined.send('room-activity',activity),drop => {
       joined.send('pocket-cash',drop);
       map.focus({preventScroll:true});
-    });
-    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,()=>{
-      const cash = hud.nearbyCash();
-      if (cash!==undefined) joined.send('carry-cash',cash);
-    },message=>hud.notify('Objetos e celular',message));
+    },gameplay.nearby);
     joined.onMessage('gameplay-feedback',(message:string)=>gameplay.feedback(message));
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
@@ -233,8 +232,8 @@ async function connect(join: () => Promise<Room>) {
       panel.render(view);
       political.render(view);
       election.render(view);
-      hud.render(view);
       gameplay.render(view);
+      hud.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? []);
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);

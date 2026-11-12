@@ -1,5 +1,5 @@
 import type { GameplayEvent } from '../src/gameplay';
-import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact,
+import { agendas, AGENDA_REWARD, CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Agenda, type Contact, type DirectoryContact,
   type Evidence, type Mission, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
 
@@ -22,13 +22,13 @@ const cap = (value:number) => Math.max(0,Math.min(100,value));
 
 export class PoliticalEconomy {
   private accounts = new Map<string,Account>();
-  private contacts = new Map<string,Contact>();
+  private contacts = new Map<string,DirectoryContact>();
   private records = new Map<number,Evidence>();
   private published = new Set<number>();
   private offers = new Map<number,Offer>();
   private serial = 0;
 
-  reset(contacts:Contact[], random:()=>number) {
+  reset(contacts:DirectoryContact[], random:()=>number) {
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
     this.accounts.clear();
     this.records.clear();

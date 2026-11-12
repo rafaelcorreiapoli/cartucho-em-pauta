@@ -1,4 +1,4 @@
-import { documentTemplates, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player } from '../src/map';
 import type { Office } from '../src/elections';
 
@@ -11,7 +11,6 @@ export type GameplayWorld = {
   players:Player[]; now:number; cashVisible:(player:Player)=>ObjectKind[]; office:(id:string)=>Office|undefined;
   voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
 };
-const MAX_ITEMS = 6;
 const within = (a:Motion,b:Motion) => Math.hypot(a.x-b.x,a.y-b.y)<=24 && localPerception(a,b).visible;
 const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => within(player,terminals[key].point));
@@ -34,7 +33,7 @@ export class Gameplay {
     return [...this.items.values()].filter(({place}) => 'holder' in place && place.holder===id);
   }
 
-  private available(id:string) { return this.inventory(id).length<MAX_ITEMS; }
+  private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
 
   private move(item:Item, place:Place) {
     item.place = place;

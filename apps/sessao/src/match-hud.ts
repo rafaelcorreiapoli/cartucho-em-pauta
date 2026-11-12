@@ -9,10 +9,16 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void) {
+export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
+  renderNearby:(cash:CashDrop | undefined,exploring:boolean) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
+  const leftHud = element('left-hud');
+  const agendaSpace = new ResizeObserver(() => {
+    agendaDock.style.setProperty('--left-stack-height',`${leftHud.offsetHeight}px`);
+  });
+  agendaSpace.observe(leftHud);
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
@@ -83,25 +89,45 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     };
     return {button,control};
   });
-  const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
-    const activity = roomActivities[station];
-    const button = addStationButton({...activity,station});
-    button.onclick = () => sendActivity(station);
-    return {button,activity};
-  });
+  const activityButtons = (Object.keys(roomActivities) as RoomActivity[])
+    .filter(station => station!=='coffee')
+    .map(station => {
+      const activity = roomActivities[station];
+      const button = addStationButton({...activity,station});
+      button.onclick = () => sendActivity(station);
+      return {button,activity};
+    });
   let own:Player | undefined;
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
-  const actionKeys = [ ...stations.querySelectorAll<HTMLButtonElement>('.station-actions button') ].map(button => {
-    const badge = document.createElement('kbd');
-    badge.className = 'station-key';
-    badge.setAttribute('aria-hidden','true');
-    button.append(badge);
-    return {button,badge};
-  });
+  const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
+  function refreshActionKeys() {
+    let index = 0;
+    for (const button of actionButtons()) {
+      const number = !button.disabled && !button.closest('[hidden]') ? ++index : 0;
+      const key = number && number<=9 ? String(number) : null;
+      if (button.getAttribute('aria-keyshortcuts')===key) continue;
+      if (!key) {
+        button.querySelector('.station-key')?.remove();
+        button.removeAttribute('aria-keyshortcuts');
+        continue;
+      }
+      let badge = button.querySelector('kbd');
+      if (!badge) {
+        badge = document.createElement('kbd');
+        badge.className = 'station-key';
+        badge.setAttribute('aria-hidden','true');
+        button.append(badge);
+      }
+      badge.textContent = key;
+      button.setAttribute('aria-keyshortcuts',key);
+    }
+  }
+  const nearbyToggle = element('nearby-objects');
+  stations.addEventListener('click',refreshActionKeys);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) || hudConsumesKeys(event.target)) return;
-    const button = actionKeys.find(action => action.button.getAttribute('aria-keyshortcuts')===event.key)?.button;
+    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
     if (!button || button.disabled || button.closest('[hidden]')) return;
     event.preventDefault();
     button.click();
@@ -183,27 +209,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     nearbyDrop = exploring && own ? view.drops.find(drop => canPocket(own!,drop)) : undefined;
     pocket.hidden = !nearbyDrop;
-    element('carry-cash').hidden = !nearbyDrop;
-    const world = view?.gameplay;
-    const nearbyObjects = !!world && (world.locations.length>0 || world.nearby.length>0);
-    element('nearby-objects').hidden = !nearbyObjects;
+    renderNearby(nearbyDrop,exploring);
+    const nearbyObjects = !nearbyToggle.hidden;
     if (nearbyDrop) pocketReward.textContent = `+${money(cashItems[nearbyDrop.kind].amount)}`;
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
     stations.hidden = (!exploring && view?.phase!=='ballot') ||
       (!nearbyObjects && !nearbyDrop && !hasAction && interviewHint.hidden);
-    let index = 0;
-    for (const {button,badge} of actionKeys) {
-      const number = !button.disabled && !button.closest('[hidden]') ? ++index : 0;
-      const key = number && number<=9 ? String(number) : '';
-      if (badge.textContent===key) continue;
-      badge.textContent = key;
-      if (key) button.setAttribute('aria-keyshortcuts',key);
-      else button.removeAttribute('aria-keyshortcuts');
-    }
+    refreshActionKeys();
   }
 
   return {
-    nearbyCash:() => nearbyDrop?.id,
     notify,
     showIncome(amount:number, head:{x:number;y:number} | undefined) {
       const total = amount+Number(incomeEffect?.dataset.amount ?? 0);
@@ -292,6 +307,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions();
     },
     destroy() {
+      agendaSpace.disconnect();
+      agendaDock.style.removeProperty('--left-stack-height');
       for (const node of timers.keys()) remove(node);
       for (const tab of missionTabs) {
         tab.onclick = null;
@@ -299,9 +316,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       incomeEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
-      for (const {button,badge} of actionKeys) {
+      stations.removeEventListener('click',refreshActionKeys);
+      for (const button of actionButtons()) {
         button.removeAttribute('aria-keyshortcuts');
-        badge.remove();
+        button.querySelector('.station-key')?.remove();
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = pocket.hidden = true;

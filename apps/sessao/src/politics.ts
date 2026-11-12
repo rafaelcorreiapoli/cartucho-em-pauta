@@ -37,11 +37,12 @@ export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversi
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
+export type DirectoryContact = Contact & {character?:number};
 export type PoliticsView = {
   wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]; paid:boolean}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
-  contacts:Contact[]; directory:(Contact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
+  contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
 };
 export type PoliticsAction =
   | {kind:'grant'; diverted:Split}

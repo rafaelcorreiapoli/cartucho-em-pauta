@@ -10,8 +10,8 @@ export const objects = {
   underwear:{name:'Cueca com dólares',icon:'wallet',description:'Reserva cambial de uso pessoal.',use:'cash',amount:cashItems.underwear.amount},
   bundle:{name:'Maço de dinheiro',icon:'wallet',description:'Um maço de procedência criativamente indefinida.',use:'cash',amount:cashItems.bundle.amount},
   document:{name:'Lei do Elevador para o Térreo',icon:'document',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
-  gift:{name:'Presente institucional',icon:'star',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
-  photo:{name:'Fotografia',icon:'search',description:'Registro feito com a câmera do celular.',destructible:true},
+  gift:{name:'Presente institucional',icon:'gift',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
+  photo:{name:'Fotografia',icon:'camera',description:'Registro feito com a câmera do celular.',destructible:true},
 } as const satisfies Record<string,{name:string; icon:string; description:string; use?:'consume'|'cash'; amount?:number; destructible?:boolean}>;
 
 export const documentTemplates = {
@@ -29,6 +29,7 @@ export type WorldItem = {id:number; kind:ObjectKind; document?:DocumentData; pho
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export type PhoneGame = {tiles?:number[]; total:number; progress:number; elapsed:number};
+export const INVENTORY_SLOTS = 6;
 export const PHONE_PREVIEW_MS = 3000;
 export const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
   'call','answer','hangup','game-start','game-stop','game-tile','photo'] as const;
