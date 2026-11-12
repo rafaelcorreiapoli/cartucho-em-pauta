@@ -185,15 +185,16 @@
             </div>
           </div>
         </section>
-        <section id="congress-dock" class="hud-module" aria-label="Situação do Congresso">
+        <section id="congress-dock" class="hud-module" aria-labelledby="congress-heading">
+          <h2 id="congress-heading">Parlamento</h2>
           <div class="resource-grid">
             <div class="resource stability-resource">
-              <label for="stability-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg>Estabilidade <strong id="stability"></strong></label>
+              <label for="stability-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Estabilidade institucional</span> <strong id="stability"></strong></label>
               <div class="resource-track"><progress id="stability-meter" max="100" value="48"></progress><span title="Meta: 45"></span></div>
               <small>Meta: 45 de 100</small>
             </div>
             <div class="resource budget-resource">
-              <label for="budget-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Orçamento <strong id="budget"></strong></label>
+              <label for="budget-meter"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span>Orçamento público</span> <strong id="budget"></strong></label>
               <progress id="budget-meter" max="100" value="32"></progress>
               <small>Verba pública</small>
             </div>
