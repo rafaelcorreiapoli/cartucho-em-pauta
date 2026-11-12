@@ -1,4 +1,4 @@
-import { documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player } from '../src/map';
 import type { Office } from '../src/elections';
 
@@ -11,9 +11,8 @@ export type GameplayWorld = {
   players:Player[]; now:number; cashVisible:(player:Player)=>ObjectKind[]; office:(id:string)=>Office|undefined;
   voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
 };
-const within = (a:Motion,b:Motion) => Math.hypot(a.x-b.x,a.y-b.y)<=24 && localPerception(a,b).visible;
 const terminalKeys = Object.keys(terminals) as Terminal[];
-const locations = (player:Player) => terminalKeys.filter(key => within(player,terminals[key].point));
+const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
   private items = new Map<number,Item>();
@@ -129,9 +128,9 @@ export class Gameplay {
     const peer = call && world.players.find(other => other.id===(call.from===id ? call.to : call.from));
     const game = this.puzzles.get(id);
     return {
-      contacts:world.players.filter(other => other.id!==id && within(player,other)).map(other => ({id:other.id,name:other.nick})),
+      contacts:world.players.filter(other => other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
-      nearby:ground.filter(item => within(player,item)),
+      nearby:ground.filter(item => canReachObject(player,item)),
       ground:ground.map(({id:objectId,kind,x,y}) => ({id:objectId,kind,x,y})),
       stored:[...this.items.values()].filter(({place}) =>
         'storage' in place && nearbyLocations.some(key => key===place.storage)).map(({data})=>data),
@@ -245,7 +244,7 @@ export class Gameplay {
     if (!item) return 'Objeto indisponível.';
     const {data} = item;
     if (action.kind==='collect' || action.kind==='recover') {
-      const accessible = action.kind==='collect' ? 'ground' in item.place && within(player,item.place.ground) :
+      const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
       if (!accessible || !this.available(id)) return 'Objeto fora de alcance ou inventário cheio.';
       this.move(item,{holder:id});
@@ -257,7 +256,7 @@ export class Gameplay {
     switch (action.kind) {
       case 'offer':
       case 'sign-request': {
-        const target = world.players.find(person => person.id===action.target && person.id!==id && within(player,person));
+        const target = world.players.find(person => person.id===action.target && person.id!==id && canReachObject(player,person));
         if (!target) return 'Aproxime-se do destinatário.';
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return 'Este jogador não pode assinar o documento.';
@@ -339,7 +338,7 @@ export class Gameplay {
     }
     const owner = world.players.find(person => person.id===request.from);
     const item = this.items.get(request.item);
-    if (!owner || !item || !('holder' in item.place) || item.place.holder!==owner.id || !within(player,owner)) {
+    if (!owner || !item || !('holder' in item.place) || item.place.holder!==owner.id || !canReachObject(player,owner)) {
       return 'O portador ou objeto está fora de alcance.';
     }
     if (request.kind==='offer') {

@@ -20,8 +20,17 @@ export class SessionRoom extends Room {
 
   private gameplay = new Gameplay();
   private gameplayWorld() {
-    return this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
+    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
       id=>this.voice.has(id));
+    return {
+      ...world,
+      publish: (event:Parameters<typeof world.publish>[0]) => {
+        world.publish(event);
+        const pickup = event.type==='collected' || event.type==='recovered';
+        const recipient = pickup || event.type==='photo' ? event.actor : event.type==='transferred' ? event.target : undefined;
+        if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
+      },
+    };
   }
 
   private match = new PlenaryMatch();

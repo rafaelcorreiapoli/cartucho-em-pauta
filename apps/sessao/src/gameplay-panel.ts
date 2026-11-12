@@ -1,7 +1,8 @@
 import { offices } from './elections';
 import { setCharacterPortrait } from './character-art';
-import { cashItems, type CashDrop } from './cash-drops';
-import { documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canPocket, type CashDrop } from './cash-drops';
+import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, PHONE_PREVIEW_MS, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
 
@@ -14,6 +15,7 @@ const apps = {
   'Eleições':'ballot',
 } as const;
 type App = keyof typeof apps;
+type InteractionArea = (player:Motion) => boolean;
 
 function node<K extends keyof HTMLElementTagNameMap>(tag:K,text = '') {
   const result = document.createElement(tag);
@@ -22,22 +24,12 @@ function node<K extends keyof HTMLElementTagNameMap>(tag:K,text = '') {
 }
 
 function itemArt(kind:ObjectKind) {
-  if (kind==='coffee') {
-    const portrait = node('img');
-    portrait.className = 'item-portrait';
-    portrait.src = import.meta.env.BASE_URL+'assets/retrato-cafezinho.webp';
-    portrait.alt = '';
-    portrait.draggable = false;
-    return portrait;
-  }
-  if (kind==='briefcase' || kind==='underwear' || kind==='bundle') {
-    const sprite = node('span');
-    sprite.className = 'item-sprite';
-    sprite.style.setProperty('--item-frame',String(cashItems[kind].frame));
-    sprite.setAttribute('aria-hidden','true');
-    return sprite;
-  }
-  return glyph(objects[kind].icon);
+  const portrait = node('img');
+  portrait.className = 'item-portrait';
+  portrait.src = import.meta.env.BASE_URL+'assets/'+objects[kind].portrait;
+  portrait.alt = '';
+  portrait.draggable = false;
+  return portrait;
 }
 
 function glyph(name:string) {
@@ -69,6 +61,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
+  let pendingPickup:InteractionArea | undefined;
+  let collectedArea:InteractionArea | undefined;
   let app:App = 'Telefone';
   let previous:PlenaryView | undefined;
   let renderKey = '';
@@ -320,35 +314,62 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     nearbyButton.setAttribute('aria-expanded',String(expanded));
   }
 
+  function pickUp(area:InteractionArea, action:()=>void) {
+    if (pendingPickup) return;
+    pendingPickup = area;
+    action();
+  }
+
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   phoneButton.onclick = () => open();
   const closed = () => { if (previous?.gameplay?.game) send({kind:'game-stop'}); };
   dialog.addEventListener('close',closed);
 
   return {
-    nearby(cash:CashDrop | undefined, exploring:boolean) {
+    itemObtained(pickup:boolean) {
+      if (!pickup || !pendingPickup) return;
+      collectedArea = pendingPickup;
+      pendingPickup = undefined;
+      nearbyKey = '';
+      nearbyButton.hidden = true;
+      setNearbyExpanded(false);
+    },
+    nearby(cash:CashDrop | undefined, player:Motion | undefined, exploring:boolean) {
+      if (collectedArea) {
+        if (exploring && (!player || collectedArea(player))) return;
+        collectedArea = undefined;
+      }
       const state = exploring ? previous?.gameplay : undefined;
       const key = JSON.stringify(state ? [cash?.id,state.nearby,state.stored,state.filed,state.locations] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
       const tiles:HTMLButtonElement[] = [];
       if (state) {
-        if (cash) tiles.push(itemButton(cash.kind,objects[cash.kind].name,'Carregar',()=>carry(cash.id)));
+        if (cash) tiles.push(itemButton(cash.kind,objects[cash.kind].name,'Carregar',
+          ()=>pickUp(player=>canPocket(player,cash),()=>carry(cash.id))));
         for (const item of state.nearby) {
-          tiles.push(itemButton(item.kind,itemName(item),'Pegar',()=>send({kind:'collect',item:item.id})));
+          tiles.push(itemButton(item.kind,itemName(item),'Pegar',
+            ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id}))));
         }
+        const storage = state.locations.map(place=>terminals[place as keyof typeof terminals])
+          .filter(terminal=>'storage' in terminal);
         for (const item of state.stored) {
-          tiles.push(itemButton(item.kind,itemName(item),'Recuperar',()=>send({kind:'recover',item:item.id})));
+          tiles.push(itemButton(item.kind,itemName(item),'Recuperar',()=>pickUp(
+            player=>storage.some(terminal=>canReachObject(player,terminal.point)),
+            ()=>send({kind:'recover',item:item.id}),
+          )));
         }
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
           if (!('supply' in terminal)) continue;
+          const take = (target?:string) => pickUp(player=>canReachObject(player,terminal.point),
+            ()=>send({kind:'supply',place,target}));
           if (terminal.supply==='document') {
             for (const [target,template] of Object.entries(documentTemplates)) {
-              tiles.push(itemButton('document',template.title,'Pegar',()=>send({kind:'supply',place,target})));
+              tiles.push(itemButton('document',template.title,'Pegar',()=>take(target)));
             }
           } else {
-            tiles.push(itemButton(terminal.supply,objects[terminal.supply].name,'Pegar',()=>send({kind:'supply',place})));
+            tiles.push(itemButton(terminal.supply,objects[terminal.supply].name,'Pegar',()=>take()));
           }
         }
         for (const item of state.filed) {
@@ -364,6 +385,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const incoming = view.gameplay?.requests.at(0);
       const old = previous?.gameplay;
       previous = view;
+      if (view.phase!=='negotiation') pendingPickup = undefined;
       tools.hidden = !view.gameplay;
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
@@ -392,6 +414,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       render();
     },
     feedback(text:string) {
+      pendingPickup = undefined;
       if (dialog.open) feedback.textContent = text;
       else notify(text);
     },

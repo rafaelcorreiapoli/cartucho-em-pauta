@@ -209,6 +209,10 @@ async function connect(join: () => Promise<Room>) {
       joined.send('pocket-cash',drop);
       map.focus({preventScroll:true});
     },gameplay.nearby);
+    joined.onMessage('item-obtained',(pickup:boolean)=>{
+      gameplay.itemObtained(pickup);
+      audio.cue('pickup');
+    });
     joined.onMessage('gameplay-feedback',(message:string)=>gameplay.feedback(message));
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));

@@ -2,7 +2,7 @@ import { hudConsumesKeys } from './game-keys';
 import { canPocket, cashItems, type CashDrop } from './cash-drops';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
-import type { Player } from './map';
+import type { Motion, Player } from './map';
 import { AGENDA_REWARD, missionTitle, money, type Mission, type PoliticsView } from './politics';
 import { STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
@@ -10,7 +10,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
-  renderNearby:(cash:CashDrop | undefined,exploring:boolean) => void) {
+  renderNearby:(cash:CashDrop | undefined,player:Motion | undefined,exploring:boolean) => void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
@@ -89,14 +89,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     };
     return {button,control};
   });
-  const activityButtons = (Object.keys(roomActivities) as RoomActivity[])
-    .filter(station => station!=='coffee')
-    .map(station => {
-      const activity = roomActivities[station];
-      const button = addStationButton({...activity,station});
-      button.onclick = () => sendActivity(station);
-      return {button,activity};
-    });
+  const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
+    const activity = roomActivities[station];
+    const button = addStationButton({...activity,station});
+    button.onclick = () => sendActivity(station);
+    return {button,activity};
+  });
   let own:Player | undefined;
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
@@ -209,7 +207,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     nearbyDrop = exploring && own ? view.drops.find(drop => canPocket(own!,drop)) : undefined;
     pocket.hidden = !nearbyDrop;
-    renderNearby(nearbyDrop,exploring);
+    renderNearby(nearbyDrop,own,exploring);
     const nearbyObjects = !nearbyToggle.hidden;
     if (nearbyDrop) pocketReward.textContent = `+${money(cashItems[nearbyDrop.kind].amount)}`;
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));

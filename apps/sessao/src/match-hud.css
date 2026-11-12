@@ -988,7 +988,6 @@
 
 .item-tile {
   --item-art: 2rem;
-  --item-ink: #ffe7a8;
   --item-surface: #40624b;
   position: relative;
   display: grid;
@@ -998,7 +997,6 @@
   padding: 0;
   border: 1px solid #92b9889e;
   border-radius: 8px;
-  color: var(--item-ink);
   background: radial-gradient(ellipse at 50% 37%, var(--item-surface), #172f27 80%);
 }
 button.item-tile {
@@ -1010,18 +1008,10 @@ button.item-tile:hover { filter: brightness(1.22); }
 button.item-tile:active { transform: translateY(3px); }
 button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-offset: 2px; }
 .item-tile-empty { border: 1px dashed #749d8170; background: #10241f; }
-.item-tile[data-kind="coffee"] { --item-surface: #785239; --item-ink: #ffe0b2; }
-.item-tile[data-kind="document"] { --item-surface: #4a6879; --item-ink: #e0f3ff; }
-.item-tile[data-kind="gift"] { --item-surface: #6e4652; --item-ink: #ffc8b8; }
-.item-tile[data-kind="photo"] { --item-surface: #46666a; --item-ink: #bcf1ea; }
-.item-tile > .hud-glyph { width: var(--item-art); height: var(--item-art); }
-.item-sprite {
-  display: inline-block;
-  flex: none;
-  width: var(--item-art, 1.6rem);
-  aspect-ratio: 1;
-  background: url('/assets/dinheiro-no-mapa.png') calc(var(--item-frame) * 50%) center / 300% 100% no-repeat;
-}
+.item-tile[data-kind="coffee"] { --item-surface: #785239; }
+.item-tile[data-kind="document"] { --item-surface: #4a6879; }
+.item-tile[data-kind="gift"] { --item-surface: #6e4652; }
+.item-tile[data-kind="photo"] { --item-surface: #46666a; }
 #item-slots .item-caption { display: none; }
 #nearby-items {
   order: -1;
@@ -1037,12 +1027,11 @@ button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-o
   pointer-events: auto;
 }
 #nearby-items .item-tile {
-  --item-art: 3rem;
+  --item-art: 4.65rem;
   flex: 0 0 104px;
-  padding-bottom: 1.35rem;
+  padding-bottom: 1rem;
   box-shadow: 0 4px 0 #0b2119;
 }
-#nearby-items .item-sprite { --item-art: 3.75rem; }
 #nearby-items .item-caption {
   position: absolute;
   inset: auto 0 0;
@@ -1065,12 +1054,10 @@ button.item-tile:focus-visible { outline: 2px solid var(--party-gold); outline-o
 
 .item-portrait {
   display: block;
-  width: var(--item-art, 1.8rem);
+  width: min(100%, var(--item-art, 1.8rem));
   aspect-ratio: 1;
   object-fit: contain;
 }
-#nearby-items .item-portrait { --item-art: 4.65rem; }
-#nearby-items .item-tile:has(.item-portrait) { padding-bottom: 1rem; }
 
 #gameplay-dialog[data-mode="phone"] {
   width: min(368px, calc((100dvh - 2rem) * 9 / 16), calc(100vw - 1.5rem));

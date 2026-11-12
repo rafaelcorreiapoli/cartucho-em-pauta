@@ -4,7 +4,7 @@ export const roomActivities = {
   cabinetA: {x:70,y:93, title:'Gabinete A', label:'Abrir negociação', icon:'wallet', panel:'trade-dock'},
   cabinet: {x:389,y:93, title:'Gabinete B', label:'Consultar orçamento', icon:'wallet'},
   secretary: {x:83,y:247, title:'Secretaria', label:'Ver pauta', icon:'document', panel:'legislative-dock'},
-  coffee: {x:240,y:250, title:'Cafezinho', label:'Tomar cafezinho', icon:'coffee'},
+  coffee: {x:240,y:250, title:'Cafezinho', label:'Tomar um cafezinho', icon:'coffee'},
   cabinetC: {x:366,y:244, title:'Gabinete C', label:'Revisar campanha', icon:'chart', panel:'election-dock'},
   archive: {x:549,y:90, title:'Arquivo', label:'Abrir registro público', icon:'document', panel:'politics-dock'},
   support: {x:631,y:243, title:'Apoio Técnico', label:'Revisar impacto', icon:'chart', panel:'legislative-dock'},
