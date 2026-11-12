@@ -55,6 +55,10 @@ export class SessionRoom extends Room {
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
     });
+    this.onMessage('pocket-cash',(client, id:unknown) => {
+      const player = this.players.get(client.sessionId)?.player;
+      if (player && typeof id==='number' && Number.isSafeInteger(id)) this.match.pocketCash(player,id,this.clock.currentTime);
+    });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
@@ -99,7 +103,7 @@ export class SessionRoom extends Room {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
-        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
+        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players),state.player);
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);

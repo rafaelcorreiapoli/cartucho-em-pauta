@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
+import { cashItems, type CashDrop } from './cash-drops';
+import { characterArt, characterSheets } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { stations, STATION_RADIUS, type Phase, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, NAMES, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; nextStep:number };
 const stationColor = 0x79ebdf;
@@ -21,6 +23,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   fog.setAttribute('aria-hidden','true');
   parent.append(fog);
   let players: Player[] = [];
+  let drops: CashDrop[] = [];
   let negotiating = false;
   let running = false;
   let resizeObserver:ResizeObserver | undefined;
@@ -50,6 +53,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private views = new Map<string,View>();
+    private cashSprites = new Map<number,Phaser.GameObjects.Sprite>();
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
@@ -57,14 +61,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
 
     preload() {
-      this.load.spritesheet('players','assets/sprites-hd.png',{frameWidth:128,frameHeight:128});
+      for (const {key,path} of characterSheets) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      this.load.spritesheet('cash-drops','assets/dinheiro-no-mapa.png',{frameWidth:64,frameHeight:64});
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
-      for (let character=0;character<3;character++) {
+      for (let character=0;character<NAMES.length;character++) {
+        const {sheet,frame} = characterArt(character);
         for (let direction=0;direction<3;direction++) {
-          const start = character*12+direction*4;
-          const frames = Array.from({length:4},(_,step) => ({key:'players',frame:start+step}));
+          const start = frame+direction*4;
+          const frames = Array.from({length:4},(_,step) => ({key:sheet.key,frame:start+step}));
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
       }
@@ -114,6 +120,23 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
     }
 
+    private renderCashDrops(time:number) {
+      for (const [id,sprite] of this.cashSprites) {
+        if (drops.some(drop => drop.id===id)) continue;
+        sprite.destroy();
+        this.cashSprites.delete(id);
+      }
+      for (const drop of drops) {
+        let sprite = this.cashSprites.get(drop.id);
+        if (!sprite) {
+          sprite = this.add.sprite(drop.x,drop.y,'cash-drops',cashItems[drop.kind].frame)
+            .setOrigin(.5,.72).setDisplaySize(28,28).setDepth(drop.y-1);
+          this.cashSprites.set(drop.id,sprite);
+        }
+        sprite.y = drop.y+Math.sin(time/230+drop.id)*2;
+      }
+    }
+
     update(time: number, delta: number) {
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
@@ -135,6 +158,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         manual = keys.size>0;
       }
+      this.renderCashDrops(time);
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const camera = this.cameras.main;
@@ -170,6 +194,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
         const {id,character,direction,moving} = player;
+        const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
         if (running && !own && ownPlayer && Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=VISION_RADIUS) {
           view?.sprite.setVisible(false);
@@ -180,7 +205,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!view) {
           view = {
             nextStep:0,
-            sprite:this.add.sprite(player.x,player.y,'players').setOrigin(.5,1).setScale(.295),
+            sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
               fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
@@ -212,7 +237,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
           sprite.anims.stop();
-          sprite.setFrame(character*12+row*4);
+          sprite.setTexture(sheet.key,frame+row*4);
         }
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
@@ -240,6 +265,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       players = snapshot;
       history.add(snapshot,performance.now());
     },
+    setCashDrops(next:CashDrop[]) { drops = next; },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHeadY() { return scene.sys.isActive() ? scene.playerHeadY() : undefined; },
     reconcile(snapshot: ControlState) { local.reconcile(snapshot); },

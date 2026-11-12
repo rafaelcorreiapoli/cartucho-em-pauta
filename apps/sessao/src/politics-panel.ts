@@ -1,3 +1,4 @@
+import { setCharacterPortrait } from './character-art';
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
 import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
@@ -32,7 +33,7 @@ function picker(id:string, changed:()=>void, empty='') {
           const portrait = document.createElement('span');
           portrait.className = 'portrait';
           portrait.setAttribute('aria-hidden','true');
-          portrait.style.setProperty('--portrait-row',String(choice.portrait*3));
+          setCharacterPortrait(portrait,choice.portrait);
           button.append(portrait);
         }
         button.append(choice.label);

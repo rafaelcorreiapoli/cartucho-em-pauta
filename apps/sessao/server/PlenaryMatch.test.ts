@@ -166,7 +166,7 @@ test('personal missions refill immediately and pay once at settlement', () => {
   const view = (id:string) => economy.view(id,[],1,false,() => true)!;
   const initial = view('a').missions.active;
   expect(initial.map(mission => mission.kind)).toEqual(['cafe','fortuna','campanha']);
-  economy.paySalary('a',4);
+  economy.earn('a',4);
   economy.changePopularity('a',25);
   const {active,completed,paid} = view('a').missions;
   expect(active).toHaveLength(3);
@@ -193,7 +193,7 @@ test('activities only count while their mission is active and replacements get a
   expect(missions().completed.map(mission => mission.kind)).toEqual(['auditoria']);
   economy.recordActivity('a','emenda');
   economy.billResult(new Map([['a','yes']]),true,true);
-  economy.paySalary('a',4);
+  economy.earn('a',4);
   economy.changePopularity('a',25);
   economy.recordActivity('a','cafe');
   expect(missions().active.find(mission => mission.kind==='leitura')?.current).toBe(0);

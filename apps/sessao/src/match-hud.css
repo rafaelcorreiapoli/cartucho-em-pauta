@@ -215,7 +215,9 @@
   user-select: none;
 }
 #stations .hud-button .hud-glyph { width: 40px; height: 40px; color: #d1ef9c; }
-#stations .hud-button small { font-size: .78em; color: #d5e7bf; }
+#stations .hud-button small { display: block; margin-top: .18rem; font-size: .78em; color: #d5e7bf; }
+#stations #pocket-cash { background: #3c4e2b; border-color: #c7b263; }
+#pocket-cash :is(.hud-glyph, #pocket-reward) { color: var(--party-gold); }
 #stations .hud-button[data-action="fraud"] { background: #6b3a31; border-color: #e7997f; }
 #stations .hud-button[data-action="fraud"] .hud-glyph { color: #ffd1a9; }
 #stations .hud-button:hover { filter: brightness(1.22); }

@@ -1,7 +1,7 @@
 export const WIDTH = 960;
 export const HEIGHT = 540;
 export const SPEED = 88;
-export const NAMES = ['Lula', 'Bolsonaro', 'Trump'] as const;
+export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
 export const walls: Rect[] = [
@@ -89,7 +89,7 @@ function wallBetween(a: Motion, b: Motion) {
   });
 }
 
-export function localPerception(a: Player, b: Player) {
+export function localPerception(a: Motion, b: Motion) {
   const distance = Math.hypot(a.x-b.x,a.y-b.y);
   if (distance>=HEARING_RADIUS) return {visible:false,volume:0};
   const wall = wallBetween(a,b);

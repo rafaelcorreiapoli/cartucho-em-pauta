@@ -1,3 +1,4 @@
+import { setCharacterPortrait } from './character-art';
 import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
@@ -57,7 +58,7 @@ const buttons = NAMES.map((name,index) => {
   button.className = 'hud-option character-option';
   const portrait = document.createElement('span');
   portrait.className = 'portrait';
-  portrait.style.setProperty('--portrait-row',String(index*3));
+  setCharacterPortrait(portrait,index);
   portrait.setAttribute('aria-hidden','true');
   button.append(portrait,name);
   button.setAttribute('aria-pressed','false');
@@ -197,7 +198,10 @@ async function connect(join: () => Promise<Room>) {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => joined.send('room-activity',activity));
+    },activity => joined.send('room-activity',activity),drop => {
+      joined.send('pocket-cash',drop);
+      map.focus({preventScroll:true});
+    });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -222,6 +226,7 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       hud.render(view);
+      game?.setCashDrops(view.drops);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;

@@ -60,13 +60,13 @@ p { margin:.5rem 0; }
 #room-setup .hud-title { margin:.75rem 0 .45rem; }
 #room-roster { list-style:none; padding:0; display:flex; flex-wrap:wrap; gap:.3rem; margin:.6rem 0 .9rem; }
 #room-roster li { border:1px solid #9e927a66; border-radius:3px; padding:.2rem .4rem; }
-#characters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; margin:.45rem 0 .85rem; }
+#characters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.4rem; margin:.45rem 0 .85rem; }
 .character-option { flex-direction:column; padding:.35rem .2rem; font-size:.78rem; }
 .portrait {
   --portrait-size:46px;
   width:var(--portrait-size); height:var(--portrait-size);
-  background:url('/assets/sprites-hd.png') no-repeat;
-  background-size:calc(var(--portrait-size) * 4) calc(var(--portrait-size) * 9);
+  background:var(--portrait-sheet) no-repeat;
+  background-size:calc(var(--portrait-size) * 4) calc(var(--portrait-size) * var(--portrait-rows));
   background-position:0 calc(-1 * var(--portrait-size) * var(--portrait-row));
 }
 .plenary-line { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .7rem; }

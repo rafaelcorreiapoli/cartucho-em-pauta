@@ -56,7 +56,7 @@ export class PoliticalEconomy {
     account.walletIncome += amount;
   }
 
-  paySalary(id:string, amount:number) {
+  earn(id:string, amount:number) {
     const account = this.accounts.get(id);
     if (!account) return;
     this.credit(account,amount);
