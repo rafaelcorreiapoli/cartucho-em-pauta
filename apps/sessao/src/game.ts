@@ -1,3 +1,4 @@
+import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { npcs } from './npcs';
@@ -23,7 +24,8 @@ const directions = new Map(Object.entries({
   arrowup:[0,-1], w:[0,-1], arrowdown:[0,1], s:[0,1],
 }));
 
-export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void) {
+export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
   const fog = document.createElement('div');
   fog.className = 'map-fog';
   fog.hidden = true;
@@ -295,6 +297,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.views.delete(id);
         }
       }
+      const playCombatSound = (cue:CombatCue,x:number,y:number) => {
+        if (!ownPlayer) return;
+        const distance = Math.hypot(x-ownPlayer.x,y-ownPlayer.y);
+        const level = Math.max(0,1-distance/VISION_RADIUS);
+        if (level) combatSound(cue,level,Phaser.Math.Clamp((x-ownPlayer.x)/85,-1,1));
+      };
       const healthBars:Motion[] = [];
       for (const latest of players) {
         const own = latest.id===ownId;
@@ -341,6 +349,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (swing && swing.startedAt!==view.swingAt) {
           view.swingAt = swing.startedAt;
           view.swingStarted = time;
+          playCombatSound('swing',x,y);
         }
         const profile = swing && weapons[swing.weapon];
         const progress = profile && view.swingStarted!==undefined ? (time-view.swingStarted)/profile.swingMs : 1;
@@ -355,6 +364,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         } else if (!moving) view.nextStep = 0;
         if (latest.hit!==undefined && latest.hit!==view.lastHit) {
           view.flashUntil = time+115;
+          playCombatSound('impact',x,y);
+          if (latest.knockedOut) {
+            this.time.delayedCall(115,()=>{
+              if (running) playCombatSound('fall',x,y);
+            });
+          }
           playBloodImpact(this,x,y-15);
           playComicImpact(this,x,y-54,latest.hit,this.textResolution);
         }

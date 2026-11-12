@@ -189,7 +189,8 @@ async function connect(join: () => Promise<Room>) {
     document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
-    game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
+    game = createGame(map,joined.sessionId,input => joined.send('input',input),
+      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
     let fieldToken = 0;
     const sendGameplay = (action:GameplayAction) =>
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
@@ -203,7 +204,7 @@ async function connect(join: () => Promise<Room>) {
       joined.send('gameplay',{kind:'use',item:drop});
       map.focus({preventScroll:true});
     },gameplay.nearby,action=>{
-      audio.stationClick();
+      if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
