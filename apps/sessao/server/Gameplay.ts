@@ -391,7 +391,7 @@ export class Gameplay {
     const officeOptions:OfficeOption[] = [];
     const channel = this.privateOffices.channels.get(player.id);
     if (channel) return {offices,ownOffice,officeFurnishings,officeOptions:[{kind:'office-cancel',label:'Cancelar'}],
-      officeChannel:{label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
+      officeChannel:{kind:channel.kind,officeId:channel.office.layout.id,label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
 
     const items = this.inventory(player.id).map(item=>item.data);
     const tools = items.filter(item=>'attack' in objects[item.kind]).sort((a,b)=>
@@ -660,6 +660,9 @@ export class Gameplay {
     const {id} = player;
     if (action.kind==='dialogue-close') return this.dialogues.close(id);
     if (player.knockedOut) return 'Você está nocauteado.';
+    if (this.privateOffices.channels.get(id)?.kind==='office-cash' && action.kind!=='office-cancel') {
+      return 'Você já está embolsando dinheiro.';
+    }
     if (action.kind==='release') return this.transport.drop(player,world) ? 'Jogador colocado no chão.' : undefined;
     if (action.kind==='treat') return this.treat(player,world);
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';

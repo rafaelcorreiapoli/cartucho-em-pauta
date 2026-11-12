@@ -144,19 +144,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
     const channel = state?.officeChannel;
-    progress.hidden = !channel;
-    progressLabel.hidden = !channel;
-    if (channel) {
-      progress.max = channel.duration;
-      progress.value = channel.elapsed;
-      progress.setAttribute('aria-label',channel.label);
-      progressLabel.textContent = `${channel.label} · ${Math.ceil((channel.duration-channel.elapsed)/1000)} s`;
+    const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
+    progress.hidden = !breach;
+    progressLabel.hidden = !breach;
+    if (breach) {
+      progress.max = breach.duration;
+      progress.value = breach.elapsed;
+      progress.setAttribute('aria-label',breach.label);
+      progressLabel.textContent = `${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`;
     }
     const ownOffice = state?.ownOffice;
     officeBadge.hidden = !ownOffice;
     if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
-    if (state && player) {
-      for (const {label,...action} of state.officeOptions ?? []) actions.push({label,icon:'document',action});
+    for (const {label,...action} of state?.officeOptions ?? []) {
+      actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
+    }
+    if (state && player && channel?.kind!=='office-cash') {
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
@@ -303,7 +306,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const player = own;
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     renderField(exploring ? view : undefined,player);
-    const canInteract = exploring && !player?.carrying;
+    const canInteract = exploring && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash';
     let context:Station | undefined;
     let best = STATION_RADIUS;
     if (canInteract && player) {

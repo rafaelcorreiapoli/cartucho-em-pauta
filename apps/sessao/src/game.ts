@@ -72,6 +72,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   window.addEventListener('blur',stop,options);
 
   class Plenary extends Phaser.Scene {
+    private safeProgress!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
     private officeSigns = new Map<string,Phaser.GameObjects.Text>();
     private officeRenderKey:string|undefined = '';
@@ -133,6 +134,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
       this.officeDoors = this.add.graphics().setDepth(2);
+      this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
         const point = officeDoorPoint(office);
         const sign = this.add.text(point.x,point.y-office.inside*15,'',{
@@ -305,6 +307,20 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           }
           if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
             .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
+        }
+      }
+      this.safeProgress.clear();
+      const channel = plenaryView?.gameplay?.officeChannel;
+      if (negotiating && channel?.kind==='office-cash') {
+        const safe = privateOffices.find(office=>office.id===channel.officeId)?.safe;
+        if (safe) {
+          const {height,footOffset} = officeFixtures.safe;
+          const x = safe.x-15;
+          const y = safe.y-footOffset-height-8;
+          const fraction = Phaser.Math.Clamp(channel.elapsed/channel.duration,0,1);
+          this.safeProgress.fillStyle(0x211a10,.95).fillRoundedRect(x,y,30,5,2);
+          this.safeProgress.lineStyle(.75,0xffdb83).strokeRoundedRect(x,y,30,5,2);
+          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*fraction,2);
         }
       }
       const now = performance.now();
