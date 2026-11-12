@@ -180,7 +180,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       const active = view.phase==='negotiation';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
-      el('trade-balance').textContent = `Na carteira · ${money(p.wallet)}`;
+      el('trade-balance').textContent = money(p.wallet);
       updateContacts();
       nominee.update(p.directory.filter(contact => contact.id!==id && contact.eligible)
         .map(({id,name,popularity}) => ({value:id,label:`${name} · ${popularity} pop.`})));

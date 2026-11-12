@@ -119,15 +119,21 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
           list.dataset.office = office;
           for (const candidate of election.polls.filter(candidate => candidate.race===office)) {
             const row = document.createElement('li');
-            const trend = candidate.trend>0 ? ` · +${candidate.trend} pp` : candidate.trend<0 ? ` · ${candidate.trend} pp` : '';
+            const trend = candidate.trend ? `${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : '';
             const label = document.createElement('div');
             label.className = 'poll-label';
             const person = document.createElement('span');
             person.textContent = candidate.name+(candidate.id===id ? ' (você)' : '');
             const estimate = document.createElement('strong');
-            estimate.textContent = `${candidate.estimate}%${trend}`;
+            estimate.textContent = `${candidate.estimate}%`;
             estimate.dataset.effect = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
             label.append(person,estimate);
+            if (trend) {
+              const movement = document.createElement('small');
+              movement.textContent = trend;
+              movement.dataset.effect = estimate.dataset.effect;
+              estimate.after(movement);
+            }
             const meter = document.createElement('progress');
             meter.max = 100;
             meter.value = candidate.estimate;

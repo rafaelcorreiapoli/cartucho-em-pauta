@@ -195,6 +195,7 @@
 #stations .station-grid:not([hidden]), #station-shortcuts { display: contents; }
 
 #stations .hud-button {
+  position: relative;
   display: grid;
   place-items: center;
   align-content: center;
@@ -756,4 +757,62 @@
   #current-office { font-size: .78rem; }
   #election-position { font: 850 1.17rem/1.1 var(--party-display); }
   #election-timer { font-size: 1.22rem; }
+}
+
+.station-key {
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0 .2rem;
+  border: 1px solid #d2bc786e;
+  border-radius: 5px;
+  background: #132720;
+  color: var(--party-gold);
+  font: 850 .82rem/1 var(--party-display);
+}
+.station-key:empty { display: none; }
+#stations .hud-button:has(.station-key:not(:empty)) { padding-top: 1.25rem; }
+
+.trade-wallet { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.trade-wallet strong, .electoral-metrics strong {
+  color: var(--party-gold);
+  font: 850 1.25rem/1.15 var(--party-display);
+}
+.poll-label { align-items: baseline; }
+.poll-label span { flex: 1; overflow-wrap: anywhere; }
+.poll-label strong { font: 900 1.2rem/1 var(--party-display); white-space: nowrap; }
+.poll-label small { font-size: .7rem; white-space: nowrap; }
+
+@media (min-width: 921px) {
+  #social-docks { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; width: var(--hud-side); }
+  #social-docks .social-trigger {
+    gap: .45rem;
+    min-height: 48px;
+    padding: .65rem .6rem;
+    background: #193329f5;
+    font: 800 .95rem/1.15 var(--party-display);
+    white-space: nowrap;
+  }
+  #social-docks .social-trigger:is(:hover, :focus-visible),
+  #social-docks details[open] > .social-trigger { background: #294334; }
+  #social-docks .social-trigger .hud-glyph { width: 20px; height: 20px; }
+  #personal-stats:not(:empty) { font-size: .7rem; white-space: normal; }
+  #social-docks .social-panel, #session #election-dock .politics-content {
+    width: var(--hud-side);
+    padding: 1rem;
+    background: #193329fa;
+    border-radius: 9px;
+  }
+  .social-header h2, #election-dock .compact-heading h3 {
+    font: 850 1.15rem/1.2 var(--party-display);
+  }
+  .electoral-metrics div, #election-polls section { padding: .65rem .75rem; border-radius: 8px; }
+  #election-polls section { margin: .55rem 0; background: #142522; }
+  #election-polls h4 { margin: 0 0 .4rem; }
+  #social-docks h3 { font-size: .95rem; }
+  #social-docks .social-empty { padding: 1rem .65rem; gap: .45rem; }
 }

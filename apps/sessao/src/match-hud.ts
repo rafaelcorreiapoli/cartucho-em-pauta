@@ -72,6 +72,24 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   });
   let own:Player | undefined;
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
+  const actionKeys = [ ...stations.querySelectorAll<HTMLButtonElement>('.station-actions button') ].map(button => {
+    const badge = document.createElement('kbd');
+    badge.className = 'station-key';
+    badge.setAttribute('aria-hidden','true');
+    button.append(badge);
+    return {button,badge};
+  });
+  function onActionKey(event:KeyboardEvent) {
+    if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
+      event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) ||
+      (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))) return;
+    const button = actionKeys.find(action => action.button.getAttribute('aria-keyshortcuts')===event.key)?.button;
+    if (!button || button.disabled || button.closest('[hidden]')) return;
+    event.preventDefault();
+    button.click();
+  }
+  document.addEventListener('keydown',onActionKey);
+
   function onStationClick(event:MouseEvent) {
     const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
     if (!button || button.disabled || button.closest('[hidden]')) return;
@@ -152,6 +170,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (nearbyDrop) pocketReward.textContent = `+${money(cashItems[nearbyDrop.kind].amount)}`;
     const hasAction = stationActions.some(button => !button.disabled && !button.closest('[hidden]:not(#stations)'));
     stations.hidden = !exploring || (!nearbyDrop && !hasAction && interviewHint.hidden);
+    let index = 0;
+    for (const {button,badge} of actionKeys) {
+      const number = !button.disabled && !button.closest('[hidden]') ? ++index : 0;
+      const key = number && number<=9 ? String(number) : '';
+      if (badge.textContent===key) continue;
+      badge.textContent = key;
+      if (key) button.setAttribute('aria-keyshortcuts',key);
+      else button.removeAttribute('aria-keyshortcuts');
+    }
   }
 
   return {
@@ -236,6 +263,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       for (const node of timers.keys()) remove(node);
       agendaDock.removeEventListener('toggle',showLatestMission);
       incomeEffect?.remove();
+      document.removeEventListener('keydown',onActionKey);
+      for (const {button,badge} of actionKeys) {
+        button.removeAttribute('aria-keyshortcuts');
+        badge.remove();
+      }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = pocket.hidden = true;
       pocket.onclick = null;
