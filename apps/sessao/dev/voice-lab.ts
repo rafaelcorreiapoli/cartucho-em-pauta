@@ -12,6 +12,8 @@ const outputCleanup = 'highpass=f=65,lowpass=f=11000,alimiter=limit=0.9:level=fa
 const models = {
   lula: ['Lula.pth', 'added_IVF502_Flat_nprobe_1_Lula_v2.index'],
   bolsonaro: ['Bolsonaro.pth', 'added_IVF354_Flat_nprobe_1_Bolsonaro_v2.index'],
+  'lula-alternativo': ['Lula-alternativo.pth', 'Lula-alternativo.index'],
+  'bolsonaro-alternativo': ['Bolsonaro-alternativo.pth', 'Bolsonaro-alternativo.index'],
 } as const;
 
 export function voiceLab(directory: string): Plugin {
