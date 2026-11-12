@@ -1,4 +1,5 @@
 import type { Room } from '@colyseus/sdk';
+import { LiveDisguise, type Disguise } from './live-disguise';
 import type { VoiceSignal } from './voice-protocol';
 
 type Meter = { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; buffer: Float32Array<ArrayBuffer>; lastSound: number };
@@ -18,6 +19,7 @@ function iceServers(): RTCIceServer[] {
 export class RoomVoice {
   private audio?: AudioContext;
   private mic?: MediaStream;
+  private disguise?: LiveDisguise;
   private localMeter?: Meter;
   private peers = new Map<string,Peer>();
   private timer?: number;
@@ -50,6 +52,7 @@ export class RoomVoice {
         return;
       }
       this.mic = mic;
+      this.disguise = new LiveDisguise(audio,mic);
       this.localMeter = this.meter(mic);
       this.timer = window.setInterval(() => this.measure(),80);
       this.room.send('voice-join');
@@ -60,9 +63,14 @@ export class RoomVoice {
     }
   }
 
+  setDisguise(effect?: Disguise) {
+    return this.disguise?.setEffect(effect);
+  }
+
   toggleMute() {
     const enabled = this.muted;
     this.mic?.getAudioTracks().forEach(track => { track.enabled = enabled; });
+    this.disguise?.stream.getAudioTracks().forEach(track => { track.enabled = enabled; });
     for (const peer of this.peers.values()) void peer.playback?.play().catch(() => {});
     this.measure();
   }
@@ -74,6 +82,8 @@ export class RoomVoice {
     for (const id of this.peers.keys()) this.removePeer(id);
     this.mic?.getTracks().forEach(track => track.stop());
     this.mic = undefined;
+    this.disguise?.stop();
+    this.disguise = undefined;
     this.localMeter = undefined;
     if (this.audio) void this.audio.close().catch(() => {});
     this.audio = undefined;
@@ -81,10 +91,11 @@ export class RoomVoice {
   }
 
   private syncPeers(ids: string[]) {
-    if (!this.mic || !ids.includes(this.room.sessionId)) return;
+    const outgoing = this.disguise?.stream;
+    if (!outgoing || !ids.includes(this.room.sessionId)) return;
     for (const id of this.peers.keys()) if (!ids.includes(id)) this.removePeer(id);
     for (const id of ids) {
-      if (id !== this.room.sessionId && !this.peers.has(id)) this.addPeer(id,this.mic);
+      if (id !== this.room.sessionId && !this.peers.has(id)) this.addPeer(id,outgoing);
     }
     this.report();
   }

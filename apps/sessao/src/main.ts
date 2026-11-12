@@ -2,6 +2,7 @@ import { Client, type Room } from '@colyseus/sdk';
 import { createGame } from './game';
 import type { ControlState } from './movement';
 import { NAMES, playerName, type Player } from './map';
+import type { Disguise } from './live-disguise';
 import { RoomVoice } from './voice';
 import './style.css';
 
@@ -32,6 +33,13 @@ const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 const voiceSpeaking = document.querySelector<HTMLElement>('#voice-speaking')!;
+const livePanel = document.querySelector<HTMLFieldSetElement>('#live-disguise')!;
+const liveEnabled = document.querySelector<HTMLInputElement>('#live-disguise-enabled')!;
+const livePitch = document.querySelector<HTMLInputElement>('#live-pitch')!;
+const livePitchValue = document.querySelector<HTMLOutputElement>('#live-pitch-value')!;
+const liveStyle = document.querySelector<HTMLSelectElement>('#live-style')!;
+const liveStatus = document.querySelector<HTMLElement>('#live-disguise-status')!;
+let disguiseRevision = 0;
 let voice: RoomVoice | undefined;
 let playersInRoom: Player[] = [];
 let speaking = new Set<string>();
@@ -46,11 +54,34 @@ function updateSpeaking() {
   if (voiceSpeaking.textContent !== label) voiceSpeaking.textContent = label;
 }
 
+async function updateDisguise() {
+  const current = voice;
+  if (!current?.active) return;
+  const revision = ++disguiseRevision;
+  const pitch = livePitch.valueAsNumber;
+  livePitchValue.value = `${pitch>0 ? '+' : ''}${pitch} ${Math.abs(pitch)===1 ? 'semitom' : 'semitons'}`;
+  livePitch.disabled = liveStyle.disabled = !liveEnabled.checked;
+  liveStatus.textContent = liveEnabled.checked ? 'Aplicando disfarce…' : '';
+  try {
+    await current.setDisguise(liveEnabled.checked ? {pitch,style:liveStyle.value as Disguise['style']} : undefined);
+    if (revision===disguiseRevision) liveStatus.textContent = liveEnabled.checked ? 'Disfarce ativo' : '';
+  } catch {
+    if (revision===disguiseRevision) liveStatus.textContent = 'Falha no disfarce. Desative para voltar à voz original.';
+  }
+}
+liveEnabled.onchange = liveStyle.onchange = () => void updateDisguise();
+livePitch.oninput = () => void updateDisguise();
+
 function resetVoiceButtons() {
   voiceToggle.disabled = false;
   voiceToggle.textContent = 'Ativar voz';
   voiceLeave.hidden = true;
   voiceStatus.textContent = '';
+  ++disguiseRevision;
+  livePanel.hidden = true;
+  liveEnabled.checked = false;
+  livePitch.disabled = liveStyle.disabled = true;
+  liveStatus.textContent = '';
 }
 
 voiceToggle.onclick = async () => {
@@ -68,6 +99,7 @@ voiceToggle.onclick = async () => {
     if (current !== voice || !current.active) return;
     voiceToggle.textContent = 'Silenciar microfone';
     voiceLeave.hidden = false;
+    livePanel.hidden = false;
   } catch (error) {
     if (current !== voice) return;
     voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
