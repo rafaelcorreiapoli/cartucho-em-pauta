@@ -1,5 +1,5 @@
 import { js as EasyStar } from 'easystarjs';
-import { canStand, canStandInPlenary, HEIGHT, SPEED, WIDTH, type Motion, type Player } from './map';
+import { canStand, canStandInPlenary, HEIGHT, movementSpeed, WIDTH, type Motion, type Player } from './map';
 
 const cellSize = 4;
 const toWorld = (point:Motion):Motion => ({x:point.x*cellSize+2,y:point.y*cellSize+2});
@@ -16,7 +16,7 @@ search.enableSync();
 search.enableDiagonals();
 search.disableCornerCutting();
 
-function clearSegment(from:Motion,to:Motion,stand:typeof canStand) {
+export function clearSegment(from:Motion,to:Motion,stand:typeof canStand) {
   const steps = Math.max(1,Math.ceil(Math.hypot(to.x-from.x,to.y-from.y)));
   for (let step=1;step<=steps;step++) {
     const t = step/steps;
@@ -74,7 +74,7 @@ export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
 
 export function followRoute(player:Player, route:Motion[], seconds:number) {
   player.moving = false;
-  let remaining = SPEED*seconds;
+  let remaining = movementSpeed(player)*seconds;
   while (route.length && remaining>0) {
     const target = route[0];
     const dx = target.x-player.x;

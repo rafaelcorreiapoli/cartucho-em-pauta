@@ -1,11 +1,12 @@
 import { characterStats } from '../src/character-stats';
 import { canReachObject } from '../src/gameplay';
+import { aidRadius } from '../src/medical';
 import { obstacleBetween, type Player } from '../src/map';
 
 const recoveryTime = 8_000;
 const recoveryShield = 4_000;
 const attackCooldown = 1_250;
-const aidRadius = 20;
+
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number};
 
@@ -41,11 +42,14 @@ export class Combat {
     player.knockedOut = undefined;
   }
 
-  tick(players:Player[], now:number, exploring:boolean) {
+  tick(players:Player[], now:number, exploring:boolean, recovered?:(player:Player)=>void) {
     for (const player of players) {
       if (player.hit!==undefined && player.hit<=now) player.hit = undefined;
       const state = this.vitality.get(player.id);
-      if (state?.recoverAt && (!exploring || state.recoverAt<=now)) this.recover(player,state,now);
+      if (state?.recoverAt && (!exploring || state.recoverAt<=now)) {
+        this.recover(player,state,now);
+        recovered?.(player);
+      }
     }
   }
 
@@ -72,6 +76,12 @@ export class Combat {
         !canReachObject(actor,target) || obstacleBetween(actor,target) || !target.knockedOut) return false;
     this.recover(target,this.state(target),now);
     return true;
+  }
+
+  treat(player:Player, amount:number, now:number) {
+    const state = this.state(player);
+    if (state.recoverAt) this.recover(player,state,now);
+    state.hp = Math.min(this.max(player),state.hp+amount);
   }
 
   view(player:Player, now:number) {

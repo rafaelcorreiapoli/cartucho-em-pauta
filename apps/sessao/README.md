@@ -85,6 +85,12 @@ No Apoio Técnico, aproxime-se do **Seu Balcão** e use o atalho indicado para c
 
 Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica temporariamente nocauteado. Ele recupera parte dos PV em oito segundos ou pode ser socorrido por alguém próximo. Durante a recuperação há proteção temporária contra novos golpes.
 
+## Transporte e Enfermaria
+
+Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
+
+A Enfermaria fica no lado direito da Galeria. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
+
 ## Voz da sala
 
 Depois de entrar numa sala, clique em **Ativar voz** e permita o microfone. Todos que ativarem a voz na mesma sala podem conversar. Para disfarçar a voz em partida, equipe o modulador comprado no mercado e ligue-o no painel de equipamentos. O navegador transforma o áudio enviado aos outros jogadores enquanto a bateria durar. Use **Silenciar microfone** para continuar ouvindo ou **Sair da voz** para desligar o microfone e o áudio da sala. A lista de falantes e o nome verde no mapa reagem ao áudio.

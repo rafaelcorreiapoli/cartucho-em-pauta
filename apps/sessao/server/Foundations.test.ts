@@ -3,7 +3,8 @@ import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
-import { canStand, VISION_RADIUS, type Player } from '../src/map';
+import { canStand, movementSpeed, VISION_RADIUS, type Player } from '../src/map';
+import { infirmary } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs } from '../src/npcs';
 import { applyInput } from '../src/movement';
@@ -134,4 +135,97 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   Object.assign(alice,{x:620,y:206});
   Object.assign(bob,{x:642,y:206});
   expect(combat.attack(alice,bob,false,16_000).error).toBe('Aproxime-se do alvo.');
+});
+
+
+function knockOut(match:ReturnType<typeof setup>) {
+  const {alice,bob,game,world,openShop} = match;
+  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  for (const now of [100,1400,2700,4000]) {
+    world.now = now;
+    game.act(alice,{kind:'attack',target:bob.id},world);
+  }
+}
+
+test('transport is exclusive, follows authoritative movement and drops on valid floor', () => {
+  const match = setup();
+  const {alice,bob,game,world,events} = match;
+  const carol = player('Carol',642,196);
+  world.players.push(carol);
+  knockOut(match);
+  expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
+  expect(game.act(carol,{kind:'carry',target:bob.id},world)).toBe('Esse jogador não pode ser carregado agora.');
+  expect(game.act(carol,{kind:'release'},world)).toBeUndefined();
+  expect(game.act(alice,{kind:'attack',target:carol.id},world)).toBe('Solte o jogador primeiro.');
+  const start = alice.x;
+  const control = {player:alice,route:[],ack:0};
+  applyInput(control,{seq:1,destination:{x:650,y:197}});
+  expect(alice.x-start).toBeCloseTo(movementSpeed(alice)*.05);
+  expect(movementSpeed(alice)).toBeCloseTo(88*.65);
+  game.tick(world,true);
+  expect(bob).toMatchObject({x:alice.x,y:alice.y,carried:true});
+  game.act(carol,{kind:'photo'},world);
+  expect(game.photoView(carol.id,world.now).album[0]?.photo.people.find(person=>person.id===bob.id))
+    .toMatchObject({knockedOut:true,carried:true});
+
+  expect(game.act(alice,{kind:'release'},world)).toBe('Jogador colocado no chão.');
+  expect(game.act(alice,{kind:'release'},world)).toBeUndefined();
+  expect(canStand(bob.x,bob.y)).toBe(true);
+  expect(bob.carried).toBeUndefined();
+  expect(bob.knockedOut).toBe(true);
+  expect(alice.carrying).toBeUndefined();
+  expect(events.filter(event=>event.type==='character-dropped')).toHaveLength(1);
+});
+
+test('transport ends on disconnect, natural recovery and plenary transition', () => {
+  for (const reason of ['disconnect','recovery','plenary'] as const) {
+    const match = setup();
+    const {alice,bob,game,world,events} = match;
+    knockOut(match);
+    game.act(alice,{kind:'carry',target:bob.id},world);
+    if (reason==='disconnect') {
+      game.leave(bob,world,false);
+      world.present = id=>id!==bob.id;
+      expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Esse jogador não pode ser carregado agora.');
+      world.present = ()=>true;
+      expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
+      game.leave(alice,world,false);
+    } else {
+      if (reason==='recovery') world.now = 12_000;
+      game.tick(world,reason==='recovery');
+      expect(bob.knockedOut).toBeUndefined();
+      expect(events.filter(event=>event.type==='character-recovered')).toHaveLength(1);
+    }
+    expect(alice.carrying).toBeUndefined();
+    expect(bob.carried).toBeUndefined();
+    expect(canStand(bob.x,bob.y)).toBe(true);
+  }
+});
+
+test('the infirmary can treat a passenger and heals only after a valid payment', () => {
+  const match = setup();
+  const {alice,bob,game,world,balance,events} = match;
+  knockOut(match);
+  expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
+  expect(findRoute({x:140,y:146},{x:infirmary.x,y:infirmary.y}).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
+  game.act(alice,{kind:'carry',target:bob.id},world);
+  Object.assign(alice,{x:infirmary.x,y:infirmary.y});
+  game.tick(world,true);
+  balance.set(alice.id,0);
+  expect(game.act(alice,{kind:'treat'},world)).toBe('Saldo insuficiente para o atendimento.');
+  expect(game.view(bob,world).vitality?.hp).toBe(0);
+  expect(bob.carried).toBe(true);
+
+  balance.set(alice.id,2);
+  expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento concluído.');
+  expect(game.view(bob,world).vitality?.hp).toBe(80);
+  expect(bob.carried).toBeUndefined();
+  expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
+  expect(balance.get(alice.id)).toBe(1);
+  expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento concluído.');
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
+  expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento indisponível.');
+  expect(balance.get(bob.id)).toBe(4);
+  expect(events.filter(event=>event.type==='treated')).toHaveLength(2);
 });

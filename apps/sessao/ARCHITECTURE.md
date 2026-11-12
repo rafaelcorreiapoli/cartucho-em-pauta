@@ -15,12 +15,13 @@ O Vite carrega `src/main.ts`, que cria o jogo Phaser, os painéis HTML e a conex
 | Fotos, cópias, apresentações e publicação | `PhotoAlbum` controla o acesso e usa `InformationRequests` para os pedidos. A cena da foto é capturada a partir da percepção do servidor. |
 | NPCs, diálogo e compras | `npcs.ts` define o vendedor estático. `NpcDialogues` mantém sessões privadas e valida escolhas e tokens de compra. `Gameplay` valida a compra e usa a economia e a custódia já existentes. |
 | Equipamentos e combate | `Gameplay` mantém a custódia de inventário e equipamento no mesmo registro. `VoiceEquipment` controla bateria e recarga. `Combat` controla dano, proteção, nocaute e recuperação. `character-stats.ts` define os atributos base e `SessionRoom` aplica a velocidade no início da partida. |
+| Transporte e atendimento | `Transport` controla um vínculo exclusivo e projeta os estados visíveis. O passageiro segue a posição autoritativa do carregador e o vínculo termina antes da transição para o Plenário. `medical.ts` define alcance, velocidade e atendimento. `Gameplay` valida o local e o débito, e `Combat` aplica a recuperação. |
 | Chamadas e Snake | `PhoneSession` controla convites, conexões e tabuleiros. `snake.ts` contém as regras do tabuleiro. A sala controla sinalização, presença e alcance de voz. `voice.ts` opera o WebRTC no cliente. |
 | Câmera, sprites e HUD | `game.ts` renderiza o mapa e usa `network-movement.ts` para predição e reconciliação. Os painéis traduzem ações em comandos e desenham o estado recebido. `phone-photos.ts` controla a seleção no álbum e a prévia da câmera. |
 
 ## Comandos, eventos e privacidade
 
-A sala lê mensagens como dados desconhecidos, valida a forma e verifica a fase. O domínio confirma posse, alcance, consentimento ou elegibilidade antes de mudar o estado. A predição de movimento no cliente reaplica somente os inputs ainda sem confirmação do servidor. Prazos, apuração e recompensas usam o relógio da sala.
+A sala lê mensagens como dados desconhecidos, valida a forma e verifica a fase. O domínio confirma posse, alcance, consentimento ou elegibilidade antes de mudar o estado. A predição de movimento no cliente reaplica somente os inputs ainda sem confirmação do servidor. Prazos, apuração e recompensas usam o relógio da sala. Ataque, socorro, transporte e tratamento têm identificadores crescentes por participante para descartar reenvios.
 
 `publishGameplay` emite fatos internos depois da ação. O fluxo atual passa por `SessionRoom` e `PlenaryMatch` até a economia e a agenda. A sala também envia o aviso de obtenção ao jogador que recebeu o item. O cliente recebe projeções feitas para cada destinatário, incluindo a visão local do mapa, sua agenda, seu papel e as fotos a que tem acesso. O canal de voz tem alcance próprio e pode atravessar uma parede sem revelar o jogador no mapa.
 

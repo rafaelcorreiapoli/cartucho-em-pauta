@@ -9,7 +9,7 @@ export const PHOTO_LOOK_UP = 19;
 export const PHOTO_LIMIT = 12;
 export const ROOM_PHOTO_LIMIT = 144;
 export type PhotoPerson = Contact & Motion & {
-  character:number; direction:number; exposed?:{id:number; kind:ObjectKind}; phone?:'call'|'game'; office?:Office;
+  character:number; direction:number; knockedOut?:boolean; carried?:boolean; exposed?:{id:number; kind:ObjectKind}; phone?:'call'|'game'; office?:Office;
 };
 export type Decoration = Motion & {
   id:number; kind:'portrait'|'vip'|'pizza'; owner:Contact; character:number; marked?:boolean; slices?:number;

@@ -1,3 +1,4 @@
+import { carrySpeedFactor, infirmary } from './medical';
 import { npcs } from './npcs';
 
 export const WIDTH = 960;
@@ -63,7 +64,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; carrying?:true; carried?:true; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
@@ -81,14 +82,18 @@ export function canStandInPlenary(x:number,y:number) {
   return inPlenary({x,y}) && canStand(x,y);
 }
 
+export function movementSpeed(player:Player) {
+  return (player.speed ?? SPEED)*(player.carrying ? carrySpeedFactor : 1);
+}
+
 export function move(player: Player, input: Motion, seconds: number, stand = canStand) {
   const length = Math.hypot(input.x,input.y);
   if (!length) {
     player.moving = false;
     return;
   }
-  const dx = input.x / Math.max(1,length) * (player.speed ?? SPEED) * seconds;
-  const dy = input.y / Math.max(1,length) * (player.speed ?? SPEED) * seconds;
+  const dx = input.x / Math.max(1,length) * movementSpeed(player) * seconds;
+  const dy = input.y / Math.max(1,length) * movementSpeed(player) * seconds;
   const {x,y} = player;
   if (stand(x+dx,y)) player.x += dx;
   if (stand(player.x,y+dy)) player.y += dy;
@@ -141,7 +146,8 @@ export const rooms = [
   {name:'Comissões', bounds:[602,270,348,122], color:0x637b69},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
   {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
-  {name:'Galeria', bounds:[602,403,348,127], color:0x56736e},
+  {name:'Galeria', bounds:[602,403,280,127], color:0x56736e},
+  {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];
 
 export function roomAt({x,y}:Motion) {

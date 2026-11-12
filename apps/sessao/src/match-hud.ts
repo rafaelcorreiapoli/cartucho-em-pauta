@@ -1,3 +1,4 @@
+import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
@@ -101,17 +102,28 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
     const actions:{label:string; icon:string; action:GameplayAction}[] = [];
-    if (view?.gameplay && player) {
-      for (const target of view.gameplay.npcNearby ?? []) {
-        actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
+    const state = view?.gameplay;
+    if (state && player) {
+      if (state.treatment) {
+        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Tratar ferimentos'} · ${money(infirmary.price)}`,
+          icon:'shield',action:{kind:'treat'}});
       }
-      const armed = view.gameplay.equipped?.some(item=>item.kind==='baton');
-      for (const target of roster) {
-        if (target.id===id || !canReachObject(player,target) || obstacleBetween(player,target)) continue;
-        if (target.knockedOut && Math.hypot(player.x-target.x,player.y-target.y)<=20) {
-          actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
-        } else if (armed && !target.knockedOut) {
-          actions.push({label:`Golpear ${target.nick}`,icon:'alert',action:{kind:'attack',target:target.id}});
+      if (player.carrying) {
+        actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
+      } else {
+        for (const target of state.npcNearby ?? []) {
+          actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
+        }
+        const armed = state.equipped?.some(item=>item.kind==='baton');
+        for (const target of roster) {
+          if (target.id===id || !canReachObject(player,target) || obstacleBetween(player,target)) continue;
+          if (target.knockedOut && Math.hypot(player.x-target.x,player.y-target.y)<=aidRadius) {
+            actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
+            if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
+            actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
+          } else if (armed && !target.knockedOut) {
+            actions.push({label:`Golpear ${target.nick}`,icon:'alert',action:{kind:'attack',target:target.id}});
+          }
         }
       }
     }
@@ -231,9 +243,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const player = own;
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     renderField(exploring ? view : undefined,player);
+    const canInteract = exploring && !player?.carrying;
     let context:Station | undefined;
     let best = STATION_RADIUS;
-    if (exploring && player) {
+    if (canInteract && player) {
       for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
         const distance = Math.hypot(player.x-point.x,player.y-point.y);
         if (distance<=best && canReachObject(player,point)) {
@@ -251,11 +264,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.dataset.contextHidden = String(button.dataset.station!==context);
     }
     interviewHint.dataset.contextHidden = String(context!=='tv');
-    nearbyCash = exploring && !context && player ?
+    nearbyCash = canInteract && !context && player ?
       view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
     const amount = nearbyCash && cashAmount(nearbyCash.kind);
     pocket.hidden = !amount;
-    renderNearby(player,exploring);
+    renderNearby(player,canInteract);
     if (amount) pocketReward.textContent = `+${money(amount)}`;
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
@@ -347,7 +360,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (hp) {
         vitalityMeter.max = hp.max;
         vitalityMeter.value = hp.hp;
-        vitalityNumber.textContent = hp.recovery ? `Nocaute · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
+        vitalityNumber.textContent = hp.recovery ? `${own?.carried ? 'Em transporte' : 'Nocaute'} · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
       }
       previous = view;
       actions(view);

@@ -1,6 +1,6 @@
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
-import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
+import { canUseGameplayAction, needsFieldToken, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
@@ -21,12 +21,14 @@ export class SessionRoom extends Room {
   private movementQueue = new Map<string, MovementInput[]>();
 
   private gameplay = new Gameplay();
+  private lastFieldToken = new Map<string,number>();
   private matchObjectsActive = false;
   private gameplayWorld() {
     const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
       id=>this.voice.has(id));
     return {
       ...world,
+      present:(id:string)=>!!this.clients.getById(id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
         const pickup = event.type==='collected' || event.type==='recovered';
@@ -80,14 +82,14 @@ export class SessionRoom extends Room {
     });
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
-      if (player && !player.knockedOut && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
+      if (player && !player.knockedOut && !player.carrying && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
         const result = this.match.act(player,action,this.clock.currentTime);
         if (result) client.send('audit-result',result);
       }
     });
     this.onMessage('room-activity', (client, activity:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || player.knockedOut || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
+      if (!player || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
     });
@@ -96,13 +98,18 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           !canUseGameplayAction(action,this.match.phase==='negotiation')) return;
+      if (needsFieldToken(action.kind)) {
+        const last = this.lastFieldToken.get(player.id) ?? 0;
+        if (action.token===undefined || action.token<=last) return;
+        this.lastFieldToken.set(player.id,action.token);
+      }
       const text = this.gameplay.act(player,action,this.gameplayWorld());
       if (text) client.send('gameplay-feedback',text);
     });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || player.knockedOut) return;
+      if (!action || !player || player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
       this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
       this.resetFinishedMatch(now);
@@ -110,7 +117,7 @@ export class SessionRoom extends Room {
     this.onMessage('election', (client, raw:unknown) => {
       const action = readElectionAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (action && player && !player.knockedOut) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      if (action && player && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
     });
     this.onMessage('bill-vote', (client, vote:unknown) => {
       if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
@@ -141,6 +148,9 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state => state.player);
       const now = this.clock.currentTime;
       this.match.advance(now);
+      this.resetFinishedMatch(now);
+      const world = this.gameplayWorld();
+      this.gameplay.tick(world,this.match.phase==='negotiation');
       const plenary = this.match.phase==='ballot';
       for (const [index,[id,state]] of [...this.players].entries()) {
         if (!!state.plenary===plenary) continue;
@@ -150,9 +160,6 @@ export class SessionRoom extends Room {
         this.movementQueue.get(id)?.splice(0);
         if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
       }
-      this.resetFinishedMatch(now);
-      const world = this.gameplayWorld();
-      this.gameplay.tick(world,this.match.phase==='negotiation');
       for (const player of players) {
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItem(player.id) : undefined;
@@ -234,6 +241,7 @@ export class SessionRoom extends Room {
     this.match.leave(client.sessionId,this.clock.currentTime);
     this.resetFinishedMatch(this.clock.currentTime);
     this.players.delete(client.sessionId);
+    this.lastFieldToken.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }
 }

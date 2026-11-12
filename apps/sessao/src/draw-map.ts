@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene) {
@@ -41,7 +42,11 @@ export function drawMap(scene: Phaser.Scene) {
   fill(0x24473e,278,552,404,185);
   fill(0x355f50,282,556,396,177);
   fill(0x789383,453,620,54,120,.23);
-  rug(617,418,316,102);
+  rug(617,418,260,102);
+  fill(0xe7f0e6,898,438,30,28);
+  fill(0x47796a,900,440,26,24);
+  fill(0xfff5e7,910,445,6,14);
+  fill(0xfff5e7,906,449,14,6);
   rug(78,306,135,75);
   rug(725,32,197,73);
   for (const [x,y,w,h] of walls) {
@@ -72,7 +77,7 @@ export function drawMap(scene: Phaser.Scene) {
   }).setOrigin(.5,0).setDepth(HEIGHT+20);
   return [tribune,...rooms.map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
-      fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : '8px',fontStyle:'bold',color:'#fff4dc',
+      fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31',resolution:3,padding:{x:5,y:2},
     }).setOrigin(.5,0).setDepth(HEIGHT+20),
   )];

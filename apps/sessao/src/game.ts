@@ -333,9 +333,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
-        sprite.setRotation(latest.knockedOut ? -Math.PI/2 : 0).setAlpha(latest.knockedOut ? .68 : 1);
-        sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setVisible(true).setPosition(x,y+2).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
+        const spriteX = latest.carried ? x-17 : x;
+        const spriteY = latest.carried ? y-24 : y;
+        const labelY = latest.carried ? y-51 : y+2;
+        sprite.setRotation(latest.carried ? Math.PI/2 : latest.knockedOut ? -Math.PI/2 : 0)
+          .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
+        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0)).setFlipX(direction===3);
+        label.setVisible(true).setPosition(x,labelY).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
           .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed;
         const symbol = exposed && itemSymbols[exposed.kind];
@@ -344,8 +348,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (exposed && !symbol) view.carried.setTexture(`item-${exposed.kind}`).setDisplaySize(13,13).setPosition(x,y-42);
         if (symbol) view.symbol.setText(symbol).setPosition(x,y-42);
         const title = titles.get(id);
-        office.setVisible(running || !!title).setPosition(x,y+12)
-          .setText(latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
+        office.setVisible(running || !!title).setPosition(x,labelY+10)
+          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {

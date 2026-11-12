@@ -51,7 +51,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close','shop-buy','equip','unequip','toggle-modulator','attack','aid'] as const;
+  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close','shop-buy','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -61,21 +61,24 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 }
 
 const articulationActions = new Set<GameplayActionKind>([
-  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','equip','unequip','toggle-modulator','attack','aid',
+  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
   return articulating || !articulationActions.has(action.kind);
 }
+const replaySensitiveActions = new Set<GameplayActionKind>(['attack','aid','carry','release','treat']);
+export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActions.has(kind);
+
 export type GameplayView = {
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
-  npcNearby?:NpcId[]; dialogue?:DialogueView;
+  npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};
   modulator?:{active:boolean; battery:number; recharge:number};
   exposed?:number; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {
-  type:'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided';
+  type:'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   actor:string; target?:string; item?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; damage?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 

@@ -4,7 +4,7 @@ import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
   players:Player[]; now:number; office:(id:string)=>Office|undefined;
-  started?:number; wallet?:(id:string)=>number; spend?:(id:string,amount:number)=>boolean; voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
+  started?:number; present?:(id:string)=>boolean; wallet?:(id:string)=>number; spend?:(id:string,amount:number)=>boolean; voice:(id:string)=>boolean; earn:(id:string,amount:number)=>void; publish:(event:GameplayEvent)=>void;
 };
 
 export function gameplayWitnesses(players:Player[], actor:Player, target?:string) {

@@ -114,6 +114,12 @@ test('clients share movement and voice, then receive private roles and payments'
     first.send('gameplay',{kind:'install',place:'constructor',item:1});
     first.send('gameplay',{kind:'photo'});
     await until(() => feedback.includes('Aproxime-se do local.') && firstPhotos?.album.length===1);
+    const strike = {kind:'attack',target:second.sessionId,token:1};
+    first.send('gameplay',strike);
+    first.send('gameplay',strike);
+    first.send('gameplay',{kind:'treat',token:2});
+    await until(() => feedback.includes('Atendimento indisponível.'));
+    expect(feedback.filter(message=>message==='Equipe um porrete.')).toHaveLength(1);
     second.send('gameplay',{kind:'photo'});
     await until(() => secondPhotos?.album.length===1);
     expect(firstPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([first.sessionId]);

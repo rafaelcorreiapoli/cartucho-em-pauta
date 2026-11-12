@@ -75,14 +75,16 @@ export class PhotoRenderer {
 
     const recent = 'transfers' in scene ? (scene as Photo).transfers : [];
     const labels:{name:string;x:number;y:number}[] = [];
-    for (const person of [...scene.people].sort((a,b)=>a.y-b.y)) {
+    for (const person of [...scene.people].sort((a,b)=>a.y-b.y || Number(!!a.carried)-Number(!!b.carried))) {
       const {sheet,frame} = characterArt(person.character);
       const pose = this.textures.getFrame(sheet.key,frame+(person.direction===3 ? 1 : person.direction)*4);
       if (!pose) continue;
       const source = pose.source.image as HTMLImageElement;
       const x = person.x-left, y = person.y-top;
       ctx.save();
-      ctx.translate(x,y);
+      ctx.translate(person.carried ? x-17 : x,person.carried ? y-24 : y);
+      if (person.carried) ctx.rotate(Math.PI/2);
+      else if (person.knockedOut) ctx.rotate(-Math.PI/2);
       if (person.direction===3) ctx.scale(-1,1);
       ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38,38,38);
       ctx.restore();
@@ -94,7 +96,7 @@ export class PhotoRenderer {
         ctx.fillText(person.phone==='game' ? '🎮' : '☎',x+13,y-25);
       }
       for (const handoff of recent.filter(event=>event.to===person.id)) item(handoff.kind,x+16,y-9,12);
-      labels.push({name:person.name,x,y});
+      labels.push({name:person.name,x,y:person.carried ? y-53 : y});
     }
     ctx.font = 'bold 6px system-ui';
     ctx.textAlign = 'center';
