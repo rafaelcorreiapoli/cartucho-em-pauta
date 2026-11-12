@@ -5,11 +5,21 @@
   directory = "netlify/functions"
 
 [[redirects]]
+  from = "/jogar/brwars"
+  to = "/jogar/base-aliada"
+  status = 301
+
+[[redirects]]
   from = "/jogar/brspire"
-  to = "/jogar/brspire.html"
+  to = "/jogar/cartas-marcadas"
+  status = 301
+
+[[redirects]]
+  from = "/jogar/base-aliada"
+  to = "/jogar/base-aliada.html"
   status = 200
 
 [[redirects]]
-  from = "/jogar/brwars"
-  to = "/jogar/brwars.html"
+  from = "/jogar/cartas-marcadas"
+  to = "/jogar/cartas-marcadas.html"
   status = 200
