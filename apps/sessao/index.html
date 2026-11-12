@@ -111,7 +111,7 @@
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
         <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
-        <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
+        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
         <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
       <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
@@ -454,7 +454,6 @@
       <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <div id="market-body"></div>
-        <p id="market-feedback" role="status"></p>
       </dialog>
       <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item">
         <h2 id="equip-purchase-title">Equipar agora?</h2>
@@ -473,7 +472,6 @@
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
         <header><h2 id="gameplay-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
-        <p id="gameplay-feedback" role="status"></p>
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
       </dialog>

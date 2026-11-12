@@ -101,8 +101,8 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
         return;
       }
       if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable="true"]')) return;
-      if (event.shiftKey || !/^[1-9]$/.test(event.key)) return;
-      const control = active.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      if (event.shiftKey || !/^[1-9a-z]$/i.test(event.key)) return;
+      const control = active.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key.toUpperCase()}"]`);
       if (!control || !available(control)) return;
       event.preventDefault();
       control.click();

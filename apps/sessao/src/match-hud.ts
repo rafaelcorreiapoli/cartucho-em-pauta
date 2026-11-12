@@ -239,6 +239,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     window.clearTimeout(timers.get(node));
     timers.delete(node);
     node.remove();
+    if (timers.size===0) notices.hidePopover();
   }
 
   function notify(title:string, text:string, critical=false) {
@@ -257,6 +258,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     description.textContent = text;
     node.append(heading,description);
     notices.append(node);
+    if (notices.matches(':popover-open') && document.querySelector('dialog:modal')) notices.hidePopover();
+    if (!notices.matches(':popover-open')) notices.showPopover();
     timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
   }
 

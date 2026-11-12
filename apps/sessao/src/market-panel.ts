@@ -11,7 +11,6 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
   const heading = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('#market-body')!;
-  const feedback = dialog.querySelector<HTMLElement>('#market-feedback')!;
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
   const purchasedName = prompt.querySelector('#equip-purchase-item')!;
   const yes = prompt.querySelector<HTMLButtonElement>('#equip-purchase-yes')!;
@@ -29,7 +28,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   no.onclick = () => prompt.close();
   const dismissPurchase = () => { purchase = undefined; };
   prompt.addEventListener('close',dismissPurchase);
-  const pageSize = 4;
+  const pageSize = 9;
   let category:'equipment'|'food' = 'equipment';
   let page = 0;
   let token:number|undefined;
@@ -42,6 +41,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   };
   dialog.addEventListener('cancel',close);
   dialog.addEventListener('submit',close);
+  function onPageKey(event:KeyboardEvent) {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+        (event.key!=='ArrowLeft' && event.key!=='ArrowRight')) return;
+    const arrow = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+    if (!arrow) return;
+    event.preventDefault();
+    if (!arrow.disabled) arrow.click();
+  }
+  dialog.addEventListener('keydown',onPageKey);
 
   function renderCatalog(token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[]) {
     const funds = node('p',money(wallet));
@@ -49,7 +57,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     funds.prepend(glyph('wallet'));
     const tabs = node('div');
     tabs.className = 'market-category';
-    for (const [value,label,key] of [['equipment','Equipamentos','8'],['food','Comida','9']] as const) {
+    for (const [value,label,key] of [['equipment','Equipamentos','Q'],['food','Comida','E']] as const) {
       const tab = button(label,()=>{
         if (category===value) return;
         category = value;
@@ -60,50 +68,89 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       markShortcut(tab,key);
       tabs.append(tab);
     }
+    const toolbar = node('div');
+    toolbar.className = 'market-toolbar';
+    toolbar.append(tabs,funds);
     const products = node('div');
     products.className = 'market-products';
     const kinds = category==='equipment' ? gearKinds : foodKinds;
     const owned = [...inventory,...equipped];
     const full = inventory.length>=INVENTORY_SLOTS;
-    for (const [index,kind] of kinds.slice(page*pageSize,(page+1)*pageSize).entries()) {
+    const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
+    for (const [index,kind] of visible.entries()) {
       const food = isFood(kind) ? foods[kind] : undefined;
       const price = isGear(kind) ? equipment[kind].price : foods[kind].price;
       const item = objects[kind];
       const card = node('article');
+      card.className = 'market-product';
       const art = itemPortrait(kind);
       art.className = 'market-art';
-      const description = node('div');
-      description.append(node('p',item.description));
-      if (food) {
-        const details = node('p',`${food.category} · ${describeFood(food.effect)}`);
-        details.className = 'market-food-effect';
-        description.append(details);
-      }
       const hasItem = isGear(kind) && owned.some(ownedItem=>ownedItem.kind===kind);
-      const buy = button(hasItem ? 'Adquirido' : `Comprar · ${money(price)}`,
-        ()=>send({kind:'shop-buy',target:kind,token}));
+      const priceLabel = hasItem ? 'Adquirido' : money(price);
+      const buy = button('',()=>send({kind:'shop-buy',target:kind,token}));
+      buy.className = 'market-product-button';
       buy.disabled = hasItem || wallet<price || full;
-      if (full && !hasItem) buy.title = 'Inventário cheio';
+      buy.setAttribute('aria-label',hasItem ? `${item.name} · Adquirido` : `Comprar ${item.name} · ${money(price)}`);
+      const caption = node('span');
+      caption.className = 'market-product-caption';
+      const name = node('strong',item.name);
+      const cost = node('span',priceLabel);
+      cost.className = 'market-product-price';
+      caption.append(name,cost);
+      buy.append(art,caption);
       if (!buy.disabled) markShortcut(buy,String(index+1));
-      card.append(art,node('h3',item.name),description,buy);
+
+      const details = node('span',item.description);
+      details.className = 'market-product-details';
+      details.id = `market-description-${kind}`;
+      if (food) details.append(node('small',`${food.category} · ${describeFood(food.effect)}`));
+      if (!hasItem && (full || wallet<price)) details.append(node('small',full ? 'Inventário cheio' : 'Saldo insuficiente'));
+      buy.setAttribute('aria-describedby',details.id);
+      card.append(buy,details);
       products.append(card);
     }
-    body.replaceChildren(funds,tabs,products);
-    const pageCount = Math.ceil(kinds.length/pageSize);
-    if (pageCount>1) {
-      const paging = node('nav');
-      paging.className = 'market-paging';
-      paging.setAttribute('aria-label','Páginas do catálogo');
-      const previous = button('Anterior',()=>{ page--; renderCatalog(token,wallet,inventory,equipped); });
-      const next = button('Próxima',()=>{ page++; renderCatalog(token,wallet,inventory,equipped); });
-      previous.disabled = page===0;
-      next.disabled = page===pageCount-1;
-      if (!previous.disabled) markShortcut(previous,'5');
-      if (!next.disabled) markShortcut(next,'6');
-      paging.append(previous,node('span',`${page+1} / ${pageCount}`),next);
-      body.append(paging);
+    for (let index=visible.length;index<pageSize;index++) {
+      const empty = node('div');
+      empty.className = 'market-product-empty';
+      empty.setAttribute('aria-hidden','true');
+      products.append(empty);
     }
-    if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) tabs.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus();
+
+    const pageCount = Math.ceil(kinds.length/pageSize);
+    const paging = node('nav');
+    paging.className = 'market-paging';
+    paging.setAttribute('aria-label','Páginas do catálogo');
+    const goTo = (next:number) => {
+      if (next===page || next<0 || next>=pageCount) return;
+      page = next;
+      renderCatalog(token,wallet,inventory,equipped);
+    };
+    const previous = button('‹',()=>goTo(page-1));
+    const next = button('›',()=>goTo(page+1));
+    for (const [arrow,label,key,disabled] of [
+      [previous,'Página anterior','ArrowLeft',page===0],
+      [next,'Próxima página','ArrowRight',page===pageCount-1],
+    ] as const) {
+      arrow.className = 'market-page-arrow';
+      arrow.setAttribute('aria-label',label);
+      arrow.setAttribute('aria-keyshortcuts',key);
+      arrow.disabled = disabled;
+      arrow.hidden = pageCount===1;
+    }
+    const dots = node('div');
+    dots.className = 'market-page-dots';
+    for (let index=0;index<pageCount;index++) {
+      const dot = button('',()=>goTo(index));
+      dot.className = 'market-page-dot';
+      dot.setAttribute('aria-label',`Página ${index+1}`);
+      if (index===page) dot.setAttribute('aria-current','page');
+      dots.append(dot);
+    }
+    paging.append(previous,dots,next);
+    body.replaceChildren(toolbar,products,paging);
+    if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
+      tabs.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus({preventScroll:true});
+    }
   }
 
   return {
@@ -124,7 +171,6 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         category = 'equipment';
         page = 0;
         last = '';
-        feedback.textContent = '';
         if (dialog.open) dialog.close();
         return;
       }
@@ -141,6 +187,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       last = key;
       token = state.token;
       const npc = npcs[state.npc];
+      dialog.classList.toggle('market-catalog',state.shop);
       heading.textContent = state.shop ? npc.label : npc.name;
       if (!dialog.open) dialog.showModal();
       if (!state.shop) {
@@ -163,11 +210,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;
     },
-    feedback(message:string) {
-      if (!dialog.open) return false;
-      feedback.textContent = message;
-      return true;
-    },
+    isOpen() { return dialog.open; },
     destroy() {
       prompt.removeEventListener('close',dismissPurchase);
       purchase = undefined;
@@ -175,6 +218,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       yes.onclick = no.onclick = null;
       dialog.removeEventListener('cancel',close);
       dialog.removeEventListener('submit',close);
+      dialog.removeEventListener('keydown',onPageKey);
       dialog.close();
     },
   };

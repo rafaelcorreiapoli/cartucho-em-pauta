@@ -43,7 +43,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
-  const feedback = element('gameplay-feedback');
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -93,7 +92,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
-    feedback.textContent = '';
     renderKey = '';
     element('gameplay-title').textContent = equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
     navigation.hidden = object || equipment;
@@ -114,7 +112,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       photos.closePresentation();
       app = title;
       photos.resetSelection();
-      feedback.textContent = '';
       render();
     });
     tile.className = 'phone-app';
@@ -516,8 +513,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     },
     feedback(text:string) {
       pendingPickup = undefined;
-      if (dialog.open) feedback.textContent = text;
-      else notify(text);
+      notify(text);
     },
     destroy() {
       photos.destroy();

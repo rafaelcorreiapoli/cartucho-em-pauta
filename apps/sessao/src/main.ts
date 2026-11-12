@@ -220,7 +220,8 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('pickup');
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (!market.feedback(message)) gameplay.feedback(message);
+      if (market.isOpen()) hud.notify('Loja',message);
+      else gameplay.feedback(message);
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
