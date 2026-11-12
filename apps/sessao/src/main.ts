@@ -156,3 +156,5 @@ invite.onclick = async () => {
     window.prompt('Link da sala',url.href);
   }
 };
+
+if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());

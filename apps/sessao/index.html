@@ -17,6 +17,21 @@
       <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
       <button type="submit">Entrar</button>
     </form>
+    <details id="voice-test" hidden>
+      <summary>Testar filtro de voz</summary>
+      <div class="voice-test-controls">
+        <label>Voz
+          <select id="voice-model">
+            <option value="lula">Lula</option>
+            <option value="bolsonaro">Bolsonaro</option>
+          </select>
+        </label>
+        <button id="voice-record" type="button">Gravar frase</button>
+        <button id="voice-convert" type="button" disabled>Aplicar à gravação</button>
+      </div>
+      <p id="voice-test-status" role="status"></p>
+      <audio id="voice-result" controls hidden aria-label="Gravação com filtro"></audio>
+    </details>
     <div id="connection" role="status"></div>
     <section id="session" hidden>
       <div id="room-bar">

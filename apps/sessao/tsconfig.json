@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["bun", "vite/client"]
   },
-  "include": ["src", "server"]
+  "include": ["src", "server", "dev", "vite.config.ts"]
 }
