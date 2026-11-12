@@ -450,7 +450,13 @@
   letter-spacing: 0;
   color: #fae7b8;
 }
-#phase { font-size: .64rem; }
+#project-solo { font-size: .64rem; text-transform: none; }
+#legislative-dock .project-phase {
+  margin: .28rem 0 .4rem;
+  color: #e2e6c9;
+  font-size: .8rem;
+}
+.project-phase strong { color: var(--party-gold); }
 .project-chevron {
   width: .42rem;
   height: .42rem;

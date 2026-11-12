@@ -57,10 +57,14 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('role').textContent = role ?? '';
       element('role-goal').textContent = running ? role==='Infiltrado' ? 'Derrube a estabilidade' : 'Preserve a estabilidade' : '';
       element('role').parentElement!.dataset.role = role ?? '';
-      element('phase').textContent = phase==='finished' ?
+      element('project-solo').hidden = !view.solo;
+      const sessionResult = element('project-session-result');
+      sessionResult.hidden = phase!=='finished';
+      sessionResult.textContent = phase==='finished' ?
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
-        phase==='negotiation' ? view.solo ? 'Articulação · solo' : 'Articulação' : hearing ? 'Cassação' : 'Votação';
+        '';
+      element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Cassação' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');
       clock.parentElement!.hidden = !running;

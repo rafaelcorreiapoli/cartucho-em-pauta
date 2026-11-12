@@ -142,14 +142,15 @@
         </details>
         <details id="legislative-dock" class="hud-module" open>
           <summary class="match-top">
-            <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projetos</strong><span id="phase"></span></span></span>
+            <span class="phase-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="project-header-label"><strong>Projetos</strong><small id="project-solo" hidden>Modo solo</small></span></span>
             <span class="clock-chip"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg><strong id="clock"></strong></span>
             <span class="project-chevron" aria-hidden="true"></span>
           </summary>
+          <p id="project-session-result" hidden></p>
           <p class="hud-feedback" id="bill-objection" hidden></p>
           <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
           <div id="proposal">
-            <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2></div>
+            <div class="bill-heading"><span id="bill-round"></span><h2 id="bill"></h2><p class="project-phase">Fase: <strong id="phase"></strong></p></div>
             <div id="impact" aria-label="Impacto de cada decisão">
               <div class="impact-card">
                 <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
