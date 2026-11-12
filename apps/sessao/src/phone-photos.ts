@@ -28,7 +28,7 @@ export function createPhonePhotos(
     drawPhoto(canvas,photo);
     figure.append(canvas,node('figcaption',full ? `${photo.author.name} · ${photo.location} · ${Math.floor(photo.at/1000)} s` : photo.location));
     if (full) {
-      const facts = photo.people.map(person=>person.name+(person.exposed ? ` · ${objects[person.exposed.kind].name}` : ''));
+      const facts = photo.people.map(person=>[person.name,...(person.exposed ?? []).map(({kind})=>objects[kind].name)].join(' · '));
       if (facts.length) figure.append(node('small',facts.join(' / ')));
       for (const handoff of photo.transfers) {
         const from = photo.people.find(person=>person.id===handoff.from)?.name;

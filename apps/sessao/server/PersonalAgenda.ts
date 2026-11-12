@@ -1,3 +1,4 @@
+import { isOfficeFurniture } from '../src/private-offices';
 import type { GameplayEvent } from '../src/gameplay';
 import { agendas, missionReward, type Agenda, type Mission, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
@@ -5,6 +6,7 @@ import { applyFacts, photoMissions } from './photo-missions';
 type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
 
 const activityMissions = {
+  gabinete:(event:GameplayEvent) => event.type==='installed' && !!event.kind && isOfficeFurniture(event.kind),
   protocolo:(event:GameplayEvent) => event.type==='filed',
   sigilo:(event:GameplayEvent) => event.type==='dropped' && !event.witnesses.length,
   joguinho:(event:GameplayEvent) => event.type==='game-won' && !event.witnesses.length,
@@ -34,7 +36,7 @@ export class PersonalAgenda {
     const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
     this.missionDeck = ['cafe',...ordered.slice(0,2),
       ...(playerCount>1 ? visualDeck.slice(0,3) : []),'protocolo','sigilo','joguinho',...ordered.slice(2),
-      ...visualDeck.slice(playerCount>1 ? 3 : 0),...(playerCount>=4 ? ['entrega'] as const : [])];
+      ...visualDeck.slice(playerCount>1 ? 3 : 0),...(playerCount>=4 ? ['entrega'] as const : []),...(playerCount>=2 ? ['gabinete'] as const : [])];
     this.fillMissions(metrics);
   }
 

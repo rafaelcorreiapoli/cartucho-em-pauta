@@ -1,3 +1,4 @@
+import { officeRules } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
@@ -59,6 +60,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let app:App = 'Telefone';
   let decorationId:number | undefined;
   let equipmentOpen = false;
+  let stashOpen = false;
   const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
@@ -85,17 +87,18 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     return card;
   }
 
-  function open(item?:typeof selection, decoration?:number, equipment=false) {
+  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
     selection = item;
     decorationId = decoration;
     equipmentOpen = equipment;
+    stashOpen = stash;
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
     renderKey = '';
-    element('gameplay-title').textContent = equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
-    navigation.hidden = object || equipment;
-    dialog.dataset.mode = equipment ? 'equipment' : object ? 'item' : 'phone';
+    element('gameplay-title').textContent = stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    navigation.hidden = object || equipment || stash;
+    dialog.dataset.mode = equipment || stash ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -145,7 +148,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const state = view?.gameplay;
     if (dialog.open && state?.vitality?.recovery) dialog.close();
     if (!dialog.open || !state || !view) return;
-    const phone = !selection && decorationId===undefined && !equipmentOpen;
+    const stash = stashOpen ? state.officeStash : undefined;
+    if (stashOpen && !stash) { dialog.close(); return; }
+    const phone = !selection && decorationId===undefined && !equipmentOpen && !stash;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
@@ -165,18 +170,26 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable] : decoration ? decoration :
+    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,decorationId,equipmentOpen,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
     photos.stopPreview();
     const cards:HTMLElement[] = [];
+    if (stash) {
+      cards.push(node('p',`${stash.items.length}/${officeRules.stashSlots} slots${stash.level ? ` · Segurança nível ${stash.level}` : ' · Arrombado'}`));
+      for (const item of stash.items) {
+        const card = objectCard(item);
+        card.append(button('Retirar',()=>send({kind:'office-take',place:stash.id,item:item.id})));
+        cards.push(card);
+      }
+    }
     if (equipmentOpen) {
       const equipped = state.equipped ?? [];
       if (equipped.length) {
@@ -214,14 +227,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
+        if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
+        const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
+        if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         if ('use' in definition) {
-          const label = definition.use==='cash' ? 'Embolsar' : item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
+          const label = item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
           const use = act(label,'use');
           if (isFood(item.kind)) markShortcut(use,'1');
         }
         if ('exposable' in definition) {
-          const exposed = state.exposed===item.id;
+          const exposed = state.exposed.includes(item.id);
           act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');
         }
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
@@ -238,7 +254,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (item.document) act('Adulterar','edit');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
-          if ('delivery' in terminal && terminal.delivery.some(kind=>kind===item.kind)) act('Depositar','deliver',place);
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
           if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
@@ -254,7 +269,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (decoration.marked) card.append(node('p','Retrato rabiscado'));
       if (decoration.kind==='vip') card.append(node('p','Área reservada por '+decoration.owner.name));
       const control = (label:string,kind:GameplayAction['kind'])=>button(label,()=>send({kind,item:decoration.id}));
-      if (phase==='negotiation') {
+      if (phase==='negotiation' && !decoration.privateOffice) {
         if (decoration.kind==='pizza') card.append(control('Pegar uma fatia','slice'));
         else {
           if (decoration.kind==='portrait' && !decoration.marked && decoration.owner.id!==ownId) card.append(control('Rabiscar','mark'));
@@ -501,6 +516,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
+    openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);
       if (presented) {

@@ -29,6 +29,7 @@ export class SessionRoom extends Room {
       id=>this.voice.has(id));
     return {
       ...world,
+      feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       present:(id:string)=>!!this.clients.getById(id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
@@ -100,7 +101,11 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state=>state.player);
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
-        for (const player of players) {
+        for (const [id,state] of this.players) {
+          const {player} = state;
+          Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
+          state.route = [];
+          this.movementQueue.get(id)?.splice(0);
           player.speed = characterStats[player.character].speed;
           player.stamina = MAX_STAMINA;
           player.sprinting = undefined;
@@ -134,6 +139,11 @@ export class SessionRoom extends Room {
       }
       const text = this.gameplay.act(player,action,this.gameplayWorld());
       if (text) client.send('gameplay-feedback',text);
+      if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
+        const state = this.players.get(client.sessionId);
+        if (state) state.route = [];
+        this.movementQueue.get(client.sessionId)?.splice(0);
+      }
     });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
@@ -192,7 +202,7 @@ export class SessionRoom extends Room {
       }
       for (const player of players) {
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
-        player.exposed = this.match.running ? this.gameplay.visibleItem(player.id) : undefined;
+        player.exposed = this.match.running ? this.gameplay.visibleItems(player.id) : undefined;
       }
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
@@ -219,7 +229,7 @@ export class SessionRoom extends Room {
           const vision = this.gameplay.vision(id);
           const visible = plenary ? players.filter(inPlenary) :
             players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
-          client.send('players',visible.map(player=>({...player,health:this.gameplay.healthFraction(player,now)})));
+          client.send('players',visible.map(({barriers:_barriers,...player})=>({...player,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }

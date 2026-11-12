@@ -1,5 +1,5 @@
 import { canReachObject } from '../src/gameplay';
-import { canStand, type Player } from '../src/map';
+import { blockedBy, canStand, type Player } from '../src/map';
 import { clearSegment } from '../src/navigation';
 import { aidRadius } from '../src/medical';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
@@ -68,7 +68,7 @@ export class Transport {
     // The last synchronized position is walkable. Try adjacent floor for clear separation.
     const around = [[0,10],[10,0],[-10,0],[0,-10]];
     const point = around.map(([x,y])=>({x:passenger.x+x,y:passenger.y+y}))
-      .find(candidate=>clearSegment(passenger,candidate,canStand));
+      .find(candidate=>clearSegment(passenger,candidate,(x,y)=>canStand(x,y) && !passenger.barriers?.some(rect=>blockedBy(rect,x,y))));
     if (point) Object.assign(passenger,point);
     publishGameplay(world,carrier,'character-dropped',{target:passenger.id});
   }

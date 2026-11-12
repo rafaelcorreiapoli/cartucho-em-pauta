@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { npcs, snackBar } from './npcs';
+import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
@@ -33,12 +34,13 @@ export function drawMap(scene: Phaser.Scene) {
     fill(0x31564b,x+4.5,y+4.5,w-9,h-9);
   };
 
-  fill(0x172722,0,0,WIDTH,541);
-  floor([10,114,940,58],0x757f78,23,18);
+  fill(0x172722,0,0,960,541);
+  floor([10,108,940,64],0x757f78,23,18);
   floor([10,259,940,11],0x757f78,23,11);
   floor([10,392,940,11],0x757f78,23,11);
   rug(14,130,932,23);
-  rooms.forEach(({bounds,color},index) => floor(bounds,color,index===1?18:24,index===1?13:8));
+  floor([eastAnnex.left,eastAnnex.top,166,eastAnnex.bottom-eastAnnex.top],0x757f78,23,18);
+  rooms.forEach(({bounds,color}) => floor(bounds,color,24,8));
   rug(156,16,168,95);
   fill(0x24473e,278,552,404,185);
   fill(0x355f50,282,556,396,177);
@@ -52,6 +54,10 @@ export function drawMap(scene: Phaser.Scene) {
   rug(725,32,197,73);
   for (const [x,y,w,h] of walls) {
     fill(0x172723,x,y,w,h);
+    if (h>w) {
+      fill(0x2c453b,x+1,y,Math.max(0,w-2),h);
+      continue;
+    }
     fill(0x9aa296,x,y,w,Math.min(2,h));
     fill(0x526b5d,x,y+2,w,Math.min(3,h-2));
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
@@ -59,13 +65,23 @@ export function drawMap(scene: Phaser.Scene) {
   }
   const [snackX,snackY,snackWidth] = snackBar.door;
   for (const [x,y,w] of [
-    [59,114,34],[177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[384,114,35],[69,161,36],[218,161,44],[368,161,36],
-    [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[431,259,47],[658,259,44],
+    [177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[69,161,36],[218,161,44],
+    [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[658,259,44],
     [115,392,41],[400,392,46],[780,392,34],[snackX,snackY,snackWidth],
   ]) {
     fill(0x9b8d6d,x,y+3,w,3);
   }
 
+  for (const office of privateOffices) {
+    const [dx,dy,dw,dh] = office.door;
+    fill(0x757f78,dx,dy,dw,dh);
+    fill(0x9b8d6d,dx,dy+3,dw,3);
+    for (const kind of ['safe','cabinet'] as const) {
+      const {x,y} = office[kind];
+      const {texture,width,height,footOffset} = officeFixtures[kind];
+      scene.add.image(x,y-footOffset,texture).setOrigin(.5,1).setDisplaySize(width,height).setDepth(y-footOffset);
+    }
+  }
   for (const [x,y] of desks) {
     if (!Object.values(npcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
@@ -82,7 +98,7 @@ export function drawMap(scene: Phaser.Scene) {
   const tribune = scene.add.text(570,591,'TRIBUNA',{
     fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
   }).setOrigin(.5,0).setDepth(HEIGHT+20);
-  return [tribune,...rooms.map(({name,bounds:[x,y,w]}) =>
+  return [tribune,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

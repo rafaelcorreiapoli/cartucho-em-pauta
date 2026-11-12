@@ -99,10 +99,8 @@
               <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
               <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
             </div>
-            <button class="hud-button" id="pocket-cash" type="button" hidden>
-              <svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-              <span>Embolsar<small id="pocket-reward"></small></span>
-            </button>
+            <span id="office-progress-label" hidden></span>
+            <progress id="office-progress" class="office-progress" hidden></progress>
             <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
             <div id="station-shortcuts"></div>
             <div id="field-actions"></div>
@@ -182,7 +180,7 @@
             <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
             <div class="deck-identity">
               <strong id="hud-nick"></strong>
-              <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span>
+              <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
               <div class="deck-profile-links">
                 <details id="agenda-dock" class="hud-module" name="game-panels">
                   <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Agenda pessoal</span><strong id="agenda-progress"></strong></summary>

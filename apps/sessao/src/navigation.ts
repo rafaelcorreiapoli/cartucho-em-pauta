@@ -1,5 +1,5 @@
 import { js as EasyStar } from 'easystarjs';
-import { canStand, canStandInPlenary, HEIGHT, movementSpeed, WIDTH, type Motion, type Player } from './map';
+import { blockedBy, canStand, canStandInPlenary, HEIGHT, movementSpeed, WIDTH, type Motion, type Player } from './map';
 
 const cellSize = 4;
 const toWorld = (point:Motion):Motion => ({x:point.x*cellSize+2,y:point.y*cellSize+2});
@@ -45,10 +45,14 @@ function closestCell(point:Motion, requireClear:boolean, grid:number[][], stand:
 }
 
 export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
-  const stand = plenary ? canStandInPlenary : canStand;
-  const grid = plenary ? plenaryGrid : worldGrid;
+  const base = plenary ? canStandInPlenary : canStand;
+  const barriers = from.barriers;
+  const stand:typeof canStand = (x,y)=>base(x,y) && !barriers?.some(rect=>blockedBy(rect,x,y));
+  const baseGrid = plenary ? plenaryGrid : worldGrid;
   if (plenary && !stand(to.x,to.y)) return [];
   if (clearSegment(from,to,stand)) return [to];
+  const grid = barriers?.length ? baseGrid.map((row,y)=>row.map((tile,x)=>
+    tile || Number(barriers.some(rect=>blockedBy(rect,x*cellSize+2,y*cellSize+2))))) : baseGrid;
   const start = closestCell(from,true,grid,stand);
   const end = closestCell(to,stand(to.x,to.y),grid,stand);
   if (!start || !end) return [];
@@ -64,7 +68,8 @@ export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
   let anchor = from;
   for (let index=0;index<points.length;) {
     let next = index;
-    while (next+1<points.length && clearSegment(anchor,points[next+1],stand)) next++;
+    while (next+1<points.length && clearSegment(anchor,points[next+1],(x,y)=>
+      stand(x,y) && stand(x-.5,y) && stand(x+.5,y) && stand(x,y-.5) && stand(x,y+.5))) next++;
     anchor = points[next];
     route.push(anchor);
     index = next+1;
@@ -72,7 +77,7 @@ export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
   return route;
 }
 
-export function followRoute(player:Player, route:Motion[], seconds:number) {
+export function followRoute(player:Player, route:Motion[], seconds:number, stand:typeof canStand = canStand) {
   player.moving = false;
   let remaining = movementSpeed(player)*seconds;
   while (route.length && remaining>0) {
@@ -83,8 +88,9 @@ export function followRoute(player:Player, route:Motion[], seconds:number) {
     if (distance<=remaining) route.shift();
     if (!distance) continue;
     const step = Math.min(distance,remaining);
-    player.x += dx/distance*step;
-    player.y += dy/distance*step;
+    const next = {x:player.x+dx/distance*step,y:player.y+dy/distance*step};
+    if (!clearSegment(player,next,stand)) { route.length = 0; break; }
+    Object.assign(player,next);
     player.direction = Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
     player.moving = true;
     remaining -= step;

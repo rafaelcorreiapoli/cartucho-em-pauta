@@ -33,6 +33,7 @@ export const agendas = {
   fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',
   pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
 
+  gabinete: 'Instale um móvel de luxo no seu gabinete.',
   fortuna: 'Aumente sua carteira',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',

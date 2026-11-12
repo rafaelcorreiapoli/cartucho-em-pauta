@@ -202,11 +202,9 @@ async function connect(join: () => Promise<Room>) {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => joined.send('room-activity',activity),drop => {
-      joined.send('gameplay',{kind:'use',item:drop});
-      map.focus({preventScroll:true});
-    },gameplay.nearby,action=>{
+    },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
+      if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});

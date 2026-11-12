@@ -1,9 +1,10 @@
+import { privateOffices } from '../src/private-offices';
 import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
 import type { PhotoAccessView } from '../src/photography';
 import type { PlenaryView } from '../src/plenary';
-import { canStand, type Player } from '../src/map';
+import { canStand, roomAt, type Player } from '../src/map';
 
 test('clients share movement and voice, then receive private roles and payments', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
@@ -43,8 +44,10 @@ test('clients share movement and voice, then receive private roles and payments'
       if (player) observed.push(player);
     });
     first.onMessage('players',() => {});
-    first.onMessage('control',() => {});
-    second.onMessage('control',() => {});
+    const positions = new Map<string,Player>();
+    const track = (room:Room) => room.onMessage('control',(state:{player:Player})=>positions.set(room.sessionId,state.player));
+    track(first);
+    track(second);
     let seq = 0;
     const findFirst = () => seen.find(player => player.id===first.sessionId);
     const until = async (ready: () => boolean) => {
@@ -97,7 +100,7 @@ test('clients share movement and voice, then receive private roles and payments'
     let thirdView: PlenaryView;
     third.onMessage('plenary',(view:PlenaryView) => { thirdView = view; });
     third.onMessage('players',() => {});
-    third.onMessage('control',() => {});
+    track(third);
     third.onMessage('voice-roster',() => {});
     await until(() => firstView?.players===3 && secondView?.players===3 && thirdView?.players===3);
     let firstPhotos:PhotoAccessView | undefined;
@@ -113,7 +116,14 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(() => [firstView,secondView,thirdView].every(view => view?.phase==='negotiation'));
     expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
-    await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
+    const participants = [first,second,third];
+    const assigned = [firstView!,secondView!,thirdView!].map(view=>privateOffices.find(office=>office.id===view.gameplay?.ownOffice)!);
+    expect(new Set(assigned.map(office=>office.id)).size).toBe(3);
+    await until(()=>participants.every((peer,index)=>{
+      const player = positions.get(peer.sessionId);
+      return !!player && roomAt(player)===assigned[index].name;
+    }));
+    expect(findFirst()).toBeUndefined();
     first.send('gameplay',{kind:'install',place:'constructor',item:1});
     first.send('gameplay',{kind:'photo'});
     await until(() => feedback.includes('Aproxime-se do local.') && firstPhotos?.album.length===1);
@@ -138,7 +148,19 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(firstOutbound).toContain(second.sessionId);
     second.send('gameplay',{kind:'hangup'});
     await until(() => !secondView?.gameplay?.call &&
-      secondRange.some(([peer,volume]) => peer===first.sessionId && volume<1));
+      !secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
+    await Promise.all([second,third].map(async(peer,index)=>{
+      const destination = {x:140+index*12,y:146};
+      let sequence = 100;
+      peer.send('input',{seq:sequence,destination,sprint:true});
+      for (let attempt=0;attempt<350;attempt++) {
+        const player = positions.get(peer.sessionId)!;
+        if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
+        peer.send('input',{seq:++sequence,sprint:true});
+        await Bun.sleep(52);
+      }
+      throw new Error('Could not reach the transfer point from the assigned office');
+    }));
     second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
     await until(() => secondView?.politics?.wallet===6 && thirdView?.politics?.wallet===10);
     expect(firstView!.politics?.wallet).toBe(8);
@@ -183,7 +205,7 @@ test('clients share movement and voice, then receive private roles and payments'
     server.kill();
     await server.exited;
   }
-},10000);
+},30_000);
 
 test('transport is released on an actual socket reconnect and on plenary admission', async () => {
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
@@ -225,11 +247,11 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
     const positions = Reflect.get(room,'players') as Map<string,{player:Player}>;
-    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
-    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     const match = Reflect.get(room,'match');
     carrier.send('start-match');
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{kind:'talk',target:'vendor'});
     await wait(()=>!!gameplay()?.dialogue);
@@ -257,12 +279,15 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
     await wait(()=>reconnected && snapshots.get(passenger.sessionId)?.carried===undefined);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
+    const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
+    expect(passengerOffice).toBeDefined();
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:6});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
       snapshots.get(passenger.sessionId)?.x===386 && snapshots.get(passenger.sessionId)?.y===655);
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
+    expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
     passenger.send('bill-vote','yes');
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');

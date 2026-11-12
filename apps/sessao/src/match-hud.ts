@@ -4,7 +4,7 @@ import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, objects, type GameplayAction, type GroundItem, type GameplayView } from './gameplay';
+import { canReachObject, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
@@ -12,11 +12,11 @@ import { missionReward, missionTitle, money, type Mission, type PoliticsView } f
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
-type FieldAction = GameplayAction | {kind:'cross-door';door:number};
+type FieldAction = GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
+export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
@@ -50,10 +50,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
-  const pocket = element<HTMLButtonElement>('pocket-cash');
-  const pocketReward = element('pocket-reward');
-  let nearbyCash:GroundItem | undefined;
-  pocket.onclick = () => { if (nearbyCash) pocketCash(nearbyCash.id); };
   function addStationButton(action:{station:Station; icon:string; label:string}) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -97,6 +93,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return {button,station};
   });
   const fieldActions = element('field-actions');
+  const progress = element<HTMLProgressElement>('office-progress');
+  const progressLabel = element('office-progress-label');
+  const officeBadge = element('own-office');
   const vitality = element('vitality');
   const vitalityNumber = element('vitality-number');
   const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
@@ -144,7 +143,21 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
     const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
+    const channel = state?.officeChannel;
+    progress.hidden = !channel;
+    progressLabel.hidden = !channel;
+    if (channel) {
+      progress.max = channel.duration;
+      progress.value = channel.elapsed;
+      progress.setAttribute('aria-label',channel.label);
+      progressLabel.textContent = `${channel.label} · ${Math.ceil((channel.duration-channel.elapsed)/1000)} s`;
+    }
+    const ownOffice = state?.ownOffice;
+    officeBadge.hidden = !ownOffice;
+    if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
     if (state && player) {
+      for (const {label,...action} of state.officeOptions ?? []) actions.push({label,icon:'document',action});
+      if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
       if (state.treatment) {
@@ -311,16 +324,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.dataset.contextHidden = String(button.dataset.station!==context);
     }
     interviewHint.dataset.contextHidden = String(context!=='tv');
-    nearbyCash = canInteract && !context && player ?
-      view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
-    const amount = nearbyCash && cashAmount(nearbyCash.kind);
-    pocket.hidden = !amount;
     renderNearby(player,canInteract);
-    if (amount) pocketReward.textContent = `+${money(amount)}`;
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
-    stations.hidden = !exploring || (nearbyToggle.hidden && pocket.hidden && !hasAction && !hint && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 
@@ -437,8 +445,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         button.querySelector('.station-key')?.remove();
       }
       stations.removeEventListener('click',onStationClick,true);
-      stations.hidden = pocket.hidden = true;
-      pocket.onclick = null;
+      stations.hidden = true;
+      progress.hidden = officeBadge.hidden = true;
       shortcuts.replaceChildren();
       fieldActions.replaceChildren();
       vitality.hidden = true;

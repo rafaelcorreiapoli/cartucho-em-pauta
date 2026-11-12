@@ -704,3 +704,13 @@ img.market-art {
 #action-shortcuts p { margin-block: .55rem .9rem; }
 .shortcut-list { display: grid; gap: .4rem; }
 .shortcut-pages { margin-top: .7rem; }
+
+#office-progress-label:not([hidden]) { display: block; text-align: center; color: var(--party-gold); margin-bottom: 4px; }
+.office-progress:not([hidden]) {
+  display: block;
+  width: min(220px, 50vw);
+  height: 8px;
+  margin: 0 auto 7px;
+  accent-color: var(--party-gold);
+}
+#own-office:not([hidden]) { color: var(--party-gold); font-size: .68rem; }

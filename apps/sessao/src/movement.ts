@@ -1,5 +1,5 @@
 import { doorDestination } from './interactions';
-import { canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type MovementModifier, type Player } from './map';
+import { blockedBy, canStand, canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type MovementModifier, type Player } from './map';
 import { findRoute, followRoute } from './navigation';
 
 export const STEP_MS = 50;
@@ -48,11 +48,13 @@ export function applyInput(state: ControlState, input: MovementInput) {
   player.sprinting = wantsSprint && stamina>=staminaDrain ? true : undefined;
   const destination = input.door===undefined ? input.destination : doorDestination(state.player,input.door,!!state.plenary);
   if (destination) state.route = findRoute(state.player,destination,state.plenary);
+  const base = state.plenary ? canStandInPlenary : canStand;
+  const stand:typeof canStand = (x,y)=>base(x,y) && !player.barriers?.some(rect=>blockedBy(rect,x,y));
   if (input.motion) {
     state.route = [];
-    move(state.player,input.motion,STEP_SECONDS,state.plenary ? canStandInPlenary : undefined);
+    move(state.player,input.motion,STEP_SECONDS,stand);
   } else {
-    followRoute(state.player,state.route,STEP_SECONDS);
+    followRoute(state.player,state.route,STEP_SECONDS,stand);
   }
   if (!player.moving) player.sprinting = undefined;
   if (player.sprinting) player.stamina = stamina-staminaDrain;

@@ -1,3 +1,4 @@
+import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
@@ -16,7 +17,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { MAX_STAMINA, restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -71,13 +72,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   window.addEventListener('blur',stop,options);
 
   class Plenary extends Phaser.Scene {
+    private officeDoors!: Phaser.GameObjects.Graphics;
+    private officeSigns = new Map<string,Phaser.GameObjects.Text>();
+    private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
     private groundMarkers = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text}>();
     private renderedGround?:GroundItem[];
     private renderedDecorations?:Decoration[];
-    private installed = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
+    private installed = new Map<number,{marker:Phaser.GameObjects.Container; label?:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
     photoRenderer?:PhotoRenderer;
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
@@ -94,10 +98,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [id,npc] of Object.entries(npcs)) {
         if ('sprite' in npc) this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
+      for (const [kind,{sprite}] of Object.entries(officeFurniture)) {
+        this.load.image(`furniture-${kind}`,import.meta.env.BASE_URL+'assets/'+sprite);
+      }
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
       this.load.spritesheet('installed-portraits',`${import.meta.env.BASE_URL}assets/retratos-elenco.webp`,{frameWidth:256,frameHeight:256});
+      this.load.image(officeFixtures.safe.texture,`${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
+      this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
@@ -123,6 +132,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
+      this.officeDoors = this.add.graphics().setDepth(2);
+      for (const office of privateOffices) {
+        const point = officeDoorPoint(office);
+        const sign = this.add.text(point.x,point.y-office.inside*15,'',{
+          fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#172b23',
+          align:'center',padding:{x:3,y:1},resolution:3,
+        }).setOrigin(.5).setDepth(2);
+        this.officeSigns.set(office.id,sign);
+      }
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
         this.doors.fillStyle(0x774740).fillRect(x,y,w,h).fillStyle(0xe8aa75).fillRect(x,y+2,w,2);
@@ -222,12 +240,21 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const item of decorations) {
         const current = this.installed.get(item.id);
         if (current) {
-          current.label.setText(decorationLabel(item));
+          current.label?.setText(decorationLabel(item));
           current.mark?.setVisible(!!item.marked);
           continue;
         }
+        if (isOfficeFurniture(item.kind)) {
+          const {width,height,anchor} = officeFurniture[item.kind];
+          const art = this.add.image(0,0,`furniture-${item.kind}`).setDisplaySize(width,height).setOrigin(.5,anchor);
+          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : item.y);
+          this.installed.set(item.id,{marker});
+          continue;
+        }
         const art = item.kind==='portrait' ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
-          : this.add.text(0,0,itemSymbols[item.kind] ?? '',{fontSize:'16px',color:'#ffe08a',resolution:3}).setOrigin(.5);
+          : itemSymbols[item.kind]
+            ? this.add.text(0,0,itemSymbols[item.kind]!,{fontSize:'16px',color:'#ffe08a',resolution:3}).setOrigin(.5)
+            : this.add.image(0,0,`item-${item.kind}`).setDisplaySize(26,26);
         const label = this.add.text(0,9,decorationLabel(item),{
           fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
         }).setOrigin(.5,0);
@@ -262,6 +289,24 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.renderGroundItems();
       this.renderDecorations();
+      const officeViews = plenaryView?.gameplay?.offices;
+      const officeKey = JSON.stringify(officeViews);
+      if (officeKey!==this.officeRenderKey) {
+        this.officeRenderKey = officeKey;
+        this.officeDoors.clear();
+        for (const layout of privateOffices) {
+          const office = officeViews?.find(entry=>entry.id===layout.id);
+          this.officeSigns.get(layout.id)?.setText(`${layout.name}\n${office?.owner ?? 'Desocupado'}`);
+          const [x,y,w,h] = layout.door;
+          const status = office?.door ?? 'open';
+          if (status!=='open') {
+            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1)
+              .fillRect(x,y+3,w,status==='breached' ? 2 : h-3);
+          }
+          if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
+            .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
+        }
+      }
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const binoculars = plenaryView?.gameplay?.equipped?.some(item=>item.kind==='binoculars');
@@ -287,7 +332,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.textResolution = resolution;
         for (const label of this.mapLabels) label.setResolution(resolution);
         for (const {label} of this.groundMarkers.values()) label.setResolution(resolution);
-        for (const {label} of this.installed.values()) label.setResolution(resolution);
+        for (const {label} of this.installed.values()) label?.setResolution(resolution);
         for (const view of this.views.values()) {
           view.label.setResolution(resolution);
           view.office.setResolution(resolution);
@@ -305,8 +350,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.label.destroy();
           view.office.destroy();
           view.health.destroy(true);
-          view.carried.destroy();
-          view.symbol.destroy();
+          view.items.destroy();
           view.weapon.destroy();
           this.views.delete(id);
         }
@@ -328,8 +372,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.label.setVisible(false);
           view?.office.setVisible(false);
           view?.health.setVisible(false);
-          view?.carried.setVisible(false);
-          view?.symbol.setVisible(false);
+          view?.items.setVisible(false);
           view?.weapon.setVisible(false);
           continue;
         }
@@ -343,14 +386,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             healthFill,staminaFill,
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
-            carried:this.add.image(0,0,'item-briefcase').setDepth(HEIGHT+30).setVisible(false),
-            symbol:this.add.text(0,0,'',{fontSize:'11px',color:'#ffe08a',resolution:3}).setOrigin(.5).setDepth(HEIGHT+30).setVisible(false),
+            items:this.add.container().setDepth(HEIGHT+26),
             sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
-              fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:1.4,resolution:this.textResolution,
+              fontFamily:'system-ui',fontSize:'5.5px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:1.1,resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
             office:this.add.text(player.x,player.y+10,'',{
-              fontFamily:'system-ui',fontSize:'5px',fontStyle:'bold',stroke:'#152522',strokeThickness:1,
+              fontFamily:'system-ui',fontSize:'4px',fontStyle:'bold',stroke:'#152522',strokeThickness:.85,
               resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
           };
@@ -408,9 +450,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0))
           .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
         view.health.setVisible(latest.health!==undefined);
+        const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
         if (latest.health!==undefined) {
           const health = Phaser.Math.Clamp(latest.health,0,1);
-          const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
           view.health.setPosition(x,barY);
           view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? MAX_STAMINA)/MAX_STAMINA,0,1),1);
           view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
@@ -421,16 +463,23 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
           .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
-        const exposed = latest.exposed;
-        const symbol = exposed && itemSymbols[exposed.kind];
-        view.carried.setVisible(!!exposed && !symbol);
-        view.symbol.setVisible(!!symbol);
-        if (exposed && !symbol) view.carried.setTexture(`item-${exposed.kind}`).setDisplaySize(13,13).setPosition(x,y-42);
-        if (symbol) view.symbol.setText(symbol).setPosition(x,y-42);
+        const exposed = latest.exposed ?? [];
+        const itemsKey = exposed.map(item=>item.kind).join(',');
+        if (view.itemsKey!==itemsKey) {
+          view.itemsKey = itemsKey;
+          view.items.removeAll(true);
+          exposed.forEach(({kind},index)=>{
+            const offset = (index-(exposed.length-1)/2)*13;
+            const backdrop = this.add.rectangle(offset,0,11.5,11.5,0x10211b,.84).setStrokeStyle(.5,0x637f6d);
+            const icon = this.add.image(offset,0,`item-${kind}`).setDisplaySize(10,10);
+            view.items.add([backdrop,icon]);
+          });
+        }
+        view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
         const title = titles.get(id);
-        office.setVisible(running || !!title).setPosition(x,labelY+8)
+        office.setVisible(running || !!title).setPosition(x,labelY+6)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving && !pose && !combatArt) {
@@ -491,13 +540,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const player = players.find(person=>person.id===ownId);
       if (!player) return;
+      const center = local.state?.player ?? player;
+      const breaches = plenaryView?.gameplay?.offices?.flatMap(office=>{
+        const layout = privateOffices.find(layout=>layout.id===office.id);
+        return layout ? [...(office.door==='breached' ? [officeDoorPoint(layout)] : []),
+          ...(office.cabinetBreached ? [layout.cabinet] : [])] : [];
+      }).filter(point=>inPhotoFrame(center,point));
       scene.photoRenderer.draw(canvas,{
-        center:player,
-        people:players.filter(person=>inPhotoFrame(player,person,true)).map(person=>({
+        center,breaches,
+        people:players.filter(person=>inPhotoFrame(center,person,true)).map(person=>({
           ...person,name:person.nick,
         })),
-        ground:groundItems.filter(item=>inPhotoFrame(player,item)),
-        decorations:decorations.filter(item=>inPhotoFrame(player,item)),
+        ground:groundItems.filter(item=>inPhotoFrame(center,item)),
+        decorations:decorations.filter(item=>inPhotoFrame(center,item)),
       });
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },

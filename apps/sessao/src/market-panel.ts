@@ -1,3 +1,4 @@
+import { isOfficeGood, officeGoodKinds, officeGoods } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
 import { equipment, gearKinds, isGear } from './equipment';
@@ -60,13 +61,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     toolbar.append(funds);
     const products = node('div');
     products.className = 'market-products';
-    const kinds = npcs[npc].catalog==='equipment' ? gearKinds : foodKinds;
+    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds] : foodKinds;
     const owned = [...inventory,...equipped];
     const full = inventory.length>=INVENTORY_SLOTS;
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     for (const [index,kind] of visible.entries()) {
       const food = isFood(kind) ? foods[kind] : undefined;
-      const price = isGear(kind) ? equipment[kind].price : foods[kind].price;
+      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : foods[kind].price;
       const item = objects[kind];
       const card = node('article');
       card.className = 'market-product';

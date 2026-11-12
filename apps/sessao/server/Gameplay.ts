@@ -1,8 +1,11 @@
+import { PrivateOffices } from './PrivateOffices';
+import { decorPoint, decorSlots, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeOption } from '../src/private-offices';
+import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
+import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
@@ -29,6 +32,7 @@ const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
+  private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
@@ -37,7 +41,7 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
-  private exposed = new Map<string,number>();
+  private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
   private installations = new Map<string,Decoration>();
   private servings = new Map<number,Set<string>>();
@@ -47,8 +51,10 @@ export class Gameplay {
   private random = Math.random;
   private nextCashSpawn = Infinity;
 
-  reset(now:number,random = Math.random,players:Player[] = []) {
+  reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.items.clear();
+    this.privateOffices.reset(players,officeRandom);
+    this.syncOfficeDoors(players,now);
     this.album.reset();
     this.exposed.clear();
     this.installations.clear();
@@ -62,6 +68,7 @@ export class Gameplay {
     this.transport.reset();
     this.modulator.reset();
     for (const player of players) {
+      player.pocketing = undefined;
       player.speedModifier = undefined;
       player.staminaRegenModifier = undefined;
     }
@@ -88,6 +95,13 @@ export class Gameplay {
 
   vision(id:string) { return VISION_RADIUS+(this.wearing(id,'binoculars') ? binocularBonus : 0); }
 
+  officeSpawn(id:string) { return this.privateOffices.spawnFor(id); }
+
+  private syncOfficeDoors(players:Player[],now:number) {
+    const doors = this.privateOffices.doors(now);
+    for (const player of players) player.barriers = doors;
+  }
+
   private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
 
   private move(item:Item, place:Place) {
@@ -108,12 +122,20 @@ export class Gameplay {
   }
 
   private hide(item:Item) {
-    if ('holder' in item.place && this.exposed.get(item.place.holder)===item.data.id) this.exposed.delete(item.place.holder);
+    if ('holder' in item.place) this.exposed.get(item.place.holder)?.delete(item.data.id);
   }
 
-  visibleItem(id:string) {
-    const item = this.items.get(this.exposed.get(id) ?? -1);
-    return item && {id:item.data.id,kind:item.data.kind};
+  private expose(id:string,item:number) {
+    const items = this.exposed.get(id) ?? new Set<number>();
+    items.add(item);
+    this.exposed.set(id,items);
+  }
+
+  visibleItems(id:string) {
+    return [...this.exposed.get(id) ?? []].flatMap(itemId=>{
+      const item = this.items.get(itemId);
+      return item && 'holder' in item.place && item.place.holder===id ? [{id:itemId,kind:item.data.kind}] : [];
+    });
   }
 
   private create(kind:ObjectKind, place:Place) {
@@ -144,13 +166,14 @@ export class Gameplay {
     if (now<this.nextCashSpawn) return;
     this.nextCashSpawn = now+8000+this.random()*10000;
     const ground = this.groundItems(now);
+    const barriers = this.privateOffices.doors(now);
     if (ground.length>=maxGroundItems || ground.filter(item=>cashAmount(item.kind)).length>=8) return;
     for (let attempt=0;attempt<16;attempt++) {
       const x = 24+Math.floor(this.random()*(WIDTH-48));
       const y = 24+Math.floor(this.random()*(HEIGHT-48));
-      if (!canStand(x,y) || !canStand(x-8,y+6) || !canStand(x+8,y+6) ||
+      if (barriers.some(rect=>blockedBy(rect,x,y)) || !canStand(x,y) || !canStand(x-8,y+6) || !canStand(x+8,y+6) ||
         ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
-      const last = findRoute(mapEntrance,{x,y}).at(-1);
+      const last = findRoute({...mapEntrance,barriers},{x,y}).at(-1);
       if (last?.x!==x || last.y!==y) continue;
       const kind = cashKinds[Math.floor(this.random()*cashKinds.length)];
       this.create(kind,this.groundPlace(kind,{x,y},now));
@@ -164,6 +187,8 @@ export class Gameplay {
     for (const item of this.items.values()) {
       if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
     }
+    this.privateOffices.expireDoors(world.players,world.now);
+    this.syncOfficeDoors(world.players,world.now);
     if (exploring) this.spawnCash(world.now);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
@@ -185,6 +210,7 @@ export class Gameplay {
         this.phone.leave(target,world);
       },
     });
+    this.tickOfficeChannels(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
       if (!exploring || player.knockedOut || !world.voice(player.id)) this.stopModulator(player.id,world.now);
@@ -197,6 +223,8 @@ export class Gameplay {
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
+    this.privateOffices.channels.delete(player.id);
+    player.pocketing = undefined;
     this.album.leave(player.id,permanent);
     this.combat.interrupt(player);
     this.phone.leave(player,world);
@@ -246,7 +274,8 @@ export class Gameplay {
       return item && from ? [{id:request.id,kind:request.kind,item:item.data,from:{id:from.id,name:from.nick}}] : [];
     });
     return {
-      exposed:this.exposed.get(id),
+      exposed:[...this.exposed.get(id) ?? []],
+      ...this.officeView(player,world.now),
       equipped,equipmentCooldowns,
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
@@ -274,12 +303,12 @@ export class Gameplay {
     const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        exposed:this.visibleItem(person.id),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
       id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
-      center:{x,y},location:roomAt(player),selfie,people,
+      center:{x,y,barriers:player.barriers},breaches:this.officeBreaches(world.now).filter(point=>inPhotoFrame(player,point)),location:roomAt(player),selfie,people,
       ground:this.visibleGround(player,world.now).filter(item=>inPhotoFrame(player,item))
         .map(({id,kind,x,y,document})=>({id,kind,x,y,title:document?.title})),
       decorations:[...this.installations.values()].filter(item=>inPhotoFrame(player,item)).map(item=>({...item})),
@@ -346,6 +375,208 @@ export class Gameplay {
     return 'Objeto retirado.';
   }
 
+  private officeBreaches(now:number) {
+    return [...this.privateOffices.offices.values()].flatMap(office=>[
+      ...(office.doorUntil>now ? [officeDoorPoint(office.layout)] : []),
+      ...(office.cabinetUntil>now ? [office.layout.cabinet] : []),
+    ]);
+  }
+
+  private officeView(player:Player, now:number):Partial<GameplayView> {
+    const offices = this.privateOffices.view(now,player);
+    const ownOffice = [...this.privateOffices.offices.values()].find(office=>office.owner===player.id)?.layout.id;
+    if (player.knockedOut || player.carrying) return {offices,ownOffice};
+    const officeOptions:OfficeOption[] = [];
+    const channel = this.privateOffices.channels.get(player.id);
+    if (channel) return {offices,ownOffice,officeOptions:[{kind:'office-cancel',label:'Cancelar'}],
+      officeChannel:{label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
+
+    const items = this.inventory(player.id).map(item=>item.data);
+    const tools = items.filter(item=>'attack' in objects[item.kind]).sort((a,b)=>
+      this.toolLevel(b)-this.toolLevel(a));
+    const tool = tools[0];
+    let officeStash:GameplayView['officeStash'];
+    const officeDecor:NonNullable<GameplayView['officeDecor']> = [];
+    for (const office of this.privateOffices.offices.values()) {
+      const {layout,owner} = office;
+      const own = owner===player.id;
+      const add = (kind:OfficeAction,label:string,item?:number)=>officeOptions.push({kind,label,item,place:layout.id});
+      const upgrade = (target:'door'|'cabinet',level:number)=>{
+        const kit = items.find(item=>item.kind===(target==='door' ? 'doorLock' : 'cabinetLock'));
+        if (kit && level<officeRules.maxSecurity) add(target==='door' ? 'office-upgrade-door' : 'office-upgrade-cabinet',`Reforçar ${target==='door' ? 'porta' : 'armário'} · Nv. ${level}`,kit.id);
+      };
+      const breach = (target:'door'|'cabinet')=>{
+        if (!tool) return;
+        const duration = this.privateOffices.breachTime(office,target,this.toolLevel(tool),now);
+        if (duration) add(target==='door' ? 'office-breach-door' : 'office-breach-cabinet',
+          `Arrombar ${target==='door' ? 'porta' : 'armário'} · ${duration/1000} s`,tool.id);
+      };
+      if (this.privateOffices.near(player,office,'door')) {
+        if (office.doorUntil<=now) {
+          if (office.door==='closed' || (office.door==='locked' && own)) add('office-open','Abrir porta');
+          if (own && office.door==='open') add('office-close','Fechar porta');
+          if (own && office.door!=='locked') add('office-lock',`Trancar porta · Nv. ${office.doorLevel}`);
+          if (own && office.door==='locked') add('office-unlock',`Destrancar porta · Nv. ${office.doorLevel}`);
+          if (!own && office.door==='locked') {
+            if (this.privateOffices.isInside(player,office)) add('office-open','Sair do gabinete');
+            else breach('door');
+          }
+        }
+        if (own) upgrade('door',office.doorLevel);
+      }
+      if (this.privateOffices.near(player,office,'cabinet')) {
+        if (own) upgrade('cabinet',office.cabinetLevel);
+        else breach('cabinet');
+        if (this.privateOffices.stashAccess(player,office,now)) officeStash = {
+          id:layout.id,items:this.officeStash(layout.id).map(item=>item.data),level:own ? office.cabinetLevel : undefined,
+        };
+      }
+      if (own && this.privateOffices.near(player,office,'safe')) {
+        for (const item of items) {
+          const amount = cashAmount(item.kind);
+          if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
+        }
+      }
+      if (own) for (const slot of decorSlots) {
+        if (!this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
+        officeDecor.push({id:layout.id,kind:slot});
+        const decoration = this.installations.get(`office:${layout.id}:${slot}`);
+        if (decoration) add('office-remove',`Retirar · ${objects[slot].name}`,decoration.id);
+      }
+    }
+    return {offices,ownOffice,officeOptions,officeStash,officeDecor};
+  }
+
+  private officeStash(id:string) {
+    return [...this.items.values()].filter(({place})=>'storage' in place && place.storage===`office:${id}`);
+  }
+
+  private toolLevel(item:WorldItem) {
+    const definition = objects[item.kind];
+    return 'attack' in definition ? definition.attack : 0;
+  }
+
+  private officeAction(player:Player, action:GameplayAction, world:GameplayWorld) {
+    const {kind} = action;
+    const {now} = world;
+    const offices = this.privateOffices;
+    if (kind==='office-cancel') {
+      offices.channels.delete(player.id);
+      player.pocketing = undefined;
+      return 'Interação cancelada.';
+    }
+    const office = offices.offices.get(action.place ?? '');
+    if (!office) return 'Gabinete indisponível.';
+    const own = office.owner===player.id;
+    if (kind==='office-open' || kind==='office-close' || kind==='office-lock' || kind==='office-unlock') {
+      if ((kind==='office-close' || kind==='office-lock') && world.players.some(other=>blockedBy(office.layout.door,other.x,other.y))) return 'A passagem está ocupada.';
+      const result = offices.doorAction(player,office,kind,now);
+      this.syncOfficeDoors(world.players,now);
+      return result;
+    }
+    const item = this.items.get(action.item ?? -1);
+    if (kind==='office-take' || kind==='office-stash') {
+      if (!offices.stashAccess(player,office,now)) return 'Armário protegido.';
+      if (!item) return 'Objeto indisponível.';
+      if (kind==='office-take') {
+        if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return 'Objeto indisponível.';
+        if (!this.available(player.id)) return 'Inventário cheio.';
+        this.move(item,{holder:player.id});
+      } else {
+        if (!('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
+        if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return 'Armário cheio.';
+        this.move(item,{storage:`office:${office.layout.id}`});
+      }
+      this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id});
+      return kind==='office-take' ? 'Objeto retirado do armário.' : 'Objeto guardado no armário.';
+    }
+    if (kind==='office-remove') {
+      const slot = decorSlots.find(slot=>this.installations.get(`office:${office.layout.id}:${slot}`)?.id===action.item);
+      if (!slot) return 'Decoração indisponível.';
+      if (!own || !offices.near(player,office,decorPoint(office.layout,slot))) return 'Use o ponto de decoração do seu gabinete.';
+      if (!this.available(player.id)) return 'Inventário cheio.';
+      const key = `office:${office.layout.id}:${slot}`;
+      const decoration = this.installations.get(key)!;
+      this.installations.delete(key);
+      const data = {id:decoration.id,kind:decoration.kind};
+      this.items.set(data.id,{data,place:{holder:player.id}});
+      this.event(world,player,'uninstalled',data,undefined,{place:office.layout.id});
+      return 'Decoração recolhida.';
+    }
+    if (!item || !('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
+    if (kind==='office-install') {
+      const decor = decorSlots.find(slot=>slot===item.data.kind);
+      if (!decor) return 'Decoração incompatível.';
+      const point = decorPoint(office.layout,decor);
+      if (!own || !offices.near(player,office,point)) return 'Use o ponto de decoração do seu gabinete.';
+      const key = `office:${office.layout.id}:${decor}`;
+      const prior = this.installations.get(key);
+      this.remove(item);
+      if (prior) this.items.set(prior.id,{data:{id:prior.id,kind:prior.kind},place:{holder:player.id}});
+      this.installations.set(key,{...point,id:item.data.id,kind:decor,privateOffice:office.layout.id,owner:{id:player.id,name:player.nick},character:player.character});
+      this.event(world,player,'installed',item.data,undefined,{place:office.layout.id,replaced:!!prior});
+      return prior ? 'Decoração substituída.' : 'Decoração instalada.';
+    }
+    if (kind==='office-upgrade-door' || kind==='office-upgrade-cabinet') {
+      const target = kind==='office-upgrade-door' ? 'door' : 'cabinet';
+      const level = target==='door' ? 'doorLevel' : 'cabinetLevel';
+      if (!own || !offices.near(player,office,target)) return 'Use o reforço no seu gabinete.';
+      if (item.data.kind!==(target==='door' ? 'doorLock' : 'cabinetLock')) return 'Reforço incompatível.';
+      if (office[level]>=officeRules.maxSecurity) return 'Segurança no nível máximo.';
+      office[level]++;
+      this.remove(item);
+      this.event(world,player,'security-upgraded',item.data,undefined,{place:office.layout.id});
+      return `Segurança nível ${office[level]}.`;
+    }
+    if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet') return 'Ação indisponível.';
+    if (offices.channels.has(player.id)) return 'Já existe uma interação em andamento.';
+    const target = kind==='office-cash' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+    if (!offices.near(player,office,target)) return 'Aproxime-se do alvo.';
+    const level = this.toolLevel(item.data);
+    const duration = target==='safe' ? (own && cashAmount(item.data.kind) ? officeRules.cashMs : undefined)
+      : !own ? offices.breachTime(office,target,level,now) : undefined;
+    if (!duration) return target==='safe' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
+    offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+duration,level});
+    if (kind==='office-cash') {
+      player.pocketing = true;
+      this.expose(player.id,item.data.id);
+    }
+  }
+
+  private tickOfficeChannels(world:GameplayWorld, exploring:boolean) {
+    const offices = this.privateOffices;
+    for (const [id,channel] of offices.channels) {
+      const player = world.players.find(player=>player.id===id);
+      const item = this.items.get(channel.item);
+      const {office,kind} = channel;
+      const target = kind==='office-cash' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+      const valid = exploring && player && !player.knockedOut && !player.carrying && !player.moving &&
+        world.present?.(id)!==false && player.x===channel.origin.x && player.y===channel.origin.y &&
+        item && 'holder' in item.place && item.place.holder===id && offices.near(player,office,target) &&
+        (target==='safe' ? office.owner===id : offices.breachTime(office,target,channel.level,world.now)===channel.ends-channel.started);
+      if (valid && world.now<channel.ends) continue;
+      offices.channels.delete(id);
+      if (player) player.pocketing = undefined;
+      if (!valid) {
+        world.feedback?.(id,'Interação interrompida.');
+        continue;
+      }
+      this.remove(item);
+      if (target==='safe') {
+        world.earn(id,cashAmount(item.data.kind)!);
+        this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id});
+        world.feedback?.(id,'Dinheiro embolsado.');
+      } else {
+        if (target==='door') office.doorUntil = world.now+officeRules.breachMs;
+        else office.cabinetUntil = world.now+officeRules.breachMs;
+        this.syncOfficeDoors(world.players,world.now);
+        this.event(world,player,target==='door' ? 'door-breached' : 'cabinet-breached',item.data,office.owner,{place:office.layout.id,
+          witnesses:world.players.filter(other=>other!==player && worldVisible(other,player)).map(other=>other.id)});
+        world.feedback?.(id,target==='door' ? 'Porta arrombada.' : 'Armário arrombado.');
+      }
+    }
+  }
+
   private consumeFood(player:Player, effect:FoodEffect) {
     if (effect.hp) this.combat.heal(player,effect.hp);
     if (effect.stamina) player.stamina = Math.min(MAX_STAMINA,(player.stamina ?? MAX_STAMINA)+effect.stamina);
@@ -357,11 +588,12 @@ export class Gameplay {
     const {id} = player;
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
-      if (!gear && !isFood(kind)) return 'Produto indisponível.';
-      if (npcs[npc].catalog!==(gear ? 'equipment' : 'food')) return 'Este produto não é vendido aqui.';
+      const furnishing = isOfficeGood(kind);
+      if (!gear && !isFood(kind) && !furnishing) return 'Produto indisponível.';
+      if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
       if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
+      if (!world.spend?.(id,gear ? equipment[kind].price : furnishing ? officeGoods[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
       const data = this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
     }) ?? 'Compra guardada no inventário.';
@@ -413,6 +645,7 @@ export class Gameplay {
     if (action.kind==='release') return this.transport.drop(player,world) ? 'Jogador colocado no chão.' : undefined;
     if (action.kind==='treat') return this.treat(player,world);
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';
+    if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
     if (action.kind==='talk') {
       const error = this.dialogues.open(player,action.target);
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
@@ -459,7 +692,7 @@ export class Gameplay {
         (type,photo,actor,target)=>this.event(world,actor,type,undefined,target,{photo}));
     }
     if (action.kind==='conceal') {
-      this.exposed.delete(id);
+      if (action.item===undefined || !this.exposed.get(id)?.delete(action.item)) return 'Objeto não está exposto.';
       return 'Objeto guardado.';
     }
     if (action.kind==='buy') {
@@ -503,18 +736,17 @@ export class Gameplay {
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
       if (!accessible || !this.available(id)) return 'Objeto fora de alcance ou inventário cheio.';
       this.move(item,{holder:id});
+      if (cashAmount(data.kind)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
-    const pocketing = action.kind==='use' && cashAmount(data.kind)!==undefined &&
-      'ground' in item.place && canReachObject(player,item.place.ground);
-    if (!pocketing && (!('holder' in item.place) || item.place.holder!==id)) return 'O objeto não está com você.';
+    if (!('holder' in item.place) || item.place.holder!==id) return 'O objeto não está com você.';
     const definition = objects[data.kind];
     switch (action.kind) {
       case 'expose':
         if (!('exposable' in definition)) return 'Este objeto fica guardado.';
-        if (this.exposed.get(id)===data.id) return 'Objeto já exposto.';
-        this.exposed.set(id,data.id);
+        if (this.exposed.get(id)?.has(data.id)) return 'Objeto já exposto.';
+        this.expose(id,data.id);
         this.event(world,player,'exposed',data);
         return 'Objeto exposto.';
       case 'offer':
@@ -544,17 +776,11 @@ export class Gameplay {
         this.event(world,player,'stored',data);
         return 'Objeto armazenado.';
       case 'deliver':
-        if (!terminal || !('delivery' in terminal) || !terminal.delivery.some(kind=>kind===data.kind) || !('amount' in definition)) {
-          return 'Leve o dinheiro à Tesouraria.';
-        }
-        this.remove(item);
-        world.earn(id,definition.amount);
-        this.event(world,player,'delivered',data);
-        return 'Dinheiro depositado.';
+        return 'Leve o dinheiro ao cofre do seu gabinete.';
       case 'use':
+        if (cashAmount(data.kind)) return 'Leve o dinheiro ao cofre do seu gabinete.';
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
         this.remove(item);
-        if ('amount' in definition) world.earn(id,definition.amount);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
         this.event(world,player,'used',data);
         return 'Objeto utilizado.';
@@ -607,11 +833,12 @@ export class Gameplay {
     }
     if (request.kind==='offer') {
       if (!this.available(player.id)) return 'Inventário cheio.';
-      if (this.visibleItem(owner.id)?.id===item.data.id) {
+      if (this.exposed.get(owner.id)?.has(item.data.id)) {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
         if (this.transfers.length>16) this.transfers.shift();
       }
       this.move(item,{holder:player.id});
+      if (cashAmount(item.data.kind)) this.expose(player.id,item.data.id);
       this.event(world,owner,'transferred',item.data,player.id);
       return 'Objeto recebido.';
     }
