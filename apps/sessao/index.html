@@ -206,13 +206,16 @@
           <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Agenda pessoal</span><strong id="agenda-progress"></strong></summary>
           <div class="hud-panel module-content agenda-panel">
             <h2>Missões pessoais</h2>
-            <div id="missions-history" hidden>
-              <h3>Concluídas</h3>
-              <ul class="agenda-list" id="missions-completed"></ul>
+            <div id="mission-tabs" role="tablist" aria-label="Status das missões">
+              <button id="mission-tab-active" type="button" role="tab" aria-selected="true" aria-controls="missions-current">Ativas</button>
+              <button id="mission-tab-done" type="button" role="tab" aria-selected="false" aria-controls="missions-history" tabindex="-1">Concluídas</button>
             </div>
-            <div id="missions-current">
-              <h3>Ativas</h3>
+            <div id="missions-current" role="tabpanel" aria-labelledby="mission-tab-active" tabindex="0">
               <ul class="agenda-list" id="missions-active"></ul>
+            </div>
+            <div id="missions-history" role="tabpanel" aria-labelledby="mission-tab-done" tabindex="0" hidden>
+              <p id="missions-empty">Nenhuma missão concluída ainda.</p>
+              <ul class="agenda-list" id="missions-completed"></ul>
             </div>
             <template id="agenda-mission">
               <li>

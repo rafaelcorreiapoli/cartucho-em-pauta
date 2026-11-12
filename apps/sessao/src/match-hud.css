@@ -428,13 +428,34 @@
 #trade-private .game-choice { justify-content: center; padding: .35rem .2rem; border: 1px solid transparent; background: transparent; min-height: 33px; font-size: .75rem; }
 #trade-private .game-choice[aria-pressed="true"] { background: #384231; border-color: #a79763; }
 
-.agenda-panel h2, .agenda-panel h3 {
+.agenda-panel h2 {
   margin: 0;
   font: 850 1.2rem/1.2 var(--party-display);
 }
-.agenda-panel h3 { margin-top: 1.15rem; font-size: .95rem; color: #c0d5bb; }
-#missions-history { min-height: 3rem; overflow: auto; scrollbar-width: thin; }
-#missions-current { flex-shrink: 0; }
+#mission-tabs {
+  display: flex;
+  gap: .4rem;
+  margin-top: .75rem;
+  padding: .25rem;
+  border-radius: 8px;
+  background: #122522;
+}
+#mission-tabs button {
+  flex: 1;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--hud-paper);
+  cursor: pointer;
+  font: 750 .88rem/1 var(--party-display);
+}
+#mission-tabs [aria-selected="true"] {
+  border-color: #9b9767;
+  background: #294334;
+  color: var(--party-gold);
+}
+#missions-empty { margin: .75rem 0 0; color: #d6cfb5; }
 .agenda-list {
   display: grid;
   gap: .55rem;

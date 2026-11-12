@@ -16,7 +16,25 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
-  const missionHistory = element('missions-history');
+  const missionTabs = [element<HTMLButtonElement>('mission-tab-active'),element<HTMLButtonElement>('mission-tab-done')];
+  function selectMissionTab(selected:HTMLButtonElement) {
+    for (const tab of missionTabs) {
+      const active = tab===selected;
+      tab.setAttribute('aria-selected',String(active));
+      tab.tabIndex = active ? 0 : -1;
+      element(tab.getAttribute('aria-controls')!).hidden = !active;
+    }
+  }
+  for (const [index,tab] of missionTabs.entries()) {
+    tab.onclick = () => selectMissionTab(tab);
+    tab.onkeydown = event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = missionTabs[event.key==='Home' ? 0 : event.key==='End' ? 1 : 1-index];
+      selectMissionTab(next);
+      next.focus();
+    };
+  }
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
@@ -106,8 +124,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let previous:PlenaryView | undefined;
 
   agendaDock.open = false;
-  const showLatestMission = () => { missionHistory.scrollTop = missionHistory.scrollHeight; };
-  agendaDock.addEventListener('toggle',showLatestMission);
+  selectMissionTab(missionTabs[0]);
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
     timers.delete(node);
@@ -138,7 +155,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (key===missionRenderKey) return;
     missionRenderKey = key;
     element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    missionHistory.hidden = !missions.completed.length;
+    element('missions-empty').hidden = !!missions.completed.length;
     function row(mission:Mission, done:boolean) {
       const node = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
       node.dataset.done = String(done);
@@ -151,8 +168,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));
     if (completedMissions.children.length!==missions.completed.length || missions.paid) {
-      completedMissions.replaceChildren(...missions.completed.map(mission => row(mission,true)));
-      showLatestMission();
+      completedMissions.replaceChildren(...missions.completed.slice().reverse().map(mission => row(mission,true)));
     }
   }
 
@@ -225,7 +241,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
         renderMissions(politics.missions);
-        if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) agendaDock.open = true;
+        if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) {
+          selectMissionTab(missionTabs[0]);
+          agendaDock.open = true;
+        }
       }
 
       if (previous) {
@@ -261,7 +280,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     destroy() {
       for (const node of timers.keys()) remove(node);
-      agendaDock.removeEventListener('toggle',showLatestMission);
+      for (const tab of missionTabs) {
+        tab.onclick = null;
+        tab.onkeydown = null;
+      }
       incomeEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
       for (const {button,badge} of actionKeys) {
