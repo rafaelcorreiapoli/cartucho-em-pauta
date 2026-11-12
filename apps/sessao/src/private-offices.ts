@@ -45,14 +45,14 @@ export const officeGoods = {
   masterDecoder:{name:'Ferramenta especializada',description:'Arrombamento nível 5.',portrait:'retrato-gazua.webp',price:5,attack:5},
   doorLock:{name:'Reforço de porta',description:'Aumenta a segurança da porta em um nível.',portrait:'retrato-fechadura.webp',price:2},
   cabinetLock:{name:'Reforço de armário',description:'Aumenta a segurança do armário em um nível.',portrait:'retrato-fechadura.webp',price:2},
-  officeTv:{name:'TV de 85 polegadas',description:'Instale no seu gabinete.',portrait:'retrato-tv.webp',price:3},
-  officeRug:{name:'Tapete persa',description:'Instale no seu gabinete.',portrait:'retrato-tapete.webp',price:2},
-  officeChair:{name:'Poltrona de couro',description:'Instale no seu gabinete.',portrait:'retrato-poltrona.webp',price:2},
+  officeTv:{name:'TV de 85 polegadas',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tv.webp',price:3},
+  officeRug:{name:'Tapete persa',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tapete.webp',price:2},
+  officeChair:{name:'Poltrona de couro',description:'Instalação no seu gabinete incluída.',portrait:'retrato-poltrona.webp',price:2},
 } as const;
 export type OfficeGood = keyof typeof officeGoods;
 export const officeFurniture = {
   officeChair:{sprite:'gabinete-poltrona.webp',width:32,height:30,anchor:.8},
-  officeRug:{sprite:'gabinete-tapete.webp',width:43,height:25,anchor:.5},
+  officeRug:{sprite:'gabinete-tapete.webp',width:48,height:16,anchor:.5},
   officeTv:{sprite:'gabinete-tv.webp',width:37,height:26,anchor:.83},
 } as const;
 export type OfficeFurniture = keyof typeof officeFurniture;

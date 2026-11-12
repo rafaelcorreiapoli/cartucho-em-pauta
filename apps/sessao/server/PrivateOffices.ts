@@ -24,8 +24,12 @@ export class PrivateOffices {
     }
   }
 
+  ownedBy(id:string) {
+    return [...this.offices.values()].find(office=>office.owner===id)?.layout;
+  }
+
   spawnFor(id:string) {
-    const layout = [...this.offices.values()].find(office=>office.owner===id)?.layout;
+    const layout = this.ownedBy(id);
     if (layout) return {...layout.spawn,direction:layout.inside===1 ? 2 : 0};
   }
 

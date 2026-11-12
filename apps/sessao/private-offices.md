@@ -15,7 +15,7 @@ onde o cômodo encosta no prédio.
 - **Segurança:** porta e armário têm níveis independentes de 1 a 5. Ferramentas
   têm nível de ataque e são consumidas no sucesso; a abertura dura 30 segundos.
   Um visitante preso por uma porta trancada pode sair pelo lado de dentro.
-- **Decoração:** TV, tapete, poltrona e retrato são instalados em pontos fixos.
+- **Decoração:** TV, tapete e poltrona vão direto para seus espaços no gabinete após a compra. O retrato é instalado manualmente.
   Os móveis usam sprites próprios no mapa, separados dos retratos do catálogo.
 - **Exposição:** dinheiro físico coletado fica exposto; outros itens podem ser
   mostrados individualmente. O jogo e a câmera exibem apenas os itens expostos

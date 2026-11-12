@@ -1,4 +1,4 @@
-import { officeActions, officeGoods, type OfficeDecor, type OfficeOption, type OfficeView } from './private-offices';
+import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { foods } from './food';
 import type { DialogueView, NpcId } from './npcs';
 import { stations } from './plenary';
@@ -78,7 +78,7 @@ export type GameplayView = {
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};
-  offices?:OfficeView[]; ownOffice?:string; officeOptions?:OfficeOption[];
+  offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   officeChannel?:{label:string; elapsed:number; duration:number};
   equipmentCooldowns?:Record<number,number>;

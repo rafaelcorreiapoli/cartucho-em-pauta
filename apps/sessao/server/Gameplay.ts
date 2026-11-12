@@ -1,5 +1,5 @@
 import { PrivateOffices } from './PrivateOffices';
-import { decorPoint, decorSlots, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeOption } from '../src/private-offices';
+import { decorPoint, decorSlots, isOfficeFurniture, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
@@ -384,11 +384,13 @@ export class Gameplay {
 
   private officeView(player:Player, now:number):Partial<GameplayView> {
     const offices = this.privateOffices.view(now,player);
-    const ownOffice = [...this.privateOffices.offices.values()].find(office=>office.owner===player.id)?.layout.id;
-    if (player.knockedOut || player.carrying) return {offices,ownOffice};
+    const ownOffice = this.privateOffices.ownedBy(player.id)?.id;
+    const officeFurnishings = ownOffice ? decorSlots.filter(isOfficeFurniture).filter(slot=>
+      this.installations.has(`office:${ownOffice}:${slot}`)) : [];
+    if (player.knockedOut || player.carrying) return {offices,ownOffice,officeFurnishings};
     const officeOptions:OfficeOption[] = [];
     const channel = this.privateOffices.channels.get(player.id);
-    if (channel) return {offices,ownOffice,officeOptions:[{kind:'office-cancel',label:'Cancelar'}],
+    if (channel) return {offices,ownOffice,officeFurnishings,officeOptions:[{kind:'office-cancel',label:'Cancelar'}],
       officeChannel:{label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
 
     const items = this.inventory(player.id).map(item=>item.data);
@@ -444,7 +446,7 @@ export class Gameplay {
         if (decoration) add('office-remove',`Retirar · ${objects[slot].name}`,decoration.id);
       }
     }
-    return {offices,ownOffice,officeOptions,officeStash,officeDecor};
+    return {offices,ownOffice,officeFurnishings,officeOptions,officeStash,officeDecor};
   }
 
   private officeStash(id:string) {
@@ -454,6 +456,18 @@ export class Gameplay {
   private toolLevel(item:WorldItem) {
     const definition = objects[item.kind];
     return 'attack' in definition ? definition.attack : 0;
+  }
+
+  private installOfficeDecor(player:Player, layout:OfficeLayout, decor:OfficeDecor, data:WorldItem, world:GameplayWorld) {
+    const key = `office:${layout.id}:${decor}`;
+    const prior = this.installations.get(key);
+    if (prior) this.items.set(prior.id,{data:{id:prior.id,kind:prior.kind},place:{holder:player.id}});
+    this.installations.set(key,{
+      ...decorPoint(layout,decor),id:data.id,kind:decor,privateOffice:layout.id,
+      owner:{id:player.id,name:player.nick},character:player.character,
+    });
+    this.event(world,player,'installed',data,undefined,{place:layout.id,replaced:!!prior});
+    return prior ? 'Decoração substituída.' : 'Decoração instalada.';
   }
 
   private officeAction(player:Player, action:GameplayAction, world:GameplayWorld) {
@@ -509,13 +523,8 @@ export class Gameplay {
       if (!decor) return 'Decoração incompatível.';
       const point = decorPoint(office.layout,decor);
       if (!own || !offices.near(player,office,point)) return 'Use o ponto de decoração do seu gabinete.';
-      const key = `office:${office.layout.id}:${decor}`;
-      const prior = this.installations.get(key);
       this.remove(item);
-      if (prior) this.items.set(prior.id,{data:{id:prior.id,kind:prior.kind},place:{holder:player.id}});
-      this.installations.set(key,{...point,id:item.data.id,kind:decor,privateOffice:office.layout.id,owner:{id:player.id,name:player.nick},character:player.character});
-      this.event(world,player,'installed',item.data,undefined,{place:office.layout.id,replaced:!!prior});
-      return prior ? 'Decoração substituída.' : 'Decoração instalada.';
+      return this.installOfficeDecor(player,office.layout,decor,item.data,world);
     }
     if (kind==='office-upgrade-door' || kind==='office-upgrade-cabinet') {
       const target = kind==='office-upgrade-door' ? 'door' : 'cabinet';
@@ -586,17 +595,26 @@ export class Gameplay {
 
   private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
+    let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
-      const furnishing = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !furnishing) return 'Produto indisponível.';
+      const officeGood = isOfficeGood(kind);
+      if (!gear && !isFood(kind) && !officeGood) return 'Produto indisponível.';
       if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
-      if (!this.available(id)) return 'Inventário cheio.';
+      const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
+      if (isOfficeFurniture(kind)) {
+        if (!layout) return 'Gabinete indisponível.';
+        if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
+      } else if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : furnishing ? officeGoods[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
-      const data = this.create(kind,{holder:id});
+      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
+      const data = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
-    }) ?? 'Compra guardada no inventário.';
+      if (layout && isOfficeFurniture(kind)) {
+        this.installOfficeDecor(player,layout,kind,data,world);
+        confirmation = 'Compra instalada no seu gabinete.';
+      }
+    }) ?? confirmation;
   }
 
   private changeGear(player:Player, itemId:number|undefined, equip:boolean, world:GameplayWorld) {

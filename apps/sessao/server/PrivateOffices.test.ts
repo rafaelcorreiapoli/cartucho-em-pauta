@@ -7,7 +7,7 @@ import { MAX_PLAYERS } from '../src/plenary';
 import { clearSegment, findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
 import { npcs } from '../src/npcs';
-import { terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
+import { INVENTORY_SLOTS, terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
 
 function atDoor(office:OfficeLayout,inside:boolean) {
   const {x,y} = officeDoorPoint(office);
@@ -27,14 +27,17 @@ function setup(count=2) {
     return game.act(player,{kind,place,item},world);
   }
   function tick(ms:number,exploring=true) { world.now += ms; game.tick(world,exploring); }
-  function buy(player:Player, target:string) {
+  function openShop(player:Player) {
     Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y-11});
     game.act(player,{kind:'talk',target:'vendor'},world);
     game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
-    expect(game.act(player,{kind:'shop-buy',target,token:game.view(player,world).dialogue?.token},world)).toBe('Compra guardada no inventário.');
+    return game.view(player,world).dialogue?.token;
+  }
+  function buy(player:Player, target:string) {
+    expect(game.act(player,{kind:'shop-buy',target,token:openShop(player)},world)).toBe('Compra guardada no inventário.');
     return game.view(player,world).inventory.at(-1)!.id;
   }
-  return {players,game,world,events,credit,act,tick,buy};
+  return {players,game,world,events,credit,act,tick,buy,openShop};
 }
 
 test('every seat has a unique reachable office, independent of office in Congress',()=>{
@@ -151,13 +154,41 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   expect(game.view(visitor,world).offices?.[0].door).toBe('locked');
 });
 
+test('shop purchases furnish the correct office slots even when the inventory is full',()=>{
+  const {players:[owner,visitor],game,world,events,buy,openShop} = setup();
+  const [home,other] = privateOffices;
+  for (let i=0;i<INVENTORY_SLOTS;i++) buy(owner,'lockpick');
+  let charged = 0;
+  world.spend = (_id,price)=>{ charged += price; return true; };
+  const products = ['officeTv','officeRug','officeChair'] as const;
+  for (const target of products) {
+    const purchase = {kind:'shop-buy',target,token:openShop(owner)} as const;
+    expect(game.act(owner,purchase,world)).toBe('Compra instalada no seu gabinete.');
+    expect(game.act(owner,purchase,world)).toBe('Abra o catálogo do vendedor.');
+    expect(game.act(owner,{...purchase,token:openShop(owner)},world)).toBe('Você já tem este móvel instalado.');
+  }
+  expect(charged).toBe(7);
+  expect(game.view(owner,world).inventory.map(item=>item.kind)).toEqual(Array(INVENTORY_SLOTS).fill('lockpick'));
+  expect(game.view(owner,world).officeFurnishings).toEqual([...products]);
+  expect(game.view(visitor,world).officeFurnishings).toEqual([]);
+  expect(events.filter(event=>event.type==='installed').map(({kind,place})=>[kind,place]))
+    .toEqual(products.map(kind=>[kind,home.id]));
+  Object.assign(visitor,other.spawn);
+  expect(game.view(visitor,world).decorations).toEqual([]);
+  for (const kind of products) {
+    const point = decorPoint(home,kind);
+    Object.assign(visitor,point);
+    expect(game.view(visitor,world).decorations.find(item=>item.kind===kind)).toMatchObject({...point,privateOffice:home.id});
+  }
+});
+
 test('decoration persists and a plenary call cancels breach without spending the tool',()=>{
-  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const {players:[owner,visitor],game,world,act,tick,buy,openShop,events} = setup();
   const [home] = privateOffices;
-  const tv = buy(owner,'officeTv');
+  game.act(owner,{kind:'shop-buy',target:'officeTv',token:openShop(owner)},world);
+  const tv = events.find(event=>event.type==='installed')!.item!;
   const tool = buy(visitor,'lockpick');
   Object.assign(owner,decorPoint(home,'officeTv'));
-  expect(act(owner,'office-install',home.id,tv)).toBe('Decoração instalada.');
   Object.assign(visitor,decorPoint(home,'officeTv'));
   expect(game.view(visitor,world).decorations.some(item=>item.id===tv)).toBe(true);
   expect(act(visitor,'office-remove',home.id,tv)).toContain('seu gabinete');

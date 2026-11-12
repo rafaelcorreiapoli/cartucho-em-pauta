@@ -1,4 +1,4 @@
-import { isOfficeGood, officeGoodKinds, officeGoods } from './private-offices';
+import { isOfficeFurniture, isOfficeGood, officeGoodKinds, officeGoods, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
 import { equipment, gearKinds, isGear } from './equipment';
@@ -52,7 +52,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   }
   dialog.addEventListener('keydown',onPageKey);
 
-  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[]) {
+  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[]) {
     const funds = node('p',money(wallet));
     funds.className = 'market-wallet';
     funds.prepend(glyph('wallet'));
@@ -73,12 +73,14 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       card.className = 'market-product';
       const art = itemPortrait(kind);
       art.className = 'market-art';
-      const hasItem = isGear(kind) && owned.some(ownedItem=>ownedItem.kind===kind);
-      const priceLabel = hasItem ? 'Adquirido' : money(price);
+      const furniture = isOfficeFurniture(kind);
+      const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(ownedItem=>ownedItem.kind===kind);
+      const noSpace = !furniture && full;
+      const priceLabel = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : money(price);
       const buy = button('',()=>send({kind:'shop-buy',target:kind,token}));
       buy.className = 'market-product-button';
-      buy.disabled = hasItem || wallet<price || full;
-      buy.setAttribute('aria-label',hasItem ? `${item.name} · Adquirido` : `Comprar ${item.name} · ${money(price)}`);
+      buy.disabled = hasItem || wallet<price || noSpace;
+      buy.setAttribute('aria-label',hasItem ? `${item.name} · ${priceLabel}` : `Comprar ${item.name} · ${money(price)}`);
       const caption = node('span');
       caption.className = 'market-product-caption';
       const name = node('strong',item.name);
@@ -92,7 +94,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       details.className = 'market-product-details';
       details.id = `market-description-${kind}`;
       if (food) details.append(node('small',`${food.category} · ${describeFood(food.effect)}`));
-      if (!hasItem && (full || wallet<price)) details.append(node('small',full ? 'Inventário cheio' : 'Saldo insuficiente'));
+      if (!hasItem && (noSpace || wallet<price)) details.append(node('small',noSpace ? 'Inventário cheio' : 'Saldo insuficiente'));
       buy.setAttribute('aria-describedby',details.id);
       card.append(buy,details);
       products.append(card);
@@ -111,7 +113,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     const goTo = (next:number) => {
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
-      renderCatalog(npc,token,wallet,inventory,equipped);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings);
     };
     const previous = button('‹',()=>goTo(page-1));
     const next = button('›',()=>goTo(page+1));
@@ -169,9 +171,10 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       }
       const wallet = view.politics?.wallet ?? 0;
       const equipped = view.gameplay?.equipped ?? [];
+      const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) page = 0;
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.options,wallet,inventory,equipped]);
+      const key = JSON.stringify([state.npc,state.token,state.options,wallet,inventory,equipped,furnishings]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -200,7 +203,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         choices.querySelector('button')?.focus();
         return;
       }
-      renderCatalog(state.npc,state.token,wallet,inventory,equipped);
+      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings);
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;
