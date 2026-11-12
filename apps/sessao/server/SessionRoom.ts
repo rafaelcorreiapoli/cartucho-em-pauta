@@ -1,15 +1,13 @@
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, type Client } from 'colyseus';
-import { HEIGHT, idle, move, NAMES, WIDTH, type Motion, type Player } from '../src/map';
-import { findRoute, followRoute } from './navigation';
+import { NAMES, type Player } from '../src/map';
+import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 export class SessionRoom extends Room {
   maxClients = 6;
   maxMessagesPerSecond = 100;
-  private players = new Map<string, Player>();
-  private movementInputs = new Map<string, { motion: Motion; received: number }>();
-
-  private routes = new Map<string,Motion[]>();
+  private players = new Map<string, ControlState>();
+  private movementQueue = new Map<string, MovementInput[]>();
 
   private voice = new Set<string>();
 
@@ -30,53 +28,48 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
-    this.onMessage('move', (client, data: unknown) => {
-      if (!data || typeof data !== 'object' || !('x' in data) || !('y' in data)) return;
-      const {x,y} = data;
-      if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return;
-      this.routes.delete(client.sessionId);
-      const clamp = (n: number) => Math.max(-1,Math.min(1,n));
-      this.movementInputs.set(client.sessionId, {motion:{x:clamp(x),y:clamp(y)}, received:Date.now()});
-    });
-    this.onMessage('destination', (client, data: unknown) => {
-      const player = this.players.get(client.sessionId);
-      if (!player || !data || typeof data !== 'object' || !('x' in data) || !('y' in data)) return;
-      const {x,y} = data;
-      if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return;
-      if (x<0 || y<0 || x>=WIDTH || y>=HEIGHT) return;
-      this.movementInputs.delete(client.sessionId);
-      this.routes.set(client.sessionId,findRoute(player,{x,y}));
+    this.onMessage('input', (client, data: unknown) => {
+      const input = readInput(data);
+      const state = this.players.get(client.sessionId);
+      const queue = this.movementQueue.get(client.sessionId);
+      if (!input || !state || !queue || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
+      if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
+      queue.push(input);
     });
     this.onMessage('character', (client, character: unknown) => {
-      const player = this.players.get(client.sessionId);
+      const player = this.players.get(client.sessionId)?.player;
       if (player && typeof character === 'number' && Number.isInteger(character) && character >= 0 && character < NAMES.length) {
         player.character = character;
       }
     });
     this.setSimulationInterval(() => {
-      const now = Date.now();
-      for (const player of this.players.values()) {
-        const input = this.movementInputs.get(player.id);
-        const route = this.routes.get(player.id);
-        if (route?.length) followRoute(player,route,.05);
-        else move(player,input && now-input.received<350 ? input.motion : idle,.05);
+      for (const [id,state] of this.players) {
+        const input = this.movementQueue.get(id)?.shift();
+        if (input) applyInput(state,input);
+        else state.player.moving = false;
       }
-      this.broadcast('players', [...this.players.values()]);
-    }, 50);
+      const players = [...this.players.values()].map(state => state.player);
+      this.broadcast('players',players);
+      for (const client of this.clients) {
+        const state = this.players.get(client.sessionId);
+        if (state) client.send('control',state);
+      }
+    },STEP_MS);
   }
 
   onJoin(client: Client) {
-    const occupied = new Set([...this.players.values()].map(player => player.character));
+    const occupied = new Set([...this.players.values()].map(({player}) => player.character));
     const character = NAMES.findIndex((_, index) => !occupied.has(index));
-    this.players.set(client.sessionId, {
+    const player: Player = {
       id:client.sessionId, character:Math.max(0,character), x:140+this.players.size*36, y:146, direction:0, moving:false,
-    });
+    };
+    this.players.set(client.sessionId,{player,route:[],ack:0});
+    this.movementQueue.set(client.sessionId,[]);
   }
 
   onLeave(client: Client) {
     this.leaveVoice(client.sessionId);
     this.players.delete(client.sessionId);
-    this.routes.delete(client.sessionId);
-    this.movementInputs.delete(client.sessionId);
+    this.movementQueue.delete(client.sessionId);
   }
 }

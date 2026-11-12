@@ -1,5 +1,6 @@
 import { Client, type Room } from '@colyseus/sdk';
 import { createGame } from './game';
+import type { ControlState } from './movement';
 import { NAMES, playerName, type Player } from './map';
 import { RoomVoice } from './voice';
 import './style.css';
@@ -114,8 +115,8 @@ async function connect(join: () => Promise<Room>) {
     lobby.hidden = true;
     session.hidden = false;
     status.textContent = `Sala ${joined.roomId}`;
-    game = createGame(map,joined.sessionId,motion => joined.send('move',motion),
-      point => joined.send('destination',point));
+    game = createGame(map,joined.sessionId,input => joined.send('input',input));
+    joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
     joined.onMessage('players',(players: Player[]) => {
       playersInRoom = players;
       game?.update(players);

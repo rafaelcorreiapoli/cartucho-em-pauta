@@ -1,5 +1,5 @@
 import { js as EasyStar } from 'easystarjs';
-import { canStand, HEIGHT, SPEED, WIDTH, type Motion, type Player } from '../src/map';
+import { canStand, HEIGHT, SPEED, WIDTH, type Motion, type Player } from './map';
 
 const cellSize = 4;
 const toWorld = (point:Motion):Motion => ({x:point.x*cellSize+2,y:point.y*cellSize+2});

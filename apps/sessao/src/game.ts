@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { drawMap } from './draw-map';
+import { PlayerHistory, PredictedMovement } from './network-movement';
+import { STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, playerName, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text };
@@ -8,9 +10,13 @@ const directions = new Map(Object.entries({
   arrowup:[0,-1], w:[0,-1], arrowdown:[0,1], s:[0,1],
 }));
 
-export function createGame(parent: HTMLElement, ownId: string, send: (motion: Motion) => void, goTo: (point:Motion) => void) {
+export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void) {
   let players: Player[] = [];
   let speaking = new Set<string>();
+  const local = new PredictedMovement(send);
+  const history = new PlayerHistory();
+  let destination: Motion | undefined;
+  let nextStep = -Infinity;
   let manual = false;
   const keys = new Set<string>();
   const listeners = new AbortController();
@@ -22,6 +28,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
     const key = event.key.toLowerCase();
     if (!directions.has(key)) return;
     event.preventDefault();
+    if (!keys.size && !manual) nextStep = -Infinity;
+    destination = undefined;
     keys.add(key);
   }, options);
   parent.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), options);
@@ -31,7 +39,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
   class Plenary extends Phaser.Scene {
     private views = new Map<string,View>();
     private marker!: Phaser.GameObjects.Ellipse;
-    private lastSent = -Infinity;
+
 
     preload() {
       this.load.spritesheet('players','assets/sprites-hd.png',{frameWidth:128,frameHeight:128});
@@ -52,22 +60,34 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
         parent.focus({preventScroll:true});
         keys.clear();
         manual = false;
-        goTo({x:pointer.worldX,y:pointer.worldY});
+        if (pointer.worldX>=0 && pointer.worldX<WIDTH && pointer.worldY>=0 && pointer.worldY<HEIGHT) {
+          destination = {x:pointer.worldX,y:pointer.worldY};
+          nextStep = -Infinity;
+        }
       });
     }
     update(time: number, delta: number) {
-      const own = players.find(player => player.id===ownId);
-      if (own && time-this.lastSent>=50) {
-        this.lastSent = time;
-        const motion = {x:0,y:0};
-        for (const key of keys) {
-          const [x,y] = directions.get(key)!;
-          motion.x += x;
-          motion.y += y;
+      if (local.state && time>=nextStep) {
+        nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
+        if (destination) {
+          local.input({destination});
+          destination = undefined;
+        } else if (keys.size || manual) {
+          const motion = {x:0,y:0};
+          for (const key of keys) {
+            const [x,y] = directions.get(key)!;
+            motion.x += x;
+            motion.y += y;
+          }
+          local.input({motion});
+        } else if (local.state.route.length) {
+          local.input({});
+        } else {
+          local.state.player.moving = false;
         }
-        if (keys.size || manual) send(motion);
         manual = keys.size>0;
       }
+      const now = performance.now();
 
       for (const [id,view] of this.views) {
         if (!players.some(player => player.id===id)) {
@@ -76,7 +96,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
           this.views.delete(id);
         }
       }
-      for (const player of players) {
+      for (const latest of players) {
+        const own = latest.id===ownId;
+        const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
         const {id,character,direction,moving} = player;
         let view = this.views.get(id);
         if (!view) {
@@ -89,7 +111,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
           this.views.set(id,view);
         }
         const {sprite,label} = view;
-        const blend = 1-Math.exp(-delta/25);
+        const blend = own ? 1-Math.exp(-delta/20) : 1;
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
@@ -111,7 +133,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (motion: Mo
     scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
   });
   return {
-    update(snapshot: Player[]) { players = snapshot; },
+    update(snapshot: Player[]) {
+      players = snapshot;
+      history.add(snapshot,performance.now());
+    },
+    reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
     setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();

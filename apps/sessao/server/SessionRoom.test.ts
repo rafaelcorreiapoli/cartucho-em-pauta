@@ -29,6 +29,9 @@ test('two clients share movement, collision and character changes in a room', as
       if (player) observed.push(player);
     });
     first.onMessage('players',() => {});
+    first.onMessage('control',() => {});
+    second.onMessage('control',() => {});
+    let seq = 0;
     const findFirst = () => seen.find(player => player.id===first.sessionId);
     const until = async (ready: () => boolean) => {
       for (let attempt=0;attempt<85;attempt++) {
@@ -41,16 +44,21 @@ test('two clients share movement, collision and character changes in a room', as
     const start = findFirst()!;
     first.send('character',2);
     for (let step=0;step<10;step++) {
-      first.send('move',{x:0,y:-1});
+      first.send('input',{seq:++seq,motion:{x:0,y:-1}});
       await Bun.sleep(50);
     }
-    first.send('move',{x:0,y:0});
+    first.send('input',{seq:++seq,motion:{x:0,y:0}});
     await until(() => findFirst()?.moving===false && findFirst()?.character===2);
     const end = findFirst()!;
     expect(end.y).toBeLessThan(start.y);
     expect(end.y).toBeGreaterThanOrEqual(132);
     expect(end.x).toBe(start.x);
-    first.send('destination',{x:240,y:70});
+    first.send('input',{seq:++seq,destination:{x:240,y:70}});
+    for (let step=0;step<55;step++) {
+      if (Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1) break;
+      first.send('input',{seq:++seq});
+      await Bun.sleep(50);
+    }
     await until(() => Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1);
     expect(observed.some(player => player.x>=223 && player.x<=257 && player.y<132 && player.y>114)).toBe(true);
     expect(observed.every(player => canStand(player.x,player.y))).toBe(true);
