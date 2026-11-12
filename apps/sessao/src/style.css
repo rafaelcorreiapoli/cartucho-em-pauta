@@ -234,10 +234,7 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   flex:none;
 }
 .hud-help-popover { position:fixed; z-index:20; padding:.55rem .7rem; width:max-content; max-width:min(290px,calc(100vw - 16px)); font-size:.8rem; line-height:1.45; pointer-events:none; }
-.electoral-header { display:flex; justify-content:space-between; align-items:center; padding:.15rem 0 .45rem; }
-.electoral-header .kicker { display:block; margin:0 0 .12rem; font-size:.6rem; }
-.electoral-header strong { font-size:1.15rem; }
-.electoral-metrics { display:grid; grid-template-columns:1fr 1fr; gap:.35rem; margin-bottom:.65rem; }
+.electoral-metrics { margin-bottom:.65rem; }
 .electoral-metrics div { background:#142124; border:1px solid #9e927a66; padding:.3rem .45rem; border-radius:4px; }
 .electoral-metrics span { display:flex; align-items:center; gap:.28rem; font-size:.66rem; color:#cbd8ca; }
 .electoral-metrics strong { display:block; margin-top:.12rem; font-size:.84rem; }

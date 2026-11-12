@@ -7,6 +7,10 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 
 export function createMatchHud(id:string) {
   const session = element('session');
+  const profile = element<HTMLDetailsElement>('profile-dock');
+  profile.querySelector('summary')!.onclick = event => {
+    if (event.target instanceof Element && event.target.closest('.profile-help')) event.preventDefault();
+  };
   const agendaSummary = element('agenda-dock').querySelector('summary')!;
   const notices = element('hud-notices');
   const compact = element<HTMLButtonElement>('compact-hud');
@@ -18,10 +22,6 @@ export function createMatchHud(id:string) {
     {target:'campaign',label:'Campanha · R$ 20 mil'},
     {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência'},
-    {target:'advertise',label:'Propaganda · R$ 20 mil'},
-    {target:'speech',label:'Discursar'},
-    {target:'interview',label:'Entrevista'},
-    {target:'object',label:'Contestar projeto'},
   ].map(action => {
     const control = element<HTMLButtonElement>(action.target);
     const button = document.createElement('button');
@@ -41,7 +41,7 @@ export function createMatchHud(id:string) {
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
-  element<HTMLDetailsElement>('profile-dock').open = false;
+  profile.open = false;
   element<HTMLDetailsElement>('agenda-dock').open = false;
   try { session.classList.toggle('compact-hud',localStorage.getItem('sessao-compact-hud')==='true'); } catch {}
   compact.setAttribute('aria-pressed',String(session.classList.contains('compact-hud')));
@@ -79,13 +79,15 @@ export function createMatchHud(id:string) {
   function actions(view:PlenaryView | undefined = previous) {
     const exploring = view?.phase==='negotiation';
     for (const {button,control} of quickActions) {
-      const electionAction = Boolean(control.closest('#election-dock'));
       button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
-        (electionAction && !view.election?.canCampaign) ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }
-    stations.hidden = !exploring || ![...stationActions,...quickActions.map(action => action.button)]
+    const hasNearbyAction = [...stationActions,...quickActions.map(action => action.button)]
       .some(button => !button.hidden && !button.disabled);
+    const electionActions = element('station-election-actions');
+    const hasElectionAction = !electionActions.hidden &&
+      !!electionActions.querySelector('button:not([hidden]):not(:disabled)');
+    stations.hidden = !exploring || (!hasNearbyAction && !hasElectionAction && element('interview-hint').hidden);
   }
 
   return {
@@ -93,7 +95,17 @@ export function createMatchHud(id:string) {
     render(view:PlenaryView) {
       const politics = view.politics;
       if (politics) {
-        const office = view.election?.personal?.office;
+        const personal = view.election?.personal;
+        const office = personal?.office;
+        const power = office ? offices[office].power : 'Você pode acompanhar a pesquisa como assessor.';
+        element('office-power').dataset.help = power;
+        element('mandate-power').textContent = power;
+        element('office-salary').textContent = personal ? money(personal.salary) : '—';
+        const result = view.election?.result;
+        const mandateResult = element('mandate-result');
+        mandateResult.hidden = !result?.previous || !office;
+        mandateResult.textContent = result?.previous && office
+          ? `Última eleição: ${offices[result.previous].name} → ${offices[office].name}. Salário recebido: ${money(result.salary)}.` : '';
         const label = element('hud-office');
         label.textContent = office ? offices[office].name : 'Assessor';
         label.dataset.office = office ?? 'advisor';

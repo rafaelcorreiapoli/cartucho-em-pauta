@@ -466,3 +466,29 @@
 }
 #legislative-dock[open] .project-chevron { transform: rotate(45deg); }
 #legislative-dock #impact { margin-top: .4rem; }
+
+.profile-office,
+.profile-salary {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.profile-summary .profile-help { width: 18px; height: 18px; }
+.profile-summary .profile-values > span { gap: .2rem; }
+.profile-mandate {
+  padding: .55rem;
+  border: 1px solid #a99c7169;
+  border-radius: 6px;
+  background: #182d25;
+}
+.profile-mandate h2 { margin: 0; font-size: .9rem; color: var(--party-gold); }
+.profile-mandate p { line-height: 1.35; }
+.profile-salary { padding-top: .3rem; border-top: 1px solid #a99c7144; }
+.profile-salary strong { margin-left: auto; color: var(--party-gold); white-space: nowrap; }
+
+@media (max-width: 380px) {
+  #profile-dock .profile-summary { gap: .3rem; padding-inline: .35rem; }
+  #profile-dock .profile-summary .portrait { --portrait-size: 24px; }
+  #profile-dock .profile-summary .profile-help { width: 15px; }
+  #profile-dock .profile-values { flex-wrap: wrap; row-gap: 0; }
+}

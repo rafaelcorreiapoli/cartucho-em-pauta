@@ -39,13 +39,15 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   function controls() {
     const election = view?.election;
     const personal = election?.personal;
-    if (!election || !personal) return;
+    el('station-election-actions').hidden = !election?.canCampaign || !personal;
+    el('interview-hint').hidden = true;
+    if (!election?.canCampaign || !personal) return;
     const at = (key:keyof typeof stations) => !!own && Math.hypot(own.x-stations[key].x,own.y-stations[key].y)<=STATION_RADIUS;
     el<HTMLButtonElement>('advertise').disabled = !at('press') || personal.advertised ||
       (view?.politics?.wallet ?? 0)<ELECTION_RULES.advertisementCost;
     el<HTMLButtonElement>('speech').disabled = !at('panel') || personal.spoke;
     el<HTMLButtonElement>('interview').disabled = !at('tv') || !election.canInterview || !hasVoice();
-    el('interview-hint').hidden = !at('tv') || hasVoice();
+    el('interview-hint').hidden = !at('tv') || !election.canInterview || hasVoice();
     el('object').hidden = personal.office!=='president';
     el<HTMLButtonElement>('object').disabled = !at('panel') || !election.canObject;
   }
@@ -64,16 +66,11 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       el('election-position').textContent = candidate ? `${rank+1}º · ${candidate.estimate}%${candidate.trend ? ` · ${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : ''}` : '';
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
       el('election-timer').textContent = view.phase==='finished' ? 'Eleições' : `Eleição em ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
-      el('office-display').textContent = personal ? offices[personal.office].name : 'Assessor';
-      el('office-display').dataset.office = personal?.office ?? 'advisor';
-      el('office-power').dataset.help = personal ? offices[personal.office].power : 'Você pode acompanhar a pesquisa como assessor.';
-      el('office-salary').textContent = personal ? money(personal.salary) : '—';
       el('election-wallet').textContent = personal ? money(personal.invested) : '—';
       el('election-result').hidden = !result;
       el('election-result-title').textContent = result ? `Resultado · Eleição ${result.cycle}` : 'Última eleição';
       el('election-result-detail').textContent = result ? [
         `Eleição ${result.cycle}: ${result.offices.map(person => `${person.name} (${offices[person.office].name})`).join(', ')}.`,
-        result.previous && personal ? `Seu cargo: ${offices[result.previous].name} → ${offices[personal.office].name}. Salário recebido: ${money(result.salary)}.` : '',
       ].join(' ') : '';
       if (result && result.cycle!==lastResult) {
         lastResult = result.cycle;
