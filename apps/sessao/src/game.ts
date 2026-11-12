@@ -311,7 +311,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const level = Math.max(0,1-distance/VISION_RADIUS);
         if (level) combatSound(cue,level,Phaser.Math.Clamp((x-ownPlayer.x)/85,-1,1));
       };
-      const healthBars:Motion[] = [];
       for (const latest of players) {
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
@@ -342,10 +341,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             symbol:this.add.text(0,0,'',{fontSize:'11px',color:'#ffe08a',resolution:3}).setOrigin(.5).setDepth(HEIGHT+30).setVisible(false),
             sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
-              fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:this.textResolution,
+              fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:1.4,resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
-            office:this.add.text(player.x,player.y+12,'',{
-              fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',stroke:'#152522',strokeThickness:1.5,
+            office:this.add.text(player.x,player.y+10,'',{
+              fontFamily:'system-ui',fontSize:'5px',fontStyle:'bold',stroke:'#152522',strokeThickness:1,
               resolution:this.textResolution,
             }).setOrigin(.5,0).setDepth(HEIGHT+30),
           };
@@ -405,9 +404,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.health.setVisible(latest.health!==undefined);
         if (latest.health!==undefined) {
           const health = Phaser.Math.Clamp(latest.health,0,1);
-          let barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
-          while (healthBars.some(bar=>Math.abs(bar.x-x)<19 && Math.abs(bar.y-barY)<9)) barY -= 9;
-          healthBars.push({x,y:barY});
+          const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
           view.health.setPosition(x,barY);
           view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? MAX_STAMINA)/MAX_STAMINA,0,1),1);
           view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
@@ -427,7 +424,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (exposed && !symbol) view.carried.setTexture(`item-${exposed.kind}`).setDisplaySize(13,13).setPosition(x,y-42);
         if (symbol) view.symbol.setText(symbol).setPosition(x,y-42);
         const title = titles.get(id);
-        office.setVisible(running || !!title).setPosition(x,labelY+10)
+        office.setVisible(running || !!title).setPosition(x,labelY+8)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving && !pose && !combatArt) {
