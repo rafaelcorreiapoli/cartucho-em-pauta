@@ -1,5 +1,4 @@
 import { equippedWeapon } from './equipment';
-import { weapons } from './weapons';
 import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
@@ -121,15 +120,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
-        const weapon = equippedWeapon(state.equipped);
+        if (equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
         for (const target of roster) {
           if (target.id===id) continue;
           if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
             actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
             if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
             actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
-          } else if (weapon && !target.knockedOut && canReachObject(player,target,{radius:weapons[weapon].reach,clearFloor:true})) {
-            actions.push({label:`Golpear ${target.nick}`,icon:'alert',action:{kind:'attack',target:target.id}});
           }
         }
       }

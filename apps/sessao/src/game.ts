@@ -1,4 +1,4 @@
-import { playComicImpact } from './comic-impact';
+import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { npcs } from './npcs';
 import { binocularBonus } from './equipment';
@@ -15,7 +15,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -288,12 +288,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.sprite.destroy();
           view.label.destroy();
           view.office.destroy();
+          view.health.destroy(true);
           view.carried.destroy();
           view.symbol.destroy();
           view.weapon.destroy();
           this.views.delete(id);
         }
       }
+      const healthBars:Motion[] = [];
       for (const latest of players) {
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
@@ -304,13 +306,18 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
+          view?.health.setVisible(false);
           view?.carried.setVisible(false);
           view?.symbol.setVisible(false);
           view?.weapon.setVisible(false);
           continue;
         }
         if (!view) {
+          const track = this.add.rectangle(0,0,19,4,0x101820,.95).setStrokeStyle(.5,0x293641);
+          const healthFill = this.add.rectangle(-8.5,0,17,2,0x69d878).setOrigin(0,.5);
           view = {
+            health:this.add.container(0,0,[track,healthFill]).setDepth(HEIGHT+25).setVisible(false),
+            healthFill,
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             carried:this.add.image(0,0,'item-briefcase').setDepth(HEIGHT+30).setVisible(false),
@@ -347,13 +354,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.nextStep = time+290;
         } else if (!moving) view.nextStep = 0;
         if (latest.hit!==undefined && latest.hit!==view.lastHit) {
-          const hit = latest.hit;
-          const targetView = view;
-          this.time.delayedCall(125,()=>{
-            if (!running || !targetView.sprite.active || !targetView.sprite.visible) return;
-            targetView.flashUntil = this.time.now+115;
-            playComicImpact(this,targetView.sprite.x,targetView.sprite.y-33,hit,this.textResolution);
-          });
+          view.flashUntil = time+115;
+          playBloodImpact(this,x,y-15);
+          playComicImpact(this,x,y-54,latest.hit,this.textResolution);
         }
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
@@ -364,6 +367,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         sprite.setRotation(latest.carried ? Math.PI/2 : latest.knockedOut ? -Math.PI/2 : pose?.lean ?? 0)
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
         sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0)).setFlipX(facing===3);
+        view.health.setVisible(latest.health!==undefined);
+        if (latest.health!==undefined) {
+          const health = Phaser.Math.Clamp(latest.health,0,1);
+          let barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
+          while (healthBars.some(bar=>Math.abs(bar.x-x)<19 && Math.abs(bar.y-barY)<5)) barY -= 5;
+          healthBars.push({x,y:barY});
+          view.health.setPosition(x,barY);
+          view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
+        }
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)

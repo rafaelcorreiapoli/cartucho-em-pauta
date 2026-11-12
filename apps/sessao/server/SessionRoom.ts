@@ -208,9 +208,9 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id);
-          client.send('players',plenary ? players.filter(inPlenary) :
-            players.filter(player=>player===state.player || worldVisible(state.player,player,vision)));
-
+          const visible = plenary ? players.filter(inPlenary) :
+            players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
+          client.send('players',visible.map(player=>({...player,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }

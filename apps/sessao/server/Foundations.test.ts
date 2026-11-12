@@ -7,6 +7,7 @@ import { canStand, movementSpeed, worldVisible, VISION_RADIUS, type Player } fro
 import { infirmary } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs } from '../src/npcs';
+import { weapons } from '../src/weapons';
 import { applyInput } from '../src/movement';
 
 function player(id:string, x:number, y:number, character=0):Player {
@@ -14,7 +15,7 @@ function player(id:string, x:number, y:number, character=0):Player {
 }
 
 function setup() {
-  const alice = player('Alice',631,197);
+  const alice = {...player('Alice',631,197),direction:1};
   const bob = player('Bob',640,197,1);
   const game = new Gameplay();
   const events:GameplayEvent[] = [];
@@ -101,15 +102,19 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   balance.set(alice.id,12);
   expect(game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world)).toBe('Compra guardada no inventário.');
   const weapon = game.view(alice,world).inventory[0];
-  expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Equipe um porrete.');
+  expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Equipe uma arma.');
   expect(game.act(bob,{kind:'equip',item:weapon.id},world)).toBe('O equipamento não está com você.');
   expect(game.act(alice,{kind:'equip',item:weapon.id},world)).toBe('Equipado.');
-  expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Acertou · 26 de dano');
-  expect(game.view(bob,world).vitality?.hp).toBe(74);
-  expect(alice.swing).toEqual({weapon:'baton',startedAt:world.now,angle:0});
-  world.now += 320;
+  expect(game.act(alice,{kind:'attack'},world)).toBeUndefined();
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
+  expect(game.view(alice,world).vitality?.hp).toBe(120);
+  expect((alice as Player).swing).toEqual({weapon:'baton',startedAt:world.now,angle:0});
+  world.now += weapons.baton.impactMs;
   game.tick(world,true);
-  expect(alice.swing).toBeUndefined();
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  world.now += weapons.baton.swingMs;
+  game.tick(world,true);
+  expect((alice as Player).swing).toBeUndefined();
   expect(events.filter(event=>event.type==='hit')).toHaveLength(1);
 });
 
@@ -117,28 +122,35 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   const alice = player('Alice',140,146);
   const bob = player('Bob',152,146,1);
   const combat = new Combat();
-  expect(combat.attack(alice,bob,true,1).damage).toBe(17);
-  expect(combat.view(bob,1).hp).toBe(83);
-  expect(combat.attack(alice,bob,false,2).error).toBe('O porrete está em recarga.');
-  for (const now of [1300,2600,3900,5200]) combat.attack(alice,bob,false,now);
-  expect(combat.view(bob,5200).hp).toBe(0);
+  alice.direction = 1;
+  const strike = (now:number,armor=false) => {
+    expect(combat.attack(alice,now)).toBeUndefined();
+    combat.tick([alice,bob],now+weapons.baton.impactMs,true,{armored:()=>armor});
+  };
+  strike(1,true);
+  expect(combat.view(bob,141).hp).toBe(83);
+  expect(combat.attack(alice,142)).toBe('A arma está em recarga.');
+  for (const now of [1300,2600,3900,5200]) strike(now);
+  expect(combat.view(bob,5340).hp).toBe(0);
   expect(bob.knockedOut).toBe(true);
   const movement = {player:bob,route:[{x:164,y:146}],ack:0};
   applyInput(movement,{seq:1,motion:{x:1,y:0}});
   expect(movement.route).toEqual([]);
   expect(bob.x).toBe(152);
-  expect(combat.aid(alice,bob,5250)).toBe(true);
-  expect(combat.view(bob,5250).hp).toBe(45);
-  expect(combat.attack(alice,bob,false,6500).error).toBe('Alvo indisponível.');
-  combat.attack(alice,bob,false,9500);
-  combat.attack(alice,bob,false,10800);
+  expect(combat.aid(alice,bob,5400)).toBe(true);
+  expect(combat.view(bob,5400).hp).toBe(45);
+  strike(6500);
+  expect(combat.view(bob,6640).hp).toBe(45);
+  strike(9500);
+  strike(10800);
   expect(bob.knockedOut).toBe(true);
   combat.tick([alice,bob],11000,false);
   expect(bob.knockedOut).toBeUndefined();
   expect(combat.view(bob,11000).hp).toBe(45);
   Object.assign(alice,{x:620,y:206});
   Object.assign(bob,{x:642,y:206});
-  expect(combat.attack(alice,bob,false,16_000).error).toBe('Aproxime-se do alvo.');
+  strike(16_000);
+  expect(combat.view(bob,16_140).hp).toBe(45);
 });
 
 
@@ -148,7 +160,9 @@ function knockOut(match:ReturnType<typeof setup>) {
   game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
   for (const now of [100,1400,2700,4000]) {
     world.now = now;
-    game.act(alice,{kind:'attack',target:bob.id},world);
+    game.act(alice,{kind:'attack'},world);
+    world.now += weapons.baton.impactMs;
+    game.tick(world,true);
   }
 }
 
@@ -196,7 +210,7 @@ test('transport ends on disconnect, natural recovery and plenary transition', ()
       expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
       game.leave(alice,world,false);
     } else {
-      if (reason==='recovery') world.now = 12_000;
+      if (reason==='recovery') world.now = 12_140;
       game.tick(world,reason==='recovery');
       expect(bob.knockedOut).toBeUndefined();
       expect(events.filter(event=>event.type==='character-recovered')).toHaveLength(1);
@@ -283,6 +297,34 @@ test('doors, furniture and actors without a player session use the shared world 
   expect(worldVisible({x:500,y:140},{x:587,y:140},VISION_RADIUS+2)).toBe(true);
   const npc = {id:'npc:treino',character:0,x:151,y:146};
   const combat = new Combat();
-  expect(combat.attack(player('Treino',140,146),npc,false,100).damage).toBe(26);
-  expect(combat.view(npc,100).hp).toBe(94);
+  const attacker = {...player('Treino',140,146),direction:1};
+  combat.attack(attacker,100);
+  combat.tick([attacker,npc],100+weapons.baton.impactMs,true);
+  expect(combat.view(npc,240).hp).toBe(94);
+});
+
+
+test('a swing can miss or hit the closest player in its arc at the impact frame', () => {
+  const attacker = {...player('Alice',140,146),direction:1};
+  const behind = player('Atrás',129,146);
+  const ahead = player('À frente',161,146);
+  const closer = player('Mais perto',150,146);
+  const combat = new Combat();
+  const hits:string[] = [];
+  const callbacks = {hit:(_attacker:Player,target:Player)=>hits.push(target.id)};
+
+  combat.attack(attacker,100);
+  expect((attacker as Player).swing?.angle).toBe(0);
+  combat.tick([attacker,behind],240,true,callbacks);
+  expect(hits).toEqual([]);
+  expect(behind.hit).toBeUndefined();
+
+  combat.attack(attacker,1400);
+  combat.tick([attacker,behind,ahead],1450,true,callbacks);
+  expect(hits).toEqual([]);
+  combat.tick([attacker,behind,ahead,closer],1540,true,callbacks);
+  combat.tick([attacker,behind,ahead,closer],1590,true,callbacks);
+  expect(hits).toEqual([closer.id]);
+  expect(combat.view(ahead,1590).hp).toBe(120);
+  expect(combat.view(closer,1590).hp).toBe(94);
 });

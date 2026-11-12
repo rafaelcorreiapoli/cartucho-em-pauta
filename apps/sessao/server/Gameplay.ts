@@ -75,6 +75,11 @@ export class Gameplay {
     return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }
 
+  healthFraction(player:Player, now:number) {
+    const {hp,max} = this.combat.view(player,now);
+    return hp/max;
+  }
+
   vision(id:string) { return VISION_RADIUS+(this.wearing(id,'binoculars') ? binocularBonus : 0); }
 
   private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
@@ -157,9 +162,22 @@ export class Gameplay {
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
     this.transport.tick(world,exploring);
-    this.combat.tick(world.players,world.now,exploring,player=>{
-      this.transport.detach(player,world);
-      publishGameplay(world,player,'character-recovered');
+    this.combat.tick(world.players,world.now,exploring,{
+      recovered:player=>{
+        this.transport.detach(player,world);
+        publishGameplay(world,player,'character-recovered');
+      },
+      canHit:player=>world.present?.(player.id)!==false,
+      armored:player=>!!this.wearing(player.id,'vest'),
+      hit:(attacker,target,damage)=>{
+        publishGameplay(world,attacker,'hit',{target:target.id,damage});
+        if (!target.knockedOut) return;
+        this.transport.detach(target,world);
+        publishGameplay(world,attacker,'character-knocked-out',{target:target.id});
+        this.dialogues.close(target.id);
+        this.stopModulator(target.id,world.now);
+        this.phone.leave(target,world);
+      },
     });
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
@@ -174,6 +192,7 @@ export class Gameplay {
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.album.leave(player.id,permanent);
+    this.combat.interrupt(player);
     this.phone.leave(player,world);
     this.transport.detach(player,world);
     this.dialogues.close(player.id);
@@ -397,30 +416,18 @@ export class Gameplay {
       if (!before && this.modulator.view(item.id,world.now).active) this.event(world,player,'used',item);
       return message;
     }
-    if (action.kind==='attack' || action.kind==='aid') {
+    if (action.kind==='aid') {
       const target = world.players.find(person=>person.id===action.target);
-      if (action.kind==='aid') {
-        if (!this.combat.aid(player,target,world.now)) return 'Aproxime-se de um jogador nocauteado.';
-        if (target) {
-          this.transport.detach(target,world);
-          publishGameplay(world,target,'character-recovered');
-        }
-        this.event(world,player,'aided',undefined,target?.id);
-        return 'Jogador socorrido.';
-      }
+      if (!target || !this.combat.aid(player,target,world.now)) return 'Aproxime-se de um jogador nocauteado.';
+      this.transport.detach(target,world);
+      publishGameplay(world,target,'character-recovered');
+      this.event(world,player,'aided',undefined,target.id);
+      return 'Jogador socorrido.';
+    }
+    if (action.kind==='attack') {
       const weapon = equippedWeapon(this.equipped(id).map(item=>item.data));
-      if (!weapon) return 'Equipe um porrete.';
-      const result = this.combat.attack(player,target,!!this.wearing(target?.id ?? '', 'vest'),world.now,weapon);
-      if (result.error) return result.error;
-      publishGameplay(world,player,'hit',{target:target?.id,damage:result.damage});
-      if (target?.knockedOut) {
-        this.transport.detach(target,world);
-        publishGameplay(world,player,'character-knocked-out',{target:target.id});
-        this.dialogues.close(target.id);
-        this.stopModulator(target.id,world.now);
-        this.phone.leave(target,world);
-      }
-      return `Acertou · ${result.damage} de dano`;
+      if (!weapon) return 'Equipe uma arma.';
+      return this.combat.attack(player,world.now,weapon);
     }
     if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
     if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {

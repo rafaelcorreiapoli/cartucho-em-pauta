@@ -23,3 +23,20 @@ export function playComicImpact(scene:Phaser.Scene, x:number, y:number, hit:numb
 }
 
 const HEIGHT_ABOVE_PLAYERS = 1200;
+
+export function playBloodImpact(scene:Phaser.Scene,x:number,y:number) {
+  const texture = 'blood-impact-dot';
+  if (!scene.textures.exists(texture)) {
+    const dot = scene.add.graphics().fillStyle(0xffffff).fillCircle(2,2,2);
+    dot.generateTexture(texture,4,4);
+    dot.destroy();
+  }
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const drops = scene.add.particles(x,y,texture,{
+    emitting:false,lifespan:{min:220,max:410},speedX:{min:-28,max:28},
+    speedY:{min:-56,max:-16},gravityY:160,scale:{start:.62,end:.14},
+    alpha:{start:.95,end:0},tint:[0xa72c25,0xc13c2c,0x791e20],
+  }).setDepth(HEIGHT_ABOVE_PLAYERS-1);
+  drops.explode(reduced ? 3 : 8);
+  scene.time.delayedCall(450,()=>drops.destroy());
+}

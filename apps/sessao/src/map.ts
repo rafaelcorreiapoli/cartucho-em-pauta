@@ -65,7 +65,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 

@@ -117,12 +117,12 @@ test('clients share movement and voice, then receive private roles and payments'
     first.send('gameplay',{kind:'install',place:'constructor',item:1});
     first.send('gameplay',{kind:'photo'});
     await until(() => feedback.includes('Aproxime-se do local.') && firstPhotos?.album.length===1);
-    const strike = {kind:'attack',target:second.sessionId,token:1};
+    const strike = {kind:'attack',token:1};
     first.send('gameplay',strike);
     first.send('gameplay',strike);
     first.send('gameplay',{kind:'treat',token:2});
     await until(() => feedback.includes('Atendimento indisponível.'));
-    expect(feedback.filter(message=>message==='Equipe um porrete.')).toHaveLength(1);
+    expect(feedback.filter(message=>message==='Equipe uma arma.')).toHaveLength(1);
     second.send('gameplay',{kind:'photo'});
     await until(() => secondPhotos?.album.length===1);
     expect(firstPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([first.sessionId]);
@@ -213,6 +213,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     rooms.push(passenger);
     const snapshots = new Map<string,Player>();
     const views = new Map<string,PlenaryView>();
+    let visible:Player[] = [];
+    carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
@@ -221,7 +223,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
     const positions = Reflect.get(room,'players') as Map<string,{player:Player}>;
-    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197});
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     const match = Reflect.get(room,'match');
     carrier.send('start-match');
@@ -236,7 +238,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('gameplay',{kind:'equip',item:gameplay()?.inventory.find(item=>item.kind==='baton')?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
     for (let token=1;token<=4;token++) {
-      carrier.send('gameplay',{kind:'attack',target:passenger.sessionId,token});
+      carrier.send('gameplay',{kind:'attack',token});
+      if (token===1) await wait(()=>visible.some(player=>player.id===passenger.sessionId && player.health===.74 && player.hit!==undefined));
       if (token<4) await Bun.sleep(1300);
     }
     await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);

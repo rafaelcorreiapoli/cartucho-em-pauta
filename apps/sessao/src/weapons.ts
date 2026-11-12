@@ -5,6 +5,7 @@ export const weapons = {
     grip:.16,
     arc:1.9,
     swingMs:320,
+    impactMs:140,
     reach:24,
     cooldown:1_250,
     damage:12,
