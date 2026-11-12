@@ -65,6 +65,7 @@ import { lobbyScreen, type LobbyStep } from "./lobby";
 import { campaignHeroPosition, campaignMap } from "./campaign";
 import { campaignEvent } from "./campaign-event";
 import { loadGameAssets } from "./loading";
+import { readAutosave, writeAutosave } from "./autosave";
 import "./style.css";
 import "./combat-hud.css";
 import "./shop.css";
@@ -159,6 +160,21 @@ let message = "Escolha um personagem para começar.";
 let busy = false;
 let impact: string[] = [];
 let acting: string | undefined;
+let mapSelection: number | undefined;
+let pickingEventCard = false;
+let pendingEndTurn = false;
+
+function checkpoint() {
+  writeAutosave({
+    run,
+    lobby: lobbyStep ? { step: lobbyStep, faction: selectedFaction, selectedHero, previewHero } : undefined,
+    mapSelection: choosingStage ? mapSelection : undefined,
+    eventView: view.event.hidden ? undefined : { pickingCard: pickingEventCard },
+    selectedCard,
+    pendingEndTurn,
+    message,
+  });
+}
 
 function meter(moral: number, max: number) {
   return `<div class="health-line">
@@ -298,6 +314,7 @@ window.addEventListener("resize", fitCardTitles);
 void document.fonts.ready.then(fitCardTitles);
 
 function render(pendingDraw = 0) {
+  checkpoint();
   clearHandPreview();
   const encounter = encounters[run.stage];
   const activeHero = heroes[run.hero];
@@ -390,9 +407,9 @@ function render(pendingDraw = 0) {
     : choosingRelic
       ? `
     <div class="result-heading"><small>Chefe derrotado</small><h2>${run.relicRewards.length ? "Escolha uma relíquia" : "Coleção completa"}</h2></div>
-    <div class="shop-items relic-rewards">${run.relicRewards.map((id) => {
+    <div class="relic-rewards">${run.relicRewards.map((id) => {
       const item = relics[id];
-      return `<button class="secondary shop-item" data-action="reward-relic" data-value="${id}">
+      return `<button class="relic-choice" data-action="reward-relic" data-value="${id}">
         <img class="item-art" src="${asset(item.image)}" alt=""><strong>${item.name}</strong><small>${item.description}</small>
       </button>`;
     }).join("")}</div>
@@ -586,21 +603,7 @@ async function useCard(index: number, target?: string) {
   const drawn = active.hand.length - previousHand + 1;
   selectedCard = undefined;
   busy = true;
-  const dismiss = await presentCard(source, view.arena, view.fx);
-  if (run !== active) return;
-
-  if (damage.length) {
-    hero.play("attack");
-    const defender = !card.all && damage.length === 1 ? rivalStage(damage[0].id) : null;
-    if (defender) lungeAt(view.heroStage.querySelector(".hero-sprite")!, defender, ATTACK_WINDUP_MS);
-    gameAudio.play("attack");
-    await wait(ATTACK_WINDUP_MS);
-    if (run !== active) return;
-  }
-  if (playedId === "entrarOGrosso" || playedId === "entrarOGrosso+") gameAudio.playHeroVoice("lula", "entrar-o-grosso");
-  if (card.exhaust) gameAudio.play("exhaust");
-  const cardExit = dismiss(card.exhaust);
-  impact = damage.map(({ id }) => id);
+  pendingEndTurn = Boolean(card.endTurn && active.phase === "player");
   message = `${card.name}. ${[
     damage.length
       ? `${damage.reduce((sum, hit) => sum + hit.damage, 0)} de dano à Moral`
@@ -622,6 +625,22 @@ async function useCard(index: number, target?: string) {
   ]
     .filter(Boolean)
     .join(" · ")}.`;
+  checkpoint();
+  const dismiss = await presentCard(source, view.arena, view.fx);
+  if (run !== active) return;
+
+  if (damage.length) {
+    hero.play("attack");
+    const defender = !card.all && damage.length === 1 ? rivalStage(damage[0].id) : null;
+    if (defender) lungeAt(view.heroStage.querySelector(".hero-sprite")!, defender, ATTACK_WINDUP_MS);
+    gameAudio.play("attack");
+    await wait(ATTACK_WINDUP_MS);
+    if (run !== active) return;
+  }
+  if (playedId === "entrarOGrosso" || playedId === "entrarOGrosso+") gameAudio.playHeroVoice("lula", "entrar-o-grosso");
+  if (card.exhaust) gameAudio.play("exhaust");
+  const cardExit = dismiss(card.exhaust);
+  impact = damage.map(({ id }) => id);
   render(drawn);
   showPlayerGains(before);
   if (card.election) statusBurst(view.fx, view.heroStage, [{ kind: "gold", text: "Ano de Eleição" }]);
@@ -647,12 +666,13 @@ async function useCard(index: number, target?: string) {
     gameAudio.stopHeroVoice();
     gameAudio.play("eventSuccess");
   }
-  if (card.endTurn && active.phase === "player") await endPlayerTurn();
+  if (pendingEndTurn) await endPlayerTurn();
   else showDraw(drawn);
 }
 
 async function endPlayerTurn() {
   if (busy || !endTurn(run)) return;
+  pendingEndTurn = false;
   gameAudio.play("click");
   const active = run;
   selectedCard = undefined;
@@ -666,10 +686,14 @@ async function endPlayerTurn() {
   }
   message = "Turno dos rivais.";
   render();
+  await resolveRivalTurn(active);
+}
+
+async function resolveRivalTurn(active: typeof run) {
   await wait(250);
   if (run !== active) return;
   for (const rival of active.rivals) {
-    if (!rival.moral) continue;
+    if (!rival.moral || rival.step >= active.turn) continue;
     let recoverAttack: ReturnType<typeof lungeAt>;
     if (rivalIntent(active, rival, true).kind === "attack") {
       acting = rival.id;
@@ -728,17 +752,18 @@ async function endPlayerTurn() {
   acting = undefined;
   const before = { ...playerCombatStats(active), energy: TURN_ENERGY };
   const turnStart = finishRivals(active);
+  if (active.phase === "player")
+    message = active.lockedCardType ? `${active.lockedCardType === "offensive" ? "Ataques bloqueados" : "Defesas bloqueadas"} neste turno.` : active.firstCardLocked ? "A primeira carta está bloqueada neste turno." : `Turno ${active.turn}. Escolha seus personagens.`;
+  if (turnStart?.moralCost) message = `Cloroquina · −${turnStart.moralCost} de Moral.`;
+  if (turnStart?.damage.length) message = "Patriota do Caminhão · O caminhão chegou.";
+  checkpoint();
   if (turnStart?.moralCost) hero.play(!active.moral ? "death" : "hit");
   if (turnStart?.debtPaid) {
     await showDebtSettlement(turnStart.debtPaid, turnStart.debtDamage, active.moral);
     if (run !== active) return;
   }
-  if (active.phase === "player")
-    message = active.lockedCardType ? `${active.lockedCardType === "offensive" ? "Ataques bloqueados" : "Defesas bloqueadas"} neste turno.` : active.firstCardLocked ? "A primeira carta está bloqueada neste turno." : `Turno ${active.turn}. Escolha seus personagens.`;
-  if (turnStart?.moralCost) message = `Cloroquina · −${turnStart.moralCost} de Moral.`;
   if (turnStart?.damage.length) {
     impact = turnStart.damage.map(({ id }) => id);
-    message = "Patriota do Caminhão · O caminhão chegou.";
     render();
     for (const hit of turnStart.damage) {
       const stage = view.rivals.querySelector<HTMLElement>(`[data-rival="${hit.id}"] .rival-stage`);
@@ -801,6 +826,7 @@ function showLobby(step: LobbyStep, focus = true, heroId?: HeroId) {
   }
   fitCardTitles();
   if (focus) view.lobby.querySelector("h1")?.focus({ preventScroll: true });
+  checkpoint();
 }
 
 function startSession(heroId: HeroId) {
@@ -814,6 +840,7 @@ function startSession(heroId: HeroId) {
     run.relics = loadout.getAll("relic") as RelicId[];
   }
   selectedCard = undefined;
+  pendingEndTurn = false;
   busy = false;
   impact = [];
   acting = undefined;
@@ -831,6 +858,7 @@ function showCampaign(selection?: number, previousPaper?: DOMRect) {
   if (selection === undefined) window.scrollTo(0, 0);
   if (run.conquered.length) gameAudio.stopHeroVoice();
   const selected = selection ?? availableDestinations(run)[0] ?? 0;
+  mapSelection = selected;
   choosingStage = true;
   view.event.hidden = true;
   view.shop.hidden = true;
@@ -846,6 +874,7 @@ function showCampaign(selection?: number, previousPaper?: DOMRect) {
   }
   renderResources();
   view.campaign.querySelector("h1")?.focus({ preventScroll: true });
+  checkpoint();
 }
 
 function animateCampaignOpening(previous: DOMRect) {
@@ -887,8 +916,6 @@ function enterStage() {
   choosingStage = false;
   view.campaign.hidden = true;
   if (run.phase === "event") {
-    view.event.hidden = false;
-    view.event.style.setProperty("--arena-image", `url('${asset(encounters[run.stage].arena)}')`);
     showEvent();
     return;
   }
@@ -901,6 +928,10 @@ function enterStage() {
 }
 
 function showEvent(pickCard = false) {
+  view.event.hidden = false;
+  view.event.style.setProperty("--arena-image", `url('${asset(encounters[run.stage].arena)}')`);
+  pickingEventCard = pickCard;
+  checkpoint();
   const previousHeight = run.eventResult
     ? view.event.querySelector(".event-panel")?.getBoundingClientRect().height
     : undefined;
@@ -920,6 +951,7 @@ function showShop(purchased?: string) {
   choosingStage = false;
   view.campaign.hidden = true;
   view.shop.hidden = false;
+  checkpoint();
   if (!purchased) window.scrollTo(0, 0);
   renderResources();
   view.shop.innerHTML = `
@@ -1058,6 +1090,8 @@ app.addEventListener("click", (event) => {
   } else if (action === "difficulty" && lobbyStep === "hero" && !previewHero &&
     (value === "easy" || value === "normal" || value === "hard")) {
     selectedDifficulty = value;
+    run.difficulty = value;
+    checkpoint();
     gameAudio.play("click");
     for (const button of view.lobby.querySelectorAll<HTMLButtonElement>('[data-action="difficulty"]')) {
       button.setAttribute("aria-pressed", String(button.dataset.value === value));
@@ -1069,6 +1103,7 @@ app.addEventListener("click", (event) => {
       gameAudio.playHeroVoice(value, "selection");
     } else {
       selectedHero = value;
+      checkpoint();
       gameAudio.play("click");
       for (const choice of view.lobby.querySelectorAll<HTMLButtonElement>('[data-action="select-hero"]')) {
         choice.setAttribute("aria-pressed", String(choice.dataset.value === value));
@@ -1087,7 +1122,12 @@ app.addEventListener("click", (event) => {
     gameAudio.stopHeroVoice();
     view.settings.close();
     view.fx.replaceChildren();
-    run = newRun();
+    run = newRun(undefined, "lula", selectedDifficulty);
+    selectedCard = undefined;
+    pendingEndTurn = false;
+    busy = false;
+    impact = [];
+    acting = undefined;
     debugLoadouts = {};
     showLobby("faction");
   } else if (action === "preview-route" && choosingStage && run.routes[Number(value)]) {
@@ -1223,4 +1263,47 @@ document.addEventListener("keydown", () => gameAudio.unlock(), {
 });
 refreshAudioControls();
 installItemTooltip(app);
-showLobby("faction", false);
+restoreSession();
+
+function restoreSession() {
+  const saved = readAutosave();
+  if (!saved) {
+    showLobby("faction", false);
+    return;
+  }
+
+  run = saved.run;
+  selectedDifficulty = run.difficulty;
+  message = saved.message;
+  if (saved.lobby) {
+    selectedFaction = saved.lobby.faction;
+    selectedHero = saved.lobby.selectedHero;
+    showLobby(saved.lobby.step, false, saved.lobby.previewHero);
+    return;
+  }
+
+  lobbyStep = undefined;
+  hero.select(run.hero);
+  view.lobby.hidden = true;
+  view.reset.hidden = false;
+  view.resources.hidden = false;
+  if (run.phase === "map") {
+    const selections = run.routeNumber === null ? run.routes.map((_, index) => index) : availableDestinations(run);
+    showCampaign(selections.includes(saved.mapSelection ?? -1) ? saved.mapSelection : (selections[0] ?? 0));
+  } else if (run.phase === "shop") {
+    showShop();
+  } else if (run.phase === "event" || (run.phase === "lost" && saved.eventView && run.eventResult)) {
+    showEvent(Boolean(saved.eventView?.pickingCard && canResolveSpecialEvent(run)));
+  } else {
+    view.game.hidden = false;
+    pendingEndTurn = saved.pendingEndTurn && run.phase === "player";
+    if (run.phase === "player" && saved.selectedCard !== undefined && canPlayCard(run, saved.selectedCard)) {
+      selectedCard = saved.selectedCard;
+    }
+    busy = run.phase === "rivals";
+    if (run.phase === "lost") hero.play("death");
+    render();
+    if (busy) void resolveRivalTurn(run);
+    else if (pendingEndTurn) void endPlayerTurn();
+  }
+}

@@ -886,23 +886,71 @@ button:is(.resource-health, .resource-money, .draw-pile)[data-hud-help] {
   to { box-shadow: 0 0 20px #ffc76cc0; }
 }
 
+.relic-rewards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 8px;
+  width: min(100%, 800px);
+  padding-inline: 8px;
+}
+
+.relic-rewards:empty { display: none; }
+
+.relic-choice {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--paper);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.relic-choice:is(:hover, :focus-visible) {
+  background-color: #dbc08918;
+  border-color: #dbc08966;
+}
+
+.relic-choice > .item-art { width: clamp(62px, 8vw, 95px); }
+.relic-choice > strong {
+  font: 700 clamp(18px, 2.2vw, 26px) / 1.05 var(--display-font);
+  color: #ffe0a2;
+}
+.relic-choice > small {
+  max-width: 28ch;
+  font-size: clamp(12px, 1.5vw, 15px);
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .relic-rewards > button {
-    animation: reveal-relic 360ms ease-out backwards;
-  }
-  .relic-rewards > button:nth-child(2) { animation-delay: 120ms; }
-  .relic-rewards > button:nth-child(3) { animation-delay: 240ms; }
+  .relic-choice { animation: reveal-relic 370ms ease-out backwards; }
+  .relic-choice:nth-child(2) { animation-delay: 105ms; }
+  .relic-choice:nth-child(3) { animation-delay: 210ms; }
 }
 
 @keyframes reveal-relic {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(.96);
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 520px) {
+  .relic-rewards { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .relic-choice {
+    grid-template-columns: 54px minmax(0, 1fr);
+    column-gap: 12px;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  .relic-choice > .item-art { grid-row: span 2; width: 100%; }
+  .relic-choice > small { max-width: none; }
 }
 
 .event-item-reward {

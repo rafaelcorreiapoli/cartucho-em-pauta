@@ -121,7 +121,6 @@
   .card-copy { min-block-size: 92px; gap: 3px; }
   .card-copy strong { --card-title-size: 15px; }
   .card-stats { line-height: 1.14; }
-  .outcome .relic-rewards { max-block-size: none; overflow: visible; }
   .outcome :is(.primary, .secondary), .campaign :is(.primary, .secondary),
   .campaign-route-options button, .lobby :is(.primary, .secondary), .shop .secondary {
     min-height: 44px;
