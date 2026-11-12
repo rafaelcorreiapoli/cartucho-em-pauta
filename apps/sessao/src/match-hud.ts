@@ -14,9 +14,9 @@ export function createMatchHud(id:string) {
   const shortcuts = element('station-shortcuts');
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('[data-action]')];
   const quickActions = [
-    {target:'grant',panel:'politics-dock',label:'Verba do gabinete'},
+    {target:'grant',panel:'trade-dock',label:'Verba do gabinete'},
     {target:'campaign',label:'Campanha · R$ 20 mil'},
-    {target:'hearing-target',panel:'politics-dock',label:'Convocar cassação'},
+    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência'},
     {target:'advertise',label:'Propaganda · R$ 20 mil'},
     {target:'speech',label:'Discursar'},
@@ -31,7 +31,7 @@ export function createMatchHud(id:string) {
     button.onclick = () => {
       if (action.panel) {
         element<HTMLDetailsElement>(action.panel).open = true;
-        const field = control.closest('form')?.querySelector('select');
+        const field = control.closest('form')?.querySelector<HTMLElement>('.game-choice');
         field?.focus();
       } else control.click();
     };
@@ -82,7 +82,7 @@ export function createMatchHud(id:string) {
       const electionAction = Boolean(control.closest('#election-dock'));
       button.hidden = !exploring || control.disabled || !!control.closest('[hidden]') ||
         (electionAction && !view.election?.canCampaign) ||
-        (control.id==='publish' && !element<HTMLSelectElement>('evidence').value);
+        (control.id==='publish' && !element('evidence').dataset.value);
     }
     stations.hidden = !exploring || ![...stationActions,...quickActions.map(action => action.button)]
       .some(button => !button.hidden && !button.disabled);

@@ -4,32 +4,106 @@ import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-function updateOptions(select:HTMLSelectElement, options:[string,string][]) {
-  if (select.options.length===options.length &&
-      options.every(([value,label],i) => select.options[i].value===value && select.options[i].text===label)) return;
-  const selected = select.value;
-  select.replaceChildren(...options.map(([value,label]) => new Option(label,value)));
-  if (options.some(([value]) => value===selected)) select.value = selected;
+type Choice = {value:string; label:string; portrait?:number};
+
+function picker(id:string, changed:()=>void, empty='') {
+  const container = el(id);
+  let key = '';
+  const select = (value:string) => {
+    container.dataset.value = value;
+    for (const button of container.querySelectorAll('button')) {
+      button.setAttribute('aria-pressed',String(button.value===value));
+    }
+  };
+  select('');
+  return {
+    get value() { return container.dataset.value ?? ''; },
+    update(choices:Choice[], selectFirst=false) {
+      const next = JSON.stringify(choices);
+      if (key===next) return;
+      key = next;
+      const previous = this.value;
+      const buttons = choices.map(choice => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hud-button hud-button--secondary game-choice';
+        button.value = choice.value;
+        if (choice.portrait!==undefined) {
+          const portrait = document.createElement('span');
+          portrait.className = 'portrait';
+          portrait.setAttribute('aria-hidden','true');
+          portrait.style.setProperty('--portrait-row',String(choice.portrait*3));
+          button.append(portrait);
+        }
+        button.append(choice.label);
+        button.onclick = () => { select(choice.value); changed(); };
+        return button;
+      });
+      container.replaceChildren(...buttons);
+      if (!buttons.length && empty) {
+        const message = document.createElement('p');
+        message.className = 'choice-empty';
+        message.textContent = empty;
+        container.append(message);
+      }
+      select(choices.some(choice => choice.value===previous) ? previous : selectFirst ? choices[0]?.value ?? '' : '');
+    },
+  };
+}
+
+function stepper(id:string, initial:number, minimum:number, format:(value:number)=>string) {
+  const container = el(id);
+  const amount = document.createElement('output');
+  const minus = document.createElement('button');
+  const plus = document.createElement('button');
+  let value = initial;
+  let maximum = Number.MAX_SAFE_INTEGER / 10;
+  function render() {
+    amount.textContent = format(value);
+    minus.disabled = value<=minimum;
+    plus.disabled = value>=maximum;
+  }
+  for (const [button, label, text, delta] of [
+    [minus,'Diminuir valor','−',-1],[plus,'Aumentar valor','+',1],
+  ] as const) {
+    button.type = 'button';
+    button.className = 'hud-button hud-button--secondary';
+    button.textContent = text;
+    button.setAttribute('aria-label',label);
+    button.onclick = () => { value += delta; render(); };
+  }
+  container.replaceChildren(minus,amount,plus);
+  render();
+  return {
+    get value() { return value; },
+    limit(limit:number) {
+      maximum = Math.max(minimum,limit);
+      value = Math.min(value,maximum);
+      render();
+    },
+  };
 }
 
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
   const dock = el<HTMLDetailsElement>('politics-dock');
-  const target = el<HTMLSelectElement>('trade-contact');
-  const amount = el<HTMLInputElement>('trade-amount');
-  const dossier = el<HTMLSelectElement>('evidence');
-  const price = el<HTMLInputElement>('evidence-price');
-  const nominee = el<HTMLSelectElement>('hearing-target');
-  const split = el<HTMLSelectElement>('grant-split');
-  const privatePayment = el<HTMLInputElement>('trade-private');
+  const trade = el<HTMLDetailsElement>('trade-dock');
+  const target = picker('trade-contact',updateControls,'Ninguém próximo');
+  const recipient = picker('evidence-contact',updateControls,'Ninguém próximo');
+  const amount = stepper('trade-amount',1,1,money);
+  const dossier = picker('evidence',() => { describeSelected(); updateControls(); });
+  const price = stepper('evidence-price',0,0,value => value ? money(value) : 'Grátis');
+  const nominee = picker('hearing-target',updateControls);
+  const split = picker('grant-split',updateControls);
+  const privacy = picker('trade-private',updateControls);
+  split.update(splits.map(value => ({value:String(value),label:value ? `Desviar ${money(value)}` : 'Aplicar tudo'})),true);
+  privacy.update([{value:'public',label:'Pública'},{value:'private',label:'Clandestina'}],true);
+  let visiblePlayers:Player[] = [];
   let view:PlenaryView | undefined;
   let own:Player | undefined;
   let recordsKey = '';
   let offersKey = '';
   dock.open = false;
-  amount.value = '1';
-  price.value = '0';
-  split.value = '0';
-  privatePayment.checked = false;
+  trade.open = false;
   el<HTMLDetailsElement>('ledger').open = false;
   el('public-records').replaceChildren();
   el('offer-list').replaceChildren();
@@ -47,12 +121,15 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el('campaign').hidden = !at('press');
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
     el('hearing-form').hidden = !at('panel') || !politics.canCallHearing;
-    el<HTMLButtonElement>('publish').disabled = !at('press');
+    el<HTMLButtonElement>('publish').disabled = !at('press') || !dossier.value;
+    el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet===0 || politics.paymentsLeft===0;
+    el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
+    el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
   }
 
   el<HTMLFormElement>('trade').onsubmit = event => {
     event.preventDefault();
-    if (target.value && amount.reportValidity()) send({kind:'transfer',to:target.value,amount:amount.valueAsNumber,clandestine:privatePayment.checked});
+    if (target.value) send({kind:'transfer',to:target.value,amount:amount.value,clandestine:privacy.value==='private'});
   };
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {
     event.preventDefault();
@@ -68,8 +145,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   };
   el<HTMLButtonElement>('campaign').onclick = () => send({kind:'campaign'});
   el<HTMLButtonElement>('share').onclick = () => {
-    if (target.value && dossier.value && price.reportValidity()) {
-      send({kind:'share',to:target.value,evidence:Number(dossier.value),price:price.valueAsNumber});
+    if (recipient.value && dossier.value) {
+      send({kind:'share',to:recipient.value,evidence:Number(dossier.value),price:price.value});
     }
   };
   el<HTMLButtonElement>('publish').onclick = () => {
@@ -80,28 +157,33 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     const record = view?.politics?.evidence.find(record => record.id===Number(dossier.value));
     el('evidence-detail').textContent = record ? describe(record) : '';
   };
-  dossier.onchange = describeSelected;
+  function updateContacts() {
+    const choices = (view?.politics?.contacts ?? []).flatMap(contact => {
+      const player = visiblePlayers.find(player => player.id===contact.id);
+      return player ? [{value:contact.id,label:contact.name,portrait:player.character}] : [];
+    });
+    target.update(choices);
+    recipient.update(choices);
+  }
 
   return {
     render(next:PlenaryView) {
       view = next;
       const p = view.politics;
       dock.hidden = !p;
+      trade.hidden = !p || view.phase!=='negotiation';
       if (!p) return;
       const active = view.phase==='negotiation';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
       el('politics-hint').textContent = p.suspended ? 'Mandato cassado · assessor' :
         active ? 'Negociação' : 'Seu dossiê';
-      updateOptions(target,[['',p.contacts.length ? 'Selecione um jogador' : 'Ninguém próximo'],
-        ...p.contacts.map(({id,name}):[string,string] => [id,name])]);
-      updateOptions(nominee,[['','Selecione um jogador'],...p.directory.filter(contact => contact.id!==id && contact.eligible)
-        .map(({id,name,popularity}):[string,string] => [id,`${name} · ${popularity} pop.`])]);
-      updateOptions(dossier,p.evidence.map(record => [String(record.id),`Documento ${record.id} · Rodada ${record.round+1}`]));
-      amount.max = String(p.wallet);
-      el<HTMLButtonElement>('transfer').disabled = !p.contacts.length || p.wallet===0 || p.paymentsLeft===0;
+      updateContacts();
+      nominee.update(p.directory.filter(contact => contact.id!==id && contact.eligible)
+        .map(({id,name,popularity}) => ({value:id,label:`${name} · ${popularity} pop.`})));
+      dossier.update(p.evidence.map(record => ({value:String(record.id),label:`Documento ${record.id} · Rodada ${record.round+1}`})),true);
+      amount.limit(p.wallet);
       el<HTMLButtonElement>('transfer').textContent = p.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido nesta rodada';
-      el<HTMLButtonElement>('share').disabled = !p.contacts.length;
       el('evidence-form').hidden = p.evidence.length===0;
       el('empty-evidence').hidden = p.evidence.length>0;
       describeSelected();
@@ -144,6 +226,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       updateControls();
     },
     players(players:Player[]) {
+      visiblePlayers = players;
+      updateContacts();
       own = players.find(player => player.id===id);
       updateControls();
     },

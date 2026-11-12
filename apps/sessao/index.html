@@ -264,43 +264,46 @@
           </details>
         </div>
       </details>
-      <details id="politics-dock" class="hud-strip hud-module" name="game-panels" hidden>
-        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Dossiê</span><span id="personal-stats"></span></summary>
+      <div id="social-docks">
+      <details id="trade-dock" class="hud-strip hud-module" name="game-panels" hidden>
+        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>Negociação</summary>
         <div class="hud-panel politics-content">
           <div class="compact-heading"><span id="politics-hint"></span><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma cassação, vá ao Painel com 55 de popularidade.">?</button></div>
           <div id="politics-actions">
             <form id="trade">
-              <label>Jogador próximo <select id="trade-contact"></select></label>
+              <div class="section-label">Jogadores próximos</div><div class="choice-grid" id="trade-contact" role="group" aria-label="Destinatário da transferência"></div>
               <div class="economy-row">
-                <label>Valor em R$ 10 mil <input id="trade-amount" type="number" value="1" min="1" step="1" required></label>
-                <label><input id="trade-private" type="checkbox"> Clandestino</label>
+                <div class="game-stepper" id="trade-amount" role="group" aria-label="Valor da transferência"></div>
               </div>
+              <div class="choice-grid" id="trade-private" role="group" aria-label="Visibilidade da transferência"></div>
               <button class="hud-button" id="transfer" type="submit">Transferir</button>
             </form>
             <form id="cabinet-form" hidden>
-              <label>Destino da verba <select id="grant-split">
-                <option value="0">Aplicar tudo no gabinete</option>
-                <option value="1">Desviar R$ 10 mil</option>
-                <option value="2">Desviar R$ 20 mil</option>
-                <option value="3">Desviar R$ 30 mil</option>
-              </select></label>
+              <div class="section-label">Destino da verba</div>
+              <div class="choice-grid" id="grant-split" role="group" aria-label="Destino da verba"></div>
               <button class="hud-button" id="grant" type="submit">Aplicar verba de R$ 40 mil</button>
             </form>
             <button class="hud-button hud-button--secondary" id="campaign" type="button" hidden>Fazer campanha · R$ 20 mil</button>
             <form id="hearing-form" hidden>
-              <label>Convocar cassação de <select id="hearing-target"></select></label>
-              <button class="hud-button" type="submit">Convocar votação</button>
+              <div class="section-label">Convocar cassação</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da cassação"></div>
+              <button class="hud-button" id="hearing-confirm" type="submit">Convocar votação</button>
             </form>
           </div>
+        </div>
+      </details>
+      <details id="politics-dock" class="hud-strip hud-module" name="game-panels" hidden>
+        <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Dossiê</span><span id="personal-stats"></span></summary>
+        <div class="hud-panel politics-content">
           <section id="offer-list" aria-label="Ofertas de documentos"></section>
           <section aria-label="Provas privadas">
             <h3>Provas privadas</h3>
             <p id="empty-evidence">Sem documentos privados.</p>
             <form id="evidence-form" hidden>
-              <label>Documento <select id="evidence"></select></label>
+              <div class="choice-grid" id="evidence" role="group" aria-label="Selecionar documento"></div>
               <p id="evidence-detail"></p>
               <div id="evidence-tools">
-                <label>Preço em R$ 10 mil (0 = grátis) <input id="evidence-price" type="number" value="0" min="0" step="1" required></label>
+                <div class="section-label">Compartilhar com</div><div class="choice-grid" id="evidence-contact" role="group" aria-label="Destinatário da prova"></div>
+                <div class="game-stepper" id="evidence-price" role="group" aria-label="Preço da prova"></div>
                 <div class="economy-row">
                   <button class="hud-button hud-button--secondary" id="share" type="button">Enviar a quem está perto</button>
                   <button class="hud-button hud-button--secondary" id="publish" type="button">Divulgar na imprensa</button>
@@ -314,6 +317,7 @@
           </details>
         </div>
       </details>
+      </div>
       <p id="movement-hint" class="hud-strip">WASD, setas ou toque no chão para andar</p>
     </section>
   </main>

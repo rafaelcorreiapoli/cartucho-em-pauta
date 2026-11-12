@@ -184,6 +184,7 @@ async function connect(join: () => Promise<Room>) {
     setup.before(roomBar);
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
+    document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));

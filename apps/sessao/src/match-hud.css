@@ -175,7 +175,7 @@
 .compact-hud #legislative-dock:not(:has(details[open])) #impact-preview { display: none; }
 
 @media (max-width: 760px) {
-  #session { --hud-side: min(47vw, 230px); --hud-top-row: 142px; }
+  #session { --hud-side: min(47vw, 230px); --hud-top-row: 160px; }
   #congress-dock {
     top: calc(var(--hud-edge) + 72px);
     width: calc(100% - 2 * var(--hud-edge));
@@ -199,4 +199,39 @@
   #stations { bottom: calc(var(--hud-edge) + 94px); }
   #agenda-dock > summary { gap: .25rem; font-size: .72rem; }
   #agenda-dock > summary strong { font-size: .65rem; }
+}
+
+#social-docks {
+  position: absolute;
+  right: var(--hud-edge);
+  bottom: var(--hud-edge);
+  display: flex;
+  gap: .35rem;
+  z-index: 3;
+}
+#social-docks:has(details[open]) { z-index: 5; }
+#session #social-docks > details { position: static; }
+#social-docks .politics-content { inset: auto 0 calc(100% + 6px) auto; }
+.choice-grid { display: flex; flex-wrap: wrap; gap: .35rem; }
+.game-choice { display: inline-flex; align-items: center; gap: .45rem; max-width: 100%; overflow-wrap: anywhere; }
+.game-choice .portrait { --portrait-size: 34px; flex: none; background-color: #111f1c; border-radius: 4px; }
+.game-choice[aria-pressed="true"] { background: #473b23; border-color: var(--hud-gold); color: var(--hud-gold); }
+.game-stepper { display: flex; align-items: stretch; gap: .25rem; }
+.game-stepper button { min-width: 38px; }
+.game-stepper output {
+  align-content: center;
+  min-width: 92px;
+  padding: .3rem .45rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--hud-gold);
+  background: #12201e;
+  border: 1px solid #a99c7169;
+  border-radius: 4px;
+}
+.choice-empty { color: #d6cfb5; font-size: .78rem; }
+
+@media (max-width: 480px) {
+  #social-docks > details > summary { gap: .28rem; padding: .4rem .45rem; }
+  #personal-stats:not(:empty) { max-width: 4.8ch; overflow: hidden; text-overflow: ellipsis; }
 }
