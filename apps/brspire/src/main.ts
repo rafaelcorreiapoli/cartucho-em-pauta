@@ -115,7 +115,10 @@ app.innerHTML = `
   <section class="combat-resources" aria-label="Recursos da sessão" hidden></section>
   <main class="lobby" aria-labelledby="lobby-title"></main>
   <main class="campaign" aria-labelledby="campaign-title" hidden></main>
-  <main class="shop" aria-labelledby="shop-title" hidden></main>
+  <main class="shop" aria-labelledby="shop-title" hidden>
+    <div class="shop-content"></div>
+    <p class="shop-feedback" role="status"></p>
+  </main>
   <main class="event-scene" aria-labelledby="event-title" hidden></main>
   <main class="game" hidden>
     <section class="arena" aria-label="Confronto">
@@ -140,6 +143,8 @@ app.innerHTML = `
 
 const view = {
   shop: app.querySelector<HTMLElement>(".shop")!,
+  shopContent: app.querySelector<HTMLElement>(".shop-content")!,
+  shopFeedback: app.querySelector<HTMLElement>(".shop-feedback")!,
   shopDeck: app.querySelector<HTMLDialogElement>(".shop-deck-dialog")!,
   event: app.querySelector<HTMLElement>(".event-scene")!,
   resources: app.querySelector<HTMLElement>(".combat-resources")!,
@@ -968,6 +973,8 @@ function showEvent(pickCard = false) {
   view.event.querySelector("h1")?.focus({ preventScroll: Boolean(run.eventResult) });
 }
 
+let shopFeedbackTimer: number | undefined;
+
 function showShop(purchased?: string) {
   choosingStage = false;
   view.campaign.hidden = true;
@@ -975,52 +982,71 @@ function showShop(purchased?: string) {
   checkpoint();
   if (!purchased) window.scrollTo(0, 0);
   renderResources();
-  view.shop.innerHTML = `
+  const focusedOffer = purchased && view.shop.contains(document.activeElement)
+    ? document.activeElement?.closest<HTMLButtonElement>("button[data-action]")
+    : null;
+  view.shopContent.innerHTML = `
     <header class="shop-header">
-      <img src="${asset("shop-merchant")}" alt="Um mascate exibe uma carta na sua banca.">
-      <h1 id="shop-title" tabindex="-1">Banca do Mascate</h1>
+      <img src="${asset("shop-merchant")}" alt="">
+      <div class="shop-header-caption">
+        <h1 id="shop-title" tabindex="-1">Banca do Mascate</h1>
+        <button type="button" class="secondary" data-action="leave-shop">Voltar ao mapa →</button>
+      </div>
     </header>
-    <section class="shop-section" aria-labelledby="shop-cards-title">
-      <h2 id="shop-cards-title">Cartas</h2>
-      <div class="shop-stock">
-      ${run.shopOffers.map(({ card, price, sold }) => cardTile(card, "buy-shop-card", card, {
-        disabled: sold || run.money < price,
-        shopLabel: sold ? "Vendida" : `<span aria-hidden="true">${glyph.gold}</span> ${price} <small>moedas</small>`,
-      })).join("")}
+    <div class="shop-shelves">
+      <div class="shop-shelf shop-card-shelf">
+        <section class="shop-section" aria-labelledby="shop-cards-title">
+          <h2 id="shop-cards-title" tabindex="-1">Cartas</h2>
+          <div class="shop-stock">
+            ${run.shopOffers.map(({ card, price, sold }) => cardTile(card, "buy-shop-card", card, {
+              disabled: sold || run.money < price,
+              shopLabel: sold ? "Vendida" : `<span aria-hidden="true">${glyph.gold}</span> ${price} <small>moedas</small>`,
+            })).join("")}
+          </div>
+        </section>
+        <section class="shop-removal" aria-labelledby="shop-remove-title">
+          <div>
+            <h2 id="shop-remove-title" tabindex="-1">Remover uma carta</h2>
+            <p>Uma remoção por visita</p>
+          </div>
+          <button type="button" class="secondary" data-action="open-shop-deck" aria-haspopup="dialog"
+            ${canRemoveShopCard(run) ? "" : "disabled"}>
+            ${run.shopRemovedCard ? "Remoção usada" : `Remover · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}
+          </button>
+        </section>
       </div>
-    </section>
-    ${(["consumable", "relic"] as const).map((kind) => `
-      <section class="shop-section" aria-labelledby="shop-${kind}-title">
-        <h2 id="shop-${kind}-title">${kind === "consumable" ? "Consumíveis" : "Relíquias"}</h2>
-        <div class="shop-items">
-          ${run.itemOffers.map((offer, index) => {
-            if (offer.kind !== kind) return "";
-            const item = offer.kind === "relic" ? relics[offer.id] : consumables[offer.id];
-            const full = offer.kind === "consumable" && run.consumables.length >= consumableSlots;
-            return `<button class="secondary shop-item" data-action="buy-shop-item" data-value="${index}"
-              ${offer.sold || full || run.money < item.price ? "disabled" : ""}>
-              <img class="item-art" src="${asset(item.image)}" alt=""><strong>${item.name}</strong>
-              <small>${item.description}</small>
-              <em>${item.flavor}</em>
-              <b>${offer.sold ? "Vendido" : full ? "Inventário cheio" : `${glyph.gold} ${item.price}`}</b>
-            </button>`;
-          }).join("")}
-        </div>
-      </section>`).join("")}
-    <section class="shop-section" aria-labelledby="shop-remove-title">
-      <h2 id="shop-remove-title">Remover uma carta</h2>
-      <div class="shop-removal">
-        <span>Uma remoção por visita</span>
-        <button type="button" class="secondary" data-action="open-shop-deck" aria-haspopup="dialog"
-          ${canRemoveShopCard(run) ? "" : "disabled"}>
-          ${run.shopRemovedCard ? "Remoção usada" : `Remover carta · ${glyph.gold} ${SHOP_REMOVAL_PRICE}`}
-        </button>
-      </div>
-    </section>
-    <p class="shop-feedback" role="status">${purchased ? `${purchased}` : ""}</p>
-    <button class="secondary" data-action="leave-shop">Voltar ao mapa →</button>`;
+      ${(["relic", "consumable"] as const).map((kind) => {
+        const offers = run.itemOffers.map((offer, index) => {
+          if (offer.kind !== kind) return "";
+          const item = offer.kind === "relic" ? relics[offer.id] : consumables[offer.id];
+          const full = offer.kind === "consumable" && run.consumables.length >= consumableSlots;
+          return `<button type="button" class="shop-item" data-action="buy-shop-item" data-value="${index}"
+            ${offer.sold || full || run.money < item.price ? "disabled" : ""}>
+            <img class="item-art" src="${asset(item.image)}" alt="">
+            <strong>${item.name}</strong>
+            <small>${item.description}</small>
+            <b class="shop-price">${offer.sold ? "Vendido" : full ? "Sem vaga" : `${glyph.gold} ${item.price} <small>moedas</small>`}</b>
+          </button>`;
+        }).join("");
+        return `<section class="shop-section shop-${kind}-shelf" aria-labelledby="shop-${kind}-title">
+          <h2 id="shop-${kind}-title" tabindex="-1">${kind === "consumable" ? "Consumíveis" : "Relíquias"}</h2>
+          ${offers ? `<div class="shop-items">${offers}</div>` : '<p class="shop-empty">Sem ofertas nesta visita.</p>'}
+        </section>`;
+      }).join("")}
+    </div>`;
+  window.clearTimeout(shopFeedbackTimer);
+  view.shopFeedback.textContent = purchased ?? "";
+  if (purchased) {
+    shopFeedbackTimer = window.setTimeout(() => { view.shopFeedback.textContent = ""; }, 3500);
+  }
   fitCardTitles();
-  view.shop.querySelector<HTMLElement>(purchased ? "[data-action=leave-shop]" : "h1")?.focus({ preventScroll: true });
+  if (!purchased) {
+    view.shop.querySelector("h1")?.focus({ preventScroll: true });
+  } else if (focusedOffer) {
+    const section = focusedOffer.closest("section");
+    const sectionTitle = section?.getAttribute("aria-labelledby");
+    if (sectionTitle) document.getElementById(sectionTitle)?.focus({ preventScroll: true });
+  }
 }
 
 view.album.addEventListener("close", () => {
