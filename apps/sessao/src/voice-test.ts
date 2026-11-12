@@ -15,6 +15,11 @@ export async function mountVoiceTest() {
   const available = await fetch('/__voice-lab/').then(response => response.status===204).catch(() => false);
   if (!available || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return;
   panel.hidden = false;
+  const updateProfile = () => {
+    profile.disabled = select.value==='disfarce' || select.value==='original';
+  };
+  select.addEventListener('change',updateProfile);
+  updateProfile();
 
   function clearResult() {
     if (playbackUrl) URL.revokeObjectURL(playbackUrl);
@@ -39,7 +44,8 @@ export async function mountVoiceTest() {
       status.textContent = error instanceof Error && error.message ?
         error.message : 'Não foi possível converter a gravação.';
     } finally {
-      record.disabled = convert.disabled = select.disabled = profile.disabled = false;
+      record.disabled = convert.disabled = select.disabled = false;
+      updateProfile();
     }
   }
 

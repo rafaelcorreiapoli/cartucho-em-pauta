@@ -40,7 +40,9 @@ export function voiceLab(directory: string): Plugin {
         const [path,query] = (req.url ?? '').split('?',2);
         const voice = path.slice(1);
         const natural = new URLSearchParams(query).get('profile')!=='classic';
-        if (!Object.hasOwn(models,voice)) return reply(404);
+        const generic = voice==='disfarce';
+        const reference = voice==='original';
+        if (!generic && !reference && !Object.hasOwn(models,voice)) return reply(404);
         if (busy) return reply(409,'Já tem uma conversão em andamento. Tente novamente.');
         if (Number(req.headers['content-length'])>limit) return reply(413,'A gravação é grande demais.');
 
@@ -62,23 +64,30 @@ export function voiceLab(directory: string): Plugin {
           const recording = join(temporary,'recording');
           const input = join(temporary,'input.wav');
           const output = join(temporary,'output.wav');
-          const [model,index] = models[voice as keyof typeof models];
           await writeFile(recording,Buffer.concat(chunks));
           await run('ffmpeg',[
-            '-nostdin','-v','error','-i',recording,'-t','10','-ac','1','-ar','16000',
-            ...(natural ? ['-af',inputCleanup] : []),input,
+            '-nostdin','-v','error','-i',recording,'-t','10','-ac','1','-ar',generic || reference ? '48000' : '16000',
+            ...(natural && !generic && !reference ? ['-af',inputCleanup] : []),input,
           ],{timeout:10000});
-          await run(join(engine,'.venv/bin/python'),[
-            '-m','rvc_mlx_rt.cli','convert','--model',join(lab,'models',model),
-            '--index',join(lab,'models',index),'--index-rate',natural ? '0.12' : '0.35',
-            ...(natural ? ['--protect','0.25','--filter-radius','5','--rms-mix-rate','0.3'] : []),
-            '--input',input,'--output',output,
-          ],{cwd:engine,env:{...process.env,TORCH_FORCE_WEIGHTS_ONLY_LOAD:'1'},timeout:45000});
-          const cleaned = join(temporary,'cleaned.wav');
-          if (natural) {
-            await run('ffmpeg',['-nostdin','-v','error','-i',output,'-af',outputCleanup,cleaned],{timeout:10000});
+          let result = input;
+          if (generic) {
+            await run('rubberband',['--fine','--formant','--pitch','-4',input,output],{timeout:10000});
+            result = output;
+          } else if (!reference) {
+            const [model,index] = models[voice as keyof typeof models];
+            await run(join(engine,'.venv/bin/python'),[
+              '-m','rvc_mlx_rt.cli','convert','--model',join(lab,'models',model),
+              '--index',join(lab,'models',index),'--index-rate',natural ? '0.12' : '0.35',
+              ...(natural ? ['--protect','0.25','--filter-radius','5','--rms-mix-rate','0.3'] : []),
+              '--input',input,'--output',output,
+            ],{cwd:engine,env:{...process.env,TORCH_FORCE_WEIGHTS_ONLY_LOAD:'1'},timeout:45000});
+            result = output;
+            if (natural) {
+              result = join(temporary,'cleaned.wav');
+              await run('ffmpeg',['-nostdin','-v','error','-i',output,'-af',outputCleanup,result],{timeout:10000});
+            }
           }
-          const converted = await readFile(natural ? cleaned : output);
+          const converted = await readFile(result);
           res.writeHead(200,{'Content-Type':'audio/wav','Cache-Control':'no-store'}).end(converted);
         } catch (error) {
           server.config.logger.error(`Teste de voz: ${error}`);
