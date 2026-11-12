@@ -7,7 +7,8 @@ soleira, pontos de interação e sprites. Paredes existentes servem de divisóri
 onde o cômodo encosta no prédio.
 
 - **Cofre:** maletas, cuecas e maços viram saldo após cinco segundos de interação
-  no cofre próprio. Mover-se, ser nocauteado ou entrar no Plenário interrompe a
+  no cofre próprio. A barra amarela acima do cofre mostra o progresso e a ação
+  Cancelar interrompe a contagem. Mover-se, ser nocauteado ou entrar no Plenário interrompe a
   operação. O item só é consumido quando o dinheiro é creditado.
 - **Armário:** guarda até quatro instâncias do inventário, incluindo dinheiro
   físico. Só o titular ou quem chega a um armário temporariamente arrombado
