@@ -101,17 +101,9 @@ p { margin:.5rem 0; }
   position:absolute; left:max(12px,env(safe-area-inset-left)); bottom:max(12px,env(safe-area-inset-bottom));
   padding:.4rem; max-width:calc(100% - 24px); font-size:.8rem;
 }
-#voice-bar { display:flex; align-items:center; gap:.35rem; }
 #voice-status:not(:empty) { display:block; margin:.3rem .15rem .05rem; }
-#voice-settings summary { list-style:none; font-size:.8rem; min-height:40px; }
-#voice-settings summary::-webkit-details-marker { display:none; }
-.voice-settings-content {
-  position:absolute; bottom:calc(100% + 6px); left:0; width:min(295px,calc(100vw - 24px));
-  padding:.65rem; z-index:1;
-}
-#live-disguise { display:grid; gap:.45rem; margin:.5rem 0 0; min-width:0; }
-#live-disguise output, #disguise-controls output { font-variant-numeric:tabular-nums; }
-#live-pitch, #disguise-pitch { width:100%; }
+#disguise-pitch-value { font-variant-numeric:tabular-nums; }
+#disguise-pitch { width:100%; }
 
 #voice-test { position:fixed; bottom:0; right:0; max-width:min(460px,100%); padding:.6rem; background:#1c3038; }
 body:has(#session:not([hidden])) #voice-test { display:none; }
@@ -257,8 +249,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 #election-result summary { color:var(--hud-gold); }
 #voice-dock { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
 #voice-status:not(:empty) { flex-basis:100%; }
-#sound-settings summary { list-style:none; min-height:38px; font-size:.75rem; }
-#sound-settings summary::-webkit-details-marker { display:none; }
 .sound-settings-content { position:absolute; bottom:calc(100% + 6px); left:0; z-index:1; width:min(240px,calc(100vw - 24px)); padding:.65rem; }
 .sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
 .sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }

@@ -19,8 +19,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
   let own: Player | undefined;
   const count = element<HTMLSelectElement>('infiltrator-count');
   count.value = '1';
-  const projects = element<HTMLDetailsElement>('legislative-dock');
-  projects.open = true;
+  const brief = element('project-outcome-brief');
+  let briefTimer:number | undefined;
+  function clearBrief() {
+    window.clearTimeout(briefTimer);
+    brief.hidden = true;
+  }
   start.onclick = () => send('start-match',count.value==='2' ? 2 : 1);
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
@@ -72,6 +76,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
     const threshold = outcome.needed===1 ? '1 voto a favor para passar' : `${outcome.needed} votos a favor para passar`;
     element('outcome-threshold').textContent = noVotes ? `Ninguém votou · ${threshold}` : threshold;
     const details = [
+      `Estabilidade ${signed(outcome.applied.stability)} · Orçamento ${signed(outcome.applied.budget)}`,
       outcome.deficit ? `Déficit: −${outcome.deficit*2} de estabilidade` : '',
       outcome.fraud ? 'O painel foi fraudado' : '',
     ].filter(Boolean);
@@ -84,13 +89,29 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
 
   return {
     render(next:PlenaryView) {
-      if (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing' ||
-        next.phase==='finished' || view?.phase==='finished')) projects.open = true;
+
       if (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing')) {
-        history.open = false;
-        element<HTMLDetailsElement>('agenda-dock').open = false;
+        clearBrief();
       }
       const historyChanged = next.outcomes.length!==view?.outcomes.length;
+      if (!next.outcomes.length) clearBrief();
+      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished')) {
+        clearBrief();
+        const outcome = next.outcome;
+        brief.dataset.passed = String(outcome.passed);
+        element('brief-verdict').textContent = outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado';
+        element('brief-project').textContent = bills[outcome.round].name;
+        element('brief-yes').textContent = String(outcome.yes);
+        element('brief-no').textContent = String(outcome.no);
+        for (const key of ['stability','budget'] as const) {
+          const stat = element(`brief-${key}`);
+          const value = outcome.applied[key];
+          stat.textContent = signed(value);
+          stat.dataset.effect = value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
+        }
+        brief.hidden = false;
+        briefTimer = window.setTimeout(clearBrief,8500);
+      }
       view = next;
       const {phase,remaining,role,players,host,round} = view;
       const hearing = view.hearing;
@@ -113,8 +134,10 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Cassação' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');
-      clock.parentElement!.hidden = !running;
-      clock.parentElement!.dataset.urgent = String(remaining<=10);
+      element('clock-label').textContent = phase==='negotiation' ? 'Votação em' : 'Tempo de voto';
+      const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
+      clockChip.hidden = !running;
+      clockChip.dataset.urgent = String(remaining<=10);
       element('stability').textContent = String(view.stability);
       const stability = element<HTMLProgressElement>('stability-meter');
       stability.value = view.stability;
@@ -134,7 +157,9 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
       element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
-      element('bill').textContent = hearing ? hearing.target : bills[round].name;
+      const title = hearing ? hearing.target : bills[round].name;
+      element('bill').textContent = title;
+      element('project-details-title').textContent = title;
       element('bill-description').textContent = hearing ? '' : bills[round].description;
       element('impact').hidden = !!hearing;
       showImpact('yes',view.yes);
@@ -142,15 +167,21 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
 
       element('ballot').hidden = phase!=='ballot' && !hearing;
       const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
-      element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} votos a favor para ${hearing ? 'cassar' : 'aprovar'}`;
+      element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'cassar' : 'aprovar'}`;
       const progress = element<HTMLProgressElement>('vote-progress');
       progress.max = Math.max(1,view.electorate);
       progress.value = view.voted;
       if (view.politics?.suspended) element('quorum').textContent = 'Seu mandato foi cassado. Você pode conversar e agir como assessor.';
+      const castVote = hearing?.vote ?? view.vote;
+      const state = element('vote-state');
+      state.hidden = !castVote;
+      state.textContent = castVote ? (hearing ?
+        castVote==='yes' ? 'Seu voto: cassar' : 'Seu voto: manter mandato' :
+        castVote==='yes' ? 'Seu voto: aprovar' : 'Seu voto: rejeitar') : '';
       for (const button of votes) {
         button.disabled = !!view.politics?.suspended;
         button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Manter mandato' : 'Rejeitar';
-        button.setAttribute('aria-pressed',String((hearing?.vote ?? view.vote)===button.dataset.vote as Vote));
+        button.setAttribute('aria-pressed',String(castVote===button.dataset.vote as Vote));
       }
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
@@ -164,6 +195,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
+    destroy() { clearBrief(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();

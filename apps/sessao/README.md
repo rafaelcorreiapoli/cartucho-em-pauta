@@ -164,13 +164,7 @@ a jogadores próximos e visite os balcões indicados. O Protocolo mantém os
 documentos aceitos no registro do balcão. O Arquivo e o Gabinete B têm compartimentos compartilhados,
 acessíveis a quem estiver perto.
 
-O **Celular** abre Telefone, Joguinhos, Câmera, Notícias e Eleições. Ative
-a voz para ligar. Após o atendimento, feche ou reabra o celular conforme
-necessário para continuar andando ou encerrar a ligação. A ligação usa
-o mesmo áudio e a mesma modulação do VoIP. Ela se encerra ao entrar no
-Plenário. A câmera gera uma ficha visual negociável com os retratos e
-objetos que estavam visíveis, o local e o momento da captura. Notícias e
-Eleições usam os registros públicos e a pesquisa já existentes.
+O **Celular** abre Telefone, Joguinhos, Câmera e Álbum. Ative o microfone para ligar para outra pessoa. Em Joguinhos, selecione **Snake** e colete cinco frutas com as setas, WASD ou os controles na tela. As fotos públicas ficam em **Álbum → Publicadas** e a pesquisa eleitoral na barra superior. Convite, volumes e saída da sala ficam na engrenagem.
 
 O servidor emite eventos de interação com posição, horário e testemunhas
 calculadas pela visibilidade do mapa. A agenda usa esses eventos para
@@ -184,6 +178,12 @@ Abra um objeto no inventário e escolha **Expor acima do personagem**. Só um it
 
 Em **Celular → Câmera**, use **Tirar foto** ou **Selfie**. A prévia acompanha o enquadramento. Ao disparar, o servidor congela a posição, a direção, os itens expostos, os objetos no chão e as instalações que entram no quadro e passam pela visibilidade. O cliente desenha o quadro com o mapa e os sprites Phaser, usando exclusivamente esse registro para a imagem salva. As miniaturas são geradas no cliente. Uma entrega recente só entra no quadro quando os dois participantes continuam visíveis perto de onde a entrega ocorreu.
 
-O **Álbum** guarda até 12 imagens por jogador e a sala comporta até 144 originais. **Mostrar** concede uma visualização temporária após aceite. **Enviar cópia** adiciona uma referência ao mesmo original no álbum do destinatário. Ambas exigem proximidade no envio e no aceite. Excluir do álbum retira apenas a própria referência. Na Sala de Imprensa, **Publicar nas Notícias** torna a imagem pública. A negociação de preço usa a transferência de dinheiro existente e o envio da cópia é uma ação separada. A primeira selfie própria publicada com companhia rende +4 de popularidade na partida. Uma imagem registra o que aparece no quadro e não gera uma acusação automática.
+O **Álbum** guarda até 12 imagens por jogador e a sala comporta até 144 originais. **Mostrar** concede uma visualização temporária após aceite. **Enviar cópia** adiciona uma referência ao mesmo original no álbum do destinatário. Ambas exigem proximidade no envio e no aceite. Excluir do álbum retira apenas a própria referência. Na Sala de Imprensa, **Publicar foto** torna a imagem pública. A negociação de preço usa a transferência de dinheiro existente e o envio da cópia é uma ação separada. A primeira selfie própria publicada com companhia rende +4 de popularidade na partida. Uma imagem registra o que aparece no quadro e não gera uma acusação automática.
 
 O **Cafezinho** vende a pizza e tem uma mesa para servir seis fatias. Cada pessoa pode pegar uma fatia de cada pizza. O **Credenciamento** vende retratos e placas VIP. Os pontos de instalação aparecem como ações no item ao se aproximar de uma superfície válida. Retratos podem ser rabiscados, retirados e substituídos. Placas reservam simbolicamente uma cadeira ou espaço sem bloquear passagem. Fotos, instalações e fatias usam o mesmo sistema de eventos das agendas. As agendas fotográficas contabilizam fatos distintos e os caprichos liberam espaço sem prêmio em dinheiro.
+
+### HUD da partida
+
+A barra superior concentra carteira, popularidade, indicadores do Parlamento e eleição. O mapa usa a faixa central como viewport do Phaser, incluindo fog, coordenadas de clique e feedback espacial. A faixa inferior reúne perfil, agenda sob demanda, projeto e votação, itens de uso rápido, equipamentos e comunicação. O resultado legislativo aparece temporariamente no centro do painel e fica disponível no histórico.
+
+Use as teclas numéricas indicadas para acionar o contexto atual, `Shift+1` a `Shift+6` para abrir um slot e `Esc` para fechar um painel. Os atalhos de local correspondem ao ponto de interação ao alcance. Os objetos disponíveis ficam em **Objetos próximos**.

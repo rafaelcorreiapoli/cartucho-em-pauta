@@ -82,7 +82,7 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       const world = this.gameplayWorld();
       if (!action || !player || !this.match.canHandleObjects(player.id,world.now)) return;
-      if (this.match.phase!=='negotiation' && ['call','answer','game-start','game-tile','photo','selfie','buy','install','uninstall','mark','slice','photo-publish'].includes(action.kind)) return;
+      if (this.match.phase!=='negotiation' && ['call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish'].includes(action.kind)) return;
       const text = this.gameplay.act(player,action,world);
       if (text) client.send('gameplay-feedback',text);
     });
