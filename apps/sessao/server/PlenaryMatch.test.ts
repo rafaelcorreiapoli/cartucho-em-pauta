@@ -27,7 +27,9 @@ test('fraud shows different figures until a player audits and reports it', () =>
   match.act(at(traitor,'panel'),'fraud',3);
   expect(view(host).yes.budget).toBe(-4);
   expect(view(traitor).yes.budget).toBe(-28);
-  match.act(at(honest,'audit'),'audit',4);
+  const finding = match.act(at(honest,'audit'),'audit',4);
+  expect(finding?.critical).toBe(true);
+  expect(finding?.text).toContain('Fraude no projeto');
   expect(view(honest).audit).toBe('fraud');
   expect(view(honest).yes.budget).toBe(-28);
   expect(view(host).yes.budget).toBe(-4);
@@ -168,4 +170,14 @@ test('completed personal missions pay only once at settlement', () => {
   economy.settleAgendas(['a','b']);
   expect(view('a')).toMatchObject({wallet:14,goalMet:true,agendaPaid:true});
   expect(view('b')).toMatchObject({wallet:8,goalMet:false,agendaPaid:false});
+});
+
+test('the Controladoria returns feedback for each audit, even without new records', () => {
+  const match = new PlenaryMatch();
+  match.start(host.id,[host],0);
+  expect(match.act(host,'audit',1)?.text).toContain('Chegue mais perto');
+  const player = at(host,'audit');
+  const first = match.act(player,'audit',2);
+  expect(first?.text).toContain('Nenhum registro novo');
+  expect(match.act(player,'audit',3)).toEqual(first);
 });

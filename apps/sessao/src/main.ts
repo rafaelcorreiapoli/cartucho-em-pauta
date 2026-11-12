@@ -226,6 +226,9 @@ async function connect(join: () => Promise<Room>) {
       else setup.before(roomBar);
       if (negotiating) map.focus({preventScroll:true});
     });
+    joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
+      hud.notify('Controladoria',text,critical);
+    });
     joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
     joined.onMessage('players',(players: Player[]) => {
       panel.players(players);

@@ -44,7 +44,8 @@ export class SessionRoom extends Room {
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;
       if (player && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
-        this.match.act(player,action,this.clock.currentTime);
+        const result = this.match.act(player,action,this.clock.currentTime);
+        if (result) client.send('audit-result',result);
       }
     });
     this.onMessage('politics', (client, raw:unknown) => {

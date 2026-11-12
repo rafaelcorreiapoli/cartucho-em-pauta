@@ -89,6 +89,7 @@ export function createMatchHud(id:string) {
   }
 
   return {
+    notify,
     render(view:PlenaryView) {
       const politics = view.politics;
       if (politics) {
@@ -121,7 +122,6 @@ export function createMatchHud(id:string) {
         }
         if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);
-        else if (view.audit==='fraud' && previous.audit!=='fraud') notify('Fraude encontrada','Vá ao Painel para corrigir os números.',true);
         if (politics && past && politics.wallet!==past.wallet) {
           const change = politics.wallet-past.wallet;
           notify('Carteira atualizada',`${change>0 ? '+' : '−'}${money(Math.abs(change))}`);

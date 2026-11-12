@@ -84,9 +84,15 @@ export class PlenaryMatch {
   }
 
   act(player:Player, action:Action, now:number) {
-    if (!this.electorate.has(player.id) || this.phase!=='negotiation' || now>=this.ends) return;
-    const station = stations[action==='fraud' ? 'panel' : action];
-    if (Math.hypot(player.x-station.x,player.y-station.y)>STATION_RADIUS) return;
+    if (!this.electorate.has(player.id)) return;
+    if (this.phase!=='negotiation' || now>=this.ends) {
+      if (action==='audit') return {text:'A auditoria só pode ser feita durante a articulação.',critical:false};
+      return;
+    }
+    if (!this.at(player,action==='fraud' ? 'panel' : action)) {
+      if (action==='audit') return {text:'Chegue mais perto do ponto da Controladoria.',critical:false};
+      return;
+    }
     if (action==='amendment') this.amended = true;
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
@@ -96,6 +102,8 @@ export class PlenaryMatch {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
       const note = this.economy.audit(player.id,this.round,this.election.office(player.id)==='senator' ? 2 : 1);
       if (note) this.auditNotes.set(player.id,note);
+      const finding = this.fraud ? 'Fraude no projeto. Vá ao Painel para corrigir os números.' : 'Os números do projeto conferem.';
+      return {text:note ? `${finding} ${note}` : finding,critical:this.fraud && !this.reportedFraud};
     }
     if (action==='panel' && this.audits.get(player.id)==='fraud') this.reportedFraud = true;
   }
