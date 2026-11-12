@@ -1,0 +1,22 @@
+{
+  "name": "@brwars/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run assets && bunx --bun vite --host 0.0.0.0",
+    "build": "bun run assets && bunx --bun vite build",
+    "assets": "bun ../../../../packages/personagens/stage.mjs brwars public/assets"
+  },
+  "dependencies": {
+    "@brwars/simulation": "workspace:*",
+    "@colyseus/sdk": "0.18.9",
+    "@phosphor-icons/react": "^2.1.10",
+    "phaser": "4.2.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest"
+  }
+}

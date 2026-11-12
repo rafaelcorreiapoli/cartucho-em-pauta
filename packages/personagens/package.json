@@ -1,0 +1,9 @@
+{
+  "name": "@cartucho/personagens",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./catalogo": "./characters.json",
+    "./assets/*": "./assets/*"
+  }
+}

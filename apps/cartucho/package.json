@@ -1,0 +1,11 @@
+{
+  "name": "cartucho-em-pauta",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "11.1.9"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node --check public/portal.js && node --check public/jogar/player.js && node --check public/ranking-api.js && node --check netlify/functions/ranking.mjs && npm run build"
+  }
+}

@@ -1,0 +1,43 @@
+name: Cartucho
+on:
+  pull_request:
+    paths:
+      - 'apps/cartucho/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/cartucho.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/cartucho/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/cartucho.yml'
+  workflow_dispatch:
+    inputs:
+      publish_web:
+        description: Publicar o frontend no Netlify
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validar Cartucho
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/cartucho
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm run check
+      - name: Publicar no Netlify
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_web
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: npx --yes netlify-cli@26.1.0 deploy --prod --no-build --site 520aca3a-eeb4-4fa7-9b58-d1cbefb888b7 --dir dist

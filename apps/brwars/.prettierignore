@@ -1,0 +1,6 @@
+node_modules
+**/dist
+**/public
+bun.lock
+apps/web/src/*origins.json
+apps/web/src/building-tops.json

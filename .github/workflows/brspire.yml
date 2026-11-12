@@ -1,0 +1,46 @@
+name: BRSpire
+on:
+  pull_request:
+    paths:
+      - 'apps/brspire/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/brspire.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/brspire/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/brspire.yml'
+  workflow_dispatch:
+    inputs:
+      publish_web:
+        description: Publicar o frontend no Netlify
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validar BRSpire
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/brspire
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - name: Publicar no Netlify
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_web
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: npx --yes netlify-cli@26.1.0 deploy --prod --no-build --site 5b3ea455-e1d2-4e5c-896b-7e11cd81b8ca --dir dist

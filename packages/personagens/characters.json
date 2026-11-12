@@ -1,0 +1,68 @@
+{
+  "lula": {
+    "nome": "Lula",
+    "cartucho": [
+      "lulinha.webp"
+    ],
+    "brwars": [
+      "hero-lulinha.png",
+      "hero-lulinha-packed.webp"
+    ],
+    "brspire": [
+      "lula-portrait.webp"
+    ]
+  },
+  "che": {
+    "nome": "Che Guevara",
+    "cartucho": [
+      "che.webp"
+    ],
+    "brwars": [
+      "hero-che.png",
+      "hero-che-packed.webp"
+    ],
+    "brspire": [
+      "che-portrait.webp"
+    ]
+  },
+  "stalin": {
+    "nome": "Stalin",
+    "cartucho": [
+      "stalin.webp"
+    ],
+    "brwars": [
+      "hero-stalin.png",
+      "hero-stalin-packed.webp"
+    ],
+    "brspire": [
+      "stalin-portrait.webp"
+    ]
+  },
+  "dilma": {
+    "nome": "Dilma Rousseff",
+    "cartucho": [
+      "dilma.webp"
+    ],
+    "brwars": [
+      "hero-dilma.png"
+    ],
+    "brspire": [
+      "rival-dilma-idle.webp"
+    ]
+  },
+  "jorginho": {
+    "nome": "Jorginho",
+    "cartucho": [
+      "jorginho.webp"
+    ]
+  },
+  "pavanato": {
+    "nome": "Pavanato",
+    "cartucho": [
+      "pavanato.webp"
+    ],
+    "brwars": [
+      "hero-pavanato.png"
+    ]
+  }
+}

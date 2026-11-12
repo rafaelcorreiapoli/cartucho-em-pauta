@@ -1,0 +1,62 @@
+name: BR Wars
+on:
+  pull_request:
+    paths:
+      - 'apps/brwars/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/brwars.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/brwars/**'
+      - 'packages/personagens/**'
+      - '.github/workflows/brwars.yml'
+  workflow_dispatch:
+    inputs:
+      publish_web:
+        description: Publicar o frontend no Netlify
+        type: boolean
+        default: false
+      publish_server:
+        description: Publicar o servidor do BR Wars no Fly.io
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validar BR Wars
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/brwars
+    env:
+      VITE_ENABLE_ONLINE: 'true'
+      VITE_GAME_SERVER: wss://brwars-server.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - name: Validar imagem do servidor
+        run: docker build -t brwars-server:ci .
+      - uses: superfly/flyctl-actions/setup-flyctl@98172f70657cb3e15db199af139be99bd3e61200
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_server
+      - name: Publicar servidor no Fly.io
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_server
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --ha=false
+      - name: Publicar no Netlify
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_web
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: npx --yes netlify-cli@26.1.0 deploy --prod --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir apps/web/dist --filter @brwars/web

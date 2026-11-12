@@ -1,0 +1,126 @@
+.match-chat {
+  position: absolute;
+  right: 12px;
+  bottom: 50px;
+  z-index: 5;
+  color: #f4edcd;
+  font-size: 13px;
+}
+
+.match-chat-panel,
+.match-chat-toggle {
+  background: #182317ed;
+  border: 1px solid #87925b;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px #0008;
+}
+
+.match-chat-panel {
+  width: min(320px, calc(100vw - 24px));
+}
+
+.match-chat-panel header,
+.match-chat-panel form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #263623;
+}
+
+.match-chat-panel header {
+  justify-content: space-between;
+}
+
+.match-chat button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  gap: 5px;
+  padding: 0 8px;
+  color: inherit;
+}
+
+.match-chat button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.match-chat .match-chat-toggle {
+  min-height: 32px;
+  padding: 0 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.match-chat-toggle:hover {
+  border-color: #e4d58e;
+  background: #263623;
+}
+
+.match-chat-toggle kbd {
+  padding: 1px 4px;
+  border: 1px solid #87925b;
+  border-radius: 3px;
+  color: #d9d6b0;
+  font: inherit;
+  font-size: 10px;
+}
+
+.match-chat-toggle span {
+  color: #ffe39c;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-chat-log {
+  height: clamp(64px, 18dvh, 154px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  padding: 5px 8px;
+}
+
+.match-chat-log p {
+  margin: 3px 0;
+}
+
+.match-chat-log .ally {
+  color: #c9e6a5;
+}
+
+.match-chat-log .opponent {
+  color: #ffc49f;
+}
+
+.match-chat-log .match-chat-empty {
+  color: #b7c1a7;
+}
+
+.match-chat input {
+  flex: 1;
+  width: 0;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid #65734e;
+  border-radius: 3px;
+  background: #141e13;
+  color: inherit;
+  font: inherit;
+}
+
+.match-chat-panel button {
+  border: 1px solid #65734e;
+  border-radius: 3px;
+  background: #33462e;
+}
+
+.match-chat-panel button:hover:not(:disabled) {
+  background: #465c3d;
+}
+
+.match-chat-panel > p {
+  margin: 0;
+  padding: 5px 8px;
+  color: #ffc49f;
+}

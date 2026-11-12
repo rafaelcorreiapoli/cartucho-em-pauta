@@ -1,0 +1,7 @@
+node_modules/
+dist/
+
+/public/assets/lula-portrait.webp
+/public/assets/che-portrait.webp
+/public/assets/stalin-portrait.webp
+/public/assets/rival-dilma-idle.webp
