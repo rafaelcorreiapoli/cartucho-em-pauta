@@ -1,4 +1,4 @@
-# BR WARS — V1
+# BASE ALIADA — V1
 
 RTS de browser: duas civilizações inspiradas na esquerda e na direita brasileiras em guerra. Você controla construções, produção e economia; tropas e heróis lutam automaticamente. Não é uma simulação eleitoral.
 

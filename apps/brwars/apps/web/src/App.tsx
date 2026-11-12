@@ -332,7 +332,7 @@ export default function App() {
         <div className="game-logo">
           <Flag weight="fill" />
           <b>
-            BR<span>WARS</span>
+            BASE <span>ALIADA</span>
           </b>
         </div>
         <div className="resource gold" data-hud-tooltip="Recursos disponíveis">
@@ -686,7 +686,7 @@ export default function App() {
                 <X />
               </button>
             )}
-            <span className="eyebrow">BR WARS · V1</span>
+            <span className="eyebrow">BASE ALIADA · V1</span>
             <h2 id="modal-title">
               {modal === 'new'
                 ? invitation

@@ -21,14 +21,14 @@ export function LoadingScreen({
       className="game-loading"
       role="dialog"
       aria-modal="true"
-      aria-label="Preparando BR Wars"
+      aria-label="Preparando Base Aliada"
       data-game-loading
     >
       <div className="loading-emblem">
         <Sword weight="duotone" />
       </div>
       <h1>
-        BR <span>WARS</span>
+        BASE <span>ALIADA</span>
       </h1>
       <div className="loading-plaque">
         <p role={state.error ? 'alert' : 'status'}>

@@ -70,9 +70,9 @@ h1 em { font-style: normal; color: var(--lime); }
 .games { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
 .game { --accent: var(--lime); display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--panel); }
 .spire { --accent: var(--gold); }
-.cover { position: relative; isolation: isolate; overflow: hidden; height: clamp(146px, 17vw, 210px); background: repeating-linear-gradient(135deg, transparent 0 12px, #d7ec8512 12px 13px), radial-gradient(ellipse at center, #61783b, #303b2c 75%); border-bottom: 1px solid var(--line); }
+.cover { container-type: inline-size; position: relative; isolation: isolate; overflow: hidden; height: clamp(146px, 17vw, 210px); background: repeating-linear-gradient(135deg, transparent 0 12px, #d7ec8512 12px 13px), radial-gradient(ellipse at center, #61783b, #303b2c 75%); border-bottom: 1px solid var(--line); }
 .spire .cover { background: repeating-radial-gradient(ellipse at 50% 85%, transparent 0 22px, #ffd47329 23px 24px), radial-gradient(ellipse at center, #7a693d, #383f28 80%); }
-.cover-name { position: absolute; z-index: 1; top: 13%; width: 100%; text-align: center; font: 900 clamp(2.8rem,5vw,5.2rem)/.85 var(--display); color: #fff6d7; text-shadow: 3px 4px #232f1d; }
+.cover-name { position: absolute; z-index: 1; top: 13%; width: 100%; text-align: center; font: 900 clamp(1.25rem,12cqi,4.25rem)/.95 var(--display); color: #fff6d7; text-shadow: 3px 4px #232f1d; }
 .cover img { position: absolute; height: 82%; width: 49%; bottom: -15%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 4px 7px #1621199c); }
 .cover-left { left: 1%; rotate: -10deg; }
 .cover-right { right: 0; scale: -1 1; rotate: 9deg; }
@@ -126,7 +126,6 @@ footer .brand { font-size: 1.25rem; }
   nav { gap: 12px; }
   .games { grid-template-columns: 1fr; }
   .cover { height: 166px; }
-  .cover-name { font-size: 3.6rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

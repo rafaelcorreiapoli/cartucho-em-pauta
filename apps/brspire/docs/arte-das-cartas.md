@@ -1,4 +1,4 @@
-# Arte das cartas do BRSpire
+# Arte das cartas do Cartas Marcadas
 
 Use [Bolsa Família](../public/assets/card-bolsa-familia.webp) como referência para cenas com pessoas e [Petrolão](../public/assets/card-petrolao.webp) para a linguagem de sátira política e objetos exagerados. Anexe uma ou ambas as imagens à geração para manter o acabamento do conjunto.
 
@@ -15,7 +15,7 @@ Antes de propor uma carta, identifique a referência concreta que dá origem ao 
 
 ## Prompt base
 
-> Ilustração 2D para uma carta do BRSpire. [Descreva quem aparece, a ação e o objeto que conta a piada.] Use as referências anexadas para reproduzir o acabamento de caricatura editorial brasileira, com contornos escuros, pintura texturizada, luz âmbar e sombras profundas. Composição em paisagem 3:2, preenchida até as bordas. Rosto e ação principal nos 70% centrais da altura. Sem texto, números, logotipos, marcas-d'água, moldura ou interface.
+> Ilustração 2D para uma carta do Cartas Marcadas. [Descreva quem aparece, a ação e o objeto que conta a piada.] Use as referências anexadas para reproduzir o acabamento de caricatura editorial brasileira, com contornos escuros, pintura texturizada, luz âmbar e sombras profundas. Composição em paisagem 3:2, preenchida até as bordas. Rosto e ação principal nos 70% centrais da altura. Sem texto, números, logotipos, marcas-d'água, moldura ou interface.
 
 ## Integração
 
