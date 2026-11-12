@@ -23,8 +23,8 @@ test('prediction starts immediately and replays only the inputs the server has n
   expect(client.state!.player.x).toBeCloseTo(server.player.x);
 });
 
-test('all six seats are reachable, and plenary movement respects closed doors', () => {
-  const outside = {x:240,y:146};
+test('all twelve seats are reachable, and plenary movement respects closed doors', () => {
+  const outside = {x:480,y:517};
   for (const seat of PLENARY_SEATS) {
     expect(canStandInPlenary(seat.x,seat.y)).toBe(true);
     expect(findRoute(outside,seat).at(-1)).toEqual(seat);
@@ -32,14 +32,17 @@ test('all six seats are reachable, and plenary movement respects closed doors', 
     expect(findRoute(seat,PLENARY_SEATS[1],true).at(-1)).toEqual(PLENARY_SEATS[1]);
   }
   const state:ControlState = {
-    player:{id:'p',nick:'P',character:0,x:240,y:113,moving:false,direction:0},
+    player:{id:'p',nick:'P',character:0,x:480,y:748,moving:false,direction:0},
     route:[],ack:0,plenary:true,
   };
-  applyInput(state,{seq:1,motion:{x:1,y:1},plenary:true});
+  applyInput(state,{seq:1,motion:{x:1,y:-1},plenary:true});
   expect(inPlenary(state.player)).toBe(true);
-  expect(state.player.y).toBe(113);
+  expect(state.player.y).toBeLessThan(748);
+  state.player.y = 548;
+  applyInput(state,{seq:2,motion:{x:0,y:-1},plenary:true});
+  expect(state.player.y).toBe(548);
   state.plenary = false;
-  applyInput(state,{seq:2,motion:{x:0,y:1}});
+  applyInput(state,{seq:3,motion:{x:0,y:-1}});
   expect(inPlenary(state.player)).toBe(false);
 });
 

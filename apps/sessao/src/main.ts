@@ -222,7 +222,7 @@ async function connect(join: () => Promise<Room>) {
       const income = (view.politics?.walletIncome ?? 0)-pastIncome;
       if (previousView?.politics && income>0) {
         audio.cue('cash');
-        hud.showIncome(income,game?.playerHeadY());
+        hud.showIncome(income,game?.playerHead());
       }
       panel.render(view);
       political.render(view);

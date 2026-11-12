@@ -1,18 +1,17 @@
 export const WIDTH = 960;
-export const HEIGHT = 540;
+export const HEIGHT = 759;
 export const SPEED = 88;
 export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
-export const PLENARY_BOUNDS = [148,10,184,104] as const;
-export const PLENARY_DOORS:Rect[] = [[177,114,26,11],[217,114,46,11],[277,114,26,11]];
-export const PLENARY_SEATS = [
-  {x:192,y:76},{x:223,y:76},{x:286,y:76},
-  {x:196,y:112},{x:246,y:112},{x:296,y:112},
-] as const;
+export const PLENARY_BOUNDS = [268,541,424,208] as const;
+export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
+export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
 
 export const walls: Rect[] = [
-  [0,0,960,10], [0,530,960,10], [0,10,10,520], [950,10,10,520],
+  [0,0,960,10], [0,10,10,520], [950,10,10,520],
+  [0,530,284,11], [310,530,140,11], [510,530,128,11], [666,530,294,11],
+  [258,541,10,218], [692,541,10,218], [268,749,424,10],
   [470,10,10,115], [470,161,10,98],
   [10,259,211,11], [261,259,170,11], [478,259,180,11], [702,259,248,11],
   [480,114,65,11], [586,114,235,11], [864,114,86,11],
@@ -30,10 +29,14 @@ export const desks = [
   [48,65],[373,65],[151,43],[284,43],[151,84],[284,84],[63,217],[342,217],
   [526,60],[786,59],[609,214],[851,210],[105,334],[404,331],[766,330],
   [128,460],[433,460],[713,460],[822,463],
+  [274,614],[274,677],[643,614],[643,677],
 ] as const;
 export const furnishings = [
   {frame:0, area:[197,33,86,29], footprint:10},
-  {frame:1, area:[253,64,15,13], footprint:5},
+  {frame:0, area:[414,570,132,38], footprint:12},
+  {frame:1, area:[559,598,22,18], footprint:7},
+  {frame:3, area:[279,554,30,40], footprint:9},
+  {frame:3, area:[651,554,30,40], footprint:9},
   {frame:3, area:[16,21,25,34], footprint:9},
   {frame:3, area:[444,18,24,32], footprint:9},
   {frame:3, area:[301,28,22,28], footprint:7},
@@ -62,6 +65,7 @@ export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
 export function canStand(x: number, y: number) {
+  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (y>541 && (x<274 || x>686))) return false;
   return obstacles.every(([left, top, width, height]) =>
     x + 6 <= left || x - 6 >= left + width || y <= top || y - 7 >= top + height);
 }

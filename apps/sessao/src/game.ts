@@ -95,8 +95,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [x,y,w,h] of PLENARY_DOORS) {
         this.doors.fillStyle(0x774740).fillRect(x,y,w,h).fillStyle(0xe8aa75).fillRect(x,y+2,w,2);
       }
-      this.board = this.add.text(240,25,'',{
-        fontFamily:'system-ui',fontSize:'6px',color:'#d6ffd0',backgroundColor:'#111e19',
+      this.board = this.add.text(480,562,'',{
+        fontFamily:'system-ui',fontSize:'7px',color:'#d6ffd0',backgroundColor:'#111e19',
         align:'center',padding:{x:4,y:2},resolution:3,
       }).setOrigin(.5,0).setDepth(HEIGHT+10);
       for (const {x,y} of Object.values(stations)) {
@@ -115,12 +115,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       });
     }
-    playerHeadY() {
+    playerHead() {
       const camera = this.cameras.main;
-      const height = this.views.get(ownId)?.sprite.displayHeight;
-      if (!height || !camera.width) return;
+      const sprite = this.views.get(ownId)?.sprite;
+      if (!sprite || !camera.width) return;
       const zoom = camera.zoom*parent.clientWidth/camera.width;
-      return parent.clientHeight/2-(height+5)*zoom;
+      return {
+        x:parent.clientWidth/2+(sprite.x-camera.midPoint.x)*zoom,
+        y:parent.clientHeight/2+(sprite.y-camera.midPoint.y-sprite.displayHeight-5)*zoom,
+      };
     }
 
     pulseStation(key:Station) {
@@ -183,7 +186,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cssWidth = parent.clientWidth || 1;
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
-      const cssZoom = Math.max(1.5,cssWidth/550,cssHeight/(cssWidth<=680 ? 310 : 360));
+      const normalZoom = Math.max(1.5,cssWidth/550,cssHeight/(cssWidth<=680 ? 310 : 360));
+      const cssZoom = inSession ? Math.min(normalZoom,cssWidth/580,cssHeight/340) : normalZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
       if (resolution!==this.textResolution) {
@@ -259,7 +263,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         if (own) {
           this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
-          camera.centerOn(x,y);
+          if (inSession) {
+            const [left,top,width,height] = PLENARY_BOUNDS;
+            camera.centerOn(left+width/2,top+height/2-30);
+          } else camera.centerOn(x,y);
           if (running) {
             const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
             const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
@@ -293,7 +300,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     setCashDrops(next:CashDrop[]) { drops = next; },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
-    playerHeadY() { return scene.sys.isActive() ? scene.playerHeadY() : undefined; },
+    playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },
     reconcile(snapshot: ControlState) {
       if (!!snapshot.plenary!==!!local.state?.plenary) {

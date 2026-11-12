@@ -153,7 +153,7 @@ test('campaign unlocks a hearing, then a wrong removal costs stability and the p
   expect(view(honest).vote).toBeUndefined();
 });
 
-test('only a full room may choose two infiltrators', () => {
+test('rooms with at least six players may choose two infiltrators', () => {
   const match = new PlenaryMatch();
   const six = [...people,...people.map(player => ({...player,id:'extra-'+player.id}))];
   match.start(host.id,six,0,() => .9,2);

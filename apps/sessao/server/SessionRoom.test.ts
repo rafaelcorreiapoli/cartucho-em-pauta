@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
 import type { PlenaryView } from '../src/plenary';
-import { canStand, PLENARY_DOORS, type Player } from '../src/map';
+import { canStand, type Player } from '../src/map';
 
 test('clients share movement and voice, then receive private roles and payments', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
@@ -71,8 +71,7 @@ test('clients share movement and voice, then receive private roles and payments'
       await Bun.sleep(50);
     }
     await until(() => Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1);
-    expect(observed.some(player => PLENARY_DOORS.some(([x,y,width,height]) =>
-      player.x>=x+6 && player.x<=x+width-6 && player.y>y && player.y<y+height+7))).toBe(true);
+    expect(observed.some(player => player.y>114 && player.y<132)).toBe(true);
     expect(observed.every(player => canStand(player.x,player.y))).toBe(true);
     const roster: string[][] = [];
     const signals: unknown[] = [];

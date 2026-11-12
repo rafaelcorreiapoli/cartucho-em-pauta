@@ -4,7 +4,7 @@ import type { PoliticsView } from './politics';
 import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 1;
-export const MAX_PLAYERS = 6;
+export const MAX_PLAYERS = 12;
 export const NEGOTIATION_MS = 205_000;
 export const BALLOT_MS = 35_000;
 
@@ -12,7 +12,7 @@ export const stations = {
   ...roomActivities,
   amendment: {x:129,y:365},
   audit: {x:808,y:93},
-  panel: {x:240,y:76},
+  panel: {x:548,y:620},
   press: {x:863,y:245},
   tv: {x:915,y:200},
 } as const;

@@ -49,7 +49,7 @@ export class PlenaryMatch {
     this.electorate = new Set(ids);
     this.initialPlayers = ids.length;
     const candidates = [...players];
-    const count = ids.length===1 ? 0 : ids.length===6 && requested===2 ? 2 : 1;
+    const count = ids.length===1 ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
     this.infiltrators.clear();
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
     const contacts = players.map(player => ({id:player.id,name:player.nick}));

@@ -1,6 +1,6 @@
 # Presidente da Sessão
 
-Jogo de negociação e sabotagem para uma a seis pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
+Jogo de negociação e sabotagem para uma a doze pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
 
 ```sh
 bun install --frozen-lockfile
@@ -22,7 +22,7 @@ O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
 
 Entre com um nick e crie a sala ou use o link de convite. A caricatura é
 uma skin: o mapa, a voz e os avisos usam o nick. O anfitrião pode iniciar
-sozinho para testar sem infiltrado ou convidar até cinco amigos. Ativem
+sozinho para testar sem infiltrado ou convidar até onze amigos. Ativem
 a voz e iniciem a sessão. No multiplayer, o papel secreto é sorteado independentemente da skin. Os
 parlamentares ganham se terminarem os três projetos com pelo menos 45 de
 estabilidade; o infiltrado ganha se impedir isso. Se chegar a zero, a partida
@@ -35,12 +35,12 @@ valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer 
 painel uma vez por projeto para que o custo aparente de aprovar seja menor.
 
 A convocação aparece quando faltam 30 segundos. Ao abrir a votação, o servidor
-reúne os jogadores nos seis pontos de chegada do Plenário, limpa as rotas anteriores
+reúne os jogadores nos doze pontos de chegada do Plenário, limpa as rotas anteriores
 e fecha as três portas. Durante os 35 segundos de votação, os jogadores podem
 andar, conversar por voz geral e negociar com quem estiver próximo. Todos na sala
 ficam visíveis entre si e os corredores permanecem sob o fog of war.
 
-O Plenário aproveita o mapa e os móveis existentes, com mesa diretora, tribuna,
+A ala sul abriga o Plenário, com mesa diretora, tribuna,
 assentos laterais e painel ligado ao projeto e cronômetro do HUD. A discussão e o
 voto compartilham o mesmo temporizador. O servidor decide o confinamento para
 movimento manual e por clique. Após a apuração, as portas e a voz por proximidade
@@ -62,7 +62,7 @@ de vagas, o modal indica a disputa de origem dos votos.
 
 Abra **Carteira e dossiê** durante a partida. Cada pessoa começa com R$ 80 mil
 de dinheiro pessoal e recebe uma agenda privada, independente do papel e da
-caricatura. Uma sala cheia pode jogar com um ou dois infiltrados.
+caricatura. Uma sala com pelo menos seis jogadores pode escolher dois infiltrados.
 
 Perto de alguém, combine pela voz e transfira dinheiro, com registro público ou
 de forma clandestina. O dinheiro muda de mãos na hora. O voto continua livre.

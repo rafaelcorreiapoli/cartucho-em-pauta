@@ -3,6 +3,7 @@ import { desks, furnishings, walls, PLENARY_BOUNDS, PLENARY_DOORS, WIDTH, HEIGHT
 
 const rooms = [
   {name:'Gabinete A', bounds:[10,10,129,104], color:0xb69c75},
+  {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
   {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
   {name:'Gabinete B', bounds:[341,10,129,104], color:0xaf9a79},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
@@ -50,18 +51,16 @@ export function drawMap(scene: Phaser.Scene) {
     fill(0x31564b,x+4.5,y+4.5,w-9,h-9);
   };
 
-  fill(0x172722,0,0,WIDTH,HEIGHT);
+  fill(0x172722,0,0,WIDTH,541);
   floor([10,114,940,58],0x757f78,23,18);
   floor([10,259,940,11],0x757f78,23,11);
   floor([10,392,940,11],0x757f78,23,11);
   rug(14,130,932,23);
   rooms.forEach(({bounds,color},index) => floor(bounds,color,index===1?18:24,index===1?13:8));
   rug(156,16,168,95);
-  fill(0xb9a779,218,83,44,30,.16);
-  graphics.lineStyle(1,0xc3a66d,.55);
-  for (const radius of [49,70]) {
-    graphics.beginPath().arc(240,50,radius,Math.PI/6,5*Math.PI/6).strokePath();
-  }
+  fill(0x24473e,278,552,404,185);
+  fill(0x355f50,282,556,396,177);
+  fill(0x789383,453,620,54,120,.23);
   rug(617,418,316,102);
   rug(78,306,135,75);
   rug(725,32,197,73);
@@ -73,7 +72,7 @@ export function drawMap(scene: Phaser.Scene) {
     fill(0x162b24,x,y+h-1,w,1);
   }
   for (const [x,y,w] of [
-    [59,114,34],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[384,114,35],[69,161,36],[218,161,44],[368,161,36],
+    [59,114,34],[177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[384,114,35],[69,161,36],[218,161,44],[368,161,36],
     [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[431,259,47],[658,259,44],
     [115,392,41],[400,392,46],[780,392,45],
   ]) {
@@ -88,13 +87,13 @@ export function drawMap(scene: Phaser.Scene) {
     prop(frame,x,y,w,h,y+h);
   }
 
-  const tribune = scene.add.text(260,60,'TRIBUNA',{
+  const tribune = scene.add.text(570,591,'TRIBUNA',{
     fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
-  }).setOrigin(.5,0).setDepth(300);
+  }).setOrigin(.5,0).setDepth(HEIGHT+20);
   return [tribune,...rooms.map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
-      fontFamily:'system-ui',fontSize:'8px',fontStyle:'bold',color:'#fff4dc',
+      fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31',resolution:3,padding:{x:5,y:2},
-    }).setOrigin(.5,0).setDepth(300),
+    }).setOrigin(.5,0).setDepth(HEIGHT+20),
   )];
 }

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { CashDrops } from './CashDrops';
 
 test('cash spawns after a delay, stays within local vision, and can only be pocketed once', () => {
-  const values = [0,0,.14,.248,0, .4,.3,.5,.8];
+  const values = [0,0,.14,.172,0, .4,.3,.5,.8];
   const drops = new CashDrops();
   const player = {x:140,y:146};
   drops.reset(1000,() => values.shift() ?? .5);
@@ -20,7 +20,7 @@ test('cash spawns after a delay, stays within local vision, and can only be pock
 });
 
 test('expired drops cannot be pocketed', () => {
-  const values = [0,0,.14,.248,.99];
+  const values = [0,0,.14,.172,.99];
   const drops = new CashDrops();
   const player = {x:140,y:146};
   drops.reset(0,() => values.shift() ?? .5);

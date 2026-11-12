@@ -199,12 +199,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   return {
     notify,
-    showIncome(amount:number, headY:number | undefined) {
+    showIncome(amount:number, head:{x:number;y:number} | undefined) {
       const total = amount+Number(incomeEffect?.dataset.amount ?? 0);
       incomeEffect?.remove();
       const effect = walletGain.content.firstElementChild!.cloneNode(true) as HTMLElement;
       effect.dataset.amount = String(total);
-      if (headY!==undefined) effect.style.top = `${headY}px`;
+      if (head) {
+        effect.style.left = `${head.x}px`;
+        effect.style.top = `${head.y}px`;
+      }
       effect.querySelector('strong')!.textContent = `+${money(total)}`;
       effect.addEventListener('animationend',() => {
         effect.remove();
