@@ -1,7 +1,7 @@
 import type { DialogueView, NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
-import { localPerception, type Motion } from './map';
+import type { Motion } from './map';
 import type { Decoration, Photo } from './photography';
 import type { Contact } from './politics';
 import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
@@ -18,7 +18,7 @@ export const objects = {
   binoculars:{name:'Binóculo',portrait:'retrato-presente.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-presente.webp',description:'Distorce sua voz até a bateria acabar.'},
   vest:{name:'Colete',portrait:'retrato-presente.webp',description:'Reduz em 35% o dano físico recebido.'},
-  baton:{name:'Porrete',portrait:'retrato-presente.webp',description:'Golpeia um jogador próximo.'},
+  baton:{name:'Porrete',portrait:'weapon-baton.webp',description:'Golpeia um jogador próximo.'},
   pizza:{exposable:true,name:'Pizza parlamentar',portrait:'retrato-presente.webp',description:'Seis fatias para dividir no Cafezinho.',use:'consume'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'|'cash'; amount?:number; destructible?:boolean}>;
 
@@ -41,8 +41,7 @@ export type WorldItem = {id:number; kind:ObjectKind; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
-export const canReachObject = (player:Motion,point:Motion) =>
-  Math.hypot(player.x-point.x,player.y-point.y)<=24 && localPerception(player,point).visible;
+export { canInteract as canReachObject } from './interactions';
 
 export const INVENTORY_SLOTS = 6;
 const phoneActions = ['call','answer','hangup','game-start','game-stop','game-turn'] as const;
@@ -67,7 +66,7 @@ const articulationActions = new Set<GameplayActionKind>([
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
   return articulating || !articulationActions.has(action.kind);
 }
-const replaySensitiveActions = new Set<GameplayActionKind>(['attack','aid','carry','release','treat']);
+const replaySensitiveActions = new Set<GameplayActionKind>(['attack','aid','carry','release','treat','toggle-modulator']);
 export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActions.has(kind);
 
 export type GameplayView = {

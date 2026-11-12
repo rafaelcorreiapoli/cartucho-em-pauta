@@ -9,6 +9,8 @@ type Peer = {
   candidates: RTCIceCandidateInit[];
   meter?: Meter;
   playback?: GainNode;
+  outgoing: GainNode;
+  destination: MediaStreamAudioDestinationNode;
 };
 
 function iceServers(): RTCIceServer[] {
@@ -25,8 +27,20 @@ export class RoomVoice {
   private timer?: number;
   private generation = 0;
   private range?: Map<string,number>;
+  private outbound = new Set<string>();
+  private sendUntil = 0;
 
   constructor(private room: Room, private onSpeaking: (ids: Set<string>) => void) {
+    room.onMessage('voice-send',(ids:string[])=>{
+      this.outbound = new Set(ids);
+      this.sendUntil = (this.audio?.currentTime ?? 0)+.35;
+      for (const [id,peer] of this.peers) this.updateOutgoing(id,peer);
+    });
+    room.onDrop(()=>{
+      this.outbound.clear();
+      this.sendUntil = 0;
+      for (const id of this.peers.keys()) this.removePeer(id);
+    });
     room.onMessage('voice-range', (levels:[string,number][]) => this.setRange(new Map(levels)));
     room.onMessage('voice-roster', (ids: string[]) => this.syncPeers(ids));
     room.onMessage('voice-signal', ({from,signal}: {from:string; signal:VoiceSignal}) => {
@@ -71,7 +85,7 @@ export class RoomVoice {
   toggleMute() {
     const enabled = this.muted;
     this.mic?.getAudioTracks().forEach(track => { track.enabled = enabled; });
-    this.disguise?.stream.getAudioTracks().forEach(track => { track.enabled = enabled; });
+    if (this.disguise) this.disguise.output.gain.value = enabled ? 1 : 0;
     void this.audio?.resume().catch(() => {});
     this.measure();
   }
@@ -82,6 +96,15 @@ export class RoomVoice {
   }
 
   private volume(id:string) { return this.range ? this.range.get(id) ?? 0 : 1; }
+
+  private updateOutgoing(id:string, peer:Peer) {
+    const now = this.audio!.currentTime;
+    const gain = peer.outgoing.gain;
+    const allowed = this.outbound.has(id) && now<this.sendUntil;
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(allowed ? 1 : 0,now);
+    if (allowed) gain.setValueAtTime(0,this.sendUntil);
+  }
 
   private updateGain(id:string, peer:Peer) {
     peer.playback?.gain.setTargetAtTime(this.volume(id),this.audio!.currentTime,.025);
@@ -94,6 +117,7 @@ export class RoomVoice {
     for (const id of this.peers.keys()) this.removePeer(id);
     this.mic?.getTracks().forEach(track => track.stop());
     this.mic = undefined;
+    this.outbound.clear();
     this.disguise?.stop();
     this.disguise = undefined;
     this.localMeter = undefined;
@@ -103,16 +127,21 @@ export class RoomVoice {
   }
 
   private syncPeers(ids: string[]) {
-    const outgoing = this.disguise?.stream;
-    if (!outgoing || !ids.includes(this.room.sessionId)) return;
+    if (!this.disguise || !ids.includes(this.room.sessionId)) return;
     for (const id of this.peers.keys()) if (!ids.includes(id)) this.removePeer(id);
     for (const id of ids) {
-      if (id !== this.room.sessionId && !this.peers.has(id)) this.addPeer(id,outgoing);
+      if (id !== this.room.sessionId && !this.peers.has(id)) this.addPeer(id);
     }
   }
 
   private removePeer(id: string) {
     const peer = this.peers.get(id)!;
+    const now = this.audio!.currentTime;
+    peer.outgoing.gain.cancelScheduledValues(now);
+    peer.outgoing.gain.setValueAtTime(0,now);
+    this.disguise?.output.disconnect(peer.outgoing);
+    peer.outgoing.disconnect();
+    for (const track of peer.destination.stream.getTracks()) track.stop();
     peer.connection.close();
     peer.playback?.disconnect();
     peer.meter?.source.disconnect();
@@ -120,11 +149,18 @@ export class RoomVoice {
     this.peers.delete(id);
   }
 
-  private addPeer(id: string, mic: MediaStream) {
+  private addPeer(id:string) {
     const connection = new RTCPeerConnection({iceServers:iceServers()});
-    const peer: Peer = {connection, pending:Promise.resolve(), candidates:[]};
+    const audio = this.audio!;
+    const outgoing = audio.createGain();
+    outgoing.gain.value = 0;
+    const destination = audio.createMediaStreamDestination();
+    destination.channelCount = 1;
+    this.disguise!.output.connect(outgoing).connect(destination);
+    const peer: Peer = {connection, pending:Promise.resolve(), candidates:[],outgoing,destination};
     this.peers.set(id,peer);
-    for (const track of mic.getAudioTracks()) connection.addTrack(track,mic);
+    this.updateOutgoing(id,peer);
+    for (const track of destination.stream.getAudioTracks()) connection.addTrack(track,destination.stream);
     connection.onicecandidate = ({candidate}) => {
       if (candidate) this.signal(id,peer,{candidate:candidate.toJSON()});
     };

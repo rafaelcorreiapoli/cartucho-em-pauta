@@ -1,6 +1,8 @@
 import { canReachObject } from '../src/gameplay';
 import type { Player } from '../src/map';
-import { dialogues, npcs, type DialogueNode, type DialogueOption, type DialogueView, type NpcId } from '../src/npcs';
+import { dialogues, npcs, type DialogueCondition, type DialogueNode, type DialogueOption, type DialogueView, type NpcId } from '../src/npcs';
+
+type Eligibility = (condition:DialogueCondition)=>boolean;
 
 type Session = {npc:NpcId; node:string; shop:boolean; token:number};
 
@@ -15,8 +17,8 @@ export class NpcDialogues {
     return dialogues[npcs[session.npc].dialogue][session.node];
   }
 
-  private options(session:Session, wallet:number):readonly DialogueOption[] {
-    return this.node(session).options.filter(option => (option.requires?.wallet ?? 0)<=wallet);
+  private options(session:Session, eligible:Eligibility):readonly DialogueOption[] {
+    return this.node(session).options.filter(option => !option.requires || eligible(option.requires));
   }
 
   private nearby(player:Player, key:NpcId) { return canReachObject(player,npcs[key]); }
@@ -36,10 +38,10 @@ export class NpcDialogues {
     this.close(player.id);
   }
 
-  choose(player:Player, choice:string|undefined, token:number|undefined, wallet:number) {
+  choose(player:Player, choice:string|undefined, token:number|undefined, eligible:Eligibility) {
     const session = this.active(player);
     if (!session || token!==session.token) return 'Esta conversa já mudou.';
-    const option = this.options(session,wallet).find(entry=>entry.id===choice);
+    const option = this.options(session,eligible).find(entry=>entry.id===choice);
     if (!option) return 'Opção indisponível.';
     if (option.action==='close') {
       this.close(player.id);
@@ -58,10 +60,10 @@ export class NpcDialogues {
     return result;
   }
 
-  view(player:Player,wallet:number):DialogueView|undefined {
+  view(player:Player,eligible:Eligibility):DialogueView|undefined {
     const session = this.active(player);
     if (!session) return;
     return {npc:session.npc,shop:session.shop,token:session.token,text:this.node(session).text,
-      options:this.options(session,wallet).map(({id,label})=>({id,label}))};
+      options:this.options(session,eligible).map(({id,label})=>({id,label}))};
   }
 }

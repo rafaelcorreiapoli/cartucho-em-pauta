@@ -1,10 +1,11 @@
-import { canStandInPlenary, HEIGHT, WIDTH, move, type Motion, type Player } from './map';
+import { doorDestination } from './interactions';
+import { canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type Player } from './map';
 import { findRoute, followRoute } from './navigation';
 
 export const STEP_MS = 50;
 export const STEP_SECONDS = STEP_MS / 1000;
 export const MAX_QUEUED_INPUTS = 8;
-export type MovementInput = { seq: number; plenary?:boolean; motion?: Motion; destination?: Motion };
+export type MovementInput = { seq: number; plenary?:boolean; motion?: Motion; destination?: Motion; door?:number };
 export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean };
 
 export function applyInput(state: ControlState, input: MovementInput) {
@@ -14,7 +15,8 @@ export function applyInput(state: ControlState, input: MovementInput) {
     state.ack = input.seq;
     return;
   }
-  if (input.destination) state.route = findRoute(state.player,input.destination,state.plenary);
+  const destination = input.door===undefined ? input.destination : doorDestination(state.player,input.door,!!state.plenary);
+  if (destination) state.route = findRoute(state.player,destination,state.plenary);
   if (input.motion) {
     state.route = [];
     move(state.player,input.motion,STEP_SECONDS,state.plenary ? canStandInPlenary : undefined);
@@ -35,6 +37,12 @@ export function readInput(data: unknown): MovementInput | undefined {
       typeof data.seq !== 'number' || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
   const seq = data.seq;
   const plenary = 'plenary' in data && data.plenary===true;
+  if ('door' in data) {
+    if (typeof data.door==='number' && Number.isInteger(data.door) && data.door>=0 && data.door<PLENARY_DOORS.length) {
+      return {seq,door:data.door,plenary};
+    }
+    return;
+  }
   if ('destination' in data) {
     const destination = point(data.destination);
     if (destination && destination.x>=0 && destination.y>=0 && destination.x<WIDTH && destination.y<HEIGHT) {

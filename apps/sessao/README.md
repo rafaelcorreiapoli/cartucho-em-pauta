@@ -81,7 +81,7 @@ assessora: conversa, negocia e investiga, mas perde voto, verba e sabotagem.
 
 ## Mercado e equipamentos
 
-No Apoio Técnico, aproxime-se do **Seu Balcão** e use o atalho indicado para conversar. Abra o catálogo, compre um equipamento e selecione-o no inventário para equipar. O botão **Equipamentos** permite desequipar e controlar o modulador. O binóculo amplia a visão, o colete reduz o dano, e o porrete oferece uma ação contextual quando outro jogador está ao alcance.
+No Apoio Técnico, aproxime-se do **Seu Balcão** e use o atalho indicado para conversar. Abra o catálogo, compre um equipamento e selecione-o no inventário para equipar. O botão **Equipamentos** permite desequipar e controlar o modulador. O binóculo amplia a visão, o colete reduz o dano, e o porrete oferece **Golpear** quando outro jogador está ao alcance. Pressione o número exibido no botão ou clique nele para atacar.
 
 Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica temporariamente nocauteado. Ele recupera parte dos PV em oito segundos ou pode ser socorrido por alguém próximo. Durante a recuperação há proteção temporária contra novos golpes.
 

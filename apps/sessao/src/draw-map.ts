@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { npcs } from './npcs';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
@@ -65,7 +66,7 @@ export function drawMap(scene: Phaser.Scene) {
   }
 
   for (const [x,y] of desks) {
-    prop(2,x+13,y-17,19,23,y+1);
+    if (x!==npcs.vendor.counter.x || y!==npcs.vendor.counter.y) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   for (const {frame,area:[x,y,w,h]} of furnishings) {
@@ -78,7 +79,7 @@ export function drawMap(scene: Phaser.Scene) {
   return [tribune,...rooms.map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
-      backgroundColor:'#263a31',resolution:3,padding:{x:5,y:2},
-    }).setOrigin(.5,0).setDepth(HEIGHT+20),
+      backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},
+    }).setOrigin(.5,0).setDepth(1),
   )];
 }

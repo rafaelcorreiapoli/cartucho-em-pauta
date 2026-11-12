@@ -1,5 +1,5 @@
 import { canReachObject } from '../src/gameplay';
-import { canStand, obstacleBetween, type Player } from '../src/map';
+import { canStand, type Player } from '../src/map';
 import { clearSegment } from '../src/navigation';
 import { aidRadius } from '../src/medical';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
@@ -14,8 +14,7 @@ export class Transport {
   carry(carrier:Player, passenger:Player|undefined, world:GameplayWorld) {
     if (!passenger || passenger===carrier || carrier.carrying || carrier.knockedOut ||
         !passenger.knockedOut || passenger.carried || world.present?.(passenger.id)===false ||
-        Math.hypot(carrier.x-passenger.x,carrier.y-passenger.y)>aidRadius ||
-        !canReachObject(carrier,passenger) || obstacleBetween(carrier,passenger) || !canStand(carrier.x,carrier.y)) return false;
+        !canReachObject(carrier,passenger,{radius:aidRadius,clearFloor:true,handsFree:true}) || !canStand(carrier.x,carrier.y)) return false;
     const pair = {carrier,passenger};
     this.pairs.set(carrier.id,pair);
     carrier.carrying = true;

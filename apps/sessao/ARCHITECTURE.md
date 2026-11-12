@@ -37,12 +37,16 @@ Chamadas e Snake encerram ao sair da articulação ou ao perder a conexão. Uma 
 
 `bun run --cwd apps/sessao check` roda TypeScript, Bun Test e o build do Vite. Os testes da sala usam clientes Colyseus reais contra um processo Bun local. Os testes de domínio controlam tempo, aleatoriedade e posição para verificar transições e reenvios.
 
+## Extensões de combate
+
+`weapons.ts` define o sprite, o ponto de empunhadura, o arco, o alcance, o dano e a recarga de cada arma. Associe o item à arma em `equipment.ts`. `Combat` valida o golpe e publica a direção e o momento. `game.ts` compõe o sprite da arma sobre a pose direcional do personagem. A mesma composição serve para outros equipamentos de ataque.
+
 ## Auditoria e prioridades
 
 | Severidade | Achado | Estado |
 | --- | --- | --- |
 | Crítica | Um comando de instalação podia resolver chaves herdadas, como `constructor`, e lançar uma exceção ao consultar coordenadas. | Corrigido com validação de chave própria e teste na conexão Colyseus. |
-| Crítica | Durante a articulação o WebRTC conecta todos os participantes com voz. O servidor informa os volumes, mas a atenuação ocorre no receptor. Um cliente alterado pode escutar fora do alcance. | Aberto. Restringir a entrega de mídia exige revisar a autorização da camada de voz e validar transições entre proximidade, chamadas, transmissão e voz geral. |
+| Crítica | A atenuação de voz ocorria apenas no navegador receptor. | O servidor autoriza cada direção do áudio. O navegador transmissor fornece voz apenas aos destinatários autorizados e suspende o envio se a autorização expirar. |
 | Alta | Um encerramento vindo de um comando político podia escapar da limpeza executada na transição do relógio ou na saída de um jogador. | Corrigido com uma única rotina de limpeza que pode ser chamada após qualquer transição. |
 | Alta | Inventário controlava chamadas e Snake, enquanto a economia também controlava o baralho e a progressão de missões. | Resolvido com `PhoneSession` e `PersonalAgenda`. |
 | Alta | Transferências livres admitem pedidos legítimos idênticos. Um reenvio explícito do mesmo comando também produz outro pagamento até o limite da rodada. | Aberto. Identificar a intenção original requer identidade de comando no protocolo. Custódia de itens, aceitação de pedidos e publicação têm guardas de estado próprias. |

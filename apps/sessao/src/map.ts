@@ -1,3 +1,4 @@
+import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
 import { npcs } from './npcs';
 
@@ -64,7 +65,7 @@ const obstacles = [
     [x,y+height-footprint,width,footprint]),
 ];
 
-export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; carrying?:true; carried?:true; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
+export type Player = { id: string; nick: string; character: number; x: number; y: number; direction: number; moving: boolean; speed?:number; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; phone?:'call'|'game'; exposed?:{id:number;kind:import('./gameplay').ObjectKind} };
 export type Motion = { x: number; y: number };
 export const idle = { x: 0, y: 0 };
 
@@ -119,10 +120,18 @@ export function obstacleBetween(a:Motion, b:Motion) {
   return obstacles.some(rect=>segmentIntersects(a,b,rect));
 }
 
+export function wallBetween(a:Motion,b:Motion) {
+  return walls.some(rect=>segmentIntersects(a,b,rect));
+}
+
+export function worldVisible(a:Motion,b:Motion,radius=VISION_RADIUS) {
+  return Math.hypot(a.x-b.x,a.y-b.y)<radius && !obstacleBetween(a,b);
+}
+
 export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
   const distance = Math.hypot(a.x-b.x,a.y-b.y);
   if (distance>=Math.max(vision,HEARING_RADIUS)) return {visible:false,volume:0};
-  const wall = walls.some(rect=>segmentIntersects(a,b,rect));
+  const wall = wallBetween(a,b);
   return {
     visible:distance<vision && !wall,
     volume:Math.round(20 * Math.max(0,Math.min(1,(HEARING_RADIUS-distance)/85)) * (wall ? .2 : 1))/20,

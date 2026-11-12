@@ -3,7 +3,7 @@ import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
-import { canStand, movementSpeed, VISION_RADIUS, type Player } from '../src/map';
+import { canStand, movementSpeed, worldVisible, VISION_RADIUS, type Player } from '../src/map';
 import { infirmary } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs } from '../src/npcs';
@@ -106,6 +106,10 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   expect(game.act(alice,{kind:'equip',item:weapon.id},world)).toBe('Equipado.');
   expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Acertou · 26 de dano');
   expect(game.view(bob,world).vitality?.hp).toBe(74);
+  expect(alice.swing).toEqual({weapon:'baton',startedAt:world.now,angle:0});
+  world.now += 320;
+  game.tick(world,true);
+  expect(alice.swing).toBeUndefined();
   expect(events.filter(event=>event.type==='hit')).toHaveLength(1);
 });
 
@@ -228,4 +232,57 @@ test('the infirmary can treat a passenger and heals only after a valid payment',
   expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   expect(balance.get(bob.id)).toBe(4);
   expect(events.filter(event=>event.type==='treated')).toHaveLength(2);
+});
+
+
+test('dialogue eligibility is private and checked again when the player chooses', () => {
+  const {alice,bob,game,world} = setup();
+  world.office = id=>id===alice.id ? 'president' : undefined;
+  world.hasMission = (id,mission)=>id===alice.id && mission==='cafe';
+  world.hasEvidence = (id,kind)=>id===alice.id && kind==='clandestine-transfer';
+  Object.assign(alice, {x:240,y:250});
+  game.act(alice,{kind:'supply',place:'coffee'},world);
+  Object.assign(alice, {x:631,y:197});
+  for (const player of [alice,bob]) game.act(player,{kind:'talk',target:'vendor'},world);
+  const options = (player:Player)=>game.view(player,world).dialogue?.options.map(choice=>choice.id);
+  expect(options(alice)).toEqual(expect.arrayContaining(['coffee','president','evidence','mission']));
+  expect(options(bob)).toEqual(['products','promotion','budget','leave']);
+  const token = game.view(alice,world).dialogue?.token;
+  world.hasMission = ()=>false;
+  expect(game.act(alice,{kind:'dialogue-choice',target:'mission',token},world)).toBe('Opção indisponível.');
+  game.act(alice,{kind:'dialogue-choice',target:'president',token},world);
+  expect(game.view(alice,world).dialogue?.text).toContain('Presidência');
+});
+
+test('modulator recharge follows the item when another player collects and equips it', () => {
+  const {alice,bob,game,world,openShop} = setup();
+  game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
+  const {id} = game.view(alice,world).inventory[0];
+  game.act(alice,{kind:'equip',item:id},world);
+  game.act(alice,{kind:'toggle-modulator'},world);
+  game.act(alice,{kind:'unequip',item:id},world);
+  game.act(alice,{kind:'drop',item:id},world);
+  game.act(bob,{kind:'collect',item:id},world);
+  game.act(bob,{kind:'equip',item:id},world);
+  expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
+  world.now += 45_000;
+  expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
+});
+
+test('doors, furniture and actors without a player session use the shared world rules', () => {
+  const alice = player('Alice',480,520);
+  const passage = {player:alice,route:[],ack:0};
+  applyInput(passage,{seq:1,door:1});
+  expect(alice.y).toBeGreaterThan(520);
+  const closed = {player:player('Bia',480,554),route:[],ack:0,plenary:true};
+  applyInput(closed,{seq:1,door:1,plenary:true});
+  expect(closed.player.y).toBe(554);
+  expect(worldVisible({x:625,y:201},{x:625,y:249},VISION_RADIUS+2)).toBe(false);
+  expect(worldVisible({x:550,y:195},{x:550,y:282},VISION_RADIUS+2)).toBe(false);
+  expect(worldVisible({x:500,y:140},{x:587,y:140})).toBe(false);
+  expect(worldVisible({x:500,y:140},{x:587,y:140},VISION_RADIUS+2)).toBe(true);
+  const npc = {id:'npc:treino',character:0,x:151,y:146};
+  const combat = new Combat();
+  expect(combat.attack(player('Treino',140,146),npc,false,100).damage).toBe(26);
+  expect(combat.view(npc,100).hp).toBe(94);
 });

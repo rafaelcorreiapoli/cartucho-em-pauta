@@ -1,3 +1,6 @@
+import { equippedWeapon } from './equipment';
+import { weapons } from './weapons';
+import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph } from './gameplay-ui';
@@ -5,15 +8,17 @@ import { hudConsumesKeys } from './game-keys';
 import { canReachObject, cashAmount, type GameplayAction, type GroundItem } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
-import { obstacleBetween, type Motion, type Player } from './map';
+import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
+type FieldAction = GameplayAction | {kind:'cross-door';door:number};
+
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:GameplayAction)=>void) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element<HTMLDetailsElement>('agenda-dock');
@@ -101,9 +106,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let roster:Player[] = [];
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
-    const actions:{label:string; icon:string; action:GameplayAction}[] = [];
+    const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
     if (state && player) {
+      const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
+      if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
       if (state.treatment) {
         actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Tratar ferimentos'} · ${money(infirmary.price)}`,
           icon:'shield',action:{kind:'treat'}});
@@ -114,14 +121,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
-        const armed = state.equipped?.some(item=>item.kind==='baton');
+        const weapon = equippedWeapon(state.equipped);
         for (const target of roster) {
-          if (target.id===id || !canReachObject(player,target) || obstacleBetween(player,target)) continue;
-          if (target.knockedOut && Math.hypot(player.x-target.x,player.y-target.y)<=aidRadius) {
+          if (target.id===id) continue;
+          if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
             actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
             if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
             actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
-          } else if (armed && !target.knockedOut) {
+          } else if (weapon && !target.knockedOut && canReachObject(player,target,{radius:weapons[weapon].reach,clearFloor:true})) {
             actions.push({label:`Golpear ${target.nick}`,icon:'alert',action:{kind:'attack',target:target.id}});
           }
         }
@@ -249,7 +256,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (canInteract && player) {
       for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
         const distance = Math.hypot(player.x-point.x,player.y-point.y);
-        if (distance<=best && canReachObject(player,point)) {
+        if (canReachObject(player,point,{radius:best,handsFree:true})) {
           best = distance;
           context = key;
         }

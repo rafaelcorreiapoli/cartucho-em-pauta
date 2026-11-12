@@ -1,6 +1,6 @@
 import type { GameplayEvent } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
-  type Evidence, type Offer, type PoliticsView, type Split } from '../src/politics';
+  type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
 import { PersonalAgenda } from './PersonalAgenda';
 
@@ -39,6 +39,15 @@ export class PoliticalEconomy {
   }
 
   wallet(id:string) { return this.accounts.get(id)?.wallet ?? 0; }
+
+  hasEvidence(id:string,kind:EvidenceKind) {
+    const known = this.accounts.get(id)?.known;
+    return [...(known ?? []),...this.published].some(key=>this.records.get(key)?.kind===kind);
+  }
+
+  hasMission(id:string,mission:Agenda) {
+    return this.accounts.get(id)?.agenda.hasActive(mission) ?? false;
+  }
 
   popularity(id:string) { return this.accounts.get(id)?.popularity ?? 0; }
 

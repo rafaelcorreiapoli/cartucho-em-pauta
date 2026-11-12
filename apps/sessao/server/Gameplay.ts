@@ -1,5 +1,6 @@
+import type { DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { canStand, HEIGHT, localPerception, obstacleBetween, roomAt, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
+import { canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
 import { installationSites, shop, type Installable } from '../src/installations';
@@ -10,7 +11,7 @@ import { Combat } from './Combat';
 import { Transport } from './Transport';
 import { aidRadius, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binocularBonus, equipment, isGear, type Gear } from '../src/equipment';
+import { binocularBonus, equippedWeapon, equipment, isGear, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -71,7 +72,7 @@ export class Gameplay {
   }
 
   private wearing(id:string, kind:Gear) {
-    return this.equipped(id).some(({data})=>data.kind===kind);
+    return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }
 
   vision(id:string) { return VISION_RADIUS+(this.wearing(id,'binoculars') ? binocularBonus : 0); }
@@ -91,6 +92,7 @@ export class Gameplay {
   private remove(item:Item) {
     this.hide(item);
     this.items.delete(item.data.id);
+    if (item.data.kind==='voiceModulator') this.modulator.remove(item.data.id);
     this.clearRequests(item.data.id);
   }
 
@@ -124,7 +126,7 @@ export class Gameplay {
   }
 
   private visibleGround(player:Player,now:number) {
-    return this.groundItems(now).filter(item=>localPerception(player,item,this.vision(player.id)).visible);
+    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id)));
   }
 
   private spawnCash(now:number) {
@@ -161,8 +163,13 @@ export class Gameplay {
     });
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
-      if (!exploring || player.knockedOut || !world.voice(player.id)) this.modulator.deactivate(player.id,world.now);
+      if (!exploring || player.knockedOut || !world.voice(player.id)) this.stopModulator(player.id,world.now);
     }
+  }
+
+  private stopModulator(id:string, now:number) {
+    const item = this.wearing(id,'voiceModulator');
+    if (item) this.modulator.deactivate(item.id,now);
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
@@ -170,10 +177,9 @@ export class Gameplay {
     this.phone.leave(player,world);
     this.transport.detach(player,world);
     this.dialogues.close(player.id);
-    this.modulator.deactivate(player.id,world.now);
+    this.stopModulator(player.id,world.now);
     if (!permanent) return;
     this.combat.leave(player);
-    this.modulator.leave(player.id);
     for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data.kind,player,world.now));
     for (const [id,request] of this.requests) {
       if (request.from===player.id || request.to===player.id) this.requests.delete(id);
@@ -186,9 +192,19 @@ export class Gameplay {
   get photoRevision() { return this.album.revision; }
   photoView(id:string,now:number) { return this.album.view(id,now); }
 
+  private dialogueEligibility(id:string, world:GameplayWorld) {
+    return ({wallet,item,office,evidence,mission}:DialogueCondition) =>
+      (wallet===undefined || (world.wallet?.(id) ?? 0)>=wallet) &&
+      (item===undefined || [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===item)) &&
+      (office===undefined || world.office(id)===office) &&
+      (evidence===undefined || world.hasEvidence?.(id,evidence)===true) &&
+      (mission===undefined || world.hasMission?.(id,mission)===true);
+  }
+
   view(player:Player, world:GameplayWorld):GameplayView {
     const {id} = player;
     const nearbyLocations = locations(player);
+    const modulator = this.wearing(id,'voiceModulator');
     const ground = this.visibleGround(player,world.now);
     const requests = [...this.requests.values()].flatMap(request => {
       if (request.to!==id) return [];
@@ -200,10 +216,10 @@ export class Gameplay {
       exposed:this.exposed.get(id),
       equipped:this.equipped(id).map(item=>item.data),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
-      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,world.wallet?.(id) ?? 0),
+      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
-      modulator:this.wearing(id,'voiceModulator') ? this.modulator.view(id,world.now) : undefined,
+      modulator:modulator ? this.modulator.view(modulator.id,world.now) : undefined,
       decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
@@ -323,7 +339,7 @@ export class Gameplay {
     if (!('equipped' in item.place) || item.place.equipped!==id) return 'Equipamento indisponível.';
     if (!this.available(id)) return 'Inventário cheio.';
     this.move(item,{holder:id});
-    if (item.data.kind==='voiceModulator') this.modulator.deactivate(id,world.now);
+    if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
     this.event(world,player,'unequipped',item.data);
     return 'Guardado no inventário.';
   }
@@ -367,21 +383,18 @@ export class Gameplay {
         this.phone.leave(player,world);
         return 'Jogador carregado.';
       }
-      if (!target?.knockedOut || !canReachObject(player,target) || obstacleBetween(player,target) ||
-          Math.hypot(player.x-target.x,player.y-target.y)>aidRadius) return 'Aproxime-se do jogador nocauteado.';
+      if (!target?.knockedOut || !canReachObject(player,target,{radius:aidRadius,clearFloor:true})) return 'Aproxime-se do jogador nocauteado.';
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
-    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,world.wallet?.(id) ?? 0);
+    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
     if (action.kind==='shop-buy') return this.buyGear(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
     if (action.kind==='toggle-modulator') {
-      if (!this.wearing(id,'voiceModulator') || !world.voice(id)) return 'Equipe o modulador e ative a voz.';
-      const before = this.modulator.view(id,world.now).active;
-      const message = this.modulator.toggle(id,world.now);
-      if (!before && this.modulator.view(id,world.now).active) {
-        const item = this.equipped(id).find(({data})=>data.kind==='voiceModulator');
-        this.event(world,player,'used',item?.data);
-      }
+      const item = this.wearing(id,'voiceModulator');
+      if (!item || !world.voice(id)) return 'Equipe o modulador e ative a voz.';
+      const before = this.modulator.view(item.id,world.now).active;
+      const message = this.modulator.toggle(item.id,world.now);
+      if (!before && this.modulator.view(item.id,world.now).active) this.event(world,player,'used',item);
       return message;
     }
     if (action.kind==='attack' || action.kind==='aid') {
@@ -395,15 +408,16 @@ export class Gameplay {
         this.event(world,player,'aided',undefined,target?.id);
         return 'Jogador socorrido.';
       }
-      if (!this.wearing(id,'baton')) return 'Equipe um porrete.';
-      const result = this.combat.attack(player,target,this.wearing(target?.id ?? '', 'vest'),world.now);
+      const weapon = equippedWeapon(this.equipped(id).map(item=>item.data));
+      if (!weapon) return 'Equipe um porrete.';
+      const result = this.combat.attack(player,target,!!this.wearing(target?.id ?? '', 'vest'),world.now,weapon);
       if (result.error) return result.error;
       publishGameplay(world,player,'hit',{target:target?.id,damage:result.damage});
       if (target?.knockedOut) {
         this.transport.detach(target,world);
         publishGameplay(world,player,'character-knocked-out',{target:target.id});
         this.dialogues.close(target.id);
-        this.modulator.deactivate(target.id,world.now);
+        this.stopModulator(target.id,world.now);
         this.phone.leave(target,world);
       }
       return `Acertou · ${result.damage} de dano`;

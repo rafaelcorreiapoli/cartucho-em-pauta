@@ -1,3 +1,4 @@
+import { canInteract } from '../src/interactions';
 import type { GameplayWorld } from './gameplay-world';
 import { offices, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
@@ -5,7 +6,7 @@ import {
   BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, STATION_RADIUS,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
-import { localPerception, type Player } from '../src/map';
+import type { Player } from '../src/map';
 import { HEARING_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -146,7 +147,9 @@ export class PlenaryMatch {
     return {
       players:players.filter(player => this.electorate.has(player.id)),now,
       started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
-      office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
+      office:id=>this.election.office(id),
+      hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
+      hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };
   }
@@ -163,12 +166,12 @@ export class PlenaryMatch {
 
   private at(player:Player, key:keyof typeof stations) {
     const station = stations[key];
-    return Math.hypot(player.x-station.x,player.y-station.y)<=STATION_RADIUS;
+    return canInteract(player,station,{radius:STATION_RADIUS,handsFree:true});
   }
 
   private nearby(player:Player, other:Player) {
     return player.id!==other.id && this.electorate.has(other.id) &&
-      Math.hypot(player.x-other.x,player.y-other.y)<=TRADE_RADIUS && localPerception(player,other).visible;
+      canInteract(player,other,{radius:TRADE_RADIUS,handsFree:true});
   }
 
   contacts(player:Player, players:Player[]): Contact[] {

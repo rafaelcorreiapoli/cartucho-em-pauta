@@ -1,12 +1,12 @@
 import { voiceBattery, voiceRecharge } from '../src/equipment';
 
 export class VoiceEquipment {
-  private cycles = new Map<string,{until:number; readyAt:number}>();
+  private cycles = new Map<number,{until:number; readyAt:number}>();
 
   reset() { this.cycles.clear(); }
-  leave(id:string) { this.cycles.delete(id); }
+  remove(id:number) { this.cycles.delete(id); }
 
-  deactivate(id:string, now:number) {
+  deactivate(id:number, now:number) {
     const cycle = this.cycles.get(id);
     if (cycle && cycle.until>now) {
       cycle.until = now;
@@ -14,7 +14,7 @@ export class VoiceEquipment {
     }
   }
 
-  toggle(id:string, now:number) {
+  toggle(id:number, now:number) {
     const cycle = this.cycles.get(id);
     if (cycle && cycle.until>now) {
       this.deactivate(id,now);
@@ -26,7 +26,7 @@ export class VoiceEquipment {
     return 'Modulador ligado.';
   }
 
-  view(id:string, now:number) {
+  view(id:number, now:number) {
     const cycle = this.cycles.get(id);
     return {active:!!cycle && cycle.until>now,
       battery:cycle ? Math.max(0,Math.ceil((cycle.until-now)/1000)) : voiceBattery/1000,

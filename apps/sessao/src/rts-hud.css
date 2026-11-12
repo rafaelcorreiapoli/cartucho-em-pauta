@@ -512,4 +512,5 @@
   border-radius: .65rem;
 }
 .market-art { font-size: 1.8rem; }
+img.market-art { width: 3rem; height: 2rem; object-fit: contain; }
 #market-feedback:not(:empty) { margin-top: .8rem; }

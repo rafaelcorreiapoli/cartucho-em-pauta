@@ -1,4 +1,4 @@
-import { needsFieldToken } from './gameplay';
+import { needsFieldToken, type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
@@ -190,9 +190,11 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
-    const market = createMarketPanel(action=>joined.send('gameplay',action));
-    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     let fieldToken = 0;
+    const sendGameplay = (action:GameplayAction) =>
+      joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+    const market = createMarketPanel(sendGameplay);
+    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -202,7 +204,8 @@ async function connect(join: () => Promise<Room>) {
       map.focus({preventScroll:true});
     },gameplay.nearby,action=>{
       audio.stationClick();
-      joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+      if (action.kind==='cross-door') game?.crossDoor(action.door);
+      else sendGameplay(action);
       map.focus({preventScroll:true});
     });
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{

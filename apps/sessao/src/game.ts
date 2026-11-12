@@ -1,3 +1,5 @@
+import { playComicImpact } from './comic-impact';
+import { weaponPose, weapons } from './weapons';
 import { npcs } from './npcs';
 import { binocularBonus } from './equipment';
 import { objects, type GroundItem } from './gameplay';
@@ -11,9 +13,9 @@ import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, inPlenary, localPerception, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number; lastHit?:number; flashUntil?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -77,6 +79,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
 
     preload() {
+      for (const [key,weapon] of Object.entries(weapons)) {
+        this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
+      }
       for (const {key,path} of characterSheets) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
@@ -123,9 +128,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {sheet,frame} = characterArt(npc.character);
         const sprite = this.add.sprite(npc.x,npc.y,sheet.key,frame+npc.direction*4)
           .setOrigin(.5,1).setScale(.295).setDepth(npc.y).setTint(0xffd7a2);
-        const label = this.add.text(npc.x,npc.y+5,npc.label,{fontFamily:'system-ui',fontSize:'7px',
-          color:'#ffe4a1',backgroundColor:'#142820ee',padding:{x:3,y:1},resolution:3})
-          .setOrigin(.5,0).setDepth(HEIGHT+10);
+        const label = this.add.text(npc.x,npc.counter.y+24,npc.label,{fontFamily:'system-ui',fontSize:'7px',
+          color:'#ffe4a1',backgroundColor:'#142820bb',padding:{x:3,y:1},resolution:3})
+          .setOrigin(.5,0).setDepth(1);
         return {sprite,label};
       });
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
@@ -285,6 +290,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.office.destroy();
           view.carried.destroy();
           view.symbol.destroy();
+          view.weapon.destroy();
           this.views.delete(id);
         }
       }
@@ -294,17 +300,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {id,character,direction,moving} = player;
         const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
-        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : Math.hypot(player.x-ownPlayer.x,player.y-ownPlayer.y)>=visionRadius)) {
+        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !worldVisible(ownPlayer,player,visionRadius))) {
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
           view?.carried.setVisible(false);
           view?.symbol.setVisible(false);
+          view?.weapon.setVisible(false);
           continue;
         }
         if (!view) {
           view = {
             nextStep:0,
+            weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             carried:this.add.image(0,0,'item-briefcase').setDepth(HEIGHT+30).setVisible(false),
             symbol:this.add.text(0,0,'',{fontSize:'11px',color:'#ffe08a',resolution:3}).setOrigin(.5).setDepth(HEIGHT+30).setVisible(false),
             sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
@@ -322,23 +330,46 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const blend = own && Math.hypot(sprite.x-player.x,sprite.y-player.y)<40 ? 1-Math.exp(-delta/20) : 1;
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
-        const row = direction===3 ? 1 : direction;
+        const swing = latest.swing;
+        if (swing && swing.startedAt!==view.swingAt) {
+          view.swingAt = swing.startedAt;
+          view.swingStarted = time;
+        }
+        const profile = swing && weapons[swing.weapon];
+        const progress = profile && view.swingStarted!==undefined ? (time-view.swingStarted)/profile.swingMs : 1;
+        const pose = swing && progress<1 && !latest.knockedOut ? weaponPose(swing,progress) : undefined;
+        const facing = pose?.facing ?? direction;
+        const row = facing===3 ? 1 : facing;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
           const level = own ? .46 : Math.max(0,1-distance/75)*.32;
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
           view.nextStep = time+290;
         } else if (!moving) view.nextStep = 0;
-        if (latest.hit!==undefined && latest.hit!==view.lastHit) view.flashUntil = time+240;
+        if (latest.hit!==undefined && latest.hit!==view.lastHit) {
+          const hit = latest.hit;
+          const targetView = view;
+          this.time.delayedCall(125,()=>{
+            if (!running || !targetView.sprite.active || !targetView.sprite.visible) return;
+            targetView.flashUntil = this.time.now+115;
+            playComicImpact(this,targetView.sprite.x,targetView.sprite.y-33,hit,this.textResolution);
+          });
+        }
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
-        const spriteX = latest.carried ? x-17 : x;
-        const spriteY = latest.carried ? y-24 : y;
+        const spriteX = latest.carried ? x-17 : x+(pose?.lungeX ?? 0);
+        const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? 0);
         const labelY = latest.carried ? y-51 : y+2;
-        sprite.setRotation(latest.carried ? Math.PI/2 : latest.knockedOut ? -Math.PI/2 : 0)
+        sprite.setRotation(latest.carried ? Math.PI/2 : latest.knockedOut ? -Math.PI/2 : pose?.lean ?? 0)
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
-        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0)).setFlipX(direction===3);
+        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0)).setFlipX(facing===3);
+        view.weapon.setVisible(!!pose);
+        if (pose && swing && profile) {
+          view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
+            .setScale(profile.size/view.weapon.width).setPosition(spriteX+pose.handX,spriteY+pose.handY)
+            .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
+        }
         label.setVisible(true).setPosition(x,labelY).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
           .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed;
@@ -351,7 +382,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         office.setVisible(running || !!title).setPosition(x,labelY+10)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
-        if (moving) sprite.play(`${character}-${row}`,true);
+        if (moving && !pose) sprite.play(`${character}-${row}`,true);
         else {
           sprite.anims.stop();
           sprite.setTexture(sheet.key,frame+row*4);
@@ -392,6 +423,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     update(snapshot: Player[]) {
       players = snapshot;
       history.add(snapshot,performance.now());
+    },
+    crossDoor(door:number) {
+      stop();
+      destination = undefined;
+      local.input({door});
     },
     setGroundItems(items:GroundItem[], installed:Decoration[]) { groundItems = items; decorations = installed; },
     drawPhoto(canvas:HTMLCanvasElement, captured?:PhotoScene) {

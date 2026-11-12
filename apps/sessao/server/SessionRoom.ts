@@ -6,7 +6,7 @@ import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
-import { localPerception, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
+import { localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
@@ -56,6 +56,27 @@ export class SessionRoom extends Room {
   private leaveVoice(id: string) {
     this.match.stopBroadcast(id,this.clock.currentTime);
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
+  }
+
+  private routeVoice(speaker:string|undefined) {
+    const participants = [...this.voice].flatMap(id=>{
+      const player = this.players.get(id)?.player;
+      return player ? [player] : [];
+    });
+    const spatial = this.match.phase==='negotiation';
+    const volume = (listener:Player, talker:Player) =>
+      !spatial || talker.id===speaker || this.gameplay.callPeer(listener.id)===talker.id
+        ? 1 : localPerception(listener,talker).volume;
+    for (const player of participants) {
+      const others = participants.filter(peer=>peer.id!==player.id);
+      const client = this.clients.getById(player.id);
+      if (!client) continue;
+      client.send('voice-send',others.filter(peer=>volume(peer,player)>0).map(peer=>peer.id));
+      if (spatial) {
+        const levels = others.map(peer=>[peer.id,volume(player,peer)] as const);
+        client.send('voice-range',levels.filter(([,level])=>level>0));
+      }
+    }
   }
 
   onCreate() {
@@ -164,7 +185,7 @@ export class SessionRoom extends Room {
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItem(player.id) : undefined;
       }
-      const speaker = this.match.speaker(now);
+      this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
       for (const client of this.clients) {
         const id = client.sessionId;
@@ -186,12 +207,10 @@ export class SessionRoom extends Room {
           this.lastMatchView.set(id,key);
         }
         if (this.match.running) {
-          const nearby = players.map(player => ({player,...localPerception(state.player,player,this.gameplay.vision(id))}));
-          client.send('players',plenary ? players.filter(inPlenary) : nearby.filter(entry => entry.visible).map(entry => entry.player));
-          if (view.phase==='negotiation' && this.voice.has(id)) client.send('voice-range',nearby
-            .map(entry => entry.player.id===speaker || entry.player.id===this.gameplay.callPeer(id) ? {...entry,volume:1} : entry)
-            .filter(({player,volume}) => player.id!==id && volume>0 && this.voice.has(player.id))
-            .map(({player,volume}) => [player.id,volume]));
+          const vision = this.gameplay.vision(id);
+          client.send('players',plenary ? players.filter(inPlenary) :
+            players.filter(player=>player===state.player || worldVisible(state.player,player,vision)));
+
         } else client.send('players',players);
         client.send('control',state);
       }

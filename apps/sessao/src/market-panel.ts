@@ -64,7 +64,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         const product = equipment[kind];
         const item = objects[kind];
         const card = node('article');
-        const art = node('span',product.symbol);
+        const art = 'weapon' in product ? node('img') : node('span',product.symbol);
+        if (art instanceof HTMLImageElement) {
+          art.src = import.meta.env.BASE_URL+'assets/'+item.portrait;
+          art.alt = '';
+        }
         art.className = 'market-art';
         art.setAttribute('aria-hidden','true');
         const hasItem = owned.some(ownedItem=>ownedItem.kind===kind);

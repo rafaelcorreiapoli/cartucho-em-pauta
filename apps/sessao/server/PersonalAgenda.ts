@@ -110,6 +110,10 @@ export class PersonalAgenda {
     return this.completed.reduce((total,mission)=>total+missionReward(mission.kind),0);
   }
 
+  hasActive(kind:Agenda) {
+    return this.missions.some(mission=>mission.kind===kind);
+  }
+
   view(metrics:AgendaMetrics):PoliticsView['missions'] {
     return {
       active:this.missions.map(mission=>({...mission,current:this.paid ? mission.current : this.missionProgress(metrics,mission)})),

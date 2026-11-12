@@ -23,6 +23,8 @@ test('clients share movement and voice, then receive private roles and payments'
     rooms.push(first);
     let firstView: PlenaryView;
     first.onMessage('plenary',(view:PlenaryView) => { firstView = view; });
+    let firstOutbound:string[] = [];
+    first.onMessage('voice-send',(ids:string[])=>{firstOutbound = ids;});
     first.onMessage('voice-range',() => {});
     await expect(new Client(endpoint).joinById(first.roomId,{nick:'  RAFA  '})).rejects.toThrow('já está em uso');
     await expect(new Client(endpoint).joinById(first.roomId,{nick:'   '})).rejects.toThrow('Use de 1 a 20');
@@ -31,6 +33,7 @@ test('clients share movement and voice, then receive private roles and payments'
     let secondView: PlenaryView;
     let secondRange:[string,number][] = [];
     second.onMessage('plenary',(view:PlenaryView) => { secondView = view; });
+    second.onMessage('voice-send',() => {});
     second.onMessage('voice-range',(levels:[string,number][]) => { secondRange = levels; });
     let seen: Player[] = [];
     const observed: Player[] = [];
@@ -132,6 +135,7 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(() => secondView?.gameplay?.call?.state==='connected' &&
       secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
     expect(secondRange.filter(([peer]) => peer===first.sessionId)).toHaveLength(1);
+    expect(firstOutbound).toContain(second.sessionId);
     second.send('gameplay',{kind:'hangup'});
     await until(() => !secondView?.gameplay?.call &&
       secondRange.some(([peer,volume]) => peer===first.sessionId && volume<1));
@@ -180,3 +184,82 @@ test('clients share movement and voice, then receive private roles and payments'
     await server.exited;
   }
 },10000);
+
+test('transport is released on an actual socket reconnect and on plenary admission', async () => {
+  const {defineRoom,defineServer,matchMaker} = await import('colyseus');
+  const {BunWebSockets} = await import('@colyseus/bun-websockets');
+  const {SessionRoom} = await import('./SessionRoom');
+  const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
+  const port = reservation.port!;
+  await reservation.stop();
+  const server = defineServer({
+    gracefullyShutdown:false,transport:new BunWebSockets(),
+    rooms:{plenary:defineRoom(SessionRoom)},
+  });
+  const rooms:Room[] = [];
+  const wait = async (ready:()=>boolean) => {
+    for (let attempt=0;attempt<100;attempt++) {
+      if (ready()) return;
+      await Bun.sleep(30);
+    }
+    throw new Error('Expected transport state did not arrive');
+  };
+  try {
+    await server.listen(port,'127.0.0.1');
+    const client = new Client(`http://127.0.0.1:${port}`);
+    const carrier = await client.create('plenary',{nick:'Alice'});
+    rooms.push(carrier);
+    const passenger = await client.joinById(carrier.roomId,{nick:'Bia'});
+    rooms.push(passenger);
+    const snapshots = new Map<string,Player>();
+    const views = new Map<string,PlenaryView>();
+    for (const peer of rooms) {
+      peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
+      peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
+      for (const message of ['players','photo-state','gameplay-feedback','item-obtained']) peer.onMessage(message,()=>{});
+    }
+    const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
+    // Set only the fixture position and deadline. Actions and results use the live socket.
+    const positions = Reflect.get(room,'players') as Map<string,{player:Player}>;
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
+    const match = Reflect.get(room,'match');
+    carrier.send('start-match');
+    await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
+    const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
+    carrier.send('gameplay',{kind:'talk',target:'vendor'});
+    await wait(()=>!!gameplay()?.dialogue);
+    carrier.send('gameplay',{kind:'dialogue-choice',target:'products',token:gameplay()?.dialogue?.token});
+    await wait(()=>gameplay()?.dialogue?.shop===true);
+    carrier.send('gameplay',{kind:'shop-buy',target:'baton',token:gameplay()?.dialogue?.token});
+    await wait(()=>gameplay()?.inventory.some(item=>item.kind==='baton')===true);
+    carrier.send('gameplay',{kind:'equip',item:gameplay()?.inventory.find(item=>item.kind==='baton')?.id});
+    await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
+    for (let token=1;token<=4;token++) {
+      carrier.send('gameplay',{kind:'attack',target:passenger.sessionId,token});
+      if (token<4) await Bun.sleep(1300);
+    }
+    await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);
+    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:5});
+    await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
+    let reconnected = false;
+    passenger.reconnection.minUptime = 0;
+    passenger.onReconnect(()=>{reconnected = true;});
+    passenger.connection.close(4010);
+    await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
+    await wait(()=>reconnected && snapshots.get(passenger.sessionId)?.carried===undefined);
+    expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
+    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:6});
+    await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
+      snapshots.get(passenger.sessionId)?.x===386 && snapshots.get(passenger.sessionId)?.y===655);
+    expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
+    expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
+    passenger.send('bill-vote','yes');
+    await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
+  } finally {
+    await Promise.allSettled(rooms.map(room=>room.leave()));
+    await server.gracefullyShutdown(false);
+  }
+},15_000);
