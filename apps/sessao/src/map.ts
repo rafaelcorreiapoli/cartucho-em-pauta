@@ -30,9 +30,9 @@ const obstacles = [
 ];
 
 export type Player = { id: string; character: number; x: number; y: number; direction: number; moving: boolean };
-export function playerName(player: Player, players: Player[]) {
+export function playerName(player: Player, players: Player[], alwaysDisambiguate = false) {
   const name = NAMES[player.character];
-  return players.some(other => other.id!==player.id && other.character===player.character) ?
+  return alwaysDisambiguate || players.some(other => other.id!==player.id && other.character===player.character) ?
     `${name} · ${player.id.slice(-4)}` : name;
 }
 export type Motion = { x: number; y: number };
@@ -56,4 +56,30 @@ export function move(player: Player, input: Motion, seconds: number) {
   if (canStand(player.x,y+dy)) player.y += dy;
   player.direction = Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
   player.moving = x !== player.x || y !== player.y;
+}
+
+const VISION_RADIUS = 86;
+const HEARING_RADIUS = 114;
+
+function wallBetween(a: Motion, b: Motion) {
+  return walls.some(([x,y,w,h]) => {
+    const interval = (start:number, end:number, min:number, max:number) => {
+      if (start===end) return start>=min && start<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
+      const first = (min-start)/(end-start), last = (max-start)/(end-start);
+      return [Math.min(first,last),Math.max(first,last)];
+    };
+    const [x0,x1] = interval(a.x,b.x,x,x+w);
+    const [y0,y1] = interval(a.y,b.y,y,y+h);
+    return Math.max(0,x0,y0)<=Math.min(1,x1,y1);
+  });
+}
+
+export function localPerception(a: Player, b: Player) {
+  const distance = Math.hypot(a.x-b.x,a.y-b.y);
+  if (distance>=HEARING_RADIUS) return {visible:false,volume:0};
+  const wall = wallBetween(a,b);
+  return {
+    visible:distance<VISION_RADIUS && !wall,
+    volume:Math.round(20 * Math.min(1,(HEARING_RADIUS-distance)/85) * (wall ? .2 : 1))/20,
+  };
 }

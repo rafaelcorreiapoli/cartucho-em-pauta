@@ -8,7 +8,7 @@ type Peer = {
   pending: Promise<void>;
   candidates: RTCIceCandidateInit[];
   meter?: Meter;
-  playback?: HTMLAudioElement;
+  playback?: GainNode;
 };
 
 function iceServers(): RTCIceServer[] {
@@ -24,9 +24,11 @@ export class RoomVoice {
   private peers = new Map<string,Peer>();
   private timer?: number;
   private generation = 0;
+  private range?: Map<string,number>;
 
   constructor(private room: Room, private onSpeaking: (ids: Set<string>) => void,
     private onConnections: (connected: number, peers: number) => void) {
+    room.onMessage('voice-range', (levels:[string,number][]) => this.setRange(new Map(levels)));
     room.onMessage('voice-roster', (ids: string[]) => this.syncPeers(ids));
     room.onMessage('voice-signal', ({from,signal}: {from:string; signal:VoiceSignal}) => {
       const peer = this.peers.get(from);
@@ -71,8 +73,19 @@ export class RoomVoice {
     const enabled = this.muted;
     this.mic?.getAudioTracks().forEach(track => { track.enabled = enabled; });
     this.disguise?.stream.getAudioTracks().forEach(track => { track.enabled = enabled; });
-    for (const peer of this.peers.values()) void peer.playback?.play().catch(() => {});
+    void this.audio?.resume().catch(() => {});
     this.measure();
+  }
+
+  setRange(range?: Map<string,number>) {
+    this.range = range;
+    for (const [id,peer] of this.peers) this.updateGain(id,peer);
+  }
+
+  private volume(id:string) { return this.range ? this.range.get(id) ?? 0 : 1; }
+
+  private updateGain(id:string, peer:Peer) {
+    peer.playback?.gain.setTargetAtTime(this.volume(id),this.audio!.currentTime,.025);
   }
 
   stop(notify = true) {
@@ -109,10 +122,7 @@ export class RoomVoice {
     const peer = this.peers.get(id)!;
     peer.connection.onconnectionstatechange = null;
     peer.connection.close();
-    if (peer.playback) {
-      peer.playback.pause();
-      peer.playback.srcObject = null;
-    }
+    peer.playback?.disconnect();
     peer.meter?.source.disconnect();
     peer.meter?.analyser.disconnect();
     this.peers.delete(id);
@@ -130,11 +140,13 @@ export class RoomVoice {
     connection.ontrack = ({track,streams}) => {
       if (track.kind !== 'audio' || this.peers.get(id) !== peer || peer.playback) return;
       const stream = streams[0] ?? new MediaStream([track]);
-      const playback = new Audio();
-      playback.srcObject = stream;
+      const audio = this.audio!;
+      const playback = audio.createGain();
+      playback.gain.value = this.volume(id);
       peer.playback = playback;
       peer.meter = this.meter(stream);
-      void playback.play().catch(() => {});
+      peer.meter.source.connect(playback);
+      playback.connect(audio.destination);
     };
     if (this.room.sessionId < id) {
       this.queue(peer,async () => {
@@ -196,7 +208,7 @@ export class RoomVoice {
       if (now-meter.lastSound<260) speaking.add(id);
     };
     if (!this.muted) sample(this.room.sessionId,this.localMeter);
-    for (const [id,peer] of this.peers) sample(id,peer.meter);
+    for (const [id,peer] of this.peers) if (this.volume(id)>0) sample(id,peer.meter);
     this.onSpeaking(speaking);
   }
 }

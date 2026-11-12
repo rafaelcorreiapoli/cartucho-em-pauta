@@ -1,6 +1,6 @@
 # Presidente da Sessão
 
-Protótipo de movimentação multiplayer para até seis pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
+Jogo de negociação e sabotagem para três a seis pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
 
 ```sh
 bun install --frozen-lockfile
@@ -9,10 +9,29 @@ bun run server
 
 Em outro terminal, execute `bun run dev` e abra http://localhost:5175. Crie uma sala e copie o link para uma segunda aba ou informe o código manualmente. Use WASD ou as setas para andar, ou clique no chão para o servidor calcular um caminho pelas portas e ao redor dos móveis com EasyStar. Para testar na rede local, abra o endereço de rede mostrado pelo Vite nos dois dispositivos e permita acesso às portas 5175 e 2568. Para um servidor em outro endereço, configure `VITE_GAME_SERVER` no cliente.
 
-`bun run check` verifica os tipos, testa dois clientes contra um servidor Bun e gera o build web.
+`bun run check` verifica os tipos, testa três clientes contra um servidor Bun e gera o build web.
 
 Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram feitas de frente, perfil e costas, com duas poses de passada para cada direção, e empacotadas em quadros de 128×128. O perfil é espelhado no jogo para a quarta direção. O mapa usa um atlas de móveis próprio, pisos e paredes montados no Phaser.
 
+
+## Jogar uma sessão
+
+Crie uma sala, copie o link e reúna de 3 a 6 pessoas. Ativem a voz e iniciem a
+sessão. Um infiltrado é sorteado independentemente do personagem. Os
+parlamentares ganham se terminarem os três projetos com pelo menos 45 de
+estabilidade; o infiltrado ganha se impedir isso. Se chegar a zero, a partida
+termina na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
+
+Cada projeto começa com 80 segundos de articulação. No mapa, a visão de outros
+jogadores é local e a voz perde volume com distância e paredes. Os pontos dourados
+permitem protocolar uma emenda que troca estabilidade por economia, auditar os
+valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer no
+painel uma vez por projeto para que o custo aparente de aprovar seja menor.
+
+Na votação, todos voltam a se ouvir e têm 30 segundos para aprovar ou rejeitar.
+O projeto precisa de mais da metade dos jogadores a favor. O resultado usa os
+valores reais, mesmo se a fraude não for descoberta. No fim, a sala mostra quem
+era o infiltrado e permite jogar de novo.
 
 ## Voz da sala
 

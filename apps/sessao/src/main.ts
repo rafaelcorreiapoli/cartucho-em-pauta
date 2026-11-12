@@ -1,5 +1,7 @@
 import { Client, type Room } from '@colyseus/sdk';
 import { createGame } from './game';
+import { createPlenaryPanel } from './plenary-panel';
+import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { NAMES, playerName, type Player } from './map';
 import type { Disguise } from './live-disguise';
@@ -43,13 +45,15 @@ let disguiseRevision = 0;
 let voice: RoomVoice | undefined;
 let playersInRoom: Player[] = [];
 let speaking = new Set<string>();
+let matchRunning = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
 function updateSpeaking() {
   const names = playersInRoom.filter(player => speaking.has(player.id)).map(player =>
-    player.id === room?.sessionId ? 'Você' : playerName(player,playersInRoom));
+    player.id === room?.sessionId ? 'Você' : playerName(player,playersInRoom,matchRunning));
+  if ([...speaking].some(id => !playersInRoom.some(player => player.id===id))) names.push('voz próxima');
   const label = names.length ? 'Falando: '+names.join(', ') : '';
   if (voiceSpeaking.textContent !== label) voiceSpeaking.textContent = label;
 }
@@ -119,6 +123,7 @@ function showLobby(message: string) {
   voice?.stop(false);
   voice = undefined;
   playersInRoom = [];
+  matchRunning = false;
   resetVoiceButtons();
   game?.destroy();
   game = undefined;
@@ -146,16 +151,38 @@ async function connect(join: () => Promise<Room>) {
     code.value = joined.roomId;
     lobby.hidden = true;
     session.hidden = false;
+    characters.hidden = false;
     status.textContent = `Sala ${joined.roomId}`;
     game = createGame(map,joined.sessionId,input => joined.send('input',input));
+    const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
+      joined.send(type,data);
+      if (type!=='bill-vote') map.focus({preventScroll:true});
+    });
+    let phase: PlenaryView['phase'] = 'lobby';
+    let count = 1;
+    const updateRoomLabel = () => {
+      const label = `Sala ${joined.roomId} · ${count}/${MAX_PLAYERS} jogadores`;
+      if (status.textContent!==label) status.textContent = label;
+    };
+    joined.onMessage('plenary',(view: PlenaryView) => {
+      panel.render(view);
+      count = view.players;
+      updateRoomLabel();
+      if (phase===view.phase) return;
+      phase = view.phase;
+      const negotiating = phase==='negotiation';
+      voice?.setRange(negotiating ? new Map() : undefined);
+      matchRunning = negotiating || phase==='ballot';
+      game?.setMatchPhase(phase);
+      characters.hidden = negotiating || phase==='ballot';
+    });
     joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
     joined.onMessage('players',(players: Player[]) => {
       playersInRoom = players;
+      panel.players(players);
       game?.update(players);
       updateSpeaking();
       const self = players.find(player => player.id===joined.sessionId);
-      const label = `Sala ${joined.roomId} · ${players.length}/6 jogadores`;
-      if (status.textContent!==label) status.textContent = label;
       buttons.forEach((button,index) => button.setAttribute('aria-pressed',String(index===self?.character)));
     });
     joined.onLeave(() => {

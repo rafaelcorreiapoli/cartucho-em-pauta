@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
+import type { PlenaryView } from '../src/plenary';
 import { canStand, type Player } from '../src/map';
 
 test('two clients share movement, collision and character changes in a room', async () => {
@@ -19,8 +20,15 @@ test('two clients share movement, collision and character changes in a room', as
     }
     const first = await new Client(endpoint).create('plenary');
     rooms.push(first);
+    let firstView: PlenaryView;
+    first.onMessage('plenary',(view:PlenaryView) => { firstView = view; });
+    first.onMessage('voice-range',() => {});
     const second = await new Client(endpoint).joinById(first.roomId);
     rooms.push(second);
+    let secondView: PlenaryView;
+    let secondRange:[string,number][] = [];
+    second.onMessage('plenary',(view:PlenaryView) => { secondView = view; });
+    second.onMessage('voice-range',(levels:[string,number][]) => { secondRange = levels; });
     let seen: Player[] = [];
     const observed: Player[] = [];
     second.onMessage('players',(players: Player[]) => {
@@ -77,10 +85,23 @@ test('two clients share movement, collision and character changes in a room', as
     first.send('voice-signal',{to:second.sessionId,signal});
     await until(() => signals.length===1);
     expect(signals[0]).toEqual({from:first.sessionId,signal});
+    const third = await new Client(endpoint).joinById(first.roomId);
+    rooms.push(third);
+    let thirdView: PlenaryView;
+    third.onMessage('plenary',(view:PlenaryView) => { thirdView = view; });
+    third.onMessage('players',() => {});
+    third.onMessage('control',() => {});
+    third.onMessage('voice-roster',() => {});
+    await until(() => firstView?.players===3 && secondView?.players===3 && thirdView?.players===3);
+    first.send('start-match');
+    await until(() => [firstView,secondView,thirdView].every(view => view?.phase==='negotiation'));
+    expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
+    expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
+    await until(() => !findFirst() && secondRange.some(([id,volume]) => id===first.sessionId && volume>0));
     await first.leave();
     await until(() => roster.at(-1)?.length===1);
     expect(roster.at(-1)).toEqual([second.sessionId]);
-    await until(() => seen.length===1 && seen[0].id===second.sessionId);
+    await until(() => secondView?.phase==='finished' && seen.length===2 && seen.some(player => player.id===second.sessionId));
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();

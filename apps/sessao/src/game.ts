@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { stations, STATION_RADIUS, type Phase } from './plenary';
 import { drawMap } from './draw-map';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
@@ -12,6 +13,8 @@ const directions = new Map(Object.entries({
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void) {
   let players: Player[] = [];
+  let negotiating = false;
+  let running = false;
   let speaking = new Set<string>();
   const local = new PredictedMovement(send);
   const history = new PlayerHistory();
@@ -38,6 +41,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private views = new Map<string,View>();
+    private stationMarkers: {ring:Phaser.GameObjects.Ellipse; label:Phaser.GameObjects.Text}[] = [];
     private marker!: Phaser.GameObjects.Ellipse;
 
 
@@ -55,6 +59,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.cameras.main.setZoom(2).centerOn(WIDTH/2,HEIGHT/2);
       drawMap(this);
+      for (const {x,y,label} of Object.values(stations)) {
+        this.stationMarkers.push({
+          ring:this.add.ellipse(x,y,34,16,0xffdc82,.2).setStrokeStyle(1,0xffdc82).setDepth(y-2),
+          label:this.add.text(x,y-13,label,{fontFamily:'system-ui',fontSize:'8px',fontStyle:'bold',
+            backgroundColor:'#263a31',padding:{x:3,y:1},resolution:3}).setOrigin(.5,1).setDepth(490),
+        });
+      }
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
@@ -88,6 +99,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         manual = keys.size>0;
       }
       const now = performance.now();
+      const ownPlayer = local.state?.player;
+      for (const [i,station] of Object.values(stations).entries()) {
+        const {ring,label} = this.stationMarkers[i];
+        ring.setVisible(negotiating).setAlpha(ownPlayer && Math.hypot(ownPlayer.x-station.x,ownPlayer.y-station.y)<=STATION_RADIUS ? 1 : .55);
+        label.setVisible(negotiating);
+      }
 
       for (const [id,view] of this.views) {
         if (!players.some(player => player.id===id)) {
@@ -116,7 +133,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
         sprite.setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setPosition(x,y+2).setText(playerName(player,players))
+        label.setPosition(x,y+2).setText(playerName(player,players,running))
           .setColor(speaking.has(id) ? '#adff91' : '#fff7df');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
@@ -138,6 +155,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       history.add(snapshot,performance.now());
     },
     reconcile(snapshot: ControlState) { local.reconcile(snapshot); },
+    setMatchPhase(phase:Phase) {
+      negotiating = phase==='negotiation';
+      running = negotiating || phase==='ballot';
+    },
     setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();

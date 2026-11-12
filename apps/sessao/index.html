@@ -10,7 +10,7 @@
   <main>
     <header>
       <h1>Presidente da Sessão</h1>
-      <p>Protótipo multiplayer · Até 6 jogadores</p>
+      <p>Negociação e sabotagem · 3 a 6 jogadores</p>
     </header>
     <form id="lobby">
       <button id="create" type="button">Criar sala</button>
@@ -79,6 +79,37 @@
         <span id="live-disguise-status" role="status"></span>
       </fieldset>
       <div id="characters" role="group" aria-label="Personagem"></div>
+      <section id="plenary" aria-label="Sessão legislativa">
+        <p id="briefing">Três projetos entram em pauta. Negociem no mapa e terminem com pelo menos 45 de estabilidade. Um infiltrado quer derrubar a sessão.</p>
+        <button id="start-match" type="button">Iniciar sessão</button>
+        <p id="start-hint"></p>
+        <div id="match" hidden>
+          <div class="plenary-line"><strong id="role"></strong><span id="phase"></span><strong id="clock"></strong></div>
+          <div class="plenary-line"><span id="stability"></span><span id="budget"></span></div>
+          <p id="outcome" role="status" hidden></p>
+          <div id="proposal">
+            <h2 id="bill"></h2>
+            <p id="impact"></p>
+            <p id="clue" role="status" hidden></p>
+            <div id="stations">
+              <p>Converse com quem estiver perto. Aproxime-se de um ponto dourado para agir.</p>
+              <div class="plenary-line">
+                <button data-action="amendment" type="button">Protocolar emenda</button>
+                <button data-action="audit" type="button">Conferir os números</button>
+                <button data-action="panel" type="button" hidden>Corrigir o painel</button>
+                <button data-action="fraud" type="button" hidden>Fraudar o painel</button>
+              </div>
+            </div>
+            <div id="ballot" hidden>
+              <p id="quorum"></p>
+              <div class="plenary-line">
+                <button data-vote="yes" aria-pressed="false" type="button">Aprovar</button>
+                <button data-vote="no" aria-pressed="false" type="button">Rejeitar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
       <p>WASD, setas ou toque no chão pra andar.</p>
     </section>

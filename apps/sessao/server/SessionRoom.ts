@@ -1,13 +1,19 @@
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, type Client } from 'colyseus';
-import { NAMES, type Player } from '../src/map';
+import { localPerception, NAMES, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, readInput, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
+import { MAX_PLAYERS } from '../src/plenary';
+import { PlenaryMatch } from './PlenaryMatch';
+
 export class SessionRoom extends Room {
-  maxClients = 6;
+  maxClients = MAX_PLAYERS;
   maxMessagesPerSecond = 100;
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
+
+  private match = new PlenaryMatch();
+  private lastMatchView = new Map<string,string>();
 
   private voice = new Set<string>();
 
@@ -28,6 +34,18 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('start-match', client => {
+      if (this.match.start(client.sessionId,[...this.players.values()].map(({player}) => player),this.clock.currentTime)) void this.lock();
+    });
+    this.onMessage('plenary-action', (client, action:unknown) => {
+      const player = this.players.get(client.sessionId)?.player;
+      if (player && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
+        this.match.act(player,action,this.clock.currentTime);
+      }
+    });
+    this.onMessage('bill-vote', (client, vote:unknown) => {
+      if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
+    });
     this.onMessage('input', (client, data: unknown) => {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
@@ -38,7 +56,7 @@ export class SessionRoom extends Room {
     });
     this.onMessage('character', (client, character: unknown) => {
       const player = this.players.get(client.sessionId)?.player;
-      if (player && typeof character === 'number' && Number.isInteger(character) && character >= 0 && character < NAMES.length) {
+      if (!this.match.running && player && typeof character === 'number' && Number.isInteger(character) && character >= 0 && character < NAMES.length) {
         player.character = character;
       }
     });
@@ -49,10 +67,29 @@ export class SessionRoom extends Room {
         else state.player.moving = false;
       }
       const players = [...this.players.values()].map(state => state.player);
-      this.broadcast('players',players);
+      const running = this.match.running;
+      const now = this.clock.currentTime;
+      this.match.advance(now);
+      if (running && !this.match.running) void this.unlock();
+      const ids = players.map(({id}) => id);
       for (const client of this.clients) {
-        const state = this.players.get(client.sessionId);
-        if (state) client.send('control',state);
+        const id = client.sessionId;
+        const state = this.players.get(id);
+        if (!state) continue;
+        const view = this.match.view(id,ids,now);
+        const key = JSON.stringify(view);
+        if (this.lastMatchView.get(id)!==key) {
+          client.send('plenary',view);
+          this.lastMatchView.set(id,key);
+        }
+        if (view.phase==='negotiation') {
+          const nearby = players.map(player => ({player,...localPerception(state.player,player)}));
+          client.send('players',nearby.filter(entry => entry.visible).map(entry => entry.player));
+          if (this.voice.has(id)) client.send('voice-range',nearby
+            .filter(({player,volume}) => player.id!==id && volume>0 && this.voice.has(player.id))
+            .map(({player,volume}) => [player.id,volume]));
+        } else client.send('players',players);
+        client.send('control',state);
       }
     },STEP_MS);
   }
@@ -69,6 +106,10 @@ export class SessionRoom extends Room {
 
   onLeave(client: Client) {
     this.leaveVoice(client.sessionId);
+    this.lastMatchView.delete(client.sessionId);
+    const running = this.match.running;
+    this.match.leave(client.sessionId);
+    if (running && !this.match.running) void this.unlock();
     this.players.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }
