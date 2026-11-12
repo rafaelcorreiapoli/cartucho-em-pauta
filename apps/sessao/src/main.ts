@@ -1,3 +1,4 @@
+import type { PhotoAccessView } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { showNewResults } from './results';
 import { setCharacterPortrait } from './character-art';
@@ -198,7 +199,7 @@ async function connect(join: () => Promise<Room>) {
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
-    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message));
+    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -207,6 +208,9 @@ async function connect(join: () => Promise<Room>) {
       joined.send('gameplay',{kind:'use',item:drop});
       map.focus({preventScroll:true});
     },gameplay.nearby);
+    joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
+      if (gameplay.photoState(photos)) audio.shutter();
+    });
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
@@ -236,7 +240,7 @@ async function connect(join: () => Promise<Room>) {
       election.render(view);
       gameplay.render(view);
       hud.render(view);
-      game?.setGroundItems(view.gameplay?.ground ?? []);
+      game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;

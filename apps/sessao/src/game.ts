@@ -5,11 +5,13 @@ import { characterArt, characterSheets } from './character-art';
 import { offices, type Assignment, type Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
+import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
+import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; nextStep:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; carried:Phaser.GameObjects.Image; symbol:Phaser.GameObjects.Text; nextStep:number };
 const stationColor = 0x79ebdf;
 const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
@@ -25,6 +27,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   parent.append(fog);
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
+  let decorations: Decoration[] = [];
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -61,6 +64,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private views = new Map<string,View>();
     private groundMarkers = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text}>();
     private renderedGround?:GroundItem[];
+    private renderedDecorations?:Decoration[];
+    private installed = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
+    photoRenderer?:PhotoRenderer;
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
@@ -72,6 +78,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
+      this.load.spritesheet('installed-portraits',`${import.meta.env.BASE_URL}assets/retratos-elenco.webp`,{frameWidth:256,frameHeight:256});
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
@@ -94,6 +101,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this);
+      this.photoRenderer = new PhotoRenderer(this.textures);
+      this.children.depthSort();
+      this.photoRenderer.loadMap(this.children.getChildren());
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
         this.doors.fillStyle(0x774740).fillRect(x,y,w,h).fillStyle(0xe8aa75).fillRect(x,y+2,w,2);
@@ -153,15 +163,46 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const existing = this.groundMarkers.get(item.id);
         if (existing) {
           existing.marker.setPosition(item.x,item.y).setDepth(item.y-1);
+          existing.label.setText(item.title ?? objects[item.kind].name);
           continue;
         }
-        const icon = this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,.8).setDisplaySize(20,20);
+        const symbol = itemSymbols[item.kind];
+        const icon = symbol ? this.add.text(0,0,symbol,{fontSize:'15px',color:'#ffe08a',resolution:3}).setOrigin(.5,.8)
+          : this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,.8).setDisplaySize(20,20);
         const label = this.add.text(0,4,item.title ?? objects[item.kind].name,{
           fontFamily:'system-ui',fontSize:'5px',color:'#fff5df',backgroundColor:'rgba(14,25,20,0.68)',
           padding:{x:2,y:1},align:'center',wordWrap:{width:76},resolution:this.textResolution,
         }).setOrigin(.5,0);
         const marker = this.add.container(item.x,item.y,[icon,label]).setDepth(item.y-1);
         this.groundMarkers.set(item.id,{marker,label});
+      }
+    }
+
+    private renderDecorations() {
+      if (this.renderedDecorations===decorations) return;
+      this.renderedDecorations = decorations;
+      const ids = new Set(decorations.map(item=>item.id));
+      for (const [id,{marker}] of this.installed) {
+        if (ids.has(id)) continue;
+        marker.destroy();
+        this.installed.delete(id);
+      }
+      for (const item of decorations) {
+        const current = this.installed.get(item.id);
+        if (current) {
+          current.label.setText(decorationLabel(item));
+          current.mark?.setVisible(!!item.marked);
+          continue;
+        }
+        const art = item.kind==='portrait' ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
+          : this.add.text(0,0,itemSymbols[item.kind] ?? '',{fontSize:'16px',color:'#ffe08a',resolution:3}).setOrigin(.5);
+        const label = this.add.text(0,9,decorationLabel(item),{
+          fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
+        }).setOrigin(.5,0);
+        const frame = this.add.rectangle(0,0,20,20,0x543b24,.92).setStrokeStyle(1,0xcb9853);
+        const mark = this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3}).setOrigin(.5).setVisible(!!item.marked);
+        const marker = this.add.container(item.x,item.y,[frame,art,label,mark]).setDepth(item.y+1);
+        this.installed.set(item.id,{marker,label,mark});
       }
     }
 
@@ -187,6 +228,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         manual = keys.size>0;
       }
       this.renderGroundItems();
+      this.renderDecorations();
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const inSession = !!local.state?.plenary;
@@ -205,6 +247,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.textResolution = resolution;
         for (const label of this.mapLabels) label.setResolution(resolution);
         for (const {label} of this.groundMarkers.values()) label.setResolution(resolution);
+        for (const {label} of this.installed.values()) label.setResolution(resolution);
         for (const view of this.views.values()) {
           view.label.setResolution(resolution);
           view.office.setResolution(resolution);
@@ -221,6 +264,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.sprite.destroy();
           view.label.destroy();
           view.office.destroy();
+          view.carried.destroy();
+          view.symbol.destroy();
           this.views.delete(id);
         }
       }
@@ -234,11 +279,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
+          view?.carried.setVisible(false);
+          view?.symbol.setVisible(false);
           continue;
         }
         if (!view) {
           view = {
             nextStep:0,
+            carried:this.add.image(0,0,'item-briefcase').setDepth(HEIGHT+30).setVisible(false),
+            symbol:this.add.text(0,0,'',{fontSize:'11px',color:'#ffe08a',resolution:3}).setOrigin(.5).setDepth(HEIGHT+30).setVisible(false),
             sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
             label:this.add.text(player.x,player.y+2,'',{
               fontFamily:'system-ui',fontSize:'9px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:2,resolution:this.textResolution,
@@ -262,8 +311,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.nextStep = time+290;
         } else if (!moving) view.nextStep = 0;
         sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setVisible(true).setPosition(x,y+2).setText(player.phone ? `☎ ${player.nick}` : player.nick)
+        label.setVisible(true).setPosition(x,y+2).setText(player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
           .setColor('#fff7df');
+        const exposed = latest.exposed;
+        const symbol = exposed && itemSymbols[exposed.kind];
+        view.carried.setVisible(!!exposed && !symbol);
+        view.symbol.setVisible(!!symbol);
+        if (exposed && !symbol) view.carried.setTexture(`item-${exposed.kind}`).setDisplaySize(13,13).setPosition(x,y-42);
+        if (symbol) view.symbol.setText(symbol).setPosition(x,y-42);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,y+12)
           .setText(title ? offices[title].name : 'Assessor')
@@ -310,7 +365,24 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       players = snapshot;
       history.add(snapshot,performance.now());
     },
-    setGroundItems(items:GroundItem[]) { groundItems = items; },
+    setGroundItems(items:GroundItem[], installed:Decoration[]) { groundItems = items; decorations = installed; },
+    drawPhoto(canvas:HTMLCanvasElement, captured?:PhotoScene) {
+      if (!scene.sys.isActive() || !scene.photoRenderer) return;
+      if (captured) {
+        scene.photoRenderer.draw(canvas,captured);
+        return;
+      }
+      const player = players.find(person=>person.id===ownId);
+      if (!player) return;
+      scene.photoRenderer.draw(canvas,{
+        center:player,
+        people:players.filter(person=>inPhotoFrame(player,person,true)).map(person=>({
+          ...person,name:person.nick,
+        })),
+        ground:groundItems.filter(item=>inPhotoFrame(player,item)),
+        decorations:decorations.filter(item=>inPhotoFrame(player,item)),
+      });
+    },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },

@@ -3,7 +3,7 @@ import { canReachObject, cashAmount, type GroundItem } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import type { Motion, Player } from './map';
-import { AGENDA_REWARD, missionTitle, money, type Mission, type PoliticsView } from './politics';
+import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
 import { STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -186,8 +186,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       node.querySelector('strong')!.textContent = missionTitle(mission);
       const progress = mission.kind==='fortuna' ? `${money(mission.current)} / ${money(mission.target)}` :
         `${mission.current} / ${mission.target}`;
-      node.querySelector('small')!.textContent = done ? missions.paid ? 'Prêmio recebido' : 'Prêmio no fim da sessão' : progress;
-      node.querySelector('.mission-reward span')!.textContent = `+${money(AGENDA_REWARD)}`;
+      const reward = missionReward(mission.kind);
+      node.querySelector('small')!.textContent = done ? reward ? missions.paid ? 'Prêmio recebido' : 'Prêmio no fim da sessão' : 'Capricho concluído' : progress;
+      node.querySelector<HTMLElement>('.mission-reward')!.hidden = !reward;
+      node.querySelector('.mission-reward span')!.textContent = `+${money(reward)}`;
       return node;
     }
     activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));

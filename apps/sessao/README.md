@@ -177,3 +177,13 @@ calculadas pela visibilidade do mapa. A agenda usa esses eventos para
 missões de protocolo, entrega, fotografia e ações sem testemunhas.
 Pedidos entre jogadores aparecem apenas para quem os recebeu. O jogo da
 memória considera testemunhas durante toda a rodada.
+
+### Câmera e objetos expostos
+
+Abra um objeto no inventário e escolha **Expor acima do personagem**. Só um item fica exposto por vez. Largar, usar, guardar ou entregar o objeto encerra a exposição. O servidor envia o indicador junto ao jogador apenas a quem consegue vê-lo.
+
+Em **Celular → Câmera**, use **Tirar foto** ou **Selfie**. A prévia acompanha o enquadramento. Ao disparar, o servidor congela a posição, a direção, os itens expostos, os objetos no chão e as instalações que entram no quadro e passam pela visibilidade. O cliente desenha o quadro com o mapa e os sprites Phaser, usando exclusivamente esse registro para a imagem salva. As miniaturas são geradas no cliente. Uma entrega recente só entra no quadro quando os dois participantes continuam visíveis perto de onde a entrega ocorreu.
+
+O **Álbum** guarda até 12 imagens por jogador e a sala comporta até 144 originais. **Mostrar** concede uma visualização temporária após aceite. **Enviar cópia** adiciona uma referência ao mesmo original no álbum do destinatário. Ambas exigem proximidade no envio e no aceite. Excluir do álbum retira apenas a própria referência. Na Sala de Imprensa, **Publicar nas Notícias** torna a imagem pública. A negociação de preço usa a transferência de dinheiro existente e o envio da cópia é uma ação separada. A primeira selfie própria publicada com companhia rende +4 de popularidade na partida. Uma imagem registra o que aparece no quadro e não gera uma acusação automática.
+
+O **Cafezinho** vende a pizza e tem uma mesa para servir seis fatias. Cada pessoa pode pegar uma fatia de cada pizza. O **Credenciamento** vende retratos e placas VIP. Os pontos de instalação aparecem como ações no item ao se aproximar de uma superfície válida. Retratos podem ser rabiscados, retirados e substituídos. Placas reservam simbolicamente uma cadeira ou espaço sem bloquear passagem. Fotos, instalações e fatias usam o mesmo sistema de eventos das agendas. As agendas fotográficas contabilizam fatos distintos e os caprichos liberam espaço sem prêmio em dinheiro.

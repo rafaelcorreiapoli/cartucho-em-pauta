@@ -208,6 +208,16 @@ test('activities only count while their mission is active and replacements get a
   expect(missions().completed.at(-1)?.kind).toBe('leitura');
   economy.recordActivity('a','credencial');
   economy.recordActivity('a','cafe');
+  const actor = {id:'a',name:'A'};
+  const center = {x:465,y:414};
+  const base = {actor:actor.id,position:center,at:0,witnesses:[]};
+  economy.recordGameplay({...base,type:'installed',kind:'portrait',place:'hall',item:1});
+  economy.recordGameplay({...base,type:'photo',photo:{
+    id:2,author:actor,at:0,location:'Hall das Bancadas',selfie:true,center,people:[],ground:[],transfers:[],
+    decorations:[{...center,id:1,kind:'portrait',owner:actor,character:0}],
+  }});
+  economy.recordGameplay({...base,type:'installed',kind:'vip',place:'coffeeVip',item:3});
+  economy.recordActivity('a','cafe');
   const nextAudit = missions().active.find(mission => mission.kind==='auditoria')!;
   expect(nextAudit.id).toBeGreaterThan(missions().completed[0].id);
   economy.audit('a',0);

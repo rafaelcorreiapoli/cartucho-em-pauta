@@ -15,6 +15,7 @@ const clamp = (value:number) => Math.max(0,Math.min(100,value));
 export class PlenaryMatch {
   phase: Phase = 'lobby';
   private round = 0;
+  private started = 0;
   private ends = 0;
   private stability = 48;
   private budget = 32;
@@ -52,6 +53,7 @@ export class PlenaryMatch {
     this.infiltrators.clear();
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
+    this.started = now;
     this.economy.reset(contacts,random);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -143,6 +145,7 @@ export class PlenaryMatch {
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
     return {
       players:players.filter(player => this.electorate.has(player.id)),now,
+      started:this.started,spend:(id,amount)=>this.economy.spend(id,amount),
       office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };
