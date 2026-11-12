@@ -1,11 +1,11 @@
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
-import type { DialogueCondition } from '../src/npcs';
+import { npcs, type DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
-import { installationSites, shop, type Installable } from '../src/installations';
+import { installationSites, shop } from '../src/installations';
 import { stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -355,9 +355,10 @@ export class Gameplay {
 
   private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
-    return this.dialogues.purchase(player,token,()=>{
+    return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
       if (!gear && !isFood(kind)) return 'Produto indisponível.';
+      if (npcs[npc].catalog!==(gear ? 'equipment' : 'food')) return 'Este produto não é vendido aqui.';
       if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
       if (!world.spend?.(id,gear ? equipment[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
@@ -462,9 +463,8 @@ export class Gameplay {
       return 'Objeto guardado.';
     }
     if (action.kind==='buy') {
-      const kind = action.target as Installable;
-      const station = kind==='pizza' ? stations.coffee : stations.credentials;
-      if (!Object.hasOwn(shop,kind) || !canReachObject(player,station)) return 'Aproxime-se do balcão.';
+      const kind = action.target;
+      if ((kind!=='portrait' && kind!=='vip') || !canReachObject(player,stations.credentials)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
       if (this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (!world.spend?.(id,shop[kind])) return 'Saldo insuficiente.';

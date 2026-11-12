@@ -21,7 +21,10 @@ export class NpcDialogues {
     return this.node(session).options.filter(option => !option.requires || eligible(option.requires));
   }
 
-  private nearby(player:Player, key:NpcId) { return canReachObject(player,npcs[key]); }
+  private nearby(player:Player, key:NpcId) {
+    const npc = npcs[key];
+    return canReachObject(player,'interaction' in npc ? npc.interaction : npc);
+  }
 
   nearbyNpcs(player:Player) {
     return (Object.keys(npcs) as NpcId[]).filter(key=>this.nearby(player,key));
@@ -52,10 +55,10 @@ export class NpcDialogues {
     session.token = ++this.serial;
   }
 
-  purchase(player:Player, token:number|undefined, buy:()=>string|undefined) {
+  purchase(player:Player, token:number|undefined, buy:(npc:NpcId)=>string|undefined) {
     const session = this.active(player);
     if (!session?.shop || token!==session.token) return 'Abra o catálogo do vendedor.';
-    const result = buy();
+    const result = buy(session.npc);
     if (!result) session.token = ++this.serial;
     return result;
   }

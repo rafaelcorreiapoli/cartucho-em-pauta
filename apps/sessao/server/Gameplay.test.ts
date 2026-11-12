@@ -1,3 +1,4 @@
+import { npcs } from '../src/npcs';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
@@ -208,9 +209,16 @@ test('installations validate location, keep one occupant and serve each diner on
   const {alice,bob,watcher,events,game,world} = setup();
   const purchases:number[] = [];
   world.spend = (_id,amount)=>{ purchases.push(amount); return true; };
-  game.act(alice,{kind:'buy',target:'pizza'},world);
-  game.act(alice,{kind:'buy',target:'pizza'},world);
+  expect(game.act(alice,{kind:'buy',target:'pizza'},world)).toBe('Aproxime-se do balcão.');
+  const coffeeRoom = {x:alice.x,y:alice.y};
+  Object.assign(alice,npcs.snackVendor.interaction);
+  game.act(alice,{kind:'talk',target:'snackVendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  const purchase = {kind:'shop-buy',target:'pizza',token:game.view(alice,world).dialogue?.token} as const;
+  game.act(alice,purchase,world);
+  game.act(alice,purchase,world);
   expect(purchases).toEqual([2]);
+  Object.assign(alice,coffeeRoom);
   const [pizza] = game.view(alice,world).inventory;
   expect(game.act(alice,{kind:'install',place:'hall',item:pizza.id},world)).toBe('Aproxime-se do local.');
   game.act(alice,{kind:'install',place:'pizza',item:pizza.id},world);

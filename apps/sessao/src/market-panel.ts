@@ -3,7 +3,7 @@ import { describeFood, foodKinds, foods, isFood } from './food';
 import { equipment, gearKinds, isGear } from './equipment';
 import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
-import { npcs } from './npcs';
+import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
 
@@ -29,9 +29,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dismissPurchase = () => { purchase = undefined; };
   prompt.addEventListener('close',dismissPurchase);
   const pageSize = 9;
-  let category:'equipment'|'food' = 'equipment';
   let page = 0;
   let token:number|undefined;
+  let currentVendor:NpcId|undefined;
   let dismissed = false;
   let last = '';
   const close = () => {
@@ -51,29 +51,16 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   }
   dialog.addEventListener('keydown',onPageKey);
 
-  function renderCatalog(token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[]) {
+  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[]) {
     const funds = node('p',money(wallet));
     funds.className = 'market-wallet';
     funds.prepend(glyph('wallet'));
-    const tabs = node('div');
-    tabs.className = 'market-category';
-    for (const [value,label,key] of [['equipment','Equipamentos','Q'],['food','Comida','E']] as const) {
-      const tab = button(label,()=>{
-        if (category===value) return;
-        category = value;
-        page = 0;
-        renderCatalog(token,wallet,inventory,equipped);
-      });
-      tab.setAttribute('aria-pressed',String(category===value));
-      markShortcut(tab,key);
-      tabs.append(tab);
-    }
     const toolbar = node('div');
     toolbar.className = 'market-toolbar';
-    toolbar.append(tabs,funds);
+    toolbar.append(funds);
     const products = node('div');
     products.className = 'market-products';
-    const kinds = category==='equipment' ? gearKinds : foodKinds;
+    const kinds = npcs[npc].catalog==='equipment' ? gearKinds : foodKinds;
     const owned = [...inventory,...equipped];
     const full = inventory.length>=INVENTORY_SLOTS;
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
@@ -123,7 +110,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     const goTo = (next:number) => {
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
-      renderCatalog(token,wallet,inventory,equipped);
+      renderCatalog(npc,token,wallet,inventory,equipped);
     };
     const previous = button('‹',()=>goTo(page-1));
     const next = button('›',()=>goTo(page+1));
@@ -149,7 +136,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     paging.append(previous,dots,next);
     body.replaceChildren(toolbar,products,paging);
     if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
-      tabs.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus({preventScroll:true});
+      dialog.querySelector<HTMLButtonElement>('header button')?.focus({preventScroll:true});
     }
   }
 
@@ -167,8 +154,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
       if (!state) {
         token = undefined;
+        currentVendor = undefined;
         dismissed = false;
-        category = 'equipment';
         page = 0;
         last = '';
         if (dialog.open) dialog.close();
@@ -177,12 +164,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       if (dismissed) {
         if (state.token===token || state.shop) return;
         dismissed = false;
-        category = 'equipment';
         page = 0;
       }
       const wallet = view.politics?.wallet ?? 0;
       const equipped = view.gameplay?.equipped ?? [];
-      const key = JSON.stringify([state.token,state.options,wallet,inventory,equipped]);
+      if (currentVendor!==state.npc) page = 0;
+      currentVendor = state.npc;
+      const key = JSON.stringify([state.npc,state.token,state.options,wallet,inventory,equipped]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -193,7 +181,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       if (!state.shop) {
         const line = node('div');
         line.className = 'market-line';
-        line.append(contactFace({id:state.npc,name:npc.name,character:npc.character}),node('p',state.text));
+        const face = 'sprite' in npc ? node('img') : contactFace({id:state.npc,name:npc.name,character:npc.character});
+        if (face instanceof HTMLImageElement && 'sprite' in npc) {
+          face.className = 'phone-contact-face market-npc-face';
+          face.src = import.meta.env.BASE_URL+'assets/'+npc.sprite;
+          face.alt = '';
+        }
+        line.append(face,node('p',state.text));
         const choices = node('div');
         choices.className = 'market-choices';
         for (const [index,option] of state.options.entries()) {
@@ -205,7 +199,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         choices.querySelector('button')?.focus();
         return;
       }
-      renderCatalog(state.token,wallet,inventory,equipped);
+      renderCatalog(state.npc,state.token,wallet,inventory,equipped);
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;

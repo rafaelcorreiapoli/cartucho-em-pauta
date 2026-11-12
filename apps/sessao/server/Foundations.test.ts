@@ -3,10 +3,10 @@ import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
-import { canStand, movementSpeed, worldVisible, VISION_RADIUS, type Player } from '../src/map';
+import { canStand, movementSpeed, roomAt, worldVisible, VISION_RADIUS, type Player } from '../src/map';
 import { infirmary } from '../src/medical';
 import { findRoute } from '../src/navigation';
-import { npcs } from '../src/npcs';
+import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
 import { applyInput, restMovement, STEP_MS } from '../src/movement';
 import { foods, type FoodKind } from '../src/food';
@@ -32,8 +32,8 @@ function setup() {
     },
     publish:event=>events.push(event),
   };
-  const openShop = (buyer:Player) => {
-    game.act(buyer,{kind:'talk',target:'vendor'},world);
+  const openShop = (buyer:Player, target:NpcId='vendor') => {
+    game.act(buyer,{kind:'talk',target},world);
     const token = game.view(buyer,world).dialogue?.token;
     game.act(buyer,{kind:'dialogue-choice',target:'products',token},world);
     return game.view(buyer,world).dialogue?.token;
@@ -65,6 +65,24 @@ test('the vendor is reachable, maintains separate dialogue sessions and accepts 
   expect(game.view(bob,world).dialogue).toBeUndefined();
   game.tick(world,false);
   expect(game.view(alice,world).dialogue).toBeUndefined();
+});
+
+test('the Lanchonete is reachable and each vendor sells only its own catalog', () => {
+  const {alice,game,world,openShop,balance} = setup();
+  const counter = npcs.snackVendor.interaction;
+  expect(roomAt(counter)).toBe(snackBar.name);
+  expect(findRoute({x:140,y:146},counter).at(-1)).toEqual(counter);
+  expect(canStand(npcs.snackVendor.x,npcs.snackVendor.y)).toBe(false);
+  const gearToken = openShop(alice);
+  expect(game.act(alice,{kind:'shop-buy',target:'pizza',token:gearToken},world)).toBe('Este produto não é vendido aqui.');
+  expect(game.act(alice,{kind:'talk',target:'snackVendor'},world)).toBe('Aproxime-se para conversar.');
+  Object.assign(alice,counter);
+  const foodToken = openShop(alice,'snackVendor');
+  expect(game.view(alice,world).dialogue?.npc).toBe('snackVendor');
+  expect(game.act(alice,{kind:'shop-buy',target:'baton',token:foodToken},world)).toBe('Este produto não é vendido aqui.');
+  expect(balance.get(alice.id)).toBe(12);
+  expect(game.act(alice,{kind:'shop-buy',target:'pizza',token:foodToken},world)).toBe('Compra guardada no inventário.');
+  expect(game.view(alice,world).inventory.map(item=>item.kind)).toEqual(['pizza']);
 });
 
 test('equipping changes custody, binocular range and voice battery without stacking bonuses', () => {
@@ -378,7 +396,8 @@ for (const [kind,hp,stamina] of consumableCases) {
     expect(game.view(bob,world).vitality?.hp).toBe(22);
     bob.speed = 88;
     bob.stamina = 40;
-    const token = openShop(bob);
+    Object.assign(bob,npcs.snackVendor.interaction);
+    const token = openShop(bob,'snackVendor');
     const buy = {kind:'shop-buy',target:kind,token} as const;
     expect(game.act(bob,buy,world)).toBe('Compra guardada no inventário.');
     expect(game.act(bob,buy,world)).toBe('Abra o catálogo do vendedor.');

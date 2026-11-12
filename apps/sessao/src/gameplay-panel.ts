@@ -435,7 +435,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           tiles.push(itemButton(decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id)));
         }
         for (const place of state.locations) {
-          for (const kind of place==='coffee' ? ['pizza'] as const : place==='credentials' ? ['portrait','vip'] as const : []) {
+          for (const kind of place==='credentials' ? ['portrait','vip'] as const : []) {
             tiles.push(itemButton(kind,`${objects[kind].name} · ${money(shop[kind])}`,'Comprar',
               ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind}))));
           }

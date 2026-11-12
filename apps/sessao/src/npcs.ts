@@ -2,8 +2,14 @@ import type { Office } from './elections';
 import type { ObjectKind } from './gameplay';
 import type { Agenda, EvidenceKind } from './politics';
 
+export const snackBar = {
+  name:'Lanchonete', bounds:[824,270,126,122], door:[853,259,44,11],
+} as const;
+
 export const npcs = {
-  vendor:{name:'Seu Balcão',character:4,x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar'},
+  vendor:{name:'Seu Balcão',character:4,x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar',catalog:'equipment'},
+  snackVendor:{name:'Tia do Lanche',sprite:'tia-do-lanche.webp',x:886,y:328,direction:0,
+    counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
 export type NpcId = keyof typeof npcs;
@@ -24,6 +30,23 @@ export type DialogueOption = {
 };
 export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
+  snacks:{
+    start:{
+      text:'Chega mais, Excelência. Tem café passado e lanche quente. O que vai ser?',
+      options:[
+        {id:'products',label:'Ver cardápio',action:'shop'},
+        {id:'special',label:'O que saiu agora?',next:'special'},
+        {id:'leave',label:'Voltar depois',action:'close'},
+      ],
+    },
+    special:{
+      text:'A coxinha saiu agora. A lagosta é para quem veio com a verba do gabinete.',
+      options:[
+        {id:'products',label:'Ver cardápio',action:'shop'},
+        {id:'back',label:'Voltar',next:'start'},
+      ],
+    },
+  },
   convenience:{
     start:{
       text:'Boa tarde, Excelência. Ferramentas de trabalho ou algo que fique fora da prestação de contas?',

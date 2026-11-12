@@ -91,6 +91,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
       for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const [id,npc] of Object.entries(npcs)) {
+        if ('sprite' in npc) this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
+      }
       for (const [kind,{portrait}] of Object.entries(objects)) {
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
@@ -132,13 +135,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
-      this.npcViews = Object.values(npcs).map(npc=>{
-        const {sheet,frame} = characterArt(npc.character);
-        const sprite = this.add.sprite(npc.x,npc.y,sheet.key,frame+npc.direction*4)
-          .setOrigin(.5,1).setScale(.295).setDepth(npc.y).setTint(0xffd7a2);
-        const label = this.add.text(npc.x,npc.counter.y+24,npc.label,{fontFamily:'system-ui',fontSize:'7px',
-          color:'#ffe4a1',backgroundColor:'#142820bb',padding:{x:3,y:1},resolution:3})
-          .setOrigin(.5,0).setDepth(1);
+      this.npcViews = Object.entries(npcs).map(([id,npc])=>{
+        const art = 'character' in npc ? characterArt(npc.character) : undefined;
+        const sprite = art
+          ? this.add.sprite(npc.x,npc.y,art.sheet.key,art.frame+npc.direction*4).setTint(0xffd7a2)
+          : this.add.sprite(npc.x,npc.y,`npc-${id}`);
+        sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
+        const label = this.add.text(npc.x,npc.counter.y+24,'sprite' in npc ? npc.name : npc.label,{
+          fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
+          padding:{x:3,y:1},resolution:3,
+        }).setOrigin(.5,0).setDepth(1);
         return {sprite,label};
       });
       this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);

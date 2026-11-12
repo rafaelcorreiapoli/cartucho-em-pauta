@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { npcs } from './npcs';
+import { npcs, snackBar } from './npcs';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
@@ -57,17 +57,23 @@ export function drawMap(scene: Phaser.Scene) {
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
   }
+  const [snackX,snackY,snackWidth] = snackBar.door;
   for (const [x,y,w] of [
     [59,114,34],[177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[384,114,35],[69,161,36],[218,161,44],[368,161,36],
     [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[431,259,47],[658,259,44],
-    [115,392,41],[400,392,46],[780,392,45],
+    [115,392,41],[400,392,46],[780,392,34],[snackX,snackY,snackWidth],
   ]) {
     fill(0x9b8d6d,x,y+3,w,3);
   }
 
   for (const [x,y] of desks) {
-    if (x!==npcs.vendor.counter.x || y!==npcs.vendor.counter.y) prop(2,x+13,y-17,19,23,y+1);
+    if (!Object.values(npcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
+  }
+  const snackCounter = npcs.snackVendor.counter;
+  for (const [index,kind] of ['coxinha','coffee','pizza'].entries()) {
+    scene.add.image(snackCounter.x+10+index*12,snackCounter.y+7,`item-${kind}`)
+      .setDisplaySize(11,11).setDepth(snackCounter.y+21);
   }
   for (const {frame,area:[x,y,w,h]} of furnishings) {
     prop(frame,x,y,w,h,y+h);
