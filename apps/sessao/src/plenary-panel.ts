@@ -31,8 +31,8 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const nearby = !!own && Math.hypot(own.x-station.x,own.y-station.y)<=STATION_RADIUS;
       button.disabled = !nearby || (action==='amendment' && !!view?.amended);
     }
+    element('station-hint').hidden = actions.some(button => !button.disabled && !button.hidden);
   }
-
 
   return {
     render(next:PlenaryView) {

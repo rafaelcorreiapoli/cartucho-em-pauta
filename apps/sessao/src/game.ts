@@ -20,6 +20,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let players: Player[] = [];
   let negotiating = false;
   let running = false;
+  let names = new Map<string,string>();
   let speaking = new Set<string>();
   const local = new PredictedMovement(send);
   const history = new PlayerHistory();
@@ -107,7 +108,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const camera = this.cameras.main;
-      const zoom = Math.max(1.5,camera.width/550,camera.height/360);
+      const zoom = Math.max(1.5,camera.width/550,camera.height/(camera.width<=680 ? 310 : 360));
       if (camera.zoom!==zoom) camera.setZoom(zoom);
       for (const [i,station] of Object.values(stations).entries()) {
         const {ring,label} = this.stationMarkers[i];
@@ -147,7 +148,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const row = direction===3 ? 1 : direction;
         sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
-        label.setVisible(true).setPosition(x,y+2).setText(playerName(player,players,running))
+        label.setVisible(true).setPosition(x,y+2).setText(names.get(id) ?? playerName(player,players))
           .setColor(speaking.has(id) ? '#adff91' : '#fff7df');
         if (moving) sprite.play(`${character}-${row}`,true);
         else {
@@ -184,6 +185,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       running = negotiating || phase==='ballot' || phase==='hearing';
       if (!running) fog.hidden = true;
     },
+    setNames(next:Map<string,string>) { names = next; },
     setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();

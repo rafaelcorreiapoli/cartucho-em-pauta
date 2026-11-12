@@ -57,7 +57,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
     expect(view.outcome?.passed).toBe(round===0);
     if (round===0) expect(view.budget).toBe(20);
   }
-  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump · rump'});
+  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump'});
 });
 
 test('nearby voices can carry past a wall without revealing the speaker', () => {

@@ -60,13 +60,14 @@ let speaking = new Set<string>();
 let broadcaster: {id:string; name:string} | undefined;
 let matchRunning = false;
 let voiceIsLocal = false;
+let matchNames = new Map<string,string>();
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
 function updateSpeaking() {
   const names = playersInRoom.filter(player => speaking.has(player.id)).map(player =>
-    player.id === room?.sessionId ? 'Você' : playerName(player,playersInRoom,matchRunning));
+    player.id === room?.sessionId ? 'Você' : matchNames.get(player.id) ?? playerName(player,playersInRoom));
   if (broadcaster && speaking.has(broadcaster.id) && !playersInRoom.some(player => player.id===broadcaster!.id)) names.push(broadcaster.name);
   if ([...speaking].some(id => id!==broadcaster?.id && !playersInRoom.some(player => player.id===id))) names.push(voiceIsLocal ? 'voz próxima' : 'voz na sessão');
   const label = names.length ? 'Falando: '+names.join(', ') : '';
@@ -166,6 +167,7 @@ async function connect(join: () => Promise<Room>) {
     landing.hidden = true;
     session.dataset.phase = 'lobby';
     voiceIsLocal = false;
+    matchNames = new Map();
     session.hidden = false;
     setup.hidden = false;
     roster.replaceChildren();
@@ -185,6 +187,8 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       broadcaster = view.election?.broadcast;
+      matchNames = new Map((view.phase!=='finished' ? view.politics?.directory ?? [] : []).map(({id,name}) => [id,name]));
+      game?.setNames(matchNames);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
       if (phase===view.phase) return;
