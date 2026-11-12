@@ -102,7 +102,8 @@ export class PlenaryMatch {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
       const note = this.economy.audit(player.id,this.round,this.election.office(player.id)==='senator' ? 2 : 1);
       if (note) this.auditNotes.set(player.id,note);
-      const finding = this.fraud ? 'Fraude no projeto. Vá ao Painel para corrigir os números.' : 'Os números do projeto conferem.';
+      const finding = this.reportedFraud ? 'O Painel já mostra os números corrigidos.' :
+        this.fraud ? 'Fraude no projeto. Vá ao Painel para corrigir os números.' : 'Os números do projeto conferem.';
       return {text:note ? `${finding} ${note}` : finding,critical:this.fraud && !this.reportedFraud};
     }
     if (action==='panel' && this.audits.get(player.id)==='fraud') this.reportedFraud = true;
