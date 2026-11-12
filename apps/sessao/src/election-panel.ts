@@ -14,11 +14,10 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   const endorsement = el<HTMLSelectElement>('endorsement');
   let view:PlenaryView | undefined;
   let own:Player | undefined;
-  let noticeKey = 0;
+  let lastResult = 0;
   let lastRace:Office | undefined;
   let pollsKey = '';
   let candidatesKey = '';
-  let noticeTimeout = 0;
   dock.hidden = notice.hidden = true;
   dock.open = false;
   el<HTMLDetailsElement>('election-actions').open = false;
@@ -58,7 +57,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       dock.hidden = !election;
       if (!election) return;
       const {remaining,broadcast,result} = election;
-      el('current-office').textContent = personal ? offices[personal.office].name : 'Assessor';
+      const race = personal && election.polls.filter(candidate => candidate.race===personal.race);
+      const rank = race?.findIndex(candidate => candidate.id===id) ?? -1;
+      const candidate = rank>=0 ? race?.[rank] : undefined;
+      el('current-office').textContent = personal ? `Disputa · ${offices[personal.race].name}` : 'Eleições';
+      el('election-position').textContent = candidate ? `${rank+1}º · ${candidate.estimate}%${candidate.trend ? ` · ${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : ''}` : '';
+      dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
       el('election-timer').textContent = view.phase==='finished' ? 'Eleições' : `Eleição em ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
       el('office-display').textContent = personal ? offices[personal.office].name : 'Assessor';
       el('office-display').dataset.office = personal?.office ?? 'advisor';
@@ -71,12 +75,9 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         `Eleição ${result.cycle}: ${result.offices.map(person => `${person.name} (${offices[person.office].name})`).join(', ')}.`,
         result.previous && personal ? `Seu cargo: ${offices[result.previous].name} → ${offices[personal.office].name}. Salário recebido: ${money(result.salary)}.` : '',
       ].join(' ') : '';
-      if (election.notice && election.notice.seq!==noticeKey) {
-        noticeKey = election.notice.seq;
-        notice.hidden = false;
-        notice.textContent = election.notice.text;
-        window.clearTimeout(noticeTimeout);
-        noticeTimeout = window.setTimeout(() => { if (!view?.election?.broadcast) notice.hidden = true; },7000);
+      if (result && result.cycle!==lastResult) {
+        lastResult = result.cycle;
+        dock.open = false;
       }
       if (broadcast) {
         notice.hidden = false;
@@ -158,6 +159,6 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       own = players.find(player => player.id===id);
       controls();
     },
-    destroy() { window.clearTimeout(noticeTimeout); },
+
   };
 }

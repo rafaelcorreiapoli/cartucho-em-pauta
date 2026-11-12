@@ -1,3 +1,4 @@
+import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
 import { createElectionPanel } from './election-panel';
 import { GameAudio } from './game-audio';
@@ -13,6 +14,7 @@ import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
+import './match-hud.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
@@ -68,34 +70,21 @@ const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
 const voiceLabel = voiceToggle.querySelector('span')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
-const voiceSpeaking = document.querySelector<HTMLElement>('#voice-speaking')!;
 const liveEnabled = document.querySelector<HTMLInputElement>('#live-disguise-enabled')!;
 const livePitch = document.querySelector<HTMLInputElement>('#live-pitch')!;
 const livePitchValue = document.querySelector<HTMLOutputElement>('#live-pitch-value')!;
 const liveStyle = document.querySelector<HTMLSelectElement>('#live-style')!;
+const disguiseIndicator = document.querySelector<HTMLElement>('#voice-disguise-indicator')!;
 const liveStatus = document.querySelector<HTMLElement>('#live-disguise-status')!;
 let disguiseRevision = 0;
 let voice: RoomVoice | undefined;
-let playersInRoom: Player[] = [];
-let speaking = new Set<string>();
-let broadcaster: {id:string; name:string} | undefined;
 let matchRunning = false;
-let voiceIsLocal = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
 try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
 nickInput.oninput = () => nickInput.setCustomValidity('');
 code.value = new URL(location.href).searchParams.get('sala') || '';
-
-function updateSpeaking() {
-  const names = playersInRoom.filter(player => speaking.has(player.id)).map(player =>
-    player.id === room?.sessionId ? 'Você' : player.nick);
-  if (broadcaster && speaking.has(broadcaster.id) && !playersInRoom.some(player => player.id===broadcaster!.id)) names.push(broadcaster.name);
-  if ([...speaking].some(id => id!==broadcaster?.id && !playersInRoom.some(player => player.id===id))) names.push(voiceIsLocal ? 'voz próxima' : 'voz na sessão');
-  const label = names.length ? 'Falando: '+names.join(', ') : '';
-  if (voiceSpeaking.textContent !== label) voiceSpeaking.textContent = label;
-}
 
 async function updateDisguise() {
   const current = voice;
@@ -107,7 +96,10 @@ async function updateDisguise() {
   liveStatus.textContent = liveEnabled.checked ? 'Aplicando disfarce…' : '';
   try {
     await current.setDisguise(liveEnabled.checked ? {pitch,style:liveStyle.value as Disguise['style']} : undefined);
-    if (revision===disguiseRevision) liveStatus.textContent = liveEnabled.checked ? 'Disfarce ativo' : '';
+    if (revision===disguiseRevision) {
+      liveStatus.textContent = liveEnabled.checked ? 'Disfarce ativo' : '';
+      disguiseIndicator.hidden = !liveEnabled.checked;
+    }
   } catch {
     if (revision===disguiseRevision) liveStatus.textContent = 'Falha no disfarce. Desative para voltar à voz original.';
   }
@@ -122,6 +114,7 @@ function resetVoiceButtons() {
   voiceSettings.open = false;
   voiceStatus.textContent = '';
   ++disguiseRevision;
+  disguiseIndicator.hidden = true;
   liveEnabled.checked = false;
   livePitch.disabled = liveStyle.disabled = true;
   liveStatus.textContent = '';
@@ -141,6 +134,7 @@ voiceToggle.onclick = async () => {
     await current.start();
     if (current !== voice || !current.active) return;
     voiceLabel.textContent = 'Silenciar microfone';
+    voiceStatus.textContent = '';
     voiceSettings.hidden = false;
   } catch (error) {
     if (current !== voice) return;
@@ -161,7 +155,6 @@ function showLobby(message: string) {
   audio.leave();
   voice?.stop(false);
   voice = undefined;
-  playersInRoom = [];
   matchRunning = false;
   resetVoiceButtons();
   game?.destroy();
@@ -180,25 +173,21 @@ async function connect(join: () => Promise<Room>) {
     const joined = await join();
     room = joined;
     voice = new RoomVoice(joined, ids => {
-      speaking = ids;
       audio.setSpeaking(ids.size>0);
-      game?.setSpeaking(ids);
-      updateSpeaking();
-    }, (connected, peers) => {
-      voiceStatus.textContent = peers === 0 ? 'Voz ativa · aguardando outras pessoas' :
-        `Voz ativa · ${connected}/${peers} conexões`;
     });
     code.value = joined.roomId;
     landing.hidden = true;
     session.dataset.phase = 'lobby';
-    voiceIsLocal = false;
     session.hidden = false;
     setup.hidden = false;
+    const roomBar = document.querySelector<HTMLElement>('#room-bar')!;
+    setup.before(roomBar);
     roster.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
+    const hud = createMatchHud(joined.sessionId);
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -216,7 +205,7 @@ async function connect(join: () => Promise<Room>) {
       panel.render(view);
       political.render(view);
       election.render(view);
-      broadcaster = view.election?.broadcast;
+      hud.render(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
@@ -227,22 +216,22 @@ async function connect(join: () => Promise<Room>) {
       phase = view.phase;
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      voiceIsLocal = negotiating;
       voiceToggle.title = negotiating ? 'Voz por proximidade' : 'Voz geral da sala';
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
+      if (matchRunning) document.querySelector('#profile-dock .module-content')!.append(roomBar);
+      else setup.before(roomBar);
       if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
     joined.onMessage('players',(players: Player[]) => {
-      playersInRoom = players;
       panel.players(players);
       political.players(players);
       election.players(players);
+      hud.players(players);
       game?.update(players);
-      updateSpeaking();
       const self = players.find(player => player.id===joined.sessionId);
       for (const [index,button] of buttons.entries()) {
         const pressed = String(index===self?.character);
@@ -260,9 +249,8 @@ async function connect(join: () => Promise<Room>) {
       }));
     });
     joined.onLeave((closeCode,reason) => {
-      election.destroy();
+      hud.destroy();
       if (room!==joined) return;
-      broadcaster = undefined;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');
     });

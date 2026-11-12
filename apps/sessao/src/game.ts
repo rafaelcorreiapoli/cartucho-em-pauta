@@ -24,7 +24,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let running = false;
   let resizeObserver:ResizeObserver | undefined;
   let titles = new Map<string,Office>();
-  let speaking = new Set<string>();
   const local = new PredictedMovement(send);
   const history = new PlayerHistory();
   let destination: Motion | undefined;
@@ -191,7 +190,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         } else if (!moving) view.nextStep = 0;
         sprite.setVisible(true).setPosition(x,y).setDepth(y).setFlipX(direction===3);
         label.setVisible(true).setPosition(x,y+2).setText(player.nick)
-          .setColor(speaking.has(id) ? '#adff91' : '#fff7df');
+          .setColor('#fff7df');
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,y+14)
           .setText(title ? offices[title].name : 'Assessor')
@@ -233,7 +232,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (!running) fog.hidden = true;
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
-    setSpeaking(ids: Set<string>) { speaking = ids; },
     destroy() {
       listeners.abort();
       resizeObserver?.disconnect();

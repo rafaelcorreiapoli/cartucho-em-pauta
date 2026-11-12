@@ -21,7 +21,7 @@ export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; a
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
 export type PoliticsView = {
-  wallet:number; popularity:number; agenda:Agenda; goalMet:boolean; grantUsed:boolean;
+  wallet:number; popularity:number; agenda:Agenda; agendaProgress:{current:number; target:number}; goalMet:boolean; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(Contact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;

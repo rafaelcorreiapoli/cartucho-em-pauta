@@ -1,0 +1,195 @@
+#session {
+  --hud-edge: clamp(10px, 1.2vw, 22px);
+  --hud-side: clamp(230px, 22vw, 310px);
+  --hud-top-row: 78px;
+}
+
+#match { display: contents; }
+
+.hud-module {
+  position: absolute;
+  z-index: 2;
+  border: 1px solid #a99c7169;
+  border-radius: 6px;
+  background: #142322ef;
+  color: var(--hud-paper);
+  box-shadow: 0 4px 12px #06110e55;
+  font-size: .8rem;
+}
+
+.hud-module summary { cursor: pointer; }
+.hud-module > summary { list-style: none; }
+.hud-module > summary::-webkit-details-marker { display: none; }
+.hud-module > summary:focus-visible, #project-details > summary:focus-visible {
+  outline: 2px solid var(--hud-gold);
+  outline-offset: 2px;
+}
+
+#session:is([data-phase="negotiation"],[data-phase="ballot"],[data-phase="hearing"]) #plenary { display: none; }
+
+#profile-dock {
+  top: var(--hud-edge);
+  left: var(--hud-edge);
+  width: var(--hud-side);
+}
+.profile-summary { display: flex; align-items: center; gap: .55rem; padding: .4rem .55rem; }
+.profile-summary .portrait { --portrait-size: 44px; flex: none; background-color: #1f3532; border-radius: 4px; }
+.profile-copy { display: grid; flex: 1; min-width: 0; gap: .05rem; }
+#hud-nick { font-size: .94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud-office { font-size: .71rem; }
+.profile-values, .profile-values > span, #agenda-dock > summary {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+.profile-values { gap: .65rem; font-variant-numeric: tabular-nums; }
+.profile-values > span { white-space: nowrap; }
+.profile-values .hud-glyph { color: #c8bc96; }
+.module-content {
+  position: absolute;
+  z-index: 1;
+  width: min(310px, calc(100vw - 2 * var(--hud-edge)));
+  padding: .6rem;
+}
+.module-content p { margin: .3rem 0; }
+#profile-dock .module-content { top: calc(100% + 6px); left: 0; }
+
+#congress-dock {
+  top: var(--hud-edge);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 2 * (var(--hud-side) + 2 * var(--hud-edge))));
+  padding: .3rem;
+}
+#congress-dock .resource { border: 0; padding: .25rem .4rem; }
+#congress-dock .resource small { display: none; }
+#congress-dock:has([data-low="true"]) { border-color: #d78570; }
+
+#legislative-dock {
+  top: calc(var(--hud-edge) + var(--hud-top-row));
+  left: var(--hud-edge);
+  width: var(--hud-side);
+  max-height: 48dvh;
+  overflow: auto;
+  padding: .5rem .6rem;
+}
+#legislative-dock .match-top { min-height: 0; }
+#legislative-dock .bill-heading { margin-top: .32rem; }
+#legislative-dock #bill { font-size: 1rem; }
+#project-details > summary { font-size: .75rem; color: #e5d2a8; margin: .25rem 0; }
+#session:is([data-phase="ballot"],[data-phase="hearing"]) #legislative-dock {
+  border-color: #ebcb82;
+  box-shadow: 0 0 0 1px #ebcb8244, 0 4px 12px #06110e88;
+}
+
+#session #election-dock {
+  top: var(--hud-edge);
+  right: var(--hud-edge);
+  bottom: auto;
+  left: auto;
+  width: var(--hud-side);
+}
+#session #election-dock .politics-content { inset: calc(100% + 6px) 0 auto auto; }
+.election-summary { display: grid; min-width: 0; gap: .12rem; }
+#current-office { color: #d6cfb5; font-size: .69rem; }
+#election-position { font-variant-numeric: tabular-nums; }
+#election-timer { margin-left: auto; white-space: nowrap; }
+#election-dock[data-urgency="soon"] { border-color: #bba365; }
+#election-dock[data-urgency="high"] { border-color: #f4cc75; box-shadow: 0 0 0 1px #f4cc7544; }
+
+#voice-dock {
+  top: calc(var(--hud-edge) + var(--hud-top-row));
+  right: var(--hud-edge);
+  bottom: auto;
+  left: auto;
+  z-index: 3;
+  max-width: var(--hud-side);
+  justify-content: flex-end;
+}
+#voice-dock .voice-settings-content, #voice-dock .sound-settings-content {
+  top: calc(100% + 6px);
+  right: 0;
+  bottom: auto;
+  left: auto;
+}
+#voice-dock button, #voice-dock summary { min-height: 33px; font-size: .73rem; }
+#voice-bar { flex-wrap: wrap; justify-content: flex-end; }
+#voice-status:empty { display: none; }
+#voice-disguise-indicator { color: var(--hud-gold); }
+
+#agenda-dock { bottom: var(--hud-edge); left: var(--hud-edge); }
+#agenda-dock > summary { padding: .45rem .55rem; gap: .5rem; }
+#agenda-dock strong { font-size: .73rem; color: var(--hud-gold); }
+#agenda-dock .module-content { bottom: calc(100% + 6px); left: 0; }
+#session #politics-dock { right: var(--hud-edge); bottom: var(--hud-edge); visibility: visible; }
+
+#stations {
+  bottom: var(--hud-edge);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 2 * var(--hud-edge));
+  padding: .28rem;
+  margin: 0;
+}
+#stations .station-grid, #station-shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
+#stations .station-grid:not(:has(button:not([hidden]):not(:disabled))) { display: none; }
+#station-shortcuts:has(button:not([hidden])) { padding: .15rem; }
+#station-shortcuts button { min-height: 32px; padding: .3rem .45rem; }
+
+#hud-notices {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--hud-edge) + 55px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: .3rem;
+  width: min(290px, 34vw);
+  pointer-events: none;
+}
+.hud-notice { position: static; display: grid; gap: .18rem; padding: .4rem .55rem; }
+.hud-notice strong { color: var(--hud-gold); }
+.hud-notice[data-critical="true"] { border-color: #dc8875; }
+.hud-notice[data-critical="true"] strong { color: #ffc2b2; }
+#session #electoral-notice { top: auto; left: auto; right: var(--hud-edge); bottom: calc(var(--hud-edge) + 52px); }
+#movement-hint { display: none; }
+
+#profile-dock[open], #election-dock[open], #agenda-dock[open], #politics-dock[open],
+#voice-dock:has(details[open]) { z-index: 5; }
+#session[data-phase="lobby"] #voice-dock { top: auto; bottom: var(--hud-edge); }
+#session[data-phase="lobby"] #voice-dock .voice-settings-content,
+#session[data-phase="lobby"] #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
+#session[data-phase="finished"] :is(#profile-dock,#agenda-dock,#congress-dock) { display: none; }
+#session[data-phase="finished"] #legislative-dock { top: auto; bottom: var(--hud-edge); }
+
+.compact-hud #agenda-dock > summary span:not(.sr-only) { display: none; }
+.compact-hud #last-vote:not([open]) { display: none; }
+.compact-hud .profile-summary .portrait { --portrait-size: 32px; }
+.compact-hud #legislative-dock:not(:has(details[open])) #impact-preview { display: none; }
+
+@media (max-width: 760px) {
+  #session { --hud-side: min(47vw, 230px); --hud-top-row: 118px; }
+  #congress-dock {
+    top: calc(var(--hud-edge) + 72px);
+    width: calc(100% - 2 * var(--hud-edge));
+  }
+  #profile-dock .portrait { --portrait-size: 33px; }
+  .profile-values { gap: .3rem; font-size: .68rem; }
+  #session #election-dock > summary { flex-wrap: wrap; gap: .2rem .3rem; padding: .35rem; }
+  #election-timer { font-size: .68rem; }
+  #legislative-dock { max-height: 28dvh; }
+  #session:is([data-phase="ballot"],[data-phase="hearing"]) #legislative-dock { max-height: 40dvh; width: min(305px,calc(100% - 2 * var(--hud-edge))); z-index: 4; }
+  #voice-dock { top: auto; bottom: calc(var(--hud-edge) + 48px); padding: .25rem; gap: .2rem; max-width: calc(100% - 2 * var(--hud-edge)); }
+  #voice-dock .voice-settings-content, #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
+  #legislative-dock .clock-chip { flex: none; }
+  #impact-preview { display: none; }
+  #voice-bar { gap: .2rem; }
+  #hud-notices {
+    top: auto;
+    bottom: calc(var(--hud-edge) + 143px);
+    width: min(270px, calc(100% - 2 * var(--hud-edge)));
+  }
+  #stations { bottom: calc(var(--hud-edge) + 94px); }
+  #agenda-dock > summary { gap: .25rem; font-size: .72rem; }
+  #agenda-dock > summary strong { font-size: .65rem; }
+}

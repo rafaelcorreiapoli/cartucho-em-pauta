@@ -1,5 +1,5 @@
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
-import { agendas, CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
+import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -89,8 +89,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       dock.hidden = !p;
       if (!p) return;
       const active = view.phase==='negotiation';
-      el('personal-stats').textContent = `${money(p.wallet)} · ${p.popularity} pop.${p.incoming.length ? ' · nova oferta' : ''}`;
-      el('agenda').textContent = `${agendas[p.agenda]}. ${p.goalMet ? 'Cumprida.' : 'Em andamento.'}`;
+      el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
       el('politics-hint').textContent = p.suspended ? 'Mandato cassado · assessor' :
         active ? 'Negociação' : 'Seu dossiê';

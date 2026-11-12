@@ -192,12 +192,12 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account) return;
     const {wallet,popularity,agenda,grantUsed,suspended} = account;
-    const goalMet = {
-      fortuna:wallet>=12, campanha:popularity>=65, articulacao:account.payers.size>=2,
-      projetos:account.passed>=2, oposicao:account.rejected>=2, escandalo:account.exposed>0,
+    const [current,target] = {
+      fortuna:[wallet,12], campanha:[popularity,65], articulacao:[account.payers.size,2],
+      projetos:[account.passed,2], oposicao:[account.rejected,2], escandalo:[account.exposed,1],
     }[agenda];
     return {
-      wallet,popularity,agenda,goalMet,grantUsed,suspended,campaigned:account.campaignRound===round,
+      wallet,popularity,agenda,agendaProgress:{current,target},goalMet:current>=target,grantUsed,suspended,campaigned:account.campaignRound===round,
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
       directory:[...this.contacts.values()].map(contact => ({

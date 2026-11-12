@@ -26,8 +26,7 @@ export class RoomVoice {
   private generation = 0;
   private range?: Map<string,number>;
 
-  constructor(private room: Room, private onSpeaking: (ids: Set<string>) => void,
-    private onConnections: (connected: number, peers: number) => void) {
+  constructor(private room: Room, private onSpeaking: (ids: Set<string>) => void) {
     room.onMessage('voice-range', (levels:[string,number][]) => this.setRange(new Map(levels)));
     room.onMessage('voice-roster', (ids: string[]) => this.syncPeers(ids));
     room.onMessage('voice-signal', ({from,signal}: {from:string; signal:VoiceSignal}) => {
@@ -110,17 +109,10 @@ export class RoomVoice {
     for (const id of ids) {
       if (id !== this.room.sessionId && !this.peers.has(id)) this.addPeer(id,outgoing);
     }
-    this.report();
-  }
-
-  private report() {
-    const connected = [...this.peers.values()].filter(peer => peer.connection.connectionState === 'connected').length;
-    this.onConnections(connected,this.peers.size);
   }
 
   private removePeer(id: string) {
     const peer = this.peers.get(id)!;
-    peer.connection.onconnectionstatechange = null;
     peer.connection.close();
     peer.playback?.disconnect();
     peer.meter?.source.disconnect();
@@ -136,7 +128,6 @@ export class RoomVoice {
     connection.onicecandidate = ({candidate}) => {
       if (candidate) this.signal(id,peer,{candidate:candidate.toJSON()});
     };
-    connection.onconnectionstatechange = () => this.report();
     connection.ontrack = ({track,streams}) => {
       if (track.kind !== 'audio' || this.peers.get(id) !== peer || peer.playback) return;
       const stream = streams[0] ?? new MediaStream([track]);

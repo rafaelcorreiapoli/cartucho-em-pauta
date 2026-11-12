@@ -20,6 +20,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
   const count = element<HTMLSelectElement>('infiltrator-count');
   count.value = '1';
   element<HTMLDetailsElement>('last-vote').open = false;
+  element<HTMLDetailsElement>('project-details').open = false;
   start.onclick = () => send('start-match',count.value==='2' ? 2 : 1);
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
@@ -31,11 +32,14 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const nearby = !!own && Math.hypot(own.x-station.x,own.y-station.y)<=STATION_RADIUS;
       button.disabled = !nearby || (action==='amendment' && !!view?.amended);
     }
-    element('station-hint').hidden = actions.some(button => !button.disabled && !button.hidden);
+
   }
 
   return {
     render(next:PlenaryView) {
+      if (next.phase!==view?.phase) {
+        element<HTMLDetailsElement>('project-details').open = next.phase==='ballot' || next.phase==='hearing';
+      }
       view = next;
       const {phase,remaining,role,players,host,outcome,round} = view;
       const hearing = view.hearing;
@@ -78,9 +82,10 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
       element('bill').textContent = hearing ? hearing.target : bills[round].name;
       element('impact').hidden = !!hearing;
+      element('impact-preview').textContent = hearing ? '' : ` · Estab. ${signed(view.yes.stability)} / ${signed(view.no.stability)}`;
       showImpact('yes',view.yes);
       showImpact('no',view.no);
-      element('stations').hidden = phase!=='negotiation';
+
       element('ballot').hidden = phase!=='ballot' && !hearing;
       const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
       element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} votos a favor para ${hearing ? 'cassar' : 'aprovar'}`;
