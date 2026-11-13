@@ -1,4 +1,4 @@
-import { mountVoteHistory } from './ui/vote-history';
+import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { createRoomCommandSender } from './room-commands';
@@ -36,12 +36,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   const infiltrators = countPicker('infiltrator-count',1);
   const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
   for (const button of npcButtons) button.onclick = ()=>command('lobby-npc-count',{count:Number(button.dataset.count)});
-  const brief = element('project-outcome-brief');
-  let briefTimer:number | undefined;
-  function clearBrief() {
-    window.clearTimeout(briefTimer);
-    brief.hidden = true;
-  }
+  const brief = mountVoteBrief(element('project-outcome-brief'));
   start.onclick = () => command('start-match',{infiltrators:infiltrators()});
   for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
   for (const button of votes) button.onclick = () => command('bill-vote',{vote:button.dataset.vote as Vote});
@@ -66,26 +61,14 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
     render(next:PlenaryView) {
 
       if (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing')) {
-        clearBrief();
+        brief.clear();
       }
-      const historyChanged = next.outcomes.length!==view?.outcomes.length;
-      if (!next.outcomes.length) clearBrief();
-      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished' || next.phase==='ballot')) {
-        clearBrief();
-        const outcome = next.outcome;
-        brief.dataset.passed = String(outcome.passed);
-        element('brief-verdict').textContent = outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado';
-        element('brief-project').textContent = agendaProject(outcome).name;
-        element('brief-yes').textContent = String(outcome.yes);
-        element('brief-no').textContent = String(outcome.no);
-        for (const key of ['stability','budget'] as const) {
-          const stat = element(`brief-${key}`);
-          const value = outcome.applied[key];
-          stat.textContent = signed(value);
-          stat.dataset.effect = value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
-        }
-        brief.hidden = false;
-        briefTimer = window.setTimeout(clearBrief,8500);
+      const matchId = next.politics?.progression.matchId;
+      const sameMatch = matchId===view?.politics?.progression.matchId;
+      const historyChanged = !sameMatch || next.outcomes.length!==view?.outcomes.length;
+      if (!sameMatch || !next.outcomes.length) brief.clear();
+      if (sameMatch && view && next.outcomes.length>view.outcomes.length && next.outcome && (next.phase==='negotiation' || next.phase==='finished' || next.phase==='ballot')) {
+        brief.render(next.outcome);
       }
       view = next;
       const {phase,remaining,role,players,host,round} = view;
@@ -123,7 +106,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
       clockChip.hidden = !running;
       clockChip.dataset.urgent = String(remaining<=10);
-      if (historyChanged) history.render(view.outcomes);
+      if (historyChanged) history.render(view.outcomes,matchId);
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
@@ -184,7 +167,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { clearBrief(); history.destroy(); },
+    destroy() { brief.destroy(); history.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();

@@ -3,7 +3,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {BALLOT_MS,NEGOTIATION_MS} from '../plenary';
 import type {Player} from '../map';
-import {VoteHistory} from './vote-history';
+import {VoteBrief,VoteHistory} from './vote-history';
 
 test('the history renders the latest authoritative result and enables previous pages',()=>{
   const match = new PlenaryMatch(1);
@@ -20,6 +20,12 @@ test('the history renders the latest authoritative result and enables previous p
   match.advance(firstEnd+NEGOTIATION_MS+BALLOT_MS);
   const markup = renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>);
   expect(markup).toContain('Votação 2 de 2');
+  const [first,second] = getOutcomes();
+  expect(renderToStaticMarkup(<VoteBrief outcome={first}/>)).toContain('id="brief-yes">1');
+  const brief = renderToStaticMarkup(<VoteBrief outcome={second}/>);
+  expect(brief).toContain('Projeto rejeitado');
+  expect(brief).toContain('id="brief-stability" data-effect="loss"');
+
   expect(markup).toContain('Wi-Fi na Praça: rejeitado. 0 a favor, 0 contra.');
   expect(markup).toContain('Ninguém votou');
   expect(markup).toContain('aria-label="Votação anterior">');

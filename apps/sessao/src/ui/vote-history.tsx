@@ -49,15 +49,53 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
 export function mountVoteHistory(history:HTMLDetailsElement) {
   const root = createRoot(history);
   return {
-    render(outcomes:readonly Outcome[]) {
+    render(outcomes:readonly Outcome[], matchId?:number) {
       history.hidden = !outcomes.length;
       if (!outcomes.length) history.open = false;
-      root.render(outcomes.length ? <VoteHistory outcomes={outcomes}/> : null);
+      root.render(outcomes.length ? <VoteHistory key={matchId} outcomes={outcomes}/> : null);
     },
     destroy() {
       history.open = false;
       history.hidden = true;
       root.unmount();
     },
+  };
+}
+
+export function VoteBrief({outcome}:{outcome:Outcome}) {
+  const scores = [
+    {id:'yes',label:'Votos a favor',icon:'check',value:outcome.yes},
+    {id:'no',label:'Votos contra',icon:'cross',value:outcome.no},
+    {id:'stability',label:'Variação de estabilidade',icon:'shield',value:outcome.applied.stability,delta:true},
+    {id:'budget',label:'Variação do orçamento',icon:'wallet',value:outcome.applied.budget,delta:true},
+  ];
+  return <>
+    <div><strong id="brief-verdict">{outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado'}</strong><span id="brief-project">{agendaProject(outcome).name}</span></div>
+    <div className="brief-scores">
+      {scores.map(({id,label,icon,value,delta})=><span key={id} title={label}>
+        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>
+        <strong id={'brief-'+id} data-effect={delta ? value>0 ? 'gain' : value<0 ? 'loss' : 'neutral' : undefined}>{delta && value>0 ? '+' : ''}{value}</strong>
+      </span>)}
+    </div>
+  </>;
+}
+
+export function mountVoteBrief(host:HTMLElement) {
+  const root = createRoot(host);
+  let timer:number|undefined;
+  function clear() {
+    window.clearTimeout(timer);
+    host.hidden = true;
+  }
+  return {
+    clear,
+    render(outcome:Outcome) {
+      clear();
+      host.dataset.passed = String(outcome.passed);
+      root.render(<VoteBrief outcome={outcome}/>);
+      host.hidden = false;
+      timer = window.setTimeout(clear,8500);
+    },
+    destroy() { clear(); root.unmount(); },
   };
 }
