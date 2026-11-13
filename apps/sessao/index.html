@@ -163,7 +163,6 @@
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
           <div class="personal-resources">
-            <span id="vitality" class="vitality" hidden><span aria-hidden="true">♥</span><strong id="vitality-number"></strong><progress id="vitality-meter" aria-label="Pontos de vida"></progress></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
           </div>
@@ -208,25 +207,25 @@
         </header>
         <footer id="command-deck" aria-label="Painel de partida">
           <section id="profile-dock" aria-label="Seu personagem">
-            <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
+            <div class="profile-portrait">
+              <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
+              <div id="vitality" class="vitality" hidden>
+                <progress id="vitality-meter" aria-label="Pontos de vida"></progress>
+                <strong id="vitality-number"></strong>
+              </div>
+            </div>
             <div class="deck-identity">
-              <strong id="hud-nick"></strong>
-              <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
+              <div class="profile-name-row">
+                <strong id="hud-nick"></strong>
+                <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
+              </div>
+              <small id="hud-office" hidden>Ex-parlamentar</small>
+              <small id="own-office" hidden></small>
               <footer id="profile-xp" hidden>
-                <div><strong id="profile-level"></strong><span id="profile-xp-value"></span></div>
-                <div class="xp-track" aria-hidden="true"><span id="profile-xp-fill"></span></div>
+                <strong id="profile-level"></strong>
+                <div class="xp-track"><span id="profile-xp-fill" aria-hidden="true"></span><span id="profile-xp-value"></span></div>
                 <div id="profile-xp-reward" role="status"></div>
               </footer>
-              <div class="deck-profile-links">
-                <details id="private-profile" name="game-panels">
-                  <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Perfil</span></summary>
-                  <div class="hud-panel deck-popover">
-                    <h2>Seu mandato</h2>
-                    <div class="deck-private-row"><button id="profile-role" class="resource-help profile-help" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use/></svg></button><strong id="profile-role-label"></strong></div>
-                    <div class="deck-private-row"><span><button class="resource-help profile-help" type="button" aria-label="Como funciona o salário" data-help="O salário é a remuneração por um ciclo completo no cargo. Ele entra na carteira na apuração da eleição e é proporcional ao tempo no cargo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-salary"/></svg></button><strong id="office-salary"></strong></span><small>por mandato</small></div>
-                  </div>
-                </details>
-              </div>
             </div>
           </section>
           <section id="legislative-dock" aria-label="Situação legislativa">

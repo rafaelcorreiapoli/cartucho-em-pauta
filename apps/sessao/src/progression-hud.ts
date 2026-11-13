@@ -173,7 +173,8 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       const inLevel = progress.xp-progress.levelStart;
       const step = progress.nextLevelXp===undefined ? 0 : progress.nextLevelXp-progress.levelStart;
       const fraction = step ? inLevel/step : 1;
-      levelLabel.textContent = `Nível ${progress.level}`;
+      levelLabel.textContent = String(progress.level);
+      levelLabel.setAttribute('aria-label',`Nível ${progress.level}`);
       xpLabel.textContent = step ? `${inLevel} / ${step} XP` : 'MAX';
       if (!before) {
         pending = undefined;

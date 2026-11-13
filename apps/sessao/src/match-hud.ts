@@ -21,7 +21,6 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
-  const roleIcon = roleBadge.querySelector('use')!;
   const agendaDock = element('agenda-dock');
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
@@ -444,25 +443,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
     },
     render(view:PlenaryView) {
-      const infiltrator = view.role==='Infiltrado';
-      roleBadge.hidden = !view.role;
-      element('profile-role-label').textContent = view.role ?? '';
-      if (view.role) {
-        roleBadge.dataset.role = view.role;
-        roleBadge.dataset.help = infiltrator ? 'Infiltrado. Derrube a estabilidade.' : 'Parlamentar. Preserve a estabilidade.';
-        roleBadge.setAttribute('aria-label',view.role);
-        roleIcon.setAttribute('href',infiltrator ? '#icon-bug' : '#icon-star');
-      }
+      roleBadge.hidden = view.role!=='Infiltrado';
+      element('hud-office').hidden = view.mandate!==false;
       const politics = view.politics;
       if (politics) {
-        const personal = view.election?.personal;
-        const office = personal?.office;
-        const power = office ? 'Mandato ativo. Você pode votar e disputar a próxima renovação.' : 'Ex-parlamentar. Você mantém seus bens e pode circular pelo Congresso.';
-        element('office-power').dataset.help = power;
-        element('office-salary').textContent = personal ? money(personal.salary) : '—';
-        const label = element('hud-office');
-        label.textContent = view.mandate ? 'Parlamentar' : 'Ex-parlamentar';
-        label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
         const prior = previous?.phase==='finished' ? undefined : previous?.politics?.missions;

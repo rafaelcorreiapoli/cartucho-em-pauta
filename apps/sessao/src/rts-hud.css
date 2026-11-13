@@ -194,12 +194,12 @@ button.equipped-gear-tile { cursor: pointer; }
   background-color: #345343;
   background-origin: border-box;
 }
-.deck-identity { display: grid; gap: 4px; min-width: 0; }
+.deck-identity { display: grid; flex: 1; gap: 4px; min-width: 0; }
 #command-deck #hud-nick { font: 720 clamp(16px,1.5vw,22px)/1.12 system-ui, sans-serif; }
 #command-deck .profile-office { gap: 5px; font-size: 13px; }
 #command-deck #hud-office { color: var(--party-gold); font-size: 12px; }
 .deck-profile-links, .deck-project-links { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#command-deck :is(#vote-history,#private-profile,#project-details) {
+#command-deck :is(#vote-history,#project-details) {
   position: relative;
   inset: auto;
   transform: none;
@@ -210,7 +210,7 @@ button.equipped-gear-tile { cursor: pointer; }
   box-shadow: none;
   background: none;
 }
-#command-deck :is(#vote-history,#private-profile,#project-details) > summary {
+#command-deck :is(#vote-history,#project-details) > summary {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -222,9 +222,9 @@ button.equipped-gear-tile { cursor: pointer; }
   white-space: nowrap;
   cursor: pointer;
 }
-#command-deck :is(#vote-history,#private-profile,#project-details) > summary::-webkit-details-marker { display: none; }
-#command-deck :is(#vote-history,#private-profile,#project-details) > summary:hover,
-#command-deck :is(#vote-history,#private-profile,#project-details)[open] > summary { color: var(--party-gold); }
+#command-deck :is(#vote-history,#project-details) > summary::-webkit-details-marker { display: none; }
+#command-deck :is(#vote-history,#project-details) > summary:hover,
+#command-deck :is(#vote-history,#project-details)[open] > summary { color: var(--party-gold); }
 #command-deck .deck-popover, #command-deck #last-vote {
   position: absolute;
   inset: auto auto calc(100% + 12px) 0;
@@ -527,14 +527,28 @@ button.equipped-gear-tile { cursor: pointer; }
   flex-wrap: wrap;
 }
 #field-actions:empty { display: none; }
-.personal-resources .vitality {
-  color: #ffc3a7;
-  gap: .4rem;
+.profile-portrait { display: grid; gap: 5px; flex: none; }
+.profile-name-row { display: flex; align-items: center; gap: 6px; }
+
+.profile-portrait .vitality {
+  position: relative;
+  height: 15px;
 }
 .vitality progress {
-  width: 3.3rem;
-  height: .45rem;
+  display: block;
+  width: 100%;
+  height: 100%;
   accent-color: #e98473;
+}
+#vitality-number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff4e9;
+  font: 800 9px/1 system-ui,sans-serif;
+  text-shadow: 0 1px 2px #30120d, 0 0 3px #30120d;
+  white-space: nowrap;
 }
 #market-dialog {
   width: min(640px, calc(100vw - 3rem));
