@@ -105,3 +105,83 @@ test('the phone only emits play time after input and uses observer visibility th
   game.tick(world,true);
   expect(samples.at(-1)).toMatchObject({duration:50,witnesses:['b']});
 });
+
+test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo'] as const)(
+  '%s completes only after the corresponding gameplay with the assigned person',
+  kind=>{
+    const economy = new PoliticalEconomy();
+    const players:Player[] = ['a','b','c'].map((id,character)=>({
+      id,nick:character===0 ? 'Autora' : 'Mesmo nome',character,x:140,y:146,direction:0,moving:false,
+    }));
+    const [owner,target,other] = players;
+    economy.reset(players.map(({id,nick:name,character})=>({id,name,character})),()=>0);
+    const agenda = Reflect.get(economy,'accounts').get(owner.id).agenda as PersonalAgenda;
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    const missions = () => economy.view(owner.id,[],0,false,()=>true)!.missions;
+    expect(missions().active.find(mission=>mission.kind===kind)?.person?.id).toBe(target.id);
+
+    const game = new Gameplay();
+    game.reset(0,()=>.5,players,()=>.5);
+    const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+      spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+    const interact = (recipient:Player) => {
+      const third = recipient===target ? other : target;
+      Object.assign(third,{x:800,y:490});
+      world.now += 3_000;
+      if (kind==='dinheiroAlvo') {
+        expect(economy.transfer(owner.id,recipient.id,3,true,0)).toBe(true);
+        return;
+      }
+      if (kind==='visitaAlvo') {
+        Object.assign(owner,{x:140,y:146});
+        game.tick(world,true);
+        Object.assign(owner,game.officeSpawn(recipient.id));
+        game.tick(world,true);
+        return;
+      }
+      if (kind==='selfieAlvo') {
+        Object.assign(owner,{x:140,y:146});
+        Object.assign(recipient,{x:148,y:146});
+        expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+        return;
+      }
+      if (kind==='documentoAlvo') {
+        Object.assign(owner,terminals.secretary.point);
+        game.act(owner,{kind:'supply',place:'secretary'},world);
+      } else {
+        Object.assign(owner,npcs.snackVendor.interaction);
+        game.act(owner,{kind:'talk',target:'snackVendor'},world);
+        game.act(owner,{kind:'dialogue-choice',target:'products',token:game.view(owner,world).dialogue?.token},world);
+        game.act(owner,{kind:'shop-buy',target:'pizza',token:game.view(owner,world).dialogue?.token},world);
+      }
+      Object.assign(owner,{x:140,y:146});
+      Object.assign(recipient,{x:148,y:146});
+      const item = game.view(owner,world).inventory.find(item=>item.kind===(kind==='pizzaAlvo' ? 'pizza' : 'document'))!;
+      game.act(owner,{kind:'offer',target:recipient.id,item:item.id},world);
+      const request = game.view(recipient,world).requests.find(request=>request.item.id===item.id)!;
+      game.act(recipient,{kind:'accept',item:request.id},world);
+      expect(game.view(recipient,world).inventory.some(entry=>entry.id===item.id)).toBe(true);
+    };
+    interact(other);
+    expect(missions().completed.some(mission=>mission.kind===kind)).toBe(false);
+    interact(target);
+    expect(missions().completed.find(mission=>mission.kind===kind)?.person?.id).toBe(target.id);
+    expect(missions().active).toHaveLength(3);
+  },
+);
+
+test('a player in isolation is replaced as a selfie target while their office remains visitable',()=>{
+  const targets = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
+  for (const kind of ['selfieAlvo','visitaAlvo'] as const) {
+    const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio']);
+    agenda.updateEligibility(metrics,3,true,3,0,targets,new Set(['b','c']));
+    const target = () => agenda.view(metrics).active.find(mission=>mission.kind===kind)?.person?.id;
+    expect(target()).toBe('b');
+    agenda.updateEligibility(metrics,3,true,3,0,targets,new Set(['c']));
+    expect(target()).toBe(kind==='selfieAlvo' ? 'c' : 'b');
+  }
+});

@@ -327,12 +327,13 @@ export class PoliticalEconomy {
   }
 
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
+    const availableTargets = new Set([...players].filter(id=>!this.suspended(id)));
     for (const id of players) {
       const account = this.accounts.get(id);
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
-        ballotsLeft,this.npcIds.size,targets);
+        ballotsLeft,this.npcIds.size,targets,availableTargets);
     }
   }
 

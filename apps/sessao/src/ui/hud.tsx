@@ -84,7 +84,7 @@ function AgendaPanel({state}:{state:ReturnType<typeof channel<Agenda|undefined>>
   </HudPanel>;
 }
 
-function MissionRow({mission,done=false}:{mission:Mission;done?:boolean}) {
+export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean}) {
   const timed = timedAgendas.has(mission.kind);
   const current = timed ? Math.floor(mission.current/1000) : mission.current;
   const target = timed ? mission.target/1000 : mission.target;

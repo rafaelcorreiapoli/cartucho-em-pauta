@@ -56,11 +56,17 @@ export class PersonalAgenda {
   private cannotVote = false;
   private ballotsLeft = 3;
   private targets:readonly Contact[] = [];
+  private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
   private readonly rewardedTargetItems = new Set<number>();
   private pickTarget(kind:Agenda) {
-    return this.targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
-      this.targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
+    const targets = this.targets.filter(person=>this.targetAvailable(kind,person.id));
+    return targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
+      targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
+  }
+
+  private targetAvailable(kind:Agenda,id:string) {
+    return kind==='visitaAlvo' || !this.availableTargets || this.availableTargets.has(id);
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
@@ -91,14 +97,15 @@ export class PersonalAgenda {
       assinaturas:mission ? this.countFacts(mission,[{value:signer,group:String(document)}]) : 0});
   }
 
-  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = []) {
+  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
     this.targets = targets;
+    this.availableTargets = availableTargets;
     this.npcCount = npcCount;
     this.playerCount = playerCount;
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (this.availableInMatch(mission.kind,mission.target-mission.current) && (!mission.person || targets.some(person=>person.id===mission.person?.id))) return true;
+      if (this.availableInMatch(mission.kind,mission.target-mission.current) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       return false;
     });

@@ -310,7 +310,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MIS-01 | Agenda Pessoal secreta | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-02 | Três missões ativas | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-03 | Reposição automática | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
-| MIS-04 | Missões com alvo humano nominal | PARCIAL | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | Seis tipos usam alvo por ID; assinatura validada com três clientes. Faltam testes ponta a ponta dos demais tipos. | Média |
+| MIS-04 | Missões com alvo humano nominal | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | Assinatura verificada por socket com três clientes. Testes integrados cobrem entrega de pizza e documento, transferência, visita e selfie, inclusive jogador errado com mesmo nome. HUD testado para os seis tipos. | — |
 | MIS-05 | Missões de assinatura | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-06 | Missões de entrega de objetos | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-07 | Missões financeiras | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
@@ -322,7 +322,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MIS-13 | Missões com duração | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-14 | Condições compostas e progresso parcial | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-15 | Missões condicionadas à visibilidade | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
-| MIS-16 | Seleção de objetivos realmente elegíveis | PARCIAL | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | Regras filtram participantes, mandatos e ciclos. Nem todo tipo considera acesso atual a sala, saldo e equipamento. | Média |
+| MIS-16 | Seleção de objetivos realmente elegíveis | PARCIAL | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | Regras filtram participantes, mandatos e ciclos. Alvos isolados são substituídos em missões de contato. Ainda falta considerar acesso atual a sala, saldo e equipamento. | Média |
 | MIS-17 | Evitar repetição imediata | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-18 | Recompensas em XP | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
 | MIS-19 | Recompensas econômicas e políticas | IMPLEMENTADO | PersonalAgenda.ts, photo-missions.ts, politics.ts, Documents.multiplayer.test.ts, hud.tsx; PR 12, 15 | — | — |
