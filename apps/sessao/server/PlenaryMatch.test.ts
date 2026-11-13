@@ -1,3 +1,5 @@
+import {Gameplay} from './Gameplay';
+import {terminals} from '../src/gameplay';
 import {privateOffices} from '../src/private-offices';
 import {fireRules,fireSites} from '../src/fire';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -364,4 +366,33 @@ test('only a victim or direct witness can report an infraction, once, at the des
   const witnessed = match.complaintView(host.id).available[0]!;
   expect(match.submitComplaint(desk(host),witnessed.id,10_012)).toBeUndefined();
   expect(match.complaintView(honest.id).available).toEqual([]);
+});
+
+test('the monetary summary reconciles physical issuance, trade, treasury and project spending',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const game = new Gameplay();
+  const player = {...host,x:140,y:146};
+  const receiver = {...honest,x:148,y:146};
+  const group = [player,receiver,traitor];
+  const values = [0,0,.117,.172];
+  game.reset(0,()=>values.shift() ?? .5);
+  const world = match.gameplayWorld(group,4000,()=>false);
+  game.tick(world,true);
+  const [item] = game.view(player,world).nearby;
+  expect(match.economySummary(game.physicalCash())).toMatchObject({spawned:3,physical:3,discrepancy:0});
+  game.act(player,{kind:'collect',item:item.id},world);
+  match.politics(player,{kind:'transfer',to:receiver.id,amount:3,clandestine:true},group,4001);
+  expect(world.spend!(player.id,1.5)).toBe(true);
+  expect(match.economySummary(game.physicalCash())).toMatchObject({transferred:3,reserveFees:1.5,discrepancy:0});
+  Object.assign(player,terminals.treasury.point);
+  expect(game.act(player,{kind:'deliver',item:item.id,place:'treasury'},world)).toContain('Tesouraria');
+  expect(match.economySummary(game.physicalCash())).toMatchObject({treasury:3,physical:0,discrepancy:0});
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'yes',NEGOTIATION_MS+1);
+  match.vote(honest.id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(match.economySummary(game.physicalCash())).toMatchObject({projects:28,discrepancy:0});
+  match.advance(ELECTION_RULES.interval);
+  expect(match.economySummary(game.physicalCash())).toMatchObject({publicDuty:4.2,salaries:2.7,discrepancy:0});
 });

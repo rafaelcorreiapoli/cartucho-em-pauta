@@ -126,6 +126,8 @@ test('spawned and dropped cash share visibility and custody without immediate re
 
 test('cash on the ground expires after the same interval on spawn or drop', () => {
   const {alice,game,world} = setup();
+  const flows:string[] = [];
+  world.cashFlow = (kind,amount)=>flows.push(kind+":"+amount);
   const values = [0,0,.117,.172,.99];
   Object.assign(alice,{x:140,y:146});
   game.reset(0,()=>values.shift() ?? .5);
@@ -136,6 +138,10 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   world.now = 59000;
   expect(game.act(alice,{kind:'collect',item:item.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
+
+  game.tick(world,false);
+  game.tick(world,false);
+  expect(flows).toEqual(['spawned:3','expired:3']);
 
   const nextValues = [0,0,.117,.172,.99];
   game.reset(0,()=>nextValues.shift() ?? .5);
@@ -150,6 +156,8 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   world.now = 65000;
   expect(game.act(alice,{kind:'use',item:next.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
+  game.tick(world,false);
+  expect(flows).toEqual(['spawned:3','expired:3','spawned:3','expired:3']);
 });
 
 test('the camera freezes visible exposed objects and preserves permissions through show, copy and publish', () => {

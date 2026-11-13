@@ -22,11 +22,14 @@ export class PoliticalEconomy {
   private serial = 0;
   private matchId = 0;
   private rewardReserve = 0;
+  private transferred = 0;
+  private reserveFees = 0;
   private npcIds = new Set<string>();
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number) {
     this.matchId++;
+    this.transferred = this.reserveFees = 0;
     this.npcIds.clear();
     this.rewardReserve = contacts.length*8;
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
@@ -88,7 +91,7 @@ export class PoliticalEconomy {
       if (this.npcIds.has(id)) npcs += account.wallet;
       else humans += account.wallet;
     }
-    return {humans,npcs,reserve:this.rewardReserve};
+    return {humans,npcs,reserve:this.rewardReserve,transferred:this.transferred,reserveFees:this.reserveFees};
   }
 
   takeWallet(id:string,fraction=1) {
@@ -142,6 +145,7 @@ export class PoliticalEconomy {
     if (!account || amount>account.wallet) return false;
     account.wallet -= amount;
     this.rewardReserve += amount;
+    this.reserveFees += amount;
     return true;
   }
 
@@ -169,6 +173,7 @@ export class PoliticalEconomy {
     }
     if (source.payments>=PAYMENTS_PER_ROUND) return false;
     source.payments++;
+    this.transferred += amount;
     source.wallet -= amount;
     this.credit(recipient,amount);
     if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from);
@@ -192,6 +197,7 @@ export class PoliticalEconomy {
     if (!account || account.wallet<CAMPAIGN_COST || account.campaignRound===round) return;
     account.wallet -= CAMPAIGN_COST;
     this.rewardReserve += CAMPAIGN_COST;
+    this.reserveFees += CAMPAIGN_COST;
     account.campaignRound = round;
     this.changePopularity(id,17);
   }

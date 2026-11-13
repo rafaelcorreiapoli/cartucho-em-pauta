@@ -69,7 +69,7 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
-    this.match.logEconomy(this.gameplay.physicalCash());
+    this.match.logEconomy(this.gameplay.physicalCash(),this.roomId);
     this.npcTalk.reset();
     this.parliamentarians.reset(0,now);
     const players = [...this.players.values()].map(state=>state.player);

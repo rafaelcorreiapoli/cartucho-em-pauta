@@ -306,7 +306,7 @@ export class Gameplay {
     return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
   }
 
-  private spawnCash(now:number) {
+  private spawnCash({now,cashFlow}:GameplayWorld) {
     if (now<this.nextCashSpawn) return;
     this.nextCashSpawn = now+8000+this.random()*10000;
     const ground = this.groundItems(now);
@@ -321,6 +321,7 @@ export class Gameplay {
       if (last?.x!==x || last.y!==y) continue;
       const kind = 'briefcase';
       this.create(kind,this.groundPlace(kind,{x,y},now));
+      cashFlow?.('spawned',cashAmount(kind)!);
       console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;
     }
@@ -358,12 +359,16 @@ export class Gameplay {
     }
     this.transfers = this.transfers.filter(event=>world.now-event.at<=2400);
     for (const item of this.items.values()) {
-      if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
+      if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) {
+        const amount = cashAmount(item.data);
+        if (amount) world.cashFlow?.('expired',amount);
+        this.remove(item);
+      }
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
-    if (exploring) this.spawnCash(world.now);
+    if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
     this.recordRoomVisits(world,exploring);

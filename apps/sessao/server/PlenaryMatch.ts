@@ -36,12 +36,25 @@ export class PlenaryMatch {
   addParliamentarian(player:Player) {
     this.npcIds.add(player.id);
     const [min,max] = npcRules.startingWallet;
-    this.economy.addParliamentarian({id:player.id,name:player.nick,character:player.character},min+Math.floor(Math.random()*(max-min+1)));
+    const wallet = min+Math.floor(Math.random()*(max-min+1));
+    this.economy.addParliamentarian({id:player.id,name:player.nick,character:player.character},wallet);
+    this.cash.npcIssued += wallet;
     this.election.addDeputy(player.id);
   }
 
-  logEconomy(physical:number) {
-    console.info(JSON.stringify({event:'economy-totals',...this.economy.totals(),physical,budget:this.budget}));
+  private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
+
+  economySummary(physical:number) {
+    const totals = this.economy.totals();
+    const issued = this.cash.initial+this.cash.npcIssued+this.cash.spawned;
+    const spent = this.cash.expired+this.cash.publicDuty+this.cash.projects;
+    const held = totals.humans+totals.npcs+totals.reserve+physical+this.budget;
+    return {...totals,...this.cash,physical,budget:this.budget,issued,spent,
+      discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
+  }
+
+  logEconomy(physical:number,roomId:string) {
+    console.info(JSON.stringify({event:'economy-totals',roomId,...this.economySummary(physical)}));
   }
 
   refreshAgendaEligibility() { this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round%bills.length,id=>!!this.election.office(id)); }
@@ -69,6 +82,8 @@ export class PlenaryMatch {
       payments.set(id,paid);
     }
     this.budget = Math.max(0,Math.round((this.budget-publicPaid-paid*ids.length)*10)/10);
+    this.cash.publicDuty += publicPaid;
+    this.cash.salaries += paid*ids.length;
     this.treasuryReputation.clear();
     this.stability = clamp(this.stability-Math.ceil(rules.publicDutyPenalty*(1-publicPaid/rules.publicDuty)));
     return payments;
@@ -136,6 +151,8 @@ export class PlenaryMatch {
     this.fire.reset(now);
     this.complaints.reset();
     this.economy.reset(contacts,random);
+    const {humans,reserve} = this.economy.totals();
+    this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingImmunity.clear();
@@ -241,8 +258,10 @@ export class PlenaryMatch {
       plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
       office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
       hasMandate:id=>this.npcIds.has(id) || !!this.election.office(id),
+      cashFlow:(kind,amount)=>{ this.cash[kind] += amount; },
       deposit:(id,amount)=>{
         if (!this.running || !this.electorate.has(id) || amount<=0) return false;
+        this.cash.treasury += amount;
         this.budget = Math.round((this.budget+amount)*10)/10;
         const credited = this.treasuryReputation.get(id) ?? 0;
         const gain = Math.max(0,Math.min(rules.treasuryReputationCap-credited,Math.floor(amount)));
@@ -321,6 +340,8 @@ export class PlenaryMatch {
         const result = this.economy.grant(id,action.diverted,this.budget,this.round);
         if (!result) break;
         this.budget -= result.budget;
+        this.cash.diverted += action.diverted;
+        this.cash.projects += result.budget-action.diverted;
         this.stability = clamp(this.stability+result.stability);
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
         break;
@@ -486,6 +507,7 @@ export class PlenaryMatch {
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
     this.budget = Math.max(0,Math.round(balance*10)/10);
+    this.cash.projects += previous.budget-this.budget;
     const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
     const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
     this.stability = clamp(this.stability+benefit+Math.round(Math.min(0,balance)*2));

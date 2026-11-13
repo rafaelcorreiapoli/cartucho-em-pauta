@@ -11,6 +11,7 @@ export type GameplayWorld = {
   lootWallet?:(id:string,fraction:number)=>number;
   takeWallet?:(id:string)=>number;
   payNpc?:(from:string,to:string,amount:number)=>boolean;
+  cashFlow?:(kind:'spawned'|'expired',amount:number)=>void;
   feedback?:(id:string,message:string)=>void;
   players:Player[]; now:number; office:(id:string)=>Office|undefined;
   hasEvidence?:(id:string,kind:EvidenceKind)=>boolean; hasMission?:(id:string,mission:Agenda)=>boolean;
