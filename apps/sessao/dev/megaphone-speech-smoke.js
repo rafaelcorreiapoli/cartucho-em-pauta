@@ -1,5 +1,4 @@
 async page => {
-  await page.goto('http://127.0.0.1:5197/');
   await page.evaluate(() => {
     const input = document.createElement('input');
     input.id = 'speech-fixture';
@@ -112,7 +111,10 @@ async page => {
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
       await peers[0].setDisguise({pitch:7,style:'shifted'});
       const combined = await sample(true);
-      return {normal,filtered,combined,streams:meters.length,microphoneSources:devices.length};
+      const disguiseOnly = await sample(false);
+      if (combined.bassToMid>=disguiseOnly.bassToMid*.65) throw Error(JSON.stringify({disguiseOnly,combined}));
+      if (meters.length!==2 || devices.length!==2) throw Error(JSON.stringify({streams:meters.length,microphoneSources:devices.length}));
+      return {normal,filtered,combined,disguiseOnly,streams:meters.length,microphoneSources:devices.length};
     } finally {
       clearInterval(heartbeat);
       peers.forEach(peer=>peer.stop(false));

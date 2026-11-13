@@ -254,5 +254,6 @@ playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
 ```
 
 O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
-no receptor. Ele verifica redução relativa de graves, presença de sinal com
-Megafone e Modulador ativos e ausência de picos próximos ao clipping.
+no receptor. Compara a relação entre graves e médios com e sem Megafone,
+repetindo a comparação com o Modulador ativo. Também verifica presença de
+sinal, picos abaixo do clipping e uma captura e uma trilha por cliente.
