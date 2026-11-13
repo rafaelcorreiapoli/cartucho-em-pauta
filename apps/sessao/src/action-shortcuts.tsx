@@ -1,4 +1,6 @@
-import { button, node } from './gameplay-ui';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
 
 const pageSize = 9;
@@ -53,8 +55,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
   disableHudTabStops(root,signal);
   const launcher = root.querySelector<HTMLButtonElement>('#open-action-shortcuts')!;
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
-  const list = palette.querySelector<HTMLElement>('.shortcut-list')!;
-  const pages = palette.querySelector<HTMLElement>('.shortcut-pages')!;
+  const paletteRoot = createRoot(palette);
   const map = root.querySelector<HTMLElement>('#map')!;
   const controls = quickActions.map(([key,selector])=>[key,root.querySelector<HTMLElement>(selector)!] as const);
   for (const [key,control] of controls) control.setAttribute('aria-keyshortcuts',key.toUpperCase());
@@ -72,24 +73,19 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
       .map(control=>({control,name:actionName(control)})).filter(({name})=>name);
     const total = Math.max(1,Math.ceil(actions.length/pageSize));
     page = Math.max(0,Math.min(page,total-1));
-    list.replaceChildren(...actions.slice(page*pageSize,(page+1)*pageSize).map(({control,name},index)=>{
-      const entry = button(name,()=>{
-        palette.close();
-        if (!available(control)) return;
-        if (control.matches('input:not([type="checkbox"], [type="radio"]), select, textarea')) control.focus();
-        else control.click();
-      });
-      markShortcut(entry,String(index+1));
-      return entry;
-    }));
-    pages.hidden = total===1;
-    pages.replaceChildren(button('‹',()=>{ page--; render(); }),node('span',`${page+1} / ${total}`),button('›',()=>{ page++; render(); }));
-    const [back,next] = pages.querySelectorAll('button');
-    back.disabled = page===0;
-    next.disabled = page===total-1;
-    back.setAttribute('aria-label','Página anterior');
-    next.setAttribute('aria-label','Próxima página');
-    if (palette.open) list.querySelector('button')?.focus({preventScroll:true});
+    flushSync(()=>paletteRoot.render(<ShortcutPalette
+      entries={actions.slice(page*pageSize,(page+1)*pageSize).map(({control,name})=>({
+        name,
+        activate:()=>{
+          palette.close();
+          if (!available(control)) return;
+          if (control.matches('input:not([type="checkbox"], [type="radio"]), select, textarea')) control.focus();
+          else control.click();
+        },
+      }))}
+      page={page} total={total} changePage={offset=>{ page += offset; render(); }}
+    />));
+    if (palette.open) palette.querySelector<HTMLButtonElement>('.shortcut-list button')?.focus({preventScroll:true});
   }
 
   function toggle() {
@@ -139,7 +135,34 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>{
     launcher.onclick = null;
     palette.close();
-    list.replaceChildren();
-    pages.replaceChildren();
+    paletteRoot.unmount();
   },{once:true});
+}
+
+export function ShortcutPalette({entries,page,total,changePage}:{
+  entries: readonly {name:string; activate:()=>void}[];
+  page:number;
+  total:number;
+  changePage:(offset:number)=>void;
+}) {
+  return <>
+    <header>
+      <h2 id="action-shortcuts-title">Atalhos de teclado</h2>
+      <form method="dialog"><button className="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form>
+    </header>
+    <p>Use os números para agir. Use ← e → para mudar de página.</p>
+    <div className="shortcut-list">
+      {entries.map(({name,activate},index)=><button
+        key={page*pageSize+index} type="button" className="hud-button hud-button--secondary" onClick={activate}
+        aria-keyshortcuts={String(index+1)}
+      >
+        {name}<kbd className="action-key" aria-hidden="true">{index+1}</kbd>
+      </button>)}
+    </div>
+    <nav className="shortcut-pages" aria-label="Páginas de ações" hidden={total===1}>
+      <button type="button" className="hud-button hud-button--secondary" aria-label="Página anterior" disabled={page===0} onClick={()=>changePage(-1)}>‹</button>
+      <span>{page+1} / {total}</span>
+      <button type="button" className="hud-button hud-button--secondary" aria-label="Próxima página" disabled={page===total-1} onClick={()=>changePage(1)}>›</button>
+    </nav>
+  </>;
 }
