@@ -59,6 +59,7 @@ export class Gameplay {
   private random = Math.random;
   private nextCashSpawn = Infinity;
 
+  private readonly originalDocuments = new Map<number,NonNullable<WorldItem['document']>>();
   private megaphoneBroadcast?: {owner:string;item:number;until:number};
   private megaphoneRecharge = new Map<number,{owner:string;until:number}>();
 
@@ -113,6 +114,7 @@ export class Gameplay {
     this.modulator.reset();
     this.megaphoneBroadcast = undefined;
     this.megaphoneRecharge.clear();
+    this.originalDocuments.clear();
     for (const player of players) {
       player.pocketing = undefined;
       player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
@@ -175,6 +177,7 @@ export class Gameplay {
   }
 
   private remove(item:Item) {
+    this.originalDocuments.delete(item.data.id);
     this.hide(item);
     this.items.delete(item.data.id);
     if (item.data.kind==='voiceModulator') this.modulator.remove(item.data.id);
@@ -1142,14 +1145,13 @@ export class Gameplay {
       case 'edit':
         if (!canReachObject(player,terminals.reprography.point)) return 'Aproxime-se da estação de Reprografia.';
         if (!data.document) return 'Selecione um documento.';
-        if (data.document.edited) return 'Este documento já foi adulterado.';
+        if (this.originalDocuments.has(data.id)) return 'Este documento já foi adulterado.';
+        this.originalDocuments.set(data.id,structuredClone(data.document));
         data.document.edited = true;
         data.document.title += ' · versão retificada';
-        data.document.signatures = [];
-        data.document.stamps = [];
         this.clearRequests(data.id);
         this.event(world,player,'edited',data);
-        return 'Documento adulterado. Assinaturas e carimbos precisam ser refeitos.';
+        return 'Documento adulterado na Reprografia.';
       case 'stamp':
         if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
         if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
