@@ -9,10 +9,6 @@ const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void) {
-  const xpPanel = element('profile-xp');
-  const levelLabel = element('profile-level');
-  const xpLabel = element('profile-xp-value');
-  const fill = element('profile-xp-fill');
   const reward = element('profile-xp-reward');
   const launch = element<HTMLButtonElement>('open-attributes');
   const badge = element('attribute-points-badge');
@@ -154,7 +150,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       const before = latest?.matchId===progress?.matchId && !reconnecting ? latest : undefined;
       reconnecting = false;
       latest = progress;
-      levelLabel.hidden = xpPanel.hidden = !progress || next.phase==='lobby';
       launch.hidden = !progress || next.phase==='lobby' || next.phase==='finished';
       if (next.phase!=='negotiation') {
         if (celebration.open) celebration.close('later');
@@ -170,19 +165,12 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       badge.textContent = String(progress.available);
       launch.title = progress.available ? `Atributos (I) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (I)';
       launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
-      const inLevel = progress.xp-progress.levelStart;
-      const step = progress.nextLevelXp===undefined ? 0 : progress.nextLevelXp-progress.levelStart;
-      const fraction = step ? inLevel/step : 1;
-      levelLabel.textContent = `NV ${progress.level}`;
-      levelLabel.setAttribute('aria-label',`Nível ${progress.level}`);
-      xpLabel.textContent = step ? `${inLevel} / ${step} XP` : 'MAX';
       if (!before) {
         pending = undefined;
         clearTimeout(revealTimer);
         revealTimer = undefined;
         clearTimeout(rewardTimer);
         reward.textContent = '';
-        fill.getAnimations().forEach(animation=>animation.cancel());
         if (celebration.open) celebration.close('later');
       }
       if (before && progress.xp>before.xp) {
@@ -200,13 +188,11 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         updateCelebration(displayed);
       } else if (before && progress.level>before.level && next.phase!=='finished') {
         pending = {from:pending?.from ?? before.level,to:progress.level};
-        if (!reduceMotion()) fill.animate([{transform:fill.style.transform || 'scaleX(0)'},{transform:'scaleX(1)'}],{duration:250,easing:'ease-out'});
         clearTimeout(revealTimer);
         revealTimer = window.setTimeout(()=>{ revealTimer = undefined; tryReveal(); },reduceMotion() ? 0 : 250);
       } else if (pending && next.phase==='negotiation' && !celebration.open && before?.xp===progress.xp) {
         tryReveal();
       }
-      fill.style.transform = `scaleX(${fraction})`;
       completedCount = next.politics?.missions.completed.length ?? 0;
       if (!before || progress.revision!==before.revision) selected = undefined;
       if (before && progress.revision>before.revision) {
@@ -231,8 +217,9 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       attributes.removeEventListener('close',clearSelection);
       attributes.close();
       confirm.onclick = null;
+      launch.hidden = true;
+      reward.textContent = '';
       launch.onclick = null;
-      launch.hidden = levelLabel.hidden = xpPanel.hidden = true;
       sparks.replaceChildren();
       element('attribute-list').replaceChildren();
       element('attribute-resources').replaceChildren();

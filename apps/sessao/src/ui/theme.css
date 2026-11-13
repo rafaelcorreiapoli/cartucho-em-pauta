@@ -1,0 +1,64 @@
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "./";
+
+@theme {
+  --color-hud-surface: #101e18ed;
+  --color-hud-ink: #f3f1dc;
+  --color-hud-muted: #b2c5b7;
+  --color-hud-border: #a3c4aa45;
+  --color-hud-stability: #9ae3b1;
+  --color-hud-budget: #f6cb80;
+  --color-hud-danger: #ff9a8c;
+  --color-hud-track: #0a130f;
+  --radius-hud: .7rem;
+}
+.react-resource { font-size: 11px; white-space: nowrap; }
+.react-resource strong { color:var(--meter-tone); font-size: 14px; padding-left: 3px; }
+[data-tone="stability"] { --meter-tone:var(--color-hud-stability); }
+[data-tone="budget"] { --meter-tone:var(--color-hud-budget); }
+[data-tone="danger"] { --meter-tone:var(--color-hud-danger); }
+.react-meter { position:relative; height:5px; border-radius:4px; background:var(--color-hud-track); overflow:hidden; }
+.react-meter span { display:block; height:100%; background:var(--meter-tone); transform-origin:left; }
+.react-meter i { position:absolute; inset-block:0; width:1px; background:var(--color-hud-ink); }
+#agenda-dock { position:absolute; z-index:3; top:12px; right:clamp(12px,2vw,24px); width:min(286px,46vw); pointer-events:none; }
+.react-agenda { border:1px solid var(--color-hud-border); box-shadow:0 6px 20px #0005; font: 13px/1.3 system-ui,sans-serif; }
+.react-agenda h2 { margin:0; font:700 14px/1.15 system-ui,sans-serif; }
+.react-agenda small { color:var(--color-hud-muted); font-size:11px; }
+.react-agenda header .hud-glyph { width:16px; height:16px; color:var(--color-hud-stability); }
+.react-missions { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.react-missions.completed { border-bottom:1px solid var(--color-hud-border); padding-bottom:8px; }
+.react-missions strong { display:block; font-weight:600; overflow-wrap:anywhere; }
+.react-missions [data-done="true"] { color:var(--color-hud-muted); text-decoration:line-through; }
+.react-mission-check { flex:none; display:grid; place-items:center; width:13px; height:13px; margin-top:2px; border:1px solid var(--color-hud-muted); border-radius:3px; }
+.react-mission-check .hud-glyph { width:10px; height:10px; color:var(--color-hud-stability); }
+#world #hud-notices { inset-block-start:auto; inset-block-end:calc(var(--rts-hud-height, 122px) + 12px); }
+@media (prefers-reduced-motion:no-preference) { .react-meter span { transition:transform 240ms ease-out; } }
+@media (max-width:700px) {
+  .react-parliament { gap:6px; }
+  .react-resource { font-size:9px; }
+  .react-resource strong { font-size:11px; }
+  .react-agenda { font-size:11px; }
+}
+
+.profile-portrait { position:relative; }
+#profile-level-mount { margin-inline-start:auto; }
+.react-level { color:var(--color-hud-muted); font-size:12px; white-space:nowrap; }
+.react-vitals { width:100%; }
+.react-vitals .react-meter { height:4px; }
+[data-tone="health"] { --meter-tone:#69d878; }
+[data-tone="stamina"] { --meter-tone:#50b6ef; }
+[data-tone="xp"] { --meter-tone:#a465e6; }
+.react-xp { position:relative; }
+.react-xp .react-meter { height:11px; }
+.react-xp small { position:absolute; inset:0; display:grid; place-items:center; font:750 8px/1 system-ui,sans-serif; text-shadow:0 1px 2px #000; }
+@media (min-width:641px) and (max-width:1220px) {
+  #command-strip { grid-template-columns:minmax(0,1fr) auto minmax(0,1.2fr); gap:8px; }
+  #command-strip #election-dock { min-width:0; }
+  #command-strip .election-summary { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+}
+@media (max-width:380px) {
+  .react-resource button { display:none; }
+  .react-parliament { gap:4px; }
+}

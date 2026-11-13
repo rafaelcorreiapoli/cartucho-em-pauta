@@ -1,3 +1,4 @@
+import { createRoot } from 'react-dom/client';
 import { officeRules } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
@@ -51,11 +52,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const equipmentButton = element<HTMLButtonElement>('open-equipment');
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
+  const slotsRoot = createRoot(slots);
   const nearbyItems = element('nearby-items');
   const nearbyButton = element<HTMLButtonElement>('nearby-objects');
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
+  let inventoryItems:WorldItem[] = [];
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
   let app:App = 'Telefone';
@@ -353,31 +356,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const key = JSON.stringify(inventory);
     if (key===inventoryKey) return;
     inventoryKey = key;
-    slots.replaceChildren(...Array.from({length:INVENTORY_SLOTS},(_,index) => {
-      const item = inventory[index];
-      const slot = item ? itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'})) : node('span');
-      if (item) {
-        slot.dataset.item = String(item.id);
-        slot.setAttribute('aria-haspopup','dialog');
-        slot.setAttribute('aria-keyshortcuts',`Shift+${index+1}`);
-        slot.title += ` (Shift+${index+1})`;
-      } else {
-        slot.className = 'item-tile item-tile-empty';
-        slot.setAttribute('aria-hidden','true');
-      }
-      const key = node('kbd',`⇧${index+1}`);
-      key.className = 'slot-key';
-      key.setAttribute('aria-hidden','true');
-      slot.append(key);
-      return slot;
-    }));
+    inventoryItems = inventory;
     highlightSlot();
   }
 
   function highlightSlot() {
-    for (const slot of slots.querySelectorAll('button[data-item]')) {
-      slot.setAttribute('aria-expanded',String(selection?.source==='inventory' && slot.getAttribute('data-item')===String(selection.id)));
-    }
+    slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+      const item = inventoryItems[index];
+      const shortcut = index+1;
+      const badge = <kbd className="slot-key" aria-hidden="true">⇧{shortcut}</kbd>;
+      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}</span>;
+      const name = itemName(item);
+      return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
+        aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
+        aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
+        onClick={()=>open({id:item.id,source:'inventory'})}>
+        <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
+        <span className="item-caption">{name}</span>{badge}
+      </button>;
+    }));
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
@@ -553,7 +550,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       delete element('object-request').dataset.request;
       navigation.replaceChildren();
       slots.hidden = nearbyButton.hidden = true;
-      slots.replaceChildren();
+      slotsRoot.unmount();
       nearbyItems.replaceChildren();
       setNearbyExpanded(false);
     },

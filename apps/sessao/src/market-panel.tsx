@@ -3,7 +3,8 @@ import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
 import { concealment, equipment, gearKinds, isGear } from './equipment';
 import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
-import { button, glyph, itemPortrait, node } from './gameplay-ui';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
@@ -16,6 +17,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
   const heading = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('#market-body')!;
+  const root = createRoot(body);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
   const purchasedName = prompt.querySelector('#equip-purchase-item')!;
   const yes = prompt.querySelector<HTMLButtonElement>('#equip-purchase-yes')!;
@@ -57,91 +59,59 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   dialog.addEventListener('keydown',onPageKey);
 
   function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[]) {
-    const funds = node('p',money(wallet));
-    funds.className = 'market-wallet';
-    funds.prepend(glyph('wallet'));
-    const toolbar = node('div');
-    toolbar.className = 'market-toolbar';
-    toolbar.append(funds);
-    const products = node('div');
-    products.className = 'market-products';
     const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds,'mensalUnderwear' as const] : foodKinds;
     const owned = [...inventory,...equipped];
-    const full = inventory.length>=INVENTORY_SLOTS;
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
-    for (const [index,kind] of visible.entries()) {
-      const food = isFood(kind) ? foods[kind] : undefined;
-      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price;
-      const item = objects[kind];
-      const card = node('article');
-      card.className = 'market-product';
-      const art = itemPortrait(kind);
-      art.className = 'market-art';
-      const furniture = isOfficeFurniture(kind);
-      const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(ownedItem=>ownedItem.kind===kind);
-      const noSpace = !furniture && full;
-      const priceLabel = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : money(price);
-      const buy = button('',()=>send({kind:'shop-buy',target:kind,token}));
-      buy.className = 'market-product-button';
-      buy.disabled = hasItem || wallet<price || noSpace;
-      buy.setAttribute('aria-label',hasItem ? `${item.name} · ${priceLabel}` : `Comprar ${item.name} · ${money(price)}`);
-      const caption = node('span');
-      caption.className = 'market-product-caption';
-      const name = node('strong',item.name);
-      const cost = node('span',priceLabel);
-      cost.className = 'market-product-price';
-      caption.append(name,cost);
-      buy.append(art,caption);
-      if (!buy.disabled) markShortcut(buy,String(index+1));
-
-      const details = node('span',item.description);
-      details.className = 'market-product-details';
-      details.id = `market-description-${kind}`;
-      if (food) details.append(node('small',`${food.category} · ${describeFood(food.effect)}`));
-      if (!hasItem && (noSpace || wallet<price)) details.append(node('small',noSpace ? 'Inventário cheio' : 'Saldo insuficiente'));
-      buy.setAttribute('aria-describedby',details.id);
-      card.append(buy,details);
-      products.append(card);
-    }
-    for (let index=visible.length;index<pageSize;index++) {
-      const empty = node('div');
-      empty.className = 'market-product-empty';
-      empty.setAttribute('aria-hidden','true');
-      products.append(empty);
-    }
-
     const pageCount = Math.ceil(kinds.length/pageSize);
-    const paging = node('nav');
-    paging.className = 'market-paging';
-    paging.setAttribute('aria-label','Páginas do catálogo');
     const goTo = (next:number) => {
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
       renderCatalog(npc,token,wallet,inventory,equipped,furnishings);
     };
-    const previous = button('‹',()=>goTo(page-1));
-    const next = button('›',()=>goTo(page+1));
-    for (const [arrow,label,key,disabled] of [
-      [previous,'Página anterior','ArrowLeft',page===0],
-      [next,'Próxima página','ArrowRight',page===pageCount-1],
-    ] as const) {
-      arrow.className = 'market-page-arrow';
-      arrow.setAttribute('aria-label',label);
-      arrow.setAttribute('aria-keyshortcuts',key);
-      arrow.disabled = disabled;
-      arrow.hidden = pageCount===1;
-    }
-    const dots = node('div');
-    dots.className = 'market-page-dots';
-    for (let index=0;index<pageCount;index++) {
-      const dot = button('',()=>goTo(index));
-      dot.className = 'market-page-dot';
-      dot.setAttribute('aria-label',`Página ${index+1}`);
-      if (index===page) dot.setAttribute('aria-current','page');
-      dots.append(dot);
-    }
-    paging.append(previous,dots,next);
-    body.replaceChildren(toolbar,products,paging);
+    flushSync(()=>root.render(<>
+      <div className="market-toolbar"><p className="market-wallet tabular-nums">
+        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}
+      </p></div>
+      <div className="market-products">
+        {visible.map((kind,index)=>{
+          const food = isFood(kind) ? foods[kind] : undefined;
+          const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price :
+            isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price;
+          const item = objects[kind];
+          const furniture = isOfficeFurniture(kind);
+          const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
+          const noSpace = !furniture && inventory.length>=INVENTORY_SLOTS;
+          const disabled = hasItem || wallet<price || noSpace;
+          const priceLabel = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : money(price);
+          const detail = 'market-description-'+kind;
+          return <article className="market-product" key={kind}>
+            <button type="button" className="market-product-button" disabled={disabled} aria-describedby={detail}
+              aria-label={hasItem ? item.name+' · '+priceLabel : 'Comprar '+item.name+' · '+priceLabel}
+              aria-keyshortcuts={disabled ? undefined : String(index+1)}
+              onClick={()=>send({kind:'shop-buy',target:kind,token})}>
+              <img className="market-art" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
+              <span className="market-product-caption"><strong>{item.name}</strong><span className="market-product-price">{priceLabel}</span></span>
+              {!disabled && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
+            </button>
+            <span id={detail} className="market-product-details">{item.description}
+              {food && <small>{food.category} · {describeFood(food.effect)}</small>}
+              {!hasItem && (noSpace || wallet<price) && <small>{noSpace ? 'Inventário cheio' : 'Saldo insuficiente'}</small>}
+            </span>
+          </article>;
+        })}
+        {Array.from({length:pageSize-visible.length},(_,index)=><div className="market-product-empty" aria-hidden="true" key={index}/>)}
+      </div>
+      <nav className="market-paging" aria-label="Páginas do catálogo">
+        <button type="button" className="market-page-arrow" aria-label="Página anterior" aria-keyshortcuts="ArrowLeft"
+          hidden={pageCount===1} disabled={page===0} onClick={()=>goTo(page-1)}>‹</button>
+        <div className="market-page-dots">
+          {Array.from({length:pageCount},(_,index)=><button type="button" className="market-page-dot" key={index}
+            aria-label={'Página '+(index+1)} aria-current={index===page ? 'page' : undefined} onClick={()=>goTo(index)}/>)}
+        </div>
+        <button type="button" className="market-page-arrow" aria-label="Próxima página" aria-keyshortcuts="ArrowRight"
+          hidden={pageCount===1} disabled={page===pageCount-1} onClick={()=>goTo(page+1)}>›</button>
+      </nav>
+    </>));
     if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
       dialog.querySelector<HTMLButtonElement>('header button')?.focus({preventScroll:true});
     }
@@ -164,6 +134,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         currentVendor = undefined;
         dismissed = false;
         page = 0;
+        if (last) root.render(null);
         last = '';
         if (dialog.open) dialog.close();
         return;
@@ -178,7 +149,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) page = 0;
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.options,wallet,inventory,equipped,furnishings]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.options,wallet,inventory,equipped,furnishings]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -187,22 +158,19 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       heading.textContent = state.shop ? npc.label : npc.name;
       if (!dialog.open) dialog.showModal();
       if (!state.shop) {
-        const line = node('div');
-        line.className = 'market-line';
-        const face = node('img');
-        face.className = 'phone-contact-face market-npc-face';
-        face.src = import.meta.env.BASE_URL+'assets/'+npc.sprite;
-        face.alt = '';
-        line.append(face,node('p',state.text));
-        const choices = node('div');
-        choices.className = 'market-choices';
-        for (const [index,option] of state.options.entries()) {
-          const choice = button(option.label,()=>send({kind:'dialogue-choice',target:option.id,token:state.token}));
-          markShortcut(choice,String(index+1));
-          choices.append(choice);
-        }
-        body.replaceChildren(line,choices);
-        choices.querySelector('button')?.focus();
+        flushSync(()=>root.render(<>
+          <div className="market-line">
+            <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>
+            <p>{state.text}</p>
+          </div>
+          <div className="market-choices">
+            {state.options.map((option,index)=><button key={option.id} type="button" className="hud-button hud-button--secondary"
+              aria-keyshortcuts={String(index+1)} onClick={()=>send({kind:'dialogue-choice',target:option.id,token:state.token})}>
+              {option.label}<kbd className="action-key" aria-hidden="true">{index+1}</kbd>
+            </button>)}
+          </div>
+        </>));
+        body.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
       renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings);
@@ -212,6 +180,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     },
     isOpen() { return dialog.open; },
     destroy() {
+      root.unmount();
       prompt.removeEventListener('close',dismissPurchase);
       purchase = undefined;
       prompt.close();

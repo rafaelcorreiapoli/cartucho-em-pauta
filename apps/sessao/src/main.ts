@@ -1,3 +1,4 @@
+import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
@@ -244,6 +245,7 @@ async function connect(join: () => Promise<Room>) {
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
+    const reactHud = mountReactHud();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
       if (type!=='bill-vote') map.focus({preventScroll:true});
@@ -278,6 +280,7 @@ async function connect(join: () => Promise<Room>) {
         applyVoiceEquipment(voice);
       }
       hud.render(view);
+      reactHud.render(view);
       const priorProgress = previousView?.politics?.progression;
       const currentProgress = view.politics?.progression;
       if (!suppressXpEffect && priorProgress && currentProgress &&
@@ -319,6 +322,7 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('control',(snapshot: ControlState) => {
       progression.player(snapshot.player);
+      reactHud.player(snapshot.player);
       game?.reconcile(snapshot);
     });
     joined.onMessage('players',(players: Player[]) => {
@@ -349,6 +353,7 @@ async function connect(join: () => Promise<Room>) {
       hudListeners.abort();
       panel.destroy();
       hud.destroy();
+      reactHud.destroy();
       progression.destroy();
       surveillance.destroy();
       gameplay.destroy();

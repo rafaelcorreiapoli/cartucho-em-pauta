@@ -109,22 +109,7 @@
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
         <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
-        <aside id="agenda-dock" aria-labelledby="agenda-title" hidden>
-          <header>
-            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
-            <h2 id="agenda-title">Agenda Pessoal</h2>
-            <span id="agenda-progress"></span>
-          </header>
-          <ul class="agenda-list" id="missions-completed" aria-label="Conclusões recentes" hidden></ul>
-          <ul class="agenda-list" id="missions-active" aria-label="Objetivos ativos"></ul>
-          <span id="agenda-announcement" class="sr-only" role="status"></span>
-          <template id="agenda-mission">
-            <li>
-              <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
-              <div class="mission-copy"><strong></strong><small></small></div>
-            </li>
-          </template>
-        </aside>
+        <div id="agenda-dock"></div>
         <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
         <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
@@ -164,27 +149,7 @@
             <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
           </div>
-          <section id="congress-dock" class="hud-module" aria-labelledby="congress-heading">
-            <h2 id="congress-heading">Parlamento</h2>
-            <div class="resource-grid">
-              <div class="resource stability-resource">
-                <div class="resource-readout">
-                  <button class="resource-help" type="button" aria-label="Como funciona a estabilidade" data-help="A estabilidade mede a capacidade do Parlamento de funcionar. Projetos e decisões podem aumentá-la ou reduzi-la. A meta ao fim da sessão é 45. Se cair a zero, o Parlamento entra em colapso."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg></button>
-                  <label for="stability-meter">Estabilidade</label>
-                  <strong id="stability"></strong>
-                </div>
-                <div class="resource-track"><progress id="stability-meter" max="100" value="48"></progress><span title="Meta: 45"></span></div>
-              </div>
-              <div class="resource budget-resource">
-                <div class="resource-readout">
-                  <button class="resource-help" type="button" aria-label="Como funciona o orçamento público" data-help="O orçamento público paga projetos e verbas de gabinete. Cada projeto pode aumentar ou reduzir o saldo. Se uma decisão deixar o orçamento negativo, cada ponto de déficit custa 2 pontos de estabilidade."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button>
-                  <label for="budget-meter">Orçamento Público</label>
-                  <strong id="budget"></strong>
-                </div>
-                <progress id="budget-meter" max="100" value="32"></progress>
-              </div>
-            </div>
-          </section>
+          <div id="congress-dock" class="hud-module"></div>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
             <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small>Renovação em</small><strong id="election-timer"></strong></span></summary>
             <div class="hud-panel politics-content">
@@ -207,16 +172,14 @@
           <section id="profile-dock" aria-label="Seu personagem">
             <div class="profile-portrait">
               <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
-              <footer id="profile-xp" hidden>
-                <div class="xp-track"><span id="profile-xp-fill" aria-hidden="true"></span><span id="profile-xp-value"></span></div>
-                <div id="profile-xp-reward" role="status"></div>
-              </footer>
+              <div id="profile-vitals"></div>
+              <div id="profile-xp-reward" role="status"></div>
             </div>
             <div class="deck-identity">
               <div class="profile-name-row">
                 <strong id="hud-nick"></strong>
                 <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
-                <strong id="profile-level" hidden></strong>
+                <span id="profile-level-mount"></span>
               </div>
               <small id="hud-office" hidden>Ex-parlamentar</small>
               <small id="own-office" hidden></small>

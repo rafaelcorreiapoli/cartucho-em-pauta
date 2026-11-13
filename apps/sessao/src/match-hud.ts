@@ -1,3 +1,4 @@
+import { mountNotices } from './ui/notices';
 import { updateProgress } from './progress-meter';
 import { equippedWeapon, xray } from './equipment';
 import { doorDestination } from './interactions';
@@ -9,7 +10,7 @@ import { canReachObject, cashAmount, objects, type GameplayAction, type Gameplay
 import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
-import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
+import { money } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -22,16 +23,12 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
-  const agendaDock = element('agenda-dock');
-  const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
-  const activeMissions = element('missions-active');
-  const completedMissions = element('missions-completed');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
   let xpEffect:HTMLElement | undefined;
-  let missionRenderKey = '';
-  const notices = element('hud-notices');
+  const notices = mountNotices(element('hud-notices'));
+  const {notify} = notices;
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
@@ -294,77 +291,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     stationFeedback(button.dataset.station as Station);
   }
   stations.addEventListener('click',onStationClick,true);
-  const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
-
-  agendaDock.hidden = true;
-  element('agenda-announcement').textContent = '';
-  function remove(node:HTMLElement) {
-    window.clearTimeout(timers.get(node));
-    timers.delete(node);
-    node.remove();
-    if (timers.size===0) notices.hidePopover();
-  }
-
-  function notify(title:string, text:string, critical=false) {
-    const current = [...timers.keys()];
-    if (current.length>=2) {
-      const replaceable = current.find(node => node.dataset.critical==='false');
-      if (!critical && !replaceable) return;
-      remove(replaceable ?? current[0]);
-    }
-    const node = document.createElement('div');
-    node.className = 'hud-module hud-notice';
-    node.dataset.critical = String(critical);
-    const heading = document.createElement('strong');
-    heading.textContent = title;
-    const description = document.createElement('span');
-    description.textContent = text;
-    node.append(heading,description);
-    notices.append(node);
-    if (notices.matches(':popover-open') && document.querySelector('dialog:modal')) notices.hidePopover();
-    if (!notices.matches(':popover-open')) notices.showPopover();
-    timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
-  }
-
-  function renderMissions(missions:PoliticsView['missions'], prior?:PoliticsView['missions']) {
-    const recent = missions.completed.slice(-2);
-    const key = JSON.stringify([missions.active,recent]);
-    if (key===missionRenderKey) return;
-    missionRenderKey = key;
-    element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    const newCompletions = prior ? recent.filter(mission=>!prior.completed.some(done=>done.id===mission.id)) : [];
-    if (newCompletions.length) {
-      element('agenda-announcement').textContent = newCompletions.map(mission=>`Concluído: ${missionTitle(mission)}`).join('. ');
-    }
-    function row(mission:Mission, done:boolean) {
-      const row = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
-      row.dataset.done = String(done);
-      const title = row.querySelector('strong')!;
-      title.textContent = missionTitle(mission);
-      if (done) title.setAttribute('aria-label',`Concluído: ${title.textContent}`);
-      const detail = row.querySelector('small')!;
-      detail.hidden = done;
-      if (!done) {
-        const progress = mission.kind==='fortuna' ? `${money(mission.current)}/${money(mission.target)}` :
-          timedAgendas.has(mission.kind) ? `${Math.floor(mission.current/1000)}/${mission.target/1000} s` :
-          mission.target>1 ? `${mission.current}/${mission.target}` : '';
-        detail.textContent = progress;
-        detail.hidden = !progress;
-      }
-      return row;
-    }
-    activeMissions.replaceChildren(...missions.active.map(mission=>row(mission,false)));
-    completedMissions.hidden = !recent.length;
-    if (completedMissions.dataset.recent!==recent.map(mission=>mission.id).join(',')) {
-      completedMissions.dataset.recent = recent.map(mission=>mission.id).join(',');
-      completedMissions.replaceChildren(...recent.map(mission=>{
-        const entry = row(mission,true);
-        entry.classList.toggle('agenda-completed-now',newCompletions.includes(mission));
-        return entry;
-      }));
-    }
-  }
 
   function actions(view:PlenaryView | undefined = previous) {
     const player = own;
@@ -449,15 +376,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (politics) {
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
-        const prior = previous?.phase==='finished' ? undefined : previous?.politics?.missions;
-        if (!prior && previous?.phase==='finished') {
-          completedMissions.replaceChildren();
-          delete completedMissions.dataset.recent;
-          missionRenderKey = '';
-        }
-        renderMissions(politics.missions,prior);
       }
-      agendaDock.hidden = !politics || view.phase==='lobby';
 
       if (previous) {
         const past = previous.politics;
@@ -501,10 +420,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     destroy() {
       renderEquipped();
-      for (const node of timers.keys()) remove(node);
-      agendaDock.hidden = true;
-      completedMissions.replaceChildren();
-      delete completedMissions.dataset.recent;
+      notices.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);

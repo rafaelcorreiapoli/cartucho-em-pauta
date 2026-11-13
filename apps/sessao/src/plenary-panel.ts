@@ -1,5 +1,4 @@
 import { updateProgress } from './progress-meter';
-import { money } from './politics';
 import type { Player } from './map';
 import { bills, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
@@ -160,13 +159,6 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
       clockChip.hidden = !running;
       clockChip.dataset.urgent = String(remaining<=10);
-      element('stability').textContent = String(view.stability);
-      const stability = element<HTMLProgressElement>('stability-meter');
-      updateProgress(stability,view.stability,100);
-      stability.dataset.low = String(view.stability<45);
-      element('budget').textContent = money(view.budget);
-      const budgetMeter = element<HTMLProgressElement>('budget-meter');
-      updateProgress(budgetMeter,view.budget,Math.max(100,view.budget));
       if (historyChanged) {
         selected = Math.max(0,view.outcomes.length-1);
         renderHistory();
