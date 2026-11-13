@@ -1,3 +1,4 @@
+import { InternalMail } from './InternalMail';
 import {Gameplay} from './Gameplay';
 import {terminals} from '../src/gameplay';
 import {privateOffices} from '../src/private-offices';
@@ -363,8 +364,10 @@ test('only a victim or direct witness can report an infraction, once, at the des
   expect(match.complaintView(host.id).available).toEqual([]);
   expect(match.submitComplaint(desk(host),incident.id,11)).toContain('indisponível');
   expect(match.submitComplaint(honest,incident.id,11)).toContain('balcão');
+  const beforeReward = match.economySummary(0);
   expect(match.submitComplaint(desk(honest),incident.id,11)).toBeUndefined();
   expect(match.submitComplaint(desk(honest),incident.id,11)).toContain('indisponível');
+  expect(match.economySummary(0)).toMatchObject({humans:beforeReward.humans+1,reserve:beforeReward.reserve-1,discrepancy:0});
   expect(match.complaintView(host.id).history).toEqual([incident]);
   expect(match.view(honest.id,ids,11).politics?.wallet).toBe(9);
   expect(match.view(traitor.id,ids,11).politics?.popularity).toBe(32);
@@ -433,4 +436,39 @@ test('NPC issuance, paid agreements, robbery and reserve fees conserve the same 
   for (const fee of [.1,.2,.3,5.4]) expect(world.spend!(host.id,fee)).toBe(true);
   expect(world.wallet!(host.id)).toBe(0);
   expect(summary()).toMatchObject({reserveFees:6,physical:issued+2,discrepancy:0});
+});
+
+test('failed mail payments and expired cash preserve the ledger across retries',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const player = {...host,x:140,y:146};
+  const game = new Gameplay();
+  const values = [0,0,.117,.172];
+  game.reset(0,()=>values.shift() ?? .5);
+  const world = match.gameplayWorld([player,honest,traitor],4000,()=>false);
+  game.tick(world,true);
+  const [cash] = game.view(player,world).nearby;
+  expect(cash.kind).toBe('briefcase');
+  world.now += 55_000;
+  expect(game.view(player,world).nearby).toEqual([]);
+  expect(game.act(player,{kind:'collect',item:cash.id},world)).toBe('Objeto indisponível.');
+  game.tick(world,false);
+  game.tick(world,false);
+  const summary = () => match.economySummary(game.physicalCash());
+  expect(summary()).toMatchObject({spawned:3,expired:3,physical:0,discrepancy:0});
+
+  const mail = new InternalMail();
+  Object.assign(player,stations.audit);
+  const message = {subject:'Aviso',body:'Teste'};
+  expect(world.spend!(player.id,7)).toBe(true);
+  const before = summary();
+  expect(mail.publish(player,message,world)).toContain('Saldo insuficiente');
+  expect(mail.view()).toEqual([]);
+  expect(summary()).toEqual(before);
+  expect(world.payNpc!(player.id,'missing',1)).toBe(false);
+  match.politics({...honest,x:player.x+8,y:player.y},{kind:'transfer',to:player.id,amount:1,clandestine:false},[player],world.now);
+  expect(mail.publish(player,message,world)).toBeUndefined();
+  expect(mail.publish(player,message,world)).toContain('Aguarde');
+  expect(mail.view()).toHaveLength(1);
+  expect(summary()).toMatchObject({reserveFees:8.5,transferred:1,expired:3,discrepancy:0});
 });
