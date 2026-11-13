@@ -747,3 +747,4 @@
 .market-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
 .market-buy span { display: flex; align-items: center; gap: 7px; }
 .market-buy:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
+.market-catalog .market-product-button:hover:not([aria-pressed="true"]) { border-color: #8bab8a; }
