@@ -170,7 +170,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     economy.changePopularity(alice.sessionId,40);
     move(alice,stations.panel);
-    alice.send('politics',{kind:'hearing',target:bia.sessionId});
+    alice.send('politics',{kind:'hearing',target:bia.sessionId,token:1});
     await wait(()=>views.get(bia.sessionId)?.phase==='hearing' && controls.get(bia.sessionId)?.plenary);
     expect(inPlenary(controls.get(bia.sessionId)!.player)).toBe(true);
     alice.send('bill-vote','yes');

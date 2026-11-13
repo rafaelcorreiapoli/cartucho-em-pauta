@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {createPoliticsSender,readTransferToken,type PoliticsCommand} from './politics';
+import {createPoliticalSender,readPoliticalToken} from './political-commands';
 import {manualTransfer} from './politics-panel';
 
 test('informal loans and repayments are manual payments selected by the player',()=>{
@@ -9,14 +9,18 @@ test('informal loans and repayments are manual payments selected by the player',
   expect(manualTransfer('lender',0,false)).toBeUndefined();
 });
 
-test('each deliberate transfer gets a new token on the same room connection',()=>{
-  const commands:PoliticsCommand[] = [];
-  const send = createPoliticsSender(command=>commands.push(command));
+test('political and election commands share a sequence on the room connection',()=>{
+  const commands:unknown[] = [];
+  const send = createPoliticalSender((channel,command)=>commands.push([channel,command]));
   const transfer = manualTransfer('borrower',3,true)!;
-  send(transfer);
-  send({kind:'campaign'});
-  send(transfer);
-  expect(commands).toEqual([{...transfer,token:1},{kind:'campaign'},{...transfer,token:2}]);
-  expect(readTransferToken(commands[0])).toBe(1);
-  for (const token of [undefined,0,-1,1.2,Infinity,'1']) expect(readTransferToken({token})).toBeUndefined();
+  send('politics',transfer);
+  send('election',{kind:'invest',amount:2});
+  send('politics',transfer);
+  expect(commands).toEqual([
+    ['politics',{...transfer,token:1}],
+    ['election',{kind:'invest',amount:2,token:2}],
+    ['politics',{...transfer,token:3}],
+  ]);
+  expect(readPoliticalToken({token:1})).toBe(1);
+  for (const token of [undefined,0,-1,1.2,Infinity,'1']) expect(readPoliticalToken({token})).toBeUndefined();
 });

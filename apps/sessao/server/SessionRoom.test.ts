@@ -181,7 +181,10 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
-    second.send('election',{kind:'invest',amount:2});
+    second.send('election',{kind:'invest',amount:1,token:transfer.token});
+    second.send('election',{kind:'invest',amount:2,token:2});
+    second.send('election',{kind:'invest',amount:2,token:2});
+    second.send('politics',{...transfer,token:2});
     await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
