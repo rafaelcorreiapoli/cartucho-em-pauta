@@ -233,6 +233,7 @@ async function connect(join: () => Promise<Room>) {
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';
     let previousView:PlenaryView | undefined;
+    let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
       if (view.phase==='negotiation' && view.remaining<=30 && (previousView?.remaining ?? 0)>30) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
@@ -254,6 +255,13 @@ async function connect(join: () => Promise<Room>) {
         applyVoiceEquipment(voice);
       }
       hud.render(view);
+      const priorProgress = previousView?.politics?.progression;
+      const currentProgress = view.politics?.progression;
+      if (!suppressXpEffect && priorProgress && currentProgress &&
+          priorProgress.matchId===currentProgress.matchId && currentProgress.xp>priorProgress.xp) {
+        hud.showXp(currentProgress.xp-priorProgress.xp,game?.playerHead());
+      }
+      suppressXpEffect = false;
       progression.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = showNewResults(view,previousView);
@@ -312,7 +320,7 @@ async function connect(join: () => Promise<Room>) {
         return slot;
       }));
     });
-    joined.onReconnect(() => { progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
+    joined.onReconnect(() => { suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();

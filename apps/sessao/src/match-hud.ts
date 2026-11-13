@@ -27,6 +27,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
+  let xpEffect:HTMLElement | undefined;
   let missionRenderKey = '';
   const notices = element('hud-notices');
   const stations = element('stations');
@@ -351,6 +352,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       incomeEffect = effect;
       walletEffects.append(effect);
     },
+    showXp(amount:number, head:{x:number;y:number} | undefined) {
+      if (!head) return;
+      xpEffect?.remove();
+      const effect = document.createElement('strong');
+      effect.className = 'wallet-gain xp-gain';
+      effect.setAttribute('aria-hidden','true');
+      effect.textContent = `+${amount} XP`;
+      effect.style.left = `${head.x}px`;
+      effect.style.top = `${head.y}px`;
+      effect.addEventListener('animationend',()=>{
+        effect.remove();
+        if (xpEffect===effect) xpEffect = undefined;
+      },{once:true});
+      xpEffect = effect;
+      walletEffects.append(effect);
+    },
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
       if (text) notify(info.title,text);
@@ -436,6 +453,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       completedMissions.replaceChildren();
       delete completedMissions.dataset.recent;
       incomeEffect?.remove();
+      xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',refreshActionKeys);
       for (const button of actionButtons()) {

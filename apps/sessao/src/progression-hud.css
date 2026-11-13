@@ -108,3 +108,12 @@
   }
 }
 @media (prefers-reduced-motion: reduce) { #profile-xp-fill { transition: none; } }
+
+.wallet-gain.xp-gain {
+  border-color: #e6b855;
+  background: #3b2d17;
+  color: #ffdf88;
+  font-family: system-ui, sans-serif;
+}
+#wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain)) .xp-gain { transform: translate(5px,-100%); }
+#wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain) { transform: translate(calc(-100% - 5px),-100%); }
