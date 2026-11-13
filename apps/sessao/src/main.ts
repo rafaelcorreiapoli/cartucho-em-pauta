@@ -1,5 +1,6 @@
+import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
-import type { InternalNotice } from './internal-mail';
+import type { InternalNotice, ForensicReport } from './internal-mail';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
@@ -225,15 +226,31 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='spy') { joined.send('spy',action.option); return; }
-      if (action.kind==='edit-document') { sendGameplay({kind:'edit',item:action.item}); return; }
-      if (action.kind==='compose-mail') { mail.open(true); return; }
+      if (action.kind==='edit-document') {
+        projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
+        return;
+      }
+      if (action.kind==='request-document') {
+        projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}));
+        return;
+      }
+      if (action.kind==='compose-mail') {
+        mail.open(true,[
+          ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
+            [{kind:'document' as const,id:item.id,label:item.document.title}]),
+          ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
+        ]);
+        return;
+      }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
     });
     const progression = createProgressionHud(request=>joined.send('allocate-attribute',request),cue=>audio.progression(cue));
+    let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
+      mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.shutter();
     });
     joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
@@ -253,12 +270,14 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
-    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify);
+    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify,id=>joined.send('mail-examine',id),(canvas,photo)=>game?.drawPhoto(canvas,photo));
+    joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
     const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
     mailButton.onclick = () => mail.open();
     joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
+    const projectPicker = mountProjectPicker();
     const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
@@ -371,6 +390,7 @@ async function connect(join: () => Promise<Room>) {
       political.destroy();
       hud.destroy();
       reactHud.destroy();      results.destroy();
+      projectPicker.destroy();
       mailButton.onclick = null;
       mail.destroy();
       progression.destroy();

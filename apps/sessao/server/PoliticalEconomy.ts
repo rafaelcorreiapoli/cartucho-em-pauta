@@ -166,7 +166,7 @@ export class PoliticalEconomy {
     source.wallet -= amount;
     this.credit(recipient,amount);
     if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from);
-    source.agenda.recordTransfer(source,amount);
+    source.agenda.recordTransfer(source,amount,to);
     this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
     return true;
   }
@@ -317,7 +317,7 @@ export class PoliticalEconomy {
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
     for (const id of players) {
       const account = this.accounts.get(id);
-      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !account.suspended,ballotsLeft,this.npcIds.size);
+      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !account.suspended,ballotsLeft,this.npcIds.size,[...players].filter(other=>other!==id && !this.npcIds.has(other)).map(other=>({id:other,name:this.name(other)})));
     }
   }
 

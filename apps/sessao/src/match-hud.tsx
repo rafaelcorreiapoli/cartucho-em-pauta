@@ -1,3 +1,4 @@
+import { documentRules } from './internal-mail';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -17,7 +18,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number};
+type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -169,7 +170,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
-    const meter = breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
+    const meter = state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
+      detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
       detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
       robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
       spy?.progress!==undefined ? {value:spy.progress,max:1,label:'Interação de espionagem em andamento'} : undefined;
@@ -194,9 +196,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
+    if (state?.locations.includes('secretary')) actions.push({label:'Solicitar documento',icon:'document',action:{kind:'request-document'}});
     if (state?.locations.includes('reprography')) {
-      for (const item of state.inventory) if (item.document && !item.document.edited) {
-        actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id}});
+      for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {
+        actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id,project:item.document.project}});
       }
     }
     if (state && player && canReachObject(player,stationPoints.audit,{handsFree:true})) {

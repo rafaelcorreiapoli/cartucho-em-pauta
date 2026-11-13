@@ -1,3 +1,4 @@
+import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
@@ -10,7 +11,7 @@ import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VIS
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
-import { stations } from '../src/plenary';
+import { bills, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
@@ -58,6 +59,33 @@ export class Gameplay {
 
   private random = Math.random;
   private nextCashSpawn = Infinity;
+
+  private readonly forgery = new Map<string,{item:number;project:number;end:number}>();
+  private readonly signedProjects = new Map<number,Map<string,{project:number;at:number}>>();
+
+  documentAttachment(owner:string,id:number) {
+    const item = this.inventory(owner).find(({data})=>data.id===id)?.data;
+    if (!item?.document || item.document.project===undefined) return;
+    const document = item.document;
+    const signatures = this.signedProjects.get(id);
+    const authentic = document.signatures.every(signer=>signatures?.get(signer.id)?.project===document.project);
+    const {title,description} = document;
+    return {document:{id,title,description,signatures:document.signatures.map(({name})=>name)},authentic};
+  }
+
+  consumeForensicKit(owner:string) {
+    const kit = this.inventory(owner).find(({data})=>data.kind==='forensicKit');
+    if (!kit) return false;
+    this.remove(kit);
+    return true;
+  }
+
+  private signProject(item:WorldItem,signer:Player,now:number) {
+    if (item.document?.project===undefined) return;
+    const history = this.signedProjects.get(item.id) ?? new Map();
+    history.set(signer.id,{project:item.document.project,at:now});
+    this.signedProjects.set(item.id,history);
+  }
 
   private readonly originalDocuments = new Map<number,NonNullable<WorldItem['document']>>();
   private megaphoneBroadcast?: {owner:string;item:number;until:number};
@@ -115,6 +143,8 @@ export class Gameplay {
     this.megaphoneBroadcast = undefined;
     this.megaphoneRecharge.clear();
     this.originalDocuments.clear();
+    this.forgery.clear();
+    this.signedProjects.clear();
     for (const player of players) {
       player.pocketing = undefined;
       player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
@@ -178,6 +208,7 @@ export class Gameplay {
 
   private remove(item:Item) {
     this.originalDocuments.delete(item.data.id);
+    this.signedProjects.delete(item.data.id);
     this.hide(item);
     this.items.delete(item.data.id);
     if (item.data.kind==='voiceModulator') this.modulator.remove(item.data.id);
@@ -227,6 +258,7 @@ export class Gameplay {
     if (price && !world.payNpc?.(player.id,npc.id,price)) return 'Pagamento indisponível.';
     const item = this.items.get(itemId)!;
     item.data.document!.signatures.push({id:npc.id,name:npc.nick});
+    this.signProject(item.data,npc,world.now);
     this.event(world,npc,'signed',item.data,player.id);
     console.info(JSON.stringify({event:'npc-signature',from:player.id,to:npc.id,amount:price,item:itemId}));
     return 'Assinatura obtida.';
@@ -283,6 +315,23 @@ export class Gameplay {
   }
 
   tick(world:GameplayWorld, exploring:boolean) {
+    for (const [id,operation] of this.forgery) {
+      const player = world.players.find(person=>person.id===id);
+      const item = this.inventory(id).find(({data})=>data.id===operation.item)?.data;
+      if (!exploring || !player || world.present?.(id)===false || !item?.document ||
+          !canReachObject(player,terminals.reprography.point,{handsFree:true})) {
+        this.forgery.delete(id);
+        world.feedback?.(id,'Adulteração interrompida.');
+      } else if (world.now>=operation.end) {
+        this.forgery.delete(id);
+        const bill = bills[operation.project];
+        if (!this.originalDocuments.has(item.id)) this.originalDocuments.set(item.id,structuredClone(item.document));
+        Object.assign(item.document,{project:operation.project,title:bill.name,description:bill.description});
+        this.clearRequests(item.id);
+        this.event(world,player,'edited',item);
+        world.feedback?.(id,'Documento adulterado.');
+      }
+    }
     this.album.tick(world.now);
     for (const [id,scan] of this.scanning) {
       const player = world.players.find(player=>player.id===id);
@@ -418,6 +467,7 @@ export class Gameplay {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
@@ -879,7 +929,7 @@ export class Gameplay {
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
       const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear') return 'Produto indisponível.';
+      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear' && kind!=='forensicKit') return 'Produto indisponível.';
       if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
@@ -887,7 +937,7 @@ export class Gameplay {
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price)) return 'Saldo insuficiente.';
+      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : foods[kind].price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {
@@ -1053,14 +1103,17 @@ export class Gameplay {
     if (action.kind==='supply') {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
-      if (this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
+      if (!(terminal.supply==='document' && action.target?.startsWith('project-')) && this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
+        const project = action.target?.startsWith('project-') ? Number(action.target.slice(8)) : undefined;
+        const bill = project===undefined ? undefined : bills[project];
+        if (project!==undefined && (!action.target || !/^project-[0-9]+$/.test(action.target) || !bill)) { this.remove(this.items.get(data.id)!); return 'Projeto indisponível.'; }
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
         const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
           template.office : undefined;
         data.document = {
-          author:player.nick,title:template.title,edited:false,signatures:[],stamps:[],
+          author:player.nick,title:bill?.name ?? template.title,project,description:bill?.description,edited:false,signatures:[],stamps:[],
           requiredSignatures:Math.min(template.signatures,Math.max(0,world.players.length-1)),
           requiredStamps:[...template.stamps],requiredOffice,
         };
@@ -1142,16 +1195,15 @@ export class Gameplay {
         this.remove(item);
         this.event(world,player,'destroyed',data);
         return 'Objeto destruído.';
-      case 'edit':
-        if (!canReachObject(player,terminals.reprography.point)) return 'Aproxime-se da estação de Reprografia.';
-        if (!data.document) return 'Selecione um documento.';
-        if (this.originalDocuments.has(data.id)) return 'Este documento já foi adulterado.';
-        this.originalDocuments.set(data.id,structuredClone(data.document));
-        data.document.edited = true;
-        data.document.title += ' · versão retificada';
-        this.clearRequests(data.id);
-        this.event(world,player,'edited',data);
-        return 'Documento adulterado na Reprografia.';
+      case 'edit': {
+        if (!data.document || data.document.project===undefined) return 'Selecione um documento de projeto.';
+        const project = Number(action.target);
+        if (!action.target || !/^[0-9]+$/.test(action.target) || !Number.isInteger(project) || !bills[project] || project===data.document.project) return 'Escolha outro projeto.';
+        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return 'Aproxime-se da estação de Reprografia.';
+        if (this.forgery.has(id)) return 'Adulteração em andamento.';
+        this.forgery.set(id,{item:data.id,project,end:world.now+documentRules.forgeryMs});
+        return 'Adulteração iniciada.';
+      }
       case 'stamp':
         if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
         if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
@@ -1162,7 +1214,11 @@ export class Gameplay {
         if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
         if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
         const missing = data.document.requiredStamps.filter(stamp => !data.document!.stamps.includes(stamp));
-        const signatures = data.document.requiredSignatures-data.document.signatures.length;
+        const signed = this.signedProjects.get(data.id);
+        const validSignatures = data.document.project===undefined ? data.document.signatures :
+          data.document.signatures.filter(person=>signed?.get(person.id)?.project===data.document!.project);
+        const signatures = data.document.requiredSignatures-validSignatures.length;
+        if (data.document.project!==undefined && validSignatures.length!==data.document.signatures.length) return 'O documento não atende aos requisitos formais.';
         if (missing.length || signatures>0) return `Falta: ${[...missing,...(signatures>0 ? [`${signatures} assinatura(s)`] : [])].join(', ')}.`;
         const filed = [...this.items.values()].filter(item=>'filed' in item.place);
         if (filed.length>=24) this.remove(filed[0]);
@@ -1201,6 +1257,7 @@ export class Gameplay {
       (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});
+    this.signProject(item.data,player,world.now);
     this.event(world,player,'signed',item.data,owner.id);
     return 'Documento assinado.';
   }

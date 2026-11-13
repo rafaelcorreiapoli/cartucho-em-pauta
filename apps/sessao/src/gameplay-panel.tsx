@@ -84,8 +84,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const cash = cashAmount(item);
     const food = isFood(item.kind) ? foods[item.kind] : undefined;
     return <article className="object-card" key={item.id}>
-      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}</h3>
-      <details><summary>Inspecionar</summary><p>{definition.description}</p>
+      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
+      <details><summary>Inspecionar</summary><p>{doc?.description ?? definition.description}</p>
         {doc && <>
           <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
           <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
@@ -259,7 +259,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
         act('Largar','drop');
         if ('destructible' in definition) act('Destruir','destroy');
-        if (item.document && state.locations.includes('reprography')) act('Adulterar','edit');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);

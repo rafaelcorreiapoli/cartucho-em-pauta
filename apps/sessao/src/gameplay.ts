@@ -14,6 +14,7 @@ import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 import { spyProducts, type SpyView } from "./surveillance";
 
 export const objects = {
+  forensicKit:{name:'Kit de Perícia',portrait:'retrato-documento.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
   ...spyProducts,
   ...officeGoods,
@@ -46,7 +47,7 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   return 'amount' in item ? item.amount : undefined;
 }
 export type DocumentData = {
-  author:string; title:string; edited:boolean; signatures:Contact[]; stamps:string[];
+  author:string; title:string; edited:boolean; project?:number; description?:string; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
 export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; document?:DocumentData};
@@ -88,6 +89,7 @@ export type GameplayView = {
   parliamentarians?:{id:string;name:string;down:boolean}[];
   parliamentarianDeal?:ParliamentarianDeal;
   robberyProgress?:number;
+  forgeryRemaining?:number;
   surveillance?:SpyView;
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};

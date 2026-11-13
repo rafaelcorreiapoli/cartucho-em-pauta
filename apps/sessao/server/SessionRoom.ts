@@ -140,6 +140,7 @@ export class SessionRoom extends Room {
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
+        this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
         const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.lobbyNpcCount = count;
@@ -160,14 +161,39 @@ export class SessionRoom extends Room {
         void this.lock();
       }
     });
-    this.onMessage('mail-read',client=>client.send('mail-state',this.internalMail.view()));
+    this.onMessage('mail-read',client=>{
+      client.send('mail-state',this.internalMail.view());
+      client.send('mail-reports',this.internalMail.reportsFor(client.sessionId));
+    });
+    this.onMessage('mail-examine',(client,notice:unknown)=>{
+      const id = client.sessionId;
+      const player = this.players.get(id)?.player;
+      if (!player || player.knockedOut || player.carried || this.match.phase!=='negotiation') return;
+      const error = this.internalMail.examine(id,notice,()=>this.gameplay.consumeForensicKit(id));
+      if (error) client.send('gameplay-feedback',error);
+      else client.send('mail-reports',this.internalMail.reportsFor(id));
+    });
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
         client.send('mail-result','Publicação indisponível nesta fase.');
         return;
       }
-      const error = this.internalMail.publish(player,raw,this.gameplayWorld());
+      const error = this.internalMail.publish(player,raw,this.gameplayWorld(),ref=>{
+        if (!ref || typeof ref!=='object' || !('kind' in ref) || !('id' in ref) || typeof ref.id!=='number') return;
+        if (ref.kind==='document') {
+          const snapshot = this.gameplay.documentAttachment(player.id,ref.id);
+          if (snapshot) return {attachment:{kind:'document',document:snapshot.document},authentic:snapshot.authentic};
+        }
+        if (ref.kind==='photo') {
+          const photo = this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===ref.id)?.photo;
+          if (photo) return {attachment:{kind:'photo',photo}};
+        }
+        if (ref.kind==='report') {
+          const report = this.internalMail.reportsFor(player.id).find(entry=>entry.notice===ref.id);
+          if (report) return {attachment:{kind:'report',report}};
+        }
+      });
       client.send('mail-result',error ?? null);
       if (!error) this.broadcast('mail-state',this.internalMail.view());
     });

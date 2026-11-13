@@ -1,3 +1,4 @@
+import { documentRules } from './internal-mail';
 import { isOfficeFurniture, isOfficeGood, officeGoodKinds, officeGoods, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
@@ -59,7 +60,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   dialog.addEventListener('keydown',onPageKey);
 
   function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[]) {
-    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds,'mensalUnderwear' as const] : foodKinds;
+    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds,'mensalUnderwear' as const,'forensicKit' as const] : foodKinds;
     const owned = [...inventory,...equipped];
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     const pageCount = Math.ceil(kinds.length/pageSize);
@@ -76,7 +77,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         {visible.map((kind,index)=>{
           const food = isFood(kind) ? foods[kind] : undefined;
           const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price :
-            isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price;
+            isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : foods[kind].price;
           const item = objects[kind];
           const furniture = isOfficeFurniture(kind);
           const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
