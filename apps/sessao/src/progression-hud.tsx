@@ -166,7 +166,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       }
       badge.hidden = !progress.available;
       badge.textContent = String(progress.available);
-      launch.title = progress.available ? `Atributos (I) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (I)';
+      launch.title = progress.available ? `Atributos (P) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (P)';
       launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
       if (!before) {
         pending = undefined;

@@ -416,7 +416,6 @@ button.equipped-gear-tile { cursor: pointer; }
   border-radius: 6px;
   background: #203a30;
 }
-#command-deck #voice-dock .sound-settings-content { inset: auto 0 calc(100% + 8px) auto; }
 #command-deck #social-docks .politics-content { inset: auto 0 calc(100% + 8px) auto; }
 
 #world #stations {

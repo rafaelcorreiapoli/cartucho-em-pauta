@@ -283,14 +283,13 @@
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 #command-deck #social-docks .social-trigger,
-#command-deck :is(#open-action-shortcuts,#voice-toggle,#room-settings > summary) { display: none; }
+#command-deck :is(#open-action-shortcuts,#voice-toggle,#open-settings) { display: none; }
 #command-deck #voice-host { position: absolute; right: 0; bottom: var(--hot-slot); padding: 0; border: 0; }
-#command-deck #voice-host :is(#voice-dock,#room-settings) { pointer-events: auto; }
+#command-deck #voice-host #voice-dock { pointer-events: auto; }
 .congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .congress-bag .item-tile { min-height: 78px; }
 #command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
 #command-deck #voice-dock > :is(#open-action-shortcuts,#voice-toggle),
-#command-deck #voice-dock #room-settings > summary { display: none; }
 
 #session #open-action-shortcuts { display: none; }
 
@@ -874,3 +873,29 @@
   flex-direction: column;
   gap: 0;
 }
+
+.congress-app-label kbd {
+  display: inline-block;
+  margin-inline-start: .4rem;
+  padding: .1rem .3rem;
+  border-radius: .25rem;
+  background: #284337;
+  color: var(--color-hud-budget);
+}
+#room-settings {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(27rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--color-hud-border);
+  border-radius: var(--radius-hud);
+  background: var(--color-hud-surface);
+  color: var(--color-hud-ink);
+}
+#room-settings::backdrop { background: #081510b8; }
+#room-settings header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+#room-settings h2 { margin: 0; }
+#room-settings > section + section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-hud-border); }

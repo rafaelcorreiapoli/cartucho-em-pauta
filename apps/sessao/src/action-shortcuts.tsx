@@ -2,6 +2,7 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
+import { apps } from './ui/app-launcher';
 import { hudConsumesKeys } from './game-keys';
 
 const pageSize = 9;
@@ -15,9 +16,9 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
 }
 
 const quickActions = [
-  ['g','#open-surveillance'], ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['v','#voice-toggle'],
+  ...apps.map(({id,key})=>[key.toLowerCase(),'#'+id] as const),
   ['j','#politics-dock > summary'],
-  ['p','#election-dock > summary'],
+  ['l','#election-dock > summary'],
 ] as const;
 
 function available(control:HTMLElement) {
@@ -60,6 +61,9 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
   const map = root.querySelector<HTMLElement>('#map')!;
   const controls = quickActions.map(([key,selector])=>[key,root.querySelector<HTMLElement>(selector)!] as const);
   for (const [key,control] of controls) control.setAttribute('aria-keyshortcuts',key.toUpperCase());
+  const settingsButton = root.querySelector<HTMLButtonElement>('#open-settings')!;
+  const settings = root.querySelector<HTMLDialogElement>('#room-settings')!;
+  settingsButton.onclick = ()=>{ if (!settings.open) settings.showModal(); };
   let scope:HTMLElement = root;
   let page = 0;
 
@@ -122,19 +126,20 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
       return;
     }
     if (event.shiftKey || hudConsumesKeys(event.target)) return;
-    const key = event.key.toLowerCase();
+    const key = event.key.toLowerCase()==='i' ? 'p' : event.key.toLowerCase();
     const control = key==='y' || key==='r'
       ? root.querySelector<HTMLElement>(key==='y' ? '[data-vote="yes"]' : '[data-vote="no"]')
       : controls.find(([shortcut])=>shortcut===key)?.[1];
     if (!control) return;
-    const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle';
+    const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle' || control===settingsButton;
     if (viaApp ? control.matches(':disabled,[hidden]') || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
     event.preventDefault();
     control.click();
     if (!modal()) map.focus({preventScroll:true});
   },{signal});
   signal.addEventListener('abort',()=>{
-    launcher.onclick = null;
+    launcher.onclick = settingsButton.onclick = null;
+    if (settings.open) settings.close();
     palette.close();
     paletteRoot.unmount();
   },{once:true});

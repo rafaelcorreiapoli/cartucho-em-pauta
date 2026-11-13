@@ -211,8 +211,8 @@
               <div id="congress-apps"></div>
               <div id="gameplay-tools" hidden>
                 <button id="open-bag" type="button" hidden>Mochila</button>
-                <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (G)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
-                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (I)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
+                <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (V)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
+                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (P)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
@@ -272,30 +272,31 @@
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
           <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
           <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
-          <details id="room-settings" name="game-panels">
-            <summary class="hud-option" title="Configurações" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></summary>
-            <div class="hud-panel sound-settings-content" id="room-settings-content">
-              <section aria-label="Sala">
-                <div id="room-bar">
-                  <span id="room-label" role="status"></span>
-                  <button id="invite" class="hud-button hud-button--secondary" type="button">Convidar</button>
-                  <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
-                </div>
-              </section>
-              <section aria-label="Som do jogo">
-                <h3>Som do jogo</h3>
-                <label for="music-volume">Música</label>
-                <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
-                <label for="effects-volume">Efeitos e passos</label>
-                <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
-                <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
-              </section>
-              <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
-            </div>
-          </details>
+          <button class="hud-icon-button" id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
           <span id="voice-status" role="status"></span>
         </aside>
       </div>
+      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title">
+        <header><h2 id="settings-title">Configurações</h2>
+          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar configurações">×</button></form>
+        </header>
+        <section aria-label="Sala">
+          <div id="room-bar">
+            <span id="room-label" role="status"></span>
+            <button id="invite" class="hud-button hud-button--secondary" type="button">Convidar</button>
+            <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
+          </div>
+        </section>
+        <section aria-label="Som do jogo">
+          <h3>Som do jogo</h3>
+          <label for="music-volume">Música</label>
+          <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
+          <label for="effects-volume">Efeitos e passos</label>
+          <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
+          <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
+        </section>
+        <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
+      </dialog>
       <div id="phone-mail" class="phone-app-content"></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
       <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title">

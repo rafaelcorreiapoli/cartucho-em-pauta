@@ -171,6 +171,7 @@ function showLobby(message: string) {
   room = undefined;
   roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
+  document.querySelector<HTMLDialogElement>('#room-settings')?.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
