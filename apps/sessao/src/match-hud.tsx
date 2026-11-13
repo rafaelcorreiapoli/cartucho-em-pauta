@@ -179,7 +179,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
     const meter = state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
-      detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
+      detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : channel?.kind==='office-cash' ? {value:channel.elapsed,max:channel.duration,label:'Embolsando dinheiro'} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
       detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
       robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
       spy?.progress!==undefined ? {value:spy.progress,max:1,label:'Interação de espionagem em andamento'} : undefined;

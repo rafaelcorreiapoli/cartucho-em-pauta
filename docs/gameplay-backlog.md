@@ -549,7 +549,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | UI-15 | Modal de level up | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |
 | UI-16 | Interface de eleições | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |
 | UI-17 | Resultado de Renovação de Mandato | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |
-| UI-18 | Interfaces de cofre e stash | PARCIAL | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | Cofre e armário têm ações, barra e painel. Parte do HUD continua em DOM imperativo. | Média |
+| UI-18 | Interfaces de cofre e stash | IMPLEMENTADO | office-stash.tsx, office-stash.test.tsx, match-hud.tsx, PrivateOffices.test.ts | Armário React mostra slots, segurança e atalhos para guardar e retirar. Cofre mostra progresso no mapa e no HUD, com cancelamento. Testes cobrem capacidade, acesso e custódia. | — |
 | UI-19 | Interface de arrombamento | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |
 | UI-20 | Central de Vigilância | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |
 | UI-21 | Correio Interno | IMPLEMENTADO | main.ts, match-hud.tsx, hud.tsx, theme.css, progression-hud.tsx, rts-hud.css, vite.config.ts; PR 7, 10, 15 | — | — |

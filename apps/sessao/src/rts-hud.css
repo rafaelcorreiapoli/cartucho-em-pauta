@@ -811,3 +811,20 @@ img.market-art {
   gap: .6rem;
   font-weight: 800;
 }
+
+.office-stash-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: .5rem;
+  margin-top: .4rem;
+}
+
+.office-stash-grid .item-tile {
+  min-height: 72px;
+  --item-art: 34px;
+}
+
+.office-stash-grid button:disabled {
+  opacity: .55;
+  cursor: default;
+}

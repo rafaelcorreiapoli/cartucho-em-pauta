@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { officeRules } from './private-offices';
+import { OfficeStash } from './ui/office-stash';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
@@ -183,7 +183,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
@@ -196,10 +196,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     photos.stopPreview();
     const cards:HTMLElement[] = [];
     if (stash) {
-      flushSync(()=>objectsRoot.render(<div className="grid gap-2">
-        <p>{stash.items.length}/{officeRules.stashSlots} slots · {stash.level ? 'Segurança nível '+stash.level : 'Arrombado'}</p>
-        {stash.items.map(item=>objectCard(item,[{label:'Retirar',run:()=>send({kind:'office-take',place:stash.id,item:item.id})}]))}
-      </div>));
+      flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
       cards.push(objectsHost);
     }
     if (equipmentOpen) {
@@ -372,6 +369,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
+    if (dialog.open && stashOpen && !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
+        !event.metaKey && !hudConsumesKeys(event.target) && /^Digit[1-6]$/.test(event.code)) {
+      const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
+      objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
+      event.preventDefault();
+      return;
+    }
     if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
     const slot = slots.children[Number(event.code.at(-1))-1];
