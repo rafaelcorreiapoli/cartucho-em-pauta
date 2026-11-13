@@ -1,6 +1,6 @@
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
-import type { GameplayEvent } from '../src/gameplay';
+import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
@@ -9,7 +9,7 @@ import { PersonalAgenda } from './PersonalAgenda';
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -25,6 +25,7 @@ export class PoliticalEconomy {
   private transferred = 0;
   private reserveFees = 0;
   private npcIds = new Set<string>();
+  private officialScandal = false;
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number) {
@@ -39,8 +40,9 @@ export class PoliticalEconomy {
     this.offers.clear();
     this.serial = 0;
     this.scandalPizzas.clear();
+    this.officialScandal = false;
     for (const contact of contacts) {
-      const metrics = {wallet:8,popularity:40};
+      const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal()};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
@@ -312,11 +314,17 @@ export class PoliticalEconomy {
     }
   }
 
+  recordOfficialScandal() { this.officialScandal = true; }
+
+  private hasPublicScandal() {
+    return this.officialScandal || [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer');
+  }
+
   recordGameplay(event:GameplayEvent) {
     const account = this.accounts.get(event.actor);
     if (!account) return;
     if (event.kind==='pizza' && event.item!==undefined) {
-      if (event.type==='installed' && [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer')) {
+      if (event.type==='installed' && this.hasPublicScandal()) {
         this.scandalPizzas.add(event.item);
       }
       if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
@@ -338,9 +346,9 @@ export class PoliticalEconomy {
     if (account) account.agenda.progress(account,{[kind]:1});
   }
 
-  setAgendaInventory(owns:(id:string,kind:import('../src/gameplay').ObjectKind)=>boolean) {
+  setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean) {
     for (const [id,account] of this.accounts) {
-      Object.assign(account,{owns:(kind:import('../src/gameplay').ObjectKind)=>owns(id,kind)});
+      Object.assign(account,{owns:(kind:ObjectKind)=>owns(id,kind)});
     }
   }
 

@@ -232,3 +232,19 @@ test('a carried pizza is an alternative to the purchase cost when drawing a miss
   draw();
   expect(active().some(mission=>mission.kind==='pizza')).toBe(false);
 });
+
+test('the scandal pizza mission becomes eligible only after a public finding',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = ['a','b','c','d'];
+  economy.reset(ids.map(id=>({id,name:id,character:0})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(ids),3);
+    return economy.view('a',[],0,false,()=>true)!.missions.active.some(mission=>mission.kind==='pizzada');
+  };
+  expect(draw()).toBe(false);
+  economy.recordOfficialScandal();
+  expect(draw()).toBe(true);
+});

@@ -439,6 +439,7 @@ export class PlenaryMatch {
     this.economy.rewardFromReserve(player.id,complaintRules.reward);
     this.economy.changePopularity(result.actor,-complaintRules.popularityLoss);
     this.election.scandal(result.actor);
+    this.economy.recordOfficialScandal();
   }
 
   actOnFire(player:Player, action:FireAction, site:number, now:number) {

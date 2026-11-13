@@ -6,7 +6,7 @@ import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean}>;
+type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean; hasScandal?:()=>boolean}>;
 
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
@@ -202,6 +202,7 @@ export class PersonalAgenda {
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
+    if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
       (kind!=='televisao' || !this.acquired.has('officeTv')) &&
