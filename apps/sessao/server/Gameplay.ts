@@ -193,6 +193,8 @@ export class Gameplay {
       (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
   }
 
+  hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
+
   officeStock(id:string) {
     const office = this.privateOffices.ownedBy(id);
     return office ? decorSlots.filter(isOfficeFurniture).filter(kind=>!this.installations.has(`office:${office.id}:${kind}`)) : [];

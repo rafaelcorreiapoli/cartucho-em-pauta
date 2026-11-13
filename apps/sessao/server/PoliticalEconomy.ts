@@ -12,7 +12,7 @@ type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -368,9 +368,9 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:'portrait'|'vip',replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean) {
     for (const [id,account] of this.accounts) {
-      Object.assign(account,{npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }

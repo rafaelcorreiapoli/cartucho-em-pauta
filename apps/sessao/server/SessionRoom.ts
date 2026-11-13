@@ -171,7 +171,8 @@ export class SessionRoom extends Room {
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
-          id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex));
+          id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),
+          id=>this.gameplay.hasOffice(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;

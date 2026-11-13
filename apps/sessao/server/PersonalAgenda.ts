@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -74,6 +74,7 @@ const decorationRequirements = {
   reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
+const ownOfficeMissions = new Set<Agenda>(['embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -90,6 +91,7 @@ export class PersonalAgenda {
   private cannotVote = false;
   private ballotsLeft = 3;
   private targets:readonly Contact[] = [];
+  private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
   private readonly rewardedTargetItems = new Set<number>();
@@ -100,7 +102,8 @@ export class PersonalAgenda {
   }
 
   private targetAvailable(kind:Agenda,id:string) {
-    return kind==='visitaAlvo' || !this.availableTargets || this.availableTargets.has(id);
+    if (kind==='visitaAlvo') return this.hasOffice?.(id)!==false;
+    return !this.availableTargets || this.availableTargets.has(id);
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
@@ -139,6 +142,7 @@ export class PersonalAgenda {
 
   updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
     this.targets = targets;
+    this.hasOffice = metrics.hasOffice;
     this.availableTargets = availableTargets;
     this.npcCount = npcCount;
     this.playerCount = playerCount;
@@ -153,6 +157,8 @@ export class PersonalAgenda {
   }
 
   private availableInMatch(kind:Agenda, remaining:number, drawing=false) {
+    if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
+    if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;

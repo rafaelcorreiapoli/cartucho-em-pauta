@@ -496,3 +496,26 @@ test('NPC robbery returns to the mission deck when an empty wallet is funded aga
   expect(economy.transfer('a','npc',1,true,0)).toBe(true);
   expect(draw()).toBe(true);
 });
+
+test('players without one of the six offices can visit a colleague but cannot draw own-office missions',()=>{
+  const players:Player[] = Array.from({length:8},(_,i)=>({id:String(i),nick:String(i),character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const visitor = players[6];
+  const game = new Gameplay();
+  game.reset(0,()=>0,players,()=>0);
+  const economy = new PoliticalEconomy();
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id),undefined,undefined,id=>game.hasOffice(id));
+  expect(game.hasOffice(visitor.id)).toBe(false);
+  const {agenda} = Reflect.get(economy,'accounts').get(visitor.id);
+  const withoutOffice = players[7];
+  expect(game.hasOffice(withoutOffice.id)).toBe(false);
+  Reflect.set(agenda,'missions',[
+    {id:99,kind:'embolso',target:1,current:0},
+    {id:100,kind:'visitaAlvo',target:1,current:0,person:{id:withoutOffice.id,name:withoutOffice.nick}},
+  ]);
+  Reflect.set(agenda,'missionDeck',['embolso','transporte','retratoGabinete','visitaAlvo','passeio','selfieSolo']);
+  economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+  const active = economy.view(visitor.id,[],0,false,()=>true)!.missions.active;
+  expect(active.map(mission=>mission.kind)).toEqual(['visitaAlvo','passeio','selfieSolo']);
+  expect(game.hasOffice(active[0].person!.id)).toBe(true);
+});
