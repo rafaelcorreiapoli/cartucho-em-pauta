@@ -165,7 +165,7 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   expect(game.act(alice,{kind:'attack'},world)).toBeUndefined();
   expect(game.view(bob,world).vitality?.hp).toBe(100);
   expect(game.view(alice,world).vitality?.hp).toBe(120);
-  expect(game.view(alice,world).equipmentCooldowns).toEqual({[weapon.id]:1.3});
+  expect(game.view(alice,world).equipmentCooldowns).toEqual({[weapon.id]:.4});
   expect(game.view(bob,world).equipmentCooldowns).toEqual({});
   expect((alice as Player).swing).toEqual({weapon:'baton',startedAt:world.now,angle:0});
   world.now += weapons.baton.impactMs;
@@ -175,7 +175,7 @@ test('the shop does not debit rejected purchases and only equipped weapons can h
   game.tick(world,true);
   expect((alice as Player).swing).toBeUndefined();
   expect(events.filter(event=>event.type==='hit')).toHaveLength(1);
-  world.now += weapons.baton.cooldown;
+  world.now += weapons.baton.swingMs;
   expect(game.view(alice,world).equipmentCooldowns).toEqual({});
 });
 
@@ -200,9 +200,11 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   expect(bob.x).toBe(152);
   expect(combat.aid(alice,bob,5400)).toBe(true);
   expect(combat.view(bob,5400).hp).toBe(45);
+  expect(bob.recoveryProtected).toBe(true);
   strike(6500);
   expect(combat.view(bob,6640).hp).toBe(45);
   strike(9500);
+  expect(bob.recoveryProtected).toBeUndefined();
   strike(10800);
   expect(bob.knockedOut).toBe(true);
   combat.tick([alice,bob],11000,false);
@@ -413,7 +415,7 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
   combat.tick([attacker,target],240,true);
   expect(combat.view(target,240).hp).toBe(94);
 
-  target.x = 188;
+  target.x = 194;
   combat.attack(attacker,1400);
   combat.tick([attacker,target],1540,true);
   expect(combat.view(target,1540).hp).toBe(94);
@@ -437,7 +439,7 @@ for (const [kind,hp,stamina] of consumableCases) {
       game.act(alice,{kind:'attack'},world);
       world.now += weapons.baton.impactMs;
       game.tick(world,true);
-      world.now += weapons.baton.cooldown;
+      world.now += weapons.baton.swingMs;
       game.tick(world,true);
     }
     expect(game.view(bob,world).vitality?.hp).toBe(22);
@@ -491,14 +493,14 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   game.applyAttribute(bob,'hp');
   expect(game.view(bob,world).vitality).toMatchObject({hp:78,max:104});
   game.applyAttribute(alice,'attack');
-  world.now += weapons.baton.cooldown;
+  world.now += weapons.baton.swingMs;
   game.act(alice,{kind:'attack'},world);
   world.now += weapons.baton.impactMs;
   game.tick(world,true);
   expect(events.at(-1)?.damage).toBe(27);
 
   game.applyAttribute(bob,'defense');
-  world.now += weapons.baton.cooldown;
+  world.now += weapons.baton.swingMs;
   game.act(alice,{kind:'attack'},world);
   world.now += weapons.baton.impactMs;
   game.tick(world,true);

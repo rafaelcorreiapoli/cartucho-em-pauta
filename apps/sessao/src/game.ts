@@ -43,11 +43,6 @@ const directions = new Map(Object.entries({
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
   combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
-  const penumbra = document.createElement('div');
-  penumbra.className = 'map-fog';
-  penumbra.hidden = true;
-  penumbra.setAttribute('aria-hidden','true');
-  parent.append(penumbra);
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -108,6 +103,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
     fog!:Phaser.GameObjects.Graphics;
+    private fogInSession = false;
     private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
     private flames?:Phaser.GameObjects.Text;
     private extinguishers:Phaser.GameObjects.Text[] = [];
@@ -161,7 +157,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this);
-      this.fog = this.add.graphics().setDepth(HEIGHT+90);
+      this.fog = this.add.graphics().setDepth(3);
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
@@ -536,8 +532,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const spriteX = x+(pose?.lungeX ?? 0);
         const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? 0);
         const labelY = latest.carried ? y-51 : y+2;
+        const opacity = latest.knockedOut && !latest.carried ? .68 :
+          latest.recoveryProtected && (reducedMotion.matches || Math.floor(time/150)%2===0) ? .4 : 1;
         sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
-          .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
+          .setAlpha(opacity);
         const spriteDepth = y+(latest.carried ? 1 : 0);
         if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
@@ -589,7 +587,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setOrigin(.5,.12).setScale(12/128);
           const side = facing===3 ? -1 : 1;
           briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
-            .setFlipX(facing===3).setAlpha(concealed ? .38 : 1).setVisible(true)
+            .setFlipX(facing===3).setAlpha(concealed ? .38*opacity : opacity).setVisible(true)
             .setDepth(spriteDepth+.1);
         } else view.briefcase?.setVisible(false);
         if (own) {
@@ -601,9 +599,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           for (const part of [view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
-          this.fog.clear().setVisible(running);
-          penumbra.hidden = !running || inSession;
-          if (running && inSession) {
+          this.fog.setVisible(running);
+          if (running && inSession && !this.fogInSession) {
+            this.fogInSession = true;
+            this.fogGeometry = undefined;
+            this.fog.clear();
             const [left,top,width,height] = PLENARY_BOUNDS;
             const edge = 4000;
             this.fog.fillStyle(0x000000,.66)
@@ -611,25 +611,40 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
               .fillRect(-edge,top,left+edge,height)
               .fillRect(left+width,top,edge-left-width,height)
               .fillRect(-edge,top+height,edge*2,edge-top-height);
-          } else if (running) {
+          } else if (running && !inSession) {
+            this.fogInSession = false;
             const wallX = Math.round(x), wallY = Math.round(y), radius = Math.round(this.drawnVisionRadius);
             const barriers = JSON.stringify(ownPlayer?.barriers ?? []);
             const cached = this.fogGeometry;
             if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.barriers!==barriers) {
               this.fogGeometry = {x:wallX,y:wallY,radius,barriers,
                 points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
+              this.fog.clear().fillStyle(0x000000,.62);
+              const {points} = this.fogGeometry!;
+              const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
+              this.fog.beginPath().moveTo(first.x,first.y);
+              for (const point of outline) this.fog.lineTo(point.x,point.y);
+              this.fog.closePath().fillPath();
+              // Paint the gradient on the map layer so it cannot cover depth-sorted actors.
+              for (let band=0;band<6;band++) {
+                const inner = radius*(.84+.025*band);
+                const outer = inner+radius*.025;
+                this.fog.fillStyle(0x000000,.62*((band+1)/6)**2);
+                for (let index=0;index<points.length;index++) {
+                  const a = points[index], b = points[(index+1)%points.length];
+                  const distanceA = Math.hypot(a.x,a.y), distanceB = Math.hypot(b.x,b.y);
+                  if (distanceA<=inner && distanceB<=inner) continue;
+                  const ai = Math.min(inner,distanceA), ao = Math.min(outer,distanceA);
+                  const bi = Math.min(inner,distanceB), bo = Math.min(outer,distanceB);
+                  this.fog.beginPath()
+                    .moveTo(wallX+a.dx*ai,wallY+a.dy*ai)
+                    .lineTo(wallX+a.dx*ao,wallY+a.dy*ao)
+                    .lineTo(wallX+b.dx*bo,wallY+b.dy*bo)
+                    .lineTo(wallX+b.dx*bi,wallY+b.dy*bi)
+                    .closePath().fillPath();
+                }
+              }
             }
-            this.fog.fillStyle(0x000000,.62);
-            const {points} = this.fogGeometry!;
-            const screenX = (wallX-camera.scrollX-camera.width/2)*cssZoom+camera.width/2/density;
-            const screenY = (wallY-camera.scrollY-camera.height/2)*cssZoom+camera.height/2/density;
-            const edge = radius*cssZoom;
-            penumbra.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${edge*.84}px, rgba(0,0,0,.62) ${edge*.99}px)`;
-            penumbra.style.clipPath = `polygon(${points.map(point=>`${screenX+point.x*cssZoom}px ${screenY+point.y*cssZoom}px`).join(',')})`;
-            const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
-            this.fog.beginPath().moveTo(first.x,first.y);
-            for (const point of outline) this.fog.lineTo(point.x,point.y);
-            this.fog.closePath().fillPath();
           }
         }
       }
@@ -705,14 +720,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       running = negotiating || phase==='ballot' || phase==='hearing';
       if (!running) {
         scene.fog?.setVisible(false);
-        penumbra.hidden = true;
       }
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
     destroy() {
       listeners.abort();
       resizeObserver?.disconnect();
-      penumbra.remove();
       game.destroy(true);
     },
   };
