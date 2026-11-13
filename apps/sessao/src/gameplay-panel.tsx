@@ -479,7 +479,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
       const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
       const shortcut = index+1;
-      const badge = <kbd className="slot-key" aria-hidden="true">{shortcut}</kbd>;
+      const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
         aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
         onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
