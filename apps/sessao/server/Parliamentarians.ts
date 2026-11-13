@@ -1,13 +1,13 @@
-import { blockedBy, canStand, type Player } from '../src/map';
+import { blockedBy, canStand, NAMES, type Player } from '../src/map';
 import { findRoute, followRoute } from '../src/navigation';
 import { npcRules } from '../src/parliamentarians';
 import { stations, type Vote } from '../src/plenary';
 
 const destinations = [stations.coffee,stations.archive,stations.secretary,stations.committees,stations.press,{x:140,y:146}];
 const profiles = [
-  {name:'Dona Cida',character:3,signature:0,price:2,conviction:1},
-  {name:'Dr. Valdemar',character:4,signature:2,price:2,conviction:2},
-  {name:'Dra. Nair',character:7,signature:3,price:3,conviction:2},
+  {character:3,signature:0,price:2,conviction:1},
+  {character:4,signature:2,price:2,conviction:2},
+  {character:7,signature:3,price:3,conviction:2},
 ] as const;
 type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number;
   promise?:{round:number;vote:Vote;amount:number}};
@@ -22,7 +22,7 @@ export class Parliamentarians {
     profiles.slice(0,count).forEach((profile,index)=>{
       const id = `npc-parliamentarian-${index+1}`;
       this.members.set(id,{profile,route:[],next:now+index*500,player:{
-        ...destinations[index],id,nick:profile.name,character:profile.character,npc:true,direction:0,moving:false,speed:npcRules.speed,
+        ...destinations[index],id,nick:NAMES[profile.character],character:profile.character,npc:true,direction:0,moving:false,speed:npcRules.speed,
       }});
     });
   }
