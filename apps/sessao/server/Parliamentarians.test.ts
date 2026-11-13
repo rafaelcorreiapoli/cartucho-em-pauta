@@ -165,3 +165,13 @@ test('completed deals and witnessed aggression change only the relevant NPC quot
   members.reset(2,2);
   expect(members.signature(other.id,'a')).toBe(2);
 });
+
+test('agenda uses the same paid vote quote as the NPC negotiation',()=>{
+  const {members,npcs} = fixture();
+  const project = 0;
+  const buyer = 'a';
+  const prices = () => npcs.flatMap(npc=>[members.minimum(npc.id,0,'yes',project,buyer),members.minimum(npc.id,0,'no',project,buyer)]).filter(price=>price>0);
+  expect(members.cheapestPaidVote(buyer,0,project)).toBe(Math.min(...prices()));
+  for (const npc of npcs) members.commit(npc.id,0,'yes',10,project);
+  expect(members.cheapestPaidVote(buyer,0,project)).toBe(11);
+});

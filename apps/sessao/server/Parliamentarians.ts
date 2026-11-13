@@ -71,6 +71,17 @@ export class Parliamentarians {
     return Math.max(price+this.adjustment(member,buyer),prior ? Math.floor(prior.amount)+1 : 0);
   }
 
+  cheapestPaidVote(buyer:string,round:number,project:number) {
+    let cheapest: number | undefined;
+    for (const {id} of this.players) {
+      for (const vote of ['yes','no'] as const) {
+        const price = this.minimum(id,round,vote,project,buyer);
+        if (price>0 && (cheapest===undefined || price<cheapest)) cheapest = price;
+      }
+    }
+    return cheapest;
+  }
+
   commit(id:string,round:number,vote:Vote,amount:number,project=round%bills.length,buyer?:string) {
     const member = this.members.get(id)!;
     const promise = member.promises.get(project);

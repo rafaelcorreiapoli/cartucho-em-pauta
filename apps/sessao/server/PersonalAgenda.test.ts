@@ -459,3 +459,22 @@ test('a signature objective needs two other available signers and retains progre
   agenda.recordSignature(metrics,21,'npc');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
 });
+
+test('buying an NPC vote is drawn only when a paid quote is affordable and payment is available',()=>{
+  const draw = (price:number|undefined,canPay:boolean,canVote=true) => {
+    const state = {...metrics,npcVotePrice:()=>price,canPay:()=>canPay};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,canVote,3,1);
+    return agenda;
+  };
+  expect(draw(9,true).hasActive('votoNpc')).toBe(false);
+  expect(draw(undefined,true).hasActive('votoNpc')).toBe(false);
+  expect(draw(3,false).hasActive('votoNpc')).toBe(false);
+  expect(draw(3,true,false).hasActive('votoNpc')).toBe(false);
+  const agenda = draw(3,true);
+  expect(agenda.hasActive('votoNpc')).toBe(true);
+  agenda.recordGameplay(metrics,event('npc-vote-bought'),false);
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'votoNpc'}));
+});
