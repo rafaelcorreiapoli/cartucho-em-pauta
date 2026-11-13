@@ -1,0 +1,39 @@
+#floor-plan:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: #091610f7;
+  color: var(--color-hud-ink);
+  pointer-events: auto;
+}
+.floor-plan-panel {
+  width: min(94vw, 125dvh, 75rem);
+}
+.floor-plan-panel header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+.floor-plan-panel h2 { margin: 0; }
+.floor-plan-panel header span { color: var(--color-hud-muted); }
+.floor-plan-drawing {
+  position: relative;
+  aspect-ratio: 1136 / 759;
+  container-type: inline-size;
+  background: #15251e;
+  border: 1px solid #395b49;
+}
+.floor-plan-room, .floor-plan-wall { position: absolute; }
+.floor-plan-room {
+  display: grid;
+  place-items: center;
+  background: #243f32;
+  padding: .25em;
+  text-align: center;
+  font: 700 clamp(5px, 1.35cqw, 16px)/1.05 system-ui, sans-serif;
+}
+.floor-plan-wall { background: #8cae99; }

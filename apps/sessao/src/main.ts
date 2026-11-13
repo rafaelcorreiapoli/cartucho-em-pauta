@@ -1,3 +1,4 @@
+import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
@@ -207,6 +208,7 @@ async function connect(join: () => Promise<Room>) {
     closeDetails();
     const hudListeners = new AbortController();
     bindActionShortcuts(session,hudListeners.signal);
+    bindFloorPlan(session,hudListeners.signal);
     const latency = document.querySelector<HTMLElement>('#connection-latency')!;
     let latencyGeneration = 0;
     const measureLatency = () => {

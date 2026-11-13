@@ -170,11 +170,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.officeDoors = this.add.graphics().setDepth(2);
       this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
-        const point = officeDoorPoint(office);
-        const sign = this.add.text(point.x,point.y-office.inside*15,'',{
-          fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#172b23',
-          align:'center',padding:{x:3,y:1},resolution:3,
-        }).setOrigin(.5).setDepth(2);
+        const [doorX,doorY,doorWidth,doorHeight] = office.door;
+        const sign = this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,'',{
+          fontFamily:'system-ui',fontSize:'3.6px',color:'#eee0ba',backgroundColor:'#152720',
+          align:'left',padding:{x:1.5,y:.5},resolution:4,
+        }).setOrigin(0,.5).setDepth(2);
         this.officeSigns.set(office.id,sign);
       }
       this.doors = this.add.graphics().setDepth(1);
@@ -277,7 +277,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (isOfficeFurniture(item.kind)) {
           const {width,height,anchor} = officeFurniture[item.kind];
           const art = this.add.image(0,0,`furniture-${item.kind}`).setDisplaySize(width,height).setOrigin(.5,anchor);
-          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : item.y);
+          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : 2.5);
           this.installed.set(item.id,{marker});
           continue;
         }
@@ -375,7 +375,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.officeDoors.clear();
         for (const layout of privateOffices) {
           const office = officeViews?.find(entry=>entry.id===layout.id);
-          this.officeSigns.get(layout.id)?.setText(`${layout.name}\n${office?.owner ?? 'Desocupado'}`);
+          this.officeSigns.get(layout.id)?.setText(`${layout.id.padStart(2,'0')}${office?.owner ? ' · '+[...office.owner].slice(0,14).join('') : ''}`);
           const [x,y,w,h] = layout.door;
           const status = office?.door ?? 'open';
           if (status!=='open') {

@@ -189,7 +189,8 @@ test('shop purchases furnish the correct office slots even when the inventory is
   expect(events.filter(event=>event.type==='installed').map(({kind,place})=>[kind,place]))
     .toEqual(products.map(kind=>[kind,home.id]));
   Object.assign(visitor,other.spawn);
-  expect(game.view(visitor,world).decorations).toEqual([]);
+  expect(game.view(visitor,world).decorations.map(item=>item.kind)).toEqual([...products]);
+  expect(game.view(visitor,world).interactive).toEqual([]);
   for (const kind of products) {
     const point = decorPoint(home,kind);
     Object.assign(visitor,point);

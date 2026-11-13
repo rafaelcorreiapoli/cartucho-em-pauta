@@ -555,7 +555,8 @@ export class Gameplay {
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
-      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id,world.now)).visible),
+      decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
+        localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
