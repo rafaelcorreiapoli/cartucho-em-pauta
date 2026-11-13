@@ -28,7 +28,7 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
-import { NAMES, type Player } from './map';
+import { inPlenary, NAMES, type Player } from './map';
 import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
@@ -190,6 +190,7 @@ async function connect(join: () => Promise<Room>) {
     code.value = joined.roomId;
     landing.hidden = true;
     session.dataset.phase = 'lobby';
+    delete session.dataset.inPlenary;
     session.hidden = false;
     setup.hidden = false;
     const voiceDock = document.querySelector<HTMLElement>('#voice-dock')!;
@@ -373,6 +374,8 @@ async function connect(join: () => Promise<Room>) {
       hud.notify('Corregedoria',text,critical);
     });
     joined.onMessage('control',(snapshot: ControlState) => {
+      const inside = String(inPlenary(snapshot.player) && !snapshot.isolated);
+      if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);
       game?.reconcile(snapshot);

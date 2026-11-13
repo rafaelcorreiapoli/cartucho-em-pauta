@@ -17,10 +17,10 @@ import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
-import { MAX_STAMINA, restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
+import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; metersReady?:boolean; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -434,7 +434,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.sprite.destroy();
           view.label.destroy();
           view.office.destroy();
-          view.health.destroy(true);
           view.items.destroy();
           view.weapon.destroy();
           this.views.delete(id);
@@ -456,19 +455,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
-          view?.health.setVisible(false);
           view?.items.setVisible(false);
           view?.weapon.setVisible(false);
           continue;
         }
         if (!view) {
-          const track = this.add.rectangle(0,0,19,4,0x101820,.95).setStrokeStyle(.5,0x293641);
-          const healthFill = this.add.rectangle(-8.5,0,17,2,0x69d878).setOrigin(0,.5);
-          const staminaTrack = this.add.rectangle(0,4,19,3,0x101820,.95).setStrokeStyle(.5,0x293641);
-          const staminaFill = this.add.rectangle(-8.5,4,17,1.6,0x56b6ff).setOrigin(0,.5);
           view = {
-            health:this.add.container(0,0,[track,healthFill,staminaTrack,staminaFill]).setDepth(HEIGHT+25).setVisible(false),
-            healthFill,staminaFill,
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             items:this.add.container().setDepth(HEIGHT+26),
@@ -536,20 +528,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!own && sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
           .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
-        view.health.setVisible(latest.health!==undefined);
-        const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
-        if (latest.health!==undefined) {
-          const health = Phaser.Math.Clamp(latest.health,0,1);
-          view.health.setPosition(x,barY);
-          const staminaMax = player.staminaMax ?? MAX_STAMINA;
-          const stamina = Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1);
-          const blend = view.metersReady && !reducedMotion.matches ? 1-Math.exp(-delta/65) : 1;
-          const advance = (current:number,target:number)=>Math.abs(current-target)<.002 ? target : Phaser.Math.Linear(current,target,blend);
-          view.staminaFill.setScale(advance(view.staminaFill.scaleX,stamina),1);
-          const shownHealth = advance(view.healthFill.scaleX,health);
-          view.healthFill.setScale(shownHealth,1).setFillStyle(shownHealth>.55 ? 0x69d878 : shownHealth>.25 ? 0xffc260 : 0xff6663);
-          view.metersReady = true;
-        }
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
@@ -577,7 +555,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             view.items.add([backdrop,icon]);
           });
         }
-        view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
+        view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-39).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
@@ -596,7 +574,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (inSession) {
             camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
           } else camera.centerOn(x,y);
-          for (const part of [sprite,view.weapon,view.health,view.items,label,office]) {
+          for (const part of [sprite,view.weapon,view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
           this.fog.clear().setVisible(running);

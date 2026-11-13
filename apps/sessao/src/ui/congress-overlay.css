@@ -285,3 +285,23 @@
 #command-deck #voice-dock #room-settings > summary { display: none; }
 
 #session #open-action-shortcuts { display: none; }
+
+#command-deck #legislative-dock { grid-column: 2; }
+#command-deck .deck-tools { grid-column: 3; }
+#session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
+#session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }
+#world #active-fire {
+  position: absolute;
+  z-index: 3;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #281811e8;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  #command-deck #legislative-dock { grid-column: 1 / -1; }
+  #command-deck .deck-tools { grid-column: 2; }
+}
