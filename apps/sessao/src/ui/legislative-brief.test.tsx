@@ -24,3 +24,19 @@ test('the Secretary shows the authoritative agenda after filings and the default
   expect(impact).toContain('id="brief-yes-stability"');
   expect(impact).toContain(bills[2].name);
 });
+
+test('the Archive shows only the public ledger, even for a player who holds private evidence',()=>{
+  const rafa:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
+  const bia = {...rafa,id:'b',nick:'Bia'};
+  const players = [rafa,bia];
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>0)).toBe(true);
+  const render = ()=>renderToStaticMarkup(<LegislativeBrief activity="archive"
+    view={match.view(bia.id,players.map(({id})=>id),3)}/>);
+  match.politics(rafa,{kind:'transfer',to:bia.id,amount:2,clandestine:true},players,1);
+  expect(render()).toContain('Nenhum registro público.');
+  match.politics(rafa,{kind:'transfer',to:bia.id,amount:1,clandestine:false},players,2);
+  const archive = render();
+  expect(archive).toContain('Rafa → Bia · R$ 10 mil · pagamento público.');
+  expect(archive).not.toContain('R$ 20 mil');
+});

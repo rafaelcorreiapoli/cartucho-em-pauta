@@ -365,7 +365,6 @@
 .social-empty > svg { width: 22px; height: 22px; color: #c3ac75; }
 .social-empty p { margin: 0; color: #d6cfb5; font-size: .75rem; line-height: 1.35; }
 #social-docks section[aria-label="Provas privadas"] { margin-top: .75rem; }
-#ledger { margin-top: .65rem; }
 #social-docks .game-choice[aria-pressed="true"] {
   background: #384231;
   border-color: #d7b574;

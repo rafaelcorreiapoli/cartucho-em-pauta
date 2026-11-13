@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { canReachStation, type Station, type PlenaryView } from './plenary';
-import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type Offer, type PoliticsAction, type Split } from './politics';
+import { CABINET_GRANT, CAMPAIGN_COST, money, splits, describeEvidence, type Offer, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -85,19 +85,12 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   let visiblePlayers:Player[] = [];
   let view:PlenaryView | undefined;
   let own:Player | undefined;
-  let recordsKey = '';
   let offersKey = '';
   dock.open = false;
   institutional.open = false;
-  el<HTMLDetailsElement>('ledger').open = false;
-  const recordsRoot = createRoot(el('public-records'));
   const offersRoot = createRoot(el('offer-list'));
   const at = (key:Station) => !!own && canReachStation(own,key);
   const name = (id:string) => view?.politics?.directory.find(contact => contact.id===id)?.name ?? 'Jogador';
-  const describe = (record:Evidence) => record.kind==='diversion' ?
-    `${name(record.from)} desviou ${money(record.amount)} da verba do gabinete.` :
-    `${name(record.from)} → ${name(record.to!)} · ${money(record.amount)} · pagamento ${record.kind==='public-transfer' ? 'público' : 'clandestino'}.`;
-
   function updateControls() {
     const politics = view?.politics;
     if (!politics || !view) return;
@@ -136,7 +129,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   el<HTMLFormElement>('evidence-form').onsubmit = event => event.preventDefault();
   const describeSelected = () => {
     const record = view?.politics?.evidence.find(record => record.id===Number(dossier.value));
-    el('evidence-detail').textContent = record ? describe(record) : '';
+    el('evidence-detail').textContent = record ? describeEvidence(record,name) : '';
   };
   function updateContacts() {
     const choices = (view?.politics?.contacts ?? []).flatMap(contact => {
@@ -163,11 +156,6 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       el('evidence-form').hidden = p.evidence.length===0;
       el('empty-evidence').hidden = p.evidence.length>0;
       describeSelected();
-      const ledgerKey = p.ledger.map(record => record.id).join(',');
-      if (recordsKey!==ledgerKey) {
-        recordsKey = ledgerKey;
-        recordsRoot.render(p.ledger.slice().reverse().map(record=><li key={record.id}>{describe(record)}</li>));
-      }
       const contacts = new Set(p.contacts.map(contact => contact.id));
       const offerList = [...p.incoming,...(p.outgoing ? [p.outgoing] : [])];
       const key = offerList.map(offer => `${offer.id}:${canBuyEvidence(offer,contacts,p.wallet,p.paymentsLeft)}`).join(',');
@@ -189,7 +177,6 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     },
     destroy() {
       for (const control of [recipient,dossier,price,nominee,split]) control.destroy();
-      recordsRoot.unmount();
       offersRoot.unmount();
     },
     players(players:Player[]) {

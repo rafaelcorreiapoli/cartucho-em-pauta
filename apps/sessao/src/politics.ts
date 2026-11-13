@@ -167,3 +167,9 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
 export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
   if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
 }
+
+
+export function describeEvidence(record:Evidence, name:(id:string)=>string) {
+  if (record.kind==='diversion') return `${name(record.from)} desviou ${money(record.amount)} da verba do gabinete.`;
+  return `${name(record.from)} → ${name(record.to!)} · ${money(record.amount)} · pagamento ${record.kind==='public-transfer' ? 'público' : 'clandestino'}.`;
+}

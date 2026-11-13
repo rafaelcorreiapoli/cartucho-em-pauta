@@ -456,12 +456,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
-      if ((activity==='secretary' || activity==='support') && previous?.phase==='negotiation') {
+      if ((activity==='secretary' || activity==='support' || activity==='archive') && previous?.phase==='negotiation') {
         legislativeBrief.open(activity,previous);
       }
       if (text) notify(info.title,text);
-      if ('panel' in info) element<HTMLDetailsElement>(info.panel).open = true;
-      if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
     },
     render(view:PlenaryView) {
       if (view.phase!=='negotiation') legislativeBrief.close();
