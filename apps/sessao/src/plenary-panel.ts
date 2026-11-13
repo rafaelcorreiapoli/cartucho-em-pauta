@@ -119,9 +119,10 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
       start.hidden = running || host!==id;
-      start.disabled = players<MIN_PLAYERS;
+      const minimum = view.minimumPlayers ?? MIN_PLAYERS;
+      start.disabled = players<minimum;
       start.textContent = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
-      element('start-hint').textContent = running ? '' : players<MIN_PLAYERS ? `${players}/${MIN_PLAYERS} jogadores para iniciar` :
+      element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';

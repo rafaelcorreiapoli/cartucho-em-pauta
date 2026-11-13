@@ -7,4 +7,4 @@ const server = defineServer({
   rooms: { plenary: defineRoom(SessionRoom) },
   express: app => { app.get('/health', (_req,res) => res.json({ok:true,runtime:'bun'})); },
 });
-await server.listen(Number(process.env.PORT || 2568));
+await server.listen(Number(process.env.PORT || 2568),process.env.SESSAO_LOCAL_SOLO==='1' ? '127.0.0.1' : undefined);

@@ -33,7 +33,7 @@ export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type PlenaryView = {
   phase:Phase; round:number; remaining:number; stability:number; budget:number; host?:string;
-  role?:Role; mandate?:boolean; solo:boolean; players:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
+  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;

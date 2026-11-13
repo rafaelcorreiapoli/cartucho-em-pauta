@@ -447,7 +447,7 @@ export class PlenaryMatch {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     return {
       phase:this.phase,round:this.round,remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
-      stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,
+      stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
       amended:this.amended,canFraud:role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
