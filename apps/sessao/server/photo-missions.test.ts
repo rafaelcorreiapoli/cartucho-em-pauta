@@ -11,7 +11,7 @@ test('photo rules count distinct people and distinguish a visible briefcase from
     people:[guest],ground:[{id:1,kind:'briefcase',...center}],decorations:[],transfers:[]};
   const event:GameplayEvent = {type:'photo',actor:author.id,position:center,at:0,witnesses:['b'],photo};
   expect(photoMissions.flagra.facts(event)).toEqual([]);
-  photo.people[0] = {...guest,exposed:{id:1,kind:'briefcase'}};
+  photo.people[0] = {...guest,exposed:[{id:1,kind:'briefcase'}]};
   expect(photoMissions.flagra.facts(event)).toHaveLength(1);
   const progress = new Map<string,Set<string>>();
   expect(applyFacts(progress,photoMissions.selfie.facts(event))).toBe(1);

@@ -5,9 +5,11 @@ const files = {
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
+  swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',
   foot1:'passo-1.wav', foot2:'passo-2.wav', foot3:'passo-3.wav', foot4:'passo-4.wav',
 } as const;
 type Sample = keyof typeof files;
+export type CombatCue = 'swing'|'impact'|'fall';
 export type Cue = Exclude<Sample,'music' | `foot${number}`>;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
@@ -91,10 +93,36 @@ export class GameAudio {
   }
 
   cue(name:Cue) { this.play(name,.62,0,1); }
+  progression(cue:'levelUp'|'attribute') {
+    const {context,effectsGain} = this;
+    if (!this.playing || !context || !effectsGain) return;
+    const notes = cue==='levelUp' ? [523.25,659.25,783.99,1046.5] : [659.25,880];
+    notes.forEach((frequency,index)=>{
+      const start = context.currentTime+index*(cue==='levelUp' ? .086 : .055);
+      const duration = cue==='levelUp' ? .28 : .12;
+      const tone = context.createOscillator();
+      const envelope = context.createGain();
+      tone.type = index===0 ? 'triangle' : 'sine';
+      tone.frequency.value = frequency;
+      envelope.gain.setValueAtTime(.0001,start);
+      envelope.gain.exponentialRampToValueAtTime(cue==='levelUp' ? .19 : .085,start+.014);
+      envelope.gain.exponentialRampToValueAtTime(.0001,start+duration);
+      tone.connect(envelope).connect(effectsGain);
+      tone.onended = () => { tone.disconnect(); envelope.disconnect(); };
+      tone.start(start);
+      tone.stop(start+duration);
+    });
+  }
+
   shutter() { this.play('vote',.58,0,1.85); }
   stationClick() { this.play('vote',.75,0,1.35); }
   footstep(level:number,pan:number) {
     this.play(footsteps[this.footIndex++ % footsteps.length],level,pan,.94+Math.random()*.12);
+  }
+
+  combat(name:CombatCue,level:number,pan:number) {
+    const volumes = {swing:.54,impact:.73,fall:.78};
+    this.play(name,level*volumes[name],pan,.97+Math.random()*.06);
   }
 
   private play(name:Sample, level:number, pan:number, rate:number) {

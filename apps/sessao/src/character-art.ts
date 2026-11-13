@@ -1,3 +1,5 @@
+import { NAMES } from './map';
+
 const originalCount = 3;
 
 export const characterSheets = [
@@ -5,11 +7,59 @@ export const characterSheets = [
   {key:'players-expansion',path:'assets/sprites-expansao.png'},
 ] as const;
 
+const combatCharacters:Partial<Record<(typeof NAMES)[number],string>> = {
+  Lula:'lula',
+  Bolsonaro:'bolsonaro',
+};
+const combatActions = ['attack','hit','fall'] as const;
+const hitFrameMs = 55;
+const fallFrameMs = 100;
+
+export const combatSheets = Object.values(combatCharacters).flatMap(character=>
+  combatActions.map(action=>{
+    const key = combatSheet(character,action);
+    return {key,path:`assets/${key}.webp`};
+  }),
+);
+
+function combatSheet(character:string, action:(typeof combatActions)[number]) {
+  return `${character}-${action}`;
+}
+
 export function characterArt(character:number) {
   const expansion = character>=originalCount;
   const sheet = characterSheets[expansion ? 1 : 0];
   const row = (expansion ? character-originalCount : character)*3;
   return {sheet,row,frame:row*4};
+}
+
+export function attackArt(character:number, row:number, progress:number, impactProgress:number) {
+  const skin = combatCharacters[NAMES[character]];
+  if (!skin) return;
+  // The third frame shows the arm fully extended at the moment of impact.
+  const frame = progress<impactProgress*.55 ? 0 :
+    progress<impactProgress ? 1 : progress<(1+impactProgress)/2 ? 2 : 3;
+  return {key:combatSheet(skin,'attack'),frame:row*4+frame};
+}
+
+export function hitArt(character:number, direction:number, elapsed:number) {
+  const skin = combatCharacters[NAMES[character]];
+  const frame = Math.floor(elapsed/hitFrameMs);
+  if (!skin || frame>=4) return;
+  const row = direction===3 ? 1 : direction;
+  return {key:combatSheet(skin,'hit'),frame:row*4+frame,flipX:direction===3};
+}
+
+export function downedArt(character:number, direction:number, elapsed = Infinity) {
+  const row = direction===3 ? 1 : direction;
+  const flipX = direction===3;
+  const skin = combatCharacters[NAMES[character]];
+  if (skin) {
+    const frame = Math.min(3,Math.floor(elapsed/fallFrameMs));
+    return {key:combatSheet(skin,'fall'),frame:row*4+frame,flipX,rotation:0,originY:frame===3 ? .85 : 1};
+  }
+  const {sheet,frame} = characterArt(character);
+  return {key:sheet.key,frame:frame+row*4,flipX,rotation:flipX ? -Math.PI/2 : Math.PI/2,originY:.5};
 }
 
 export function setCharacterPortrait(element:HTMLElement, character:number) {

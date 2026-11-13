@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { canStandInPlenary, inPlenary, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
 import { PredictedMovement } from './network-movement';
-import { applyInput, type ControlState, type MovementInput } from './movement';
+import { applyInput, readInput, restMovement, type ControlState, type MovementInput } from './movement';
 
 test('prediction starts immediately and replays only the inputs the server has not processed', () => {
   const server: ControlState = {
@@ -54,4 +54,37 @@ test('teleport reconciliation drops pending moves from the previous movement mod
   const seat = PLENARY_SEATS[0];
   client.reconcile({player:{...player,...seat},route:[],ack:0,plenary:true});
   expect(client.state?.player).toMatchObject(seat);
+});
+
+
+test('sprinting spends stamina in the shared movement step and falls back to walking when empty', () => {
+  const state:ControlState = {
+    player:{id:'p',nick:'P',character:0,x:140,y:146,direction:0,moving:false,speed:80,stamina:1.25,canSprint:true},
+    route:[],ack:0,
+  };
+  const motion = {x:1,y:0};
+  const sent:MovementInput[] = [];
+  const client = new PredictedMovement(input=>sent.push(input));
+  client.reconcile(state);
+  client.input({motion,sprint:true});
+  applyInput(state,readInput(sent[0])!);
+  expect(state.player).toMatchObject({x:146,stamina:0,sprinting:true});
+  client.reconcile(state);
+  client.input({motion,sprint:true});
+  applyInput(state,readInput(sent[1])!);
+  expect(state.player).toMatchObject({x:150,stamina:0});
+  expect(state.player.sprinting).toBeUndefined();
+  expect(client.state?.player).toEqual(state.player);
+
+  applyInput(state,{seq:3,motion});
+  restMovement(state.player);
+  expect(state.player.stamina).toBe(2);
+  applyInput(state,{seq:4,motion,sprint:true});
+  expect(state.player).toMatchObject({x:160,stamina:.75,sprinting:true});
+
+  state.player.carrying = true;
+  applyInput(state,{seq:5,motion,sprint:true});
+  expect(state.player.x).toBeCloseTo(162.6);
+  expect(state.player.sprinting).toBeUndefined();
+  expect(state.player.stamina).toBe(1.75);
 });

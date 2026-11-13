@@ -1,18 +1,44 @@
+import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
 import type { GameplayEvent } from '../src/gameplay';
-import { agendas, missionReward, type Agenda, type Mission, type PoliticsView } from '../src/politics';
+import { agendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
 
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
+  rouboNpc:(event:GameplayEvent) => event.type==='npc-robbed',
+  votoNpc:(event:GameplayEvent) => event.type==='npc-vote-bought',
+  embolso:(event:GameplayEvent) => event.type==='money-pocketed' && event.kind==='briefcase',
+  assinar:(event:GameplayEvent) => event.type==='signed' && !!event.target && event.target!==event.actor,
+  transporte:(event:GameplayEvent) => event.type==='room-entered' && event.kind==='briefcase' && event.target===event.actor,
+  equipamento:(event:GameplayEvent) => event.type==='purchased' && event.kind==='binoculars',
+  presente:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' && !!event.target && event.target!==event.actor,
+  visitaArquivo:(event:GameplayEvent) => event.type==='room-entered' && event.place==='Arquivo',
+  pizza:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza',
+  lagosta:(event:GameplayEvent) => event.type==='used' && event.kind==='lobster',
+  comprarLagosta:(event:GameplayEvent) => event.type==='purchased' && event.kind==='lobster',
+  televisao:(event:GameplayEvent) => event.type==='installed' && event.kind==='officeTv',
+  bombom:(event:GameplayEvent) => event.type==='used' && event.kind==='chocolates',
+  selfieSolo:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie,
+  retratoGabinete:(event:GameplayEvent) => event.type==='installed' && event.kind==='portrait' && privateOffices.some(office=>office.id===event.place),
+  poltrona:(event:GameplayEvent) => event.type==='purchased' && event.kind==='officeChair',
+  visitaGabinete:(event:GameplayEvent) => event.type==='room-entered' && !!event.target && event.target!==event.actor,
+  gabinete:(event:GameplayEvent) => event.type==='installed' && !!event.kind && isOfficeFurniture(event.kind),
   sigilo:(event:GameplayEvent) => event.type==='dropped' && !event.witnesses.length,
   joguinho:(event:GameplayEvent) => event.type==='game-won' && !event.witnesses.length,
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
-const missionTargets:Partial<Record<Agenda,number>> = {
-  protocolo:1, entrega:3, sigilo:1, joguinho:1,
-  fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2, escandalo:1, auditoria:1, emenda:1, votacao:1, cafe:1, leitura:1, credencial:1,
+
+const minimumPlayers:Partial<Record<Agenda,number>> = {
+  articulacao:3, escandalo:3, entrega:4, assinaturas:3, assinar:2,
+  recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
+const missionTargets:Partial<Record<Agenda,number>> = {
+  entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:5,
+};
+const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
+const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -20,42 +46,101 @@ export class PersonalAgenda {
   private completed:Mission[] = [];
   private missionDeck:Agenda[];
   private nextMissionId = 0;
-  private photoFacts = new Map<number,Map<string,Set<string>>>();
+  private factsByMission = new Map<number,Map<string,Set<string>>>();
   private missionPayers = new Set<string>();
   private missionCoffee = new Set<string>();
-  private paid = false;
+  private seenEvents = new Set<string>();
+  private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
+  private furnishingPurchases = 0;
+  private npcCount = 0;
+  private cannotVote = false;
+  private ballotsLeft = 3;
 
-  constructor(metrics:AgendaMetrics, playerCount:number, random:()=>number) {
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind =>
-      kind!=='cafe' && kind!=='entrega' && !Object.hasOwn(activityMissions,kind) && !Object.hasOwn(photoMissions,kind) && (playerCount>=3 || (kind!=='articulacao' && kind!=='escandalo')));
-    const visualDeck = (Object.keys(photoMissions) as (keyof typeof photoMissions)[])
-      .filter(kind=>photoMissions[kind].players<=playerCount);
+  constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
+    private reward:(reward:MissionReward, completed:Mission[])=>void) {
+    const deck = Object.keys(agendas) as Agenda[];
+    const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
+    const mission = missions[Math.floor(random()*missions.length)];
+    const activity = startingActivities[Math.floor(random()*startingActivities.length)];
     const offset = Math.floor(random()*deck.length);
     const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
-    this.missionDeck = ['cafe',...ordered.slice(0,2),
-      ...(playerCount>1 ? visualDeck.slice(0,3) : []),'protocolo','sigilo','joguinho',...ordered.slice(2),
-      ...visualDeck.slice(playerCount>1 ? 3 : 0),...(playerCount>=4 ? ['entrega'] as const : [])];
-    this.fillMissions(metrics);
+    this.missionDeck = ['cafe',mission,activity,...ordered.filter(kind=>kind!=='cafe' && kind!==mission && kind!==activity)];
+    this.fillMissions(metrics,true);
   }
 
   recordPayment(metrics:AgendaMetrics, from:string) {
-    if (this.missions.some(mission=>mission.kind==='articulacao')) this.missionPayers.add(from);
-    this.progress(metrics);
+    if (this.hasActive('articulacao')) this.missionPayers.add(from);
+    this.progress(metrics,{recebido:1});
+  }
+
+  recordTransfer(metrics:AgendaMetrics, amount:number) {
+    if (amount>=AGENDA_TRANSFER_MIN) this.progress(metrics,{pagamento:1});
+  }
+
+  recordSignature(metrics:AgendaMetrics, document:number, signer:string) {
+    const mission = this.missions.find(mission=>mission.kind==='assinaturas');
+    if (mission) this.progress(metrics,{assinaturas:this.countFacts(mission,[{value:signer,group:String(document)}])});
+  }
+
+  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0) {
+    this.npcCount = npcCount;
+    this.playerCount = playerCount;
+    this.cannotVote = !canVote;
+    this.ballotsLeft = ballotsLeft;
+    this.missions = this.missions.filter(mission=>{
+      if (this.availableInMatch(mission.kind,mission.target-mission.current)) return true;
+      this.factsByMission.delete(mission.id);
+      return false;
+    });
+    this.fillMissions(metrics);
+  }
+
+  private availableInMatch(kind:Agenda, remaining:number) {
+    if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
+    const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
+    const participants = kind==='assinaturas' ? this.playerCount+this.npcCount : this.playerCount;
+    if (players>participants) return false;
+    if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
+      return !this.cannotVote && this.ballotsLeft>=remaining;
+    }
+    return !this.cannotVote || !['propaganda','discurso','emenda','auditoria'].includes(kind);
+  }
+
+  private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
+    let seen = this.factsByMission.get(mission.id);
+    if (!seen) this.factsByMission.set(mission.id,seen=new Map());
+    return Math.max(0,applyFacts(seen,facts)-mission.current);
   }
 
   recordGameplay(metrics:AgendaMetrics, event:GameplayEvent, scandalPizza:boolean) {
+    const key = JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
+    if (this.seenEvents.has(key)) return;
+    this.seenEvents.add(key);
     const gains:Partial<Record<Agenda,number>> = {};
-    for (const [mission,matches] of Object.entries(activityMissions)) {
-      if (matches(event)) gains[mission as Agenda] = 1;
+    if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
+    if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
+      gains.ostentacao = officeGoods[event.kind].price;
+      this.furnishingPurchases += gains.ostentacao;
     }
     for (const mission of this.missions) {
-      const rule = photoMissions[mission.kind as keyof typeof photoMissions];
-      if (!rule || (mission.kind==='pizzada' && !scandalPizza)) continue;
-      const facts = rule.facts(event);
-      if (!facts.length) continue;
-      let seen = this.photoFacts.get(mission.id);
-      if (!seen) this.photoFacts.set(mission.id,seen=new Map());
-      gains[mission.kind] = Math.max(0,applyFacts(seen,facts)-mission.current);
+      const kind = mission.kind;
+      const matches = activityMissions[kind as keyof typeof activityMissions];
+      if (matches?.(event)) gains[kind] = 1;
+      const rule = photoMissions[kind as keyof typeof photoMissions];
+      if (rule && (kind!=='pizzada' || scandalPizza)) {
+        const photo = event.photo;
+        const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
+        gains[kind] = this.countFacts(mission,rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event));
+      }
+      if (kind==='assinaturas' && event.type==='edited' && event.item!==undefined) {
+        const facts = this.factsByMission.get(mission.id);
+        if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
+      }
+      if (kind==='passeio' && event.type==='room-entered' && event.place) {
+        gains.passeio = this.countFacts(mission,[{value:event.place}]);
+      }
+      if ((event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length)) ||
+          (event.type==='room-time' && event.place==='Cafezinho' && kind==='pausaCafe')) gains[kind] = event.duration ?? 0;
     }
     if (event.kind==='coffee') {
       if (event.type==='used') gains.cafe = 1;
@@ -64,12 +149,26 @@ export class PersonalAgenda {
       }
     }
     this.progress(metrics,gains);
+    return true;
   }
 
-  private fillMissions(metrics:AgendaMetrics) {
+  private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    return this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
+      (kind!=='campanha' || metrics.popularity<100) &&
+      (kind!=='equipamento' || !this.acquired.has('binoculars')) &&
+      (kind!=='poltrona' || !this.acquired.has('officeChair')) &&
+      (kind!=='ostentacao' || this.furnishingPurchases<=2);
+  }
+
+  private fillMissions(metrics:AgendaMetrics, initial=false) {
     while (this.missions.length<activeMissionCount) {
-      const index = this.missionDeck.findIndex(kind => !this.missions.some(mission => mission.kind===kind) &&
-        (kind!=='campanha' || metrics.popularity<100));
+      const recent = this.completed.at(-1)?.kind;
+      const canDraw = (kind:Agenda) => this.eligible(kind,metrics) && !this.hasActive(kind);
+      const foodActive = this.missions.some(mission=>foodMissions.has(mission.kind));
+      const diverse = initial ? -1 : this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind) &&
+        (!foodMissions.has(kind) || !foodActive && (!recent || !foodMissions.has(recent))));
+      const fresh = this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind));
+      const index = diverse>=0 ? diverse : fresh>=0 ? fresh : this.missionDeck.findIndex(canDraw);
       if (index<0) return;
       const [kind] = this.missionDeck.splice(index,1);
       this.missionDeck.push(kind);
@@ -91,30 +190,37 @@ export class PersonalAgenda {
   }
 
   progress(metrics:AgendaMetrics, gains:Partial<Record<Agenda,number>> = {}) {
+    const reward = {xp:0,cash:0,popularity:0};
+    const completed:Mission[] = [];
     for (const mission of this.missions) {
       const current = this.missionProgress(metrics,mission)+(gains[mission.kind] ?? 0);
       mission.current = Math.min(current,mission.target);
       if (current>=mission.target) {
-        this.photoFacts.delete(mission.id);
-        this.completed.push({...mission});
+        this.factsByMission.delete(mission.id);
+        completed.push({...mission});
+        const earned = missionReward(mission.kind);
+        reward.xp += earned.xp;
+        reward.cash += earned.cash ?? 0;
+        reward.popularity += earned.popularity ?? 0;
       }
     }
     this.missions = this.missions.filter(mission => mission.current<mission.target);
+    if (reward.xp) {
+      this.completed.push(...completed);
+      this.reward(reward,completed);
+      this.progress(metrics);
+    }
     this.fillMissions(metrics);
   }
 
-  settle(metrics:AgendaMetrics) {
-    if (this.paid) return 0;
-    for (const mission of this.missions) mission.current = this.missionProgress(metrics,mission);
-    this.paid = true;
-    return this.completed.reduce((total,mission)=>total+missionReward(mission.kind),0);
+  hasActive(kind:Agenda) {
+    return this.missions.some(mission=>mission.kind===kind);
   }
 
   view(metrics:AgendaMetrics):PoliticsView['missions'] {
     return {
-      active:this.missions.map(mission=>({...mission,current:this.paid ? mission.current : this.missionProgress(metrics,mission)})),
+      active:this.missions.map(mission=>({...mission,current:Math.min(mission.target,this.missionProgress(metrics,mission))})),
       completed:this.completed.map(mission=>({...mission})),
-      paid:this.paid,
     };
   }
 }

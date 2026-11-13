@@ -1,9 +1,8 @@
 export type Disguise = { pitch:number; style:'preserved'|'shifted'|'radio' };
 
 export class LiveDisguise {
-  readonly stream: MediaStream;
   private input: MediaStreamAudioSourceNode;
-  private output: MediaStreamAudioDestinationNode;
+  readonly output: GainNode;
   private dry: GainNode;
   private wet: GainNode;
   private radio: GainNode;
@@ -12,9 +11,7 @@ export class LiveDisguise {
 
   constructor(private context: AudioContext, mic: MediaStream) {
     this.input = context.createMediaStreamSource(mic);
-    this.output = context.createMediaStreamDestination();
-    this.output.channelCount = 1;
-    this.stream = this.output.stream;
+    this.output = context.createGain();
     this.dry = context.createGain();
     this.wet = context.createGain();
     this.radio = context.createGain();
@@ -65,6 +62,6 @@ export class LiveDisguise {
 
   stop() {
     ++this.revision;
-    this.stream.getTracks().forEach(track => track.stop());
+    this.output.disconnect();
   }
 }

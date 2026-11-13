@@ -1,3 +1,4 @@
+import { npcs } from '../src/npcs';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
@@ -89,9 +90,9 @@ test('phone sessions keep Snake private and clear it when a player disconnects',
   expect(events.at(-1)?.duration).toBe(1000);
 });
 
-test('spawned and dropped cash share visibility, custody and redemption', () => {
+test('spawned and dropped cash share visibility and custody without immediate redemption', () => {
   const {alice,bob,watcher,game,world} = setup();
-  const values = [0,0,.14,.172,0];
+  const values = [0,0,.117,.172,0];
   const credits:number[] = [];
   world.earn = (_id,amount) => credits.push(amount);
   Object.assign(alice,{x:140,y:146});
@@ -117,13 +118,13 @@ test('spawned and dropped cash share visibility, custody and redemption', () => 
   expect(game.view(bob,world).nearby[0]).toMatchObject({id:item.id,kind:item.kind,x:140,y:146});
   game.act(bob,{kind:'use',item:item.id},world);
   game.act(alice,{kind:'use',item:item.id},world);
-  expect(credits).toEqual([3]);
-  expect(game.view(bob,world).ground).toEqual([]);
+  expect(credits).toEqual([]);
+  expect(game.view(bob,world).ground[0]?.id).toBe(item.id);
 });
 
 test('cash on the ground expires after the same interval on spawn or drop', () => {
   const {alice,game,world} = setup();
-  const values = [0,0,.14,.172,.99];
+  const values = [0,0,.117,.172,.99];
   Object.assign(alice,{x:140,y:146});
   game.reset(0,()=>values.shift() ?? .5);
   world.now = 4000;
@@ -134,7 +135,7 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   expect(game.act(alice,{kind:'collect',item:item.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
 
-  const nextValues = [0,0,.14,.172,.99];
+  const nextValues = [0,0,.117,.172,.99];
   game.reset(0,()=>nextValues.shift() ?? .5);
   world.now = 4000;
   game.tick(world,true);
@@ -151,7 +152,7 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
 
 test('the camera freezes visible exposed objects and preserves permissions through show, copy and publish', () => {
   const {alice,bob,watcher,events,game,world} = setup();
-  const values = [0,0,.14,.172,0];
+  const values = [0,0,.117,.172,0];
   Object.assign(alice,{x:140,y:146});
   Object.assign(bob,{x:151,y:146});
   Object.assign(watcher,{x:155,y:113});
@@ -160,19 +161,26 @@ test('the camera freezes visible exposed objects and preserves permissions throu
   game.tick(world,true);
   const [briefcase] = game.view(bob,world).nearby;
   game.act(bob,{kind:'collect',item:briefcase.id},world);
-  expect(game.visibleItem(bob.id)).toBeUndefined();
+  expect(game.visibleItems(bob.id)[0]?.id).toBe(briefcase.id);
   expect(game.act(alice,{kind:'expose',item:briefcase.id},world)).toBe('O objeto não está com você.');
-  game.act(bob,{kind:'expose',item:briefcase.id},world);
+  Object.assign(bob,{...terminals.credentials.point});
+  game.act(bob,{kind:'supply',place:'credentials'},world);
+  const gift = game.view(bob,world).inventory.find(item=>item.kind==='gift')!;
+  Object.assign(bob,{x:151,y:146});
+  expect(game.act(bob,{kind:'expose',item:gift.id},world)).toBe('Objeto exposto.');
+  expect(game.visibleItems(bob.id).map(item=>item.id)).toEqual([briefcase.id,gift.id]);
   game.act(alice,{kind:'selfie'},world);
   game.act(alice,{kind:'selfie'},world);
   const [entry] = game.photoView(alice.id,world.now).album;
   const {photo} = entry;
   expect(game.photoView(alice.id,world.now).album).toHaveLength(1);
   expect(photo.people.map(person=>person.id)).toEqual([alice.id,bob.id]);
-  expect(photo.people[1].exposed).toEqual({id:briefcase.id,kind:'briefcase'});
+  expect(photo.people[1].exposed).toEqual([{id:briefcase.id,kind:'briefcase'},{id:gift.id,kind:'gift'}]);
+  expect(game.act(bob,{kind:'conceal',item:gift.id},world)).toBe('Objeto guardado.');
+  expect(game.visibleItems(bob.id).map(item=>item.id)).toEqual([briefcase.id]);
   game.act(bob,{kind:'drop',item:briefcase.id},world);
-  expect(game.visibleItem(bob.id)).toBeUndefined();
-  expect(photo.people[1].exposed?.kind).toBe('briefcase');
+  expect(game.visibleItems(bob.id)).toEqual([]);
+  expect(photo.people[1].exposed?.[0]?.kind).toBe('briefcase');
   expect(game.photoView(bob.id,world.now).album).toEqual([]);
   expect(game.photoView(watcher.id,world.now).publicPhotos).toEqual([]);
   expect(game.act(watcher,{kind:'info-copy',item:photo.id,target:bob.id},world)).toBe('Foto indisponível.');
@@ -208,9 +216,16 @@ test('installations validate location, keep one occupant and serve each diner on
   const {alice,bob,watcher,events,game,world} = setup();
   const purchases:number[] = [];
   world.spend = (_id,amount)=>{ purchases.push(amount); return true; };
-  game.act(alice,{kind:'buy',target:'pizza'},world);
-  game.act(alice,{kind:'buy',target:'pizza'},world);
+  expect(game.act(alice,{kind:'buy',target:'pizza'},world)).toBe('Aproxime-se do balcão.');
+  const coffeeRoom = {x:alice.x,y:alice.y};
+  Object.assign(alice,npcs.snackVendor.interaction);
+  game.act(alice,{kind:'talk',target:'snackVendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  const purchase = {kind:'shop-buy',target:'pizza',token:game.view(alice,world).dialogue?.token} as const;
+  game.act(alice,purchase,world);
+  game.act(alice,purchase,world);
   expect(purchases).toEqual([2]);
+  Object.assign(alice,coffeeRoom);
   const [pizza] = game.view(alice,world).inventory;
   expect(game.act(alice,{kind:'install',place:'hall',item:pizza.id},world)).toBe('Aproxime-se do local.');
   game.act(alice,{kind:'install',place:'pizza',item:pizza.id},world);

@@ -14,7 +14,7 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
   }
 }
 
-export function createPlenaryPanel(id:string, send:(type:string, data?:string|number) => void) {
+export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number;npcs:number}) => void) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   const count = element<HTMLSelectElement>('infiltrator-count');
@@ -25,7 +25,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
     window.clearTimeout(briefTimer);
     brief.hidden = true;
   }
-  start.onclick = () => send('start-match',count.value==='2' ? 2 : 1);
+  start.onclick = () => send('start-match',{infiltrators:Number(count.value),npcs:Number(element<HTMLSelectElement>('parliamentarian-count').value)});
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
 

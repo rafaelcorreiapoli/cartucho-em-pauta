@@ -1,3 +1,5 @@
+import type { Progression } from './progression';
+
 export const CABINET_GRANT = 4;
 export const CAMPAIGN_COST = 2;
 export const HEARING_POPULARITY = 55;
@@ -8,9 +10,37 @@ export const splits = [0,1,2,3] as const;
 export type Split = typeof splits[number];
 
 export const AGENDA_REWARD = 2;
+export const AGENDA_TRANSFER_MIN = 3;
 
 export const agendas = {
-  protocolo:'Protocole um documento com os carimbos e assinaturas pedidos.',
+  protocolo:'Protocole um documento válido',
+  rouboNpc:'Roube a carteira de um parlamentar NPC',
+  votoNpc:'Compre um voto de um parlamentar NPC',
+  embolso:'Embolse uma maleta no seu cofre',
+  recebido:'Receba dinheiro de outro parlamentar',
+  pagamento:'Faça uma transferência',
+  assinaturas:'Consiga duas assinaturas no mesmo documento',
+  assinar:'Assine o documento de um colega',
+  apoio:'Registre um voto a favor',
+  propaganda:'Coloque propaganda no ar',
+  discurso:'Discurse no Painel do Plenário',
+  transporte:'Leve uma maleta ao seu gabinete',
+  equipamento:'Compre um binóculo no Apoio Técnico',
+  presente:'Entregue um presente a um colega',
+  visitaArquivo:'Visite o Arquivo',
+  pizza:'Coma uma pizza',
+  lagosta:'Coma uma lagosta',
+  comprarLagosta:'Compre uma lagosta',
+  bombom:'Coma uma caixa de bombom',
+  jogar:'Jogue no celular por 30 segundos',
+  jogarOculto:'Jogue 30 segundos no celular sem ser visto',
+  selfieSolo:'Tire uma selfie',
+  retratoGabinete:'Instale seu retrato no gabinete',
+  poltrona:'Compre uma poltrona',
+  ostentacao:'Gaste R$ 50 mil em móveis',
+  visitaGabinete:'Visite o gabinete de um colega',
+  passeio:'Visite três ambientes do Congresso',
+  pausaCafe:'Passe 10 segundos no Cafezinho',
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
@@ -33,6 +63,8 @@ export const agendas = {
   fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',
   pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
 
+  gabinete: 'Instale um móvel de luxo no seu gabinete.',
+  televisao:'Instale uma TV no seu gabinete',
   fortuna: 'Aumente sua carteira',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
@@ -47,18 +79,34 @@ export const agendas = {
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
 } as const;
 export type Agenda = keyof typeof agendas;
-const caprichos = new Set<Agenda>(['selfie','presidenteFoto','retrato','autorretrato','reforma','reserva','mandaVip']);
-export const missionReward = (kind:Agenda) => caprichos.has(kind) ? 0 : AGENDA_REWARD;
+export type MissionReward = {xp:number; cash?:number; popularity?:number};
+
+const xpOnly:Partial<Record<Agenda,number>> = {
+  cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
+  selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
+  visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,
+  retrato:25,autorretrato:25,reforma:35,reserva:25,mandaVip:30,
+};
+const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
+  embolso:{xp:40,cash:AGENDA_REWARD},
+  assinaturas:{xp:60,cash:AGENDA_REWARD},
+  protocolo:{xp:50,popularity:5},
+  pagamento:{xp:30,cash:AGENDA_REWARD},
+};
+export const missionReward = (kind:Agenda):MissionReward =>
+  rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
+export const timedAgendas = new Set<Agenda>(['jogar','jogarOculto','pausaCafe']);
 export type Mission = {id:number; kind:Agenda; current:number; target:number};
 export const missionTitle = ({kind,target}:Mission) => kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
-  kind==='campanha' ? `Chegue a ${target} de popularidade` : agendas[kind];
+  kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];
 export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversion';
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};
 export type Offer = {id:number; evidence:number; from:string; to:string; price:number};
 export type Contact = {id:string; name:string};
 export type DirectoryContact = Contact & {character?:number};
 export type PoliticsView = {
-  wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]; paid:boolean}; grantUsed:boolean;
+  progression:Progression;
+  wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;

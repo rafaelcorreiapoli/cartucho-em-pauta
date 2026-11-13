@@ -1,3 +1,10 @@
+import { createParliamentarianPanel } from './parliamentarian-panel';
+import { createProgressionHud } from './progression-hud';
+import './progression-hud.css';
+import { bindActionShortcuts } from './action-shortcuts';
+import { needsFieldToken, type GameplayAction } from './gameplay';
+import { characterStats } from './character-stats';
+import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { showNewResults } from './results';
@@ -63,6 +70,8 @@ const buttons = NAMES.map((name,index) => {
   setCharacterPortrait(portrait,index);
   portrait.setAttribute('aria-hidden','true');
   button.append(portrait,name);
+  const stats = characterStats[index];
+  button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
   button.setAttribute('aria-pressed','false');
   button.onclick = () => {
     room?.send('character',index);
@@ -75,6 +84,13 @@ const voiceLabel = voiceToggle.querySelector('span')!;
 const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
 const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 let voice: RoomVoice | undefined;
+let disguiseActive = false;
+
+function applyVoiceEquipment(current:RoomVoice|undefined) {
+  void current?.setDisguise(disguiseActive ? {pitch:-6,style:'radio'} : undefined)?.catch(()=>{
+    if (current===voice) voiceStatus.textContent = 'Não foi possível ativar o modulador.';
+  });
+}
 let matchRunning = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
@@ -109,6 +125,7 @@ voiceToggle.onclick = async () => {
     voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
     voiceStatus.textContent = '';
     voiceLeave.hidden = false;
+    applyVoiceEquipment(current);
   } catch (error) {
     if (current !== voice) return;
     voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
@@ -128,6 +145,7 @@ function showLobby(message: string) {
   audio.leave();
   voice?.stop(false);
   voice = undefined;
+  disguiseActive = false;
   matchRunning = false;
   resetVoiceButtons();
   game?.destroy();
@@ -164,6 +182,7 @@ async function connect(join: () => Promise<Room>) {
     };
     closeDetails();
     const hudListeners = new AbortController();
+    bindActionShortcuts(session,hudListeners.signal);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
         !session.querySelector('details[name="game-panels"][open]')) return;
@@ -175,24 +194,39 @@ async function connect(join: () => Promise<Room>) {
     document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
-    game = createGame(map,joined.sessionId,input => joined.send('input',input),(level,pan) => audio.footstep(level,pan));
-    const gameplay = createGameplayPanel(action=>joined.send('gameplay',action),joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
+    game = createGame(map,joined.sessionId,input => joined.send('input',input),
+      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
+    let fieldToken = 0;
+    const sendGameplay = (action:GameplayAction) =>
+      joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+    const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
+    const market = createMarketPanel(sendGameplay);
+    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => joined.send('room-activity',activity),drop => {
-      joined.send('gameplay',{kind:'use',item:drop});
+    },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
+      if (action.kind!=='attack') audio.stationClick();
+      if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
+      if (action.kind==='cross-door') game?.crossDoor(action.door);
+      else sendGameplay(action);
       map.focus({preventScroll:true});
-    },gameplay.nearby);
+    });
+    const progression = createProgressionHud(request=>joined.send('allocate-attribute',request),cue=>audio.progression(cue));
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       if (gameplay.photoState(photos)) audio.shutter();
     });
+    joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
     });
-    joined.onMessage('gameplay-feedback',(message:string)=>gameplay.feedback(message));
+    joined.onMessage('gameplay-feedback',(message:string)=>{
+      if (market.isOpen()) hud.notify('Loja',message);
+      else gameplay.feedback(message);
+    });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
@@ -202,6 +236,7 @@ async function connect(join: () => Promise<Room>) {
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';
     let previousView:PlenaryView | undefined;
+    let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
       if (view.phase==='negotiation' && view.remaining<=30 && (previousView?.remaining ?? 0)>30) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
@@ -216,7 +251,22 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       gameplay.render(view);
+      market.render(view);
+      npcPanel.update(view);
+      const disguise = view.gameplay?.modulator?.active ?? false;
+      if (disguiseActive!==disguise) {
+        disguiseActive = disguise;
+        applyVoiceEquipment(voice);
+      }
       hud.render(view);
+      const priorProgress = previousView?.politics?.progression;
+      const currentProgress = view.politics?.progression;
+      if (!suppressXpEffect && priorProgress && currentProgress &&
+          priorProgress.matchId===currentProgress.matchId && currentProgress.xp>priorProgress.xp) {
+        hud.showXp(currentProgress.xp-priorProgress.xp,game?.playerHead());
+      }
+      suppressXpEffect = false;
+      progression.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);
@@ -248,7 +298,10 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
       hud.notify('Controladoria',text,critical);
     });
-    joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
+    joined.onMessage('control',(snapshot: ControlState) => {
+      progression.player(snapshot.player);
+      game?.reconcile(snapshot);
+    });
     joined.onMessage('players',(players: Player[]) => {
       panel.players(players);
       political.players(players);
@@ -271,12 +324,15 @@ async function connect(join: () => Promise<Room>) {
         return slot;
       }));
     });
-    joined.onReconnect(() => { if (voice?.active) joined.send('voice-join'); });
+    joined.onReconnect(() => { suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
       hud.destroy();
+      progression.destroy();
       gameplay.destroy();
+      market.destroy();
+      npcPanel.destroy();
       if (room!==joined) return;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');

@@ -1,10 +1,11 @@
 import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
+import { privateOffices } from './private-offices';
 import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 1;
-export const MAX_PLAYERS = 12;
+export const MAX_PLAYERS = privateOffices.length;
 export const NEGOTIATION_MS = 205_000;
 export const BALLOT_MS = 35_000;
 

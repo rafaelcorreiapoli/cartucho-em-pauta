@@ -1,10 +1,12 @@
+import { isOfficeFurniture, officeFurniture } from './private-offices';
+import { equipment } from './equipment';
 import type Phaser from 'phaser';
-import { characterArt } from './character-art';
+import { characterArt, downedArt } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
 import { HEIGHT, localPerception, WIDTH } from './map';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type Decoration, type Photo, type PhotoScene } from './photography';
 
-export const itemSymbols:Partial<Record<ObjectKind,string>> = {pizza:'🍕',vip:'★'};
+export const itemSymbols:Partial<Record<ObjectKind,string>> = {vip:'★',binoculars:equipment.binoculars.symbol,voiceModulator:equipment.voiceModulator.symbol,vest:equipment.vest.symbol};
 
 export class PhotoRenderer {
   private map?:HTMLImageElement;
@@ -55,10 +57,18 @@ export class PhotoRenderer {
         ctx.drawImage(source,x-size/2,y-size,size,size);
       }
     };
+    for (const point of scene.breaches ?? []) {
+      ctx.strokeStyle = '#ee9169';
+      ctx.strokeRect(point.x-left-6,point.y-top-6,12,8);
+    }
     for (const ground of scene.ground) item(ground.kind,ground.x-left,ground.y-top+2,16);
     for (const decoration of scene.decorations) {
       const x = decoration.x-left, y = decoration.y-top;
-      if (decoration.kind==='portrait') {
+      if (isOfficeFurniture(decoration.kind)) {
+        const {width,height,anchor} = officeFurniture[decoration.kind];
+        const sprite = this.textures.get(`furniture-${decoration.kind}`).getSourceImage() as HTMLImageElement;
+        ctx.drawImage(sprite,x-width/2,y-height*anchor,width,height);
+      } else if (decoration.kind==='portrait') {
         ctx.fillStyle = '#ae7746';
         ctx.fillRect(x-9,y-15,18,18);
         const atlas = this.textures.get('installed-portraits').getSourceImage() as HTMLImageElement;
@@ -74,18 +84,26 @@ export class PhotoRenderer {
 
     const recent = 'transfers' in scene ? (scene as Photo).transfers : [];
     const labels:{name:string;x:number;y:number}[] = [];
-    for (const person of [...scene.people].sort((a,b)=>a.y-b.y)) {
+    for (const person of [...scene.people].sort((a,b)=>a.y-b.y || Number(!!a.carried)-Number(!!b.carried))) {
       const {sheet,frame} = characterArt(person.character);
-      const pose = this.textures.getFrame(sheet.key,frame+(person.direction===3 ? 1 : person.direction)*4);
+      const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction) : undefined;
+      const pose = this.textures.getFrame(downed?.key ?? sheet.key,downed?.frame ?? frame+(person.direction===3 ? 1 : person.direction)*4);
       if (!pose) continue;
       const source = pose.source.image as HTMLImageElement;
       const x = person.x-left, y = person.y-top;
       ctx.save();
-      ctx.translate(x,y);
-      if (person.direction===3) ctx.scale(-1,1);
-      ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38,38,38);
+      ctx.translate(x,person.carried ? y-24 : y);
+      if (downed?.rotation) ctx.rotate(downed.rotation);
+      if (downed?.flipX ?? person.direction===3) ctx.scale(-1,1);
+      ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38*(downed?.originY ?? 1),38,38);
       ctx.restore();
-      if (person.exposed) item(person.exposed.kind,x,y-37,13);
+      if (person.pocketing) {
+        ctx.fillStyle = '#ffd67c';
+        ctx.font = 'bold 7px system-ui';
+        ctx.fillText('Cofre',x-7,y-39);
+      }
+      const exposed = person.exposed ?? [];
+      exposed.forEach(({kind},index)=>item(kind,x+(index-(exposed.length-1)/2)*12,y-37,11));
       if (person.phone) {
         ctx.font = '9px system-ui';
         ctx.textAlign = 'center';
@@ -93,7 +111,7 @@ export class PhotoRenderer {
         ctx.fillText(person.phone==='game' ? '🎮' : '☎',x+13,y-25);
       }
       for (const handoff of recent.filter(event=>event.to===person.id)) item(handoff.kind,x+16,y-9,12);
-      labels.push({name:person.name,x,y});
+      labels.push({name:person.name,x,y:person.carried ? y-53 : y});
     }
     ctx.font = 'bold 6px system-ui';
     ctx.textAlign = 'center';
@@ -117,4 +135,4 @@ export class PhotoRenderer {
 
 export const decorationLabel = (item:Decoration) =>
   item.kind==='pizza' ? `Pizza · ${item.slices} fatias` :
-    item.kind==='portrait' ? `Retrato de ${item.owner.name}` : `VIP · ${item.owner.name}`;
+    item.kind==='portrait' ? `Retrato de ${item.owner.name}` : item.kind==='vip' ? `VIP · ${item.owner.name}` : objects[item.kind].name;

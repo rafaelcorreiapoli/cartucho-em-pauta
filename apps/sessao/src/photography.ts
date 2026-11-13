@@ -1,5 +1,6 @@
+import type { OfficeGood } from './private-offices';
 import type { Office } from './elections';
-import type { GroundItem, ObjectKind } from './gameplay';
+import type { ExposedItem, GroundItem, ObjectKind } from './gameplay';
 import { localPerception, type Motion } from './map';
 import type { Contact } from './politics';
 
@@ -9,13 +10,13 @@ export const PHOTO_LOOK_UP = 19;
 export const PHOTO_LIMIT = 12;
 export const ROOM_PHOTO_LIMIT = 144;
 export type PhotoPerson = Contact & Motion & {
-  character:number; direction:number; exposed?:{id:number; kind:ObjectKind}; phone?:'call'|'game'; office?:Office;
+  character:number; direction:number; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:'call'|'game'; office?:Office;
 };
 export type Decoration = Motion & {
-  id:number; kind:'portrait'|'vip'|'pizza'; owner:Contact; character:number; marked?:boolean; slices?:number;
+  id:number; kind:'portrait'|'vip'|'pizza'|Extract<OfficeGood,'officeTv'|'officeRug'|'officeChair'>; owner:Contact; character:number; marked?:boolean; slices?:number; privateOffice?:string;
 };
 export type PhotoScene = {
-  center:Motion; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
+  center:Motion; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
 };
 export type Photo = PhotoScene & {
   id:number; author:Contact; at:number; location:string; selfie:boolean;

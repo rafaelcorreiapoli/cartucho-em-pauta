@@ -1,10 +1,20 @@
 import { setCharacterPortrait } from './character-art';
+import { objects, type ObjectKind } from './gameplay';
 import type { DirectoryContact } from './politics';
 
 export function node<K extends keyof HTMLElementTagNameMap>(tag:K,text = '') {
   const result = document.createElement(tag);
   result.textContent = text;
   return result;
+}
+
+export function itemPortrait(kind:ObjectKind) {
+  const portrait = node('img');
+  portrait.className = 'item-portrait';
+  portrait.src = import.meta.env.BASE_URL+'assets/'+objects[kind].portrait;
+  portrait.alt = '';
+  portrait.draggable = false;
+  return portrait;
 }
 
 export function button(label:string, action:()=>void) {

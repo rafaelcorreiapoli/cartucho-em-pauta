@@ -79,6 +79,7 @@
     <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
       <div id="world">
         <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
+        <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
         <div id="wallet-effects" role="status">
           <template id="wallet-gain">
             <div class="wallet-gain"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong></strong></div>
@@ -98,26 +99,41 @@
               <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
               <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
             </div>
-            <button class="hud-button" id="pocket-cash" type="button" hidden>
-              <svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-              <span>Embolsar<small id="pocket-reward"></small></span>
-            </button>
+            <span id="office-progress-label" hidden></span>
+            <progress id="office-progress" class="office-progress" hidden></progress>
             <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
             <div id="station-shortcuts"></div>
+            <div id="field-actions"></div>
             <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
           </div>
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
         <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
-        <div id="hud-notices" role="status" aria-label="Eventos da sessão"></div>
+        <aside id="agenda-dock" aria-labelledby="agenda-title" hidden>
+          <header>
+            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
+            <h2 id="agenda-title">Agenda Pessoal</h2>
+            <span id="agenda-progress"></span>
+          </header>
+          <ul class="agenda-list" id="missions-completed" aria-label="Conclusões recentes" hidden></ul>
+          <ul class="agenda-list" id="missions-active" aria-label="Objetivos ativos"></ul>
+          <span id="agenda-announcement" class="sr-only" role="status"></span>
+          <template id="agenda-mission">
+            <li>
+              <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
+              <div class="mission-copy"><strong></strong><small></small></div>
+            </li>
+          </template>
+        </aside>
+        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
         <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
       <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
         <div id="room-setup">
           <h2 class="hud-title">Sala de articulação</h2>
           <ul id="room-roster" aria-label="Jogadores na sala"></ul>
-          <p>Escolha sua skin</p>
-          <div id="characters" role="group" aria-label="Skin"></div>
+          <p>Escolha seu personagem</p>
+          <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
         <div id="briefing" class="compact-heading"><span>3 projetos · Meta de estabilidade: 45</span><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a sessão" data-help="Negocie, vote e preserve a estabilidade do Congresso. No multiplayer, a infiltração tenta derrubá-la. Você pode iniciar sozinho para testar.">?</button></div>
         <label id="infiltrator-setup" hidden>Infiltrados
@@ -126,12 +142,19 @@
             <option value="2">2 infiltrados</option>
           </select>
         </label>
+        <label>Parlamentares NPC
+          <select id="parliamentarian-count">
+            <option value="0">Nenhum</option><option value="1">1</option>
+            <option value="2" selected>2</option><option value="3">3</option>
+          </select>
+        </label>
         <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
         <p id="start-hint"></p>
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
           <div class="personal-resources">
+            <span id="vitality" class="vitality" hidden><span aria-hidden="true">♥</span><strong id="vitality-number"></strong><progress id="vitality-meter" aria-label="Pontos de vida"></progress></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
             <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
           </div>
@@ -179,35 +202,13 @@
             <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
             <div class="deck-identity">
               <strong id="hud-nick"></strong>
-              <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span>
+              <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
+              <footer id="profile-xp" hidden>
+                <div><strong id="profile-level"></strong><span id="profile-xp-value"></span></div>
+                <div class="xp-track" aria-hidden="true"><span id="profile-xp-fill"></span></div>
+                <div id="profile-xp-reward" role="status"></div>
+              </footer>
               <div class="deck-profile-links">
-                <details id="agenda-dock" class="hud-module" name="game-panels">
-                  <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Agenda pessoal</span><strong id="agenda-progress"></strong></summary>
-                  <div class="hud-panel module-content agenda-panel">
-                    <h2>Missões pessoais</h2>
-                    <div id="mission-tabs" role="tablist" aria-label="Status das missões">
-                      <button id="mission-tab-active" type="button" role="tab" aria-selected="true" aria-controls="missions-current">Ativas</button>
-                      <button id="mission-tab-done" type="button" role="tab" aria-selected="false" aria-controls="missions-history" tabindex="-1">Concluídas</button>
-                    </div>
-                    <div id="missions-current" role="tabpanel" aria-labelledby="mission-tab-active" tabindex="0">
-                      <ul class="agenda-list" id="missions-active"></ul>
-                    </div>
-                    <div id="missions-history" role="tabpanel" aria-labelledby="mission-tab-done" tabindex="0" hidden>
-                      <p id="missions-empty">Nenhuma missão concluída ainda.</p>
-                      <ul class="agenda-list" id="missions-completed"></ul>
-                    </div>
-                    <template id="agenda-mission">
-                      <li>
-                        <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
-                        <div class="mission-copy"><strong></strong><small></small></div>
-                        <span class="mission-reward" title="Prêmio pago ao fim da sessão">
-                          <svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-                          <span></span>
-                        </span>
-                      </li>
-                    </template>
-                  </div>
-                </details>
                 <details id="private-profile" name="game-panels">
                   <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Perfil</span></summary>
                   <div class="hud-panel deck-popover">
@@ -311,6 +312,7 @@
             <div id="item-slots" role="group" aria-label="Itens carregados" hidden></div>
             <div class="deck-tool-row">
               <div id="gameplay-tools" hidden>
+                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (I)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
@@ -395,6 +397,7 @@
       <div id="voice-lobby">
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
           <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
+          <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
           <details id="room-settings" name="game-panels">
             <summary class="hud-option" title="Configurações" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></summary>
             <div class="hud-panel sound-settings-content" id="room-settings-content">
@@ -447,14 +450,66 @@
           <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
         </form>
       </dialog>
+      <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
+        <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <div id="market-body"></div>
+      </dialog>
+      <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item">
+        <h2 id="equip-purchase-title">Equipar agora?</h2>
+        <p id="equip-purchase-item"></p>
+        <div class="equip-purchase-actions">
+          <button type="button" class="hud-button" id="equip-purchase-yes">Sim</button>
+          <button type="button" class="hud-button hud-button--secondary" id="equip-purchase-no" autofocus>Não</button>
+        </div>
+      </dialog>
+      <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title">
+        <header><h2 id="action-shortcuts-title">Atalhos de teclado</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form></header>
+        <p>Use os números para agir. Use ← e → para mudar de página.</p>
+        <div class="shortcut-list"></div>
+        <nav class="shortcut-pages" aria-label="Páginas de ações" hidden></nav>
+      </dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
         <header><h2 id="gameplay-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
-        <p id="gameplay-feedback" role="status"></p>
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
       </dialog>
-      <p id="movement-hint" class="hud-strip">WASD, setas ou toque no chão para andar</p>
+      <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title">
+        <div class="level-up-rays" aria-hidden="true"></div>
+        <div class="level-up-sparks" aria-hidden="true"></div>
+        <header>
+          <h2 id="level-up-title">LEVEL UP!</h2>
+          <div class="level-up-number"><span>NÍVEL</span><strong id="level-up-level"></strong></div>
+          <p id="level-up-points"></p>
+        </header>
+        <form method="dialog" class="progression-buttons">
+          <button class="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
+          <button class="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autofocus>Depois</button>
+        </form>
+      </dialog>
+      <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title">
+        <header><h2 id="parliamentarian-title"></h2><form method="dialog"><button class="hud-button hud-button--secondary">Encerrar</button></form></header>
+        <div class="parliamentarian-options"></div>
+      </dialog>
+      <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title">
+        <header>
+          <div><h2 id="attributes-title" class="sr-only">Atributos</h2><p id="attributes-xp"></p></div>
+          <form method="dialog"><button class="hud-button hud-button--secondary">Fechar</button></form>
+        </header>
+        <p id="attributes-available" role="status"></p>
+        <div class="attribute-columns">
+          <section class="attribute-panel" aria-label="Atributos">
+            <div id="attribute-list"></div>
+          </section>
+          <section class="attribute-panel" aria-label="Estatísticas de combate">
+            <div id="attribute-resources"></div>
+          </section>
+        </div>
+        <div class="progression-buttons">
+          <button id="confirm-attribute" type="button" class="hud-button" aria-keyshortcuts="5" disabled>Confirmar +1</button>
+        </div>
+      </dialog>
+      <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr com o tênis equipado</p>
     </section>
   </main>
   <script type="module" src="/src/main.ts"></script>

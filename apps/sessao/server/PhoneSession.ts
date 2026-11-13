@@ -1,11 +1,11 @@
 import type { GameplayView, PhoneAction } from '../src/gameplay';
-import type { Player } from '../src/map';
+import { worldVisible, type Player } from '../src/map';
 import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type Call = {from:string; to:string; connected:boolean; expires:number};
-type PhoneRound = {snake:SnakeRound; start:number; witnesses:Set<string>};
-type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'>;
+type PhoneRound = {snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
+type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'>;
 
 export class PhoneSession {
   private calls = new Map<string,Call>();
@@ -24,13 +24,21 @@ export class PhoneSession {
     }
     for (const [id,game] of this.games) {
       const player = world.players.find(person => person.id===id);
-      if (!exploring || !player) {
+      if (!exploring || !player || world.present?.(id)===false || player.knockedOut || player.carrying) {
         if (player) this.stopPhoneGame(player,world);
         else this.games.delete(id);
         continue;
       }
       if (!this.playingPhoneGame(game)) continue;
-      for (const witness of gameplayWitnesses(world.players,player)) game.witnesses.add(witness);
+      const duration = Math.min(100,world.now-game.sampledAt);
+      game.sampledAt = world.now;
+      const witnesses = world.players.filter(other=>other.id!==id && world.present?.(other.id)!==false &&
+        worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
+      for (const witness of witnesses) game.witnesses.add(witness);
+      if (game.snake.status==='playing' && duration>0 &&
+          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto'))) {
+        publishGameplay(world,player,'game-played',{duration,witnesses});
+      }
       if (world.now-game.start>=60_000) game.snake.status = 'lost';
       else stepSnake(game.snake,world.now);
       if (!this.playingPhoneGame(game)) {
@@ -90,7 +98,7 @@ export class PhoneSession {
     const call = this.calls.get(id);
     switch (action.kind) {
       case 'call': {
-        const target = world.players.find(person => person.id===action.target && person.id!==id);
+        const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
         if (!target || !world.voice(id) || !world.voice(target.id)) return 'Os dois jogadores precisam ativar a voz.';
         if (call || this.calls.has(target.id)) return 'Linha ocupada.';
         const next = {from:id,to:target.id,connected:false,expires:world.now+20_000};
@@ -109,7 +117,7 @@ export class PhoneSession {
         return 'Ligação encerrada.';
       case 'game-start':
         if (this.playingPhoneGame(this.games.get(id))) return;
-        this.games.set(id,{snake:createSnake(world.now),start:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
+        this.games.set(id,{snake:createSnake(world.now),start:world.now,sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
         publishGameplay(world,player,'game-started');
         return;
       case 'game-stop':
@@ -117,7 +125,10 @@ export class PhoneSession {
         return;
       case 'game-turn': {
         const game = this.games.get(id);
-        if (game && action.direction) turnSnake(game.snake,action.direction,world.now);
+        if (game && action.direction) {
+          if (game.snake.status==='ready') game.sampledAt = world.now;
+          turnSnake(game.snake,action.direction,world.now);
+        }
         return;
       }
     }

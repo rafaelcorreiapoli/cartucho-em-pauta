@@ -1,3 +1,6 @@
+import { npcRules } from '../src/parliamentarians';
+import type { AttributeRequest } from '../src/progression';
+import { canInteract } from '../src/interactions';
 import type { GameplayWorld } from './gameplay-world';
 import { offices, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
@@ -5,7 +8,7 @@ import {
   BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, STATION_RADIUS,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
-import { localPerception, type Player } from '../src/map';
+import type { Player } from '../src/map';
 import { HEARING_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -16,6 +19,33 @@ export class PlenaryMatch {
   phase: Phase = 'lobby';
   private round = 0;
   private started = 0;
+  private npcVotes = new Map<string,Vote>();
+  private npcIds = new Set<string>();
+
+  addParliamentarian(player:Player) {
+    this.npcIds.add(player.id);
+    const [min,max] = npcRules.startingWallet;
+    this.economy.addParliamentarian({id:player.id,name:player.nick,character:player.character},min+Math.floor(Math.random()*(max-min+1)));
+    this.election.addDeputy(player.id);
+  }
+
+  logEconomy(physical:number) {
+    console.info(JSON.stringify({event:'economy-totals',...this.economy.totals(),physical,budget:this.budget}));
+  }
+
+  refreshAgendaEligibility() { this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round); }
+
+  get projectRound() { return this.round; }
+  get projectName() { return bills[this.round].name; }
+
+  recordNpcVote(id:string,vote:Vote) {
+    if (this.phase==='ballot' && this.npcIds.has(id) && !this.npcVotes.has(id)) this.npcVotes.set(id,vote);
+  }
+
+  private paySalary(id:string,amount:number) {
+    this.economy.earn(id,amount);
+    console.info(JSON.stringify({event:'money-issued',source:'salary',id,amount}));
+  }
   private ends = 0;
   private stability = 48;
   private budget = 32;
@@ -47,6 +77,8 @@ export class PlenaryMatch {
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<MIN_PLAYERS || ids[0]!==requester) return false;
     this.electorate = new Set(ids);
+    this.npcIds.clear();
+    this.npcVotes.clear();
     this.initialPlayers = ids.length;
     const candidates = [...players];
     const count = ids.length===1 ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
@@ -68,10 +100,14 @@ export class PlenaryMatch {
     return true;
   }
 
+  private agendaYesVotes = new Set<string>();
+
   private nextRound(now:number) {
     this.phase = 'negotiation';
+    this.agendaYesVotes.clear();
     this.ends = now+NEGOTIATION_MS;
     this.votes.clear();
+    this.npcVotes.clear();
     this.audits.clear();
     this.auditNotes.clear();
     this.amended = false;
@@ -83,6 +119,7 @@ export class PlenaryMatch {
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
     this.election.leave(id,now);
+    this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
     this.economy.cancelOffers(id);
     if (this.infiltrators.size && ![...this.infiltrators].some(infiltrator => this.electorate.has(infiltrator))) this.finish('Parlamentar','Os infiltrados saíram da partida.');
     else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
@@ -144,11 +181,19 @@ export class PlenaryMatch {
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
     return {
-      players:players.filter(player => this.electorate.has(player.id)),now,
-      started:this.started,spend:(id,amount)=>this.economy.spend(id,amount),
-      office:id=>this.election.office(id),voice,earn:(id,amount)=>this.economy.earn(id,amount),
+      players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
+      started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
+      office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
+      takeWallet:id=>this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
+      payNpc:(from,to,amount)=>this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
+      hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
+      hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };
+  }
+
+  allocateAttribute(id:string, request:AttributeRequest, now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.electorate.has(id) && this.economy.allocate(id,request);
   }
 
   canHandleObjects(id:string, now:number) {
@@ -156,19 +201,25 @@ export class PlenaryMatch {
   }
 
   vote(id:string, vote:Vote, now:number) {
-    if ((this.phase==='ballot' || this.phase==='hearing') && now<this.ends && this.canVote(id)) this.votes.set(id,vote);
+    if ((this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    const previous = this.votes.get(id);
+    this.votes.set(id,vote);
+    if (this.phase!=='ballot') return;
+    const firstSupport = vote==='yes' && !this.agendaYesVotes.has(id);
+    if (firstSupport) this.agendaYesVotes.add(id);
+    if (previous===undefined || firstSupport) this.economy.recordVote(id,previous===undefined,firstSupport);
   }
 
   private canVote(id:string) { return this.electorate.has(id) && !this.economy.suspended(id); }
 
   private at(player:Player, key:keyof typeof stations) {
     const station = stations[key];
-    return Math.hypot(player.x-station.x,player.y-station.y)<=STATION_RADIUS;
+    return canInteract(player,station,{radius:STATION_RADIUS,handsFree:true});
   }
 
   private nearby(player:Player, other:Player) {
     return player.id!==other.id && this.electorate.has(other.id) &&
-      Math.hypot(player.x-other.x,player.y-other.y)<=TRADE_RADIUS && localPerception(player,other).visible;
+      canInteract(player,other,{radius:TRADE_RADIUS,handsFree:true});
   }
 
   contacts(player:Player, players:Player[]): Contact[] {
@@ -237,9 +288,14 @@ export class PlenaryMatch {
     switch (action.kind) {
       case 'run': this.election.run(id,action.office,now); break;
       case 'invest': this.election.invest(id,action.amount,spend); break;
-      case 'advertise': if (this.at(player,'press')) this.election.advertise(id,spend); break;
+      case 'advertise':
+        if (this.at(player,'press') && this.election.advertise(id,spend)) this.economy.recordActivity(id,'propaganda');
+        break;
       case 'speech':
-        if (this.at(player,'panel') && this.election.speech(id)) this.economy.changePopularity(id,3);
+        if (this.at(player,'panel') && this.election.speech(id)) {
+          this.economy.recordActivity(id,'discurso');
+          this.economy.changePopularity(id,3);
+        }
         break;
       case 'interview': if (hasVoice && this.at(player,'tv')) this.election.interview(id,now); break;
       case 'support': this.election.support(id,action.to); break;
@@ -269,7 +325,7 @@ export class PlenaryMatch {
   advance(now:number) {
     if (!this.running) return;
     if (this.phase!=='ballot' && !(this.phase==='negotiation' && now>=this.ends)) {
-      this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
+      this.election.advance(now,this.popularity,(id,amount) => this.paySalary(id,amount));
     }
     if (now<this.ends) return;
     if (this.phase==='hearing') {
@@ -278,6 +334,7 @@ export class PlenaryMatch {
       const removed = this.canVote(target) && yes>=this.quorum();
       if (removed) {
         this.economy.suspend(target);
+        this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
         this.election.leave(target,now);
         if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
       }
@@ -297,7 +354,13 @@ export class PlenaryMatch {
       this.ends = now+BALLOT_MS;
       return;
     }
-    const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
+    let yes = [...this.votes.values()].filter(vote => vote==='yes').length;
+    let no = this.votes.size-yes;
+    const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
+    if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
+      if (preference>0) yes++;
+      if (preference<0) no++;
+    }
     const needed = this.billQuorum();
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
@@ -306,9 +369,9 @@ export class PlenaryMatch {
     const previous = {budget:this.budget,stability:this.stability};
     this.budget = clamp(balance);
     this.stability = clamp(this.stability+impact.stability+Math.min(0,balance)*2);
-    this.outcomes.push({round:this.round,passed,yes,no:this.votes.size-yes,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
+    this.outcomes.push({round:this.round,passed,yes,no,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
-    this.election.advance(now,this.popularity,(id,amount) => this.economy.earn(id,amount));
+    this.election.advance(now,this.popularity,(id,amount) => this.paySalary(id,amount));
     this.economy.cancelOffers();
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else if (this.round===bills.length-1) {
@@ -316,6 +379,7 @@ export class PlenaryMatch {
         this.stability>=45 ? 'O Congresso terminou a sessão estável.' : 'A sessão terminou abaixo de 45 de estabilidade.');
     } else {
       this.round++;
+      this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
       this.nextRound(now);
     }
   }
@@ -326,7 +390,6 @@ export class PlenaryMatch {
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
   private finish(winner:Role | undefined, reason:string) {
-    this.economy.settleAgendas(this.electorate);
     this.phase = 'finished';
     this.winner = winner;
     this.reason = reason;

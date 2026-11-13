@@ -1,53 +1,39 @@
+import { equippedWeapon } from './equipment';
+import { doorDestination } from './interactions';
+import { aidRadius, infirmary } from './medical';
+import { npcs } from './npcs';
+import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, type GroundItem } from './gameplay';
+import { canReachObject, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
-import type { Motion, Player } from './map';
-import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
+import { PLENARY_DOORS, type Motion, type Player } from './map';
+import { npcRules } from './parliamentarians';
+import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
+type FieldAction = {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
+
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void, pocketCash:(id:number) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void) {
+export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
-  const agendaDock = element<HTMLDetailsElement>('agenda-dock');
+  const agendaDock = element('agenda-dock');
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
-  const missionTabs = [element<HTMLButtonElement>('mission-tab-active'),element<HTMLButtonElement>('mission-tab-done')];
-  function selectMissionTab(selected:HTMLButtonElement) {
-    for (const tab of missionTabs) {
-      const active = tab===selected;
-      tab.setAttribute('aria-selected',String(active));
-      tab.tabIndex = active ? 0 : -1;
-      element(tab.getAttribute('aria-controls')!).hidden = !active;
-    }
-  }
-  for (const [index,tab] of missionTabs.entries()) {
-    tab.onclick = () => selectMissionTab(tab);
-    tab.onkeydown = event => {
-      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
-      event.preventDefault();
-      const next = missionTabs[event.key==='Home' ? 0 : event.key==='End' ? 1 : 1-index];
-      selectMissionTab(next);
-      next.focus();
-    };
-  }
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
+  let xpEffect:HTMLElement | undefined;
   let missionRenderKey = '';
   const notices = element('hud-notices');
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
-  const pocket = element<HTMLButtonElement>('pocket-cash');
-  const pocketReward = element('pocket-reward');
-  let nearbyCash:GroundItem | undefined;
-  pocket.onclick = () => { if (nearbyCash) pocketCash(nearbyCash.id); };
   function addStationButton(action:{station:Station; icon:string; label:string}) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -90,15 +76,127 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     button.onclick = () => sendActivity(station);
     return {button,station};
   });
+  const fieldActions = element('field-actions');
+  const progress = element<HTMLProgressElement>('office-progress');
+  const progressLabel = element('office-progress-label');
+  const officeBadge = element('own-office');
+  const vitality = element('vitality');
+  const vitalityNumber = element('vitality-number');
+  const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
+  const gearStrip = element('equipped-gear');
+  const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
+  const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+  function renderEquipped(state?:GameplayView) {
+    const equipped = state?.equipped ?? [];
+    for (const [id,{tile}] of gearTiles) {
+      if (equipped.some(item=>item.id===id)) continue;
+      tile.remove();
+      gearTiles.delete(id);
+    }
+    for (const item of equipped) {
+      const name = objects[item.kind].name;
+      let entry = gearTiles.get(item.id);
+      if (!entry) {
+        const tile = node('span');
+        tile.className = 'equipped-gear-tile';
+        tile.setAttribute('role','listitem');
+        tile.dataset.kind = item.kind;
+        const timer = node('span');
+        timer.className = 'equipped-gear-timer';
+        timer.setAttribute('aria-hidden','true');
+        tile.append(itemPortrait(item.kind),timer);
+        gearStrip.append(tile);
+        entry = {tile,timer};
+        gearTiles.set(item.id,entry);
+      }
+      const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
+      const time = seconds ? `${secondsLabel.format(seconds)} s` : '';
+      const label = seconds ? `${name} · Recarga: ${time}` : name;
+      if (entry.tile.title===label) continue;
+      entry.timer.textContent = time;
+      entry.timer.hidden = !seconds;
+      entry.tile.title = label;
+      entry.tile.setAttribute('aria-label',label);
+    }
+    gearStrip.hidden = equipped.length===0;
+  }
+
+  let fieldKey = '';
+  let roster:Player[] = [];
   let own:Player | undefined;
+  function renderField(view:PlenaryView|undefined, player:Player|undefined) {
+    const actions:{label:string; icon:string; action:FieldAction}[] = [];
+    const state = view?.gameplay;
+    const channel = state?.officeChannel;
+    const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
+    const robbery = state?.robberyProgress;
+    progress.hidden = !breach && robbery===undefined;
+    if (robbery!==undefined) {
+      progress.max = npcRules.robberyMs;
+      progress.value = robbery;
+      progress.setAttribute('aria-label','Roubando dinheiro');
+      actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
+    }
+    progressLabel.hidden = !breach;
+    if (breach) {
+      progress.max = breach.duration;
+      progress.value = breach.elapsed;
+      progress.setAttribute('aria-label',breach.label);
+      progressLabel.textContent = `${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`;
+    }
+    const ownOffice = state?.ownOffice;
+    officeBadge.hidden = !ownOffice;
+    if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
+    for (const {label,...action} of state?.officeOptions ?? []) {
+      actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
+    }
+    if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
+      for (const npc of state.parliamentarians ?? []) {
+        actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
+          action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
+      }
+      if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
+      const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
+      if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
+      if (state.treatment) {
+        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Tratar ferimentos'} · ${money(infirmary.price)}`,
+          icon:'shield',action:{kind:'treat'}});
+      }
+      if (player.carrying) {
+        actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
+      } else {
+        for (const target of state.npcNearby ?? []) {
+          actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
+        }
+        if (!player.knockedOut && equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
+        for (const target of roster) {
+          if (target.id===id) continue;
+          if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
+            actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
+            if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
+            actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
+          }
+        }
+      }
+    }
+    const key = JSON.stringify(actions);
+    if (key===fieldKey) return;
+    fieldKey = key;
+    fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
+      const control = hudButton(label,()=>sendField(action));
+      control.prepend(hudGlyph(icon));
+      if (action.kind==='attack') control.dataset.key = 'Space';
+      return control;
+    }));
+  }
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const unavailable = '[hidden], [data-context-hidden="true"]';
   function refreshActionKeys() {
     let index = 0;
     for (const button of actionButtons()) {
-      const number = !button.disabled && !button.closest(unavailable) ? ++index : 0;
-      const key = number && number<=9 ? String(number) : null;
+      const available = !button.disabled && !button.closest(unavailable);
+      const key = available ? button.dataset.key ?? (++index<=9 ? String(index) : null) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -112,7 +210,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         badge.setAttribute('aria-hidden','true');
         button.append(badge);
       }
-      badge.textContent = key;
+      badge.textContent = key==='Space' ? 'Espaço' : key;
       button.setAttribute('aria-keyshortcuts',key);
     }
   }
@@ -120,8 +218,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.addEventListener('click',refreshActionKeys);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
-      event.metaKey || event.shiftKey || stations.hidden || !/^[1-9]$/.test(event.key) || hudConsumesKeys(event.target)) return;
-    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      event.metaKey || stations.hidden || hudConsumesKeys(event.target)) return;
+    const key = event.code==='Space' ? 'Space' : !event.shiftKey && /^[1-9]$/.test(event.key) ? event.key : undefined;
+    if (!key) return;
+    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
     if (!button || button.disabled || button.closest(unavailable)) return;
     event.preventDefault();
     button.click();
@@ -143,12 +243,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
-  agendaDock.open = false;
-  selectMissionTab(missionTabs[0]);
+  agendaDock.hidden = true;
+  element('agenda-announcement').textContent = '';
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
     timers.delete(node);
     node.remove();
+    if (timers.size===0) notices.hidePopover();
   }
 
   function notify(title:string, text:string, critical=false) {
@@ -167,42 +268,61 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     description.textContent = text;
     node.append(heading,description);
     notices.append(node);
+    if (notices.matches(':popover-open') && document.querySelector('dialog:modal')) notices.hidePopover();
+    if (!notices.matches(':popover-open')) notices.showPopover();
     timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
   }
 
-  function renderMissions(missions:PoliticsView['missions']) {
-    const key = JSON.stringify(missions);
+  function renderMissions(missions:PoliticsView['missions'], prior?:PoliticsView['missions']) {
+    const recent = missions.completed.slice(-2);
+    const key = JSON.stringify([missions.active,recent]);
     if (key===missionRenderKey) return;
     missionRenderKey = key;
     element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    element('missions-empty').hidden = !!missions.completed.length;
-    function row(mission:Mission, done:boolean) {
-      const node = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
-      node.dataset.done = String(done);
-      node.querySelector('strong')!.textContent = missionTitle(mission);
-      const progress = mission.kind==='fortuna' ? `${money(mission.current)} / ${money(mission.target)}` :
-        `${mission.current} / ${mission.target}`;
-      const reward = missionReward(mission.kind);
-      node.querySelector('small')!.textContent = done ? reward ? missions.paid ? 'Prêmio recebido' : 'Prêmio no fim da sessão' : 'Capricho concluído' : progress;
-      node.querySelector<HTMLElement>('.mission-reward')!.hidden = !reward;
-      node.querySelector('.mission-reward span')!.textContent = `+${money(reward)}`;
-      return node;
+    const newCompletions = prior ? recent.filter(mission=>!prior.completed.some(done=>done.id===mission.id)) : [];
+    if (newCompletions.length) {
+      element('agenda-announcement').textContent = newCompletions.map(mission=>`Concluído: ${missionTitle(mission)}`).join('. ');
     }
-    activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));
-    if (completedMissions.children.length!==missions.completed.length || missions.paid) {
-      completedMissions.replaceChildren(...missions.completed.slice().reverse().map(mission => row(mission,true)));
+    function row(mission:Mission, done:boolean) {
+      const row = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
+      row.dataset.done = String(done);
+      const title = row.querySelector('strong')!;
+      title.textContent = missionTitle(mission);
+      if (done) title.setAttribute('aria-label',`Concluído: ${title.textContent}`);
+      const detail = row.querySelector('small')!;
+      detail.hidden = done;
+      if (!done) {
+        const progress = mission.kind==='fortuna' ? `${money(mission.current)}/${money(mission.target)}` :
+          timedAgendas.has(mission.kind) ? `${Math.floor(mission.current/1000)}/${mission.target/1000} s` :
+          mission.target>1 ? `${mission.current}/${mission.target}` : '';
+        detail.textContent = progress;
+        detail.hidden = !progress;
+      }
+      return row;
+    }
+    activeMissions.replaceChildren(...missions.active.map(mission=>row(mission,false)));
+    completedMissions.hidden = !recent.length;
+    if (completedMissions.dataset.recent!==recent.map(mission=>mission.id).join(',')) {
+      completedMissions.dataset.recent = recent.map(mission=>mission.id).join(',');
+      completedMissions.replaceChildren(...recent.map(mission=>{
+        const entry = row(mission,true);
+        entry.classList.toggle('agenda-completed-now',newCompletions.includes(mission));
+        return entry;
+      }));
     }
   }
 
   function actions(view:PlenaryView | undefined = previous) {
-    const exploring = view?.phase==='negotiation';
     const player = own;
+    const exploring = view?.phase==='negotiation' && !player?.knockedOut;
+    renderField(exploring ? view : undefined,player);
+    const canInteract = exploring && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
     let best = STATION_RADIUS;
-    if (exploring && player) {
+    if (canInteract && player) {
       for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
         const distance = Math.hypot(player.x-point.x,player.y-point.y);
-        if (distance<=best && canReachObject(player,point)) {
+        if (canReachObject(player,point,{radius:best,handsFree:true})) {
           best = distance;
           context = key;
         }
@@ -217,16 +337,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.dataset.contextHidden = String(button.dataset.station!==context);
     }
     interviewHint.dataset.contextHidden = String(context!=='tv');
-    nearbyCash = exploring && !context && player ?
-      view.gameplay?.nearby.find(item=>cashAmount(item.kind) && canReachObject(player,item)) : undefined;
-    const amount = nearbyCash && cashAmount(nearbyCash.kind);
-    pocket.hidden = !amount;
-    renderNearby(player,exploring);
-    if (amount) pocketReward.textContent = `+${money(amount)}`;
+    renderNearby(player,canInteract);
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
-    stations.hidden = !exploring || (nearbyToggle.hidden && pocket.hidden && !hasAction && !hint);
+    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 
@@ -247,6 +362,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (incomeEffect===effect) incomeEffect = undefined;
       },{once:true});
       incomeEffect = effect;
+      walletEffects.append(effect);
+    },
+    showXp(amount:number, head:{x:number;y:number} | undefined) {
+      if (!head) return;
+      xpEffect?.remove();
+      const effect = document.createElement('strong');
+      effect.className = 'wallet-gain xp-gain';
+      effect.setAttribute('aria-hidden','true');
+      effect.textContent = `+${amount} XP`;
+      effect.style.left = `${head.x}px`;
+      effect.style.top = `${head.y}px`;
+      effect.addEventListener('animationend',()=>{
+        effect.remove();
+        if (xpEffect===effect) xpEffect = undefined;
+      },{once:true});
+      xpEffect = effect;
       walletEffects.append(effect);
     },
     activityResult({activity,text}:RoomActivityResult) {
@@ -277,12 +408,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
-        renderMissions(politics.missions);
-        if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) {
-          selectMissionTab(missionTabs[0]);
-          agendaDock.open = false;
+        const prior = previous?.phase==='finished' ? undefined : previous?.politics?.missions;
+        if (!prior && previous?.phase==='finished') {
+          completedMissions.replaceChildren();
+          delete completedMissions.dataset.recent;
+          missionRenderKey = '';
         }
+        renderMissions(politics.missions,prior);
       }
+      agendaDock.hidden = !politics || view.phase==='lobby';
 
       if (previous) {
         const past = previous.politics;
@@ -302,16 +436,21 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
           notify('Carteira atualizada',`−${money(past.wallet-politics.wallet)}`);
         }
-        const completed = politics && past ? politics.missions.completed.slice(past.missions.completed.length) : [];
-        if (view.phase!=='finished' && completed.length) {
-          const title = completed.length===1 ? 'Missão cumprida' : `${completed.length} missões cumpridas`;
-          notify(title,completed.map(missionTitle).join(' · '));
-        }
+
+      }
+      renderEquipped(view.gameplay);
+      const hp = view.gameplay?.vitality;
+      vitality.hidden = !hp;
+      if (hp) {
+        vitalityMeter.max = hp.max;
+        vitalityMeter.value = hp.hp;
+        vitalityNumber.textContent = hp.recovery ? `${own?.carried ? 'Em transporte' : 'Nocaute'} · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
       }
       previous = view;
       actions(view);
     },
     players(players:Player[]) {
+      roster = players;
       own = players.find(player => player.id===id);
       if (own) {
         element('hud-nick').textContent = own.nick;
@@ -320,12 +459,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions();
     },
     destroy() {
+      renderEquipped();
       for (const node of timers.keys()) remove(node);
-      for (const tab of missionTabs) {
-        tab.onclick = null;
-        tab.onkeydown = null;
-      }
+      agendaDock.hidden = true;
+      completedMissions.replaceChildren();
+      delete completedMissions.dataset.recent;
       incomeEffect?.remove();
+      xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',refreshActionKeys);
       for (const button of actionButtons()) {
@@ -333,9 +473,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         button.querySelector('.station-key')?.remove();
       }
       stations.removeEventListener('click',onStationClick,true);
-      stations.hidden = pocket.hidden = true;
-      pocket.onclick = null;
+      stations.hidden = true;
+      progress.hidden = officeBadge.hidden = true;
       shortcuts.replaceChildren();
+      fieldActions.replaceChildren();
+      vitality.hidden = true;
     },
   };
 }
