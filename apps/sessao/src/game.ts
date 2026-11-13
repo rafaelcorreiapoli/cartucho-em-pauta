@@ -20,7 +20,13 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+// Hand coordinates in each 128px source frame, relative to the feet.
+const briefcaseGrip = [
+  [[[85,101],[91,94],[85,101],[88,85]],[[57,102],[82,89],[57,102],[78,88]],[[38,100],[39,95],[38,100],[40,89]]],
+  [[[83,103],[86,97],[83,103],[87,87]],[[57,104],[85,90],[57,104],[82,89]],[[41,103],[41,99],[41,103],[43,94]]],
+] as const;
+
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -431,6 +437,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.office.destroy();
           view.items.destroy();
           view.weapon.destroy();
+          view.briefcase?.destroy();
           this.views.delete(id);
         }
       }
@@ -452,6 +459,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.office.setVisible(false);
           view?.items.setVisible(false);
           view?.weapon.setVisible(false);
+          view?.briefcase?.setVisible(false);
           continue;
         }
         if (!view) {
@@ -535,7 +543,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
-        const exposed = latest.exposed ?? [];
+        const grip = briefcaseGrip[character]?.[row];
+        const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
         const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
         if (view.itemsKey!==itemsKey) {
@@ -565,6 +574,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.anims.stop();
           sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
         }
+        if (grip && latest.cashInHand && !pose && !combatArt) {
+          const walkFrame = typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
+          const [handX,handY] = grip[walkFrame];
+          const briefcase = view.briefcase ??= this.add.image(0,0,'item-briefcase').setOrigin(.5,.12).setDisplaySize(12,12);
+          const side = facing===3 ? -1 : 1;
+          briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
+            .setFlipX(facing===3).setAlpha(concealed ? .38 : 1).setVisible(true)
+            .setDepth(own ? HEIGHT+91 : spriteDepth+.1);
+        } else view.briefcase?.setVisible(false);
         if (own) {
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);

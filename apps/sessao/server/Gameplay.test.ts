@@ -383,13 +383,17 @@ test('concealment filters cash from observers and photos through reconnect and c
   game.robNpc(alice,npc,world);
   const cash = game.view(alice,world).inventory.find(item=>item.kind==='briefcase')!;
   expect(game.visibleItems(alice.id,world.now)).toContainEqual({id:cash.id,kind:'briefcase'});
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(true);
   game.act(alice,{kind:'use',item:underwear.id},world);
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(false);
+  expect(game.hasVisibleCash(alice.id,world.now,alice.id)).toBe(true);
   expect(game.act(alice,{kind:'use',item:underwear.id},world)).toBe('Objeto indisponível.');
   expect(game.visibleItems(alice.id,world.now)).toEqual([{id:gift.id,kind:'gift'}]);
   expect(game.visibleItems(alice.id,world.now,alice.id)).toHaveLength(2);
   expect(game.physicalCash()).toBe(12);
   game.act(alice,{kind:'drop',item:cash.id},world);
   expect(game.view(alice,world).ground.some(item=>item.id===cash.id)).toBe(true);
+  expect(game.hasVisibleCash(alice.id,world.now,alice.id)).toBe(false);
   game.robNpc(alice,npc,world);
   expect(game.visibleItems(alice.id,world.now)).toHaveLength(1);
   Object.assign(alice,{x:240,y:250});
@@ -403,6 +407,7 @@ test('concealment filters cash from observers and photos through reconnect and c
   world.now = 45_000;
   game.tick(world,false);
   expect(game.view(alice,world).concealmentSeconds).toBeUndefined();
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(true);
   expect(game.visibleItems(alice.id,world.now)).toHaveLength(2);
   expect(events.filter(event=>event.type.startsWith('concealment')).map(event=>event.witnesses)).toEqual([[],[]]);
 });

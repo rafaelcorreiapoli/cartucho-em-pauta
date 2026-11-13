@@ -290,6 +290,11 @@ export class Gameplay {
     this.exposed.set(id,items);
   }
 
+  hasVisibleCash(id:string,now:number,observer:string) {
+    if (observer!==id && (this.concealedUntil.get(id) ?? 0)>now) return false;
+    return this.inventory(id).some(({data})=>!!cashAmount(data));
+  }
+
   visibleItems(id:string,now=Infinity,observer?:string) {
     const concealed = observer!==id && (this.concealedUntil.get(id) ?? 0)>now;
     return [...this.exposed.get(id) ?? []].flatMap(itemId=>{
