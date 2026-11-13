@@ -14,7 +14,9 @@ export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] a
 
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
-export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
+export const PLENARY_SEATS = [657,713].flatMap(row =>
+  [324,375,426,534,585,636].map((x,index)=>({x,y:row+[0,7,12,12,7,0][index]})),
+);
 
 export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
 
@@ -56,7 +58,6 @@ export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
   [128,460],[493,438],[713,460],[757,435],
-  [274,614],[274,677],[643,614],[643,677],
   [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
@@ -194,7 +195,7 @@ export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
   {...isolationRoom,color:0x61716a},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
-  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
+  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x232824},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
