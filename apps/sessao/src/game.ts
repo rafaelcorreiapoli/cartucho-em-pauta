@@ -537,8 +537,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
-          .setColor(player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df');
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick);
+        const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
+        // Phaser redraws and uploads the text texture on every setColor call.
+        if (label.style.color!==nameColor) label.setColor(nameColor);
         const exposed = latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
         const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
@@ -559,8 +561,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
-          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar')
-          .setColor(latest.former ? '#e6a38c' : '#cbd6db');
+          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
+        const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
+        if (office.style.color!==officeColor) office.setColor(officeColor);
         if (moving && !pose && !combatArt) {
           sprite.play(`${character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
