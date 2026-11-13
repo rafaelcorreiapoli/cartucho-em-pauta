@@ -93,6 +93,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const concealmentLabel = node('span');
   concealmentLabel.className = 'equipped-gear-timer';
   concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentLabel);
+  function useEquipped(kind:'scan-xray'|'attack') {
+    const equipped = previous?.gameplay?.equipped;
+    if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
+    if (kind==='attack' ? !equippedWeapon(equipped) : !equipped?.some(item=>item.kind==='xray')) return false;
+    sendField({kind});
+    return true;
+  }
+
   function renderEquipped(state?:GameplayView) {
     const equipped = state?.equipped ?? [];
     for (const [id,{tile}] of gearTiles) {
@@ -104,9 +112,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const name = objects[item.kind].name;
       let entry = gearTiles.get(item.id);
       if (!entry) {
-        const tile = node('span');
+        const shortcut = item.kind==='xray' ? 'X' : equippedWeapon([item]) ? 'Space' : undefined;
+        const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : 'attack')) : node('span');
         tile.className = 'equipped-gear-tile';
-        tile.setAttribute('role','listitem');
+        if (shortcut) {
+          tile.setAttribute('aria-keyshortcuts',shortcut);
+          const badge = node('kbd',shortcut==='Space' ? 'Espaço' : shortcut);
+          badge.className = 'equipped-gear-key';
+          badge.setAttribute('aria-hidden','true');
+          tile.append(badge);
+        } else tile.setAttribute('role','listitem');
         tile.dataset.kind = item.kind;
         const timer = node('span');
         timer.className = 'equipped-gear-timer';
@@ -125,7 +140,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       entry.timer.textContent = time;
       entry.timer.hidden = !time;
       entry.tile.title = label;
-      entry.tile.setAttribute('aria-label',label);
+      entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
+      if (item.kind==='xray') entry.tile.setAttribute('aria-pressed',String(!!state?.xrayVision));
     }
     const remaining = state?.concealmentSeconds;
     if (remaining) {
@@ -184,9 +200,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
           action:{kind:'deliver',place:'treasury',item:item.id}});
       }
-      if (state.equipped?.some(item=>item.kind==='xray')) actions.push({
-        label:state.xrayVision ? 'Desativar Raio X' : 'Ativar Raio X',icon:'search',action:{kind:'scan-xray'},
-      });
       if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
         label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},
       });
@@ -203,7 +216,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
-        if (!player.knockedOut && equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
         for (const target of roster) {
           if (target.id===id) continue;
           if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
@@ -220,7 +232,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
       const control = hudButton(label,()=>sendField(action));
       control.prepend(hudGlyph(icon));
-      if (action.kind==='attack') control.dataset.key = 'Space';
       return control;
     }));
   }
@@ -231,7 +242,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     let index = 0;
     for (const button of actionButtons()) {
       const available = !button.disabled && !button.closest(unavailable);
-      const key = available ? button.dataset.key ?? (++index<=9 ? String(index) : null) : null;
+      const key = available ? (++index<=9 ? String(index) : null) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -245,7 +256,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         badge.setAttribute('aria-hidden','true');
         button.append(badge);
       }
-      badge.textContent = key==='Space' ? 'Espaço' : key;
+      badge.textContent = key;
       button.setAttribute('aria-keyshortcuts',key);
     }
   }
@@ -253,9 +264,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.addEventListener('click',refreshActionKeys);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
-      event.metaKey || stations.hidden || hudConsumesKeys(event.target)) return;
-    const key = event.code==='Space' ? 'Space' : !event.shiftKey && /^[1-9]$/.test(event.key) ? event.key : undefined;
-    if (!key) return;
+      event.metaKey || hudConsumesKeys(event.target)) return;
+    const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : undefined;
+    if (equipmentAction) {
+      if (useEquipped(equipmentAction)) event.preventDefault();
+      return;
+    }
+    if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
+    const key = event.key;
     const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
     if (!button || button.disabled || button.closest(unavailable)) return;
     event.preventDefault();
