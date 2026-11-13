@@ -2,7 +2,8 @@ import { equipment } from '../src/equipment';
 import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
 import { MAX_STAMINA } from '../src/movement';
-import { canReachDownedPlayer, recoveryRules } from '../src/medical';
+import { canReachDownedPlayer } from '../src/interactions';
+import { recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
 type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;

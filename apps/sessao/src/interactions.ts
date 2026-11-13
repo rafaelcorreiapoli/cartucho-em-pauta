@@ -1,3 +1,4 @@
+import { aidRadius } from './medical';
 import { PLENARY_DOORS, obstacleBetween, wallBetween, type Motion } from './map';
 
 export type InteractionActor = Motion & {knockedOut?:boolean; carrying?:boolean};
@@ -20,4 +21,9 @@ export function doorDestination(actor:InteractionActor, index:number, closed:boo
   const threshold = {x,y:top+height/2};
   if (!canInteract(actor,threshold,{radius:24})) return;
   return {x,y:actor.y<=threshold.y ? top+height+10 : top-10};
+}
+
+export function canReachDownedPlayer(actor:InteractionActor & {id:string}, target:InteractionActor & {id:string}) {
+  return actor.id!==target.id && !!target.knockedOut &&
+    canInteract(actor,target,{radius:aidRadius,clearFloor:true,handsFree:true});
 }

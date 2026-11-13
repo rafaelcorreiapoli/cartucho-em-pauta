@@ -1,4 +1,4 @@
-import { canReachDownedPlayer } from './medical';
+import { canReachDownedPlayer } from './interactions';
 import {expect,test} from 'bun:test';
 import {agendaProject,canReachStation,stations,voteIntentSummary} from './plenary';
 import {canVerifyDocumentAt,consumableAction,objects,readGameplayAction,treasuryDeliveries} from './gameplay';

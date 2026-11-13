@@ -1,6 +1,6 @@
 import { blockedBy, canStand, type Player } from '../src/map';
 import { clearSegment } from '../src/navigation';
-import { canReachDownedPlayer } from '../src/medical';
+import { canReachDownedPlayer } from '../src/interactions';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type Pair = {carrier:Player; passenger:Player};
