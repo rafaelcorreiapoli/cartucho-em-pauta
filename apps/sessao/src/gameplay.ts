@@ -17,7 +17,7 @@ import { spyProducts, type SpyView } from "./surveillance";
 
 export const objects = {
   firstAidKit,
-  forensicKit:{name:'Kit de Perícia',portrait:'retrato-documento.webp',description:'Analisa um documento publicado no Correio Interno.'},
+  forensicKit:{name:'Kit de Perícia',portrait:'retrato-kit-pericia.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
   ...spyProducts,
   ...officeGoods,

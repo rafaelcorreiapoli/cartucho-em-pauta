@@ -260,7 +260,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ITEM-33 | Megafone | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-34 | Detector de escutas e câmeras | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-35 | Ferramentas de arrombamento | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
-| ITEM-36 | Kit de Perícia | PARCIAL | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | Kit consumível, loja e laudo testados por socket. Retrato reutiliza arte do documento. | Baixa |
+| ITEM-36 | Kit de Perícia | IMPLEMENTADO | gameplay.ts, gameplay.test.ts, Documents.multiplayer.test.ts, retrato-kit-pericia.webp | Compra, consumo e laudos autêntico e adulterado testados por socket. Loja e inventário usam o retrato WebP exclusivo do catálogo. | — |
 | ITEM-37 | Pipeline de geração de ícones consistente com a direção artística | PARCIAL | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | Catálogo usa retratos WEBP; parte dos itens reaproveita arte. Falta padrão verificável para todos os assets. | Baixa |
 
 ## NPC

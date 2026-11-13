@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {agendaProject,voteIntentSummary} from './plenary';
-import {canVerifyDocumentAt,consumableAction,readGameplayAction,treasuryDeliveries} from './gameplay';
+import {canVerifyDocumentAt,consumableAction,objects,readGameplayAction,treasuryDeliveries} from './gameplay';
 
 test('document verification is offered only at the two document counters',()=>{
   expect(canVerifyDocumentAt('secretary')).toBe(true);
@@ -37,4 +37,12 @@ test('the inventory offers the healing shortcut for the selected kit',()=>{
   expect(control).toEqual({label:'Curar',key:'1',action:{kind:'use',item:17}});
   expect(readGameplayAction(control?.action)).toMatchObject({kind:'use',item:17});
   expect(consumableAction({id:18,kind:'forensicKit'})).toBeUndefined();
+});
+
+test('the forensic kit uses its own bundled WebP portrait',async()=>{
+  const portrait = objects.forensicKit.portrait;
+  expect(portrait).not.toBe(objects.document.portrait);
+  const file = Bun.file(new URL('../public/assets/'+portrait,import.meta.url));
+  expect(await file.exists()).toBe(true);
+  expect(await file.slice(8,12).text()).toBe('WEBP');
 });
