@@ -3,7 +3,7 @@ import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { mapNpcs } from './npcs';
-import { binocularBonus, xray } from './equipment';
+import { binoculars, xray } from './equipment';
 import { canReachObject, cashAmount, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
@@ -88,6 +88,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
+    private safeFraction = 0;
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -170,7 +171,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }).setOrigin(.5,0).setDepth(1) : undefined;
         return {sprite,label};
       });
-      this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
+      this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
         keys.clear();
@@ -353,6 +354,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.safeProgress.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
+      if (!negotiating || channel?.kind!=='office-cash') this.safeFraction = 0;
       if (negotiating && channel?.kind==='office-cash') {
         const safe = privateOffices.find(office=>office.id===channel.officeId)?.safe;
         if (safe) {
@@ -360,15 +362,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const x = safe.x-15;
           const y = safe.y-footOffset-height-8;
           const fraction = Phaser.Math.Clamp(channel.elapsed/channel.duration,0,1);
+          this.safeFraction = reducedMotion.matches || fraction<this.safeFraction ? fraction :
+            Phaser.Math.Linear(this.safeFraction,fraction,1-Math.exp(-delta/45));
           this.safeProgress.fillStyle(0x211a10,.95).fillRoundedRect(x,y,30,5,2);
           this.safeProgress.lineStyle(.75,0xffdb83).strokeRoundedRect(x,y,30,5,2);
-          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*fraction,2);
+          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*this.safeFraction,2);
         }
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const binoculars = plenaryView?.gameplay?.equipped?.some(item=>item.kind==='binoculars');
-      const visionRadius = VISION_RADIUS+(binoculars ? binocularBonus : 0);
+      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1);
       for (const {sprite,label} of this.npcViews) {
         const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
         sprite.setVisible(visible);
@@ -559,7 +562,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
         }
         if (own) {
-          this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
+          this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setDepth(y-1).setVisible(true);
           if (inSession) {
             const [left,top,width,height] = PLENARY_BOUNDS;
             camera.centerOn(left+width/2,top+height/2-30);

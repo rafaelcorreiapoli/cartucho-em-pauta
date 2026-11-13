@@ -93,10 +93,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   concealmentFooter.className = 'equipped-gear-footer';
   concealmentFooter.append(concealmentLabel);
   concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
-  function useEquipped(kind:'scan-xray'|'attack') {
+  function useEquipped(kind:'scan-xray'|'attack'|'use-binoculars') {
     const equipped = previous?.gameplay?.equipped;
     if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
-    if (kind==='attack' ? !equippedWeapon(equipped) : !equipped?.some(item=>item.kind==='xray')) return false;
+    if (kind==='attack' ? !equippedWeapon(equipped) : !equipped?.some(item=>item.kind===(kind==='scan-xray' ? 'xray' : 'binoculars'))) return false;
     sendField({kind});
     return true;
   }
@@ -112,8 +112,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const name = objects[item.kind].name;
       let entry = gearTiles.get(item.id);
       if (!entry) {
-        const shortcut = item.kind==='xray' ? 'X' : equippedWeapon([item]) ? 'Space' : undefined;
-        const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : 'attack')) : node('span');
+        const shortcut = item.kind==='xray' ? 'X' : item.kind==='binoculars' ? 'B' : equippedWeapon([item]) ? 'Space' : undefined;
+        const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : shortcut==='B' ? 'use-binoculars' : 'attack')) : node('span');
         tile.className = 'equipped-gear-tile';
         const footer = node('span');
         footer.className = 'equipped-gear-footer';
@@ -138,10 +138,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const time = item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
-      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
+      const active = item.kind==='binoculars' ? state?.binocularSeconds : undefined;
+      const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
       if (entry.tile.title===label) continue;
-      entry.tile.dataset.active = String(item.kind==='xray' && !!state?.xrayVision);
+      entry.tile.dataset.active = String(!!active || item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
       entry.timer.hidden = !time;
       entry.tile.title = label;
@@ -267,7 +268,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || hudConsumesKeys(event.target)) return;
-    const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : undefined;
+    const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : event.code==='KeyB' && previous?.gameplay?.equipped?.some(item=>item.kind==='binoculars') ? 'use-binoculars' : undefined;
     if (equipmentAction) {
       if (useEquipped(equipmentAction)) event.preventDefault();
       return;

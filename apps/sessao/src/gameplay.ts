@@ -24,7 +24,7 @@ export const objects = {
   gift:{exposable:true,name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-documento.webp',description:'Uma reserva que os outros podem ignorar.'},
-  binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
+  binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão por 10 s. Recarga automática de 30 s.'},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
@@ -60,7 +60,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -71,13 +71,13 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
   return articulating || !articulationActions.has(action.kind);
 }
-const replaySensitiveActions = new Set<GameplayActionKind>([...officeActions,'attack','aid','carry','release','treat','toggle-modulator','scan-xray','recharge-xray']);
+const replaySensitiveActions = new Set<GameplayActionKind>([...officeActions,'attack','aid','carry','release','treat','toggle-modulator','scan-xray','recharge-xray','use-binoculars']);
 export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActions.has(kind);
 
 export type ExposedItem = {id:number; kind:ObjectKind};
@@ -94,6 +94,7 @@ export type GameplayView = {
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
   concealmentSeconds?:number;
+  binocularSeconds?:number;
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
   equipmentCooldowns?:Record<number,number>;
   modulator?:{active:boolean; battery:number; recharge:number};

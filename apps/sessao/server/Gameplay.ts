@@ -17,7 +17,7 @@ import { Combat } from './Combat';
 import { Transport } from './Transport';
 import { aidRadius, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binocularBonus, equippedWeapon, equipment, isGear, concealment, xray, type Gear } from '../src/equipment';
+import { binoculars, equippedWeapon, equipment, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -46,6 +46,7 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
+  private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>}>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
@@ -68,6 +69,7 @@ export class Gameplay {
     this.exposed.clear();
     this.concealedUntil.clear();
     this.scanning.clear();
+    this.binocularUse.clear();
     this.installations.clear();
     this.servings.clear();
     this.clearedSites.clear();
@@ -107,7 +109,18 @@ export class Gameplay {
     return hp/max;
   }
 
-  vision(id:string) { return VISION_RADIUS+(this.wearing(id,'binoculars') ? binocularBonus : 0); }
+  private binocularRemaining(id:string,now:number) {
+    return this.wearing(id,'binoculars') ? Math.max(0,(this.binocularUse.get(id)?.activeUntil ?? 0)-now) : 0;
+  }
+
+  vision(id:string,now:number) {
+    return VISION_RADIUS*(this.binocularRemaining(id,now) ? binoculars.multiplier : 1);
+  }
+
+  private stopBinoculars(id:string) {
+    const use = this.binocularUse.get(id);
+    if (use) use.activeUntil = 0;
+  }
 
   officeSpawn(id:string) { return this.privateOffices.spawnFor(id); }
 
@@ -210,7 +223,7 @@ export class Gameplay {
   }
 
   private visibleGround(player:Player,now:number) {
-    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id)));
+    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
   }
 
   private spawnCash(now:number) {
@@ -278,6 +291,7 @@ export class Gameplay {
     this.tickOfficeChannels(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
+      if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (!exploring || player.knockedOut || !world.voice(player.id)) this.stopModulator(player.id,world.now);
     }
   }
@@ -308,6 +322,7 @@ export class Gameplay {
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.surveillance.leave(player.id,permanent);
     this.scanning.delete(player.id);
+    this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
@@ -350,6 +365,7 @@ export class Gameplay {
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
       const seconds = item.kind==='voiceModulator' ? modulator?.recharge :
+        item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
     }
@@ -364,6 +380,7 @@ export class Gameplay {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
@@ -371,7 +388,7 @@ export class Gameplay {
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
-      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id)).visible),
+      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
@@ -777,7 +794,7 @@ export class Gameplay {
     const scan = this.scanning.get(player.id);
     if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
         this.wearing(player.id,'xray')?.id!==scan.item || !world.wallet) return;
-    const radius = this.vision(player.id);
+    const radius = this.vision(player.id,world.now);
     const targets:NonNullable<GameplayView['xrayVision']>['targets'] = [];
     const add = (id:string,owner:string,{x,y}:Motion,safe?:true)=>{
       let balance = scan.balances.get(id);
@@ -872,6 +889,7 @@ export class Gameplay {
     if (!('equipped' in item.place) || item.place.equipped!==id) return 'Equipamento indisponível.';
     if (!this.available(id)) return 'Inventário cheio.';
     this.move(item,{holder:id});
+    if (item.data.kind==='binoculars') this.stopBinoculars(id);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
     if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
     this.event(world,player,'unequipped',item.data);
@@ -925,6 +943,13 @@ export class Gameplay {
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
+    if (action.kind==='use-binoculars') {
+      if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
+      if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
+      const activeUntil = world.now+binoculars.duration;
+      this.binocularUse.set(id,{activeUntil,readyAt:activeUntil+binoculars.cooldown});
+      return 'Binóculo ativo por 10 s.';
+    }
     if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);

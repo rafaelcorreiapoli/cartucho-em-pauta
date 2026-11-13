@@ -93,10 +93,19 @@ test('equipping changes custody, binocular range and voice battery without stack
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(alice,world).equipped).toEqual([binocular]);
   expect(game.view(alice,world).equipmentCooldowns).toEqual({});
-  expect(game.vision(alice.id)).toBe(VISION_RADIUS+2);
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  game.act(alice,{kind:'use-binoculars'},world);
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS*1.65);
+  expect(game.view(alice,world).binocularSeconds).toBe(10);
+  expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('recarga');
+  world.now += 10_000;
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  expect(game.view(alice,world).equipmentCooldowns?.[binocular.id]).toBe(30);
+  world.now += 30_000;
+  expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('ativo');
   expect(game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world)).toBe('Você já tem este equipamento.');
   game.act(alice,{kind:'unequip',item:binocular.id},world);
-  expect(game.vision(alice.id)).toBe(VISION_RADIUS);
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
 
   game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;

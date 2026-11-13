@@ -41,7 +41,7 @@ export class SessionRoom extends Room {
     return {
       ...world,
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
-      vision:(id:string)=>this.gameplay.vision(id),
+      vision:(id:string)=>this.gameplay.vision(id,world.now),
       present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
@@ -307,7 +307,7 @@ export class SessionRoom extends Room {
           this.lastMatchView.set(id,key);
         }
         if (this.match.running) {
-          const vision = this.gameplay.vision(id);
+          const vision = this.gameplay.vision(id,now);
           const visible = plenary ? world.players.filter(inPlenary) :
             world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
