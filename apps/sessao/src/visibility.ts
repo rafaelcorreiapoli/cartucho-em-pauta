@@ -10,28 +10,17 @@ export function wallVision(origin:Motion,radius:number) {
   }
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
-    let nearest = radius;
     let distance = radius;
-    for (const wall of nearby) {
-      const [entry,surfaceEnd] = litWallSpan(origin,dx,dy,wall);
-      if (entry>nearest || (entry===nearest && surfaceEnd>=distance)) continue;
-      nearest = entry;
-      distance = Math.min(radius,surfaceEnd);
-    }
+    for (const wall of nearby) distance = Math.min(distance,wallEntry(origin,dx,dy,wall));
     return {x:dx*distance,y:dy*distance,dx,dy};
   });
 }
 
-function litWallSpan(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
+function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
   const [nearX,farX] = slab(origin.x,dx,x,x+w);
   const [nearY,farY] = slab(origin.y,dy,y,y+h);
   const near = Math.max(nearX,nearY,0);
-  const far = Math.min(farX,farY);
-  if (near>far) return [Infinity,Infinity];
-  // An end cap blocks the ray at its face. Letting it travel inside the
-  // rectangle paints a wedge along the wall, especially at corridor joins.
-  const hitsEndCap = (w<h && nearY>=nearX) || (h<w && nearX>=nearY);
-  return [near,hitsEndCap ? near : Math.min(far,near+Math.min(w,h))];
+  return near<=Math.min(farX,farY) ? near : Infinity;
 }
 
 function slab(origin:number,direction:number,min:number,max:number) {
