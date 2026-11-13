@@ -22,6 +22,7 @@ async page => {
   await palette.getByText(/^1 \/ /).waitFor();
   await page.keyboard.press('Escape');
   await palette.waitFor({state:'hidden'});
+  if (await page.locator('#open-settings').isVisible()) throw Error('Botão avulso de configurações durante a partida');
   const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
   if (await launcher.getAttribute('aria-expanded')==='false') await launcher.click();
   for (const [name,key] of [['Equipamentos','E'],['Personagem','P'],['Celular','C'],['Microfone','M'],['Configurações','K']]) {

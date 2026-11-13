@@ -3,7 +3,7 @@ import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
-import { canStand, movementSpeed, roomAt, worldVisible, VISION_RADIUS, type Player } from '../src/map';
+import { canStand, movementSpeed, roomAt, worldVisible, PLENARY_DOORS, VISION_RADIUS, type Player } from '../src/map';
 import { infirmary, recoveryRules } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
@@ -365,11 +365,13 @@ test('modulator recharge follows the item when another player collects and equip
 });
 
 test('doors, furniture and actors without a player session use the shared world rules', () => {
-  const alice = player('Alice',480,520);
+  const [left,,width] = PLENARY_DOORS[1];
+  const center = left+width/2;
+  const alice = player('Alice',center,520);
   const passage = {player:alice,route:[],ack:0};
   applyInput(passage,{seq:1,door:1});
   expect(alice.y).toBeGreaterThan(520);
-  const closed = {player:player('Bia',480,554),route:[],ack:0,plenary:true};
+  const closed = {player:player('Bia',center,554),route:[],ack:0,plenary:true};
   applyInput(closed,{seq:1,door:1,plenary:true});
   expect(closed.player.y).toBe(554);
   expect(worldVisible({x:675,y:201},{x:675,y:249},VISION_RADIUS+2)).toBe(false);
