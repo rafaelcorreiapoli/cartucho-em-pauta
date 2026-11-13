@@ -1,3 +1,4 @@
+import { Parliamentarians } from './Parliamentarians';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
 
@@ -453,12 +454,22 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(events.filter(event=>event.type.startsWith('xray')).map(event=>event.witnesses)).toEqual([[],[],[],[]]);
 });
 
-test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
-  const {alice,bob,watcher,game,world,events} = setup();
+test('an NPC raises its quote only after witnessing a weapon hit',()=>{
+  const {alice,bob,game,world,events} = setup();
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
   Object.assign(bob,{x:alice.x+9,y:alice.y});
-  watcher.npc = true;
-  Object.assign(watcher,{x:alice.x-14,y:alice.y});
+  const parliamentarians = new Parliamentarians();
+  parliamentarians.reset(2,world.now);
+  const [witness,unaware] = parliamentarians.players;
+  Object.assign(witness,{x:alice.x-14,y:alice.y});
+  Object.assign(unaware,{x:720,y:240});
+  world.players = [alice,bob,witness,unaware];
+  world.publish = event=>{
+    events.push(event);
+    parliamentarians.witnessAggression(event);
+  };
+  const quote = (npc:Player) => parliamentarians.signature(npc.id,alice.id);
+  const before = parliamentarians.players.map(quote);
   world.spend = ()=>true;
   game.act(alice,{kind:'talk',target:'vendor'},world);
   game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
@@ -472,10 +483,13 @@ test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
     game.tick(world,true);
     return events.filter(event=>event.type==='hit').at(-1);
   };
-  expect(strike(100)?.witnesses).toEqual([watcher.id]);
-  world.vision = id=>id===watcher.id ? 10 : 100;
-  expect(strike(2000)?.witnesses).toEqual([]);
+  world.vision = id=>id===witness.id ? 10 : 100;
+  expect(strike(100)?.witnesses).toEqual([]);
+  expect(parliamentarians.players.map(quote)).toEqual(before);
   world.vision = ()=>100;
-  Object.assign(watcher,{x:720,y:240});
+  expect(strike(2000)?.witnesses).toEqual([witness.id]);
+  expect(quote(witness)).toBeGreaterThan(before[0]);
+  expect(quote(unaware)).toBe(before[1]);
+  Object.assign(witness,{x:720,y:240});
   expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });
