@@ -62,10 +62,18 @@ export class PlenaryMatch {
     this.economy.setAgendaInventory(...inventory);
   }
 
+  private readonly disconnected = new Set<string>();
+
+  setPlayerConnected(id:string,connected:boolean) {
+    if (connected) this.disconnected.delete(id);
+    else this.disconnected.add(id);
+    if (this.running) this.refreshAgendaEligibility();
+  }
+
   refreshAgendaEligibility() {
     const scheduled = this.agenda.size+Number(this.phase==='ballot');
     const ballotsLeft = Math.max(scheduled,bills.length-this.round%bills.length);
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round);
+    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected);
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -148,6 +156,7 @@ export class PlenaryMatch {
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.electorate = new Set(ids);
+    this.disconnected.clear();
     this.treasuryReputation.clear();
     this.npcIds.clear();
     this.npcVotes.clear();
@@ -201,6 +210,7 @@ export class PlenaryMatch {
   }
 
   leave(id:string, now:number) {
+    this.disconnected.delete(id);
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
     this.voteIntents.delete(id);

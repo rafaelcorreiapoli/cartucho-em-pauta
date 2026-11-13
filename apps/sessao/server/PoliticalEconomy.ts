@@ -367,10 +367,11 @@ export class PoliticalEconomy {
     }
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set()) {
     this.agendaRound = round;
-    const availableTargets = new Set([...players].filter(id=>!this.suspended(id)));
+    const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
     for (const id of players) {
+      if (disconnected.has(id)) continue;
       const account = this.accounts.get(id);
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));

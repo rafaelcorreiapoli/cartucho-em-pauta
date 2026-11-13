@@ -401,3 +401,19 @@ test('transfer missions wait until the payment quota renews even when the wallet
   expect(economy.transfer('a','b',3,false,1)).toBe(true);
   expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['pagamento','dinheiroAlvo']);
 });
+
+test('a dropped contact is replaced without changing their own agenda during the grace period',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b','c']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfieAlvo','cafe','passeio']);
+  const view = (id:string) => economy.view(id,[],0,false,()=>true)!.missions;
+  economy.updateAgendaEligibility(ids,3);
+  expect(view('a').active.find(mission=>mission.kind==='selfieAlvo')?.person?.id).toBe('b');
+  const before = view('b');
+  economy.updateAgendaEligibility(ids,3,()=>true,0,new Set(['b']));
+  expect(view('a').active.find(mission=>mission.kind==='selfieAlvo')?.person?.id).toBe('c');
+  expect(view('b')).toEqual(before);
+});

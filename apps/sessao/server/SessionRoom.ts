@@ -460,10 +460,12 @@ export class SessionRoom extends Room {
       state.route = [];
       state.player.moving = false;
     }
+    this.match.setPlayerConnected(client.sessionId,false);
     await this.allowReconnection(client,30);
   }
 
   onReconnect(client:Client) {
+    this.match.setPlayerConnected(client.sessionId,true);
     this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
