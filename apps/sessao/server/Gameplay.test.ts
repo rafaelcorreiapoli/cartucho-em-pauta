@@ -333,6 +333,21 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(game.spyVolume(bob,watcher)).toBeGreaterThan(0);
   game.spyAction(bob,{kind:'mute',channel:audio.id},world);
   expect(game.spyVolume(bob,watcher)).toBe(0);
+  const replacementCamera = buy(bob,'spyCamera');
+  Object.assign(bob,{x:527,y:350});
+  game.spyAction(bob,{kind:'install',site:'library',item:replacementCamera.id},world);
+  world.now += 5000;
+  game.tick(world,true);
+  const cameraChannel = game.spyView(bob,world).channels.find(entry=>entry.kind==='spyCamera')!;
+  expect(cameraChannel).toBeDefined();
+  game.spyAction(bob,{kind:'open',channel:cameraChannel.id},world);
+  expect(game.spyView(bob,world)).toMatchObject({selected:cameraChannel.id,muted:false});
+  expect(game.spyView(bob,world).audio).toBeUndefined();
+  expect(game.spyVolume(bob,watcher)).toBe(0);
+  game.spyAction(bob,{kind:'open',channel:audio.id},world);
+  expect(game.spyView(bob,world).selected).toBeUndefined();
+  expect(game.spyFrame(bob,world)).toBeUndefined();
+  expect(game.spyVolume(bob,watcher)).toBeGreaterThan(0);
   expect(events.filter(event=>event.type.startsWith('spy-')).every(event=>event.witnesses.length===0)).toBe(true);
 });
 

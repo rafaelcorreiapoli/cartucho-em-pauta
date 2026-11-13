@@ -27,3 +27,8 @@ export function cameraSees(origin:Motion,subject:Motion) {
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
 export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number};
 export type SpyView = {channels:SpyChannel[]; options:SpyOption[]; selected?:number; audio?:number; muted:boolean; progress?:number};
+
+export function monitoredChannel(view?:SpyView) {
+  return view?.channels.find(channel=>!channel.removed &&
+    channel.id===(channel.kind==='wiretap' ? view.audio : view.selected));
+}

@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
 import type { PhotoScene } from './photography';
-import type { SpyView } from './surveillance';
+import { monitoredChannel, type SpyView } from './surveillance';
 
 export function createSurveillancePanel(send:(action:object)=>void) {
   const launch = document.querySelector<HTMLButtonElement>('#open-surveillance')!;
@@ -21,16 +21,16 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   let key = '';
   let page = 0;
   let editing:number|undefined;
-  let focusedChannel:number|undefined;
 
   function update() {
     if (!dialog.open) return;
-    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,focusedChannel,editing]);
+    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing]);
     if (key===next) return;
     key = next;
     const channels = view?.channels ?? [];
-    const selected = channels.find(channel=>channel.id===view?.selected && !channel.removed);
-    const audio = channels.find(channel=>channel.id===view?.audio && !channel.removed);
+    const channel = monitoredChannel(view);
+    const selected = channel?.kind==='spyCamera' ? channel : undefined;
+    const audio = channel?.kind==='wiretap' ? channel : undefined;
     const size = 4;
     const last = Math.max(0,Math.ceil(channels.length/size)-1);
     page = Math.min(page,last);
@@ -41,7 +41,6 @@ export function createSurveillancePanel(send:(action:object)=>void) {
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
           aria-keyshortcuts={channel.removed ? undefined : String(index+1)} onClick={()=>{
-            focusedChannel = channel.id;
             send({kind:'open',channel:channel.id});
             update();
           }}>
@@ -58,7 +57,6 @@ export function createSurveillancePanel(send:(action:object)=>void) {
           aria-label="Próxima página" onClick={()=>{page++;update();}}>›</button>
       </div>}
     </>);
-    const channel = [selected,audio].find(channel=>channel?.id===focusedChannel) ?? selected ?? audio;
     const closeEditor = () => { editing = undefined; update(); };
     const action = (label:string,key:string,run:()=>void) =>
       <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>

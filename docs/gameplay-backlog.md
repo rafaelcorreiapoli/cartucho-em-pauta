@@ -451,7 +451,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ESP-20 | Monitoramento remoto de áudio | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
 | ESP-21 | Renderização remota do mundo por câmera | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
 | ESP-22 | Campo de visão e oclusão das câmeras | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
-| ESP-23 | Monitoramento de um canal por vez | PARCIAL | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | Uma câmera e um grampo podem coexistir em monitoramento. Não há um único canal compartilhado entre áudio e vídeo. | Baixa |
+| ESP-23 | Monitoramento de um canal por vez | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | Abrir câmera fecha grampo e vice-versa. Testes cobrem corte de áudio, encerramento de quadros e troca no painel. | — |
 | ESP-24 | Captura fotográfica remota | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
 | ESP-25 | Limites de dispositivos por jogador | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
 | ESP-26 | Replicação seletiva de informações secretas | IMPLEMENTADO | Surveillance.ts, surveillance.ts, surveillance-viewport.ts, Gameplay.test.ts; PR 13, 15 | — | — |
@@ -506,7 +506,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | AFA-13 | Afastamento pode criar oportunidade de invadir gabinete | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | O acusado sai do gabinete compulsoriamente por 60 s. Portas e cofres conservam as regras de segurança existentes. | — |
 | AFA-14 | Afastamento não reduz segurança de portas/cofres | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-15 | Afastamento não equivale à perda de mandato | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
-| AFA-16 | Proteção contra abuso e aprisionamento indefinido | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Sessão tem temporizadores e suspensão é limpa. Falta proteção específica do futuro isolamento físico. | Alta |
+| AFA-16 | Proteção contra abuso e aprisionamento indefinido | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Temporizador autoritativo de 60 s, reconciliação descarta movimento pendente e a saída ocorre em ponto válido ou no Plenário. Mantido o limite de uma audiência por partida. | — |
 
 ## CRI
 
