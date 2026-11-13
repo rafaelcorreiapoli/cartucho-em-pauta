@@ -63,6 +63,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const cameraHost = document.createElement('div');
   cameraHost.className = 'phone-app-content';
   const cameraRoot = createRoot(cameraHost);
+  const albumHost = document.createElement('div');
+  albumHost.className = 'phone-app-content';
+  const albumRoot = createRoot(albumHost);
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -415,8 +418,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>));
         cards.push(cameraHost);
       }
-      if (app==='Álbum') photos.renderAlbum(cards,contacts,directory,
-        state.locations.includes('press') && phase==='negotiation');
+      if (app==='Álbum') {
+        flushSync(()=>albumRoot.render(photos.renderAlbum(contacts,directory,
+          state.locations.includes('press') && phase==='negotiation')));
+        cards.push(albumHost);
+      }
     }
     body.replaceChildren(...(cards.length ? cards : [node('p',phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.')]));
     if (focused) body.querySelector<HTMLButtonElement>('button')?.focus();
@@ -665,6 +671,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       navigationRoot.unmount();
       callRoot.unmount();
       cameraRoot.unmount();
+      albumRoot.unmount();
       snakeRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();

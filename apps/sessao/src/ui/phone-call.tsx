@@ -2,7 +2,7 @@ import type {CSSProperties} from 'react';
 import type {GameplayAction,PhoneCall} from '../gameplay';
 import type {DirectoryContact} from '../politics';
 
-function Face({person}:{person:DirectoryContact}) {
+export function PhoneContactFace({person}:{person:DirectoryContact}) {
   const character = person.character;
   if (character===undefined) return <span className="phone-contact-face" aria-hidden="true">{person.name.slice(0,1).toUpperCase()}</span>;
   const position = {'--portrait-column':character%2,'--portrait-row':Math.floor(character/2)} as CSSProperties;
@@ -21,7 +21,7 @@ export function PhoneCalls({call,contacts,available,send}:{
     const incoming = call.state==='incoming';
     return <>
       <div className="phone-caller">
-        <Face person={person}/><strong>{person.name}</strong>
+        <PhoneContactFace person={person}/><strong>{person.name}</strong>
         <span role="status">{incoming ? 'Chamada recebida' : call.state==='outgoing' ? 'Chamando…' : 'Em ligação'}</span>
       </div>
       {incoming && <button type="button" className="hud-button hud-button--secondary phone-answer" aria-keyshortcuts="5"
@@ -38,7 +38,7 @@ export function PhoneCalls({call,contacts,available,send}:{
       const shortcut = index<5 ? String(index+5) : undefined;
       return <button key={person.id} type="button" className="phone-contact" aria-label={`Ligar para ${person.name}`}
         aria-keyshortcuts={shortcut} onClick={()=>send({kind:'call',target:person.id})}>
-        <Face person={person}/><strong>{person.name}</strong><Icon name="handset" className="phone-contact-dial"/>
+        <PhoneContactFace person={person}/><strong>{person.name}</strong><Icon name="handset" className="phone-contact-dial"/>
         {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
       </button>;
     })}
