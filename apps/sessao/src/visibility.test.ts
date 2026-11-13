@@ -20,3 +20,9 @@ test('shadow starts at the far wall face with no opening for the avatar',()=>{
   expect(outline[east]).toEqual({x:4140,y:146});
   expect(outline[rays.length]).toEqual(outline[0]);
 });
+
+test('light does not run along a wall viewed end-on',()=>{
+  const origin = {x:140,y:146,barriers:[[153,144,45,4]] as const};
+  const east = wallVision(origin,60).find(point=>Math.abs(point.dy)<1e-8 && point.dx>0);
+  expect(east?.x).toBeCloseTo(17);
+});

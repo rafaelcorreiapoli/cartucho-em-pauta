@@ -16,7 +16,8 @@ export function wallVision(origin:Motion,radius:number) {
       const [entry,exit] = raySpan(origin,dx,dy,wall);
       if (entry>=nearest) continue;
       nearest = entry;
-      distance = Math.min(radius,exit);
+      // Light the exposed surface without following the wall along its length.
+      distance = Math.min(radius,exit,entry+Math.min(wall[2],wall[3]));
     }
     return {x:dx*distance,y:dy*distance,dx,dy};
   });
