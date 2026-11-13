@@ -60,3 +60,8 @@ test('a scandal objective identifies the two kinds of proof the player can publi
   const markup = renderToStaticMarkup(<MissionRow mission={{id:5,kind:'escandalo',current:0,target:1}}/>);
   expect(markup).toContain('Divulgue uma prova de desvio ou pagamento clandestino');
 });
+
+test('the pizza mission shows the shared table as a way to complete it',()=>{
+  const mission:Mission = {id:6,kind:'pizza',current:0,target:1};
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('pegue uma fatia no Cafezinho');
+});

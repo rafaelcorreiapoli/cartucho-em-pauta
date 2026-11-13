@@ -628,8 +628,22 @@ test('a pizza already served at the Cafezinho can support a mission without mone
     economy.updateAgendaEligibility(ids,3);
     return view().active.map(mission=>mission.kind);
   };
+  const [guest] = guests;
+  const guestAgenda = Reflect.get(economy,'accounts').get(guest.id).agenda;
+  const guestView = () => economy.view(guest.id,[],0,false,()=>true)!.missions;
+  const drawGuest = () => {
+    Reflect.set(guestAgenda,'missions',[]);
+    Reflect.set(guestAgenda,'missionDeck',['pizza','fatias','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3);
+    return guestView().active.map(mission=>mission.kind);
+  };
+  expect(economy.spend(guest.id,economy.wallet(guest.id))).toBe(true);
+  expect(drawGuest()).toContain('pizza');
+  expect(guestView().active.some(mission=>mission.kind==='fatias')).toBe(false);
   expect(draw()).toEqual(['pizzada','fatias','cafe']);
   expect(game.act(guests[0],{kind:'slice',item:pizza.id},world)).toBe('Fatia servida.');
+  expect(guestView().completed.some(mission=>mission.kind==='pizza')).toBe(true);
+  expect(drawGuest()).not.toContain('pizza');
   expect(draw()).toEqual(['fatias','cafe','passeio']);
   for (const guest of guests.slice(1)) expect(game.act(guest,{kind:'slice',item:pizza.id},world)).toBe('Fatia servida.');
   expect(view().completed.some(mission=>mission.kind==='fatias')).toBe(true);

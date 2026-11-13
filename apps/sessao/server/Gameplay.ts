@@ -195,8 +195,9 @@ export class Gameplay {
 
   installedPizza(id:string) {
     const pizza = this.installations.get('pizza');
-    if (pizza?.owner.id!==id || !pizza.slices) return;
-    return {id:pizza.id,slices:pizza.slices,served:this.servings.get(pizza.id) ?? new Set<string>()};
+    if (!pizza?.slices) return;
+    const served = this.servings.get(pizza.id) ?? new Set<string>();
+    return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
   }
 
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }

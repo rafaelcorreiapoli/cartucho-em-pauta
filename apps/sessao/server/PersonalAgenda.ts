@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -248,12 +248,15 @@ export class PersonalAgenda {
     if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) {
-      if (kind!=='fatias' && kind!=='pizzada') return false;
-      const pizza = metrics.installedPizza?.();
-      const required = photoMissions[kind].target;
-      if (!pizza || pizza.slices<required || (kind==='pizzada' && !metrics.isScandalPizza?.(pizza.id))) return false;
-      const guests = this.targets.filter(person=>this.targetAvailable(kind,person.id) && !pizza.served.has(person.id));
-      if (guests.length<required) return false;
+      const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;
+      if (kind==='pizza') {
+        if (!pizza?.canTakeSlice) return false;
+      } else if (kind==='fatias' || kind==='pizzada') {
+        const required = photoMissions[kind].target;
+        if (!pizza?.owned || pizza.slices<required || (kind==='pizzada' && !metrics.isScandalPizza?.(pizza.id))) return false;
+        const guests = this.targets.filter(person=>this.targetAvailable(kind,person.id) && !pizza.served.has(person.id));
+        if (guests.length<required) return false;
+      } else return false;
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
