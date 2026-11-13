@@ -1,7 +1,8 @@
 import type { Player } from './map';
 import { applyInput, MAX_QUEUED_INPUTS, type ControlState, type MovementInput } from './movement';
 
-const HISTORY_MS = 100;
+// Remote snapshots arrive at 10 Hz. Keep a second interval buffered for jitter.
+const INTERPOLATION_DELAY_MS = 200;
 
 export class PredictedMovement {
   private pending: MovementInput[] = [];
@@ -39,14 +40,14 @@ export class PlayerHistory {
   }
 
   sample(now: number, id: string) {
-    const at = now-HISTORY_MS;
+    const at = now-INTERPOLATION_DELAY_MS;
     const after = this.snapshots.findIndex(snapshot => snapshot.at>=at);
     const first = this.snapshots[Math.max(0,after-1)];
     const second = this.snapshots[after];
     if (!second) return this.snapshots.at(-1)?.players.find(player => player.id===id);
     const from = first.players.find(player => player.id===id);
     const to = second.players.find(player => player.id===id);
-    if (!from || !to || first===second) return to ?? from;
+    if (!from || !to || first===second) return to;
     const ratio = Math.min(1,Math.max(0,(at-first.at)/Math.max(1,second.at-first.at)));
     return {
       ...to,

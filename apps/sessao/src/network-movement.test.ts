@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
-import { PredictedMovement } from './network-movement';
+import { PlayerHistory, PredictedMovement } from './network-movement';
 import { applyInput, readInput, restMovement, type ControlState, type MovementInput } from './movement';
 
 test('prediction starts immediately and replays only the inputs the server has not processed', () => {
@@ -163,4 +163,18 @@ test('a long route across the Congress remains walkable after compressing straig
   for (let seq=2;state.route.length && seq<=400;seq++) applyInput(state,{seq});
   expect(state.player.x).toBeCloseTo(destination.x);
   expect(state.player.y).toBeCloseTo(destination.y);
+});
+
+test('remote movement interpolates through a late snapshot instead of waiting at the last position',()=>{
+  const history = new PlayerHistory();
+  const player = {id:'remote',nick:'Remoto',character:0,x:100,y:146,moving:true,direction:1};
+  history.add([player],0);
+  history.add([{...player,x:110}],100);
+  expect(history.sample(260,player.id)?.x).toBe(106);
+  history.add([{...player,x:120}],280);
+  expect([280,300,320,350,400,450].map(now=>history.sample(now,player.id)!.x))
+    .toEqual([108,110,110+10*20/180,110+10*50/180,110+10*100/180,110+10*150/180]);
+  expect(history.sample(500,player.id)?.x).toBe(120);
+  history.add([],510);
+  expect(history.sample(710,player.id)).toBeUndefined();
 });
