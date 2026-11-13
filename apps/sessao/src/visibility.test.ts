@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {shadowOutline,wallVision} from './visibility';
-import {wallBetween} from './map';
+import {canStand,obstacleBetween,wallBetween,characterVisible} from './map';
 
 test('the light ends at the first wall edge and preserves unobstructed rays',()=>{
   const player = {x:140,y:146,barriers:[[153,135,3,25]] as const};
@@ -48,4 +48,15 @@ test('corridor rays hit a straight edge across the wall and continue through its
   expect(rightWall.length).toBeGreaterThan(1);
   for (const point of throughDoor) expect(point.y).toBeGreaterThan(9);
   for (const point of rightWall) expect(point.y).toBeCloseTo(9);
+});
+
+test('furniture blocks movement but does not hide a character on illuminated floor',()=>{
+  const observer = {x:30,y:197};
+  const npc = {x:30,y:229};
+  expect(canStand(observer.x,observer.y) && canStand(npc.x,npc.y)).toBe(true);
+  expect(obstacleBetween(observer,npc)).toBe(true);
+  const south = wallVision(observer,40).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy>0);
+  expect(south?.y).toBeGreaterThan(npc.y-observer.y);
+  expect(characterVisible(observer,npc,40)).toBe(true);
+  expect(characterVisible({...observer,barriers:[[24,210,12,3]]},npc,40)).toBe(false);
 });

@@ -9,7 +9,7 @@ import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
 import { BALLOT_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
-import { canStand, localPerception, worldVisible, type Player } from '../src/map';
+import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
@@ -355,8 +355,8 @@ test('a closed office door hides players from authoritative world visibility',()
   const x = left+width/2;
   const inside = {x,y:top-12};
   const outside = {x,y:top+height+12};
-  expect(worldVisible(outside,inside)).toBe(true);
-  expect(worldVisible({...outside,barriers:[office.door]},inside)).toBe(false);
+  expect(characterVisible(outside,inside)).toBe(true);
+  expect(characterVisible({...outside,barriers:[office.door]},inside)).toBe(false);
 });
 
 test('only a victim or direct witness can report an infraction, once, at the desk',()=>{

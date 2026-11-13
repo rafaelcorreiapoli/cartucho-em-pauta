@@ -551,6 +551,14 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     host.send('start-match',{npcs:3,token:1});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    const observer = Reflect.get(room,'players').get(host.sessionId).player as Player;
+    const [walkingNpc] = Reflect.get(room,'parliamentarians').players as Player[];
+    Object.assign(observer,{x:30,y:197});
+    Object.assign(walkingNpc,{x:30,y:229,knockedOut:true});
+    await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===true);
+    Object.assign(observer,{x:30,y:146});
+    await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===false);
+    walkingNpc.knockedOut = undefined;
     Reflect.set(Reflect.get(room,'match'),'ends',room.clock.currentTime);
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===9));
     const expected = [...PLENARY_SEATS.slice(0,6),...PLENARY_SEATS.slice(-3)].map(({x,y})=>`${x},${y}`).sort();

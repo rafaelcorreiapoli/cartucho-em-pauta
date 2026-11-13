@@ -167,6 +167,10 @@ export function worldVisible(a:Motion,b:Motion,radius=VISION_RADIUS) {
   return Math.hypot(a.x-b.x,a.y-b.y)<radius && !obstacleBetween(a,b);
 }
 
+export function characterVisible(a:Motion,b:Motion,radius=VISION_RADIUS) {
+  return Math.hypot(a.x-b.x,a.y-b.y)<radius && !wallBetween(a,b);
+}
+
 export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
   const distance = Math.hypot(a.x-b.x,a.y-b.y);
   if (distance>=Math.max(vision,HEARING_RADIUS)) return {visible:false,volume:0};

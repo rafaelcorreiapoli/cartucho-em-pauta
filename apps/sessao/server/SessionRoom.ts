@@ -15,7 +15,7 @@ import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
-import { isolationRoom, localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
+import { isolationRoom, localPerception, characterVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
@@ -466,7 +466,7 @@ export class SessionRoom extends Room {
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
           const visible = state.plenary ? world.players.filter(inPlenary) :
-            world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
+            world.players.filter(player=>player===state.player || characterVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);

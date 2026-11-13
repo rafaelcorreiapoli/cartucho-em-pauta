@@ -18,7 +18,7 @@ import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
@@ -446,7 +446,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {id,character,direction} = player;
         const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
-        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !worldVisible(ownPlayer,player,visionRadius))) {
+        if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !characterVisible(ownPlayer,player,this.drawnVisionRadius))) {
           view?.sprite.setVisible(false);
           view?.label.setVisible(false);
           view?.office.setVisible(false);
