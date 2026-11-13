@@ -712,7 +712,7 @@ img.market-art {
 .shortcut-pages { margin-top: .7rem; }
 
 #office-progress-label:not([hidden]) { display: block; text-align: center; color: var(--party-gold); margin-bottom: 4px; }
-.office-progress:not([hidden]) {
+#office-progress {
   display: block;
   width: min(220px, 50vw);
   height: 8px;

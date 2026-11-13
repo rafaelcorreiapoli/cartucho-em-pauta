@@ -1,3 +1,6 @@
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
+import type { CSSProperties } from 'react';
 import { characterStats } from './character-stats';
 import type { Player } from './map';
 import type { PlenaryView } from './plenary';
@@ -14,48 +17,11 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   const badge = element('attribute-points-badge');
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
-  const confirm = element<HTMLButtonElement>('confirm-attribute');
+  const attributesRoot = createRoot(attributes);
+  const celebrationRoot = createRoot(celebration);
+  const keys = Object.keys(attributeUpgrades) as Attribute[];
   let selected:Attribute|undefined;
-  const sparks = element('level-up-dialog').querySelector('.level-up-sparks')!;
-  for (let index=0;index<16;index++) {
-    const spark = document.createElement('i');
-    spark.style.setProperty('--angle',`${index*22.5}deg`);
-    spark.style.setProperty('--distance',`${90+(index%4)*27}px`);
-    spark.style.setProperty('--delay',`${index%5*27}ms`);
-    sparks.append(spark);
-  }
-
-  const rows = (Object.keys(attributeUpgrades) as Attribute[]).map((attribute,index)=>{
-    const row = document.createElement('section');
-    const info = document.createElement('div');
-    const label = document.createElement('strong');
-    const resourceRow = document.createElement('section');
-    const resourceLabel = document.createElement('strong');
-    const resourceValue = document.createElement('span');
-    const {label:attributeLabel,resource,bonus} = attributeUpgrades[attribute];
-    const value = document.createElement('span');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'hud-button hud-button--secondary';
-    button.textContent = '+1';
-    button.title = `+1 ${attributeLabel} · +${bonus} ${resource}`;
-    button.setAttribute('aria-keyshortcuts',String(index+1));
-    button.setAttribute('aria-label',`Investir em ${attributeUpgrades[attribute].label}`);
-    label.textContent = attributeUpgrades[attribute].label;
-    const benefit = document.createElement('small');
-    benefit.textContent = `+1 dá +${bonus} ${attribute==='hp' ? 'PV máximos' : attribute==='stamina' ? 'stamina máxima' : resource}`;
-    info.append(label,benefit);
-    resourceLabel.textContent = resource;
-    resourceRow.append(resourceLabel,resourceValue);
-    element('attribute-resources').append(resourceRow);
-    row.append(info,value,button);
-    element('attribute-list').append(row);
-    button.onclick = () => {
-      selected = attribute;
-      renderAttributes();
-    };
-    return {attribute,row,value,resourceValue,button};
-  });
+  let attributesKey = '';
 
   let latest:Progression|undefined;
   let view:PlenaryView|undefined;
@@ -69,14 +35,14 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let reconnecting = false;
   let completedCount = 0;
 
-  confirm.onclick = () => {
-    if (!latest || !selected || confirm.disabled) return;
+  function confirmAttribute() {
+    if (!latest || !selected || requested===latest.revision || !latest.available) return;
     requested = latest.revision;
     clearTimeout(requestTimer);
     requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
     renderAttributes();
     send({attribute:selected,revision:latest.revision,matchId:latest.matchId});
-  };
+  }
 
   function clearSelection() {
     selected = undefined;
@@ -87,8 +53,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   function renderAttributes() {
     if (!latest || !player) return;
     const {xp,level,nextLevelXp,available,invested,revision} = latest;
-    element('attributes-xp').textContent = `Nível ${level} · ${xp} XP totais · ${nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}`;
-    element('attributes-available').textContent = `${pointLabel(available)} para distribuir`;
     const stats = characterStats[player.character];
     const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
     const maxHp = stats.hp+invested.hp*attributeUpgrades.hp.bonus;
@@ -98,26 +62,59 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     const stamina = Math.floor(player.stamina ?? staminaMax);
     const canSpend = !!available && requested!==revision && view?.phase==='negotiation' &&
       !player.knockedOut && !player.carrying && !!view.gameplay;
-    confirm.disabled = !canSpend || !selected;
-    for (const {attribute,row,value,resourceValue,button} of rows) {
-      const max = values[attribute];
-      const current = attribute==='hp' ? `${hp}/${max}` : attribute==='stamina' ? `${stamina}/${max}` : String(max);
-      value.textContent = String(baseAttribute+invested[attribute]);
-      const preview = attribute===selected && !!available;
-      button.setAttribute('aria-pressed',String(preview));
-      row.classList.toggle('attribute-selected',preview);
-      resourceValue.classList.toggle('attribute-preview',preview);
-      const bonus = attributeUpgrades[attribute].bonus;
-      const next = attribute==='hp' ? `${hp+bonus}/${max+bonus}` :
-        attribute==='stamina' ? `${stamina+bonus}/${max+bonus}` : String(max+bonus);
-      resourceValue.textContent = preview ? `${current} → ${next}` : current;
-      button.disabled = !canSpend;
-    }
+    const key = JSON.stringify([xp,level,nextLevelXp,available,invested,values,hp,stamina,selected,canSpend]);
+    if (key===attributesKey) return;
+    attributesKey = key;
+    flushSync(()=>attributesRoot.render(<>
+      <header><div><h2 id="attributes-title" className="sr-only">Atributos</h2>
+        <p id="attributes-xp">Nível {level} · {xp} XP totais · {nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}</p>
+      </div><form method="dialog"><button className="hud-button hud-button--secondary">Fechar</button></form></header>
+      <p id="attributes-available" role="status">{pointLabel(available)} para distribuir</p>
+      <div className="attribute-columns">
+        <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
+          {keys.map((attribute,index)=>{
+            const {label,resource,bonus} = attributeUpgrades[attribute];
+            const preview = attribute===selected && !!available;
+            return <section key={attribute} data-attribute={attribute} className={preview ? 'attribute-selected' : undefined}>
+              <div><strong>{label}</strong><small>+1 dá +{bonus} {attribute==='hp' ? 'PV máximos' : attribute==='stamina' ? 'stamina máxima' : resource}</small></div>
+              <span>{baseAttribute+invested[attribute]}</span>
+              <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
+                aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
+                onClick={()=>{ selected = attribute; renderAttributes(); }}>+1</button>
+            </section>;
+          })}
+        </div></section>
+        <section className="attribute-panel" aria-label="Estatísticas de combate"><div id="attribute-resources">
+          {keys.map(attribute=>{
+            const max = values[attribute];
+            const {resource,bonus} = attributeUpgrades[attribute];
+            const current = attribute==='hp' ? `${hp}/${max}` : attribute==='stamina' ? `${stamina}/${max}` : String(max);
+            const next = attribute==='hp' ? `${hp+bonus}/${max+bonus}` : attribute==='stamina' ? `${stamina+bonus}/${max+bonus}` : String(max+bonus);
+            const preview = attribute===selected && !!available;
+            return <section key={attribute}><strong>{resource}</strong><span className={preview ? 'attribute-preview' : undefined}>
+              {preview ? current+' → '+next : current}</span></section>;
+          })}
+        </div></section>
+      </div>
+      <div className="progression-buttons"><button id="confirm-attribute" type="button" className="hud-button"
+        aria-keyshortcuts="5" disabled={!canSpend || !selected} onClick={confirmAttribute}>Confirmar +1</button></div>
+    </>));
   }
 
   function updateCelebration({from,to}:{from:number;to:number}) {
-    element('level-up-level').textContent = to-from>1 ? `${from} → ${to}` : String(to);
-    element('level-up-points').textContent = `+${pointLabel(to-from)} de atributo`;
+    flushSync(()=>celebrationRoot.render(<>
+      <div className="level-up-rays" aria-hidden="true"/>
+      <div className="level-up-sparks" aria-hidden="true">{Array.from({length:16},(_,index)=>
+        <i key={index} style={{'--angle':`${index*22.5}deg`,'--distance':`${90+(index%4)*27}px`,'--delay':`${index%5*27}ms`} as CSSProperties}/>)}</div>
+      <header><h2 id="level-up-title">LEVEL UP!</h2>
+        <div className="level-up-number"><span>NÍVEL</span><strong id="level-up-level">{to-from>1 ? `${from} → ${to}` : to}</strong></div>
+        <p id="level-up-points">+{pointLabel(to-from)} de atributo</p>
+      </header>
+      <form method="dialog" className="progression-buttons">
+        <button className="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
+        <button className="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autoFocus>Depois</button>
+      </form>
+    </>));
   }
 
   function tryReveal() {
@@ -132,14 +129,19 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   function closeCelebration() {
     displayed = undefined;
-    if (celebration.returnValue==='allocate' && view?.phase==='negotiation') attributes.showModal();
+    if (celebration.returnValue==='allocate' && view?.phase==='negotiation') openAttributes();
   }
 
   function closeOtherDialog(event:Event) {
     if (event.target!==celebration) tryReveal();
   }
 
-  launch.onclick = () => { if (!document.querySelector('dialog[open]')) attributes.showModal(); };
+  function openAttributes() {
+    if (document.querySelector('dialog[open]')) return;
+    renderAttributes();
+    attributes.showModal();
+  }
+  launch.onclick = openAttributes;
   celebration.addEventListener('close',closeCelebration);
   document.addEventListener('close',closeOtherDialog,true);
 
@@ -197,13 +199,17 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       if (!before || progress.revision!==before.revision) selected = undefined;
       if (before && progress.revision>before.revision) {
         play('attribute');
-        for (const row of rows) {
-          if (progress.invested[row.attribute]>before.invested[row.attribute] && !reduceMotion()) {
-            row.row.animate([{backgroundColor:'#416b46'},{backgroundColor:'transparent'}],{duration:460});
+        if (attributes.open) {
+          renderAttributes();
+          for (const attribute of keys) {
+            if (progress.invested[attribute]>before.invested[attribute] && !reduceMotion()) {
+              attributes.querySelector(`[data-attribute="${attribute}"]`)?.animate(
+                [{backgroundColor:'#416b46'},{backgroundColor:'transparent'}],{duration:460});
+            }
           }
         }
       }
-      renderAttributes();
+      if (attributes.open) renderAttributes();
     },
     player(snapshot:Player) { player = snapshot; if (attributes.open) renderAttributes(); },
     reconnect() { reconnecting = true; },
@@ -216,13 +222,11 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       celebration.close();
       attributes.removeEventListener('close',clearSelection);
       attributes.close();
-      confirm.onclick = null;
+      attributesRoot.unmount();
+      celebrationRoot.unmount();
       launch.hidden = true;
       reward.textContent = '';
       launch.onclick = null;
-      sparks.replaceChildren();
-      element('attribute-list').replaceChildren();
-      element('attribute-resources').replaceChildren();
     },
   };
 

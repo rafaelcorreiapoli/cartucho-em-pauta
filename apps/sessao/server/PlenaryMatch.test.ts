@@ -211,7 +211,7 @@ test('room activities require proximity, and a cafezinho completes its mission',
   expect(missions().active.some(mission => mission.kind==='cafe')).toBe(false);
 });
 
-test('the Controladoria returns feedback for each audit, even without new records', () => {
+test('the Corregedoria returns feedback for each audit, even without new records', () => {
   const match = new PlenaryMatch(1);
   match.start(host.id,[host],0);
   expect(match.act(host,'audit',1)?.text).toContain('Chegue mais perto');

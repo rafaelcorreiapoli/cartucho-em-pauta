@@ -89,7 +89,7 @@ Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica
 
 Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
 
-A Enfermaria fica no lado direito da Galeria. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
+A Enfermaria fica no lado direito da Sala de Reprografia. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
 
 ## Voz da sala
 

@@ -77,7 +77,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     evidence:{
-      text:'A estante guarda bugigangas. Segredo é melhor levar à Controladoria.',
+      text:'A estante guarda bugigangas. Segredo é melhor levar à Corregedoria.',
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     mission:{

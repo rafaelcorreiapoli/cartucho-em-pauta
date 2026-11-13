@@ -1,6 +1,5 @@
-import { markShortcut } from './action-shortcuts';
 import { createRoot } from 'react-dom/client';
-import { button, node } from './gameplay-ui';
+import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
 import type { PhotoScene } from './photography';
 import type { SpyView } from './surveillance';
@@ -12,6 +11,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   const list = document.querySelector<HTMLElement>('#spy-channels')!;
   const channelsRoot = createRoot(list);
   const monitor = document.querySelector<HTMLElement>('#spy-monitor')!;
+  const monitorRoot = createRoot(monitor);
   const viewport = node('div');
   viewport.className = 'spy-viewport';
   viewport.setAttribute('aria-label','Visão ao vivo da câmera');
@@ -25,8 +25,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
 
   function update() {
     if (!dialog.open) return;
-    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,focusedChannel]);
-    if (key===next || editing!==undefined) return;
+    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,focusedChannel,editing]);
+    if (key===next) return;
     key = next;
     const channels = view?.channels ?? [];
     const selected = channels.find(channel=>channel.id===view?.selected && !channel.removed);
@@ -58,47 +58,37 @@ export function createSurveillancePanel(send:(action:object)=>void) {
           aria-label="Próxima página" onClick={()=>{page++;update();}}>›</button>
       </div>}
     </>);
-    monitor.replaceChildren();
-    if (selected) monitor.append(node('h3',selected.name),viewport);
-    if (audio) monitor.append(node('p',`${audio.name} · ${view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}`));
     const channel = [selected,audio].find(channel=>channel?.id===focusedChannel) ?? selected ?? audio;
-    if (!channel) { monitor.append(node('p','Selecione um canal.')); return; }
-    const action = (label:string,key:string,run:()=>void) => {
-      const control = button(label,run);
-      markShortcut(control,key);
-      monitor.append(control);
-    };
-    if (selected) action('Fotografar','5',()=>send({kind:'capture'}));
-    if (audio) action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo','6',()=>send({kind:'mute',channel:audio.id}));
-    action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas','7',()=>send({kind:'alerts',channel:channel.id}));
-    action('Renomear','8',()=>{
-      editing = channel.id;
-      const form = node('form');
-      const input = node('input');
-      input.value = channel.name;
-      input.maxLength = 32;
-      input.setAttribute('aria-label','Nome do canal');
-      const save = node('button','Salvar');
-      form.append(input,save);
-      form.onsubmit = event=>{
-        event.preventDefault();
-        send({kind:'rename',channel:channel.id,name:input.value});
-        editing = undefined;
-        key = '';
-        update();
-      };
-      monitor.append(form);
-      input.focus();
-      input.select();
-      input.onkeydown = event=>{
-        if (event.key!=='Escape') return;
-        event.preventDefault();
-        editing = undefined;
-        key = '';
-        update();
-      };
-    });
-    action('Fechar canal','9',()=>send({kind:'close-channel',channel:channel.id}));
+    const closeEditor = () => { editing = undefined; update(); };
+    const action = (label:string,key:string,run:()=>void) =>
+      <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
+        {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
+      </button>;
+    monitorRoot.render(<>
+      {selected && <><h3>{selected.name}</h3><div ref={host=>{ if (host && viewport.parentElement!==host) host.append(viewport); }}/></>}
+      {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
+      {!channel ? <p>Selecione um canal.</p> : <>
+        {selected && action('Fotografar','5',()=>send({kind:'capture'}))}
+        {audio && action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo','6',()=>send({kind:'mute',channel:audio.id}))}
+        {action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas','7',()=>send({kind:'alerts',channel:channel.id}))}
+        {action('Renomear','8',()=>{ editing = channel.id; update(); })}
+        {action('Fechar canal','9',()=>send({kind:'close-channel',channel:channel.id}))}
+        {editing===channel.id && <form key={channel.id} onSubmit={event=>{
+          event.preventDefault();
+          const name = String(new FormData(event.currentTarget).get('name') ?? '');
+          send({kind:'rename',channel:channel.id,name});
+          closeEditor();
+        }}>
+          <input name="name" defaultValue={channel.name} maxLength={32} aria-label="Nome do canal" autoFocus
+            onFocus={event=>event.currentTarget.select()} onKeyDown={event=>{
+              if (event.key!=='Escape') return;
+              event.preventDefault();
+              closeEditor();
+            }}/>
+          <button>Salvar</button>
+        </form>}
+      </>}
+    </>);
   }
 
   launch.onclick = ()=>{
@@ -138,6 +128,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     },
     destroy() {
       channelsRoot.unmount();
+      monitorRoot.unmount();
       stopViewport();
       launch.onclick = dialog.onclose = dialog.onkeydown = null;
       dialog.close();

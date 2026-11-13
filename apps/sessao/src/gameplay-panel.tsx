@@ -56,6 +56,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const slotsRoot = createRoot(slots);
   const equipmentHost = document.createElement('div');
   const equipmentRoot = createRoot(equipmentHost);
+  const objectsHost = document.createElement('div');
+  const objectsRoot = createRoot(objectsHost);
+  const requestBox = element('object-request');
+  const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
   const nearbyButton = element<HTMLButtonElement>('nearby-objects');
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
@@ -74,26 +78,27 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let renderKey = '';
   let targetKey = '';
 
-  function objectCard(item:WorldItem) {
-    const card = node('article');
-    card.className = 'object-card';
+  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = []) {
     const definition = objects[item.kind];
-    const heading = node('h3',itemName(item));
-    heading.prepend(itemArt(item.kind));
-    const summary = node('details');
-    summary.append(node('summary','Inspecionar'),node('p',definition.description));
     const doc = item.document;
-    if (doc) summary.append(
-      node('p',`Assinaturas ${doc.signatures.length}/${doc.requiredSignatures} · ${doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}`),
-      node('p',`Carimbos ${doc.stamps.length}/${doc.requiredStamps.length} · ${doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? `✓ ${stamp}` : stamp).join(', ')}`),
-    );
-    if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: Parlamentar`));
-    if (isFood(item.kind)) summary.append(node('p',`1 un. · ${foods[item.kind].category} · ${describeFood(foods[item.kind].effect)}`));
     const cash = cashAmount(item);
-    if (cash) summary.append(node('p',money(cash)));
-    card.append(heading,summary);
-    return card;
+    const food = isFood(item.kind) ? foods[item.kind] : undefined;
+    return <article className="object-card" key={item.id}>
+      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}</h3>
+      <details><summary>Inspecionar</summary><p>{definition.description}</p>
+        {doc && <>
+          <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
+          <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
+          {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+        </>}
+        {food && <p>1 un. · {food.category} · {describeFood(food.effect)}</p>}
+        {!!cash && <p>{money(cash)}</p>}
+      </details>
+      {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
+        aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+    </article>;
   }
+  type ObjectAction = {label:string;run:()=>void;key?:string};
 
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
     selection = item;
@@ -191,12 +196,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     photos.stopPreview();
     const cards:HTMLElement[] = [];
     if (stash) {
-      cards.push(node('p',`${stash.items.length}/${officeRules.stashSlots} slots${stash.level ? ` · Segurança nível ${stash.level}` : ' · Arrombado'}`));
-      for (const item of stash.items) {
-        const card = objectCard(item);
-        card.append(button('Retirar',()=>send({kind:'office-take',place:stash.id,item:item.id})));
-        cards.push(card);
-      }
+      flushSync(()=>objectsRoot.render(<div className="grid gap-2">
+        <p>{stash.items.length}/{officeRules.stashSlots} slots · {stash.level ? 'Segurança nível '+stash.level : 'Arrombado'}</p>
+        {stash.items.map(item=>objectCard(item,[{label:'Retirar',run:()=>send({kind:'office-take',place:stash.id,item:item.id})}]))}
+      </div>));
+      cards.push(objectsHost);
     }
     if (equipmentOpen) {
       const equipped = state.equipped ?? [];
@@ -221,23 +225,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
 
     if (item) {
-      const card = objectCard(item);
-      const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
-        const control = button(label,()=>send({kind,item:item.id,target:target.value,place}));
-        card.append(control);
-        return control;
+      const actions:ObjectAction[] = [];
+      const act = (label:string,kind:GameplayAction['kind'],place?:string,key?:string) => {
+        actions.push({label,key,run:()=>send({kind,item:item.id,target:target.value,place})});
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
         if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach((option,index)=>{
-          const control = button(option.label,()=>{
-            sendSpy(option);
-            dialog.close();
-          });
-          markShortcut(control,String(index+1));
-          card.append(control);
+          actions.push({label:option.label,key:String(index+1),run:()=>{ sendSpy(option); dialog.close(); }});
         });
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
@@ -245,8 +242,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         if ('use' in definition) {
           const label = item.kind==='mensalUnderwear' ? 'Usar' : item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
-          const use = act(label,'use');
-          markShortcut(use,'1');
+          act(label,'use',undefined,'1');
         }
         if ('exposable' in definition) {
           const exposed = state.exposed.includes(item.id);
@@ -263,7 +259,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
         act('Largar','drop');
         if ('destructible' in definition) act('Destruir','destroy');
-        if (item.document) act('Adulterar','edit');
+        if (item.document && state.locations.includes('reprography')) act('Adulterar','edit');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
@@ -271,7 +267,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
-      cards.push(card);
+      flushSync(()=>objectsRoot.render(objectCard(item,actions)));
+      cards.push(objectsHost);
     }
     if (decoration) {
       const card = node('article');
@@ -499,26 +496,23 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         app = 'Telefone';
         open();
       }
-      const requestBox = element('object-request');
       const requestKey = information ? `info-${information.id}` : String(incoming?.id ?? '');
       if (requestKey!==requestBox.dataset.request) {
         requestBox.dataset.request = requestKey;
         requestBox.hidden = !incoming && !information;
         if (information) {
-          const card = node('article');
-          card.className = 'object-card';
-          card.append(node('p',`${information.from.name} quer ${information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.`),
-            button('Aceitar',()=>send({kind:'info-accept',item:information.id})),
-            button('Recusar',()=>send({kind:'info-decline',item:information.id})));
-          requestBox.replaceChildren(card);
+          requestRoot.render(<article className="object-card">
+            <p>{information.from.name} quer {information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.</p>
+            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-accept',item:information.id})}>Aceitar</button>
+            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-decline',item:information.id})}>Recusar</button>
+          </article>);
         } else if (incoming) {
-          const item = incoming.item;
-          const card = objectCard(item);
-          card.prepend(node('p',`${incoming.from.name} ${incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}`));
-          card.append(button(incoming.kind==='signature' ? 'Assinar' : 'Aceitar',()=>send({kind:'accept',item:incoming.id})),
-            button('Recusar',()=>send({kind:'decline',item:incoming.id})));
-          requestBox.replaceChildren(card);
-        } else requestBox.replaceChildren();
+          requestRoot.render(<><p>{incoming.from.name} {incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}</p>
+            {objectCard(incoming.item,[
+              {label:incoming.kind==='signature' ? 'Assinar' : 'Aceitar',run:()=>send({kind:'accept',item:incoming.id})},
+              {label:'Recusar',run:()=>send({kind:'decline',item:incoming.id})},
+            ])}</>);
+        } else requestRoot.render(null);
       }
       render();
     },
@@ -549,6 +543,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       equipmentRoot.unmount();
+      objectsRoot.unmount();
+      requestRoot.unmount();
       nearbyItems.replaceChildren();
       setNearbyExpanded(false);
     },

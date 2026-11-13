@@ -1,4 +1,5 @@
-import { setCharacterPortrait } from './character-art';
+import { createRoot } from 'react-dom/client';
+import type { CSSProperties } from 'react';
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
 import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
@@ -9,79 +10,62 @@ type Choice = {value:string; label:string; portrait?:number};
 
 function picker(id:string, changed:()=>void, empty='') {
   const container = el(id);
+  const root = createRoot(container);
   let key = '';
-  const select = (value:string) => {
-    container.dataset.value = value;
-    for (const button of container.querySelectorAll('button')) {
-      button.setAttribute('aria-pressed',String(button.value===value));
-    }
-  };
-  select('');
+  let choices:Choice[] = [];
+  const render = () => root.render(choices.length ? choices.map(choice=>{
+    const portrait = choice.portrait===undefined ? undefined : {
+      '--portrait-column':choice.portrait%2,'--portrait-row':Math.floor(choice.portrait/2),
+    } as CSSProperties;
+    return <button type="button" className="hud-button hud-button--secondary game-choice" key={choice.value}
+      value={choice.value} aria-pressed={container.dataset.value===choice.value} onClick={()=>{
+        container.dataset.value = choice.value;
+        render();
+        changed();
+      }}>
+      {portrait && <span className="portrait" style={portrait} aria-hidden="true"/>}{choice.label}
+    </button>;
+  }) : empty ? <p className="choice-empty">{empty}</p> : null);
+  container.dataset.value = '';
   return {
     get value() { return container.dataset.value ?? ''; },
-    update(choices:Choice[], selectFirst=false) {
-      const next = JSON.stringify(choices);
+    update(nextChoices:Choice[],selectFirst=false) {
+      const next = JSON.stringify(nextChoices);
       if (key===next) return;
       key = next;
-      const previous = this.value;
-      const buttons = choices.map(choice => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'hud-button hud-button--secondary game-choice';
-        button.value = choice.value;
-        if (choice.portrait!==undefined) {
-          const portrait = document.createElement('span');
-          portrait.className = 'portrait';
-          portrait.setAttribute('aria-hidden','true');
-          setCharacterPortrait(portrait,choice.portrait);
-          button.append(portrait);
-        }
-        button.append(choice.label);
-        button.onclick = () => { select(choice.value); changed(); };
-        return button;
-      });
-      container.replaceChildren(...buttons);
-      if (!buttons.length && empty) {
-        const message = document.createElement('p');
-        message.className = 'choice-empty';
-        message.textContent = empty;
-        container.append(message);
-      }
-      select(choices.some(choice => choice.value===previous) ? previous : selectFirst ? choices[0]?.value ?? '' : '');
+      choices = nextChoices;
+      if (!choices.some(choice=>choice.value===this.value)) container.dataset.value = selectFirst ? choices[0]?.value ?? '' : '';
+      render();
     },
+    destroy() { root.unmount(); },
   };
 }
 
 function stepper(id:string, initial:number, minimum:number, format:(value:number)=>string) {
   const container = el(id);
-  const amount = document.createElement('output');
-  const minus = document.createElement('button');
-  const plus = document.createElement('button');
+  const root = createRoot(container);
   let value = initial;
   let maximum = Number.MAX_SAFE_INTEGER / 10;
   function render() {
-    amount.textContent = format(value);
-    minus.disabled = value<=minimum;
-    plus.disabled = value>=maximum;
+    root.render(<>
+      <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir valor"
+        disabled={value<=minimum} onClick={()=>{value--;render();}}>−</button>
+      <output>{format(value)}</output>
+      <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar valor"
+        disabled={value>=maximum} onClick={()=>{value++;render();}}>+</button>
+    </>);
   }
-  for (const [button, label, text, delta] of [
-    [minus,'Diminuir valor','−',-1],[plus,'Aumentar valor','+',1],
-  ] as const) {
-    button.type = 'button';
-    button.className = 'hud-button hud-button--secondary';
-    button.textContent = text;
-    button.setAttribute('aria-label',label);
-    button.onclick = () => { value += delta; render(); };
-  }
-  container.replaceChildren(minus,amount,plus);
   render();
   return {
     get value() { return value; },
     limit(limit:number) {
-      maximum = Math.max(minimum,limit);
+      const next = Math.max(minimum,limit);
+      if (maximum===next) return;
+      maximum = next;
       value = Math.min(value,maximum);
       render();
     },
+    destroy() { root.unmount(); },
   };
 }
 
@@ -106,8 +90,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   dock.open = false;
   trade.open = false;
   el<HTMLDetailsElement>('ledger').open = false;
-  el('public-records').replaceChildren();
-  el('offer-list').replaceChildren();
+  const recordsRoot = createRoot(el('public-records'));
+  const offersRoot = createRoot(el('offer-list'));
   const at = (key:keyof typeof stations) => !!own && Math.hypot(own.x-stations[key].x,own.y-stations[key].y)<=STATION_RADIUS;
   const name = (id:string) => view?.politics?.directory.find(contact => contact.id===id)?.name ?? 'Jogador';
   const describe = (record:Evidence) => record.kind==='diversion' ?
@@ -194,40 +178,31 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       const ledgerKey = p.ledger.map(record => record.id).join(',');
       if (recordsKey!==ledgerKey) {
         recordsKey = ledgerKey;
-        el('public-records').replaceChildren(...p.ledger.slice().reverse().map(record => {
-          const item = document.createElement('li');
-          item.textContent = describe(record);
-          return item;
-        }));
+        recordsRoot.render(p.ledger.slice().reverse().map(record=><li key={record.id}>{describe(record)}</li>));
       }
       const contacts = new Set(p.contacts.map(contact => contact.id));
       const offerList = [...p.incoming,...(p.outgoing ? [p.outgoing] : [])];
       const key = offerList.map(offer => `${offer.id}:${contacts.has(offer.from) && p.wallet>=offer.price && p.paymentsLeft>0}`).join(',');
       if (offersKey!==key) {
         offersKey = key;
-        el('offer-list').replaceChildren(...offerList.map(offer => {
-          const block = document.createElement('div');
-          block.className = 'offer';
+        offersRoot.render(offerList.map(offer=>{
           const outgoing = offer.from===id;
-          block.textContent = outgoing ? `Oferta para ${name(offer.to)} · ${money(offer.price)}` :
-            `${name(offer.from)} oferece um documento por ${money(offer.price)}`;
-          const cancel = document.createElement('button');
-          cancel.className = 'hud-button hud-button--secondary';
-          cancel.textContent = outgoing ? 'Cancelar' : 'Recusar';
-          cancel.onclick = () => send({kind:'cancel',offer:offer.id});
-          if (!outgoing) {
-            const accept = document.createElement('button');
-            accept.className = 'hud-button';
-            accept.textContent = 'Comprar';
-            accept.disabled = !contacts.has(offer.from) || p.wallet<offer.price || p.paymentsLeft===0;
-            accept.onclick = () => send({kind:'accept',offer:offer.id});
-            block.append(accept);
-          }
-          block.append(cancel);
-          return block;
+          return <div className="offer" key={offer.id}>
+            {outgoing ? `Oferta para ${name(offer.to)} · ${money(offer.price)}` : `${name(offer.from)} oferece um documento por ${money(offer.price)}`}
+            {!outgoing && <button className="hud-button" type="button" disabled={!contacts.has(offer.from) || p.wallet<offer.price || !p.paymentsLeft}
+              onClick={()=>send({kind:'accept',offer:offer.id})}>Comprar</button>}
+            <button className="hud-button hud-button--secondary" type="button" onClick={()=>send({kind:'cancel',offer:offer.id})}>
+              {outgoing ? 'Cancelar' : 'Recusar'}
+            </button>
+          </div>;
         }));
       }
       updateControls();
+    },
+    destroy() {
+      for (const control of [target,recipient,amount,dossier,price,nominee,split,privacy]) control.destroy();
+      recordsRoot.unmount();
+      offersRoot.unmount();
     },
     players(players:Player[]) {
       visiblePlayers = players;

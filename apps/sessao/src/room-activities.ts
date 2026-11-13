@@ -10,8 +10,9 @@ export const roomActivities = {
   committees: {x:790,y:363, title:'Comissões', label:'Consultar quórum', icon:'ballot'},
   credentials: {x:149,y:493, title:'Credenciamento', label:'Conferir credencial', icon:'check'},
   benches: {x:456,y:493, title:'Hall das Bancadas', label:'Consultar bancadas', icon:'ballot'},
-  gallery: {x:748,y:495, title:'Galeria', label:'Ouvir a galeria', icon:'mic'},
 } as const satisfies Record<string, {x:number; y:number; title:string; label:string; icon:string; panel?:ActivityPanel}>;
 
 export type RoomActivity = keyof typeof roomActivities;
 export type RoomActivityResult = {activity:RoomActivity; text?:string};
+
+export const reprography = {x:748,y:495,title:'Sala de Reprografia'} as const;

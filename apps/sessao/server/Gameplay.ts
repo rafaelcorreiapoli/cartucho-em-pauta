@@ -1140,6 +1140,7 @@ export class Gameplay {
         this.event(world,player,'destroyed',data);
         return 'Objeto destruído.';
       case 'edit':
+        if (!canReachObject(player,terminals.reprography.point)) return 'Aproxime-se da estação de Reprografia.';
         if (!data.document) return 'Selecione um documento.';
         if (data.document.edited) return 'Este documento já foi adulterado.';
         data.document.edited = true;

@@ -99,8 +99,7 @@
               <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
               <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
             </div>
-            <span id="office-progress-label" hidden></span>
-            <progress id="office-progress" class="office-progress" hidden></progress>
+            <div id="office-progress-mount"></div>
             <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
             <div id="station-shortcuts"></div>
             <div id="field-actions"></div>
@@ -334,7 +333,7 @@
                       <div class="social-empty" id="empty-evidence">
                         <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
                         <strong>Nenhuma prova no dossiê</strong>
-                        <p>Audite documentos na Controladoria ou receba provas de outros jogadores.</p>
+                        <p>Audite documentos na Corregedoria ou receba provas de outros jogadores.</p>
                       </div>
                       <form id="evidence-form" hidden>
                         <div class="choice-grid" id="evidence" role="group" aria-label="Selecionar documento"></div>
@@ -394,22 +393,7 @@
         <div id="result-content"></div>
         <form method="dialog"><button class="hud-button">Continuar</button></form>
       </dialog>
-      <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title">
-        <header>
-          <h2 id="campaign-title"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</h2>
-          <button id="close-campaign" class="hud-icon-button" type="button" aria-label="Fechar campanha"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button>
-        </header>
-        <form id="invest-form">
-          <label>Investir em campanha (R$ 10 mil por unidade)
-            <input id="investment" type="number" value="1" min="1" step="1" required>
-          </label>
-          <button class="hud-button" id="invest" type="submit">Investir</button>
-        </form>
-        <form id="support-form">
-          <label>Apoio público <select id="endorsement"></select></label>
-          <button class="hud-button hud-button--secondary" type="submit">Declarar ou retirar apoio</button>
-        </form>
-      </dialog>
+      <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title"></dialog>
       <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <div id="market-body"></div>
@@ -438,41 +422,12 @@
         <header><h2 id="surveillance-title">Central de Vigilância</h2><form method="dialog"><button type="submit" class="hud-button hud-button--secondary" aria-label="Fechar vigilância">✕</button></form></header>
         <div class="spy-console"><div id="spy-channels"></div><section id="spy-monitor"></section></div>
       </dialog>
-      <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title">
-        <div class="level-up-rays" aria-hidden="true"></div>
-        <div class="level-up-sparks" aria-hidden="true"></div>
-        <header>
-          <h2 id="level-up-title">LEVEL UP!</h2>
-          <div class="level-up-number"><span>NÍVEL</span><strong id="level-up-level"></strong></div>
-          <p id="level-up-points"></p>
-        </header>
-        <form method="dialog" class="progression-buttons">
-          <button class="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
-          <button class="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autofocus>Depois</button>
-        </form>
-      </dialog>
+      <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title"></dialog>
       <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title">
         <header><h2 id="parliamentarian-title"></h2><form method="dialog"><button class="hud-button hud-button--secondary">Encerrar</button></form></header>
         <div class="parliamentarian-options"></div>
       </dialog>
-      <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title">
-        <header>
-          <div><h2 id="attributes-title" class="sr-only">Atributos</h2><p id="attributes-xp"></p></div>
-          <form method="dialog"><button class="hud-button hud-button--secondary">Fechar</button></form>
-        </header>
-        <p id="attributes-available" role="status"></p>
-        <div class="attribute-columns">
-          <section class="attribute-panel" aria-label="Atributos">
-            <div id="attribute-list"></div>
-          </section>
-          <section class="attribute-panel" aria-label="Estatísticas de combate">
-            <div id="attribute-resources"></div>
-          </section>
-        </div>
-        <div class="progression-buttons">
-          <button id="confirm-attribute" type="button" class="hud-button" aria-keyshortcuts="5" disabled>Confirmar +1</button>
-        </div>
-      </dialog>
+      <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title"></dialog>
       <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr com o tênis equipado</p>
     </section>
   </main>

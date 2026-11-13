@@ -73,7 +73,7 @@ export const agendas = {
   cafe: 'Tome um cafezinho',
   leitura: 'Estude o projeto na Biblioteca',
   credencial: 'Confira sua credencial',
-  auditoria: 'Faça uma auditoria na Controladoria',
+  auditoria: 'Faça uma auditoria na Corregedoria',
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',

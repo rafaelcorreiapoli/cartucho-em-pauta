@@ -168,7 +168,7 @@ export class PlenaryMatch {
       return;
     }
     if (!this.at(player,action==='fraud' ? 'panel' : action)) {
-      if (action==='audit') return {text:'Chegue mais perto do ponto da Controladoria.',critical:false};
+      if (action==='audit') return {text:'Chegue mais perto do ponto da Corregedoria.',critical:false};
       return;
     }
     if (action==='amendment' && !this.amended) {
@@ -210,7 +210,6 @@ export class PlenaryMatch {
           `${this.economy.name(id)} · Ex-parlamentar`};
       }
       case 'benches': return {activity,text:`Parlamentares aptos a votar nesta rodada: ${this.votingPlayers()}.`};
-      case 'gallery': return {activity,text:`Sua popularidade com o público está em ${this.popularity(id)} de 100.`};
       default: return {activity};
     }
   }

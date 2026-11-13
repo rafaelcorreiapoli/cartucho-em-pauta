@@ -322,7 +322,7 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
-      hud.notify('Controladoria',text,critical);
+      hud.notify('Corregedoria',text,critical);
     });
     joined.onMessage('control',(snapshot: ControlState) => {
       progression.player(snapshot.player);
@@ -356,6 +356,8 @@ async function connect(join: () => Promise<Room>) {
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
+      election.destroy();
+      political.destroy();
       hud.destroy();
       reactHud.destroy();      results.destroy();
       progression.destroy();

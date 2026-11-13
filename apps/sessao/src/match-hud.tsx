@@ -1,5 +1,6 @@
 import { mountNotices } from './ui/notices';
-import { updateProgress } from './progress-meter';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { equippedWeapon, xray } from './equipment';
 import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
@@ -75,8 +76,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return {button,station};
   });
   const fieldActions = element('field-actions');
-  const progress = element<HTMLProgressElement>('office-progress');
-  const progressLabel = element('office-progress-label');
+  const progressRoot = createRoot(element('office-progress-mount'));
+  let progressKey = '';
   const officeBadge = element('own-office');
   const gearStrip = element('equipped-gear');
   const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
@@ -157,6 +158,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     gearStrip.hidden = equipped.length===0 && !remaining;
   }
 
+  const fieldRoot = createRoot(fieldActions);
   let fieldKey = '';
   let roster:Player[] = [];
   let own:Player | undefined;
@@ -167,25 +169,25 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
-    progress.hidden = !breach && robbery===undefined && spy?.progress===undefined;
-    if (spy?.progress!==undefined && !breach && robbery===undefined) {
-      updateProgress(progress,spy.progress,1);
-      progress.setAttribute('aria-label','Interação de espionagem em andamento');
+    const meter = breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
+      detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
+      robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
+      spy?.progress!==undefined ? {value:spy.progress,max:1,label:'Interação de espionagem em andamento'} : undefined;
+    const meterKey = JSON.stringify(meter) ?? '';
+    if (progressKey!==meterKey) {
+      progressKey = meterKey;
+      progressRoot.render(meter ? <>
+        {meter.detail && <span id="office-progress-label">{meter.detail}</span>}
+        <div id="office-progress" className="react-meter" data-tone="budget" role="progressbar"
+          aria-label={meter.label} aria-valuenow={meter.value} aria-valuemin={0} aria-valuemax={meter.max}>
+          <span style={{transform:`scaleX(${Math.max(0,Math.min(1,meter.value/meter.max))})`}}/>
+        </div>
+      </> : null);
     }
     for (const option of spy?.options ?? []) actions.push({
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
-    if (robbery!==undefined) {
-      updateProgress(progress,robbery,npcRules.robberyMs);
-      progress.setAttribute('aria-label','Roubando dinheiro');
-      actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
-    }
-    progressLabel.hidden = !breach;
-    if (breach) {
-      updateProgress(progress,breach.elapsed,breach.duration);
-      progress.setAttribute('aria-label',breach.label);
-      progressLabel.textContent = `${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`;
-    }
+    if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
     const ownOffice = state?.ownOffice;
     officeBadge.hidden = !ownOffice;
     if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
@@ -231,11 +233,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const key = JSON.stringify(actions);
     if (key===fieldKey) return;
     fieldKey = key;
-    fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
-      const control = hudButton(label,()=>sendField(action));
-      control.prepend(hudGlyph(icon));
-      return control;
-    }));
+    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action})=>
+      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" onClick={()=>sendField(action)}>
+        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
+      </button>)));
   }
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
@@ -433,9 +434,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
-      progress.hidden = officeBadge.hidden = true;
+      officeBadge.hidden = true;
+      progressRoot.unmount();
       shortcuts.replaceChildren();
-      fieldActions.replaceChildren();
+      fieldRoot.unmount();
     },
   };
 }

@@ -1,3 +1,4 @@
+import { reprography } from './room-activities';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
@@ -173,7 +174,7 @@ export const rooms = [
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
-  {name:'Controladoria', bounds:[713,10,237,104], color:0x527473},
+  {name:'Corregedoria', bounds:[713,10,237,104], color:0x527473},
   {name:'Apoio Técnico', bounds:[480,172,223,87], color:0x777d75},
   {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
   {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
@@ -182,7 +183,7 @@ export const rooms = [
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
   {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
-  {name:'Galeria', bounds:[602,403,204,127], color:0x56736e},
+  {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];
 

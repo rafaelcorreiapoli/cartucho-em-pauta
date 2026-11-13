@@ -1,3 +1,4 @@
+import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { concealment } from './equipment';
@@ -72,7 +73,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
@@ -122,6 +123,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
 }
 
 export const terminals = {
+  reprography:{point:reprography,title:reprography.title},
   press:{point:stations.press,title:'Imprensa'},
   coffee:{point:stations.coffee,title:'Cafezinho',supply:'coffee'},
   secretary:{point:stations.secretary,title:'Secretaria',supply:'document',stamp:'Secretaria'},
