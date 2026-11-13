@@ -1,7 +1,8 @@
+import { marketProduct } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
-import { decorPoint, decorSlots, isOfficeFurniture, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
+import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
@@ -24,7 +25,7 @@ import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
-import { cameraSees, isSpyProduct, spyProducts, spyRules, type SpyDevice } from "../src/surveillance";
+import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
@@ -960,21 +961,23 @@ export class Gameplay {
     return 'Raio X ativado.';
   }
 
-  private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
+  private buyProduct(player:Player, requested:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,npc=>{
-      const gear = isGear(kind);
-      const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear' && kind!=='forensicKit' && kind!=='firstAidKit') return 'Produto indisponível.';
-      if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
+      const product = marketProduct(npcs[npc].catalog,requested);
+      if (!product) {
+        return marketProduct('equipment',requested) || marketProduct('food',requested)
+          ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
+      }
+      const {kind,price} = product;
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
-      if (gear && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : objects[kind].price)) return 'Saldo insuficiente.';
+      if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
+      if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {

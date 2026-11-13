@@ -1,18 +1,14 @@
-import { documentRules } from './internal-mail';
-import { isOfficeFurniture, isOfficeGood, officeGoodKinds, officeGoods, type OfficeFurniture } from './private-offices';
+import { marketKinds, marketProduct } from './market-catalog';
+import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
-import { describeFood, foodKinds, foods, isFood } from './food';
-import { concealment, equipment, gearKinds, isGear } from './equipment';
+import { describeFood, foods, isFood } from './food';
+import { isGear } from './equipment';
 import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
-
-import { isSpyProduct, spyProducts, type SpyProduct } from "./surveillance";
-
-const spyKinds = Object.keys(spyProducts) as SpyProduct[];
 
 export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
@@ -60,7 +56,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   dialog.addEventListener('keydown',onPageKey);
 
   function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[]) {
-    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds,'mensalUnderwear' as const,'forensicKit' as const,'firstAidKit' as const] : foodKinds;
+    const catalog = npcs[npc].catalog;
+    if (!catalog) return;
+    const kinds = marketKinds[catalog];
     const owned = [...inventory,...equipped];
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     const pageCount = Math.ceil(kinds.length/pageSize);
@@ -76,8 +74,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       <div className="market-products">
         {visible.map((kind,index)=>{
           const food = isFood(kind) ? foods[kind] : undefined;
-          const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price :
-            isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : objects[kind].price;
+          const price = marketProduct(catalog,kind)!.price;
           const item = objects[kind];
           const furniture = isOfficeFurniture(kind);
           const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
