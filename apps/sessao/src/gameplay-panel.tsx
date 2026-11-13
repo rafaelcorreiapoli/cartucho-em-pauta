@@ -73,6 +73,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let decorationId:number | undefined;
   let equipmentOpen = false;
   let stashOpen = false;
+  let bagOpen = false;
   const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
@@ -114,19 +115,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   type ObjectAction = {label:string;run:()=>void;key?:string};
 
-  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
+  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
     selection = item;
     quantity = 1;
     decorationId = decoration;
     equipmentOpen = equipment;
     stashOpen = stash;
+    bagOpen = bag;
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
     renderKey = '';
-    element('gameplay-title').textContent = stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
-    navigation.hidden = object || equipment || stash;
-    dialog.dataset.mode = equipment || stash ? 'equipment' : object ? 'item' : 'phone';
+    element('gameplay-title').textContent = bag ? 'Mochila' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    navigation.hidden = object || equipment || stash || bag;
+    dialog.dataset.mode = equipment || stash || bag ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -178,7 +180,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (!dialog.open || !state || !view) return;
     const stash = stashOpen ? state.officeStash : undefined;
     if (stashOpen && !stash) { dialog.close(); return; }
-    const phone = !selection && decorationId===undefined && !equipmentOpen && !stash;
+    const phone = !selection && decorationId===undefined && !equipmentOpen && !stash && !bagOpen;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
@@ -198,13 +200,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = bagOpen ? state.inventory : stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
@@ -212,6 +214,19 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const cards:HTMLElement[] = [];
     if (stash) {
       flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
+      cards.push(objectsHost);
+    }
+    if (bagOpen) {
+      flushSync(()=>objectsRoot.render(<div className="congress-bag">
+        {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+          const item = state.inventory[index];
+          return item ? <button key={item.id} type="button" className="item-tile" title={itemName(item)}
+            onClick={()=>open({id:item.id,source:'inventory'})}>
+            <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait}/>
+            <span>{itemName(item)}</span>
+          </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={index}>+</span>;
+        })}
+      </div>));
       cards.push(objectsHost);
     }
     if (equipmentOpen) {
@@ -370,15 +385,15 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
       const item = inventoryItems[index];
       const shortcut = index+1;
-      const badge = <kbd className="slot-key" aria-hidden="true">⇧{shortcut}</kbd>;
-      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}</span>;
+      const badge = <kbd className="slot-key" aria-hidden="true">{shortcut}</kbd>;
+      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}<span className="slot-plus">+</span></span>;
       const name = itemName(item);
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
         aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
         onClick={()=>open({id:item.id,source:'inventory'})}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
-        <span className="item-caption">{name}</span>{badge}
+        {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </button>;
     }));
   }
@@ -432,6 +447,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   phoneButton.onclick = () => open();
+  element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
     photos.stopPreview();

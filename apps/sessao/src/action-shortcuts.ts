@@ -128,7 +128,9 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
     if (event.shiftKey || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
     const control = controls.find(([shortcut])=>shortcut===key)?.[1];
-    if (!control || !available(control)) return;
+    if (!control) return;
+    const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle';
+    if (viaApp ? control.matches(':disabled,[hidden]') || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
     event.preventDefault();
     control.click();
     if (!modal()) map.focus({preventScroll:true});

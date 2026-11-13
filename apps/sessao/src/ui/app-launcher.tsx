@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 
 const apps = [
@@ -7,6 +7,8 @@ const apps = [
   {id:'open-phone',label:'Celular',icon:'phone'},
   {id:'open-mail',label:'Correio Interno',icon:'document',key:'U'},
   {id:'open-surveillance',label:'Vigilância',icon:'camera',key:'G'},
+  {id:'voice-toggle',label:'Microfone',icon:'mic',key:'V'},
+  {id:'room-settings',label:'Configurações',icon:'settings'},
 ] as const;
 
 type AppId = typeof apps[number]['id'];
@@ -34,21 +36,21 @@ export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=
     };
   },[open]);
   return <>
-    {open && <section id="congress-app-panel" className="congress-app-panel rounded-hud p-3" aria-label="Aplicativos do parlamentar">
-      <header className="mb-3 flex items-center justify-between gap-4">
-        <strong>Aplicativos do parlamentar</strong>
-        <button type="button" tabIndex={-1} aria-label="Fechar aplicativos" onClick={()=>setOpen(false)}><Icon name="cross"/></button>
-      </header>
-      <div className="grid grid-cols-2 gap-2">
-        {apps.filter(app=>!status[app.id]?.hidden).map(app=><button key={app.id} tabIndex={-1} type="button"
-          className="congress-app flex items-center gap-2 rounded-hud p-2 text-left"
-          onClick={()=>{setOpen(false);launch(app.id);}}>
-          <Icon name={app.icon}/><span className="flex-1">{app.label}</span>
-          {status[app.id]?.badge && <strong>{status[app.id]?.badge}</strong>}
-          {'key' in app && <kbd>{app.key}</kbd>}
-        </button>)}
-      </div>
+    {open && <section id="congress-app-panel" className="congress-app-panel" aria-label="Aplicativos do parlamentar">
+      {apps.filter(app=>!status[app.id]?.hidden).map((app,index)=><button key={app.id} tabIndex={-1} type="button"
+        className="congress-app-toggle congress-app" aria-label={app.label} title={app.label}
+        style={{'--app-index':index} as CSSProperties}
+        onClick={()=>{setOpen(false);launch(app.id);}}>
+        <Icon name={app.icon}/><span className="congress-app-label">{app.label}</span>
+        {status[app.id]?.badge && <strong className="congress-app-badge">{status[app.id]?.badge}</strong>}
+      </button>)}
     </section>}
+    <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Mochila" title="Mochila"
+      onClick={()=>{setOpen(false);document.getElementById('open-bag')?.click();}}>
+      <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 7V5a4 4 0 0 1 8 0v2M6 7h12l2 4v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9zM4 13h16M9 12v5h6v-5"/>
+      </svg>
+    </button>
     <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Aplicativos" aria-expanded={open}
       aria-controls={open ? 'congress-app-panel' : undefined} onClick={()=>setOpen(value=>!value)}>
       <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -60,19 +62,22 @@ export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=
 
 export function mountAppLauncher() {
   const root = createRoot(document.getElementById('congress-apps')!);
-  const controls = apps.map(app=>({id:app.id,button:document.getElementById(app.id) as HTMLButtonElement}));
+  const controls = apps.map(app=>({id:app.id,button:document.getElementById(app.id)!}));
   let previous = '';
   return {
     render() {
       const status:AppStatus = {};
       for (const {id,button} of controls) {
-        const badge = button.querySelector('span:not([hidden]):not(.sr-only)')?.textContent?.trim();
+        const badge = id!=='voice-toggle' && id!=='room-settings' ? button.querySelector('span:not([hidden]):not(.sr-only)')?.textContent?.trim() : undefined;
         status[id] = {hidden:button.hidden,badge};
       }
       const key = JSON.stringify(status);
       if (key===previous) return;
       previous = key;
-      root.render(<AppLauncher status={status} launch={id=>document.getElementById(id)?.click()}/>);
+      root.render(<AppLauncher status={status} launch={id=>{
+        if (id==='room-settings') document.querySelector<HTMLElement>('#room-settings > summary')?.click();
+        else document.getElementById(id)?.click();
+      }}/>);
     },
     destroy() { root.unmount(); },
   };
