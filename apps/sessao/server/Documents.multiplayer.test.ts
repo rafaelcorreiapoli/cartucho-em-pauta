@@ -145,7 +145,14 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const rebuttal = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Contraexposição'));
     expect(rebuttal.attachment).toEqual({kind:'report',report});
 
+    const caioAgenda = Reflect.get(economy,'accounts').get(caio.sessionId).agenda;
+    Reflect.set(caioAgenda,'missions',[]);
+    Reflect.set(caioAgenda,'missionDeck',['publicouSelfie','cafe','passeio']);
+    match.refreshAgendaEligibility();
+    await wait(()=>views.get(caio.sessionId)?.politics?.missions.active.find(mission=>mission.kind==='publicouSelfie'));
     move(caio,stations.audit);
+    move(alice,stations.audit);
+    move(bia,stations.audit);
     caio.send('gameplay',{action:{kind:'selfie'},token:1520});
     const photo = await wait(()=>photos.get(caio.sessionId)?.album[0]?.photo);
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(bia.sessionId);
@@ -154,6 +161,14 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     caio.send('mail-publish',{token:1570,subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
+    const completedSelfie = await wait(()=>views.get(caio.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='publicouSelfie'));
+    Reflect.set(caioAgenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    Reflect.set(caioAgenda,'missions',[]);
+    match.refreshAgendaEligibility();
+    await wait(()=>views.get(caio.sessionId)?.politics?.missions.active.find(mission=>mission.kind==='publicouSelfie'));
+    Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
+    caio.send('mail-publish',{token:1590,subject:'Mesma foto',body:'Publicada novamente',attachment:{kind:'photo',id:photo.id}});
+    await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Mesma foto'));
 
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
     caio.send('mail-publish',{token:2,subject:'Reenvio',body:'Não deve publicar'});
@@ -161,6 +176,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const forwarded = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.forwardedFrom===publication.id));
     expect(forwarded.attachment).toEqual(publication.attachment);
     expect(forwarded.author).toBe('Caio');
+    expect(views.get(caio.sessionId)?.politics?.missions.completed.filter(mission=>mission.kind==='publicouSelfie')).toEqual([completedSelfie]);
     expect(inboxes.get(alice.sessionId)?.some(entry=>entry.subject==='Reenvio')).toBe(false);
     expect(JSON.stringify(forwarded)).not.toContain('authentic');
     move(alice,stations.amendment);

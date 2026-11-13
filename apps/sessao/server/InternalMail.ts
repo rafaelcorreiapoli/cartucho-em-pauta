@@ -56,5 +56,10 @@ export class InternalMail {
     if (expired) this.authenticity.delete(expired.id);
     this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
       ...this.notices].slice(0,internalMailRules.history);
+    if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
+      const {photo} = resolved.attachment;
+      world.publish({type:'photo-published',actor:player.id,at:world.now,position:{x:player.x,y:player.y},
+        item:photo.id,photo,witnesses:[]});
+    }
   }
 }

@@ -183,7 +183,9 @@ export class PersonalAgenda {
   }
 
   recordGameplay(metrics:AgendaMetrics, event:GameplayEvent, scandalPizza:boolean) {
-    const key = JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
+    const key = event.type==='photo-published' && event.photo
+      ? JSON.stringify([event.type,event.photo.id])
+      : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
     if (this.seenEvents.has(key)) return;
     this.seenEvents.add(key);
     const gains:Partial<Record<Agenda,number>> = {};

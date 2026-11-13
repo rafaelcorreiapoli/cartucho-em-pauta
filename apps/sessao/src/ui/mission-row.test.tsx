@@ -48,3 +48,10 @@ test('the phone photo objective names both eligible rooms',()=>{
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'celularFoto',current:0,target:1}}/>);
   expect(markup).toContain('Antecâmara ou nas Comissões');
 });
+
+test('publishing a qualifying selfie changes the Agenda row to completed',()=>{
+  const mission:Mission = {id:4,kind:'publicouSelfie',current:1,target:1};
+  const markup = renderToStaticMarkup(<MissionRow mission={mission} done/>);
+  expect(markup).toContain('Publique uma selfie sua com pelo menos dois colegas.');
+  expect(markup).toContain('data-done="true"');
+});
