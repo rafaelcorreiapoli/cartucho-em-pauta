@@ -121,3 +121,9 @@ test('shop listings resolve prices only for products in that shop',()=>{
     }
   }
 });
+
+test('lock tool descriptions report the same strength used by the breach rules',()=>{
+  const tools = Object.values(objects).filter(item=>'attack' in item);
+  expect(tools.map(tool=>tool.attack)).toEqual([1,2,3,4,5]);
+  for (const tool of tools) expect(tool.description).toBe(`Arrombamento nível ${tool.attack}.`);
+});

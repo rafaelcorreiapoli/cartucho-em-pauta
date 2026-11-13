@@ -37,12 +37,16 @@ export const officeRules = {
   safeLootFraction:1, cashMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],
 } as const;
 
+function lockTool(name:string, portrait:string, price:number, attack:number) {
+  return {name,portrait,price,attack,description:`Arrombamento nível ${attack}.`};
+}
+
 export const officeGoods = {
-  lockpick:{name:'Gazua improvisada',description:'Arrombamento nível 1.',portrait:'retrato-gazua.webp',price:1,attack:1},
-  lockKit:{name:'Kit de arrombamento',description:'Arrombamento nível 2.',portrait:'retrato-kit-arrombamento.webp',price:2,attack:2},
-  proLockKit:{name:'Kit profissional',description:'Arrombamento nível 3.',portrait:'retrato-kit-profissional.webp',price:3,attack:3},
-  decoder:{name:'Decodificador',description:'Arrombamento nível 4.',portrait:'retrato-decodificador.webp',price:4,attack:4},
-  masterDecoder:{name:'Ferramenta especializada',description:'Arrombamento nível 5.',portrait:'retrato-ferramenta-especializada.webp',price:5,attack:5},
+  lockpick:lockTool('Gazua improvisada','retrato-gazua.webp',1,1),
+  lockKit:lockTool('Kit de arrombamento','retrato-kit-arrombamento.webp',2,2),
+  proLockKit:lockTool('Kit profissional','retrato-kit-profissional.webp',3,3),
+  decoder:lockTool('Decodificador','retrato-decodificador.webp',4,4),
+  masterDecoder:lockTool('Ferramenta especializada','retrato-ferramenta-especializada.webp',5,5),
   doorLock:{name:'Reforço de porta',description:'Aumenta a segurança da porta em um nível.',portrait:'retrato-fechadura.webp',price:2},
   cabinetLock:{name:'Reforço de armário',description:'Aumenta a segurança do armário em um nível.',portrait:'retrato-fechadura-armario.webp',price:2},
   officeTv:{name:'TV de 85 polegadas',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tv.webp',price:3},
