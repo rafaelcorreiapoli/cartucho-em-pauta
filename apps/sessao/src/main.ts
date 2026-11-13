@@ -330,7 +330,7 @@ async function connect(join: () => Promise<Room>) {
         if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
       }
       if (matchRunning) return;
-      const names = players.map(player => player.nick+(player.id===joined.sessionId ? ' (você)' : ''));
+      const names = players.filter(player => player.id!==joined.sessionId).map(player => player.nick);
       const key = names.join('|');
       if (rosterKey===key) return;
       rosterKey = key;

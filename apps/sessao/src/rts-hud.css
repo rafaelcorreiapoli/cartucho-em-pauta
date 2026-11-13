@@ -185,7 +185,14 @@ button.equipped-gear-tile { cursor: pointer; }
   padding: 10px clamp(12px,1.5vw,26px);
 }
 #command-deck > section + section { border-left: 1px solid var(--command-divider); }
-#command-deck #profile-dock { inset: auto; width: auto; gap: clamp(10px,1vw,16px); padding-left: 0; }
+#command-deck #profile-dock {
+  inset: auto;
+  width: auto;
+  gap: clamp(10px,1vw,16px);
+  padding-left: 0;
+  background: transparent;
+  box-shadow: none;
+}
 #command-deck #profile-dock .portrait {
   --portrait-size: clamp(50px,5vw,72px);
   flex: none;
