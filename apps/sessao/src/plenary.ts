@@ -1,3 +1,4 @@
+import { canInteract, type InteractionActor } from './interactions';
 import type {ComplaintView} from './complaints';
 import type {FireView} from './fire';
 import type { GameplayView } from './gameplay';
@@ -21,6 +22,9 @@ export const stations = {
 } as const;
 export type Station = keyof typeof stations;
 export const STATION_RADIUS = 23;
+export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
+  return canInteract(player,stations[station],{radius,handsFree:true});
+}
 export const bills = [
   {name:'Auxílio Churrasco', description:'Cria um auxílio para financiar churrascos.', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8},fireSafety:false},
   {name:'Wi-Fi na Praça', description:'Instala internet pública gratuita em praças.', yes:{stability:16,budget:-22}, no:{stability:-18,budget:6},fireSafety:false},

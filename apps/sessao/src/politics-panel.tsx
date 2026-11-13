@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
-import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
+import { canReachStation, type Station, type PlenaryView } from './plenary';
 import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type Offer, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
@@ -100,7 +100,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   el<HTMLDetailsElement>('ledger').open = false;
   const recordsRoot = createRoot(el('public-records'));
   const offersRoot = createRoot(el('offer-list'));
-  const at = (key:keyof typeof stations) => !!own && Math.hypot(own.x-stations[key].x,own.y-stations[key].y)<=STATION_RADIUS;
+  const at = (key:Station) => !!own && canReachStation(own,key);
   const name = (id:string) => view?.politics?.directory.find(contact => contact.id===id)?.name ?? 'Jogador';
   const describe = (record:Evidence) => record.kind==='diversion' ?
     `${name(record.from)} desviou ${money(record.amount)} da verba do gabinete.` :

@@ -15,7 +15,7 @@ import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { money } from './politics';
-import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { stations as stationPoints, canReachStation, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
@@ -324,7 +324,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (canInteract && player) {
       for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
         const distance = Math.hypot(player.x-point.x,player.y-point.y);
-        if (canReachObject(player,point,{radius:best,handsFree:true})) {
+        if (canReachStation(player,key,best)) {
           best = distance;
           context = key;
         }

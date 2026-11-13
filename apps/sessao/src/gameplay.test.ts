@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {agendaProject,voteIntentSummary} from './plenary';
+import {agendaProject,canReachStation,stations,voteIntentSummary} from './plenary';
 import {canVerifyDocumentAt,consumableAction,objects,readGameplayAction,treasuryDeliveries} from './gameplay';
 
 test('document verification is offered only at the two document counters',()=>{
@@ -77,4 +77,13 @@ for (const kind of ['coffee','forensicKit','firstAidKit','baton','wiretap','spyC
 test('every item has a distinct inventory portrait',()=>{
   const portraits = Object.values(objects).map(item=>item.portrait);
   expect(new Set(portraits).size).toBe(portraits.length);
+});
+
+test('station controls share the reach, wall and hands-free rules',()=>{
+  const station = stations.coffee;
+  const player = {x:station.x+8,y:station.y};
+  expect(canReachStation(player,'coffee')).toBe(true);
+  expect(canReachStation({...player,carrying:true},'coffee')).toBe(false);
+  expect(canReachStation({...player,barriers:[[station.x+3,station.y-2,2,4]]},'coffee')).toBe(false);
+  expect(canReachStation({...player,x:station.x+24},'coffee')).toBe(false);
 });

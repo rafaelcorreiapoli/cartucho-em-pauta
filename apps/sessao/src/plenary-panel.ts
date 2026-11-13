@@ -2,7 +2,7 @@ import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { voteIntentSummary, agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -53,8 +53,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   function updateActions() {
     for (const button of actions) {
       const action = button.dataset.action as Action;
-      const station = stations[action==='fraud' ? 'panel' : action];
-      const nearby = !!own && Math.hypot(own.x-station.x,own.y-station.y)<=STATION_RADIUS;
+      const nearby = !!own && canReachStation(own,action==='fraud' ? 'panel' : action);
       button.disabled = !nearby || (action==='amendment' && !!view?.amended);
     }
 

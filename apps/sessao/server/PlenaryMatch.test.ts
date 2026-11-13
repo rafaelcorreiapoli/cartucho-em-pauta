@@ -551,3 +551,13 @@ test('a used amendment stays out of the mission draw until the next negotiation'
   match.act(at(host,'amendment'),'amendment',NEGOTIATION_MS+BALLOT_MS+1);
   expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'emenda'}));
 });
+
+test('a station rejects a nearby player blocked by a barrier or carrying someone',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const {x,y} = stations.coffee;
+  const nearby:Player = {...host,x:x+8,y};
+  expect(match.roomActivity({...nearby,barriers:[[x+3,y-2,2,4]]},'coffee',1)).toBeUndefined();
+  expect(match.roomActivity({...nearby,carrying:true},'coffee',2)).toBeUndefined();
+  expect(match.roomActivity(nearby,'coffee',3)?.activity).toBe('coffee');
+});

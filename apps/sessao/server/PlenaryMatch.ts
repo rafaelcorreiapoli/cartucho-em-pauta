@@ -11,7 +11,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, STATION_RADIUS,
+  BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
@@ -343,8 +343,7 @@ export class PlenaryMatch {
   private canVote(id:string) { return this.electorate.has(id) && !!this.election.office(id) && !this.economy.suspended(id); }
 
   private at(player:Player, key:keyof typeof stations) {
-    const station = stations[key];
-    return canInteract(player,station,{radius:STATION_RADIUS,handsFree:true});
+    return canReachStation(player,key);
   }
 
   private nearby(player:Player, other:Player) {
