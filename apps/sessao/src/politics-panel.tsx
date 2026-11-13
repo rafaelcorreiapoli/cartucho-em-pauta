@@ -59,7 +59,7 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
   return {
     get value() { return value; },
     limit(limit:number) {
-      const next = Math.max(minimum,limit);
+      const next = Math.max(minimum,Math.floor(limit));
       if (maximum===next) return;
       maximum = next;
       value = Math.min(value,maximum);
@@ -69,8 +69,8 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
   };
 }
 
-export function manualTransfer(to:string,amount:number,clandestine:boolean):PoliticsAction|undefined {
-  if (to && Number.isSafeInteger(amount) && amount>0) return {kind:'transfer',to,amount,clandestine};
+export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity):PoliticsAction|undefined {
+  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet) return {kind:'transfer',to,amount,clandestine};
 }
 
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
@@ -113,14 +113,14 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el('hearing-form').hidden = !exploring || !at('panel') || !politics.canCallHearing;
     el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
     el('trade-controls').hidden = !target.value;
-    el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet===0 || politics.paymentsLeft===0;
+    el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet<1 || politics.paymentsLeft===0;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
     el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
   }
 
   el<HTMLFormElement>('trade').onsubmit = event => {
     event.preventDefault();
-    const action = manualTransfer(target.value,amount.value,privacy.value==='private');
+    const action = manualTransfer(target.value,amount.value,privacy.value==='private',view?.politics?.wallet ?? 0);
     if (action) send(action);
   };
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {

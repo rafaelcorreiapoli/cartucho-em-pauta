@@ -34,6 +34,7 @@ export class PlenaryMatch {
   private npcIds = new Set<string>();
 
   addParliamentarian(player:Player) {
+    if (this.npcIds.has(player.id) || this.electorate.has(player.id)) return;
     this.npcIds.add(player.id);
     const [min,max] = npcRules.startingWallet;
     const wallet = min+Math.floor(Math.random()*(max-min+1));

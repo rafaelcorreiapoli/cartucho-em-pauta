@@ -131,8 +131,9 @@ export class PoliticalEconomy {
   }
 
   rewardFromReserve(id:string,amount:number) {
+    if (!this.accounts.has(id) || !Number.isSafeInteger(amount*10) || amount<=0) return;
     const paid = Math.min(amount,this.rewardReserve);
-    this.rewardReserve -= paid;
+    this.rewardReserve = Math.round((this.rewardReserve-paid)*10)/10;
     this.earn(id,paid);
   }
 
@@ -145,10 +146,10 @@ export class PoliticalEconomy {
 
   spend(id:string,amount:number) {
     const account = this.accounts.get(id);
-    if (!account || amount>account.wallet) return false;
-    account.wallet -= amount;
-    this.rewardReserve += amount;
-    this.reserveFees += amount;
+    if (!account || !Number.isSafeInteger(amount*10) || amount<=0 || amount>account.wallet) return false;
+    account.wallet = Math.round((account.wallet-amount)*10)/10;
+    this.rewardReserve = Math.round((this.rewardReserve+amount)*10)/10;
+    this.reserveFees = Math.round((this.reserveFees+amount)*10)/10;
     return true;
   }
 

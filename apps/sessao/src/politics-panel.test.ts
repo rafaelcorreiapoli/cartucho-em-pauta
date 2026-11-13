@@ -7,6 +7,9 @@ test('informal loans and repayments are manual payments selected by the player',
   expect(manualTransfer('lender',3,false)).toEqual({kind:'transfer',to:'lender',amount:3,clandestine:false});
   expect(manualTransfer('',3,false)).toBeUndefined();
   expect(manualTransfer('lender',0,false)).toBeUndefined();
+  expect(manualTransfer('lender',2,false,1.5)).toBeUndefined();
+  expect(manualTransfer('lender',1,false,.5)).toBeUndefined();
+  expect(manualTransfer('lender',1,false,1.5)?.kind).toBe('transfer');
 });
 
 test('political, election and mail commands share a sequence on the room connection',()=>{

@@ -396,3 +396,32 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   match.advance(ELECTION_RULES.interval);
   expect(match.economySummary(game.physicalCash())).toMatchObject({publicDuty:4.2,salaries:2.7,discrepancy:0});
 });
+
+test('NPC issuance, paid agreements, robbery and reserve fees conserve the same funds',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const npc:Player = {...traitor,id:'npc-parliamentarian-1',npc:true};
+  const game = new Gameplay();
+  const world = match.gameplayWorld([...people,npc],1,()=>false);
+  const summary = () => match.economySummary(game.physicalCash());
+
+  match.addParliamentarian(npc);
+  const issued = summary().npcIssued;
+  expect(issued).toBeGreaterThan(0);
+  match.addParliamentarian(npc);
+  match.addParliamentarian(host);
+  expect(summary()).toMatchObject({npcIssued:issued,npcs:issued,humans:24,discrepancy:0});
+
+  expect(world.payNpc!(host.id,npc.id,2)).toBe(true);
+  expect(world.payNpc!(host.id,npc.id,100)).toBe(false);
+  expect(summary()).toMatchObject({npcs:issued+2,humans:22,transferred:2,discrepancy:0});
+
+  expect(game.robNpc(host,npc,world)).toContain('Maleta roubada');
+  expect(game.robNpc(host,npc,world)).toBe('O parlamentar está sem dinheiro.');
+  expect(summary()).toMatchObject({npcs:0,physical:issued+2,discrepancy:0});
+
+  for (const invalid of [-1,NaN,Infinity,0,.05]) expect(world.spend!(host.id,invalid)).toBe(false);
+  for (const fee of [.1,.2,.3,5.4]) expect(world.spend!(host.id,fee)).toBe(true);
+  expect(world.wallet!(host.id)).toBe(0);
+  expect(summary()).toMatchObject({reserveFees:6,physical:issued+2,discrepancy:0});
+});
