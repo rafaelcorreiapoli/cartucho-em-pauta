@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {localPlayerLightMask,wallVision} from './visibility';
+import {shadowQuads,wallVision} from './visibility';
 import {wallBetween} from './map';
 
 test('the light includes the visible wall face while the barrier still blocks visibility',()=>{
@@ -11,8 +11,11 @@ test('the light includes the visible wall face while the barrier still blocks vi
   expect(unblocked?.x).toBeCloseTo(35);
 });
 
-test('the local player light covers bars and labels independently of wall rays',()=>{
-  expect(localPlayerLightMask(100,80,200,2)).toBe(
-    'radial-gradient(ellipse 36px 60px at 100px 140px, transparent 100%, #000 calc(100% + 16px))',
-  );
+test('shadow starts at the far wall face with no opening for the avatar',()=>{
+  const origin = {x:140,y:146,barriers:[[153,135,3,25]] as const};
+  const rays = wallVision(origin,35);
+  const east = rays.findIndex(point=>Math.abs(point.dy)<1e-8 && point.dx>0);
+  const quads = shadowQuads(rays,origin.x,origin.y,4000);
+  expect(quads[east][0]).toEqual({x:156,y:146});
+  expect(quads[east][3]).toEqual({x:4140,y:146});
 });

@@ -18,7 +18,7 @@ export function wallVision(origin:Motion,radius:number) {
       nearest = entry;
       distance = Math.min(radius,exit);
     }
-    return {x:dx*distance,y:dy*distance};
+    return {x:dx*distance,y:dy*distance,dx,dy};
   });
 }
 
@@ -36,8 +36,12 @@ function slab(origin:number,direction:number,min:number,max:number) {
   return [Math.min(a,b),Math.max(a,b)];
 }
 
-export function localPlayerLightMask(x:number, top:number, bottom:number, zoom:number) {
-  const center = (top+bottom)/2;
-  const height = (bottom-top)/2;
-  return `radial-gradient(ellipse ${18*zoom}px ${height}px at ${x}px ${center}px, transparent 100%, #000 calc(100% + ${8*zoom}px))`;
+export function shadowQuads(points:ReturnType<typeof wallVision>,x:number,y:number,extent:number) {
+  return points.map((a,index)=>{
+    const b = points[(index+1)%points.length];
+    return [
+      {x:x+a.x,y:y+a.y},{x:x+b.x,y:y+b.y},
+      {x:x+b.dx*extent,y:y+b.dy*extent},{x:x+a.dx*extent,y:y+a.dy*extent},
+    ] as const;
+  });
 }
