@@ -191,7 +191,7 @@
 #command-deck .profile-office { gap: 5px; font-size: 13px; }
 #command-deck #hud-office { color: var(--party-gold); font-size: 12px; }
 .deck-profile-links, .deck-project-links { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#command-deck :is(#agenda-dock,#vote-history,#private-profile,#project-details) {
+#command-deck :is(#vote-history,#private-profile,#project-details) {
   position: relative;
   inset: auto;
   transform: none;
@@ -202,7 +202,7 @@
   box-shadow: none;
   background: none;
 }
-#command-deck :is(#agenda-dock,#vote-history,#private-profile,#project-details) > summary {
+#command-deck :is(#vote-history,#private-profile,#project-details) > summary {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -214,11 +214,10 @@
   white-space: nowrap;
   cursor: pointer;
 }
-#command-deck :is(#agenda-dock,#vote-history,#private-profile,#project-details) > summary::-webkit-details-marker { display: none; }
-#command-deck :is(#agenda-dock,#vote-history,#private-profile,#project-details) > summary:hover,
-#command-deck :is(#agenda-dock,#vote-history,#private-profile,#project-details)[open] > summary { color: var(--party-gold); }
-#command-deck #agenda-progress { padding: 0; background: none; font: inherit; color: var(--party-gold); }
-#command-deck #agenda-dock .module-content, #command-deck .deck-popover, #command-deck #last-vote {
+#command-deck :is(#vote-history,#private-profile,#project-details) > summary::-webkit-details-marker { display: none; }
+#command-deck :is(#vote-history,#private-profile,#project-details) > summary:hover,
+#command-deck :is(#vote-history,#private-profile,#project-details)[open] > summary { color: var(--party-gold); }
+#command-deck .deck-popover, #command-deck #last-vote {
   position: absolute;
   inset: auto auto calc(100% + 12px) 0;
   z-index: 3;
@@ -232,13 +231,10 @@
   background: #203a30;
   box-shadow: 0 10px 26px #06140db8;
 }
-#command-deck .deck-popover h2, #command-deck .agenda-panel h2 { margin: 0 0 10px; font: 710 16px/1.15 system-ui, sans-serif; }
+#command-deck .deck-popover h2 { margin: 0 0 10px; font: 710 16px/1.15 system-ui, sans-serif; }
 .deck-private-row, .deck-private-row > span { display: flex; gap: 6px; align-items: center; }
 .deck-private-row + .deck-private-row { margin-top: 7px; }
 .deck-private-row small { color: var(--command-muted); }
-#command-deck #agenda-dock .agenda-list li { padding: 8px; }
-#command-deck .agenda-list strong, #command-deck .agenda-list small { font-size: 12px; }
-#command-deck .mission-reward { font-size: 11px; }
 
 #command-deck #legislative-dock {
   position: relative;
@@ -442,7 +438,7 @@
 #world #nearby-items .station-key { min-width: 17px; min-height: 17px; font-size: 10px; }
 #world #hud-notices {
   position: fixed;
-  inset: calc(var(--strip-height) + 10px) 12px auto auto;
+  inset: calc(var(--strip-height) + 10px) auto auto max(12px, env(safe-area-inset-left));
   transform: none;
   width: min(280px,35vw);
   margin: 0;
@@ -714,3 +710,54 @@ img.market-art {
   accent-color: var(--party-gold);
 }
 #own-office:not([hidden]) { color: var(--party-gold); font-size: .68rem; }
+
+#agenda-dock {
+  position: absolute;
+  z-index: 3;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: min(290px, 43vw);
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #adc4ad36;
+  border-radius: 12px;
+  background: #101d17e8;
+  color: #edf2e6;
+  pointer-events: none;
+  font: 400 13px/1.35 system-ui, sans-serif;
+}
+#agenda-dock header { display: flex; align-items: center; gap: 7px; }
+#agenda-title { flex: 1; margin: 0; font: 650 14px/1.2 system-ui, sans-serif; }
+#agenda-dock header .hud-glyph { width: 15px; height: 15px; }
+#agenda-progress { font-size: 11px; color: #b0c0b0; white-space: nowrap; }
+.agenda-list { display: grid; gap: 8px; margin: 9px 0 0; padding: 0; list-style: none; }
+#missions-completed:not([hidden]) { padding-bottom: 9px; border-bottom: 1px solid #adc4ad45; }
+.agenda-list li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: start; }
+.mission-mark {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  border: 1.5px solid #aebcaf;
+  border-radius: 3px;
+}
+.mission-mark .hud-glyph { width: 9px; height: 9px; visibility: hidden; }
+.mission-copy { overflow-wrap: anywhere; }
+.mission-copy strong { display: block; font-weight: 520; }
+.mission-copy small { color: #b0c0b0; font-size: 11px; font-variant-numeric: tabular-nums; }
+.agenda-list [data-done="true"] { color: #a8baab; }
+.agenda-list [data-done="true"] strong { text-decoration: line-through; }
+.agenda-list [data-done="true"] .mission-mark { border-color: #86b999; color: #a6dfad; }
+.agenda-list [data-done="true"] .hud-glyph { visibility: visible; }
+@media (prefers-reduced-motion: no-preference) {
+  .agenda-completed-now .mission-mark { animation: agenda-check 240ms ease-out; }
+  @keyframes agenda-check { from { transform: scale(.75); opacity: .4; } }
+}
+@media (max-width: 540px), (max-height: 550px) {
+  #agenda-dock { width: min(245px, 48vw); padding: 8px; font-size: 11px; }
+  #agenda-title { font-size: 12px; }
+  .agenda-list { gap: 5px; margin-top: 6px; }
+  .mission-copy small { font-size: 10px; }
+}

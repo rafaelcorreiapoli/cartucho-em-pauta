@@ -8,7 +8,7 @@ import { canReachObject, objects, type GameplayAction, type GameplayView } from 
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
-import { missionReward, missionTitle, money, type Mission, type PoliticsView } from './politics';
+import { missionCategory, missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -20,28 +20,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const roleIcon = roleBadge.querySelector('use')!;
-  const agendaDock = element<HTMLDetailsElement>('agenda-dock');
+  const agendaDock = element('agenda-dock');
   const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
   const activeMissions = element('missions-active');
   const completedMissions = element('missions-completed');
-  const missionTabs = [element<HTMLButtonElement>('mission-tab-active'),element<HTMLButtonElement>('mission-tab-done')];
-  function selectMissionTab(selected:HTMLButtonElement) {
-    for (const tab of missionTabs) {
-      const active = tab===selected;
-      tab.setAttribute('aria-selected',String(active));
-      element(tab.getAttribute('aria-controls')!).hidden = !active;
-    }
-  }
-  for (const [index,tab] of missionTabs.entries()) {
-    tab.onclick = () => selectMissionTab(tab);
-    tab.onkeydown = event => {
-      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
-      event.preventDefault();
-      const next = missionTabs[event.key==='Home' ? 0 : event.key==='End' ? 1 : 1-index];
-      selectMissionTab(next);
-      next.focus();
-    };
-  }
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
@@ -248,8 +230,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
 
-  agendaDock.open = false;
-  selectMissionTab(missionTabs[0]);
+  agendaDock.hidden = true;
+  element('agenda-announcement').textContent = '';
   function remove(node:HTMLElement) {
     window.clearTimeout(timers.get(node));
     timers.delete(node);
@@ -278,27 +260,41 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
   }
 
-  function renderMissions(missions:PoliticsView['missions']) {
-    const key = JSON.stringify(missions);
+  function renderMissions(missions:PoliticsView['missions'], prior?:PoliticsView['missions']) {
+    const recent = missions.completed.slice(-2);
+    const key = JSON.stringify([missions.active,recent]);
     if (key===missionRenderKey) return;
     missionRenderKey = key;
     element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    element('missions-empty').hidden = !!missions.completed.length;
-    function row(mission:Mission, done:boolean) {
-      const node = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
-      node.dataset.done = String(done);
-      node.querySelector('strong')!.textContent = missionTitle(mission);
-      const progress = mission.kind==='fortuna' ? `${money(mission.current)} / ${money(mission.target)}` :
-        `${mission.current} / ${mission.target}`;
-      const reward = missionReward(mission.kind);
-      node.querySelector('small')!.textContent = done ? reward ? missions.paid ? 'Prêmio recebido' : 'Prêmio no fim da sessão' : 'Capricho concluído' : progress;
-      node.querySelector<HTMLElement>('.mission-reward')!.hidden = !reward;
-      node.querySelector('.mission-reward span')!.textContent = `+${money(reward)}`;
-      return node;
+    const newCompletions = prior ? recent.filter(mission=>!prior.completed.some(done=>done.id===mission.id)) : [];
+    if (newCompletions.length) {
+      element('agenda-announcement').textContent = newCompletions.map(mission=>`Concluído: ${missionTitle(mission)}`).join('. ');
     }
-    activeMissions.replaceChildren(...missions.active.map(mission => row(mission,false)));
-    if (completedMissions.children.length!==missions.completed.length || missions.paid) {
-      completedMissions.replaceChildren(...missions.completed.slice().reverse().map(mission => row(mission,true)));
+    function row(mission:Mission, done:boolean) {
+      const row = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
+      row.dataset.done = String(done);
+      const title = row.querySelector('strong')!;
+      title.textContent = missionTitle(mission);
+      if (done) title.setAttribute('aria-label',`Concluído: ${title.textContent}`);
+      const detail = row.querySelector('small')!;
+      detail.hidden = done;
+      if (!done) {
+        const progress = mission.kind==='fortuna' ? `${money(mission.current)}/${money(mission.target)}` :
+          timedAgendas.has(mission.kind) ? `${Math.floor(mission.current/1000)}/${mission.target/1000} s` :
+          mission.target>1 ? `${mission.current}/${mission.target}` : '';
+        detail.textContent = [missionCategory(mission.kind),progress].filter(Boolean).join(' · ');
+      }
+      return row;
+    }
+    activeMissions.replaceChildren(...missions.active.map(mission=>row(mission,false)));
+    completedMissions.hidden = !recent.length;
+    if (completedMissions.dataset.recent!==recent.map(mission=>mission.id).join(',')) {
+      completedMissions.dataset.recent = recent.map(mission=>mission.id).join(',');
+      completedMissions.replaceChildren(...recent.map(mission=>{
+        const entry = row(mission,true);
+        entry.classList.toggle('agenda-completed-now',newCompletions.includes(mission));
+        return entry;
+      }));
     }
   }
 
@@ -382,12 +378,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
-        renderMissions(politics.missions);
-        if (view.phase==='negotiation' && (!previous?.politics || previous.phase==='finished')) {
-          selectMissionTab(missionTabs[0]);
-          agendaDock.open = false;
+        const prior = previous?.phase==='finished' ? undefined : previous?.politics?.missions;
+        if (!prior && previous?.phase==='finished') {
+          completedMissions.replaceChildren();
+          delete completedMissions.dataset.recent;
+          missionRenderKey = '';
         }
+        renderMissions(politics.missions,prior);
       }
+      agendaDock.hidden = !politics || view.phase==='lobby';
 
       if (previous) {
         const past = previous.politics;
@@ -407,11 +406,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
           notify('Carteira atualizada',`−${money(past.wallet-politics.wallet)}`);
         }
-        const completed = politics && past ? politics.missions.completed.slice(past.missions.completed.length) : [];
-        if (view.phase!=='finished' && completed.length) {
-          const title = completed.length===1 ? 'Missão cumprida' : `${completed.length} missões cumpridas`;
-          notify(title,completed.map(missionTitle).join(' · '));
-        }
+
       }
       renderEquipped(view.gameplay);
       const hp = view.gameplay?.vitality;
@@ -436,10 +431,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     destroy() {
       renderEquipped();
       for (const node of timers.keys()) remove(node);
-      for (const tab of missionTabs) {
-        tab.onclick = null;
-        tab.onkeydown = null;
-      }
+      agendaDock.hidden = true;
+      completedMissions.replaceChildren();
+      delete completedMissions.dataset.recent;
       incomeEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',refreshActionKeys);

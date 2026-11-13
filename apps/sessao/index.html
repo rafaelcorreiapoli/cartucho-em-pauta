@@ -109,6 +109,22 @@
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
         <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
+        <aside id="agenda-dock" aria-labelledby="agenda-title" hidden>
+          <header>
+            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
+            <h2 id="agenda-title">Agenda Pessoal</h2>
+            <span id="agenda-progress"></span>
+          </header>
+          <ul class="agenda-list" id="missions-completed" aria-label="Conclusões recentes" hidden></ul>
+          <ul class="agenda-list" id="missions-active" aria-label="Objetivos ativos"></ul>
+          <span id="agenda-announcement" class="sr-only" role="status"></span>
+          <template id="agenda-mission">
+            <li>
+              <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
+              <div class="mission-copy"><strong></strong><small></small></div>
+            </li>
+          </template>
+        </aside>
         <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
         <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
@@ -182,33 +198,6 @@
               <strong id="hud-nick"></strong>
               <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
               <div class="deck-profile-links">
-                <details id="agenda-dock" class="hud-module" name="game-panels">
-                  <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Agenda pessoal</span><strong id="agenda-progress"></strong></summary>
-                  <div class="hud-panel module-content agenda-panel">
-                    <h2>Missões pessoais</h2>
-                    <div id="mission-tabs" role="tablist" aria-label="Status das missões">
-                      <button id="mission-tab-active" type="button" role="tab" aria-selected="true" aria-controls="missions-current">Ativas</button>
-                      <button id="mission-tab-done" type="button" role="tab" aria-selected="false" aria-controls="missions-history" tabindex="-1">Concluídas</button>
-                    </div>
-                    <div id="missions-current" role="tabpanel" aria-labelledby="mission-tab-active" tabindex="0">
-                      <ul class="agenda-list" id="missions-active"></ul>
-                    </div>
-                    <div id="missions-history" role="tabpanel" aria-labelledby="mission-tab-done" tabindex="0" hidden>
-                      <p id="missions-empty">Nenhuma missão concluída ainda.</p>
-                      <ul class="agenda-list" id="missions-completed"></ul>
-                    </div>
-                    <template id="agenda-mission">
-                      <li>
-                        <span class="mission-mark" aria-hidden="true"><svg class="hud-glyph"><use href="#icon-check"/></svg></span>
-                        <div class="mission-copy"><strong></strong><small></small></div>
-                        <span class="mission-reward" title="Prêmio pago ao fim da sessão">
-                          <svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-                          <span></span>
-                        </span>
-                      </li>
-                    </template>
-                  </div>
-                </details>
                 <details id="private-profile" name="game-panels">
                   <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Perfil</span></summary>
                   <div class="hud-panel deck-popover">

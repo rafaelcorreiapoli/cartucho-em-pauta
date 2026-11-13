@@ -30,6 +30,7 @@ export class SessionRoom extends Room {
     return {
       ...world,
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
+      vision:(id:string)=>this.gameplay.vision(id),
       present:(id:string)=>!!this.clients.getById(id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);

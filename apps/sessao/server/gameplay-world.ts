@@ -4,6 +4,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
+  vision?:(id:string)=>number;
   feedback?:(id:string,message:string)=>void;
   players:Player[]; now:number; office:(id:string)=>Office|undefined;
   hasEvidence?:(id:string,kind:EvidenceKind)=>boolean; hasMission?:(id:string,mission:Agenda)=>boolean;

@@ -37,7 +37,7 @@
 .profile-copy { display: grid; flex: 1; min-width: 0; gap: .05rem; }
 #hud-nick { font-size: .94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #hud-office { font-size: .71rem; }
-.profile-values, .profile-values > span, #agenda-dock > summary {
+.profile-values, .profile-values > span {
   display: flex;
   align-items: center;
   gap: .35rem;
@@ -147,31 +147,6 @@
 #voice-dock button, #voice-dock summary { min-height: 33px; font-size: .73rem; }
 #voice-status:empty { display: none; }
 
-#agenda-dock { bottom: var(--hud-edge); left: var(--hud-edge); width: var(--hud-side); }
-#agenda-dock > summary {
-  gap: .65rem;
-  padding: .75rem 1rem;
-  font: 800 1rem/1.15 var(--party-display);
-}
-#agenda-progress {
-  margin-left: auto;
-  padding: .28rem .48rem;
-  border-radius: 5px;
-  background: #112b21;
-  color: var(--hud-gold);
-  font-size: .78rem;
-  white-space: nowrap;
-}
-#agenda-dock .module-content {
-  bottom: calc(100% + .75rem);
-  left: -1px;
-  width: var(--hud-side);
-  display: flex;
-  flex-direction: column;
-  max-height: 48dvh;
-  overflow: auto;
-  padding: 1rem;
-}
 
 #stations {
   position: absolute;
@@ -281,7 +256,7 @@
 #session #electoral-notice { top: auto; left: auto; right: var(--hud-edge); bottom: calc(var(--hud-edge) + 52px); }
 #movement-hint { display: none; }
 
-#election-dock[open], #agenda-dock[open], #politics-dock[open],
+#election-dock[open], #politics-dock[open],
 #voice-dock:has(details[open]) { z-index: 5; }
 #session[data-phase="lobby"] #voice-dock { top: auto; bottom: var(--hud-edge); }
 #session[data-phase="lobby"] #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
@@ -308,8 +283,6 @@
     bottom: calc(var(--hud-edge) + 143px);
     width: min(270px, calc(100% - 2 * var(--hud-edge)));
   }
-  #agenda-dock > summary { gap: .25rem; font-size: .72rem; }
-  #agenda-dock > summary strong { font-size: .65rem; }
 }
 
 #social-docks {
@@ -415,75 +388,7 @@
 #trade-private .game-choice { justify-content: center; padding: .35rem .2rem; border: 1px solid transparent; background: transparent; min-height: 33px; font-size: .75rem; }
 #trade-private .game-choice[aria-pressed="true"] { background: #384231; border-color: #a79763; }
 
-.agenda-panel h2 {
-  margin: 0;
-  font: 850 1.2rem/1.2 var(--party-display);
-}
-#mission-tabs {
-  display: flex;
-  gap: .4rem;
-  margin-top: .75rem;
-  padding: .25rem;
-  border-radius: 8px;
-  background: #122522;
-}
-#mission-tabs button {
-  flex: 1;
-  min-height: 36px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--hud-paper);
-  cursor: pointer;
-  font: 750 .88rem/1 var(--party-display);
-}
-#mission-tabs [aria-selected="true"] {
-  border-color: #9b9767;
-  background: #294334;
-  color: var(--party-gold);
-}
-#missions-empty { margin: .75rem 0 0; color: #d6cfb5; }
-.agenda-list {
-  display: grid;
-  gap: .55rem;
-  list-style: none;
-  margin: .7rem 0 0;
-  padding: 0;
-}
-.agenda-list li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: .55rem;
-  padding: .65rem;
-  border-radius: 8px;
-  background: #101f1c;
-}
-.mission-mark {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid #a99c71;
-  border-radius: 5px;
-  color: #acd4a8;
-}
-.mission-mark svg { visibility: hidden; }
-.mission-copy { display: grid; gap: .3rem; }
-.mission-copy strong { font-size: .93rem; line-height: 1.25; }
-.mission-copy small { color: #d6cfb5; font-size: .8rem; font-variant-numeric: tabular-nums; }
-.mission-reward {
-  display: flex;
-  align-items: center;
-  gap: .25rem;
-  white-space: nowrap;
-  font: 850 .92rem/1.2 var(--party-display);
-  color: var(--hud-gold);
-}
-.mission-reward .hud-glyph { width: 1.25em; height: 1.25em; }
-.agenda-list [data-done="true"] .mission-mark { border-color: #acd4a8; }
-.agenda-list [data-done="true"] .mission-mark svg { visibility: visible; }
-.agenda-list [data-done="true"] .mission-copy strong { text-decoration: line-through; color: #b9c4ad; }
+
 
 #session {
   --party-display: ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
@@ -596,7 +501,6 @@
 #election-timer { color: var(--party-gold); }
 #session #election-dock[data-urgency="soon"] { border-color: #e1b974; }
 #session #election-dock[data-urgency="high"] { border-color: #ffc579; }
-#agenda-dock { background: #244235f5; border-color: #9b9767; }
 @media (prefers-reduced-motion: no-preference) {
   #last-vote:not([hidden]) .vote-scoreboard { animation: vote-reveal 180ms ease-out both; }
   @keyframes vote-reveal {

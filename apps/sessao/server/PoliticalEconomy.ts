@@ -30,8 +30,12 @@ export class PoliticalEconomy {
     this.scandalPizzas.clear();
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40};
+      const agenda = new PersonalAgenda(metrics,contacts.length,random,amount=>{
+        const account = this.accounts.get(contact.id);
+        if (account) this.credit(account,amount);
+      });
       this.accounts.set(contact.id,{
-        ...metrics,walletIncome:0,agenda:new PersonalAgenda(metrics,contacts.length,random),selfieBonus:false,
+        ...metrics,walletIncome:0,agenda,selfieBonus:false,
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
       });
@@ -104,6 +108,7 @@ export class PoliticalEconomy {
     source.wallet -= amount;
     this.credit(recipient,amount);
     recipient.agenda.recordPayment(recipient,from);
+    source.agenda.recordTransfer(source,amount);
     this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
     return true;
   }
@@ -196,6 +201,11 @@ export class PoliticalEconomy {
     return record;
   }
 
+  recordVote(id:string, first:boolean, firstSupport:boolean) {
+    const account = this.accounts.get(id);
+    if (account) account.agenda.progress(account,{votacao:Number(first),apoio:Number(firstSupport)});
+  }
+
   billResult(votes:Map<string,Vote>, passed:boolean, popular:boolean) {
     for (const [id,vote] of votes) {
       const account = this.accounts.get(id);
@@ -204,7 +214,7 @@ export class PoliticalEconomy {
         account.popularity = cap(account.popularity+(popular ? 8 : -5));
       }
       account.agenda.progress(account,{
-        votacao:1,projetos:Number(passed && vote==='yes'),oposicao:Number(!passed && vote==='no'),
+        projetos:Number(passed && vote==='yes'),oposicao:Number(!passed && vote==='no'),
       });
     }
   }
@@ -231,18 +241,22 @@ export class PoliticalEconomy {
       account.selfieBonus = true;
       account.popularity = cap(account.popularity+4);
     }
-    account.agenda.recordGameplay(account,event,this.scandalPizzas.has(event.item ?? -1));
+    const recorded = account.agenda.recordGameplay(account,event,this.scandalPizzas.has(event.item ?? -1));
+    if (recorded && event.type==='signed' && event.target && event.target!==event.actor && event.item!==undefined) {
+      const owner = this.accounts.get(event.target);
+      owner?.agenda.recordSignature(owner,event.item,event.actor);
+    }
   }
 
-  recordActivity(id:string, kind:'auditoria' | 'cafe' | 'leitura' | 'credencial' | 'emenda') {
+  recordActivity(id:string, kind:'auditoria'|'cafe'|'leitura'|'credencial'|'emenda'|'propaganda'|'discurso') {
     const account = this.accounts.get(id);
     if (account) account.agenda.progress(account,{[kind]:1});
   }
 
-  settleAgendas(players:Iterable<string>) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number) {
     for (const id of players) {
       const account = this.accounts.get(id);
-      if (account) this.credit(account,account.agenda.settle(account));
+      if (account) account.agenda.updateEligibility(account,players.size,!account.suspended,ballotsLeft);
     }
   }
 

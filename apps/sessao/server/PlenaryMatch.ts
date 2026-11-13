@@ -69,8 +69,11 @@ export class PlenaryMatch {
     return true;
   }
 
+  private agendaYesVotes = new Set<string>();
+
   private nextRound(now:number) {
     this.phase = 'negotiation';
+    this.agendaYesVotes.clear();
     this.ends = now+NEGOTIATION_MS;
     this.votes.clear();
     this.audits.clear();
@@ -84,6 +87,7 @@ export class PlenaryMatch {
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
     this.election.leave(id,now);
+    this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
     this.economy.cancelOffers(id);
     if (this.infiltrators.size && ![...this.infiltrators].some(infiltrator => this.electorate.has(infiltrator))) this.finish('Parlamentar','Os infiltrados saíram da partida.');
     else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
@@ -159,7 +163,13 @@ export class PlenaryMatch {
   }
 
   vote(id:string, vote:Vote, now:number) {
-    if ((this.phase==='ballot' || this.phase==='hearing') && now<this.ends && this.canVote(id)) this.votes.set(id,vote);
+    if ((this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    const previous = this.votes.get(id);
+    this.votes.set(id,vote);
+    if (this.phase!=='ballot') return;
+    const firstSupport = vote==='yes' && !this.agendaYesVotes.has(id);
+    if (firstSupport) this.agendaYesVotes.add(id);
+    if (previous===undefined || firstSupport) this.economy.recordVote(id,previous===undefined,firstSupport);
   }
 
   private canVote(id:string) { return this.electorate.has(id) && !this.economy.suspended(id); }
@@ -240,9 +250,14 @@ export class PlenaryMatch {
     switch (action.kind) {
       case 'run': this.election.run(id,action.office,now); break;
       case 'invest': this.election.invest(id,action.amount,spend); break;
-      case 'advertise': if (this.at(player,'press')) this.election.advertise(id,spend); break;
+      case 'advertise':
+        if (this.at(player,'press') && this.election.advertise(id,spend)) this.economy.recordActivity(id,'propaganda');
+        break;
       case 'speech':
-        if (this.at(player,'panel') && this.election.speech(id)) this.economy.changePopularity(id,3);
+        if (this.at(player,'panel') && this.election.speech(id)) {
+          this.economy.recordActivity(id,'discurso');
+          this.economy.changePopularity(id,3);
+        }
         break;
       case 'interview': if (hasVoice && this.at(player,'tv')) this.election.interview(id,now); break;
       case 'support': this.election.support(id,action.to); break;
@@ -281,6 +296,7 @@ export class PlenaryMatch {
       const removed = this.canVote(target) && yes>=this.quorum();
       if (removed) {
         this.economy.suspend(target);
+        this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
         this.election.leave(target,now);
         if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
       }
@@ -319,6 +335,7 @@ export class PlenaryMatch {
         this.stability>=45 ? 'O Congresso terminou a sessão estável.' : 'A sessão terminou abaixo de 45 de estabilidade.');
     } else {
       this.round++;
+      this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round);
       this.nextRound(now);
     }
   }
@@ -329,7 +346,6 @@ export class PlenaryMatch {
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
   private finish(winner:Role | undefined, reason:string) {
-    this.economy.settleAgendas(this.electorate);
     this.phase = 'finished';
     this.winner = winner;
     this.reason = reason;

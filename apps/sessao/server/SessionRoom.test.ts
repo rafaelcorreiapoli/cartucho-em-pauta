@@ -1,3 +1,4 @@
+import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
 import { expect, test } from 'bun:test';
 import { Client, type Room } from '@colyseus/sdk';
@@ -161,8 +162,13 @@ test('clients share movement and voice, then receive private roles and payments'
       }
       throw new Error('Could not reach the transfer point from the assigned office');
     }));
+    const sourceBefore = secondView!.politics!.wallet;
+    const balanceBefore = thirdView!.politics!.wallet;
+    const completedBefore = thirdView!.politics!.missions.completed.length;
+    const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
+      .reduce((sum,mission)=>sum+missionReward(mission.kind),0);
     second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
-    await until(() => secondView?.politics?.wallet===6 && thirdView?.politics?.wallet===10);
+    await until(() => secondView?.politics?.wallet===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
     expect(firstView!.politics?.wallet).toBe(8);
     expect(firstView!.politics?.evidence).toEqual([]);
     expect(firstView!.politics?.ledger).toEqual([]);
@@ -171,7 +177,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(firstView!.election?.offices.filter(({office}) => office==='president')).toHaveLength(1);
     second.send('election',{kind:'run',office:'president'});
     second.send('election',{kind:'invest',amount:2});
-    await until(() => secondView?.politics?.wallet===4 &&
+    await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='president')===true);
     expect(secondView!.election?.personal?.invested).toBe(2);
     expect(firstView!.election?.personal?.invested).toBe(0);
@@ -251,6 +257,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('start-match');
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
+    passenger.send('room-activity','coffee');
+    await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
+    expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{kind:'talk',target:'vendor'});
@@ -272,13 +282,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:5});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
+    const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
+    expect(agendaBeforeReconnect?.active).toHaveLength(3);
     let reconnected = false;
     passenger.reconnection.minUptime = 0;
     passenger.onReconnect(()=>{reconnected = true;});
+    views.delete(passenger.sessionId);
     passenger.connection.close(4010);
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
-    await wait(()=>reconnected && snapshots.get(passenger.sessionId)?.carried===undefined);
+    await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
+    expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
     expect(passengerOffice).toBeDefined();
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:6});

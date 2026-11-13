@@ -115,7 +115,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(traitor).politics?.evidence.some(record => record.id===proof.id)).toBe(false);
   match.politics(traitor,{kind:'accept',offer:offer.id},people,10);
   match.politics(traitor,{kind:'accept',offer:offer.id},people,11);
-  expect(view(honest).politics?.wallet).toBe(11);
+  expect(view(honest).politics?.wallet).toBe(13);
   expect(view(traitor).politics?.wallet).toBe(7);
   match.politics(at(traitor,'press'),{kind:'publish',evidence:proof.id},people,12);
   expect(view(host).politics?.ledger).toContainEqual(proof);
@@ -125,7 +125,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.advance(NEGOTIATION_MS);
   match.vote(honest.id,'no',NEGOTIATION_MS+1);
   expect(view(honest).vote).toBe('no');
-  expect(view(honest).politics?.wallet).toBe(11);
+  expect(view(honest).politics?.wallet).toBe(13);
 });
 
 test('campaign unlocks a hearing, then a wrong removal costs stability and the player can still trade', () => {
@@ -164,65 +164,34 @@ test('rooms with at least six players may choose two infiltrators', () => {
   expect(ids.filter(id => short.view(id,ids,0).role==='Infiltrado')).toHaveLength(1);
 });
 
-test('personal missions refill immediately and pay once at settlement', () => {
+test('private agendas refill immediately and credit a mission only once', () => {
   const economy = new PoliticalEconomy();
   economy.reset([{id:'a',name:'A'},{id:'b',name:'B'}],() => 0);
   const view = (id:string) => economy.view(id,[],1,false,() => true)!;
-  const initial = view('a').missions.active;
-  expect(initial.map(mission => mission.kind)).toEqual(['cafe','fortuna','campanha']);
-  economy.earn('a',4);
-  economy.changePopularity('a',25);
-  const {active,completed,paid} = view('a').missions;
-  expect(active).toHaveLength(3);
-  expect(new Set(active.map(mission => mission.kind)).size).toBe(3);
-  expect(active.map(mission => mission.id)).toEqual([initial[0].id,4,5]);
-  expect(completed.map(mission => mission.kind)).toEqual(['fortuna','campanha']);
-  expect(paid).toBe(false);
-  expect(view('a').wallet).toBe(12);
-
-  economy.settleAgendas(['a','b']);
-  economy.settleAgendas(['a','b']);
-  expect(view('a')).toMatchObject({wallet:16,walletIncome:8,missions:{paid:true,completed}});
+  expect(view('a').missions.active.map(mission=>mission.kind)).toEqual(['cafe','protocolo','pizza']);
+  const event = {type:'filed',actor:'a',item:1,kind:'document',at:1,position:{x:0,y:0},witnesses:[]} as const;
+  economy.recordGameplay({...event,witnesses:[]});
+  economy.recordGameplay({...event,witnesses:[]});
+  expect(view('a')).toMatchObject({wallet:10,walletIncome:2,missions:{completed:[{kind:'protocolo'}]}});
+  expect(view('a').missions.active).toHaveLength(3);
+  expect(new Set(view('a').missions.active.map(mission=>mission.kind)).size).toBe(3);
   expect(view('b')).toMatchObject({wallet:8,missions:{completed:[]}});
+  expect(view('b').missions.active.map(mission=>mission.kind)).toContain('protocolo');
 });
 
-test('activities only count while their mission is active and replacements get a fresh ID', () => {
+test('a pizza capricho counts consumption after assignment and pays nothing', () => {
   const economy = new PoliticalEconomy();
-  economy.reset([{id:'a',name:'A'}],() => .74);
-  const missions = () => economy.view('a',[],0,false,() => true)!.missions;
-  expect(missions().active.map(mission => mission.kind)).toEqual(['cafe','auditoria','emenda']);
-  economy.recordActivity('a','leitura');
-  economy.audit('a',0);
-  economy.audit('a',0);
-  expect(missions().completed.map(mission => mission.kind)).toEqual(['auditoria']);
-  economy.recordActivity('a','emenda');
-  for (const type of ['filed','dropped','game-won'] as const) {
-    economy.recordGameplay({type,actor:'a',position:{x:0,y:0},at:0,witnesses:[]});
-  }
-  economy.billResult(new Map([['a','yes']]),true,true);
-  economy.earn('a',4);
-  economy.changePopularity('a',25);
-  economy.recordActivity('a','cafe');
-  expect(missions().active.find(mission => mission.kind==='leitura')?.current).toBe(0);
-  economy.recordActivity('a','leitura');
-  expect(missions().completed.at(-1)?.kind).toBe('leitura');
-  economy.recordActivity('a','credencial');
-  economy.recordActivity('a','cafe');
-  const actor = {id:'a',name:'A'};
-  const center = {x:465,y:414};
-  const base = {actor:actor.id,position:center,at:0,witnesses:[]};
-  economy.recordGameplay({...base,type:'installed',kind:'portrait',place:'hall',item:1});
-  economy.recordGameplay({...base,type:'photo',photo:{
-    id:2,author:actor,at:0,location:'Hall das Bancadas',selfie:true,center,people:[],ground:[],transfers:[],
-    decorations:[{...center,id:1,kind:'portrait',owner:actor,character:0}],
-  }});
-  economy.recordGameplay({...base,type:'installed',kind:'vip',place:'coffeeVip',item:3});
-  economy.recordActivity('a','cafe');
-  const nextAudit = missions().active.find(mission => mission.kind==='auditoria')!;
-  expect(nextAudit.id).toBeGreaterThan(missions().completed[0].id);
-  economy.audit('a',0);
-  expect(missions().completed.at(-1)?.id).toBe(nextAudit.id);
-  expect(missions().active).toHaveLength(3);
+  economy.reset([{id:'a',name:'A'}],() => 0);
+  const view = () => economy.view('a',[],0,false,() => true)!;
+  const event = {actor:'a',kind:'pizza',item:1,position:{x:0,y:0},witnesses:[]} as const;
+  economy.recordGameplay({...event,witnesses:[],type:'purchased',at:1});
+  expect(view().missions.completed).toEqual([]);
+  const original = view().missions.active.find(mission=>mission.kind==='pizza');
+  expect(original).toBeDefined();
+  economy.recordGameplay({...event,witnesses:[],type:'used',at:2});
+  expect(view()).toMatchObject({wallet:8,walletIncome:0,missions:{completed:[{kind:'pizza',id:original!.id}]}});
+  expect(view().missions.active).toHaveLength(3);
+  expect(view().missions.active.some(mission=>mission.kind==='pizza')).toBe(false);
 });
 
 test('room activities require proximity, and a cafezinho completes its mission', () => {

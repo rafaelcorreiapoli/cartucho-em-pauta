@@ -89,6 +89,7 @@ export class ElectionCycle {
     if (person && !person.advertised && spend(rules.advertisementCost)) {
       person.advertised = true;
       this.announce(`${person.name} colocou propaganda no ar.`);
+      return true;
     }
   }
 

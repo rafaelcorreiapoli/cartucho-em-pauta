@@ -32,6 +32,7 @@ const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
+  private roomSamples = new Map<string,{room:string; at:number}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -53,6 +54,7 @@ export class Gameplay {
 
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.items.clear();
+    this.roomSamples.clear();
     this.privateOffices.reset(players,officeRandom);
     this.syncOfficeDoors(players,now);
     this.album.reset();
@@ -192,6 +194,7 @@ export class Gameplay {
     if (exploring) this.spawnCash(world.now);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
+    this.recordRoomVisits(world,exploring);
     this.transport.tick(world,exploring);
     this.combat.tick(world.players,world.now,exploring,{
       recovered:player=>{
@@ -222,8 +225,27 @@ export class Gameplay {
     if (item) this.modulator.deactivate(item.id,now);
   }
 
+  private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
+    for (const player of world.players) {
+      const room = roomAt(player);
+      const previous = this.roomSamples.get(player.id);
+      this.roomSamples.set(player.id,{room,at:world.now});
+      if (!exploring || !previous || world.present?.(player.id)===false || player.knockedOut || player.carried) continue;
+      if (previous.room!==room && room!=='Corredor') {
+        const office = [...this.privateOffices.offices.values()].find(entry=>entry.layout.name===room &&
+          world.players.some(other=>other.id===entry.owner));
+        const carryingBriefcase = office?.owner===player.id && this.inventory(player.id).some(item=>item.data.kind==='briefcase');
+        publishGameplay(world,player,'room-entered',{place:room,target:office?.owner,kind:carryingBriefcase ? 'briefcase' : undefined});
+      } else if (previous.room===room && room==='Cafezinho' && world.hasMission?.(player.id,'pausaCafe')) {
+        const duration = Math.min(100,world.now-previous.at);
+        if (duration>0) publishGameplay(world,player,'room-time',{place:room,duration});
+      }
+    }
+  }
+
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.privateOffices.channels.delete(player.id);
+    this.roomSamples.delete(player.id);
     player.pocketing = undefined;
     this.album.leave(player.id,permanent);
     this.combat.interrupt(player);
