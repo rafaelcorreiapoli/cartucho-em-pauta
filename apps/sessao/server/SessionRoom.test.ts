@@ -13,7 +13,7 @@ test('clients share movement and voice, then receive private roles and payments'
   const port = reservation.port!;
   await reservation.stop();
   const server = Bun.spawn([process.execPath,join(import.meta.dir,'index.ts')],{
-    env:{...process.env,PORT:String(port)},stdout:'ignore',stderr:'inherit',
+    env:{...process.env,PORT:String(port),NODE_ENV:'test',SESSAO_TEST_MIN_PLAYERS:'1'},stdout:'ignore',stderr:'inherit',
   });
   const endpoint = `http://127.0.0.1:${port}`;
   const rooms: Room[] = [];
@@ -175,11 +175,10 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(firstView!.politics?.ledger).toEqual([]);
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
-    expect(firstView!.election?.offices.filter(({office}) => office==='president')).toHaveLength(1);
-    second.send('election',{kind:'run',office:'president'});
+    expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
     second.send('election',{kind:'invest',amount:2});
     await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
-      firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='president')===true);
+      firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(secondView!.election?.personal?.invested).toBe(2);
     expect(firstView!.election?.personal?.invested).toBe(0);
     await first.leave();
@@ -205,7 +204,7 @@ test('clients share movement and voice, then receive private roles and payments'
     solo.send('start-match',1);
     await until(() => soloView?.phase==='negotiation');
     expect(soloView!).toMatchObject({solo:true,role:'Parlamentar',electorate:1,
-      election:{personal:{office:'president'}}});
+      election:{personal:{office:'deputy'}}});
 
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));
@@ -218,6 +217,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
+  const {PlenaryMatch} = await import('./PlenaryMatch');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
   await reservation.stop();
@@ -256,7 +256,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
     const positions = Reflect.get(room,'players') as Map<string,{player:Player}>;
-    const match = Reflect.get(room,'match');
+    const match = new PlenaryMatch(1);
+    Reflect.set(room,'match',match);
     carrier.send('start-match');
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
     const progression = () => views.get(passenger.sessionId)?.politics?.progression;

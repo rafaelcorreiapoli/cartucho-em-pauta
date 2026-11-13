@@ -1,4 +1,5 @@
 import { PoliticalEconomy } from './PoliticalEconomy';
+import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
@@ -13,7 +14,7 @@ const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
 test('fraud shows different figures until a player audits and reports it', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   expect(match.start(honest.id,people,0)).toBe(false);
   expect(match.start(host.id,[],0)).toBe(false);
   expect(match.start(host.id,people,0,() => .9)).toBe(true);
@@ -41,14 +42,14 @@ test('fraud shows different figures until a player audits and reports it', () =>
 });
 
 test('the vote uses actual costs, requires a majority and reveals the infiltrator at the end', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   let now = 0;
   for (let round=0;round<3;round++) {
     if (round===0) {
       match.act(at(host,'amendment'),'amendment',now+1);
       match.act(at(traitor,'panel'),'fraud',now+2);
-      expect(match.view(host.id,ids,now).yes.budget).toBe(12);
+      expect(match.view(host.id,ids,now).yes.budget).toBe(0);
     }
     match.advance(now+=NEGOTIATION_MS);
     match.vote(host.id,'yes',now);
@@ -64,6 +65,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
       expect(view.outcome?.applied).toEqual({budget:-12,stability:14});
     }
   }
+  match.advance(ELECTION_RULES.matchDuration);
   expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump'});
 });
 
@@ -85,7 +87,7 @@ test('the new wings and all stations are reachable from the corridor', () => {
 });
 
 test('diversion, transfers, and evidence sales affect balances without binding votes', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
   const accounts = [host,honest,traitor].map(player => view(player).politics!);
@@ -129,7 +131,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
 });
 
 test('campaign unlocks a hearing, then a wrong removal costs stability and the player can still trade', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
   match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
@@ -154,12 +156,12 @@ test('campaign unlocks a hearing, then a wrong removal costs stability and the p
 });
 
 test('rooms with at least six players may choose two infiltrators', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   const six = [...people,...people.map(player => ({...player,id:'extra-'+player.id}))];
   match.start(host.id,six,0,() => .9,2);
   const roster = six.map(({id}) => id);
   expect(roster.filter(id => match.view(id,roster,0).role==='Infiltrado')).toHaveLength(2);
-  const short = new PlenaryMatch();
+  const short = new PlenaryMatch(1);
   short.start(host.id,people,0,() => .9,2);
   expect(ids.filter(id => short.view(id,ids,0).role==='Infiltrado')).toHaveLength(1);
 });
@@ -195,7 +197,7 @@ test('pizza earns XP only on consumption after assignment', () => {
 });
 
 test('room activities require proximity, and a cafezinho completes its mission', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start(host.id,[host],0,() => .4);
   const missions = () => match.view(host.id,[host.id],1).politics!.missions;
   expect(missions().active.some(mission => mission.kind==='cafe')).toBe(true);
@@ -210,7 +212,7 @@ test('room activities require proximity, and a cafezinho completes its mission',
 });
 
 test('the Controladoria returns feedback for each audit, even without new records', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start(host.id,[host],0);
   expect(match.act(host,'audit',1)?.text).toContain('Chegue mais perto');
   const player = at(host,'audit');

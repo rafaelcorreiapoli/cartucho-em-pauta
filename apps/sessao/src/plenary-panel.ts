@@ -1,3 +1,4 @@
+import { money } from './politics';
 import type { Player } from './map';
 import { bills, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
@@ -64,7 +65,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       dot.dataset.current = String(index===selected);
       return dot;
     }));
-    const bill = bills[outcome.round].name;
+    const bill = bills[outcome.round%bills.length].name;
     const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
     lastVote.dataset.result = outcome.passed ? 'passed' : 'failed';
     element('outcome-summary').textContent = verdict;
@@ -100,7 +101,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         const outcome = next.outcome;
         brief.dataset.passed = String(outcome.passed);
         element('brief-verdict').textContent = outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado';
-        element('brief-project').textContent = bills[outcome.round].name;
+        element('brief-project').textContent = bills[outcome.round%bills.length].name;
         element('brief-yes').textContent = String(outcome.yes);
         element('brief-no').textContent = String(outcome.no);
         for (const key of ['stability','budget'] as const) {
@@ -120,7 +121,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       start.hidden = running || host!==id;
       start.disabled = players<MIN_PLAYERS;
       start.textContent = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
-      element('start-hint').textContent = running ? '' : players===1 ? 'Teste solo disponível' :
+      element('start-hint').textContent = running ? '' : players<MIN_PLAYERS ? `${players}/${MIN_PLAYERS} jogadores para iniciar` :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';
@@ -131,7 +132,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
         '';
-      element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Cassação' : 'Votação';
+      element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Afastamento' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');
       element('clock-label').textContent = phase==='negotiation' ? 'Votação em' : 'Tempo de voto';
@@ -142,45 +143,47 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const stability = element<HTMLProgressElement>('stability-meter');
       stability.value = view.stability;
       stability.dataset.low = String(view.stability<45);
-      element('budget').textContent = String(view.budget);
-      element<HTMLProgressElement>('budget-meter').value = view.budget;
+      element('budget').textContent = money(view.budget);
+      const budgetMeter = element<HTMLProgressElement>('budget-meter');
+      budgetMeter.max = Math.max(100,view.budget);
+      budgetMeter.value = view.budget;
       if (historyChanged) {
         selected = Math.max(0,view.outcomes.length-1);
         renderHistory();
         const result = view.outcomes[selected];
         element('outcome-announcement').textContent = result ?
-          `${bills[result.round].name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
+          `${bills[result.round%bills.length].name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
       }
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      element('bill-round').textContent = hearing ? 'Votação de mandato' : `Projeto ${round+1} de ${bills.length}`;
-      const title = hearing ? hearing.target : bills[round].name;
+      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}`;
+      const title = hearing ? hearing.target : bills[round%bills.length].name;
       element('bill').textContent = title;
       element('project-details-title').textContent = title;
-      element('bill-description').textContent = hearing ? '' : bills[round].description;
+      element('bill-description').textContent = hearing ? '' : bills[round%bills.length].description;
       element('impact').hidden = !!hearing;
       showImpact('yes',view.yes);
       showImpact('no',view.no);
 
       element('ballot').hidden = phase!=='ballot' && !hearing;
       const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
-      element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'cassar' : 'aprovar'}`;
+      element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'afastar' : 'aprovar'}`;
       const progress = element<HTMLProgressElement>('vote-progress');
       progress.max = Math.max(1,view.electorate);
       progress.value = view.voted;
-      if (view.politics?.suspended) element('quorum').textContent = 'Seu mandato foi cassado. Você pode conversar e agir como assessor.';
+      if (!view.mandate || view.politics?.suspended) element('quorum').textContent = view.mandate ? 'Você está afastado da votação.' : 'Ex-parlamentar · Sem direito a voto.';
       const castVote = hearing?.vote ?? view.vote;
       const state = element('vote-state');
       state.hidden = !castVote;
       state.textContent = castVote ? (hearing ?
-        castVote==='yes' ? 'Seu voto: cassar' : 'Seu voto: manter mandato' :
+        castVote==='yes' ? 'Seu voto: afastar' : 'Seu voto: não afastar' :
         castVote==='yes' ? 'Seu voto: aprovar' : 'Seu voto: rejeitar') : '';
       for (const button of votes) {
-        button.disabled = !!view.politics?.suspended;
-        button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Manter mandato' : 'Rejeitar';
+        button.disabled = !view.mandate || !!view.politics?.suspended;
+        button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Não afastar' : 'Rejeitar';
         button.setAttribute('aria-pressed',String(castVote===button.dataset.vote as Vote));
       }
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;

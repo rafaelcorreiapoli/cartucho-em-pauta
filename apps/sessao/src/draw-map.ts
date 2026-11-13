@@ -102,7 +102,11 @@ export function drawMap(scene: Phaser.Scene) {
     fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',color:'#fff4dc',
     backgroundColor:'#263a31aa',resolution:3,padding:{x:4,y:2},
   }).setOrigin(.5,0).setDepth(1);
-  return [tribune,budgetDesk,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  const treasury = scene.add.text(500,481,'TESOURARIA',{
+    fontFamily:'system-ui',fontSize:'6px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
+    padding:{x:4,y:2},
+  }).setOrigin(.5,0).setDepth(1);
+  return [tribune,budgetDesk,treasury,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

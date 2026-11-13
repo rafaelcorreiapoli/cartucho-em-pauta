@@ -1,13 +1,13 @@
-import { ELECTION_RULES as rules, offices, officeKeys, type Assignment, type ElectionView, type Elected, type Office } from '../src/elections';
+import { ELECTION_RULES as rules, officeKeys, type Assignment, type ElectionView, type Elected, type Office } from '../src/elections';
 import type { Contact } from '../src/politics';
 
 type Candidate = Contact & {
   character:number;
   office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean;
-  interviewed:boolean; support?:string; incumbent:number; scandal:number;
-  noise:number; tie:number; payStarted:number; accrued:number;
+  interviewed:boolean; support?:string; scandal:number;
+  noise:number; tie:number;
 };
-type Result = {cycle:number; offices:Elected[]; previous:Map<string,Office>; salaries:Map<string,number>};
+type Result = {cycle:number; offices:Elected[]; salaries:Map<string,number>; eliminated?:string};
 
 export class ElectionCycle {
   private people = new Map<string,Candidate>();
@@ -35,23 +35,18 @@ export class ElectionCycle {
     this.random = random;
     this.previousPoll.clear();
     this.nextPoll = now;
-    const pool = [...contacts];
-    const senators = this.senateSeats(pool.length);
-    for (let i=0;pool.length;i++) {
-      const contact = pool.splice(Math.floor(random()*pool.length),1)[0];
-      const office = i===0 ? 'president' : i<=senators ? 'senator' : 'deputy';
-      this.people.set(contact.id,{...contact,character:contact.character ?? 0,office,race:office,invested:0,advertised:false,spoke:false,
-        interviewed:false,incumbent:0,scandal:0,noise:this.noise(),tie:random(),payStarted:now,accrued:0});
+    for (const contact of contacts) {
+      this.people.set(contact.id,{...contact,character:contact.character ?? 0,office:'deputy',race:'deputy',invested:0,
+        advertised:false,spoke:false,interviewed:false,scandal:0,noise:this.noise(),tie:random()});
     }
   }
 
   addDeputy(id:string) { this.paidDeputies.add(id); }
 
-  private senateSeats(count:number) { return Math.min(Math.floor(count/3),Math.max(0,count-2)); }
   private noise() { return (this.random()-.5)*4; }
+  get eliminated() { return this.result?.eliminated; }
   office(id:string) { return this.people.get(id)?.office; }
-  registrationOpen(now:number) { return now<this.due-rules.registrationLock; }
-  open(now:number) { return now<this.due; }
+  open(now:number) { return this.cycle>rules.cycles || now<this.due; }
   speaker(now:number) { return this.broadcast && now<this.broadcast.until ? this.broadcast.id : undefined; }
   private announce(text:string) { this.notice = {seq:++this.seq,text}; }
 
@@ -61,26 +56,6 @@ export class ElectionCycle {
     this.people.delete(id);
     if (this.broadcast?.id===id) this.stopBroadcast(now);
     for (const person of this.people.values()) if (person.support===id) person.support = undefined;
-    if (previous.office==='president' && this.people.size) {
-      const replacement = [...this.people.values()].find(person => person.office==='senator') ?? this.people.values().next().value!;
-      this.changeInterim(replacement,'president',now);
-      this.announce(`${replacement.name} assume a Presidência interinamente.`);
-    }
-    if ([...this.people.values()].filter(person => person.office==='senator').length<this.senateSeats(this.people.size)) {
-      const replacement = [...this.people.values()].find(person => person.office==='deputy');
-      if (replacement) this.changeInterim(replacement,'senator',now);
-    }
-  }
-
-  private changeInterim(person:Candidate, office:Office, now:number) {
-    person.accrued += (now-person.payStarted)*offices[person.office].salary/rules.interval;
-    person.payStarted = now;
-    person.office = office;
-  }
-
-  run(id:string, office:Office, now:number) {
-    const person = this.people.get(id);
-    if (person && this.registrationOpen(now)) person.race = office;
   }
 
   invest(id:string, amount:number, spend:(amount:number)=>boolean) {
@@ -139,19 +114,19 @@ export class ElectionCycle {
   }
 
   object(id:string) {
-    if (this.objected || this.office(id)!=='president') return false;
+    if (this.objected || !this.office(id)) return false;
     this.objected = true;
     this.announce(`${this.people.get(id)!.name} contestou o projeto em pauta.`);
     return true;
   }
 
-  canObject(id:string) { return this.office(id)==='president' && !this.objected; }
+  canObject(id:string) { return !!this.office(id) && !this.objected; }
 
   private strength(person:Candidate, popularity:(id:string)=>number) {
     const support = [...this.people.values()].filter(other => other.support===person.id).length;
     return Math.max(1,popularity(person.id)+5*Math.sqrt(person.invested)+
       (person.advertised ? 5 : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
-      Math.min(12,support*4)-person.scandal-Math.min(8,person.incumbent*4));
+      Math.min(12,support*4)-person.scandal);
   }
 
   private tallyScore(person:Candidate, popularity:(id:string)=>number) {
@@ -175,40 +150,27 @@ export class ElectionCycle {
     });
   }
 
-  advance(now:number, popularity:(id:string)=>number, pay:(id:string, amount:number)=>void) {
-    if (now>=this.due && this.people.size) {
-      const previous = new Map<string,Office>(), salaries = new Map<string,number>();
+  advance(now:number,popularity:(id:string)=>number,settle:(ids:string[])=>Map<string,number>) {
+    if (now>=this.due && this.cycle<=rules.cycles) {
       const ranked = this.rank(popularity);
-      const president = ranked.find(person => person.race==='president') ?? ranked[0];
-      const rest = ranked.filter(person => person!==president);
-      const senate = new Set([...rest.filter(person => person.race==='senator'),...rest.filter(person => person.race!=='senator')]
-        .slice(0,this.senateSeats(ranked.length)));
-      const scores = new Map(ranked.map(person => [person.id,Math.max(.01,this.tallyScore(person,popularity))]));
-      const totals = new Map<Office,number>();
-      for (const person of ranked) totals.set(person.race,(totals.get(person.race) ?? 0)+scores.get(person.id)!);
-      const elected: Elected[] = [];
-      for (const person of ranked) {
-        previous.set(person.id,person.office);
-        const salary = Math.floor(person.accrued+(this.due-person.payStarted)*offices[person.office].salary/rules.interval);
-        salaries.set(person.id,salary);
-        pay(person.id,salary);
-        const office = person===president ? 'president' : senate.has(person) ? 'senator' : 'deputy';
-        elected.push({id:person.id,name:person.name,character:person.character,office,race:person.race,
-          percentage:Math.round(100*scores.get(person.id)!/totals.get(person.race)!)});
-        person.incumbent = office===person.office ? person.incumbent+1 : 0;
-        person.office = person.race = office;
-        person.invested = person.scandal = person.accrued = 0;
-        person.advertised = person.spoke = person.interviewed = false;
-        person.support = undefined;
-        person.noise = this.noise();
-        person.payStarted = this.due;
-      }
-      for (const id of this.paidDeputies) pay(id,offices.deputy.salary);
-      this.result = {cycle:this.cycle,previous,salaries,offices:elected.sort((a,b) => officeKeys.indexOf(a.office)-officeKeys.indexOf(b.office))};
-      this.announce(`Eleição ${this.cycle}: ${president.name} assume a Presidência.`);
+      const scores = ranked.map(person=>Math.max(.01,this.tallyScore(person,popularity)));
+      const total = scores.reduce((sum,score)=>sum+score,0);
+      const eliminated = ranked.length>rules.minimumMandates ? ranked.at(-1) : undefined;
+      if (eliminated) this.leave(eliminated.id,now);
+      const salaries = settle([...this.people.keys(),...this.paidDeputies]);
+      const offices = ranked.map((person,index)=>({id:person.id,name:person.name,character:person.character,
+        office:person.office,race:person.race,percentage:Math.round(100*scores[index]/total)}));
+      this.result = {cycle:this.cycle,offices,salaries,eliminated:eliminated?.id};
+      this.announce(eliminated ? `${eliminated.name} perdeu o mandato.` : 'Renovação concluída. Mandatos preservados.');
       this.cycle++;
       this.due += rules.interval;
       this.objected = false;
+      for (const person of this.people.values()) {
+        person.invested = person.scandal = 0;
+        person.advertised = person.spoke = person.interviewed = false;
+        person.support = undefined;
+        person.noise = this.noise();
+      }
       this.previousPoll.clear();
       this.nextPoll = now;
     }
@@ -227,12 +189,12 @@ export class ElectionCycle {
     const person = this.people.get(id);
     const speaker = this.speaker(now);
     return {
-      cycle:this.cycle,remaining:Math.max(0,Math.ceil((this.due-now)/1000)),
-      registrationOpen:this.registrationOpen(now),offices:this.assignments(),polls:this.polls(popularity),
+      cycle:this.cycle,remaining:Math.max(0,Math.ceil(((this.cycle<=rules.cycles ? this.due : now)-now)/1000)),
+      mandate:!!person,offices:this.assignments(),polls:this.polls(popularity),
       personal:person && {office:person.office,race:person.race,invested:person.invested,advertised:person.advertised,
-        spoke:person.spoke,interviewed:person.interviewed,salary:offices[person.office].salary},
+        spoke:person.spoke,interviewed:person.interviewed,salary:rules.salary},
       result:this.result && {cycle:this.result.cycle,offices:this.result.offices,
-        previous:this.result.previous.get(id),salary:this.result.salaries.get(id) ?? 0},
+        eliminated:this.result.eliminated,expectedSalary:this.people.has(id) ? rules.salary : 0,salary:this.result.salaries.get(id) ?? 0},
       broadcast:speaker && this.broadcast ? {id:speaker,name:this.people.get(speaker)!.name,
         remaining:Math.ceil((this.broadcast.until-now)/1000)} : undefined,
       notice:this.notice,objection,canObject:!objection && this.canObject(id),canCampaign:canCampaign && !!person,canInterview:canCampaign && this.canInterview(id,now),

@@ -2,10 +2,10 @@ import { canReachObject } from '../src/gameplay';
 import { blockedBy, canStand, localPerception, type Motion, type Player } from '../src/map';
 import { officeDoorPoint, officeRules, privateOffices, type OfficeAction, type OfficeLayout, type OfficeView } from '../src/private-offices';
 
-type Target = 'door'|'cabinet';
-type OfficeState = {layout:OfficeLayout; owner?:string; nick?:string; door:'open'|'closed'|'locked'; doorLevel:number; cabinetLevel:number;
+type Target = 'door'|'cabinet'|'safe';
+type OfficeState = {layout:OfficeLayout; owner?:string; nick?:string; door:'open'|'closed'|'locked'; doorLevel:number; cabinetLevel:number; safeLevel:number;
   doorUntil:number; cabinetUntil:number};
-export type Channel = {kind:'office-cash'|'office-breach-door'|'office-breach-cabinet'; office:OfficeState; item:number;
+export type Channel = {kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; office:OfficeState; item:number;
   started:number; ends:number; origin:Motion; level:number};
 
 export class PrivateOffices {
@@ -16,7 +16,7 @@ export class PrivateOffices {
     this.offices.clear();
     this.channels.clear();
     const available = [...privateOffices];
-    for (const layout of privateOffices) this.offices.set(layout.id,{layout,door:'open',doorLevel:1,cabinetLevel:1,doorUntil:0,cabinetUntil:0});
+    for (const layout of privateOffices) this.offices.set(layout.id,{layout,door:'open',doorLevel:1,cabinetLevel:1,safeLevel:1,doorUntil:0,cabinetUntil:0});
     for (const player of players) {
       const [layout] = available.splice(Math.floor(random()*available.length),1);
       if (!layout) break;
@@ -82,8 +82,8 @@ export class PrivateOffices {
   }
 
   breachTime(office:OfficeState,target:Target,attack:number,now:number) {
-    if (!office.owner || (target==='door' ? office.door!=='locked' || office.doorUntil>now : office.cabinetUntil>now)) return;
-    const difference = attack-(target==='door' ? office.doorLevel : office.cabinetLevel);
+    if (!office.owner || (target==='door' ? office.door!=='locked' || office.doorUntil>now : target==='cabinet' && office.cabinetUntil>now)) return;
+    const difference = attack-(target==='door' ? office.doorLevel : target==='cabinet' ? office.cabinetLevel : office.safeLevel);
     if (difference>=0) return officeRules.breachTimes[Math.min(2,difference)];
   }
 

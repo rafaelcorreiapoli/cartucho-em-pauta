@@ -8,11 +8,11 @@ import { canStand, type Player } from '../src/map';
 import { BALLOT_MS, NEGOTIATION_MS } from '../src/plenary';
 import { terminals } from '../src/gameplay';
 import { privateOffices, officeRules } from '../src/private-offices';
-import { ELECTION_RULES, offices } from '../src/elections';
+import { ELECTION_RULES } from '../src/elections';
 
 function fixture() {
   const humans:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,x:140,y:146}));
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   const game = new Gameplay();
   const members = new Parliamentarians();
   match.start('a',humans,0,()=>0);
@@ -85,7 +85,7 @@ test('signature and competing vote offers transfer existing money and the commit
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.view(a.id,[a.id,b.id],0).outcome).toMatchObject({yes:1,no:2,passed:false});
   match.advance(ELECTION_RULES.interval);
-  expect(world(ELECTION_RULES.interval).wallet!(npc.id)).toBe(offices.deputy.salary);
+  expect(world(ELECTION_RULES.interval).wallet!(npc.id)).toBe(ELECTION_RULES.salary);
 });
 
 test('NPC routes stay on valid floor and stop for a negotiation',()=>{

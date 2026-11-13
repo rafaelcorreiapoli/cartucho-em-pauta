@@ -8,7 +8,7 @@ import { canReachObject, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
-import { offices, type Assignment, type Office } from './elections';
+import type { Assignment, Office } from './elections';
 import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
@@ -19,7 +19,6 @@ import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS
 
 type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
-const officeColors: Record<Office,string> = {president:'#ffdb83',senator:'#a8d8ff',deputy:'#a9efb5'};
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
   arrowup:[0,-1], w:[0,-1], arrowdown:[0,1], s:[0,1],
@@ -334,7 +333,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
-      const agenda = plenaryView && bills[plenaryView.round];
+      const agenda = plenaryView && bills[plenaryView.round%bills.length];
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Painel de votação');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;
@@ -497,8 +496,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
-          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : player.npc ? 'Deputado' : 'Assessor')
-          .setColor(title ? officeColors[title] : '#cbd6db');
+          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar')
+          .setColor(latest.former ? '#e6a38c' : '#cbd6db');
         if (moving && !pose && !combatArt) {
           sprite.play(`${character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;

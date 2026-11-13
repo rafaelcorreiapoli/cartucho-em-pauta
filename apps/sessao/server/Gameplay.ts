@@ -28,7 +28,6 @@ type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
-const cashKinds = ['briefcase','underwear','bundle'] as const;
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
 const cashLifetime = 55_000;
@@ -163,7 +162,7 @@ export class Gameplay {
     return this.inventory(player.id).flatMap(({data})=>{
       const doc = data.document;
       return doc && !doc.signatures.some(person=>person.id===npc.id) &&
-        (!doc.requiredOffice || world.office(npc.id)===doc.requiredOffice)
+        (!doc.requiredOffice || (world.hasMandate?.(npc.id) ?? world.office(npc.id)===doc.requiredOffice))
         ? [{id:data.id,title:doc.title}] : [];
     });
   }
@@ -221,7 +220,7 @@ export class Gameplay {
         ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
       const last = findRoute({...mapEntrance,barriers},{x,y}).at(-1);
       if (last?.x!==x || last.y!==y) continue;
-      const kind = cashKinds[Math.floor(this.random()*cashKinds.length)];
+      const kind = 'briefcase';
       this.create(kind,this.groundPlace(kind,{x,y},now));
       console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;
@@ -344,7 +343,7 @@ export class Gameplay {
     });
     return {
       exposed:[...this.exposed.get(id) ?? []],
-      ...this.officeView(player,world.now),
+      ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
@@ -518,7 +517,7 @@ export class Gameplay {
     ]);
   }
 
-  private officeView(player:Player, now:number):Partial<GameplayView> {
+  private officeView(player:Player, now:number, players:Player[]):Partial<GameplayView> {
     const offices = this.privateOffices.view(now,player);
     const ownOffice = this.privateOffices.ownedBy(player.id)?.id;
     const officeFurnishings = ownOffice ? decorSlots.filter(isOfficeFurniture).filter(slot=>
@@ -539,15 +538,15 @@ export class Gameplay {
       const {layout,owner} = office;
       const own = owner===player.id;
       const add = (kind:OfficeAction,label:string,item?:number)=>officeOptions.push({kind,label,item,place:layout.id});
-      const upgrade = (target:'door'|'cabinet',level:number)=>{
+      const upgrade = (target:'door'|'cabinet'|'safe',level:number)=>{
         const kit = items.find(item=>item.kind===(target==='door' ? 'doorLock' : 'cabinetLock'));
-        if (kit && level<officeRules.maxSecurity) add(target==='door' ? 'office-upgrade-door' : 'office-upgrade-cabinet',`Reforçar ${target==='door' ? 'porta' : 'armário'} · Nv. ${level}`,kit.id);
+        if (kit && level<officeRules.maxSecurity) add(target==='door' ? 'office-upgrade-door' : target==='safe' ? 'office-upgrade-safe' : 'office-upgrade-cabinet',`Reforçar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · Nv. ${level}`,kit.id);
       };
-      const breach = (target:'door'|'cabinet')=>{
-        if (!tool) return;
+      const breach = (target:'door'|'cabinet'|'safe')=>{
+        if (!tool || target!=='door' && this.ownerInside(office,players)) return;
         const duration = this.privateOffices.breachTime(office,target,this.toolLevel(tool),now);
-        if (duration) add(target==='door' ? 'office-breach-door' : 'office-breach-cabinet',
-          `Arrombar ${target==='door' ? 'porta' : 'armário'} · ${duration/1000} s`,tool.id);
+        if (duration) add(target==='door' ? 'office-breach-door' : target==='safe' ? 'office-breach-safe' : 'office-breach-cabinet',
+          `Arrombar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · ${duration/1000} s`,tool.id);
       };
       if (this.privateOffices.near(player,office,'door')) {
         if (office.doorUntil<=now) {
@@ -565,11 +564,13 @@ export class Gameplay {
       if (this.privateOffices.near(player,office,'cabinet')) {
         if (own) upgrade('cabinet',office.cabinetLevel);
         else breach('cabinet');
-        if (this.privateOffices.stashAccess(player,office,now)) officeStash = {
+        if ((own || !this.ownerInside(office,players)) && this.privateOffices.stashAccess(player,office,now)) officeStash = {
           id:layout.id,items:this.officeStash(layout.id).map(item=>item.data),level:own ? office.cabinetLevel : undefined,
         };
       }
+      if (!own && this.privateOffices.near(player,office,'safe')) breach('safe');
       if (own && this.privateOffices.near(player,office,'safe')) {
+        upgrade('safe',office.safeLevel);
         for (const item of items) {
           const amount = cashAmount(item);
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
@@ -626,7 +627,7 @@ export class Gameplay {
     }
     const item = this.items.get(action.item ?? -1);
     if (kind==='office-take' || kind==='office-stash') {
-      if (!offices.stashAccess(player,office,now)) return 'Armário protegido.';
+      if ((!own && (world.plenary || this.ownerInside(office,world.players))) || !offices.stashAccess(player,office,now)) return 'Armário protegido.';
       if (!item) return 'Objeto indisponível.';
       if (kind==='office-take') {
         if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return 'Objeto indisponível.';
@@ -662,9 +663,9 @@ export class Gameplay {
       this.remove(item);
       return this.installOfficeDecor(player,office.layout,decor,item.data,world);
     }
-    if (kind==='office-upgrade-door' || kind==='office-upgrade-cabinet') {
-      const target = kind==='office-upgrade-door' ? 'door' : 'cabinet';
-      const level = target==='door' ? 'doorLevel' : 'cabinetLevel';
+    if (kind==='office-upgrade-door' || kind==='office-upgrade-cabinet' || kind==='office-upgrade-safe') {
+      const target = kind==='office-upgrade-door' ? 'door' : kind==='office-upgrade-safe' ? 'safe' : 'cabinet';
+      const level = target==='door' ? 'doorLevel' : target==='safe' ? 'safeLevel' : 'cabinetLevel';
       if (!own || !offices.near(player,office,target)) return 'Use o reforço no seu gabinete.';
       if (item.data.kind!==(target==='door' ? 'doorLock' : 'cabinetLock')) return 'Reforço incompatível.';
       if (office[level]>=officeRules.maxSecurity) return 'Segurança no nível máximo.';
@@ -673,19 +674,24 @@ export class Gameplay {
       this.event(world,player,'security-upgraded',item.data,undefined,{place:office.layout.id});
       return `Segurança nível ${office[level]}.`;
     }
-    if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet') return 'Ação indisponível.';
+    if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return 'Ação indisponível.';
     if (offices.channels.has(player.id)) return 'Já existe uma interação em andamento.';
-    const target = kind==='office-cash' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+    const target = kind==='office-cash' || kind==='office-breach-safe' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
     if (!offices.near(player,office,target)) return 'Aproxime-se do alvo.';
+    if (!own && target!=='door' && (world.plenary || this.ownerInside(office,world.players))) return 'O titular está no gabinete.';
     const level = this.toolLevel(item.data);
-    const duration = target==='safe' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
+    const duration = kind==='office-cash' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
-    if (!duration) return target==='safe' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
+    if (!duration) return kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
     offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+duration,level});
     if (kind==='office-cash') {
       player.pocketing = true;
       this.expose(player.id,item.data.id);
     }
+  }
+
+  private ownerInside(office:Parameters<PrivateOffices['isInside']>[1],players:Player[]) {
+    return players.some(player=>player.id===office.owner && this.privateOffices.isInside(player,office));
   }
 
   private tickOfficeChannels(world:GameplayWorld, exploring:boolean) {
@@ -694,16 +700,32 @@ export class Gameplay {
       const player = world.players.find(player=>player.id===id);
       const item = this.items.get(channel.item);
       const {office,kind} = channel;
-      const target = kind==='office-cash' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+      const target = kind==='office-cash' || kind==='office-breach-safe' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
       const valid = exploring && player && !player.knockedOut && !player.carrying && !player.moving &&
         world.present?.(id)!==false && player.x===channel.origin.x && player.y===channel.origin.y &&
         item && 'holder' in item.place && item.place.holder===id && offices.near(player,office,target) &&
-        (target==='safe' ? office.owner===id : offices.breachTime(office,target,channel.level,world.now)===channel.ends-channel.started);
+        (kind==='office-cash' ? office.owner===id : (target==='door' || !this.ownerInside(office,world.players)) && offices.breachTime(office,target,channel.level,world.now)===channel.ends-channel.started);
       if (valid && world.now<channel.ends) continue;
       offices.channels.delete(id);
       if (player) player.pocketing = undefined;
       if (!valid) {
         world.feedback?.(id,'Interação interrompida.');
+        continue;
+      }
+      if (kind==='office-breach-safe') {
+        const owner = office.owner!;
+        const amount = world.lootWallet?.(owner,officeRules.safeLootFraction) ?? 0;
+        if (!amount) {
+          world.feedback?.(id,'O cofre está vazio.');
+          continue;
+        }
+        this.remove(item);
+        const cash = this.create('briefcase',{holder:id});
+        cash.cash = amount;
+        this.expose(id,cash.id);
+        this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id,witnesses:[]});
+        world.feedback?.(id,`Maleta de ${money(amount)} retirada do cofre.`);
+        world.feedback?.(owner,'Seu cofre foi saqueado.');
         continue;
       }
       this.remove(item);
@@ -891,7 +913,7 @@ export class Gameplay {
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
-        const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && world.office(person.id)===template.office) ?
+        const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
           template.office : undefined;
         data.document = {
           author:player.nick,title:template.title,edited:false,signatures:[],stamps:[],
@@ -950,8 +972,13 @@ export class Gameplay {
         this.move(item,{storage:place});
         this.event(world,player,'stored',data);
         return 'Objeto armazenado.';
-      case 'deliver':
-        return 'Leve o dinheiro ao cofre do seu gabinete.';
+      case 'deliver': {
+        const amount = cashAmount(data);
+        if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
+        this.remove(item);
+        this.event(world,player,'delivered',data,undefined,{place});
+        return `${money(amount)} entregues à Tesouraria.`;
+      }
       case 'use':
         if (cashAmount(data)) return 'Leve o dinheiro ao cofre do seu gabinete.';
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
@@ -981,6 +1008,7 @@ export class Gameplay {
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
       case 'file': {
+        if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
         if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
         const missing = data.document.requiredStamps.filter(stamp => !data.document!.stamps.includes(stamp));
         const signatures = data.document.requiredSignatures-data.document.signatures.length;
@@ -1019,7 +1047,7 @@ export class Gameplay {
     }
     const doc = item.data.document;
     if (!doc || doc.signatures.some(person => person.id===player.id) ||
-      (doc.requiredOffice && world.office(player.id)!==doc.requiredOffice)) return 'Assinatura inválida.';
+      (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});
     this.event(world,player,'signed',item.data,owner.id);

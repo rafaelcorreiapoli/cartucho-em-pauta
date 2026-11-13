@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ELECTION_RULES as rules, offices } from '../src/elections';
+import { ELECTION_RULES as rules } from '../src/elections';
 import { stations, NEGOTIATION_MS, BALLOT_MS } from '../src/plenary';
 import type { Player } from '../src/map';
 import { ElectionCycle } from './ElectionCycle';
@@ -10,94 +10,37 @@ const players = people.slice(0,3).map(({id,name},character):Player => ({id,nick:
 const ids = players.map(({id}) => id);
 const at = (player:Player, key:keyof typeof stations):Player => ({...player,...stations[key]});
 
-test('the polls respond to bounded spending, popularity, and reversible support', () => {
+test('one human loses their mandate, payroll excludes them, and the floor is preserved',()=>{
   const election = new ElectionCycle();
-  election.reset(people,0,() => .5);
-  const popularity = (id:string) => id==='b' ? 70 : 40;
-  const view = () => election.view('a',200,popularity,true);
-  election.run('a','president',100);
-  election.run('b','president',100);
-  election.advance(100,popularity,() => {});
-  const before = view().polls.find(p => p.id==='a')!.estimate;
-  let spent = 0;
-  const spend = (amount:number) => { spent += amount; return true; };
-  election.invest('a',rules.investmentCap,spend);
-  election.invest('a',1,spend);
-  expect(spent).toBe(rules.investmentCap);
-  expect(view().polls.find(p => p.id==='a')!.estimate).toBeGreaterThan(before);
-  expect(view().polls.find(p => p.id==='a')!.trend).toBeGreaterThan(0);
-  expect(view().polls.filter(p => p.race==='president')[0].id).toBe('b');
-  election.support('c','a');
-  const endorsed = view().polls.find(p => p.id==='a')!.estimate;
-  election.support('c','');
-  expect(view().polls.find(p => p.id==='a')!.estimate).toBeLessThan(endorsed);
-  election.run('a','senator',rules.interval-rules.registrationLock);
-  expect(view().personal?.race).toBe('president');
+  election.reset(Array.from({length:6},(_,index)=>({id:String(index),name:String(index)})),0,()=>.5);
+  election.addDeputy('npc');
+  const payroll:string[][] = [];
+  const settle = (ids:string[])=>{
+    payroll.push(ids);
+    return new Map(ids.map(id=>[id,rules.salary]));
+  };
+  const popularity = (id:string)=>Number(id)*10;
+  election.advance(rules.interval,popularity,settle);
+  election.advance(rules.interval,popularity,settle);
+  expect(payroll).toHaveLength(1);
+  expect(payroll[0]).toEqual(['1','2','3','4','5','npc']);
+  expect(election.view('0',rules.interval,popularity,true)).toMatchObject({mandate:false,result:{eliminated:'0',salary:0}});
+  expect(election.view('1',rules.interval,popularity,true).polls.some(person=>person.id==='npc')).toBe(false);
+  for (let cycle=2;cycle<=4;cycle++) election.advance(cycle*rules.interval,popularity,settle);
+  expect(payroll).toHaveLength(3);
+  expect(payroll.at(-1)).toEqual(['3','4','5','npc']);
 });
 
-test('repeat elections pay the completed office once and fill seats even with one crowded race', () => {
-  const election = new ElectionCycle();
-  election.reset(people,0,() => .5);
-  const popularity = (id:string) => id==='a' ? 80 : 40;
-  const initial = election.view('a',0,popularity,true).offices;
-  for (const {id} of people) election.run(id,'president',100);
-  const paid: [string,number][] = [];
-  const pay = (id:string, amount:number) => paid.push([id,amount]);
-  election.advance(rules.interval,popularity,pay);
-  election.advance(rules.interval+1,popularity,pay);
-  const elected = election.view('a',rules.interval,popularity,true);
-  expect(elected.cycle).toBe(2);
-  expect(elected.result?.offices).toHaveLength(6);
-  const percentages = elected.result!.offices.map(({percentage}) => percentage);
-  expect(percentages.every(value => value>0 && value<=100)).toBe(true);
-  expect(percentages.reduce((total,value) => total+value,0)).toBeCloseTo(100,-1);
-  expect(new Set(elected.offices.map(({id}) => id)).size).toBe(6);
-  expect(elected.offices.filter(({office}) => office==='president')).toEqual([{id:'a',name:'A',office:'president'}]);
-  expect(elected.offices.filter(({office}) => office==='senator')).toHaveLength(2);
-  expect(paid.sort()).toEqual(initial.map(({id,office}):[string,number] => [id,offices[office].salary]).sort());
-  election.advance(2*rules.interval,popularity,pay);
-  expect(paid).toHaveLength(12);
-  expect(election.view('a',2*rules.interval,popularity,true).result?.cycle).toBe(2);
-});
-
-test('a new president can be an infiltrator without exposing either role or carrying over the outgoing president’s objection', () => {
+test('the production match requires six humans, including when NPCs are supplied',()=>{
   const match = new PlenaryMatch();
-  let firstDraw = true;
-  match.start('a',players,0,() => { if (firstDraw) { firstDraw = false; return .9; } return 0; });
-  const view = (id:string, now=0) => match.view(id,ids,now);
-  expect(view('c').role).toBe('Infiltrado');
-  const original = view('a').election!.offices.find(({office}) => office==='president')!;
-  const challenger = players[2];
-  const missionIds = view(challenger.id).politics?.missions.active.map(mission => mission.id);
-  const incumbent = players.find(player => player.id===original.id)!;
-  match.advance(NEGOTIATION_MS);
-  for (const {id} of players) match.vote(id,'yes',NEGOTIATION_MS+1);
-  match.advance(NEGOTIATION_MS+BALLOT_MS);
-  const now = NEGOTIATION_MS+BALLOT_MS+1;
-  match.electionAction(challenger,{kind:'run',office:'president'},now,false);
-  match.electionAction(challenger,{kind:'invest',amount:8},now,false);
-  match.electionAction(at(incumbent,'panel'),{kind:'object'},now,false);
-  expect(view(challenger.id,now).billQuorum).toBe(3);
-  match.advance(rules.interval);
-  const after = view(challenger.id,rules.interval);
-  expect(after.election?.personal?.office).toBe('president');
-  expect(after.role).toBe('Infiltrado');
-  expect(after.politics?.wallet).toBe(offices.deputy.salary);
-  expect(after.politics?.missions.active.map(mission => mission.id)).toEqual(missionIds);
-  const budget = after.budget;
-  match.politics(at(challenger,'cabinet'),{kind:'grant',diverted:3},players,rules.interval+1);
-  expect(view(challenger.id,rules.interval+1).budget).toBe(budget);
-  expect(after.election?.personal?.invested).toBe(0);
-  expect(after.election?.objection).toBeUndefined();
-  expect(after.billQuorum).toBe(2);
-  expect(after.infiltratorName).toBeUndefined();
-  expect(view('c').role).toBe('Infiltrado');
-  expect(view(original.id).election?.personal?.office).not.toBe('president');
-  expect(view(original.id).election?.result?.salary).toBe(offices.president.salary);
+  const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
+  expect(match.start('0',[...humans.slice(0,5),{...humans[5],npc:true}],0)).toBe(false);
+  expect(match.start('0',humans,0,()=>0)).toBe(true);
+  expect(match.view('0',humans.map(p=>p.id),0).mandate).toBe(true);
 });
 
 test('TV requires voice and the studio, expires on schedule, and cannot be spammed', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start('a',players,0,() => .5);
   const interview = (player:Player, now:number, voice:boolean) => match.electionAction(player,{kind:'interview'},now,voice);
   interview(at(players[0],'tv'),100,false);
@@ -113,9 +56,8 @@ test('TV requires voice and the studio, expires on schedule, and cannot be spamm
 });
 
 test('private discovery leaves the race intact until the evidence is published', () => {
-  const match = new PlenaryMatch();
+  const match = new PlenaryMatch(1);
   match.start('a',players,0,() => .9);
-  match.electionAction(players[0],{kind:'run',office:'president'},1,false);
   const estimate = () => match.view('c',ids,0).election!.polls.find(p => p.id==='a')!.estimate;
   const before = estimate();
   match.politics(at(players[0],'cabinet'),{kind:'grant',diverted:3},players,2);
@@ -126,4 +68,59 @@ test('private discovery leaves the race intact until the evidence is published',
   match.politics(at(players[1],'press'),{kind:'publish',evidence:record.id},players,4);
   expect(estimate()).toBeLessThan(before);
   expect(match.view('c',ids,0).politics!.ledger).toContainEqual(record);
+});
+
+test('payroll is funded by the budget and eliminating both infiltrators wins without stability damage',()=>{
+  const match = new PlenaryMatch();
+  const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
+  const ids = humans.map(player=>player.id);
+  match.start('0',humans,0,()=>0,2);
+  const view = (id:string,now:number)=>match.view(id,ids,now);
+  const world = match.gameplayWorld(humans,0,()=>false);
+  // Break the initial tie so the two infiltrators finish last in succession.
+  for (const player of humans.slice(2)) world.deposit!(player.id,4);
+  world.deposit!('1',1);
+  match.advance(NEGOTIATION_MS);
+  match.vote('2','yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const before = view('2',rules.interval);
+  match.advance(rules.interval);
+  const after = view('2',rules.interval);
+  expect(after.election?.result?.eliminated).toBe('0');
+  expect(view('0',rules.interval)).toMatchObject({mandate:false,phase:'negotiation',election:{result:{salary:0}}});
+  expect(after.stability).toBe(before.stability);
+  expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty-rules.salary*5);
+  expect(after.election?.result?.salary).toBe(rules.salary);
+  match.advance(NEGOTIATION_MS*2+BALLOT_MS);
+  match.vote('0','yes',NEGOTIATION_MS*2+BALLOT_MS+1);
+  expect(view('0',NEGOTIATION_MS*2+BALLOT_MS+1).vote).toBeUndefined();
+  expect(match.canHandleObjects('0',NEGOTIATION_MS*2+BALLOT_MS+1)).toBe(true);
+  expect(match.gameplayWorld(humans,0,()=>false).hasMandate!('0')).toBe(false);
+  match.advance((NEGOTIATION_MS+BALLOT_MS)*2);
+  match.advance(rules.interval*2);
+  expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
+});
+
+test('a short budget pays equal fractional salaries and preserves the rounding remainder',()=>{
+  const match = new PlenaryMatch();
+  const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
+  const ids = humans.map(player=>player.id);
+  match.start('0',humans,0,()=>0);
+  match.addParliamentarian({...players[0],id:'npc',npc:true});
+  match.advance(NEGOTIATION_MS);
+  for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const budget = match.view('0',ids,rules.interval).budget;
+  const world = match.gameplayWorld(humans,0,()=>false);
+  const npcBefore = world.wallet!('npc');
+  match.advance(rules.interval);
+  const next = match.view('0',ids,rules.interval);
+  expect(budget).toBe(4);
+  expect(next.election?.result?.salary).toBe(.2);
+  expect(next.budget).toBe(.4);
+  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+.2);
+  expect(match.view('5',ids,rules.interval).election?.result?.salary).toBe(0);
+  const paid = world.wallet!('npc');
+  match.advance(rules.interval);
+  expect(world.wallet!('npc')).toBe(paid);
 });

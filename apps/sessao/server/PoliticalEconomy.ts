@@ -91,11 +91,11 @@ export class PoliticalEconomy {
     return {humans,npcs,reserve:this.rewardReserve};
   }
 
-  takeWallet(id:string) {
+  takeWallet(id:string,fraction=1) {
     const account = this.accounts.get(id);
     if (!account) return 0;
-    const amount = account.wallet;
-    account.wallet = 0;
+    const amount = Math.floor(Math.round(account.wallet*10)*fraction)/10;
+    account.wallet = Math.round((account.wallet-amount)*10)/10;
     return amount;
   }
 
@@ -120,8 +120,8 @@ export class PoliticalEconomy {
   }
 
   private credit(account:Account, amount:number) {
-    account.wallet += amount;
-    account.walletIncome += amount;
+    account.wallet = Math.round((account.wallet+amount)*10)/10;
+    account.walletIncome = Math.round((account.walletIncome+amount)*10)/10;
   }
 
   earn(id:string, amount:number) {
@@ -242,13 +242,13 @@ export class PoliticalEconomy {
     if (offer && (offer.from===by || offer.to===by)) this.offers.delete(id);
   }
 
-  publish(id:string, evidence:number, president?:string) {
+  publish(id:string, evidence:number) {
     const account = this.accounts.get(id), record = this.records.get(evidence);
     if (!account?.known.has(evidence) || !record || this.published.has(evidence)) return;
     this.published.add(evidence);
     for (const [key,offer] of this.offers) if (offer.evidence===evidence) this.offers.delete(key);
     const subject = this.accounts.get(record.from);
-    if (subject) subject.popularity = cap(subject.popularity-(record.kind==='diversion' ? 6+record.amount*4 : 8)-(record.from===president ? 4 : 0));
+    if (subject) subject.popularity = cap(subject.popularity-(record.kind==='diversion' ? 6+record.amount*4 : 8));
     if (record.to) {
       const receiver = this.accounts.get(record.to);
       if (receiver) receiver.popularity = cap(receiver.popularity-5);
@@ -277,6 +277,8 @@ export class PoliticalEconomy {
       });
     }
   }
+
+  clearSuspensions() { for (const account of this.accounts.values()) account.suspended = false; }
 
   suspend(id:string) {
     const account = this.accounts.get(id);
@@ -312,10 +314,10 @@ export class PoliticalEconomy {
     if (account) account.agenda.progress(account,{[kind]:1});
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
     for (const id of players) {
       const account = this.accounts.get(id);
-      if (account) account.agenda.updateEligibility(account,players.size,!account.suspended,ballotsLeft,this.npcIds.size);
+      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !account.suspended,ballotsLeft,this.npcIds.size);
     }
   }
 
