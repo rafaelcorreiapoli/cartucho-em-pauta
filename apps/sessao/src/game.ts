@@ -100,7 +100,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
-        if ('sprite' in npc) this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
+        this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
       for (const [kind,{sprite}] of Object.entries(officeFurniture)) {
         this.load.image(`furniture-${kind}`,import.meta.env.BASE_URL+'assets/'+sprite);
@@ -163,10 +163,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
-        const art = 'character' in npc ? characterArt(npc.character) : undefined;
-        const sprite = art
-          ? this.add.sprite(npc.x,npc.y,art.sheet.key,art.frame+npc.direction*4).setTint(0xffd7a2)
-          : this.add.sprite(npc.x,npc.y,`npc-${id}`);
+        const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
         const label = id!=='snackVendor' ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',

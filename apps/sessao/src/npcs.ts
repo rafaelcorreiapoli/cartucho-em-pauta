@@ -13,7 +13,7 @@ export const npcs = {
 } as const;
 
 export const treasurer = {
-  name:'Tesoureiro', character:6, x:499, y:453, direction:0,
+  name:'Marcos Valério', sprite:'marcos-valerio.webp', x:499, y:453, direction:0,
   counter:{x:477,y:459}, interaction:{x:499,y:489}, label:'Tesouraria',
 } as const;
 
