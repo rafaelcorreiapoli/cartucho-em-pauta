@@ -1,3 +1,5 @@
+import { PhonePix } from './ui/phone-pix';
+import type { PoliticsAction } from './politics';
 import { PhoneCamera } from './ui/phone-camera';
 import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
@@ -52,7 +54,7 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
@@ -66,6 +68,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const albumHost = document.createElement('div');
   albumHost.className = 'phone-app-content';
   const albumRoot = createRoot(albumHost);
+  const pixHost = document.createElement('div');
+  pixHost.className = 'phone-app-content';
+  const pixRoot = createRoot(pixHost);
+  const mailHost = element('phone-mail');
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -205,6 +211,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   function selectApp(next:PhoneApp) {
     if (app==='Joguinhos' && next!=='Joguinhos') send({kind:'game-stop'});
     photos.closePresentation();
+    if (next==='Correio' && app!=='Correio') resetMail();
     app = next;
     photos.resetSelection();
     render();
@@ -244,6 +251,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
+      app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory.map(({id,character})=>[id,character])] :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       [state.game?.status,state.game?.score];
     if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
@@ -402,7 +410,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       cards.push(card);
     }
     if (phone) {
-      cards.push(node('h3',app));
+      element('gameplay-title').textContent = app;
       if (app==='Telefone') {
         flushSync(()=>callRoot.render(<PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
           available={phase==='negotiation'} send={send}/>));
@@ -417,6 +425,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         flushSync(()=>cameraRoot.render(<PhoneCamera count={photos.count} available={phase==='negotiation'}
           preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>));
         cards.push(cameraHost);
+      }
+      if (app==='Correio') cards.push(mailHost);
+      if (app==='Pix' && view.politics) {
+        flushSync(()=>pixRoot.render(<PhonePix politics={view.politics!} send={sendPolitics}/>));
+        cards.push(pixHost);
       }
       if (app==='Álbum') {
         flushSync(()=>albumRoot.render(photos.renderAlbum(contacts,directory,
@@ -528,7 +541,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
-  phoneButton.onclick = () => open();
+  phoneButton.onclick = () => { if (app==='Correio') resetMail(); open(); };
   element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
@@ -645,6 +658,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
+    openMail() { app = 'Correio'; open(); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);
@@ -672,6 +686,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       callRoot.unmount();
       cameraRoot.unmount();
       albumRoot.unmount();
+      pixRoot.unmount();
       snakeRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();

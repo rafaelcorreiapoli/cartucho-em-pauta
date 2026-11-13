@@ -5,7 +5,6 @@ const apps = [
   {id:'open-equipment',label:'Equipamentos',icon:'inventory'},
   {id:'open-attributes',label:'Personagem',icon:'chart',key:'I'},
   {id:'open-phone',label:'Celular',icon:'phone'},
-  {id:'open-mail',label:'Correio Interno',icon:'document',key:'U'},
   {id:'open-surveillance',label:'Vigilância',icon:'camera',key:'G'},
   {id:'voice-toggle',label:'Microfone',icon:'mic',key:'V'},
   {id:'room-settings',label:'Configurações',icon:'settings'},

@@ -35,7 +35,7 @@ export function PhoneCalls({call,contacts,available,send}:{
   if (!contacts.length) return <p>Ninguém mais na sala.</p>;
   return <div className="phone-contacts">
     {contacts.map((person,index)=>{
-      const shortcut = index<5 ? String(index+5) : undefined;
+      const shortcut = index<3 ? String(index+5) : undefined;
       return <button key={person.id} type="button" className="phone-contact" aria-label={`Ligar para ${person.name}`}
         aria-keyshortcuts={shortcut} onClick={()=>send({kind:'call',target:person.id})}>
         <PhoneContactFace person={person}/><strong>{person.name}</strong><Icon name="handset" className="phone-contact-dial"/>

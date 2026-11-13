@@ -7,16 +7,21 @@ export function PhoneCamera({count,available,preview,send,openAlbum}:{
   send:(action:GameplayAction)=>void; openAlbum:()=>void;
 }) {
   const disabled = !available || count>=PHOTO_LIMIT;
-  return <>
-    <canvas ref={preview} className="camera-preview" role="img" aria-label="Enquadramento da câmera"/>
-    {([['photo','Tirar foto','5'],['selfie','Selfie','6']] as const).map(([kind,label,key])=>
-      <button key={kind} type="button" className="hud-button hud-button--secondary" disabled={disabled}
-        aria-keyshortcuts={key} onClick={()=>send({kind})}>
-        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg>
-        {label} <kbd className="action-key" aria-hidden="true">{key}</kbd>
-      </button>)}
-    <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts="7" onClick={openAlbum}>
-      Abrir álbum · {count}/{PHOTO_LIMIT} <kbd className="action-key" aria-hidden="true">7</kbd>
-    </button>
-  </>;
+  return <section className="phone-camera">
+    <div className="phone-camera-viewfinder">
+      <canvas ref={preview} className="camera-preview" role="img" aria-label="Enquadramento da câmera"/>
+    </div>
+    <div className="phone-camera-controls">
+      <button type="button" className="camera-gallery" aria-keyshortcuts="7" aria-label={`Abrir álbum · ${count}/${PHOTO_LIMIT}`} onClick={openAlbum}>
+        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-app-photos"/></svg>
+        <small>{count}/{PHOTO_LIMIT}</small>
+      </button>
+      <button type="button" className="camera-shutter" aria-label="Tirar foto" disabled={disabled}
+        aria-keyshortcuts="5" onClick={()=>send({kind:'photo'})}><span aria-hidden="true"/></button>
+      <button type="button" className="camera-selfie" aria-label="Selfie" disabled={disabled}
+        aria-keyshortcuts="6" onClick={()=>send({kind:'selfie'})}>
+        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie</small>
+      </button>
+    </div>
+  </section>;
 }

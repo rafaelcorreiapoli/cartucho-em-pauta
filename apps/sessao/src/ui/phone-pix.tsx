@@ -1,0 +1,32 @@
+import {useState} from 'react';
+import {manualTransfer} from '../politics-panel';
+import {money,type PoliticsAction,type PoliticsView} from '../politics';
+import {PhoneContactFace} from './phone-call';
+
+export function PhonePix({politics,send}:{politics:PoliticsView;send:(action:PoliticsAction)=>void}) {
+  const [recipient,setRecipient] = useState('');
+  const [amount,setAmount] = useState(1);
+  const [privatePayment,setPrivatePayment] = useState(false);
+  const target = politics.contacts.find(person=>person.id===recipient);
+  const transfer = manualTransfer(target?.id ?? '',amount,privatePayment,politics.wallet,politics.paymentsLeft);
+  return <section className="phone-pix" aria-label="Transferência Pix">
+    <div className="pix-balance"><small>Saldo disponível</small><strong>{money(politics.wallet)}</strong></div>
+    <h4>Para quem?</h4>
+    {politics.contacts.length===0 && <p>Aproxime-se de um jogador para transferir.</p>}
+    <div className="phone-contacts">
+      {politics.contacts.map(person=><button className="phone-contact" type="button" key={person.id}
+        aria-pressed={target?.id===person.id} onClick={()=>setRecipient(person.id)}>
+        <PhoneContactFace person={politics.directory.find(entry=>entry.id===person.id) ?? person}/><strong>{person.name}</strong>
+      </button>)}
+    </div>
+    <div className="pix-amount" aria-label="Valor da transferência">
+      <button type="button" className="hud-icon-button" aria-label="Diminuir valor" disabled={amount<=1} onClick={()=>setAmount(amount-1)}>−</button>
+      <output>{money(amount)}</output>
+      <button type="button" className="hud-icon-button" aria-label="Aumentar valor" disabled={amount+1>politics.wallet} onClick={()=>setAmount(amount+1)}>+</button>
+    </div>
+    <button type="button" className="hud-button hud-button--secondary" aria-pressed={privatePayment}
+      onClick={()=>setPrivatePayment(!privatePayment)}>{privatePayment ? 'Clandestino' : 'Público'}</button>
+    <button type="button" className="hud-button" aria-keyshortcuts="5" disabled={!transfer}
+      onClick={()=>{if (transfer) send(transfer);}}>{politics.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido'} <kbd className="action-key" aria-hidden="true">5</kbd></button>
+  </section>;
+}

@@ -36,4 +36,12 @@ async page => {
   await dialog.getByText('O álbum está vazio.',{exact:true}).waitFor();
   await dialog.getByRole('button',{name:'Publicadas'}).click();
   await dialog.getByText('Nenhuma foto publicada.',{exact:true}).waitFor();
+  await page.keyboard.press('8');
+  await dialog.getByRole('heading',{name:'Correio',exact:true}).waitFor();
+  await dialog.getByText('Nenhum comunicado publicado.',{exact:true}).waitFor();
+  await page.keyboard.press('9');
+  const pix = dialog.getByRole('region',{name:'Transferência Pix'});
+  await pix.getByText('Saldo disponível').waitFor();
+  if (!await pix.getByRole('button',{name:'Transferir'}).isDisabled()) throw Error('Pix sem destinatário');
+
 }

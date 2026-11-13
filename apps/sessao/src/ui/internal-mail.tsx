@@ -56,8 +56,9 @@ export function ComplaintDesk({view,photos,submit}:{view:ComplaintView;photos:re
 
 export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number})=>void,
   notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void,submit:(id:number,photo?:number)=>void) {
-  const dialog = document.querySelector<HTMLDialogElement>('#internal-mail')!;
-  const root = createRoot(dialog);
+  const host = document.querySelector<HTMLElement>('#phone-mail')!;
+  const originalParent = host.parentElement!;
+  const root = createRoot(host);
   let choices:readonly AttachmentChoice[] = [];
   let reports:readonly ForensicReport[] = [];
   let notices:readonly InternalNotice[] = [];
@@ -71,9 +72,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
 
   function render() {
     root.render(<>
-      <header><h2 id="internal-mail-title">{composing ? 'Publicar comunicado' : 'Correio Interno'}</h2>
-        <form method="dialog"><button className="hud-icon-button" aria-label="Fechar correio">×</button></form>
-      </header>
+      {composing && <h3>Publicar comunicado</h3>}
       {composing ? <form className="grid gap-3" onSubmit={event=>{
         event.preventDefault();
         if (pending) return;
@@ -116,7 +115,6 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
 
   return {
     open(compose=false,attachments:readonly AttachmentChoice[] = [],desk=false) {
-      if (dialog.open) return;
       composing = compose;
       atDesk = desk;
       source = undefined;
@@ -125,7 +123,6 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
       reviewing = undefined;
       error = null;
       flushSync(render);
-      dialog.showModal();
     },
     complaints(next?:ComplaintView) {
       const updated = next ?? {available:[],history:[]};
@@ -135,26 +132,31 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         notify('Boletim da Corregedoria',`${infractionLabels[latest.kind]} confirmada · ${latest.accused}`);
       }
       complaints = updated;
-      if (dialog.open && !composing) render();
+      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
     },
     receive(next:readonly InternalNotice[]) {
       if (next[0] && next[0].id!==notices[0]?.id) notify('Correio Interno',next[0].subject);
       notices = next;
-      if (dialog.open && !composing) render();
+      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
     },
     reports(next:readonly ForensicReport[]) {
       if (next[0] && next[0].notice!==reports[0]?.notice) notify('Perícia concluída',next[0].document.title);
       reports = next;
-      if (dialog.open && !composing) render();
+      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
     },
     result(message:string|null) {
-      if (!dialog.open || !composing) return;
+      if (!composing) return;
       pending = false;
       error = message;
       if (!message) composing = false;
       render();
     },
-    phase(exploring:boolean) { if (!exploring && (composing || atDesk) && dialog.open) dialog.close(); },
-    destroy() { dialog.close(); root.unmount(); },
+    phase(exploring:boolean) {
+      if (exploring || (!composing && !atDesk)) return;
+      composing = atDesk = false;
+      source = undefined;
+      render();
+    },
+    destroy() { root.unmount(); originalParent.append(host); },
   };
 }

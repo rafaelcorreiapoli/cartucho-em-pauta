@@ -223,7 +223,7 @@ async function connect(join: () => Promise<Room>) {
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      option=>sendCommand('spy',option));
+      option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open());
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -242,10 +242,12 @@ async function connect(join: () => Promise<Room>) {
         return;
       }
       if (action.kind==='complaint-desk') {
+        gameplay.openMail();
         mail.open(false,mailPhotos.map(({photo})=>({kind:'photo',id:photo.id,label:'Fotografia #'+photo.id})),true);
         return;
       }
       if (action.kind==='compose-mail') {
+        gameplay.openMail();
         mail.open(true,[
           ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
             [{kind:'document' as const,id:item.id,label:item.document.title}]),
@@ -288,8 +290,6 @@ async function connect(join: () => Promise<Room>) {
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
-    const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
-    mailButton.onclick = () => mail.open();
     joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
@@ -416,7 +416,6 @@ async function connect(join: () => Promise<Room>) {
       appLauncher.destroy();
       reactHud.destroy();      results.destroy();
       projectPicker.destroy();
-      mailButton.onclick = null;
       mail.destroy();
       progression.destroy();
       surveillance.destroy();
