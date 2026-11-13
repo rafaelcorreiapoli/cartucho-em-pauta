@@ -1,4 +1,4 @@
-import {wallVision,shadowQuads} from './visibility';
+import {wallVision,shadowOutline} from './visibility';
 import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -28,6 +28,11 @@ const directions = new Map(Object.entries({
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
   combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
+  const penumbra = document.createElement('div');
+  penumbra.className = 'map-fog';
+  penumbra.hidden = true;
+  penumbra.setAttribute('aria-hidden','true');
+  parent.append(penumbra);
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -595,6 +600,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
           this.fog.clear().setVisible(running);
+          penumbra.hidden = !running || inSession;
           if (running && inSession) {
             const [left,top,width,height] = PLENARY_BOUNDS;
             const edge = 4000;
@@ -612,9 +618,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
                 points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
             }
             this.fog.fillStyle(0x000000,.62);
-            for (const [a,b,c,d] of shadowQuads(this.fogGeometry!.points,wallX,wallY,4000)) {
-              this.fog.beginPath().moveTo(a.x,a.y).lineTo(b.x,b.y).lineTo(c.x,c.y).lineTo(d.x,d.y).closePath().fillPath();
-            }
+            const {points} = this.fogGeometry!;
+            const screenX = (wallX-camera.scrollX-camera.width/2)*cssZoom+camera.width/2/density;
+            const screenY = (wallY-camera.scrollY-camera.height/2)*cssZoom+camera.height/2/density;
+            const edge = radius*cssZoom;
+            penumbra.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${edge*.86}px, #0009 ${edge}px)`;
+            penumbra.style.clipPath = `polygon(${points.map(point=>`${screenX+point.x*cssZoom}px ${screenY+point.y*cssZoom}px`).join(',')})`;
+            const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
+            this.fog.beginPath().moveTo(first.x,first.y);
+            for (const point of outline) this.fog.lineTo(point.x,point.y);
+            this.fog.closePath().fillPath();
           }
         }
       }
@@ -679,12 +692,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
-      if (!running) scene.fog?.setVisible(false);
+      if (!running) {
+        scene.fog?.setVisible(false);
+        penumbra.hidden = true;
+      }
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
     destroy() {
       listeners.abort();
       resizeObserver?.disconnect();
+      penumbra.remove();
       game.destroy(true);
     },
   };

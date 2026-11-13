@@ -36,12 +36,11 @@ function slab(origin:number,direction:number,min:number,max:number) {
   return [Math.min(a,b),Math.max(a,b)];
 }
 
-export function shadowQuads(points:ReturnType<typeof wallVision>,x:number,y:number,extent:number) {
-  return points.map((a,index)=>{
-    const b = points[(index+1)%points.length];
-    return [
-      {x:x+a.x,y:y+a.y},{x:x+b.x,y:y+b.y},
-      {x:x+b.dx*extent,y:y+b.dy*extent},{x:x+a.dx*extent,y:y+a.dy*extent},
-    ] as const;
-  });
+export function shadowOutline(points:ReturnType<typeof wallVision>,x:number,y:number,extent:number) {
+  const [first] = points;
+  if (!first) return [];
+  const outer = points.map(({dx,dy})=>({x:x+dx*extent,y:y+dy*extent}));
+  const inner = points.map(point=>({x:x+point.x,y:y+point.y}));
+  // Traverse the exterior and the opening in opposite directions, joined by a single edge.
+  return [...outer,outer[0],inner[0],...inner.slice(1).reverse(),inner[0]];
 }
