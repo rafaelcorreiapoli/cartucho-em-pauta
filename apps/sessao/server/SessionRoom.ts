@@ -1,3 +1,4 @@
+import { InternalMail } from './InternalMail';
 import { megaphone } from '../src/equipment';
 import { Parliamentarians } from './Parliamentarians';
 import { ParliamentarianTalk } from './ParliamentarianTalk';
@@ -35,6 +36,7 @@ export class SessionRoom extends Room {
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
   private lastFieldToken = new Map<string,number>();
+  private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
   private gameplayWorld() {
     const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.clock.currentTime,
@@ -136,6 +138,8 @@ export class SessionRoom extends Room {
     this.onMessage('start-match', (client, countRequest:unknown) => {
       const players = [...this.players.values()].map(state=>state.player);
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
+        this.internalMail.reset();
+        this.broadcast('mail-state',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
         const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.lobbyNpcCount = count;
@@ -155,6 +159,17 @@ export class SessionRoom extends Room {
         this.matchObjectsActive = true;
         void this.lock();
       }
+    });
+    this.onMessage('mail-read',client=>client.send('mail-state',this.internalMail.view()));
+    this.onMessage('mail-publish',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
+        client.send('mail-result','Publicação indisponível nesta fase.');
+        return;
+      }
+      const error = this.internalMail.publish(player,raw,this.gameplayWorld());
+      client.send('mail-result',error ?? null);
+      if (!error) this.broadcast('mail-state',this.internalMail.view());
     });
     this.onMessage('plenary-action', (client, action:unknown) => {
       const player = this.players.get(client.sessionId)?.player;

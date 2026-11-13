@@ -17,7 +17,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
+type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -193,6 +193,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
+    }
+    if (state?.locations.includes('reprography')) {
+      for (const item of state.inventory) if (item.document && !item.document.edited) {
+        actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id}});
+      }
+    }
+    if (state && player && canReachObject(player,stationPoints.audit,{handsFree:true})) {
+      actions.push({label:'Publicar comunicado',icon:'document',action:{kind:'compose-mail'}});
     }
     if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
       for (const npc of state.parliamentarians ?? []) {

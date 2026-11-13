@@ -1,3 +1,5 @@
+import { mountInternalMail } from './ui/internal-mail';
+import type { InternalNotice } from './internal-mail';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
@@ -223,6 +225,8 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='spy') { joined.send('spy',action.option); return; }
+      if (action.kind==='edit-document') { sendGameplay({kind:'edit',item:action.item}); return; }
+      if (action.kind==='compose-mail') { mail.open(true); return; }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
@@ -249,6 +253,12 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
+    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify);
+    const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
+    mailButton.onclick = () => mail.open();
+    joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
+    joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
+    joined.send('mail-read');
     const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
@@ -285,6 +295,7 @@ async function connect(join: () => Promise<Room>) {
       }
       hud.render(view);
       reactHud.render(view);
+      mail.phase(view.phase==='negotiation');
       const priorProgress = previousView?.politics?.progression;
       const currentProgress = view.politics?.progression;
       if (!suppressXpEffect && priorProgress && currentProgress &&
@@ -352,7 +363,7 @@ async function connect(join: () => Promise<Room>) {
         portraitPlayers[player.character]?.append(label);
       }
     });
-    joined.onReconnect(() => { suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
+    joined.onReconnect(() => { joined.send('mail-read'); suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
@@ -360,6 +371,8 @@ async function connect(join: () => Promise<Room>) {
       political.destroy();
       hud.destroy();
       reactHud.destroy();      results.destroy();
+      mailButton.onclick = null;
+      mail.destroy();
       progression.destroy();
       surveillance.destroy();
       gameplay.destroy();
