@@ -145,10 +145,6 @@
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
-          <div class="personal-resources">
-            <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
-            <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
-          </div>
           <div id="congress-dock" class="hud-module"></div>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
             <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small>Renovação em</small><strong id="election-timer"></strong></span></summary>
@@ -180,10 +176,13 @@
                 <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
                 <span id="profile-level-mount"></span>
               </div>
-              <small id="hud-office" hidden>Ex-parlamentar</small>
-              <small id="own-office" hidden></small>
-              <div id="profile-vitals"></div>
+              <div class="profile-subtitle">
+                <small id="hud-office">Parlamentar</small>
+                <small id="own-office" hidden></small>
+              </div>
+              <div id="profile-resources"></div>
             </div>
+            <div id="profile-vitals"></div>
           </section>
           <section id="legislative-dock" aria-label="Situação legislativa">
             <div id="project-outcome-brief" role="status" hidden>

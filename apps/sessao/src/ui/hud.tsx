@@ -112,18 +112,29 @@ function Vitals({profile,stamina}:{profile:ReturnType<typeof channel<Profile|und
   const goal = stats.next===undefined ? 0 : stats.next-stats.start;
   return <div className="react-vitals grid gap-1.5">
     {stats.hp!==undefined && stats.maxHp!==undefined &&
-      <div className="vital-row" data-tone="health"><span aria-hidden="true">PV</span>
+      <div className="vital-row" data-tone="health"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3.6 13A5.6 5.6 0 0 1 12 5.8 5.6 5.6 0 0 1 20.4 13Z"/></svg>
         <Meter label="PV" value={stats.hp} max={stats.maxHp} tone="health"/>
-        <small>{stats.hp}/{stats.maxHp}</small>
+        <small>{stats.hp} / {stats.maxHp}</small>
       </div>}
-    <div className="vital-row" data-tone="stamina"><span aria-hidden="true">ϟ</span>
+    <div className="vital-row" data-tone="stamina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-2 8 11-13h-8l3-7Z"/></svg>
       <Meter label="Stamina" value={energy.current} max={energy.max} tone="stamina"/>
-      <small>{energy.current}/{energy.max}</small>
+      <small>{energy.current} / {energy.max}</small>
     </div>
     <div className="vital-row" data-tone="xp"><span aria-hidden="true">XP</span>
       <Meter label="XP" value={goal ? earned : 1} max={goal || 1} tone="xp"/>
-      <small>{goal ? `${earned}/${goal}` : 'MAX'}</small>
+      <small>{goal ? `${earned} / ${goal}` : 'MAX'}</small>
     </div>
+  </div>;
+}
+
+type PersonalResources = {wallet:number; popularity:number; stability:number};
+function ProfileResources({state}:{state:ReturnType<typeof channel<PersonalResources|undefined>>}) {
+  const resources = useSyncExternalStore(state.subscribe,state.get);
+  if (!resources) return null;
+  return <div className="profile-resource-row">
+    <span title="Popularidade"><Icon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
+    <span title="Estabilidade institucional"><Icon name="shield"/>Est. <strong>{resources.stability}</strong></span>
+    <span title="Dinheiro na carteira"><Icon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
   </div>;
 }
 
@@ -146,6 +157,9 @@ export function mountReactHud() {
   const profile = channel<Profile|undefined>(undefined);
   const stamina = channel<Stamina>({current:MAX_STAMINA,max:MAX_STAMINA});
   const vitalsRoot = createRoot(document.getElementById('profile-vitals')!);
+  const resources = channel<PersonalResources|undefined>(undefined);
+  const resourcesRoot = createRoot(document.getElementById('profile-resources')!);
+  resourcesRoot.render(<ProfileResources state={resources}/>);
   const levelRoot = createRoot(document.getElementById('profile-level-mount')!);
   vitalsRoot.render(<Vitals profile={profile} stamina={stamina}/>);
   levelRoot.render(<Level state={profile}/>);
@@ -167,6 +181,7 @@ export function mountReactHud() {
         matchId = progress?.matchId;
         agenda.update(undefined);
       }
+      resources.update(progress && view.politics ? {wallet:view.politics.wallet,popularity:view.politics.popularity,stability:view.stability} : undefined);
       profile.update(progress && {hp:view.gameplay?.vitality?.hp,maxHp:view.gameplay?.vitality?.max,
         xp:progress.xp,start:progress.levelStart,next:progress.nextLevelXp,level:progress.level});
       const missions = view.phase==='lobby' ? undefined : view.politics?.missions;
@@ -177,6 +192,6 @@ export function mountReactHud() {
       agenda.update({active:missions.active,recent,announcement:fresh.length
         ? fresh.map(mission=>'Concluído: '+missionTitle(mission)).join('. ') : previous?.announcement ?? ''});
     },
-    destroy() { broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); },
+    destroy() { broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
   };
 }

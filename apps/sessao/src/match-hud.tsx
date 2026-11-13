@@ -391,12 +391,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     render(view:PlenaryView) {
       roleBadge.hidden = view.role!=='Infiltrado';
-      element('hud-office').hidden = view.mandate!==false;
+      element('hud-office').textContent = view.mandate===false ? 'Ex-parlamentar' : 'Parlamentar';
       const politics = view.politics;
-      if (politics) {
-        element('hud-wallet').textContent = money(politics.wallet);
-        element('hud-popularity').textContent = String(politics.popularity);
-      }
 
       if (previous) {
         const past = previous.politics;
