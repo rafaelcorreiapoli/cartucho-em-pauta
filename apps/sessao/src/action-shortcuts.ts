@@ -15,7 +15,6 @@ const quickActions = [
   ['g','#open-surveillance'], ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['v','#voice-toggle'],
   ['j','#politics-dock > summary'],
   ['p','#election-dock > summary'],
-  ['y','[data-vote="yes"]'], ['r','[data-vote="no"]'],
 ] as const;
 
 function available(control:HTMLElement) {
@@ -127,7 +126,9 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
     }
     if (event.shiftKey || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
-    const control = controls.find(([shortcut])=>shortcut===key)?.[1];
+    const control = key==='y' || key==='r'
+      ? root.querySelector<HTMLElement>(key==='y' ? '[data-vote="yes"]' : '[data-vote="no"]')
+      : controls.find(([shortcut])=>shortcut===key)?.[1];
     if (!control) return;
     const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle';
     if (viaApp ? control.matches(':disabled,[hidden]') || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;

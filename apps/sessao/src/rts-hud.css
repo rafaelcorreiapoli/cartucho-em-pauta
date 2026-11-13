@@ -812,3 +812,5 @@ img.market-art {
   opacity: .55;
   cursor: default;
 }
+
+#command-deck #ballot-host:not([hidden]) { display: contents; }

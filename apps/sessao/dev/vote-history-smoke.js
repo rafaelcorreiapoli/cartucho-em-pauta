@@ -7,7 +7,8 @@ async page => {
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="ballot"]').waitFor();
-  await page.locator('[data-vote="yes"]').click();
+  await page.locator('[data-vote="yes"]').waitFor();
+  await page.keyboard.press('y');
   await page.locator('#vote-state').getByText('Seu voto: aprovar').waitFor();
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
   await page.locator('#session[data-phase="ballot"]').waitFor();
