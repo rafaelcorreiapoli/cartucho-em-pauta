@@ -18,6 +18,8 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   const badge = element('attribute-points-badge');
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
+  const confirm = element<HTMLButtonElement>('confirm-attribute');
+  let selected:Attribute|undefined;
   const sparks = element('level-up-dialog').querySelector('.level-up-sparks')!;
   for (let index=0;index<16;index++) {
     const spark = document.createElement('i');
@@ -53,12 +55,8 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     row.append(info,value,button);
     element('attribute-list').append(row);
     button.onclick = () => {
-      if (!latest || requested===latest.revision) return;
-      requested = latest.revision;
-      clearTimeout(requestTimer);
-      requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
-      for (const row of rows) row.button.disabled = true;
-      send({attribute,revision:latest.revision,matchId:latest.matchId});
+      selected = attribute;
+      renderAttributes();
     };
     return {attribute,row,value,resourceValue,button};
   });
@@ -75,6 +73,21 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let reconnecting = false;
   let completedCount = 0;
 
+  confirm.onclick = () => {
+    if (!latest || !selected || confirm.disabled) return;
+    requested = latest.revision;
+    clearTimeout(requestTimer);
+    requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
+    renderAttributes();
+    send({attribute:selected,revision:latest.revision,matchId:latest.matchId});
+  };
+
+  function clearSelection() {
+    selected = undefined;
+    renderAttributes();
+  }
+  attributes.addEventListener('close',clearSelection);
+
   function renderAttributes() {
     if (!latest || !player) return;
     const {xp,level,nextLevelXp,available,invested,revision} = latest;
@@ -87,13 +100,22 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       defense:baseDefense+invested.defense*attributeUpgrades.defense.bonus};
     const hp = view?.gameplay?.vitality?.hp ?? maxHp;
     const stamina = Math.floor(player.stamina ?? staminaMax);
-    for (const {attribute,value,resourceValue,button} of rows) {
+    const canSpend = !!available && requested!==revision && view?.phase==='negotiation' &&
+      !player.knockedOut && !player.carrying && !!view.gameplay;
+    confirm.disabled = !canSpend || !selected;
+    for (const {attribute,row,value,resourceValue,button} of rows) {
       const max = values[attribute];
       const current = attribute==='hp' ? `${hp}/${max}` : attribute==='stamina' ? `${stamina}/${max}` : String(max);
       value.textContent = String(baseAttribute+invested[attribute]);
-      resourceValue.textContent = current;
-      button.disabled = !available || requested===revision || view?.phase!=='negotiation' ||
-        !!player.knockedOut || !!player.carrying || !view?.gameplay;
+      const preview = attribute===selected && !!available;
+      button.setAttribute('aria-pressed',String(preview));
+      row.classList.toggle('attribute-selected',preview);
+      resourceValue.classList.toggle('attribute-preview',preview);
+      const bonus = attributeUpgrades[attribute].bonus;
+      const next = attribute==='hp' ? `${hp+bonus}/${max+bonus}` :
+        attribute==='stamina' ? `${stamina+bonus}/${max+bonus}` : String(max+bonus);
+      resourceValue.textContent = preview ? `${current} → ${next}` : current;
+      button.disabled = !canSpend;
     }
   }
 
@@ -185,6 +207,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       }
       fill.style.transform = `scaleX(${fraction})`;
       completedCount = next.politics?.missions.completed.length ?? 0;
+      if (!before || progress.revision!==before.revision) selected = undefined;
       if (before && progress.revision>before.revision) {
         play('attribute');
         for (const row of rows) {
@@ -204,7 +227,9 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       document.removeEventListener('close',closeOtherDialog,true);
       celebration.removeEventListener('close',closeCelebration);
       celebration.close();
+      attributes.removeEventListener('close',clearSelection);
       attributes.close();
+      confirm.onclick = null;
       launch.onclick = null;
       launch.hidden = xpPanel.hidden = true;
       sparks.replaceChildren();

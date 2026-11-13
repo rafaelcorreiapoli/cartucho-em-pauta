@@ -127,3 +127,7 @@
 }
 #wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain)) .xp-gain { transform: translate(5px,-100%); }
 #wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain) { transform: translate(calc(-100% - 5px),-100%); }
+
+#attribute-list .attribute-selected { background: #e1ba601f; }
+#attribute-list [aria-pressed="true"], .attribute-preview { color: #ffda85; }
+#attribute-resources section > span { text-align: right; }
