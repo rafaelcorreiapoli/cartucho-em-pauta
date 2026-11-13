@@ -7,10 +7,14 @@ async page => {
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="ballot"]').waitFor();
+  const exploring = ['.character-dock','#agenda-dock','.deck-tools','#election-dock','#context-hud'];
+  for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
+  await page.locator('#congress-dock').waitFor({state:'visible'});
   await page.locator('[data-vote="yes"]').waitFor();
   await page.keyboard.press('y');
   await page.locator('#vote-state').getByText('Seu voto: aprovar').waitFor();
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
+  for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
   await page.locator('#session[data-phase="ballot"]').waitFor();
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
   await page.locator('#session[data-phase="ballot"]').waitFor();

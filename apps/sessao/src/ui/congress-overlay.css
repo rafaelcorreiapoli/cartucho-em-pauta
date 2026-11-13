@@ -779,3 +779,26 @@
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+
+/* Keep the vote and institutional stability visible while the player is in the chamber. */
+#session[data-phase="ballot"][data-in-plenary="true"] :is(
+  .character-dock, #agenda-dock, .deck-tools, #election-dock,
+  #context-hud, #connection-latency, #electoral-notice-mount
+) { display: none; }
+
+#session[data-phase="ballot"][data-in-plenary="true"] #command-strip {
+  grid-template-columns: minmax(0,1fr);
+}
+#session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
+  grid-column: 1;
+  justify-self: center;
+}
+#session[data-phase="ballot"][data-in-plenary="true"] #command-deck {
+  grid-template-columns: minmax(0,1fr);
+}
+#session[data-phase="ballot"][data-in-plenary="true"] #legislative-dock {
+  grid-column: 1;
+  justify-self: center;
+  width: min(100%, 960px);
+  box-sizing: border-box;
+}
