@@ -19,8 +19,9 @@ import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/ni
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
 
-function countFromStart(request:unknown) {
-  if (!request || typeof request!=='object' || !('npcs' in request)) return 0;
+function countFromStart(request:unknown,lobbyCount:number) {
+  if (!request || typeof request!=='object') return 0;
+  if (!('npcs' in request)) return lobbyCount;
   return typeof request.npcs==='number' && Number.isInteger(request.npcs) ? Math.max(0,Math.min(3,request.npcs)) : npcRules.count;
 }
 
@@ -30,6 +31,7 @@ export class SessionRoom extends Room {
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
 
+  private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
   private lastFieldToken = new Map<string,number>();
   private matchObjectsActive = false;
@@ -115,11 +117,17 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-npc-count',(client,value:unknown)=>{
+      if (this.match.running || this.players.keys().next().value!==client.sessionId ||
+          typeof value!=='number' || !Number.isInteger(value) || value<0 || value>3) return;
+      this.lobbyNpcCount = value;
+    });
     this.onMessage('start-match', (client, countRequest:unknown) => {
       const players = [...this.players.values()].map(state=>state.player);
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
-        const count = Math.min(countFromStart(countRequest),PLENARY_SEATS.length-players.length);
+        const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
+        this.lobbyNpcCount = count;
         this.parliamentarians.reset(count,this.clock.currentTime);
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
@@ -273,6 +281,7 @@ export class SessionRoom extends Room {
         const state = this.players.get(id);
         if (!state) continue;
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
+        view.lobbyNpcCount = this.lobbyNpcCount;
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running ? this.gameplay.photoRevision : -1;
         const lastPhotos = this.lastPhotos.get(id);

@@ -333,12 +333,11 @@ async function connect(join: () => Promise<Room>) {
         if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
       }
       if (matchRunning) return;
-      const others = players.filter(player=>player.id!==joined.sessionId);
-      const key = JSON.stringify(others.map(({id,nick,character})=>[id,nick,character]));
+      const key = JSON.stringify(players.map(({id,nick,character})=>[id,nick,character]));
       if (rosterKey===key) return;
       rosterKey = key;
       for (const labels of portraitPlayers) labels.replaceChildren();
-      for (const player of others) {
+      for (const player of players) {
         const label = document.createElement('span');
         label.textContent = player.nick;
         label.title = player.nick;

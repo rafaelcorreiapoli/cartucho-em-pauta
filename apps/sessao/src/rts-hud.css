@@ -841,6 +841,8 @@ img.market-art {
   background: #4a3d26;
   color: #ffe3a5;
 }
+.lobby-count button:disabled { cursor: default; }
+.lobby-count button:disabled[aria-pressed="false"] { opacity: .45; }
 .lobby-footer {
   display: flex;
   align-items: center;

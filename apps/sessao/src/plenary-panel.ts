@@ -15,7 +15,7 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
   }
 }
 
-export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number;npcs:number}) => void) {
+export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number}) => void) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   function countPicker(id:string,initial:number) {
@@ -31,14 +31,15 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
     return ()=>selected;
   }
   const infiltrators = countPicker('infiltrator-count',1);
-  const npcs = countPicker('parliamentarian-count',2);
+  const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
+  for (const button of npcButtons) button.onclick = ()=>send('lobby-npc-count',Number(button.dataset.count));
   const brief = element('project-outcome-brief');
   let briefTimer:number | undefined;
   function clearBrief() {
     window.clearTimeout(briefTimer);
     brief.hidden = true;
   }
-  start.onclick = () => send('start-match',{infiltrators:infiltrators(),npcs:npcs()});
+  start.onclick = () => send('start-match',{infiltrators:infiltrators()});
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
 
@@ -130,7 +131,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const hearing = view.hearing;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
-      element('parliamentarian-setup').hidden = running || host!==id;
+      element('parliamentarian-setup').hidden = running;
+      const npcCount = view.lobbyNpcCount ?? 2;
+      for (const button of npcButtons) {
+        button.disabled = running || host!==id;
+        button.setAttribute('aria-pressed',String(Number(button.dataset.count)===npcCount));
+      }
       start.hidden = running || host!==id;
       const minimum = view.minimumPlayers ?? MIN_PLAYERS;
       start.disabled = players<minimum;
@@ -138,7 +144,6 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       if (start.firstChild?.textContent?.trim()!==startLabel && start.firstChild) start.firstChild.textContent = startLabel+' ';
       element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
-      element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
       const sessionResult = element('project-session-result');
