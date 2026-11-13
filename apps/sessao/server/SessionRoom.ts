@@ -358,7 +358,7 @@ export class SessionRoom extends Room {
         this.parliamentarians.stopRoutes();
         this.parliamentarians.players.forEach((npc,index)=>{
           Object.assign(npc,PLENARY_SEATS[PLENARY_SEATS.length-1-index],{direction:2});
-          const intention = this.parliamentarians.intention(npc.id,this.match.projectRound);
+          const intention = this.parliamentarians.intention(npc.id,this.match.projectRound,this.match.projectIndex);
           if (intention) this.match.recordNpcVote(npc.id,intention);
         });
       }

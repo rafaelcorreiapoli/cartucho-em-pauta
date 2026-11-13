@@ -272,7 +272,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | NPC-03 | Atributos físicos e combate | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |
 | NPC-04 | Navegação e rotinas pelo Congresso | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |
 | NPC-05 | Diálogos contextuais | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |
-| NPC-06 | Personalidades e preferências | PARCIAL | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | Perfis e decisões simples existem. Falta memória social e preferências duráveis. | Alta |
+| NPC-06 | Personalidades e preferências | PARCIAL | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | Preferências são fixas por projeto e perfil. Acordos e contrapropostas vinculam rodada e projeto. Teste verifica mudança de pauta sem cobrança de oferta antiga. Falta memória social. | Alta |
 | NPC-07 | Saldo monetário real | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |
 | NPC-08 | Patrimônio inicial aleatório | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |
 | NPC-09 | Salários pagos pelo orçamento | IMPLEMENTADO | Parliamentarians.ts, ParliamentarianTalk.ts, Parliamentarians.test.ts, PoliticalEconomy.ts; PR 13, 14 | — | — |

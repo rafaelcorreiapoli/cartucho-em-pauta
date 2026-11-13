@@ -8,6 +8,7 @@ export function createParliamentarianPanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#parliamentarian-dialog')!;
   const title = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('.parliamentarian-options')!;
+  let quotedProject:string|undefined;
   let key = '';
   let dismissed = false;
   let quote: {vote:Vote;amount:number}|undefined;
@@ -44,7 +45,7 @@ export function createParliamentarianPanel(send:(action:object)=>void) {
         controls.push(less,more);
       }
       const commit = button(`Confirmar ${offer.vote==='yes' ? 'a favor' : 'contra'} · ${offer.amount ? money(offer.amount) : 'Grátis'}`,()=>{
-        send({kind:'vote',target:deal.id,round,vote:offer.vote,amount:offer.amount});
+        send({kind:'vote',target:deal.id,round,project:deal.projectIndex,vote:offer.vote,amount:offer.amount});
         quote = undefined;
         render(deal,round);
       });
@@ -66,7 +67,10 @@ export function createParliamentarianPanel(send:(action:object)=>void) {
         return;
       }
       if (dismissed) return;
-      const next = JSON.stringify([view.round,deal.id,deal.documents,deal.minimum,deal.wallet]);
+      const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.id]);
+      if (quotedProject!==projectKey) quote = undefined;
+      quotedProject = projectKey;
+      const next = JSON.stringify([projectKey,deal.documents,deal.minimum,deal.wallet]);
       if (key!==next) { key = next; render(deal,view.round); }
       if (!dialog.open && !document.querySelector('dialog:modal')) dialog.showModal();
     },

@@ -1,16 +1,16 @@
 import { blockedBy, canStand, NAMES, type Player } from '../src/map';
 import { findRoute, followRoute } from '../src/navigation';
 import { npcRules } from '../src/parliamentarians';
-import { stations, type Vote } from '../src/plenary';
+import { bills, stations, type Vote } from '../src/plenary';
 
 const destinations = [stations.coffee,stations.archive,stations.secretary,stations.committees,stations.press,{x:140,y:146}];
 const profiles = [
-  {character:3,signature:0,price:2,conviction:1},
-  {character:4,signature:2,price:2,conviction:2},
-  {character:7,signature:3,price:3,conviction:2},
+  {character:3,signature:0,price:2,conviction:1, preferences:['yes','no',undefined]},
+  {character:4,signature:2,price:2,conviction:2, preferences:['no',undefined,'yes']},
+  {character:7,signature:3,price:3,conviction:2, preferences:[undefined,'yes','no']},
 ] as const;
 type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number;
-  promise?:{round:number;vote:Vote;amount:number}};
+  promises:Map<number,{round:number;vote:Vote;amount:number}>};
 
 export class Parliamentarians {
   private members = new Map<string,Member>();
@@ -21,7 +21,7 @@ export class Parliamentarians {
     this.members.clear();
     profiles.slice(0,count).forEach((profile,index)=>{
       const id = `npc-parliamentarian-${index+1}`;
-      this.members.set(id,{profile,route:[],next:now+index*500,player:{
+      this.members.set(id,{profile,promises:new Map(),route:[],next:now+index*500,player:{
         ...destinations[index],id,nick:NAMES[profile.character],character:profile.character,npc:true,direction:0,moving:false,speed:npcRules.speed,
       }});
     });
@@ -29,27 +29,29 @@ export class Parliamentarians {
 
   signature(id:string) { return this.members.get(id)?.profile.signature; }
 
-  intention(id:string,round:number):Vote|undefined {
+  intention(id:string,round:number,project=round%bills.length):Vote|undefined {
     const member = this.members.get(id);
     if (!member) return;
-    if (member.promise?.round===round) return member.promise.vote;
-    const index = profiles.indexOf(member.profile);
-    return (round+index)%3===0 ? 'yes' : (round+index)%3===1 ? 'no' : undefined;
+    const promise = member.promises.get(project);
+    if (promise?.round===round) return promise.vote;
+    return member.profile.preferences[project];
   }
 
-  minimum(id:string,round:number,vote:Vote) {
+  minimum(id:string,round:number,vote:Vote,project=round%bills.length) {
     const member = this.members.get(id)!;
-    const prior = member.promise?.round===round ? member.promise : undefined;
+    const promise = member.promises.get(project);
+    const prior = promise?.round===round ? promise : undefined;
     if (prior?.vote===vote) return 0;
-    const intention = this.intention(id,round);
+    const intention = this.intention(id,round,project);
     const price = intention===vote ? 0 : member.profile.price+(intention ? member.profile.conviction-1 : 0);
     return Math.max(price,prior ? Math.floor(prior.amount)+1 : 0);
   }
 
-  commit(id:string,round:number,vote:Vote,amount:number) {
+  commit(id:string,round:number,vote:Vote,amount:number,project=round%bills.length) {
     const member = this.members.get(id)!;
-    if (member.promise?.round===round && member.promise.vote===vote && !amount) return;
-    member.promise = {round,vote,amount};
+    const promise = member.promises.get(project);
+    if (promise?.round===round && promise.vote===vote && !amount) return;
+    member.promises.set(project,{round,vote,amount});
   }
 
   tick(now:number,seconds:number,paused:ReadonlySet<string>,exploring:boolean) {

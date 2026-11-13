@@ -27,7 +27,7 @@ export class PlenaryMatch {
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
   private readonly agenda = new Set<number>();
-  private get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
+  get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
   private treasuryReputation = new Map<string,number>();
   private npcVotes = new Map<string,Vote>();

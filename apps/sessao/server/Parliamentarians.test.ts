@@ -40,10 +40,10 @@ test('signature and competing vote offers transfer existing money and the commit
   expect(document.document?.signatures.map(signer=>signer.id)).toEqual([npc.id]);
   expect(talk.act(a,{kind:'sign',target:npc.id,item:document.id,amount:2},world(4))).toBe('A proposta de assinatura mudou.');
   expect(members.intention(npc.id,0)).toBe('no');
-  expect(talk.act(a,{kind:'vote',target:npc.id,round:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
+  expect(talk.act(a,{kind:'vote',target:npc.id,round:0,project:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
   talk.act(b,{kind:'talk',target:npc.id},world(6));
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,vote:'no',amount:2},world(7))).toContain('recusada');
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
+  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:2},world(7))).toContain('recusada');
+  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
   expect(world(9).wallet!(npc.id)).toBe(starting+9);
   expect(world(9).wallet!(a.id)).toBe(3);
   expect(world(9).wallet!(b.id)).toBe(4);
@@ -123,4 +123,27 @@ test('an NPC stops walking on the first tick after it reaches its destination',(
     members.tick(npcRules.pauseMs-1,.1,paused,true);
     expect(npc).toMatchObject({x:140,y:146,moving:false});
   } finally { Math.random = random; }
+});
+
+test('NPC preferences are tied to projects and paid promises stay on the negotiated bill',()=>{
+  const {members,npcs:[npc]} = fixture();
+  expect(members.intention(npc.id,0,0)).toBe('yes');
+  expect(members.intention(npc.id,1,0)).toBe('yes');
+  expect(members.intention(npc.id,0,1)).toBe('no');
+  members.commit(npc.id,0,'yes',3,1);
+  expect(members.minimum(npc.id,0,'no',1)).toBe(4);
+  expect(members.minimum(npc.id,0,'no',0)).toBe(2);
+  expect(members.intention(npc.id,1,1)).toBe('no');
+  const {humans:[buyer],talk,match,world} = fixture();
+  const target = world(1).players.find(player=>player.npc)!;
+  Object.assign(buyer,{x:target.x+8,y:target.y});
+  talk.act(buyer,{kind:'talk',target:target.id},world(1));
+  expect(talk.view(buyer,world(1))?.projectIndex).toBe(0);
+  world(2).publish({type:'filed',actor:buyer.id,project:1,at:2,position:buyer,witnesses:[]});
+  expect(match.projectIndex).toBe(1);
+  expect(talk.view(buyer,world(3))?.projectIndex).toBe(1);
+  const balance = world(3).wallet!(buyer.id);
+  talk.act(buyer,{kind:'vote',target:target.id,round:0,project:0,vote:'no',amount:2},world(3));
+  expect(world(3).wallet!(buyer.id)).toBe(balance);
+
 });
