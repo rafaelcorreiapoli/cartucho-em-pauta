@@ -57,8 +57,10 @@ export class PersonalAgenda {
   private ballotsLeft = 3;
   private targets:readonly Contact[] = [];
   private visitedTargets = new Set<string>();
+  private readonly rewardedTargetItems = new Set<number>();
   private pickTarget(kind:Agenda) {
-    return this.targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
+    return this.targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
+      this.targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
@@ -134,8 +136,11 @@ export class PersonalAgenda {
       const kind = mission.kind;
       if (mission.person) {
         const target = mission.person.id;
-        if (event.type==='transferred' && event.target===target &&
-            (kind==='documentoAlvo' && event.kind==='document' || kind==='pizzaAlvo' && event.kind==='pizza')) gains[kind] = 1;
+        if (event.type==='transferred' && event.target===target && event.item!==undefined && !this.rewardedTargetItems.has(event.item) &&
+            (kind==='documentoAlvo' && event.kind==='document' || kind==='pizzaAlvo' && event.kind==='pizza')) {
+          this.rewardedTargetItems.add(event.item);
+          gains[kind] = 1;
+        }
         if (kind==='visitaAlvo' && event.type==='room-entered' && event.target===target) gains[kind] = 1;
         if (kind==='selfieAlvo' && event.type==='photo' && event.photo?.selfie &&
             event.photo.people.some(person=>person.id===target)) gains[kind] = 1;
