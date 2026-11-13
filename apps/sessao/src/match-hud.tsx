@@ -257,11 +257,34 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
+  const more = hudButton('Mais ações',()=>{
+    const expanded = more.getAttribute('aria-expanded')!=='true';
+    if (expanded && nearbyToggle.getAttribute('aria-expanded')==='true') nearbyToggle.click();
+    more.setAttribute('aria-expanded',String(expanded));
+    refreshActionKeys();
+  });
+  more.classList.add('hud-button','context-more');
+  more.setAttribute('aria-expanded','false');
+  stations.querySelector('.station-actions')!.append(more);
   const unavailable = '[hidden], [data-context-hidden="true"]';
   function refreshActionKeys() {
     let index = 0;
-    for (const button of actionButtons()) {
-      const available = !button.disabled && !button.closest(unavailable);
+    let primaryCount = 0;
+    const expanded = more.getAttribute('aria-expanded')==='true';
+    const buttons = actionButtons();
+    const nearbyOpen = nearbyToggle.getAttribute('aria-expanded')==='true';
+    for (const button of buttons) {
+      if (button===more || button.closest('#nearby-items')) continue;
+      if (button.closest(unavailable)) { delete button.dataset.contextOverflow; continue; }
+      primaryCount++;
+      button.dataset.contextOverflow = String(!expanded && primaryCount>3);
+    }
+    more.hidden = primaryCount<=3;
+    if (more.hidden) more.setAttribute('aria-expanded','false');
+    const ordered = [...buttons.filter(button=>!button.closest('#nearby-items')), ...buttons.filter(button=>button.closest('#nearby-items'))];
+    for (const button of ordered) {
+      const available = !button.disabled && !button.closest(unavailable) && button.dataset.contextOverflow!=='true' &&
+        (!nearbyOpen || button===nearbyToggle || !!button.closest('#nearby-items'));
       const key = available ? (++index<=9 ? String(index) : null) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
@@ -281,13 +304,28 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
   }
   const nearbyToggle = element('nearby-objects');
-  stations.addEventListener('click',refreshActionKeys);
+  function onContextClick(event:MouseEvent) {
+    if (event.target instanceof Element && event.target.closest('#nearby-objects') &&
+      nearbyToggle.getAttribute('aria-expanded')==='true') more.setAttribute('aria-expanded','false');
+    refreshActionKeys();
+  }
+  stations.addEventListener('click',onContextClick);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || hudConsumesKeys(event.target)) return;
     const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : event.code==='KeyB' ? 'use-binoculars' : event.code==='KeyM' ? 'toggle-megaphone' : undefined;
     if (equipmentAction) {
       if (useEquipped(equipmentAction)) event.preventDefault();
+      return;
+    }
+    if (event.key==='Escape') {
+      if (!stations.hidden && nearbyToggle.getAttribute('aria-expanded')==='true') {
+        event.preventDefault();
+        nearbyToggle.click();
+      } else if (!stations.hidden && more.getAttribute('aria-expanded')==='true') {
+        event.preventDefault();
+        more.click();
+      }
       return;
     }
     if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
@@ -341,9 +379,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hideInterview = String(context!=='tv');
     if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
-    const hasAction = stationActions.some(button => !button.disabled &&
-      !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
+    const hasAction = [...stationActions,...quickActions.map(({button})=>button),...activityButtons.map(({button})=>button)]
+      .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
+    if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
     stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && !fieldActions.childElementCount);
     refreshActionKeys();
   }
@@ -443,7 +482,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
-      stations.removeEventListener('click',refreshActionKeys);
+      stations.removeEventListener('click',onContextClick);
       for (const button of actionButtons()) {
         button.removeAttribute('aria-keyshortcuts');
         button.querySelector('.station-key')?.remove();
@@ -453,6 +492,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       officeBadge.hidden = true;
       progressRoot.unmount();
       shortcuts.replaceChildren();
+      more.remove();
       fieldRoot.unmount();
     },
   };

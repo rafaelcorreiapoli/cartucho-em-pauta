@@ -378,7 +378,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function itemButton(kind:ObjectKind, name:string, verb:string, action:()=>void) {
     const tile = button('',action);
-    tile.className = 'item-tile';
+    tile.className = 'item-tile context-item';
     tile.dataset.kind = kind;
     tile.title = `${verb} · ${name}`;
     tile.setAttribute('aria-label',`${verb} ${name}`);
@@ -457,6 +457,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   function setNearbyExpanded(expanded:boolean) {
     nearbyItems.hidden = !expanded;
     nearbyButton.setAttribute('aria-expanded',String(expanded));
+    if (expanded) nearbyItems.scrollTop = 0;
   }
 
   function pickUp(area:InteractionArea, action:()=>void) {
@@ -548,7 +549,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') pendingPickup = undefined;
+      if (view.phase!=='negotiation') { pendingPickup = undefined; setNearbyExpanded(false); }
+      if (document.querySelector('dialog:modal')) setNearbyExpanded(false);
       tools.hidden = !view.gameplay;
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;

@@ -85,6 +85,13 @@
             <div class="wallet-gain"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong></strong></div>
           </template>
         </div>
+        <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
+        <div id="megaphone-status"></div>
+        <div id="agenda-dock"></div>
+        <p id="active-fire" class="hud-feedback" aria-live="off" hidden></p>
+        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
+        <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
+      </div>
         <section id="stations" aria-label="Ações próximas" hidden>
           <div class="station-actions">
             <div class="station-grid">
@@ -100,20 +107,15 @@
               <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
             </div>
             <div id="office-progress-mount"></div>
-            <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
+            <div class="context-nearby">
+              <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
+              <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
+            </div>
             <div id="station-shortcuts"></div>
             <div id="field-actions"></div>
-            <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
           </div>
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
-        <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
-        <div id="megaphone-status"></div>
-        <div id="agenda-dock"></div>
-        <p id="active-fire" class="hud-feedback" aria-live="off" hidden></p>
-        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
-        <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
-      </div>
       <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
         <div id="room-setup">
           <h2 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h2>
