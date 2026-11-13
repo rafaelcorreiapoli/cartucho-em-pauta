@@ -206,7 +206,8 @@ async function connect(join: () => Promise<Room>) {
     joined.onDrop(()=>surveillance.render(undefined));
     const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
-    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
+    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
+      option=>joined.send('spy',option));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);

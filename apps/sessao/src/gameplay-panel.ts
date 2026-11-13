@@ -40,7 +40,9 @@ function itemName(item:Pick<WorldItem,'kind'|'document'>) {
   return item.document?.title ?? objects[item.kind].name;
 }
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void) {
+import type { SpyOption } from "./surveillance";
+
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
@@ -171,7 +173,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor] : decoration ? decoration :
+    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
@@ -228,6 +230,15 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
+        const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
+        spyOptions.forEach((option,index)=>{
+          const control = button(option.label,()=>{
+            sendSpy(option);
+            dialog.close();
+          });
+          markShortcut(control,String(index+1));
+          card.append(control);
+        });
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);

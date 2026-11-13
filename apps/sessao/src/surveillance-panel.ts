@@ -37,7 +37,6 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
         send({kind:'open',channel:channel.id});
         update();
       });
-      control.classList.add('hud-button','hud-button--secondary');
       control.classList.add('spy-channel');
       control.disabled = channel.removed;
       control.classList.toggle('spy-active',channel.active);
@@ -50,12 +49,12 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
     });
     if (last>0) {
       const back = button('‹',()=>{page--;update();});
-      const next = button('›',()=>{page++;update();});
+      const nextPage = button('›',()=>{page++;update();});
       back.disabled = page===0;
-      next.disabled = page===last;
-      markShortcut(back,'←');
-      markShortcut(next,'→');
-      list.append(back,node('span',` ${page+1} / ${last+1} `),next);
+      nextPage.disabled = page===last;
+      markShortcut(back,'ArrowLeft','←');
+      markShortcut(nextPage,'ArrowRight','→');
+      list.append(back,node('span',` ${page+1} / ${last+1} `),nextPage);
     }
     monitor.replaceChildren();
     if (selected) monitor.append(node('h3',selected.name),canvas);

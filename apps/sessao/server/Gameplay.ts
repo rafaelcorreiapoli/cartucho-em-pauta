@@ -415,7 +415,9 @@ export class Gameplay {
   spyFrame(player:Player,world:GameplayWorld):PhotoScene|undefined {
     const device = this.surveillance.channel(player.id,'spyCamera');
     if (!device || player.knockedOut || player.carried) return;
-    const camera = this.surveillance.origin(device,player.barriers);
+    const barriers = player.barriers?.filter(([x,y,w,h])=>
+      Math.hypot(x+w/2-device.site.x,y+h/2-device.site.y)<=70+Math.hypot(w,h)/2);
+    const camera = this.surveillance.origin(device,barriers);
     const center = {...camera,x:camera.x+camera.dx*26,y:camera.y+camera.dy*26+19};
     const visible = (point:Motion)=>cameraSees(camera,point) &&
       Math.abs(point.x-center.x)<68 && Math.abs(point.y-center.y+19)<55;
