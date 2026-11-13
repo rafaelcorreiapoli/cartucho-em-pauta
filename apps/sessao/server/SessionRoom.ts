@@ -56,6 +56,7 @@ export class SessionRoom extends Room {
       present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
+        this.parliamentarians.witnessAggression(event);
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
@@ -358,7 +359,7 @@ export class SessionRoom extends Room {
         this.parliamentarians.stopRoutes();
         this.parliamentarians.players.forEach((npc,index)=>{
           Object.assign(npc,PLENARY_SEATS[PLENARY_SEATS.length-1-index],{direction:2});
-          const intention = this.parliamentarians.intention(npc.id,this.match.projectRound,this.match.projectIndex);
+          const intention = this.parliamentarians.castVote(npc.id,this.match.projectRound,this.match.projectIndex);
           if (intention) this.match.recordNpcVote(npc.id,intention);
         });
       }

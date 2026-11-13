@@ -147,3 +147,21 @@ test('NPC preferences are tied to projects and paid promises stay on the negotia
   expect(world(3).wallet!(buyer.id)).toBe(balance);
 
 });
+
+test('completed deals and witnessed aggression change only the relevant NPC quote',()=>{
+  const {members,npcs:[npc,other]} = fixture();
+  expect(members.signature(other.id,'a')).toBe(2);
+  members.commit(other.id,0,'yes',3,0,'a');
+  expect(members.signature(other.id,'a')).toBe(2);
+  expect(members.castVote(other.id,0,0)).toBe('yes');
+  expect(members.signature(other.id,'a')).toBe(1);
+  const hit = {type:'hit',actor:'a',target:'b',at:1,position:{x:140,y:146}} as const;
+  members.witnessAggression({...hit,witnesses:[other.id]});
+  members.witnessAggression({...hit,witnesses:[other.id]});
+  expect(members.signature(other.id,'a')).toBe(3);
+  expect(members.signature(other.id,'b')).toBe(2);
+  expect(members.signature(npc.id,'a')).toBe(0);
+  expect(members.minimum(other.id,1,'yes',0,'a')).toBe(4);
+  members.reset(2,2);
+  expect(members.signature(other.id,'a')).toBe(2);
+});

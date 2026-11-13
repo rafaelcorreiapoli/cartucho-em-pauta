@@ -1,6 +1,7 @@
 import { blockedBy, canStand, NAMES, type Player } from '../src/map';
 import { findRoute, followRoute } from '../src/navigation';
 import { npcRules } from '../src/parliamentarians';
+import type { GameplayEvent } from '../src/gameplay';
 import { bills, stations, type Vote } from '../src/plenary';
 
 const destinations = [stations.coffee,stations.archive,stations.secretary,stations.committees,stations.press,{x:140,y:146}];
@@ -10,7 +11,7 @@ const profiles = [
   {character:7,signature:3,price:3,conviction:2, preferences:[undefined,'yes','no']},
 ] as const;
 type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number;
-  promises:Map<number,{round:number;vote:Vote;amount:number}>};
+  promises:Map<number,{round:number;vote:Vote;amount:number;buyer?:string}>; trusted:Set<string>; aggressors:Set<string>};
 
 export class Parliamentarians {
   private members = new Map<string,Member>();
@@ -21,13 +22,36 @@ export class Parliamentarians {
     this.members.clear();
     profiles.slice(0,count).forEach((profile,index)=>{
       const id = `npc-parliamentarian-${index+1}`;
-      this.members.set(id,{profile,promises:new Map(),route:[],next:now+index*500,player:{
+      this.members.set(id,{profile,promises:new Map(),trusted:new Set(),aggressors:new Set(),route:[],next:now+index*500,player:{
         ...destinations[index],id,nick:NAMES[profile.character],character:profile.character,npc:true,direction:0,moving:false,speed:npcRules.speed,
       }});
     });
   }
 
-  signature(id:string) { return this.members.get(id)?.profile.signature; }
+  private adjustment(member:Member,buyer?:string) {
+    if (!buyer) return 0;
+    return Number(member.aggressors.has(buyer))*npcRules.aggressionSurcharge -
+      Number(member.trusted.has(buyer))*npcRules.trustDiscount;
+  }
+
+  signature(id:string,buyer:string) {
+    const member = this.members.get(id);
+    return member ? Math.max(0,member.profile.signature+this.adjustment(member,buyer)) : 0;
+  }
+
+  rememberAgreement(id:string,buyer:string) { this.members.get(id)?.trusted.add(buyer); }
+
+  witnessAggression(event:GameplayEvent) {
+    if (event.type!=='hit') return;
+    for (const id of event.witnesses) this.members.get(id)?.aggressors.add(event.actor);
+  }
+
+  castVote(id:string,round:number,project:number) {
+    const vote = this.intention(id,round,project);
+    const promise = this.members.get(id)?.promises.get(project);
+    if (promise?.round===round && promise.buyer) this.rememberAgreement(id,promise.buyer);
+    return vote;
+  }
 
   intention(id:string,round:number,project=round%bills.length):Vote|undefined {
     const member = this.members.get(id);
@@ -37,21 +61,21 @@ export class Parliamentarians {
     return member.profile.preferences[project];
   }
 
-  minimum(id:string,round:number,vote:Vote,project=round%bills.length) {
+  minimum(id:string,round:number,vote:Vote,project=round%bills.length,buyer?:string) {
     const member = this.members.get(id)!;
     const promise = member.promises.get(project);
     const prior = promise?.round===round ? promise : undefined;
     if (prior?.vote===vote) return 0;
     const intention = this.intention(id,round,project);
     const price = intention===vote ? 0 : member.profile.price+(intention ? member.profile.conviction-1 : 0);
-    return Math.max(price,prior ? Math.floor(prior.amount)+1 : 0);
+    return Math.max(price+this.adjustment(member,buyer),prior ? Math.floor(prior.amount)+1 : 0);
   }
 
-  commit(id:string,round:number,vote:Vote,amount:number,project=round%bills.length) {
+  commit(id:string,round:number,vote:Vote,amount:number,project=round%bills.length,buyer?:string) {
     const member = this.members.get(id)!;
     const promise = member.promises.get(project);
     if (promise?.round===round && promise.vote===vote && !amount) return;
-    member.promises.set(project,{round,vote,amount});
+    member.promises.set(project,{round,vote,amount,buyer});
   }
 
   tick(now:number,seconds:number,paused:ReadonlySet<string>,exploring:boolean) {
