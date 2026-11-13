@@ -88,7 +88,9 @@ export class SessionRoom extends Room {
   }
 
   private leaveVoice(id: string) {
-    this.gameplay.stopMegaphone(id,this.gameplayWorld());
+    const world = this.gameplayWorld();
+    this.gameplay.disconnectCall(id,world);
+    this.gameplay.stopMegaphone(id,world);
     this.match.stopBroadcast(id,this.clock.currentTime);
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
   }

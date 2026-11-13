@@ -467,6 +467,7 @@ export class Gameplay {
 
   phoneActivity(id:string) { return this.phone.activity(id); }
   callPeer(id:string) { return this.phone.callPeer(id); }
+  disconnectCall(id:string,world:GameplayWorld) { this.phone.disconnectCall(id,world); }
 
   get photoRevision() { return this.album.revision; }
   photoView(id:string,now:number) { return this.album.view(id,now); }
