@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MissionRow} from './hud';
+import {stabilityRules} from '../plenary';
+import {MissionRow, ParliamentMetrics} from './hud';
 import {targetedAgendas,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
@@ -26,4 +27,13 @@ test('an opposition mission shows progress across successive ballots',()=>{
   expect(markup).toContain('Vote contra dois projetos rejeitados');
   expect(markup).toContain('1 / 2');
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});
+
+test('the parliament HUD uses the configured threshold and explains the budget penalty',()=>{
+  const atTarget = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target} budget={32}/>);
+  const below = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target-1} budget={32}/>);
+  expect(atTarget).toContain('data-tone="stability"');
+  expect(below).toContain('data-tone="danger"');
+  expect(atTarget).toContain(`meta da sessão é ${stabilityRules.target}`);
+  expect(atTarget).toContain(`custa ${stabilityRules.deficitRate} pontos`);
 });

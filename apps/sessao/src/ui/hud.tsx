@@ -1,3 +1,4 @@
+import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
@@ -25,7 +26,11 @@ function Laurel({right=false}:{right?:boolean}) {
 }
 
 function Parliament({state}:{state:HudModel['congress']}) {
-  const {stability,budget} = useSyncExternalStore(state.subscribe,state.get);
+  const values = useSyncExternalStore(state.subscribe,state.get);
+  return <ParliamentMetrics {...values}/>;
+}
+
+export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -33,15 +38,15 @@ function Parliament({state}:{state:HudModel['congress']}) {
       </svg>
     </div>
     <button type="button" className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      data-help="Projetos e decisões afetam a estabilidade. A meta da sessão é 45. A zero, o Parlamento entra em colapso.">Estabilidade institucional</button>
+      data-help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</button>
     <div className="congress-meter-track flex items-center">
       <Laurel/>
-      <Meter label="Estabilidade institucional" value={stability} max={100} tone={stability<45 ? 'danger' : 'stability'} target={45}/>
+      <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
       <strong className="tabular-nums">{stability}</strong>
       <Laurel right/>
     </div>
     <button type="button" className="congress-budget flex items-center justify-center"
-      data-help="Paga projetos e verbas de gabinete. Cada ponto de déficit custa 2 pontos de estabilidade.">
+      data-help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
     </button>
   </section>;

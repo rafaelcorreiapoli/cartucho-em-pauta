@@ -8,7 +8,7 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, NEGOTIATION_MS, stations } from '../src/plenary';
+import { BALLOT_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, worldVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -561,4 +561,19 @@ test('a station rejects a nearby player blocked by a barrier or carrying someone
   expect(match.roomActivity({...nearby,barriers:[[x+3,y-2,2,4]]},'coffee',1)).toBeUndefined();
   expect(match.roomActivity({...nearby,carrying:true},'coffee',2)).toBeUndefined();
   expect(match.roomActivity(nearby,'coffee',3)?.activity).toBe('coffee');
+});
+
+test('an approved project with a fractional deficit applies the same rounded penalty shown by the client',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,[host],0,()=>0)).toBe(true);
+  expect(match.view(host.id,[host.id],0).stability).toBe(stabilityRules.initial);
+  Reflect.set(match,'budget',24.7);
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const outcome = match.view(host.id,[host.id],0).outcome!;
+  expect(outcome.passed).toBe(true);
+  expect(outcome.deficit).toBeCloseTo(3.3);
+  expect(deficitStabilityLoss(outcome.deficit)).toBe(7);
+  expect(outcome.applied.stability).toBe(Math.floor(22*24.7/28)-7);
 });

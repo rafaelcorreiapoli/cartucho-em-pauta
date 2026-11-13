@@ -12,6 +12,12 @@ export const MAX_PLAYERS = privateOffices.length;
 export const NEGOTIATION_MS = 205_000;
 export const BALLOT_MS = 35_000;
 
+export const stabilityRules = {initial:48,target:45,maximum:100,deficitRate:2} as const;
+
+export function deficitStabilityLoss(deficit:number) {
+  return -Math.round(-Math.max(0,deficit)*stabilityRules.deficitRate) || 0;
+}
+
 export const stations = {
   ...roomActivities,
   amendment: {x:129,y:365},

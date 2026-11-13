@@ -11,7 +11,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation,
+  BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
@@ -19,7 +19,7 @@ import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, ty
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
-const clamp = (value:number) => Math.max(0,Math.min(100,value));
+const clamp = (value:number) => Math.max(0,Math.min(stabilityRules.maximum,value));
 
 export class PlenaryMatch {
   phase: Phase = 'lobby';
@@ -121,7 +121,7 @@ export class PlenaryMatch {
   constructor(private readonly minimumPlayers = MIN_PLAYERS) {}
 
   private ends = 0;
-  private stability = 48;
+  private stability:number = stabilityRules.initial;
   private budget:number = rules.startingBudget;
   private initialPlayers = 0;
   private electorate = new Set<string>();
@@ -175,7 +175,7 @@ export class PlenaryMatch {
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingImmunity.clear();
     this.hearingTarget = this.hearingResult = undefined;
-    this.stability = 48;
+    this.stability = stabilityRules.initial;
     this.budget = rules.startingBudget;
     this.round = 0;
     this.agenda.clear();
@@ -535,7 +535,7 @@ export class PlenaryMatch {
     this.cash.projects += previous.budget-this.budget;
     const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
     const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
-    this.stability = clamp(this.stability+benefit+Math.round(Math.min(0,balance)*2));
+    this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
     this.outcomes.push({round:this.round,project:this.projectIndex,passed,yes,no,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
     this.economy.cancelOffers();

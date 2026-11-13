@@ -16,7 +16,7 @@ import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { money } from './politics';
-import { stations as stationPoints, canReachStation, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
@@ -500,7 +500,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (view.fire && !previous.fire) notify('Incêndio',fireSites[view.fire.site].name,true);
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
         if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
-        if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);
+        if (view.stability<stabilityRules.target && previous.stability>=stabilityRules.target) notify('Estabilidade abaixo da meta',`${view.stability} de ${stabilityRules.maximum}`,true);
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);
         if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
           notify('Carteira atualizada',`−${money(past.wallet-politics.wallet)}`);

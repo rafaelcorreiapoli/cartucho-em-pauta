@@ -2,7 +2,7 @@ import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { deficitStabilityLoss, voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -97,7 +97,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
     element('outcome-threshold').textContent = noVotes ? `Ninguém votou · ${threshold}` : threshold;
     const details = [
       `Estabilidade ${signed(outcome.applied.stability)} · Orçamento ${signed(outcome.applied.budget)}`,
-      outcome.deficit ? `Déficit: −${outcome.deficit*2} de estabilidade` : '',
+      outcome.deficit ? `Déficit: −${deficitStabilityLoss(outcome.deficit)} de estabilidade` : '',
       outcome.fraud ? 'O painel foi fraudado' : '',
     ].filter(Boolean);
     element('outcome').textContent = details.join(' · ');

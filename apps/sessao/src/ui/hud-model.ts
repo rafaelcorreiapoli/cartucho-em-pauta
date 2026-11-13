@@ -1,6 +1,7 @@
 import type { Player } from '../map';
 import { MAX_STAMINA } from '../movement';
-import type { PlenaryView } from '../plenary';
+import { stabilityRules, type PlenaryView } from '../plenary';
+import { ELECTION_RULES } from '../elections';
 import { missionTitle, type Mission } from '../politics';
 
 type Congress = {stability:number;budget:number};
@@ -31,7 +32,7 @@ function channel<T>(initial:T) {
 
 export function createHudModel() {
   const broadcast = channel(false);
-  const congress = channel<Congress>({stability:48,budget:32});
+  const congress = channel<Congress>({stability:stabilityRules.initial,budget:ELECTION_RULES.startingBudget});
   const agenda = channel<Agenda|undefined>(undefined);
   const profile = channel<Profile|undefined>(undefined);
   const stamina = channel<Stamina>({current:MAX_STAMINA,max:MAX_STAMINA});
