@@ -1,8 +1,9 @@
+import { mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { deficitStabilityLoss, voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -59,53 +60,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
 
   }
 
-  const history = element<HTMLDetailsElement>('vote-history');
-  const lastVote = element('last-vote');
-  const previousVote = element<HTMLButtonElement>('vote-prev');
-  const nextVote = element<HTMLButtonElement>('vote-next');
-  let selected = 0;
-
-  function renderHistory() {
-    const outcomes = view?.outcomes ?? [];
-    const outcome = outcomes[selected];
-    history.hidden = !outcomes.length;
-    if (!outcome) {
-      history.open = false;
-      return;
-    }
-    previousVote.disabled = selected===0;
-    nextVote.disabled = selected===outcomes.length-1;
-    element('vote-history-count').textContent = String(outcomes.length);
-    const pages = element('vote-pages');
-    pages.setAttribute('aria-label',`Votação ${selected+1} de ${outcomes.length}`);
-    pages.replaceChildren(...outcomes.map((_,index) => {
-      const dot = document.createElement('span');
-      dot.setAttribute('aria-hidden','true');
-      dot.dataset.current = String(index===selected);
-      return dot;
-    }));
-    const bill = agendaProject(outcome).name;
-    const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
-    lastVote.dataset.result = outcome.passed ? 'passed' : 'failed';
-    element('outcome-summary').textContent = verdict;
-    element('outcome-bill').textContent = bill;
-    for (const side of ['yes','no'] as const) {
-      element(`outcome-${side}`).textContent = String(outcome[side]);
-    }
-    const noVotes = outcome.yes+outcome.no===0;
-    const threshold = outcome.needed===1 ? '1 voto a favor para passar' : `${outcome.needed} votos a favor para passar`;
-    element('outcome-threshold').textContent = noVotes ? `Ninguém votou · ${threshold}` : threshold;
-    const details = [
-      `Estabilidade ${signed(outcome.applied.stability)} · Orçamento ${signed(outcome.applied.budget)}`,
-      outcome.deficit ? `Déficit: −${deficitStabilityLoss(outcome.deficit)} de estabilidade` : '',
-      outcome.fraud ? 'O painel foi fraudado' : '',
-    ].filter(Boolean);
-    element('outcome').textContent = details.join(' · ');
-    element('outcome').hidden = !details.length;
-  }
-  history.open = false;
-  previousVote.onclick = () => { selected--; renderHistory(); };
-  nextVote.onclick = () => { selected++; renderHistory(); };
+  const history = mountVoteHistory(element<HTMLDetailsElement>('vote-history'));
 
   return {
     render(next:PlenaryView) {
@@ -168,13 +123,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
       clockChip.hidden = !running;
       clockChip.dataset.urgent = String(remaining<=10);
-      if (historyChanged) {
-        selected = Math.max(0,view.outcomes.length-1);
-        renderHistory();
-        const result = view.outcomes[selected];
-        element('outcome-announcement').textContent = result ?
-          `${agendaProject(result).name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
-      }
+      if (historyChanged) history.render(view.outcomes);
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
@@ -235,7 +184,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { clearBrief(); },
+    destroy() { clearBrief(); history.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();
