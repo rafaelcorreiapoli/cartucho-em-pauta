@@ -17,3 +17,34 @@ test('a player outside the plenary receives the final result in the modal conten
   expect(markup).toContain(view.reason!);
   expect(markup).not.toContain('Infiltração:');
 });
+
+test.each(['Parlamentar','Infiltrado',undefined] as const)('finale reveals the full cast only after finish (%s)',winner=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:String(character),nick,character,direction:0,moving:false,x:140,y:146,
+  }));
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  match.start(ids[0],players,0,()=>0);
+  expect(match.view(ids[1],ids,0).finalRoster).toBeUndefined();
+  // A departure may finish the match, and the original cast must still be shown.
+  if (winner==='Parlamentar') match.leave(ids[0],1);
+  else if (winner===undefined) match.leave(ids[2],1);
+  else { Reflect.set(match,'stability',0); match.advance(1_200_000); }
+  const view = match.view(ids[1],ids,2);
+  expect(view.phase).toBe('finished');
+  expect(view.winner).toBe(winner);
+  expect(view.finalRoster).toEqual([
+    {id:'0',name:'Rafa',character:0,role:'Infiltrado'},
+    {id:'1',name:'Bia',character:1,role:'Parlamentar'},
+    {id:'2',name:'Caio',character:2,role:'Parlamentar'},
+  ]);
+  const html = renderToStaticMarkup(<SessionResult {...view}/>);
+  expect(html).toContain(winner==='Parlamentar' ? 'O Congresso foi salvo!' : winner==='Infiltrado' ? 'O Congresso foi destruído!' : 'Sessão encerrada');
+  for (const {nick} of players) expect(html).toContain(nick);
+  if (winner) {
+    const winners = html.slice(html.indexOf('aria-label="Vencedores"'),html.indexOf('aria-label="Derrotados"'));
+    expect(winners).toContain(winner==='Infiltrado' ? 'Rafa' : 'Bia');
+    expect(winners).not.toContain(winner==='Infiltrado' ? 'Bia' : 'Rafa');
+    expect(html).toContain('finale-particles');
+  } else expect(html).toContain('aria-label="Participantes"');
+});

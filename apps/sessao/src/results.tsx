@@ -19,18 +19,49 @@ export function ElectionResult({result}:{result:NonNullable<ElectionView['result
   </section>;
 }
 
-export function SessionResult({winner,reason,infiltratorName}:Pick<PlenaryView,'winner'|'reason'|'infiltratorName'>) {
-  const headline = winner==='Parlamentar' ? 'Os parlamentares venceram' :
-    winner==='Infiltrado' ? 'A infiltração venceu' : 'Sessão encerrada';
-  return <section>
-    <h3>{headline}</h3>
-    {reason && <p>{reason}</p>}
-    {infiltratorName && <p>Infiltração: <strong>{infiltratorName}</strong></p>}
+const finaleParticles = Array.from({length:44},(_,index)=>({
+  '--particle-x':`${(index*37)%100}%`,
+  '--particle-delay':`${-(index%13)*.49}s`,
+  '--particle-duration':`${3+(index%7)*.6}s`,
+}) as CSSProperties);
+
+export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<PlenaryView,'winner'|'reason'|'stability'|'finalRoster'>) {
+  const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || stability===0 ? 'destroyed' : 'ended';
+  const headline = outcome==='saved' ? 'O Congresso foi salvo!' :
+    outcome==='destroyed' ? 'O Congresso foi destruído!' : 'Sessão encerrada';
+  const teams = winner ? [
+    {name:'Vencedores',people:finalRoster.filter(person=>person.role===winner)},
+    {name:'Derrotados',people:finalRoster.filter(person=>person.role!==winner)},
+  ] : [{name:'Participantes',people:finalRoster}];
+
+  return <section className="session-finale" data-outcome={outcome}>
+    {outcome!=='ended' && <div className="finale-particles" aria-hidden="true">
+      {finaleParticles.map((style,index)=><i key={index} style={style}/>)}
+    </div>}
+    <div className="finale-content">
+      <h2 id="session-finale-title">{headline}</h2>
+      {reason && <p className="finale-reason">{reason}</p>}
+      <div className="finale-teams">
+        {teams.filter(team=>team.people.length).map(team=><section key={team.name} className="finale-team" aria-label={team.name}>
+          <h3>{team.name}</h3>
+          <ul>{team.people.map(person=><li key={person.id}>
+            <span className="portrait" aria-hidden="true" style={{
+              '--portrait-column':person.character%2,'--portrait-row':Math.floor(person.character/2),
+            } as CSSProperties}/>
+            <strong>{person.name}</strong>
+            <small>{person.role}</small>
+          </li>)}</ul>
+        </section>)}
+      </div>
+      <form method="dialog"><button className="hud-button">Continuar</button></form>
+    </div>
   </section>;
 }
 
 export function mountResults() {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
+  const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
+  const finaleRoot = createRoot(finale);
   const root = createRoot(document.querySelector('#result-content')!);
   return {
     render(view:PlenaryView, previous:PlenaryView | undefined) {
@@ -39,17 +70,18 @@ export function mountResults() {
       const project = view.outcome;
       const projectChanged = project && project.round!==previous?.outcome?.round;
       const finished = view.phase==='finished' && previous?.phase!=='finished';
-      if (finished || electionChanged) {
-        flushSync(()=>root.render(<>
-          {finished && <SessionResult {...view}/>}
-          {electionChanged && <ElectionResult result={election}/>}
-        </>));
+      if (finished) {
+        for (const overlay of document.querySelectorAll<HTMLDialogElement>('dialog:modal')) overlay.close();
+        flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
+        finale.showModal();
+      } else if (electionChanged) {
+        flushSync(()=>root.render(<ElectionResult result={election}/>));
         document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
         document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
         if (!dialog.open) dialog.showModal();
       }
       return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged ? 'election' : undefined;
     },
-    destroy() { dialog.close(); root.unmount(); },
+    destroy() { dialog.close(); finale.close(); root.unmount(); finaleRoot.unmount(); },
   };
 }

@@ -26,6 +26,16 @@ async page => {
   const acquired = detail.getByRole('button',{name:'Adquirido'});
   await acquired.waitFor();
   if (!await acquired.isDisabled() || await equip.isVisible()) throw Error('Free equipment slot should not prompt');
+  for (const name of ['Colete','Modulador de voz']) {
+    const product = dialog.getByRole('button',{name:new RegExp('^'+name+' ·','i')});
+    if (!await product.count()) await page.keyboard.press('ArrowRight');
+    await product.click();
+    await dialog.locator('.market-buy').click();
+    if (name==='Colete') await acquired.waitFor();
+  }
+  await equip.getByText(/Binóculo.*Modulador/i).waitFor();
+  await page.keyboard.press('1');
+  await equip.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
-  await page.locator('#equipped-gear').getByRole('button',{name:/Binóculo/}).waitFor();
+  await page.locator('#equipped-gear').locator('[aria-label*="Modulador" i]').waitFor();
 }

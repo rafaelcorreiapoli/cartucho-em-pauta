@@ -1,3 +1,4 @@
+import type {SessionParticipant} from '../src/plenary';
 import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
@@ -145,6 +146,7 @@ export class PlenaryMatch {
   private audits = new Map<string,'clean' | 'fraud'>();
   private outcomes: Outcome[] = [];
   private winner?: Role;
+  private finalRoster:SessionParticipant[] = [];
   private reason?: string;
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
@@ -164,6 +166,7 @@ export class PlenaryMatch {
     this.infiltrators.clear();
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
+    this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now);
     this.complaints.reset();
@@ -596,6 +599,7 @@ export class PlenaryMatch {
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
+      finalRoster:this.phase==='finished' ? this.finalRoster : undefined,
       infiltratorName:this.phase==='finished' ? this.infiltratorName : undefined,
     };
   }

@@ -35,6 +35,7 @@ import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
+import './session-finale.css';
 import './rts-hud.css';
 import './ui/congress-overlay.css';
 
@@ -171,6 +172,7 @@ function showLobby(message: string) {
   roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
+  document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
   landing.hidden = false;
   status.textContent = message;
