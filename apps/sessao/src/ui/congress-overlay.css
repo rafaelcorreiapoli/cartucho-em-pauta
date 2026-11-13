@@ -169,6 +169,8 @@
   background-color: #274b39;
 }
 #profile-dock .deck-identity { gap: 3px; align-self: stretch; }
+#profile-dock #hud-nick { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#profile-level-mount { flex: none; }
 #profile-dock .profile-subtitle { display: flex; gap: 4px; color: #d5c790; }
 #command-strip #hud-office { color: inherit; }
 #own-office:not([hidden])::before { content: "· "; }
@@ -186,7 +188,7 @@
   gap: 5px;
   padding: 6px 0 5px;
   border-bottom: 1px solid #42695480;
-  font-size: clamp(10px,1vw,14px);
+  font-size: clamp(10px,.95vw,13px);
 }
 .profile-resource-row span { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .profile-resource-row span + span { border-left: 1px solid #42695480; padding-left: 6px; }
