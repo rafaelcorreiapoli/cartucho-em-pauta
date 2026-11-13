@@ -1,3 +1,4 @@
+import { ELECTION_RULES } from '../src/elections';
 import {stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import type { PhotoScene } from '../src/photography';
@@ -193,6 +194,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.invested).toBe(2);
     expect(firstView!.election?.personal?.invested).toBe(0);
+    const previousMatch = secondView!.politics!.progression.matchId;
     await first.leave();
     await until(() => roster.at(-1)?.length===1);
     expect(roster.at(-1)).toEqual([second.sessionId]);
@@ -205,6 +207,23 @@ test('clients share movement and voice, then receive private roles and payments'
     newcomer.onMessage('plenary',() => {});
     newcomer.onMessage('voice-roster',() => {});
     await until(() => secondView?.players===3);
+
+    second.send('start-match',{npcs:0,token:1860});
+    await until(() => [secondView,thirdView].every(view =>
+      view?.phase==='negotiation' && view.politics?.progression.matchId===previousMatch+1));
+    for (const view of [secondView!,thirdView!]) {
+      expect(view.politics).toMatchObject({wallet:8,walletIncome:0,evidence:[],ledger:[],incoming:[]});
+      expect(view.politics?.outgoing).toBeUndefined();
+      expect(view.gameplay?.inventory).toEqual([]);
+      expect(view.budget).toBe(ELECTION_RULES.startingBudget);
+    }
+    // The current view can change independently of the room's command sequence.
+    second.send('politics',transfer);
+    second.send('election',{kind:'invest',amount:2,token:1870});
+    await until(() => secondView?.election?.personal?.invested===2);
+    expect(secondView!.politics?.wallet).toBe(6);
+    expect(thirdView!.politics?.wallet).toBe(8);
+
 
     const solo = await new Client(endpoint).create('plenary',{nick:'Solo'});
     rooms.push(solo);
