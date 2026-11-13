@@ -22,6 +22,8 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:10_000} as const;
+
 export const agendas = {
   ...targetedAgendas,
   protocolo:'Protocole um documento válido',
@@ -43,15 +45,15 @@ export const agendas = {
   lagosta:'Coma uma lagosta',
   comprarLagosta:'Compre uma lagosta',
   bombom:'Coma uma caixa de bombom',
-  jogar:'Jogue no celular por 30 segundos',
-  jogarOculto:'Jogue 30 segundos no celular sem ser visto',
+  jogar:`Jogue no celular por ${agendaDurationMs.jogar/1000} segundos`,
+  jogarOculto:`Jogue ${agendaDurationMs.jogarOculto/1000} segundos no celular sem ser visto`,
   selfieSolo:'Tire uma selfie',
   retratoGabinete:'Instale seu retrato no gabinete',
   poltrona:'Compre uma poltrona',
   ostentacao:'Gaste R$ 50 mil em móveis',
   visitaGabinete:'Visite o gabinete de um colega',
   passeio:'Visite três ambientes do Congresso',
-  pausaCafe:'Passe 10 segundos no Cafezinho',
+  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho`,
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
@@ -106,7 +108,7 @@ const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
 };
 export const missionReward = (kind:Agenda):MissionReward =>
   rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
-export const timedAgendas = new Set<Agenda>(['jogar','jogarOculto','pausaCafe']);
+export const timedAgendas = new Set<Agenda>(Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]);
 export type Mission = {id:number; kind:Agenda; current:number; target:number; person?:Contact};
 export const missionTitle = ({kind,target,person}:Mission) => person ? `${kind==='dinheiroAlvo' ? 'Transfira '+money(AGENDA_TRANSFER_MIN)+' para' : agendas[kind]} ${person.name}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];

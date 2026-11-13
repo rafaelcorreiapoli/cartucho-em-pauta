@@ -4,7 +4,7 @@ import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { agendaDurationMs, agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
@@ -51,7 +51,7 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:signatureTarget, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:furnitureSpendingTarget,
+  assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);

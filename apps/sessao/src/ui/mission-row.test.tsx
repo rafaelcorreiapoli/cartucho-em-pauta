@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {stabilityRules} from '../plenary';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {targetedAgendas,type Mission} from '../politics';
+import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -72,4 +72,13 @@ test('the signature objective identifies the same-document requirement and shows
   expect(active).toContain('duas assinaturas no mesmo documento');
   expect(active).toContain('1 / 2');
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});
+
+test('timed mission labels and progress display the same duration in seconds',()=>{
+  for (const kind of Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]) {
+    const target = agendaDurationMs[kind];
+    const html = renderToStaticMarkup(<MissionRow mission={{id:8,kind,current:1500,target}}/>);
+    expect(html).toContain(`${target/1000} segundos`);
+    expect(html).toContain(`1 / ${target/1000} s`);
+  }
 });

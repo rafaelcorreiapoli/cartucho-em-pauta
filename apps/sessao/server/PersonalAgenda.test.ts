@@ -9,6 +9,7 @@ import { terminals, type GameplayEvent } from '../src/gameplay';
 import type { Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
+import { agendaDurationMs } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
@@ -81,11 +82,13 @@ test('hidden play counts only witnessed-free gameplay time and duplicate samples
   const hidden = () => agenda.view(metrics).active.find(mission=>mission.kind==='jogarOculto');
   recordAgendaEvent(agenda,event('game-played',{at:2,duration:100,witnesses:['b']}));
   expect(hidden()?.current).toBe(0);
-  for (let i=0;i<300;i++) {
+  const duration = agendaDurationMs.jogarOculto;
+  expect(hidden()?.target).toBe(duration);
+  for (let i=0;i<duration/100;i++) {
     const sample = event('game-played',{at:3+i*100,duration:100});
     recordAgendaEvent(agenda,sample);
     recordAgendaEvent(agenda,sample);
-    if (i===149) expect(hidden()?.current).toBe(15_000);
+    if (i===duration/100-2) expect(hidden()?.current).toBe(duration-100);
   }
   expect(agenda.view(metrics).completed.at(-1)?.kind).toBe('jogarOculto');
   expect(agenda.view(metrics).active).toHaveLength(3);
