@@ -61,7 +61,7 @@ function Parliament({state}:{state:ReturnType<typeof channel<Congress>>}) {
 }
 
 function HudPanel({children}:{children:ReactNode}) {
-  return <aside className="react-agenda bg-hud-surface text-hud-ink rounded-hud grid gap-2.5 p-3"
+  return <aside className="react-agenda grid gap-3"
     aria-labelledby="agenda-title">{children}</aside>;
 }
 
@@ -70,8 +70,12 @@ function AgendaPanel({state}:{state:ReturnType<typeof channel<Agenda|undefined>>
   const agenda = useSyncExternalStore(state.subscribe,state.get);
   if (!agenda) return null;
   return <HudPanel>
-    <header className="flex items-center gap-2"><Icon name="document"/><h2 id="agenda-title" className="flex-1">Agenda Pessoal</h2>
-      <small>{agenda.active.length} ativas</small>
+    <header className="flex items-center gap-3">
+      <svg className="hud-glyph agenda-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 5H6a2 2 0 0 0-2 2v13h16V7a2 2 0 0 0-2-2h-3M8 11h1m3 0h4m-8 4h1m3 0h4"/>
+        <path d="M9 7V5a3 3 0 0 1 6 0v2Z"/>
+      </svg>
+      <h2 id="agenda-title">Agenda Pessoal</h2>
     </header>
     {agenda.recent.length>0 && <ul className="react-missions completed" aria-label="Conclusões recentes">
       {agenda.recent.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}

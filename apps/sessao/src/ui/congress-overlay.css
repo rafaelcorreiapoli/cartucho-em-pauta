@@ -64,11 +64,43 @@
   width: min(270px, 28vw);
 }
 #agenda-dock .react-agenda {
+  position: relative;
+  padding: 5px 10px 5px 17px;
   border: 0;
-  border-left: 2px solid #75cb9caa;
-  border-radius: 0;
+  color: #f5f7ef;
+  background: radial-gradient(ellipse at 12% 10%, #23473a55, transparent 65%),
+    linear-gradient(90deg,#09140fdb,transparent);
   box-shadow: none;
-  background: linear-gradient(90deg,#0a1712eb,#0a171200);
+  text-shadow: 0 1px 3px #000;
+  font-size: 14px;
+}
+#agenda-dock .react-agenda::before {
+  content: "";
+  position: absolute;
+  inset: 5px auto 4px 0;
+  width: 2px;
+  background: linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent);
+  filter: drop-shadow(0 0 4px #60e1af9c);
+}
+#agenda-dock .react-agenda h2 { font-size: 15px; }
+#agenda-dock .agenda-icon {
+  width: 19px;
+  height: 19px;
+  color: #eef9ee;
+  filter: drop-shadow(0 0 5px #72e5bfb8);
+}
+#agenda-dock .react-missions { gap: 9px; }
+#agenda-dock .react-missions strong { font-weight: 500; }
+#agenda-dock .react-mission-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-color: #709986b0;
+  box-shadow: inset 0 0 4px #6ed4aa24;
+}
+#agenda-dock [data-done="true"] .react-mission-check {
+  border-color: #77caa2;
+  filter: drop-shadow(0 0 3px #62e4a976);
 }
 #world #hud-notices { inset: 88px var(--hud-edge) auto auto; }
 
@@ -108,3 +140,6 @@
 }
 .congress-app .hud-glyph { flex: none; color: var(--color-hud-budget); }
 .congress-app kbd { font-size: 10px; color: var(--color-hud-muted); }
+#agenda-dock .react-missions > li { column-gap: 12px; }
+#agenda-dock .react-mission-check { margin-inline: 1px 2px; }
+#agenda-dock .react-agenda header { column-gap: 12px; }
