@@ -3,7 +3,7 @@ import { snackBar, treasurer } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import { roomActivities } from './room-activities';
 import { infirmary } from './medical';
-import { desks, furnishings, rooms, walls, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
+import { desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene) {
   const graphics = scene.add.graphics();
@@ -65,7 +65,7 @@ export function drawMap(scene: Phaser.Scene) {
   for (const [x,y,w] of [
     [177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[69,161,36],[218,161,44],
     [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[658,259,44],
-    [115,392,41],[400,392,46],[780,392,34],[snackX,snackY,snackWidth],
+    [115,392,41],[400,392,46],reprographyEntrance,[snackX,snackY,snackWidth],
   ]) {
     fill(0x9b8d6d,x,y+3,w,3);
   }

@@ -1,4 +1,9 @@
 async page => {
+  await page.addInitScript(()=>{
+    localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
+    navigator.mediaDevices.getUserMedia = async ()=>{ throw new DOMException('QA sem microfone','NotAllowedError'); };
+  });
+  await page.reload();
   await page.setViewportSize({width:1280,height:720});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
@@ -38,4 +43,8 @@ async page => {
   await equip.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
   await page.locator('#equipped-gear').locator('[aria-label*="Modulador" i]').waitFor();
+  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await detail.waitFor();
+  await page.keyboard.press('Escape');
+  await dialog.waitFor({state:'hidden'});
 }

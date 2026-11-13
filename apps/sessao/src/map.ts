@@ -16,6 +16,8 @@ export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
 export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
 
+export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
+
 export const walls: Rect[] = [
   [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,530-eastAnnex.opening[1]],
   [0,530,65,11], [194,530,90,11], [310,530,140,11], [510,530,128,11], [666,530,100,11], [895,530,65,11],
@@ -25,7 +27,7 @@ export const walls: Rect[] = [
   [480,114,65,11], [586,114,235,11], [864,114,86,11],
   [703,10,10,104], [703,161,10,98],
   [480,161,70,11], [591,161,194,11], [827,161,123,11],
-  [10,392,105,11], [156,392,244,11], [446,392,334,11], [825,392,125,11],
+  [10,392,105,11], [156,392,244,11], [446,392,334,11], [infirmary.door[0],392,950-infirmary.door[0],11],
   [814,270,10,133],
   [infirmary.door[0],403,6,infirmary.door[1]-403],
   [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],

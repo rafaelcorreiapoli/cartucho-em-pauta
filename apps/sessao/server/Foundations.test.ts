@@ -101,11 +101,15 @@ test('Palmirinha opens the shop from behind and across the counter',()=>{
   const behind = {x:vendor.x,y:vendor.y-12};
   expect(canStand(behind.x,behind.y)).toBe(true);
   expect(canStand(vendor.x,vendor.y-4)).toBe(false);
+  let previousToken: number | undefined;
   for (const point of [behind,vendor.interaction]) {
     Object.assign(alice,point);
     expect(game.view(alice,world).npcNearby).toContain('snackVendor');
     expect(game.act(alice,{kind:'open-shop',target:'snackVendor'},world)).toBeUndefined();
-    expect(game.view(alice,world).dialogue).toMatchObject({npc:'snackVendor',shop:true});
+    const dialogue = game.view(alice,world).dialogue;
+    expect(dialogue).toMatchObject({npc:'snackVendor',shop:true});
+    expect(dialogue!.token).not.toBe(previousToken);
+    previousToken = dialogue!.token;
     game.act(alice,{kind:'dialogue-close'},world);
   }
   Object.assign(alice,{x:vendor.x,y:vendor.y+37});

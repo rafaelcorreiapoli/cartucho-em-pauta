@@ -60,3 +60,13 @@ test('furniture blocks movement but does not hide a character on illuminated flo
   expect(characterVisible(observer,npc,40)).toBe(true);
   expect(characterVisible({...observer,barriers:[[24,210,12,3]]},npc,40)).toBe(false);
 });
+
+test('the reprography entrance opens south without leaking into the infirmary corner',()=>{
+  const observer = {x:800,y:390};
+  const straightThrough = {x:800,y:414};
+  const acrossCorner = {x:820,y:408};
+  expect(wallBetween(observer,straightThrough)).toBe(false);
+  expect(canStand(straightThrough.x,396)).toBe(true);
+  expect(wallBetween(observer,acrossCorner)).toBe(true);
+  expect(characterVisible(observer,acrossCorner,40)).toBe(false);
+});

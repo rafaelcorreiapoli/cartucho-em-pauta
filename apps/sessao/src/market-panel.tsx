@@ -181,7 +181,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         return;
       }
       if (dismissed) {
-        if (state.token===token || state.shop) return;
+        if (state.token===token) return;
         dismissed = false;
         page = 0;
         selected = 0;
