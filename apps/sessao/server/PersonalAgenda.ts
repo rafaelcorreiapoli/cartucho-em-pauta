@@ -1,3 +1,6 @@
+import { equipment } from '../src/equipment';
+import { foods } from '../src/food';
+import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
 import type { GameplayEvent } from '../src/gameplay';
 import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
@@ -39,6 +42,16 @@ const missionTargets:Partial<Record<Agenda,number>> = {
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
+const purchaseRequirements:Partial<Record<Agenda,number>> = {
+  equipamento:equipment.binoculars.price,
+  poltrona:officeGoods.officeChair.price,
+  televisao:officeGoods.officeTv.price,
+  comprarLagosta:foods.lobster.price,
+  propaganda:ELECTION_RULES.advertisementCost,
+  pagamento:AGENDA_TRANSFER_MIN,
+  dinheiroAlvo:AGENDA_TRANSFER_MIN,
+};
+
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -113,6 +126,7 @@ export class PersonalAgenda {
   }
 
   private availableInMatch(kind:Agenda, remaining:number) {
+    if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
     const participants = kind==='assinaturas' ? this.playerCount+this.npcCount : this.playerCount;
@@ -120,7 +134,7 @@ export class PersonalAgenda {
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
     }
-    return !this.cannotVote || !['propaganda','discurso','emenda','auditoria'].includes(kind);
+    return !this.cannotVote || !['protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
 
   private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
@@ -182,6 +196,8 @@ export class PersonalAgenda {
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
+      metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
+      (kind!=='televisao' || !this.acquired.has('officeTv')) &&
       (kind!=='campanha' || metrics.popularity<100) &&
       (kind!=='equipamento' || !this.acquired.has('binoculars')) &&
       (kind!=='poltrona' || !this.acquired.has('officeChair')) &&

@@ -185,3 +185,22 @@ test('a player in isolation is replaced as a selfie target while their office re
     expect(target()).toBe(kind==='selfieAlvo' ? 'c' : 'b');
   }
 });
+
+test('mission draws skip unavailable offices, exhausted purchases and unaffordable objectives',()=>{
+  const metrics = {wallet:0,popularity:40};
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['presidenteFoto','protocolo','comprarLagosta','televisao','cafe','passeio','selfieSolo']);
+  agenda.recordGameplay(metrics,event('purchased',{kind:'officeTv'}),false);
+  // Keep the deck fixed so changes to the account are the only eligibility inputs.
+  Reflect.set(agenda,'missions',[]);
+  agenda.updateEligibility(metrics,3,false,3);
+  expect(agenda.view(metrics).active.map(mission=>mission.kind).sort()).toEqual(['cafe','passeio','selfieSolo']);
+  Reflect.set(agenda,'missions',[]);
+  metrics.wallet = 6;
+  agenda.updateEligibility(metrics,3,true,3);
+  const eligible = agenda.view(metrics).active.map(mission=>mission.kind);
+  expect(eligible).toContain('comprarLagosta');
+  expect(eligible).toContain('protocolo');
+  expect(eligible).not.toContain('televisao');
+});
