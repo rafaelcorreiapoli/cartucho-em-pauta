@@ -539,7 +539,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
         const spriteDepth = y+(latest.carried ? 1 : 0);
-        if (!own && sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
+        if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
           .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
         view.weapon.setVisible(!!pose);
@@ -590,7 +590,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const side = facing===3 ? -1 : 1;
           briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
             .setFlipX(facing===3).setAlpha(concealed ? .38 : 1).setVisible(true)
-            .setDepth(own ? HEIGHT+91 : spriteDepth+.1);
+            .setDepth(spriteDepth+.1);
         } else view.briefcase?.setVisible(false);
         if (own) {
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
@@ -598,7 +598,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (inSession) {
             camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
           } else camera.centerOn(x,y);
-          for (const part of [sprite,view.weapon,view.items,label,office]) {
+          for (const part of [view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
           this.fog.clear().setVisible(running);

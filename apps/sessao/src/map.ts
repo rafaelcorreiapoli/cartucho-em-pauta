@@ -75,6 +75,10 @@ export const furnishings = [
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
 ] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
+function npcFootprint(npc:(typeof mapNpcs)[keyof typeof mapNpcs]):Rect {
+  const {x,y} = npc;
+  return npc===npcs.snackVendor ? [x-7,y-9,14,10] : [x-5,y-5,10,5];
+}
 const obstacles = [
   ...walls,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{
@@ -82,7 +86,7 @@ const obstacles = [
     const {width,footOffset} = officeFixtures[kind];
     return [x-width/2,y-footOffset-5,width,5];
   })),
-  ...Object.values(mapNpcs).map(({x,y}):Rect => [x-5,y-5,10,5]),
+  ...Object.values(mapNpcs).map(npc=>npcFootprint(npc)),
   ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
   ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
     [x,y+height-footprint,width,footprint]),

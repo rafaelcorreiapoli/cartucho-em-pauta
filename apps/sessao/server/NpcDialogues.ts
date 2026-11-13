@@ -23,6 +23,7 @@ export class NpcDialogues {
 
   private nearby(player:Player, key:NpcId) {
     const npc = npcs[key];
+    if ('interactionRadius' in npc) return canReachObject(player,npc,{radius:npc.interactionRadius});
     return canReachObject(player,'interaction' in npc ? npc.interaction : npc);
   }
 

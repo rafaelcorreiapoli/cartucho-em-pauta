@@ -95,6 +95,23 @@ test('the Lanchonete is reachable and each vendor sells only its own catalog', (
   expect(game.view(alice,world).inventory.map(item=>item.kind)).toEqual(['pizza']);
 });
 
+test('Palmirinha opens the shop from behind and across the counter',()=>{
+  const {alice,game,world} = setup();
+  const vendor = npcs.snackVendor;
+  const behind = {x:vendor.x,y:vendor.y-12};
+  expect(canStand(behind.x,behind.y)).toBe(true);
+  expect(canStand(vendor.x,vendor.y-4)).toBe(false);
+  for (const point of [behind,vendor.interaction]) {
+    Object.assign(alice,point);
+    expect(game.view(alice,world).npcNearby).toContain('snackVendor');
+    expect(game.act(alice,{kind:'open-shop',target:'snackVendor'},world)).toBeUndefined();
+    expect(game.view(alice,world).dialogue).toMatchObject({npc:'snackVendor',shop:true});
+    game.act(alice,{kind:'dialogue-close'},world);
+  }
+  Object.assign(alice,{x:vendor.x,y:vendor.y+37});
+  expect(game.view(alice,world).npcNearby).not.toContain('snackVendor');
+});
+
 test('equipping changes custody, binocular range and voice battery without stacking bonuses', () => {
   const {alice,game,world,buyGear} = setup();
   buyGear(alice,'binoculars');
