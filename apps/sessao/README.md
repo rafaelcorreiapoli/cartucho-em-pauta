@@ -102,12 +102,12 @@ Para testar em duas abas no mesmo computador, use localhost e fones de ouvido. P
 No diretório `apps/sessao`, publique o servidor e gere o cliente com o endpoint HTTPS do Fly:
 
 ```sh
-flyctl deploy --remote-only --ha=false
+flyctl deploy --remote-only --ha=false --env SESSAO_PREVIEW_SOLO=1
 VITE_GAME_SERVER=https://cartuchao-sessao-poc.fly.dev bun run build
 netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist --alias presidente-sessao-poc
 ```
 
-O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
+O deploy do Netlify é uma prévia. A variável `SESSAO_PREVIEW_SOLO=1` habilita partidas com um humano nessa prévia. Deixe a variável desativada em ambientes que exigem seis humanos. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
 
 ## Teste da loja no Chrome
 
