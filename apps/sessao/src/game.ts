@@ -21,11 +21,19 @@ import { restMovement, STEP_MS, type ControlState, type MovementInput } from './
 import { HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
-// Hand coordinates in each 128px source frame, relative to the feet.
-const briefcaseGrip = [
-  [[[85,101],[91,94],[85,101],[88,85]],[[57,102],[82,89],[57,102],[78,88]],[[38,100],[39,95],[38,100],[40,89]]],
-  [[[83,103],[86,97],[83,103],[87,87]],[[57,104],[85,90],[57,104],[82,89]],[[41,103],[41,99],[41,103],[43,94]]],
-] as const;
+// Grip coordinates in the original 128 px frames, ordered front, profile, back.
+type Grip = readonly [x:number,y:number];
+type WalkGrips = readonly [Grip,Grip,Grip,Grip];
+const briefcaseGrip = {
+  Lula: [[[85,101],[91,94],[85,101],[88,85]],[[57,102],[82,89],[57,102],[78,88]],[[38,100],[39,95],[38,100],[40,89]]],
+  Bolsonaro: [[[83,103],[86,97],[83,103],[87,87]],[[57,104],[85,90],[57,104],[82,89]],[[41,103],[41,99],[41,103],[43,94]]],
+  Trump: [[[91,101],[94,93],[91,101],[84,93]],[[53,102],[82,87],[53,102],[83,88]],[[36,100],[36,96],[36,100],[37,95]]],
+  Tiririca: [[[85,104],[89,95],[85,104],[80,91]],[[58,103],[86,88],[58,103],[87,87]],[[41,105],[38,98],[41,105],[39,91]]],
+  'José Sarney': [[[84,105],[87,98],[84,105],[82,92]],[[55,105],[84,89],[55,105],[82,89]],[[42,106],[39,100],[42,106],[42,93]]],
+  'Jean Wyllys': [[[85,106],[89,98],[85,106],[83,91]],[[60,105],[89,89],[60,105],[88,88]],[[43,106],[40,100],[43,106],[43,93]]],
+  'Sergio Moro': [[[85,106],[87,99],[85,106],[82,92]],[[55,105],[85,90],[55,105],[84,89]],[[43,106],[40,100],[43,106],[43,94]]],
+  'Nestor Cerveró': [[[85,106],[88,98],[85,106],[81,92]],[[58,105],[88,90],[58,105],[87,89]],[[43,106],[40,100],[43,106],[42,94]]],
+} satisfies Record<(typeof NAMES)[number],readonly [WalkGrips,WalkGrips,WalkGrips]>;
 
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
@@ -544,7 +552,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
-        const grip = briefcaseGrip[character]?.[row];
+        const grip = briefcaseGrip[NAMES[character]]?.[row];
         const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
         const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
