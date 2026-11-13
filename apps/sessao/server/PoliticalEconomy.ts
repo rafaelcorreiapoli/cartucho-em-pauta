@@ -10,7 +10,7 @@ import { PersonalAgenda } from './PersonalAgenda';
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  canCampaignAction?:(kind:'propaganda'|'discurso')=>boolean; canPay?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -31,7 +31,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canCampaignAction?:(id:string,kind:'propaganda'|'discurso')=>boolean) {
+    canAgendaAction?:(id:string,kind:'propaganda'|'discurso'|'emenda')=>boolean) {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -48,7 +48,7 @@ export class PoliticalEconomy {
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
-        canCampaignAction:canCampaignAction && ((kind:'propaganda'|'discurso')=>canCampaignAction(contact.id,kind))};
+        canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
@@ -86,7 +86,7 @@ export class PoliticalEconomy {
     const sample = this.accounts.values().next().value;
     if (!sample) return;
     this.npcIds.add(contact.id);
-    const {agenda,progression,canPay:_canPay,canCampaignAction:_canCampaignAction,...initial} = sample;
+    const {agenda,progression,canPay:_canPay,canAgendaAction:_canAgendaAction,...initial} = sample;
     this.contacts.set(contact.id,contact);
     this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
       progression:new CharacterProgression(this.matchId)});

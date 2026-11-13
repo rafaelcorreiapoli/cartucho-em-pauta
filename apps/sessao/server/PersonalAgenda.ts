@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canCampaignAction?:(kind:'propaganda'|'discurso')=>boolean; canPay?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean}>;
 const furnitureSpendingTarget = 5;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
@@ -210,7 +210,7 @@ export class PersonalAgenda {
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
     if ((kind==='pagamento' || kind==='dinheiroAlvo') && metrics.canPay?.()===false) return false;
-    if ((kind==='propaganda' || kind==='discurso') && metrics.canCampaignAction?.(kind)===false) return false;
+    if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];

@@ -161,7 +161,7 @@ export class PlenaryMatch {
     this.fire.reset(now);
     this.complaints.reset();
     let campaignReady = false;
-    this.economy.reset(contacts,random,(id,kind)=>!campaignReady || this.election.canCampaignAction(id,kind));
+    this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);

@@ -529,3 +529,25 @@ test('campaign missions return to the draw after renewal resets used actions',()
   match.electionAction(at(host,'press'),{kind:'advertise'},ELECTION_RULES.interval+1,false);
   expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'propaganda'}));
 });
+
+test('a used amendment stays out of the mission draw until the next negotiation',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  const resetDraw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['emenda','cafe','passeio','selfieSolo']);
+  };
+  const active = () => match.view(host.id,ids,0).politics!.missions.active.map(mission=>mission.kind);
+  match.act(at(honest,'amendment'),'amendment',1);
+  resetDraw();
+  match.refreshAgendaEligibility();
+  expect(active()).toEqual(['cafe','passeio','selfieSolo']);
+  resetDraw();
+  match.advance(NEGOTIATION_MS);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(active()).toContain('emenda');
+  match.act(at(host,'amendment'),'amendment',NEGOTIATION_MS+BALLOT_MS+1);
+  expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'emenda'}));
+});
