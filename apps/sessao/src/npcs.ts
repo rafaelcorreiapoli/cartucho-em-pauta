@@ -7,7 +7,7 @@ export const snackBar = {
 } as const;
 
 export const npcs = {
-  vendor:{name:'João Appolinário',sprite:'joao-appolinario.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
+  vendor:{name:'Doutor Gambiarra',sprite:'doutor-gambiarra.webp',portrait:'retrato-doutor-gambiarra.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;

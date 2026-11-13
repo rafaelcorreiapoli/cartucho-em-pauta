@@ -287,6 +287,7 @@
 #session #open-action-shortcuts { display: none; }
 
 #command-deck #legislative-dock { grid-column: 2; }
+#command-deck #last-vote { pointer-events: auto; z-index: 5; }
 #command-deck .deck-tools { grid-column: 3; }
 #session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
 #session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }
@@ -600,10 +601,6 @@
   width: min(780px,calc(100vw - 28px));
   height: min(640px,calc(100dvh - 28px));
   padding: clamp(14px,2vw,24px);
-  border: 1px solid #6e9077;
-  border-radius: 20px;
-  background: radial-gradient(ellipse at 14% 0%,#1b3026,#102019 65%,#0c1914);
-  box-shadow: 0 20px 70px #0007, inset 0 1px #a0c2a31c;
   overflow: hidden;
 }
 #gameplay-dialog[data-mode="bag"][open] { display: grid; grid-template-rows: auto minmax(0,1fr); gap: 14px; }
@@ -690,3 +687,63 @@
   .bag-detail .object-card { padding: 8px; }
   .bag-filters button { gap: 4px; font-size: .75rem; }
 }
+
+:is(#gameplay-dialog[data-mode="bag"],#market-dialog.market-catalog) {
+  border: 1px solid #6e9077;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 14% 0%,#1b3026,#102019 65%,#0c1914);
+  box-shadow: 0 20px 70px #0007, inset 0 1px #a0c2a31c;
+}
+#market-dialog.market-catalog {
+  width: min(1000px,calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: clamp(12px,2vw,23px);
+}
+#market-dialog.market-catalog h2 { font-size: clamp(22px,3vw,32px); }
+#market-dialog.market-catalog > header { position: absolute; inset: 12px 14px auto auto; z-index: 1; }
+#market-dialog.market-catalog #market-title { display: none; }
+.market-catalog #market-body { margin-top: 8px; }
+.market-catalog .market-toolbar { justify-content: space-between; padding-right: 40px; }
+.market-vendor { display: flex; align-items: center; min-width: 0; gap: 12px; }
+.market-vendor img { width: clamp(48px,9dvh,78px); aspect-ratio: 1; object-fit: contain; border: 1px solid #bb9f66; border-radius: 13px; background: #294336; }
+.market-vendor strong { font-size: 1rem; }
+.market-vendor p { color: #c8d1bc; font-size: .83rem; }
+.market-catalog .market-wallet { font-size: clamp(.85rem,2vw,1.2rem); }
+.market-catalog-label { display: flex; align-items: center; gap: 12px; margin: 8px 0; color: #f0d69b; font-weight: 750; }
+.market-catalog-label::before,.market-catalog-label::after { content: ''; flex: 1; border-top: 1px solid #a993536b; }
+.market-catalog-label span { display: flex; align-items: center; gap: 7px; padding: 5px 18px; border: 1px solid #a9935380; border-radius: 9px; background: #294335; }
+.market-catalog-layout { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 12px; }
+.market-catalog .market-products { grid-template-rows: repeat(3,clamp(90px,17dvh,158px)); }
+.market-catalog :is(.market-product-button,.market-product-empty) {
+  aspect-ratio: auto;
+  border: 1px solid #6d92747d;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 35%,#304c37,#12271e 80%);
+}
+.market-catalog .market-product-button { place-items: stretch; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) 50px; }
+:is(.bag-layout .item-tile,.market-catalog .market-product-button)[aria-pressed="true"] {
+  border-color: #f2ce78;
+  box-shadow: inset 0 0 0 1px #e9c77c,0 0 9px #d9b66146;
+}
+.market-catalog img.market-art { width: 100%; padding: 2px; transform: scale(1.13); }
+.market-product-caption { z-index: 1; }
+.market-product-empty { color: #91a58d; }
+.market-detail {
+  display: grid;
+  grid-template-rows: minmax(0,1fr) auto;
+  min-height: 0;
+  padding: 13px;
+  border: 1px solid #4c6e5999;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at top right,#29433885,#12241c);
+}
+.market-detail-content { min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.market-detail-art { display: block; width: 100%; height: clamp(76px,18dvh,155px); object-fit: contain; }
+#market-dialog .market-detail h3 { margin: 4px 0; font: 760 clamp(16px,2vw,24px)/1.1 var(--party-display); }
+#market-dialog .market-detail p { margin: 8px 0; }
+.market-detail-price { display: flex; align-items: center; gap: 7px; color: var(--party-gold); font-weight: 750; }
+.market-detail-description,.market-detail-effects { border-top: 1px solid #6d92747d; padding-top: 8px; font-size: .84rem; }
+.market-detail-effects strong { display: block; margin-bottom: 3px; }
+.market-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.market-buy span { display: flex; align-items: center; gap: 7px; }
+.market-buy:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
