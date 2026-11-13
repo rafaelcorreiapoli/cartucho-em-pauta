@@ -248,7 +248,7 @@ test('validated filings schedule distinct successive ballots, with the standard 
   match.start(host.id,people,0,()=>.9);
   const world = match.gameplayWorld(people,10,()=>false);
   const file = (project:number)=>world.publish({
-    type:'filed',actor:host.id,kind:'document',project,position:stations.amendment,at:10,witnesses:[],
+    type:'filed',actor:host.id,kind:'document',item:project+1,project,position:stations.amendment,at:10,witnesses:[],
   });
   file(2);
   file(2);
@@ -263,6 +263,11 @@ test('validated filings schedule distinct successive ballots, with the standard 
   expect(view(NEGOTIATION_MS+BALLOT_MS).vote).toBeUndefined();
   match.advance(NEGOTIATION_MS+BALLOT_MS*2);
   expect(view(NEGOTIATION_MS+BALLOT_MS*2).outcomes.map(result=>result.project)).toEqual([2,0]);
+  const replayAt = NEGOTIATION_MS+BALLOT_MS*2+1;
+  match.gameplayWorld(people,replayAt,()=>false).publish({
+    type:'filed',actor:host.id,kind:'document',item:1,project:0,position:stations.amendment,at:replayAt,witnesses:[],
+  });
+  expect(view(replayAt).queuedProjects).toEqual([]);
   match.advance(NEGOTIATION_MS*2+BALLOT_MS*2);
   expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
 });

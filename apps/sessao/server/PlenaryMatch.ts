@@ -132,6 +132,7 @@ export class PlenaryMatch {
   private election = new ElectionCycle();
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
+  private readonly filedDocuments = new Set<number>();
   private hearingTarget?: string;
   private readonly hearingImmunity = new Map<string,number>();
   private hearingResult?: string;
@@ -166,6 +167,7 @@ export class PlenaryMatch {
     this.started = now;
     this.fire.reset(now);
     this.complaints.reset();
+    this.filedDocuments.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
     const {humans,reserve} = this.economy.totals();
@@ -299,6 +301,10 @@ export class PlenaryMatch {
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>{
+        if (event.type==='filed' && event.item!==undefined) {
+          if (this.filedDocuments.has(event.item)) return;
+          this.filedDocuments.add(event.item);
+        }
         if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
           if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
           this.agenda.add(event.project);
