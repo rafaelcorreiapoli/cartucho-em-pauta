@@ -800,3 +800,67 @@ img.market-art {
 .spy-channel small { opacity: .8; }
 .spy-channel.spy-active { border-color: #8dedb0; box-shadow: inset 3px 0 #8dedb0; }
 .spy-channel[aria-pressed="true"] { background: #285344; }
+
+#session[data-phase="lobby"] {
+  background: linear-gradient(90deg,#0c1715a6,#101b16df 46%,#0c1715a6),
+    url('/assets/sala-articulacao.webp') center / cover no-repeat #13241d;
+}
+#session[data-phase="lobby"] #world { visibility: hidden; }
+#session[data-phase="lobby"] #plenary {
+  top: 50%;
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  background: linear-gradient(150deg,#24392ff5,#12231df7);
+  box-shadow: 0 24px 70px #050c0abf;
+}
+.lobby-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .6rem 1.25rem;
+}
+.lobby-count:not([hidden]) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+.lobby-count > span { display: inline-flex; align-items: center; gap: .35rem; }
+.lobby-count > div {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: #101d18;
+  border-radius: 7px;
+}
+.lobby-count button {
+  min-width: 35px;
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #22372c;
+  color: #eadcb9;
+  font: 700 14px/1 system-ui,sans-serif;
+  cursor: pointer;
+}
+.lobby-count button[aria-pressed="true"] {
+  border-color: #e8bf73;
+  background: #4a3d26;
+  color: #ffe3a5;
+}
+.lobby-footer {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--command-divider);
+}
+.lobby-footer #start-hint { flex: 1; text-align: right; }
+.lobby-footer #start-match {
+  margin-inline-start: auto;
+  min-height: 44px;
+  padding-inline: 1rem;
+  gap: .6rem;
+  font-weight: 800;
+}

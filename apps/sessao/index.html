@@ -135,21 +135,30 @@
           <p>Escolha seu personagem</p>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
-        <div id="briefing" class="compact-heading"><span>3 projetos · Meta de estabilidade: 45</span><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a sessão" data-help="Negocie, vote e preserve a estabilidade do Congresso. No multiplayer, a infiltração tenta derrubá-la. Você pode iniciar sozinho para testar.">?</button></div>
-        <label id="infiltrator-setup" hidden>Infiltrados
-          <select id="infiltrator-count">
-            <option value="1">1 infiltrado</option>
-            <option value="2">2 infiltrados</option>
-          </select>
-        </label>
-        <label>Parlamentares NPC
-          <select id="parliamentarian-count">
-            <option value="0">Nenhum</option><option value="1">1</option>
-            <option value="2" selected>2</option><option value="3">3</option>
-          </select>
-        </label>
-        <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
-        <p id="start-hint"></p>
+        <div id="briefing" class="compact-heading"><span>Negocie, vote e preserve a estabilidade do Congresso.</span></div>
+        <div class="lobby-options">
+          <div id="infiltrator-setup" class="lobby-count" role="group" aria-labelledby="infiltrator-label" hidden>
+            <span id="infiltrator-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>
+            <div id="infiltrator-count">
+              <button type="button" data-count="1" aria-pressed="true">1</button>
+              <button type="button" data-count="2" aria-pressed="false">2</button>
+            </div>
+          </div>
+          <div id="parliamentarian-setup" class="lobby-count" role="group" aria-labelledby="parliamentarian-label">
+            <span id="parliamentarian-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg> Parlamentares NPC</span>
+            <div id="parliamentarian-count">
+              <button type="button" data-count="0" aria-pressed="false" aria-label="Nenhum parlamentar NPC">0</button>
+              <button type="button" data-count="1" aria-pressed="false">1</button>
+              <button type="button" data-count="2" aria-pressed="true">2</button>
+              <button type="button" data-count="3" aria-pressed="false">3</button>
+            </div>
+          </div>
+        </div>
+        <footer class="lobby-footer">
+          <button class="hud-button hud-button--secondary" id="lobby-back" type="button">‹ Voltar</button>
+          <p id="start-hint" role="status"></p>
+          <button class="hud-button" id="start-match" type="button">Iniciar sessão <span aria-hidden="true">›</span></button>
+        </footer>
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">

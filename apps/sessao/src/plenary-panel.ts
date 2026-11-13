@@ -18,15 +18,27 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
 export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number;npcs:number}) => void) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
-  const count = element<HTMLSelectElement>('infiltrator-count');
-  count.value = '1';
+  function countPicker(id:string,initial:number) {
+    let selected = initial;
+    const buttons = [...element(id).querySelectorAll<HTMLButtonElement>('[data-count]')];
+    for (const button of buttons) {
+      button.setAttribute('aria-pressed',String(Number(button.dataset.count)===selected));
+      button.onclick = ()=>{
+        selected = Number(button.dataset.count);
+        for (const option of buttons) option.setAttribute('aria-pressed',String(option===button));
+      };
+    }
+    return ()=>selected;
+  }
+  const infiltrators = countPicker('infiltrator-count',1);
+  const npcs = countPicker('parliamentarian-count',2);
   const brief = element('project-outcome-brief');
   let briefTimer:number | undefined;
   function clearBrief() {
     window.clearTimeout(briefTimer);
     brief.hidden = true;
   }
-  start.onclick = () => send('start-match',{infiltrators:Number(count.value),npcs:Number(element<HTMLSelectElement>('parliamentarian-count').value)});
+  start.onclick = () => send('start-match',{infiltrators:infiltrators(),npcs:npcs()});
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
 
@@ -118,10 +130,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const hearing = view.hearing;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
+      element('parliamentarian-setup').hidden = running || host!==id;
       start.hidden = running || host!==id;
       const minimum = view.minimumPlayers ?? MIN_PLAYERS;
       start.disabled = players<minimum;
-      start.textContent = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
+      const startLabel = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
+      if (start.firstChild?.textContent?.trim()!==startLabel && start.firstChild) start.firstChild.textContent = startLabel+' ';
       element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('briefing').hidden = phase!=='lobby';

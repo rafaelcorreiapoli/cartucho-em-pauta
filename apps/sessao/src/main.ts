@@ -382,6 +382,7 @@ lobby.onsubmit = event => {
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
 leave.onclick = () => void room?.leave();
+document.querySelector<HTMLButtonElement>('#lobby-back')!.onclick = () => void room?.leave();
 invite.onclick = async () => {
   if (!room) return;
   const url = new URL(location.href);
