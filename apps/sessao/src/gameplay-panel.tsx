@@ -1,3 +1,4 @@
+import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
@@ -20,13 +21,6 @@ import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
-const apps = {
-  'Telefone':'app-call',
-  'Joguinhos':'app-games',
-  'Câmera':'app-camera',
-  'Álbum':'app-photos',
-} as const;
-type App = keyof typeof apps;
 type InteractionArea = (player:Motion) => boolean;
 
 const bagIcons = {bag:Backpack,food:Coffee,gear:Shirt,grid:Grid2X2,drop:Download};
@@ -61,6 +55,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
+  const navigationRoot = createRoot(navigation);
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -85,7 +80,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
-  let app:App = 'Telefone';
+  let app:PhoneApp = 'Telefone';
   let decorationId:number | undefined;
   let equipmentOpen = false;
   let stashOpen = false;
@@ -192,23 +187,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     open();
   }
 
-  const appButtons = (Object.keys(apps) as App[]).map(title => {
-    const tile = button(title,() => {
-      if (app==='Joguinhos' && title!=='Joguinhos') send({kind:'game-stop'});
-      photos.closePresentation();
-      app = title;
-      photos.resetSelection();
-      render();
-    });
-    tile.className = 'phone-app';
-    tile.dataset.app = apps[title];
-    const art = node('span');
-    art.className = 'phone-app-icon';
-    art.append(glyph(apps[title]));
-    tile.prepend(art);
-    navigation.append(tile);
-    return {tile,title};
-  });
+  let renderedApp:PhoneApp|undefined;
+  function selectApp(next:PhoneApp) {
+    if (app==='Joguinhos' && next!=='Joguinhos') send({kind:'game-stop'});
+    photos.closePresentation();
+    app = next;
+    photos.resetSelection();
+    render();
+  }
 
   function phoneContacts(contacts:DirectoryContact[]) {
     if (!contacts.length) return node('p','Ninguém mais na sala.');
@@ -252,7 +238,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (contacts.some(person=>person.id===selected)) target.value = selected;
     }
     element('gameplay-target-label').hidden = bagOpen || selection?.source!=='inventory' || !contacts.length;
-    for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
+    if (phone && renderedApp!==app) {
+      renderedApp = app;
+      navigationRoot.render(<PhoneApps active={app} select={selectApp}/>);
+    }
     const phase = view.phase;
     const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
@@ -444,6 +433,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           const game = button('Snake',()=>send({kind:'game-start'}));
           game.className = 'snake-launch';
           game.prepend(glyph('snake'));
+          markShortcut(game,'5');
           cards.push(game);
         } else {
           cards.push(snake.element);
@@ -700,7 +690,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       dialog.close();
       tools.hidden = element('object-request').hidden = true;
       delete element('object-request').dataset.request;
-      navigation.replaceChildren();
+      navigationRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       equipmentRoot.unmount();
