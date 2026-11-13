@@ -1,6 +1,6 @@
 import type { Room } from '@colyseus/sdk';
 import { LiveDisguise, type Disguise } from './live-disguise';
-import type { VoiceSignal } from './voice-protocol';
+import { showsSpeakerIdentity, type VoiceSignal } from './voice-protocol';
 
 type Meter = { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; buffer: Float32Array<ArrayBuffer>; lastSound: number };
 type Peer = {
@@ -44,7 +44,7 @@ export class RoomVoice {
     });
     room.onMessage('voice-range', (levels:[string,number,boolean?,boolean?][]) => {
       this.broadcastSources = new Set(levels.filter(([, , ,broadcast])=>broadcast).map(([id])=>id));
-      this.remoteOnly = new Set(levels.filter(([, ,local])=>local===false).map(([id])=>id));
+      this.remoteOnly = new Set(levels.filter(route=>!showsSpeakerIdentity(route)).map(([id])=>id));
       this.setRange(new Map(levels.map(([id,level])=>[id,level])));
     });
     room.onMessage('voice-roster', (ids: string[]) => this.syncPeers(ids));
