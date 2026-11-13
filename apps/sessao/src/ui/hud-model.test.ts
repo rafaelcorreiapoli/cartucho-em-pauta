@@ -55,3 +55,22 @@ test('a server mission completion updates agenda and XP without repainting publi
   expect(hud.resources.get()).toBeUndefined();
   expect(hud.agenda.get()).toBeUndefined();
 });
+
+test('the television notice follows the interview lifecycle and ignores unrelated snapshots',()=>{
+  const hud = createHudModel();
+  const match = new PlenaryMatch(1);
+  match.start(player.id,[player],0,()=>0);
+  const updates:unknown[] = [];
+  hud.television.subscribe(()=>updates.push(hud.television.get()));
+  const view = match.view(player.id,[player.id],1);
+  const election = view.election!;
+  const active = {...view,election:{...election,broadcast:{id:player.id,name:player.nick,remaining:12}}};
+  hud.render(active);
+  hud.render({...active,budget:active.budget-1});
+  expect(updates).toEqual([{name:'Rafa',remaining:12}]);
+  hud.render(view);
+  expect(updates).toEqual([{name:'Rafa',remaining:12},undefined]);
+  hud.render(active);
+  hud.render({...active,phase:'finished'});
+  expect(hud.television.get()).toBeUndefined();
+});

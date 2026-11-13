@@ -43,7 +43,6 @@ function ElectionCycle({invested,result}:{invested?:number;result?:ElectionView[
 
 export function createElectionPanel(id:string, send:(action:ElectionAction) => void, hasVoice:()=>boolean) {
   const dock = el<HTMLDetailsElement>('election-dock');
-  const notice = el('electoral-notice');
   const summaryRoot = createRoot(dock.querySelector('summary')!);
   let summaryKey = '';
   const cycleRoot = createRoot(el('election-cycle'));
@@ -54,7 +53,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   let pollsKey = '';
   const pollsRoot = createRoot(el('election-polls'));
   let campaignKey = '';
-  dock.hidden = notice.hidden = true;
+  dock.hidden = true;
   dock.open = false;
   const campaign = el<HTMLDialogElement>('campaign-dialog');
   const openCampaign = el<HTMLButtonElement>('election-actions');
@@ -117,7 +116,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       openCampaign.hidden = !election?.canCampaign;
       if (openCampaign.hidden && campaign.open) campaign.close();
       if (!election) return;
-      const {remaining,broadcast,result} = election;
+      const {remaining,result} = election;
       const race = election.polls;
       const rank = race?.findIndex(candidate => candidate.id===id) ?? -1;
       const candidate = rank>=0 ? race?.[rank] : undefined;
@@ -137,14 +136,6 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       if (result && result.cycle!==lastResult) {
         lastResult = result.cycle;
         if (!campaign.open) dock.open = false;
-      }
-      if (broadcast) {
-        notice.hidden = false;
-        const label = `TV ao vivo: ${broadcast.name} · ${broadcast.remaining}s`;
-        if (notice.textContent!==label) notice.textContent = label;
-      } else if (notice.textContent?.startsWith('TV ao vivo:')) {
-        notice.hidden = true;
-        notice.textContent = '';
       }
       if (campaign.open) renderCampaign();
       const nextPollsKey = JSON.stringify(election.polls);

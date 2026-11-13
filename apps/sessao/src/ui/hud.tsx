@@ -149,9 +149,22 @@ function ActiveFire({state}:{state:HudModel['fire']}) {
   return fire && <FireNotice fire={fire}/>;
 }
 
+export function TelevisionNotice({name,remaining}:{name:string;remaining:number}) {
+  return <aside id="electoral-notice" className="hud-strip" role="status">
+    TV ao vivo: {name} · {remaining}s
+  </aside>;
+}
+
+function LiveTelevision({state}:{state:HudModel['television']}) {
+  const interview = useSyncExternalStore(state.subscribe,state.get);
+  return interview && <TelevisionNotice {...interview}/>;
+}
+
 export function mountReactHud() {
   const model = createHudModel();
   const {broadcast,congress,agenda,profile,stamina,resources} = model;
+  const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
+  televisionRoot.render(<LiveTelevision state={model.television}/>);
   const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
   fireRoot.render(<ActiveFire state={model.fire}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
@@ -170,6 +183,6 @@ export function mountReactHud() {
     broadcast: broadcast.update,
     player: model.player,
     render: model.render,
-    destroy() { fireRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
+    destroy() { televisionRoot.unmount(); fireRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
   };
 }
