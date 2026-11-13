@@ -579,3 +579,39 @@ test('first aid kits heal the owner once, cap healing and are kept at full healt
   expect(game.view(bob,world).inventory).toEqual([]);
   expect(events.filter(event=>event.type==='used')).toHaveLength(1);
 });
+
+test('identical snacks share a slot and support partial offers and drops',()=>{
+  const {alice,bob,game,world,openShop,balance} = setup();
+  Object.assign(alice,npcs.snackVendor.interaction);
+  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'coxinha',token:openShop(buyer,'snackVendor')},world);
+  for (let index=0;index<5;index++) expect(buy(alice)).toBe('Compra guardada no inventário.');
+  expect(balance.get(alice.id)).toBe(9.5);
+  const inventory = (who:Player) => game.view(who,world).inventory;
+  expect(inventory(alice)).toHaveLength(1);
+  const {id:item} = inventory(alice)[0];
+  expect(inventory(alice)[0].quantity).toBe(5);
+  expect(game.act(alice,{kind:'use',item,quantity:5},world)).toBe('Objeto utilizado.');
+  expect(inventory(alice)[0].quantity).toBe(4);
+
+  Object.assign(bob,npcs.snackVendor.interaction);
+  expect(buy(bob)).toBe('Compra guardada no inventário.');
+  const offer = {kind:'offer',item,target:bob.id} as const;
+  expect(game.act(alice,{...offer,quantity:5},world)).toBe('Quantidade indisponível.');
+  expect(game.act(alice,{...offer,quantity:2},world)).toBe('Pedido enviado.');
+  const request = game.view(bob,world).requests[0];
+  expect(request.item.quantity).toBe(2);
+  expect(inventory(alice)[0].quantity).toBe(4);
+  const accept = {kind:'accept',item:request.id} as const;
+  expect(game.act(bob,accept,world)).toBe('Objeto recebido.');
+  expect(game.act(bob,accept,world)).toBe('Pedido indisponível.');
+  expect(inventory(alice)[0].quantity).toBe(2);
+  expect(inventory(bob)).toHaveLength(1);
+  expect(inventory(bob)[0].quantity).toBe(3);
+
+  expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
+  expect(inventory(alice)[0].quantity).toBe(1);
+  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind==='coxinha')!;
+  expect(dropped.quantity).toBe(1);
+  expect(game.act(bob,{kind:'collect',item:dropped.id},world)).toBe('Objeto recolhido.');
+  expect(inventory(bob)[0].quantity).toBe(4);
+});

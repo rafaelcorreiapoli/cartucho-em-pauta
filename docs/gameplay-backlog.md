@@ -230,7 +230,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ITEM-03 | Uso de consumíveis | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-04 | Coleta e descarte de itens | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-05 | Transferência entre jogadores | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
-| ITEM-06 | Itens com quantidade e stack | PARCIAL | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | Cargas e fatias têm quantidade. Inventário usa instâncias por slot, sem stack genérico. | Média |
+| ITEM-06 | Itens com quantidade e stack | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | Alimentos idênticos que não podem ser expostos compartilham um slot. Compra, coleta e recebimento somam unidades; jogador escolhe quantas oferecer ou largar e consome uma por uso. Testes cobrem a quantidade no comando, divisão, recombinação e reenvio de aceite. | — |
 | ITEM-07 | Equipamentos com cargas | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-08 | Recarga de equipamentos | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |
 | ITEM-09 | Buffs e debuffs temporários | IMPLEMENTADO | gameplay.ts, equipment.ts, food.ts, Gameplay.ts, market-panel.tsx, Foundations.test.ts; PR 12, 15 | — | — |

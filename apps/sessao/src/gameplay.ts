@@ -4,7 +4,7 @@ import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { binoculars, concealment, equipment, megaphone, xray } from './equipment';
-import { foods } from './food';
+import { foods, isFood } from './food';
 import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
@@ -69,8 +69,14 @@ export type DocumentData = {
   author:string; title:string; edited:boolean; project?:number; description?:string; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
-export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; document?:DocumentData};
+export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
+export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foods[kind]);
+export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;
+export function selectedItemQuantity(item:WorldItem, quantity:number) {
+  return Math.min(itemQuantity(item),Math.max(1,quantity));
+}
+
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
@@ -84,7 +90,7 @@ const gameplayActions = ['supply','collect','offer','sign-request','accept','dec
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
-export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number};
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
 
 export function isPhoneAction(action:GameplayAction):action is PhoneAction {
@@ -130,12 +136,15 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
   if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
   const kind = gameplayActions.find(kind=>kind===raw.kind);
   if (!kind) return;
+  const quantity = 'quantity' in raw ? raw.quantity : undefined;
+  if (quantity!==undefined && (typeof quantity!=='number' || !Number.isSafeInteger(quantity) || quantity<1)) return;
   return {
     kind,
     item:'item' in raw && typeof raw.item==='number' && Number.isSafeInteger(raw.item) ? raw.item : undefined,
     target:'target' in raw && typeof raw.target==='string' ? raw.target : undefined,
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,
     token:'token' in raw && typeof raw.token==='number' && Number.isSafeInteger(raw.token) ? raw.token : undefined,
+    ...(quantity===undefined ? {} : {quantity}),
     direction:'direction' in raw ? snakeDirections.find(direction=>direction===raw.direction) : undefined,
   };
 }

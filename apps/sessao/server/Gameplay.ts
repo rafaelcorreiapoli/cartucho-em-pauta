@@ -7,7 +7,7 @@ import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
@@ -30,7 +30,7 @@ import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
-type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
+type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number; quantity?:number};
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
 const cashLifetime = 55_000;
@@ -228,6 +228,30 @@ export class Gameplay {
   }
 
   private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
+
+  private stack(id:string,kind:ObjectKind,except?:number) {
+    return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
+  }
+
+  private takeUnits(item:Item,quantity:number):Item {
+    const remaining = itemQuantity(item.data)-quantity;
+    if (remaining===0) return item;
+    item.data.quantity = remaining;
+    this.clearRequests(item.data.id);
+    const split = {data:{id:++this.serial,kind:item.data.kind,quantity},place:item.place};
+    this.items.set(split.data.id,split);
+    return split;
+  }
+
+  private addToInventory(item:Item,id:string) {
+    const stack = this.stack(id,item.data.kind,item.data.id);
+    if (stack) {
+      stack.data.quantity = itemQuantity(stack.data)+itemQuantity(item.data);
+      this.remove(item);
+    } else {
+      this.move(item,{holder:id});
+    }
+  }
 
   private move(item:Item, place:Place) {
     this.hide(item);
@@ -500,7 +524,7 @@ export class Gameplay {
       if (request.to!==id) return [];
       const item = this.items.get(request.item);
       const from = world.players.find(other => other.id===request.from);
-      return item && from ? [{id:request.id,kind:request.kind,item:item.data,from:{id:from.id,name:from.nick}}] : [];
+      return item && from ? [{id:request.id,kind:request.kind,item:request.quantity===undefined ? item.data : {...item.data,quantity:request.quantity},from:{id:from.id,name:from.nick}}] : [];
     });
     return {
       exposed:[...this.exposed.get(id) ?? []],
@@ -797,8 +821,8 @@ export class Gameplay {
       if (!item) return 'Objeto indisponível.';
       if (kind==='office-take') {
         if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return 'Objeto indisponível.';
-        if (!this.available(player.id)) return 'Inventário cheio.';
-        this.move(item,{holder:player.id});
+        if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+        this.addToInventory(item,player.id);
       } else {
         if (!('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
         if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return 'Armário cheio.';
@@ -976,10 +1000,11 @@ export class Gameplay {
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
-      } else if (!this.available(id)) return 'Inventário cheio.';
+      } else if (!this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
       if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
+      if (canStackItem(kind)) this.addToInventory(this.items.get(data.id)!,id);
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
@@ -1169,14 +1194,17 @@ export class Gameplay {
     if (action.kind==='collect' || action.kind==='recover') {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
-      if (!accessible || !this.available(id)) return 'Objeto fora de alcance ou inventário cheio.';
-      this.move(item,{holder:id});
+      if (!accessible || !this.available(id) && !this.stack(id,data.kind)) return 'Objeto fora de alcance ou inventário cheio.';
+      this.addToInventory(item,id);
       if (cashAmount(data)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
     if (!('holder' in item.place) || item.place.holder!==id) return 'O objeto não está com você.';
     const definition = objects[data.kind];
+    const quantity = action.quantity ?? itemQuantity(data);
+    if ((action.kind==='offer' || action.kind==='drop') &&
+      (!Number.isSafeInteger(quantity) || quantity<1 || quantity>itemQuantity(data))) return 'Quantidade indisponível.';
     switch (action.kind) {
       case 'expose':
         if (!('exposable' in definition)) return 'Este objeto fica guardado.';
@@ -1194,14 +1222,16 @@ export class Gameplay {
         this.clearRequests(data.id);
         const key = ++this.serial;
         this.requests.set(key,{id:key,kind:action.kind==='offer' ? 'offer' : 'signature',
-          item:data.id,from:id,to:target.id,expires:world.now+25_000});
+          item:data.id,from:id,to:target.id,expires:world.now+25_000,quantity:action.kind==='offer' && canStackItem(data.kind) ? quantity : undefined});
         return 'Pedido enviado.';
       }
-      case 'drop':
+      case 'drop': {
         if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
-        this.move(item,this.groundPlace(item.data,player,world.now));
-        this.event(world,player,'dropped',data);
+        const dropped = this.takeUnits(item,quantity);
+        this.move(dropped,this.groundPlace(dropped.data,player,world.now));
+        this.event(world,player,'dropped',dropped.data);
         return 'Objeto largado.';
+      }
       case 'store':
         if (!place || !terminal || !('storage' in terminal)) return 'Aproxime-se de um armário.';
         if ([...this.items.values()].filter(({place:location})=>'storage' in location && location.storage===place).length>=12) {
@@ -1231,9 +1261,10 @@ export class Gameplay {
           if (this.healthFraction(player,world.now)>=1) return 'Seus PV já estão cheios.';
           this.combat.heal(player,firstAidKit.healing);
         }
-        this.remove(item);
+        const consumed = this.takeUnits(item,1);
+        this.remove(consumed);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
-        this.event(world,player,'used',data);
+        this.event(world,player,'used',consumed.data);
         return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
         if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';
@@ -1285,14 +1316,17 @@ export class Gameplay {
       return 'O portador ou objeto está fora de alcance.';
     }
     if (request.kind==='offer') {
-      if (!this.available(player.id)) return 'Inventário cheio.';
+      if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+      const quantity = request.quantity ?? itemQuantity(item.data);
+      if (quantity>itemQuantity(item.data)) return 'Quantidade indisponível.';
+      const transferred = this.takeUnits(item,quantity);
       if (this.exposed.get(owner.id)?.has(item.data.id)) {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
         if (this.transfers.length>16) this.transfers.shift();
       }
-      this.move(item,{holder:player.id});
-      if (cashAmount(item.data)) this.expose(player.id,item.data.id);
-      this.event(world,owner,'transferred',item.data,player.id);
+      this.addToInventory(transferred,player.id);
+      if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
+      this.event(world,owner,'transferred',transferred.data,player.id);
       return 'Objeto recebido.';
     }
     const doc = item.data.document;

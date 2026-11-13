@@ -12,7 +12,7 @@ import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
@@ -37,8 +37,9 @@ function itemArt(kind:ObjectKind) {
   return itemPortrait(kind);
 }
 
-function itemName(item:Pick<WorldItem,'kind'|'document'>) {
-  return item.document?.title ?? objects[item.kind].name;
+function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
+  const name = item.document?.title ?? objects[item.kind].name;
+  return itemQuantity(item)>1 ? `${name} ×${itemQuantity(item)}` : name;
 }
 
 import type { SpyOption } from "./surveillance";
@@ -77,8 +78,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let previous:PlenaryView | undefined;
   let renderKey = '';
   let targetKey = '';
+  let quantity = 1;
 
-  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = []) {
+  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false) {
     const definition = objects[item.kind];
     const doc = item.document;
     const cash = cashAmount(item);
@@ -91,17 +93,30 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
           {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
         </>}
-        {food && <p>1 un. · {food.category} · {describeFood(food.effect)}</p>}
+        {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
         {!!cash && <p>{money(cash)}</p>}
       </details>
+      {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
+        <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
+          disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
+        <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
+        <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
+          disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
+      </div>}
       {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
         aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
     </article>;
   }
+  function changeQuantity(item:WorldItem,delta:number) {
+    quantity = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    render();
+  }
+
   type ObjectAction = {label:string;run:()=>void;key?:string};
 
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
     selection = item;
+    quantity = 1;
     decorationId = decoration;
     equipmentOpen = equipment;
     stashOpen = stash;
@@ -189,7 +204,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
@@ -224,7 +239,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (item) {
       const actions:ObjectAction[] = [];
       const act = (label:string,kind:GameplayAction['kind'],place?:string,key?:string) => {
-        actions.push({label,key,run:()=>send({kind,item:item.id,target:target.value,place})});
+        const transferQuantity = (kind==='offer' || kind==='drop') && itemQuantity(item)>1
+          ? {quantity:selectedItemQuantity(item,quantity)} : {};
+        actions.push({label,key,run:()=>send({kind,item:item.id,target:target.value,place,...transferQuantity})});
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
@@ -262,7 +279,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
-      flushSync(()=>objectsRoot.render(objectCard(item,actions)));
+      flushSync(()=>objectsRoot.render(objectCard(item,actions,selection?.source==='inventory')));
       cards.push(objectsHost);
     }
     if (decoration) {
@@ -367,6 +384,15 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
+    if (dialog.open && selection?.source==='inventory' && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
+        !event.metaKey && !hudConsumesKeys(event.target) && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
+      const control = objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      if (control) {
+        event.preventDefault();
+        control.click();
+        return;
+      }
+    }
     if (dialog.open && stashOpen && !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
         !event.metaKey && !hudConsumesKeys(event.target) && /^Digit[1-6]$/.test(event.code)) {
       const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
