@@ -129,9 +129,14 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(reports.get(alice.sessionId)).toEqual([]);
     await wait(()=>state(bia)?.inventory.some(item=>item.kind==='forensicKit')===false);
     const balance = views.get(bia.sessionId)!.politics!.wallet;
+    const senderBalance = views.get(caio.sessionId)!.politics!.wallet;
     move(caio,{x:npcs.vendor.x,y:npcs.vendor.y+21});
     caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false});
-    await wait(()=>views.get(bia.sessionId)?.politics?.wallet===balance+4);
+    await wait(()=>{
+      const received = views.get(bia.sessionId)?.politics?.wallet;
+      const sent = views.get(caio.sessionId)?.politics?.wallet;
+      return received!==undefined && sent!==undefined && received>=balance+4 && sent<=senderBalance-4;
+    });
     const nextShop = await wait(()=>{
       const current = state(bia)?.dialogue;
       return current?.shop && current.token!==shop.token ? current : undefined;
