@@ -297,14 +297,14 @@ export class SessionRoom extends Room {
       }
       const players = [...this.players.values()].map(state => state.player);
       const now = this.clock.currentTime;
-      const wasBallot = this.match.phase==='ballot';
+      const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       this.match.advance(now);
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
       this.gameplay.tick(world,this.match.phase==='negotiation');
       const paused = this.npcTalk.tick(world,this.match.phase==='negotiation');
       this.parliamentarians.tick(now,STEP_MS/1000,paused,this.match.phase==='negotiation');
-      if (!wasBallot && this.match.phase==='ballot') {
+      if (this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();
         this.parliamentarians.players.forEach((npc,index)=>{
           Object.assign(npc,PLENARY_SEATS[PLENARY_SEATS.length-1-index],{direction:2});

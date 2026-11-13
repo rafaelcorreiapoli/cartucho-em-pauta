@@ -25,14 +25,16 @@ export const bills = [
   {name:'Teto do Cafezinho', description:'Limita os gastos públicos com cafezinho.', yes:{stability:-12,budget:23}, no:{stability:12,budget:-19}},
 ] as const;
 
+export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];
+
 export type Impact = {stability:number; budget:number};
 export type Role = 'Parlamentar' | 'Infiltrado';
 export type Vote = 'yes' | 'no';
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
 export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
-export type Outcome = {round:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
+export type Outcome = {round:number; project?:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type PlenaryView = {
-  phase:Phase; round:number; remaining:number; stability:number; budget:number; host?:string;
+  phase:Phase; round:number; project?:number; queuedProjects?:number[]; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;

@@ -289,7 +289,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'photo'|'place'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'photo'|'project'|'place'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -1233,7 +1233,7 @@ export class Gameplay {
         const filed = [...this.items.values()].filter(item=>'filed' in item.place);
         if (filed.length>=24) this.remove(filed[0]);
         this.move(item,{filed:true});
-        this.event(world,player,'filed',data);
+        this.event(world,player,'filed',data,undefined,{project:data.document.project});
         return 'Documento protocolado.';
       }
     }

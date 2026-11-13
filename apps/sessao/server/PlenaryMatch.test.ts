@@ -227,3 +227,27 @@ test('the Corregedoria returns feedback for each audit, even without new records
   expect(first?.text).toContain('Nenhum registro novo');
   expect(match.act(player,'audit',3)).toEqual(first);
 });
+
+test('validated filings schedule distinct successive ballots, with the standard bill as fallback',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const world = match.gameplayWorld(people,10,()=>false);
+  const file = (project:number)=>world.publish({
+    type:'filed',actor:host.id,kind:'document',project,position:stations.amendment,at:10,witnesses:[],
+  });
+  file(2);
+  file(2);
+  file(0);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  expect(view(10)).toMatchObject({project:2,queuedProjects:[2,0]});
+  match.advance(NEGOTIATION_MS);
+  expect(view(NEGOTIATION_MS)).toMatchObject({phase:'ballot',project:2,queuedProjects:[0]});
+  match.vote(host.id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(view(NEGOTIATION_MS+BALLOT_MS)).toMatchObject({phase:'ballot',project:0,outcome:{project:2}});
+  expect(view(NEGOTIATION_MS+BALLOT_MS).vote).toBeUndefined();
+  match.advance(NEGOTIATION_MS+BALLOT_MS*2);
+  expect(view(NEGOTIATION_MS+BALLOT_MS*2).outcomes.map(result=>result.project)).toEqual([2,0]);
+  match.advance(NEGOTIATION_MS*2+BALLOT_MS*2);
+  expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
+});

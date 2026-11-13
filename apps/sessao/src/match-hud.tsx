@@ -409,7 +409,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (view.phase==='negotiation' && view.remaining<=30 && previous.remaining>30) {
           notify('Convocação',`Sessão no Plenário em ${view.remaining} s.`);
         }
-        if (view.phase!==previous.phase && (view.phase==='ballot' || view.phase==='hearing')) {
+        if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {
           notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
             view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : element('bill').textContent ?? '',true);
         }

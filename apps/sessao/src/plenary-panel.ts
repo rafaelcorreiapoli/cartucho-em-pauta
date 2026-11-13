@@ -1,6 +1,6 @@
 import { updateProgress } from './progress-meter';
 import type { Player } from './map';
-import { bills, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -78,7 +78,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       dot.dataset.current = String(index===selected);
       return dot;
     }));
-    const bill = bills[outcome.round%bills.length].name;
+    const bill = agendaProject(outcome).name;
     const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
     lastVote.dataset.result = outcome.passed ? 'passed' : 'failed';
     element('outcome-summary').textContent = verdict;
@@ -109,12 +109,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       }
       const historyChanged = next.outcomes.length!==view?.outcomes.length;
       if (!next.outcomes.length) clearBrief();
-      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished')) {
+      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished' || next.phase==='ballot')) {
         clearBrief();
         const outcome = next.outcome;
         brief.dataset.passed = String(outcome.passed);
         element('brief-verdict').textContent = outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado';
-        element('brief-project').textContent = bills[outcome.round%bills.length].name;
+        element('brief-project').textContent = agendaProject(outcome).name;
         element('brief-yes').textContent = String(outcome.yes);
         element('brief-no').textContent = String(outcome.no);
         for (const key of ['stability','budget'] as const) {
@@ -164,18 +164,19 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         renderHistory();
         const result = view.outcomes[selected];
         element('outcome-announcement').textContent = result ?
-          `${bills[result.round%bills.length].name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
+          `${agendaProject(result).name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
       }
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}`;
-      const title = hearing ? hearing.target : bills[round%bills.length].name;
+      const queued = view.queuedProjects?.length ?? 0;
+      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}${queued ? ` · +${queued} na pauta` : ''}`;
+      const title = hearing ? hearing.target : agendaProject(view).name;
       element('bill').textContent = title;
       element('project-details-title').textContent = title;
-      element('bill-description').textContent = hearing ? '' : bills[round%bills.length].description;
+      element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
       element('impact').hidden = !!hearing;
       showImpact('yes',view.yes);
       showImpact('no',view.no);

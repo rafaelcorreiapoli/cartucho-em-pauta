@@ -9,7 +9,7 @@ import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
-import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
+import { agendaProject, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -384,7 +384,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
-      const agenda = plenaryView && bills[plenaryView.round%bills.length];
+      const agenda = plenaryView && agendaProject(plenaryView);
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Painel de votação');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;

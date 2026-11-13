@@ -156,6 +156,11 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
 
+    move(alice,stations.amendment);
+    feedback.delete(alice.sessionId);
+    alice.send('gameplay',{kind:'file',item:original.id,place:'protocol'});
+    await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
+    expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     economy.changePopularity(alice.sessionId,40);
     move(alice,stations.panel);
     alice.send('politics',{kind:'hearing',target:bia.sessionId});
@@ -173,6 +178,27 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     accountBia.suspendedUntil -= SUSPENSION_MS;
     await wait(()=>controls.get(bia.sessionId)?.isolated===false);
     expect(controls.get(bia.sessionId)?.player).toMatchObject(isolationRoom.exit);
+
+    // File a second, authentic document through the public gameplay messages.
+    move(alice,stations.secretary);
+    alice.send('gameplay',{kind:'supply',place:'secretary',target:'project-1'});
+    const fresh = await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===1));
+    alice.send('gameplay',{kind:'stamp',place:'secretary',item:fresh.id});
+    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.stamps.includes('Secretaria')));
+    move(caio,{x:stations.secretary.x+8,y:stations.secretary.y});
+    alice.send('gameplay',{kind:'sign-request',item:fresh.id,target:caio.sessionId});
+    const freshRequest = await wait(()=>state(caio)?.requests.find(entry=>entry.item.id===fresh.id));
+    caio.send('gameplay',{kind:'accept',item:freshRequest.id});
+    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.signatures.length));
+    move(alice,stations.cabinet);
+    alice.send('gameplay',{kind:'stamp',place:'cabinet',item:fresh.id});
+    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.stamps.includes('Gabinete')));
+    move(alice,stations.amendment);
+    alice.send('gameplay',{kind:'file',place:'protocol',item:fresh.id});
+    await wait(()=>views.get(alice.sessionId)?.queuedProjects?.includes(1));
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(bia.sessionId)?.phase==='ballot');
+    expect(views.get(bia.sessionId)?.project).toBe(1);
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

@@ -326,12 +326,16 @@ async function connect(join: () => Promise<Room>) {
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
+      const nextBallot = phase==='ballot' && view.phase===phase && previousView?.round!==view.round;
       previousView = view;
       game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       if (roomLabel.textContent!==label) roomLabel.textContent = label;
-      if (phase===view.phase) return;
+      if (phase===view.phase) {
+        if (nextBallot) audio.cue('ballot');
+        return;
+      }
       if ((phase==='lobby' || phase==='finished') && view.phase==='negotiation') audio.cue('session');
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished') audio.cue('end');
