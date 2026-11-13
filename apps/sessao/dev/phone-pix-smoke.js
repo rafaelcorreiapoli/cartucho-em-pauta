@@ -30,18 +30,18 @@ async page => {
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
 
     await receiver.locator(dialog).locator('.pix-balance').getByText('R$ 90 mil',{exact:true}).waitFor();
+    await receiver.getByText('Pix recebido',{exact:true}).waitFor();
+    if (await page.getByText('Pix recebido',{exact:true}).count()) throw Error('Sender received the private Pix notification');
 
     await receiver.keyboard.press('Escape');
     await receiver.locator(dialog).waitFor({state:'hidden'});
     await receiver.locator('#map').focus();
     await receiver.keyboard.down('ArrowDown');
-    try {
-      await pix.getByRole('button',{name:'Bia',exact:true}).waitFor({state:'detached',timeout:5000});
-    } finally { await receiver.keyboard.up('ArrowDown'); }
-    if (!await pix.getByRole('button',{name:'Transferir'}).isDisabled()) throw Error('Pix kept a distant recipient enabled');
+    await receiver.waitForTimeout(900);
+    await receiver.keyboard.up('ArrowDown');
     await page.keyboard.press('5');
-    await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
-
+    await pix.locator('.pix-balance').getByText('R$ 60 mil',{exact:true}).waitFor();
+    await page.keyboard.press('0');
     await receiver.keyboard.press('c');
     for (const client of [page,receiver]) {
       await client.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();

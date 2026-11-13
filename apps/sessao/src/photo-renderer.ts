@@ -23,7 +23,7 @@ export class PhotoRenderer {
     });
   }
 
-  draw(canvas:HTMLCanvasElement, scene:PhotoScene, scale=2) {
+  draw(canvas:HTMLCanvasElement, scene:PhotoScene, scale=4) {
     const ctx = canvas.getContext('2d');
     if (!ctx || !this.map) return;
     const width = PHOTO_WIDTH, height = PHOTO_HEIGHT;
@@ -48,7 +48,9 @@ export class PhotoRenderer {
         if (!localPerception(scene.center,point).visible) mask.fillRect(x,y,1,1);
       }
     }
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.fog,0,0,width,height);
+    ctx.imageSmoothingEnabled = true;
 
     const item = (kind:ObjectKind,x:number,y:number,size:number) => {
       const symbol = itemSymbols[kind];
@@ -90,6 +92,12 @@ export class PhotoRenderer {
     const recent = 'transfers' in scene ? (scene as Photo).transfers : [];
     const labels:{name:string;x:number;y:number}[] = [];
     for (const person of [...scene.people].sort((a,b)=>a.y-b.y || Number(!!a.carried)-Number(!!b.carried))) {
+      if ((scene as Photo).selfie && person.id===(scene as Photo).author.id) {
+        const atlas = this.textures.get('installed-portraits').getSourceImage() as HTMLImageElement;
+        const size = 68;
+        ctx.drawImage(atlas,person.character%2*256,Math.floor(person.character/2)*256,256,256,(width-size)/2,height-size,size,size);
+        continue;
+      }
       const {sheet,frame} = characterArt(person.character);
       const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction) : undefined;
       const pose = this.textures.getFrame(downed?.key ?? sheet.key,downed?.frame ?? frame+(person.direction===3 ? 1 : person.direction)*4);

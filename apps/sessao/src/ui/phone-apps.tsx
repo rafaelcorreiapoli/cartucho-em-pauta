@@ -9,7 +9,7 @@ const apps = {
 
 export type PhoneApp = keyof typeof apps;
 
-export function PhoneApps({active,select}:{active:PhoneApp;select:(app:PhoneApp)=>void}) {
+export function PhoneApps({active,select}:{active?:PhoneApp;select:(app:PhoneApp)=>void}) {
   return (Object.keys(apps) as PhoneApp[]).map(app=>{
     const [icon,shortcut] = apps[app];
     return <button key={app} type="button" className="phone-app" data-app={icon}

@@ -320,7 +320,10 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
-      this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
+      const transferred = this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
+      if (action.kind==='transfer' && transferred) {
+        this.clients.getById(action.to)?.send('pix-received',{from:player.nick,amount:action.amount});
+      }
       this.resetFinishedMatch(now);
     });
     this.onMessage('election', (client, raw:unknown) => {

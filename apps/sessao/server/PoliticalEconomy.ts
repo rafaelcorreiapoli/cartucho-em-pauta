@@ -412,7 +412,7 @@ export class PoliticalEconomy {
     return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }
 
-  view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
+  view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean, pixAvailable?:(id:string)=>boolean): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
     const {wallet,walletIncome,popularity,grantUsed} = account;
@@ -423,7 +423,7 @@ export class PoliticalEconomy {
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:this.paymentsLeft(id,round),
       directory:[...this.contacts.values()].filter(contact=>!this.npcIds.has(contact.id)).map(contact => ({
-        ...contact,popularity:this.accounts.get(contact.id)!.popularity,eligible:eligible(contact.id),
+        ...contact,popularity:this.accounts.get(contact.id)!.popularity,eligible:eligible(contact.id),pixAvailable:pixAvailable?.(contact.id),
       })),
       evidence:[...account.known].filter(key => !this.published.has(key)).map(key => this.records.get(key)!),
       ledger:[...this.published].map(key => this.records.get(key)!),

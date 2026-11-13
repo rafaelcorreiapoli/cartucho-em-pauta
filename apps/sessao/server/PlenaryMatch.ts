@@ -347,6 +347,10 @@ export class PlenaryMatch {
       canInteract(player,other,{radius:TRADE_RADIUS,handsFree:true});
   }
 
+  private canReceivePix(id:string) {
+    return this.electorate.has(id) && !this.disconnected.has(id) && !this.isolated(id);
+  }
+
   contacts(player:Player, players:Player[]): Contact[] {
     return this.phase==='negotiation' || this.phase==='ballot' ? players.filter(other => this.nearby(player,other))
       .map(({id}) => ({id,name:this.economy.name(id)})) : [];
@@ -374,8 +378,7 @@ export class PlenaryMatch {
         if (this.canVote(id) && this.at(player,'press')) this.economy.campaign(id,this.round);
         break;
       case 'transfer':
-        if (near(action.to)) this.economy.transfer(id,action.to,action.amount,action.clandestine,this.round);
-        break;
+        return this.canReceivePix(action.to) && this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round);
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
         break;
@@ -579,7 +582,7 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,

@@ -193,7 +193,7 @@ test('clients share movement and voice, then receive private roles and payments'
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
       .reduce((sum,mission)=>sum+(missionReward(mission.kind).cash ?? 0),0);
-    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:true,token:1730};
+    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:false,token:1730};
     second.send('politics',{...transfer,token:undefined});
     second.send('politics',transfer);
     second.send('politics',{...transfer,amount:1});

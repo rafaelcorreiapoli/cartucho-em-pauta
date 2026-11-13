@@ -641,7 +641,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }).filter(point=>inPhotoFrame(center,point));
       scene.photoRenderer.draw(canvas,{
         center,breaches,
-        people:players.filter(person=>inPhotoFrame(center,person,true)).map(person=>({
+        people:players.filter(person=>person.id!==ownId && inPhotoFrame(center,person,true)).map(person=>({
           ...person,name:person.nick,
         })),
         ground:groundItems.filter(item=>inPhotoFrame(center,item)),

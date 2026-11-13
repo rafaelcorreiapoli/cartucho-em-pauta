@@ -120,12 +120,12 @@ export type PoliticsView = {
   wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
-  contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
+  contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean; pixAvailable?:boolean})[]; paymentsLeft:number;
 };
 export type PoliticsAction =
   | {kind:'grant'; diverted:Split}
   | {kind:'campaign'}
-  | {kind:'transfer'; to:string; amount:number; clandestine:boolean}
+  | {kind:'transfer'; to:string; amount:number; clandestine?:boolean}
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
   | {kind:'accept' | 'cancel'; offer:number}
@@ -142,9 +142,8 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
       break;
     case 'campaign': return {kind:'campaign'};
     case 'transfer':
-      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount) &&
-          'clandestine' in data && typeof data.clandestine==='boolean') {
-        return {kind:'transfer',to:data.to,amount:data.amount as number,clandestine:data.clandestine};
+      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount)) {
+        return {kind:'transfer',to:data.to,amount:data.amount as number};
       }
       break;
     case 'share':

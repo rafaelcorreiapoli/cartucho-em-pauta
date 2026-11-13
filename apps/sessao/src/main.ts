@@ -1,3 +1,4 @@
+import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
@@ -288,6 +289,7 @@ async function connect(join: () => Promise<Room>) {
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
     });
+    joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
     joined.onMessage('gameplay-feedback',(message:string)=>{
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');

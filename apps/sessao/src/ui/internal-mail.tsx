@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {infractionLabels,type ComplaintView} from '../complaints';
 import { useLayoutEffect, useRef } from 'react';
 import type { Photo } from '../photography';
@@ -7,6 +8,26 @@ import { internalMailRules, type InternalNotice, type AttachmentRef, type Forens
 import { money } from '../politics';
 
 export type AttachmentChoice = AttachmentRef & {label:string};
+
+function AttachmentPicker({choices}:{choices:readonly AttachmentChoice[]}) {
+  const [open,setOpen] = useState(false);
+  const [query,setQuery] = useState('');
+  const [selected,setSelected] = useState<AttachmentChoice>();
+  return <div className="mail-attachments">
+    <input type="hidden" name="attachment" value={selected ? selected.kind+'-'+selected.id : ''}/>
+    <button type="button" className="hud-button" aria-expanded={open} onClick={()=>setOpen(!open)}>{selected?.label ?? 'Selecionar anexo'}</button>
+    {open && <section className="mail-entry" aria-label="Inventário de anexos">
+      <input aria-label="Buscar anexo" placeholder="Buscar pelo nome" value={query} onChange={event=>setQuery(event.target.value)}/>
+      <div className="mail-attachment-grid">
+        {choices.filter(choice=>choice.label.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR'))).map(choice=>
+          <button type="button" className="hud-button hud-button--secondary" key={choice.kind+'-'+choice.id} onClick={()=>{setSelected(choice);setOpen(false);}}>
+            <svg className="hud-glyph" aria-hidden="true"><use href={choice.kind==='photo' ? '#icon-app-photos' : '#icon-document'}/></svg>{choice.label}
+          </button>)}
+      </div>
+      <button type="button" className="hud-button hud-button--secondary" onClick={()=>{setSelected(undefined);setOpen(false);}}>Sem anexo</button>
+    </section>}
+  </div>;
+}
 
 function MailPhoto({photo,draw}:{photo:Photo;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void}) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -87,9 +108,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
       }}>
         <label>Assunto<input name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
         <label>Mensagem<textarea name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
-        {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <label>Anexo <select name="attachment"><option value="">Sem anexo</option>
-          {attachments.map(choice=><option key={choice.kind+'-'+choice.id} value={choice.kind+'-'+choice.id}>{choice.label}</option>)}
-        </select></label>}
+        {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <AttachmentPicker choices={attachments}/>}
         <p role="status">{error}</p>
         <button className="hud-button" disabled={pending}>Publicar · {money(internalMailRules.fee)}</button>
         <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={()=>{
