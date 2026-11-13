@@ -265,8 +265,24 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   });
   more.classList.add('hud-button','context-more');
   more.setAttribute('aria-expanded','false');
-  stations.querySelector('.station-actions')!.append(more);
-  const unavailable = '[hidden], [data-context-hidden="true"]';
+  const overflowBreak = node('span');
+  overflowBreak.className = 'context-overflow-break';
+  overflowBreak.setAttribute('aria-hidden','true');
+  overflowBreak.hidden = true;
+  stations.querySelector('.station-actions')!.append(overflowBreak,more);
+  const contextHud = element('context-hud');
+  const dock = element('command-deck');
+  const profile = element('profile-dock');
+  const tools = dock.querySelector<HTMLElement>('.deck-tools')!;
+  const measureClearance = () => {
+    const floor = Math.min(...[profile,tools].filter(panel=>panel.getClientRects().length)
+      .map(panel=>panel.getBoundingClientRect().top),window.innerHeight);
+    contextHud.style.setProperty('--context-clearance',`${Math.max(0,window.innerHeight-floor)}px`);
+  };
+  const clearanceObserver = new ResizeObserver(measureClearance);
+  for (const panel of [dock,profile,tools]) clearanceObserver.observe(panel);
+  window.addEventListener('resize',measureClearance);
+  const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
   function refreshActionKeys() {
     let index = 0;
     let primaryCount = 0;
@@ -277,11 +293,17 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (button===more || button.closest('#nearby-items')) continue;
       if (button.closest(unavailable)) { delete button.dataset.contextOverflow; continue; }
       primaryCount++;
-      button.dataset.contextOverflow = String(!expanded && primaryCount>3);
+      button.dataset.contextOverflow = primaryCount>3 ? (expanded ? 'expanded' : 'true') : 'false';
     }
     more.hidden = primaryCount<=3;
+    overflowBreak.hidden = !expanded || more.hidden;
     if (more.hidden) more.setAttribute('aria-expanded','false');
-    const ordered = [...buttons.filter(button=>!button.closest('#nearby-items')), ...buttons.filter(button=>button.closest('#nearby-items'))];
+    const ordered = [
+      ...buttons.filter(button=>button.dataset.contextOverflow==='false'),
+      more,
+      ...buttons.filter(button=>button.dataset.contextOverflow==='expanded'),
+      ...buttons.filter(button=>button!==more && button.dataset.contextOverflow!=='false' && button.dataset.contextOverflow!=='expanded'),
+    ];
     for (const button of ordered) {
       const available = !button.disabled && !button.closest(unavailable) && button.dataset.contextOverflow!=='true' &&
         (!nearbyOpen || button===nearbyToggle || !!button.closest('#nearby-items'));
@@ -493,6 +515,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       progressRoot.unmount();
       shortcuts.replaceChildren();
       more.remove();
+      overflowBreak.remove();
+      clearanceObserver.disconnect();
+      window.removeEventListener('resize',measureClearance);
       fieldRoot.unmount();
     },
   };
