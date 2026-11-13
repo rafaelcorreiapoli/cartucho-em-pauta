@@ -279,6 +279,7 @@ test('clients share movement and voice, then receive private roles and payments'
 test('transport is released on an actual socket reconnect and on plenary admission', async () => {
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
+  const {gameplayMetrics} = await import('./gameplay-metrics');
   const {SessionRoom} = await import('./SessionRoom');
   const {PlenaryMatch} = await import('./PlenaryMatch');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
@@ -479,6 +480,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(gearBeforeReconnect?.find(item=>item.kind==='xray')?.charges).toBe(2);
     const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
     expect(agendaBeforeReconnect?.active).toHaveLength(3);
+    const reconnectCount = () => Number(gameplayMetrics.exposition().match(/^congresso_reconnects_total (\d+)$/m)?.[1]);
+    const beforeReconnect = reconnectCount();
     let reconnected = false;
     passenger.reconnection.minUptime = 0;
     passenger.onReconnect(()=>{reconnected = true;});
@@ -486,6 +489,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.connection.close(4010);
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
     await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
+    expect(reconnectCount()).toBe(beforeReconnect+1);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     expect(progression()).toEqual(progressionBeforeReconnect);
