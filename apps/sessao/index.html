@@ -117,6 +117,11 @@
           </header>
           <ul class="agenda-list" id="missions-completed" aria-label="Conclusões recentes" hidden></ul>
           <ul class="agenda-list" id="missions-active" aria-label="Objetivos ativos"></ul>
+          <footer id="agenda-xp" hidden>
+            <div><strong id="agenda-level"></strong><span id="agenda-xp-value"></span></div>
+            <div class="xp-track" aria-hidden="true"><span id="agenda-xp-fill"></span></div>
+            <div id="agenda-reward" role="status"></div>
+          </footer>
           <span id="agenda-announcement" class="sr-only" role="status"></span>
           <template id="agenda-mission">
             <li>
@@ -198,6 +203,7 @@
               <strong id="hud-nick"></strong>
               <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
               <div class="deck-profile-links">
+                <button id="open-attributes" type="button" class="progression-link" aria-haspopup="dialog" hidden>Atributos <span id="attribute-points-badge" hidden></span></button>
                 <details id="private-profile" name="game-panels">
                   <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Perfil</span></summary>
                   <div class="hud-panel deck-popover">
@@ -462,7 +468,28 @@
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
       </dialog>
-      <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr</p>
+      <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title">
+        <div class="level-up-rays" aria-hidden="true"></div>
+        <div class="level-up-sparks" aria-hidden="true"></div>
+        <header>
+          <h2 id="level-up-title">LEVEL UP!</h2>
+          <div class="level-up-number"><span>NÍVEL</span><strong id="level-up-level"></strong></div>
+          <p id="level-up-points"></p>
+        </header>
+        <form method="dialog" class="progression-buttons">
+          <button class="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
+          <button class="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autofocus>Depois</button>
+        </form>
+      </dialog>
+      <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title">
+        <header>
+          <div><h2 id="attributes-title">Atributos</h2><p id="attributes-xp"></p></div>
+          <form method="dialog"><button class="hud-button hud-button--secondary">Fechar</button></form>
+        </header>
+        <p id="attributes-available" role="status"></p>
+        <div id="attribute-list"></div>
+      </dialog>
+      <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr com o tênis equipado</p>
     </section>
   </main>
   <script type="module" src="/src/main.ts"></script>

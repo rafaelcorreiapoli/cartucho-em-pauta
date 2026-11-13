@@ -1,3 +1,4 @@
+import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
 import type { GameplayWorld } from './gameplay-world';
 import { offices, type ElectionAction } from '../src/elections';
@@ -156,6 +157,10 @@ export class PlenaryMatch {
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>this.economy.recordGameplay(event),
     };
+  }
+
+  allocateAttribute(id:string, request:AttributeRequest, now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.electorate.has(id) && this.economy.allocate(id,request);
   }
 
   canHandleObjects(id:string, now:number) {

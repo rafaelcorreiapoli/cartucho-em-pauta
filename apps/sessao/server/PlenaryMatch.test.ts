@@ -115,7 +115,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(traitor).politics?.evidence.some(record => record.id===proof.id)).toBe(false);
   match.politics(traitor,{kind:'accept',offer:offer.id},people,10);
   match.politics(traitor,{kind:'accept',offer:offer.id},people,11);
-  expect(view(honest).politics?.wallet).toBe(13);
+  expect(view(honest).politics?.wallet).toBe(11);
   expect(view(traitor).politics?.wallet).toBe(7);
   match.politics(at(traitor,'press'),{kind:'publish',evidence:proof.id},people,12);
   expect(view(host).politics?.ledger).toContainEqual(proof);
@@ -125,7 +125,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.advance(NEGOTIATION_MS);
   match.vote(honest.id,'no',NEGOTIATION_MS+1);
   expect(view(honest).vote).toBe('no');
-  expect(view(honest).politics?.wallet).toBe(13);
+  expect(view(honest).politics?.wallet).toBe(11);
 });
 
 test('campaign unlocks a hearing, then a wrong removal costs stability and the player can still trade', () => {
@@ -172,14 +172,14 @@ test('private agendas refill immediately and credit a mission only once', () => 
   const event = {type:'filed',actor:'a',item:1,kind:'document',at:1,position:{x:0,y:0},witnesses:[]} as const;
   economy.recordGameplay({...event,witnesses:[]});
   economy.recordGameplay({...event,witnesses:[]});
-  expect(view('a')).toMatchObject({wallet:10,walletIncome:2,missions:{completed:[{kind:'protocolo'}]}});
+  expect(view('a')).toMatchObject({wallet:8,walletIncome:0,popularity:45,progression:{xp:50},missions:{completed:[{kind:'protocolo'}]}});
   expect(view('a').missions.active).toHaveLength(3);
   expect(new Set(view('a').missions.active.map(mission=>mission.kind)).size).toBe(3);
   expect(view('b')).toMatchObject({wallet:8,missions:{completed:[]}});
   expect(view('b').missions.active.map(mission=>mission.kind)).toContain('protocolo');
 });
 
-test('a pizza capricho counts consumption after assignment and pays nothing', () => {
+test('pizza earns XP only on consumption after assignment', () => {
   const economy = new PoliticalEconomy();
   economy.reset([{id:'a',name:'A'}],() => 0);
   const view = () => economy.view('a',[],0,false,() => true)!;
@@ -189,7 +189,7 @@ test('a pizza capricho counts consumption after assignment and pays nothing', ()
   const original = view().missions.active.find(mission=>mission.kind==='pizza');
   expect(original).toBeDefined();
   economy.recordGameplay({...event,witnesses:[],type:'used',at:2});
-  expect(view()).toMatchObject({wallet:8,walletIncome:0,missions:{completed:[{kind:'pizza',id:original!.id}]}});
+  expect(view()).toMatchObject({wallet:8,walletIncome:0,progression:{xp:20},missions:{completed:[{kind:'pizza',id:original!.id}]}});
   expect(view().missions.active).toHaveLength(3);
   expect(view().missions.active.some(mission=>mission.kind==='pizza')).toBe(false);
 });

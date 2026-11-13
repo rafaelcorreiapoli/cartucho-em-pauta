@@ -1,3 +1,5 @@
+import { createProgressionHud } from './progression-hud';
+import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
 import { needsFieldToken, type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
@@ -209,6 +211,7 @@ async function connect(join: () => Promise<Room>) {
       else sendGameplay(action);
       map.focus({preventScroll:true});
     });
+    const progression = createProgressionHud(request=>joined.send('allocate-attribute',request),cue=>audio.progression(cue));
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       if (gameplay.photoState(photos)) audio.shutter();
     });
@@ -251,6 +254,7 @@ async function connect(join: () => Promise<Room>) {
         applyVoiceEquipment(voice);
       }
       hud.render(view);
+      progression.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = showNewResults(view,previousView);
       if (resultSound) audio.cue(resultSound);
@@ -282,7 +286,10 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
       hud.notify('Controladoria',text,critical);
     });
-    joined.onMessage('control',(snapshot: ControlState) => game?.reconcile(snapshot));
+    joined.onMessage('control',(snapshot: ControlState) => {
+      progression.player(snapshot.player);
+      game?.reconcile(snapshot);
+    });
     joined.onMessage('players',(players: Player[]) => {
       panel.players(players);
       political.players(players);
@@ -305,11 +312,12 @@ async function connect(join: () => Promise<Room>) {
         return slot;
       }));
     });
-    joined.onReconnect(() => { if (voice?.active) joined.send('voice-join'); });
+    joined.onReconnect(() => { progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
       hud.destroy();
+      progression.destroy();
       gameplay.destroy();
       market.destroy();
       if (room!==joined) return;

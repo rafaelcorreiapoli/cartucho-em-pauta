@@ -470,7 +470,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (latest.health!==undefined) {
           const health = Phaser.Math.Clamp(latest.health,0,1);
           view.health.setPosition(x,barY);
-          view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? MAX_STAMINA)/MAX_STAMINA,0,1),1);
+          const staminaMax = player.staminaMax ?? MAX_STAMINA;
+          view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1),1);
           view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
         }
         view.weapon.setVisible(!!pose);

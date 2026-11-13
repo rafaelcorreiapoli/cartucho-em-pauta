@@ -1,3 +1,4 @@
+import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
 import { canUseGameplayAction, needsFieldToken, readGameplayAction } from '../src/gameplay';
@@ -146,6 +147,14 @@ export class SessionRoom extends Room {
         this.movementQueue.get(client.sessionId)?.splice(0);
       }
     });
+    this.onMessage('allocate-attribute',(client,raw:unknown)=>{
+      const request = readAttributeRequest(raw);
+      const player = this.players.get(client.sessionId)?.player;
+      if (!request || !player || player.knockedOut || player.carrying) return;
+      if (this.match.allocateAttribute(player.id,request,this.clock.currentTime)) {
+        this.gameplay.applyAttribute(player,request.attribute);
+      }
+    });
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
@@ -230,7 +239,7 @@ export class SessionRoom extends Room {
           const vision = this.gameplay.vision(id);
           const visible = plenary ? players.filter(inPlenary) :
             players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
-          client.send('players',visible.map(({barriers:_barriers,...player})=>({...player,health:this.gameplay.healthFraction(player,now)})));
+          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }

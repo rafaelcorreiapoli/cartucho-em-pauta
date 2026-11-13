@@ -2,6 +2,7 @@ export const equipment = {
   binoculars:{slot:'vision',price:2,symbol:'🔭'},
   voiceModulator:{slot:'voice',price:3,symbol:'🎙️'},
   vest:{slot:'armor',price:3,symbol:'🛡️'},
+  runningShoes:{slot:'feet',price:2,symbol:'👟'},
   baton:{slot:'weapon',weapon:'baton',price:2,symbol:'🏏'},
 } as const;
 

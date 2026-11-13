@@ -20,7 +20,7 @@ test('two different signers must sign the same document after assignment',()=>{
     id,nick:id,moving:false,direction:0,character:index,
   }));
   const [owner,b,c] = players;
-  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>.13);
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>.09);
   const view = (id:string) => economy.view(id,[],0,false,()=>true)!;
   expect(view(owner.id).missions.active.some(mission=>mission.kind==='assinaturas')).toBe(true);
 
@@ -58,7 +58,7 @@ test('a real pizza purchase and consumption produce different agenda results',()
   expect(view().missions.completed).toEqual([]);
   const [pizza] = game.view(player,world).inventory;
   game.act(player,{kind:'use',item:pizza.id},world);
-  expect(view()).toMatchObject({wallet:6,walletIncome:0,missions:{completed:[{kind:'pizza'}]}});
+  expect(view()).toMatchObject({wallet:6,walletIncome:0,progression:{xp:20},missions:{completed:[{kind:'pizza'}]}});
   expect(view().missions.active).toHaveLength(3);
 });
 

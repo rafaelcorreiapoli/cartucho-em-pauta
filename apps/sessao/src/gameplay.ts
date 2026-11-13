@@ -21,6 +21,7 @@ export const objects = {
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão em duas unidades enquanto equipado.'},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
+  runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
   baton:{name:'Porrete',portrait:'weapon-baton.webp',description:'Golpeia um jogador próximo.'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'; amount?:number; destructible?:boolean; price?:number; attack?:number}>;
 

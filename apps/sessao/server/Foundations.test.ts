@@ -430,3 +430,51 @@ for (const [kind,hp,stamina] of consumableCases) {
     }
   });
 }
+
+test('upgraded stats change baton damage and recovery, and stamina requires equipped shoes to sprint',()=>{
+  const {alice,bob,game,world,openShop,events} = setup();
+  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  const weapon = game.view(alice,world).inventory[0];
+  game.act(alice,{kind:'equip',item:weapon.id},world);
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+
+  game.applyAttribute(bob,'hp');
+  expect(game.view(bob,world).vitality).toMatchObject({hp:84,max:110});
+  game.applyAttribute(alice,'attack');
+  world.now += weapons.baton.cooldown;
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(events.at(-1)?.damage).toBe(27);
+
+  game.applyAttribute(bob,'defense');
+  world.now += weapons.baton.cooldown;
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(events.at(-1)?.damage).toBe(26);
+
+  const runner:Player = alice;
+  runner.stamina = 90;
+  game.applyAttribute(runner,'stamina');
+  expect(runner).toMatchObject({stamina:100,staminaMax:110});
+  const move = {player:runner,route:[],ack:0};
+  applyInput(move,{seq:1,motion:{x:1,y:0},sprint:true});
+  expect(runner.sprinting).toBeUndefined();
+  for (let i=0;i<30;i++) restMovement(runner);
+  expect(runner.stamina).toBe(110);
+  game.act(runner,{kind:'shop-buy',target:'runningShoes',token:openShop(runner)},world);
+  const shoes = game.view(runner,world).inventory.find(item=>item.kind==='runningShoes')!;
+  expect(game.act(runner,{kind:'equip',item:shoes.id},world)).toBe('Equipado.');
+  applyInput(move,{seq:2,motion:{x:1,y:0},sprint:true});
+  expect(runner).toMatchObject({sprinting:true,stamina:108.75});
+  expect(game.act(runner,{kind:'unequip',item:shoes.id},world)).toBe('Guardado no inventário.');
+  applyInput(move,{seq:3,motion:{x:1,y:0},sprint:true});
+  expect(runner.sprinting).toBeUndefined();
+  game.reset(world.now,()=>0,[runner,bob],()=>0);
+  expect(runner).toMatchObject({stamina:100});
+  expect(game.view(bob,world).vitality).toMatchObject({hp:100,max:100});
+});

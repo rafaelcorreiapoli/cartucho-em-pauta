@@ -166,7 +166,7 @@ test('clients share movement and voice, then receive private roles and payments'
     const balanceBefore = thirdView!.politics!.wallet;
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
-      .reduce((sum,mission)=>sum+missionReward(mission.kind),0);
+      .reduce((sum,mission)=>sum+(missionReward(mission.kind).cash ?? 0),0);
     second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
     await until(() => secondView?.politics?.wallet===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
     expect(firstView!.politics?.wallet).toBe(8);
@@ -256,6 +256,18 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const match = Reflect.get(room,'match');
     carrier.send('start-match');
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
+    const progression = () => views.get(passenger.sessionId)?.politics?.progression;
+    const economy = Reflect.get(match,'economy');
+    const account = Reflect.get(economy,'accounts').get(passenger.sessionId);
+    account.progression.earn(430);
+    await wait(()=>progression()?.level===4 && progression()?.available===3);
+    const request = {attribute:'stamina',revision:0,matchId:progression()!.matchId};
+    passenger.send('allocate-attribute',request);
+    passenger.send('allocate-attribute',request);
+    await wait(()=>progression()?.revision===1);
+    expect(progression()).toMatchObject({available:2,invested:{stamina:1}});
+    expect(snapshots.get(passenger.sessionId)?.staminaMax).toBe(110);
+    expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
     passenger.send('room-activity','coffee');
@@ -282,6 +294,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:5});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
+    const progressionBeforeReconnect = progression();
     const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
     expect(agendaBeforeReconnect?.active).toHaveLength(3);
     let reconnected = false;
@@ -293,6 +306,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
+    expect(progression()).toEqual(progressionBeforeReconnect);
     const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
     expect(passengerOffice).toBeDefined();
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:6});

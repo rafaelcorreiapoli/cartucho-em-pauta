@@ -1,3 +1,5 @@
+import type { Progression } from './progression';
+
 export const CABINET_GRANT = 4;
 export const CAMPAIGN_COST = 2;
 export const HEARING_POPULARITY = 55;
@@ -26,6 +28,7 @@ export const agendas = {
   visitaArquivo:'Visite o Arquivo',
   pizza:'Coma uma pizza',
   lagosta:'Coma uma lagosta',
+  comprarLagosta:'Compre uma lagosta',
   bombom:'Coma uma caixa de bombom',
   jogar:'Jogue no celular por 30 segundos',
   jogarOculto:'Jogue 30 segundos no celular sem ser visto',
@@ -59,6 +62,7 @@ export const agendas = {
   pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
 
   gabinete: 'Instale um móvel de luxo no seu gabinete.',
+  televisao:'Instale uma TV no seu gabinete',
   fortuna: 'Aumente sua carteira',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
@@ -73,9 +77,22 @@ export const agendas = {
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
 } as const;
 export type Agenda = keyof typeof agendas;
-const caprichos = new Set<Agenda>(['cafe','pizza','lagosta','bombom','jogar','jogarOculto','selfieSolo','retratoGabinete','poltrona','gabinete','ostentacao','visitaGabinete','passeio','pausaCafe','joguinho','selfie','presidenteFoto','retrato','autorretrato','reforma','reserva','mandaVip']);
-export const missionCategory = (kind:Agenda) => caprichos.has(kind) ? 'Capricho' : 'Missão';
-export const missionReward = (kind:Agenda) => caprichos.has(kind) ? 0 : AGENDA_REWARD;
+export type MissionReward = {xp:number; cash?:number; popularity?:number};
+
+const xpOnly:Partial<Record<Agenda,number>> = {
+  cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
+  selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
+  visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,
+  retrato:25,autorretrato:25,reforma:35,reserva:25,mandaVip:30,
+};
+const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
+  embolso:{xp:40,cash:AGENDA_REWARD},
+  assinaturas:{xp:60,cash:AGENDA_REWARD},
+  protocolo:{xp:50,popularity:5},
+  pagamento:{xp:30,cash:AGENDA_REWARD},
+};
+export const missionReward = (kind:Agenda):MissionReward =>
+  rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
 export const timedAgendas = new Set<Agenda>(['jogar','jogarOculto','pausaCafe']);
 export type Mission = {id:number; kind:Agenda; current:number; target:number};
 export const missionTitle = ({kind,target}:Mission) => kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
@@ -86,6 +103,7 @@ export type Offer = {id:number; evidence:number; from:string; to:string; price:n
 export type Contact = {id:string; name:string};
 export type DirectoryContact = Contact & {character?:number};
 export type PoliticsView = {
+  progression:Progression;
   wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;

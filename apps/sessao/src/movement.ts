@@ -1,3 +1,4 @@
+import { baseStamina } from './progression';
 import { doorDestination } from './interactions';
 import { blockedBy, canStand, canStandInPlenary, HEIGHT, PLENARY_DOORS, WIDTH, move, type Motion, type MovementModifier, type Player } from './map';
 import { findRoute, followRoute } from './navigation';
@@ -5,15 +6,16 @@ import { findRoute, followRoute } from './navigation';
 export const STEP_MS = 50;
 export const STEP_SECONDS = STEP_MS / 1000;
 export const MAX_QUEUED_INPUTS = 8;
-export const MAX_STAMINA = 100;
+export const MAX_STAMINA = baseStamina;
 const staminaDrain = 25*STEP_SECONDS;
 const staminaRecovery = 20*STEP_SECONDS;
 export type MovementInput = { seq: number; plenary?:boolean; sprint?:true; motion?: Motion; destination?: Motion; door?:number };
 export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean };
 
 function recoverStamina(player:Player) {
-  if (player.stamina!==undefined && player.stamina<MAX_STAMINA) {
-    player.stamina = Math.min(MAX_STAMINA,player.stamina+staminaRecovery*(player.staminaRegenModifier?.factor ?? 1));
+  const max = player.staminaMax ?? MAX_STAMINA;
+  if (player.stamina!==undefined && player.stamina<max) {
+    player.stamina = Math.min(max,player.stamina+staminaRecovery*(player.staminaRegenModifier?.factor ?? 1));
   }
 }
 
@@ -43,8 +45,8 @@ export function applyInput(state: ControlState, input: MovementInput) {
     return;
   }
   const {player} = state;
-  const stamina = player.stamina ?? MAX_STAMINA;
-  const wantsSprint = input.sprint && !player.carrying;
+  const stamina = player.stamina ?? player.staminaMax ?? MAX_STAMINA;
+  const wantsSprint = input.sprint && player.canSprint && !player.carrying;
   player.sprinting = wantsSprint && stamina>=staminaDrain ? true : undefined;
   const destination = input.door===undefined ? input.destination : doorDestination(state.player,input.door,!!state.plenary);
   if (destination) state.route = findRoute(state.player,destination,state.plenary);

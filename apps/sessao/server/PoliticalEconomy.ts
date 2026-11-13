@@ -1,3 +1,5 @@
+import { CharacterProgression } from './CharacterProgression';
+import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
@@ -5,7 +7,7 @@ import type { Vote } from '../src/plenary';
 import { PersonalAgenda } from './PersonalAgenda';
 
 type Account = {
-  wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda;
+  wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
   selfieBonus:boolean; known:Set<number>; suspended:boolean;
 };
@@ -18,9 +20,11 @@ export class PoliticalEconomy {
   private published = new Set<number>();
   private offers = new Map<number,Offer>();
   private serial = 0;
+  private matchId = 0;
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number) {
+    this.matchId++;
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
     this.accounts.clear();
     this.records.clear();
@@ -30,16 +34,35 @@ export class PoliticalEconomy {
     this.scandalPizzas.clear();
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40};
-      const agenda = new PersonalAgenda(metrics,contacts.length,random,amount=>{
+      const progression = new CharacterProgression(this.matchId);
+      const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
-        if (account) this.credit(account,amount);
+        if (!account) return;
+        const before = progression.view();
+        progression.earn(reward.xp);
+        const after = progression.view();
+        console.info(JSON.stringify({event:'mission-xp',playerId:contact.id,matchId:after.matchId,
+          missions:completed.map(({id,kind})=>({id,kind})),amount:reward.xp,xp:after.xp}));
+        if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:contact.id,
+          matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
+        if (reward.cash) this.credit(account,reward.cash);
+        if (reward.popularity) account.popularity = cap(account.popularity+reward.popularity);
       });
       this.accounts.set(contact.id,{
-        ...metrics,walletIncome:0,agenda,selfieBonus:false,
+        ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
         known:new Set(),suspended:false,
       });
     }
+  }
+
+  allocate(id:string, request:AttributeRequest) {
+    const progression = this.accounts.get(id)?.progression;
+    if (!progression?.allocate(request)) return false;
+    const {attribute,matchId} = request;
+    console.info(JSON.stringify({event:'attribute-allocated',playerId:id,matchId,attribute,
+      increment:attributeUpgrades[attribute].bonus,pointsInvested:progression.view().invested[attribute]}));
+    return true;
   }
 
   wallet(id:string) { return this.accounts.get(id)?.wallet ?? 0; }
@@ -267,6 +290,7 @@ export class PoliticalEconomy {
     return {
       wallet,walletIncome,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
       missions:account.agenda.view(account),
+      progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
       directory:[...this.contacts.values()].map(contact => ({

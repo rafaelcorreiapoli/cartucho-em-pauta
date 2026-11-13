@@ -1,3 +1,4 @@
+import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money } from '../src/politics';
@@ -71,6 +72,9 @@ export class Gameplay {
     this.modulator.reset();
     for (const player of players) {
       player.pocketing = undefined;
+      player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
+      player.staminaMax = player.canSprint = player.sprinting = undefined;
+      player.stamina = MAX_STAMINA;
       player.speedModifier = undefined;
       player.staminaRegenModifier = undefined;
     }
@@ -610,7 +614,8 @@ export class Gameplay {
 
   private consumeFood(player:Player, effect:FoodEffect) {
     if (effect.hp) this.combat.heal(player,effect.hp);
-    if (effect.stamina) player.stamina = Math.min(MAX_STAMINA,(player.stamina ?? MAX_STAMINA)+effect.stamina);
+    const max = player.staminaMax ?? MAX_STAMINA;
+    if (effect.stamina) player.stamina = Math.min(max,(player.stamina ?? max)+effect.stamina);
     if (effect.speed) player.speedModifier = {factor:effect.speed.factor,remainingMs:effect.speed.durationMs};
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
@@ -639,6 +644,21 @@ export class Gameplay {
     }) ?? confirmation;
   }
 
+  applyAttribute(player:Player, attribute:Attribute) {
+    const {bonus} = attributeUpgrades[attribute];
+    switch (attribute) {
+      case 'hp': this.combat.increaseMaxHp(player,bonus); break;
+      case 'stamina': {
+        const max = player.staminaMax ?? MAX_STAMINA;
+        player.staminaMax = max+bonus;
+        player.stamina = Math.min(player.staminaMax,(player.stamina ?? max)+bonus);
+        break;
+      }
+      case 'attack': player.attackBonus = (player.attackBonus ?? 0)+bonus; break;
+      case 'defense': player.defenseBonus = (player.defenseBonus ?? 0)+bonus; break;
+    }
+  }
+
   private changeGear(player:Player, itemId:number|undefined, equip:boolean, world:GameplayWorld) {
     const {id} = player;
     const item = itemId===undefined ? undefined : this.items.get(itemId);
@@ -648,6 +668,7 @@ export class Gameplay {
       const slot = equipment[item.data.kind].slot;
       if (this.equipped(id).some(({data})=>isGear(data.kind) && equipment[data.kind].slot===slot)) return 'Este espaço já está ocupado.';
       this.move(item,{equipped:id});
+      if (item.data.kind==='runningShoes') player.canSprint = true;
       this.event(world,player,'equipped',item.data);
       return 'Equipado.';
     }
@@ -655,6 +676,7 @@ export class Gameplay {
     if (!this.available(id)) return 'Inventário cheio.';
     this.move(item,{holder:id});
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
+    if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
     this.event(world,player,'unequipped',item.data);
     return 'Guardado no inventário.';
   }

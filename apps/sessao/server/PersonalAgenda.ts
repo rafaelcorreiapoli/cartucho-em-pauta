@@ -1,6 +1,6 @@
 import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
 import type { GameplayEvent } from '../src/gameplay';
-import { agendas, AGENDA_TRANSFER_MIN, missionCategory, missionReward, type Agenda, type Mission, type PoliticsView } from '../src/politics';
+import { agendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
@@ -15,6 +15,8 @@ const activityMissions = {
   visitaArquivo:(event:GameplayEvent) => event.type==='room-entered' && event.place==='Arquivo',
   pizza:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza',
   lagosta:(event:GameplayEvent) => event.type==='used' && event.kind==='lobster',
+  comprarLagosta:(event:GameplayEvent) => event.type==='purchased' && event.kind==='lobster',
+  televisao:(event:GameplayEvent) => event.type==='installed' && event.kind==='officeTv',
   bombom:(event:GameplayEvent) => event.type==='used' && event.kind==='chocolates',
   selfieSolo:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie,
   retratoGabinete:(event:GameplayEvent) => event.type==='installed' && event.kind==='portrait' && privateOffices.some(office=>office.id===event.place),
@@ -33,7 +35,8 @@ const missionTargets:Partial<Record<Agenda,number>> = {
   entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:5,
 };
-const initialCaprichos = ['pizza','jogar','selfieSolo','passeio'] as const;
+const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
+const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -51,15 +54,15 @@ export class PersonalAgenda {
   private ballotsLeft = 3;
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(amount:number)=>void) {
+    private reward:(reward:MissionReward, completed:Mission[])=>void) {
     const deck = Object.keys(agendas) as Agenda[];
-    const missions = deck.filter(kind=>missionCategory(kind)==='Missão' && this.eligible(kind,metrics));
+    const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
-    const capricho = initialCaprichos[Math.floor(random()*initialCaprichos.length)];
+    const activity = startingActivities[Math.floor(random()*startingActivities.length)];
     const offset = Math.floor(random()*deck.length);
     const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
-    this.missionDeck = ['cafe',mission,capricho,...ordered.filter(kind=>kind!=='cafe' && kind!==mission && kind!==capricho)];
-    this.fillMissions(metrics);
+    this.missionDeck = ['cafe',mission,activity,...ordered.filter(kind=>kind!=='cafe' && kind!==mission && kind!==activity)];
+    this.fillMissions(metrics,true);
   }
 
   recordPayment(metrics:AgendaMetrics, from:string) {
@@ -149,12 +152,15 @@ export class PersonalAgenda {
       (kind!=='ostentacao' || this.furnishingPurchases<=2);
   }
 
-  private fillMissions(metrics:AgendaMetrics) {
+  private fillMissions(metrics:AgendaMetrics, initial=false) {
     while (this.missions.length<activeMissionCount) {
       const recent = this.completed.at(-1)?.kind;
       const canDraw = (kind:Agenda) => this.eligible(kind,metrics) && !this.hasActive(kind);
+      const foodActive = this.missions.some(mission=>foodMissions.has(mission.kind));
+      const diverse = initial ? -1 : this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind) &&
+        (!foodMissions.has(kind) || !foodActive && (!recent || !foodMissions.has(recent))));
       const fresh = this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind));
-      const index = fresh>=0 ? fresh : this.missionDeck.findIndex(canDraw);
+      const index = diverse>=0 ? diverse : fresh>=0 ? fresh : this.missionDeck.findIndex(canDraw);
       if (index<0) return;
       const [kind] = this.missionDeck.splice(index,1);
       this.missionDeck.push(kind);
@@ -176,19 +182,24 @@ export class PersonalAgenda {
   }
 
   progress(metrics:AgendaMetrics, gains:Partial<Record<Agenda,number>> = {}) {
-    let reward = 0;
+    const reward = {xp:0,cash:0,popularity:0};
+    const completed:Mission[] = [];
     for (const mission of this.missions) {
       const current = this.missionProgress(metrics,mission)+(gains[mission.kind] ?? 0);
       mission.current = Math.min(current,mission.target);
       if (current>=mission.target) {
         this.factsByMission.delete(mission.id);
-        this.completed.push({...mission});
-        reward += missionReward(mission.kind);
+        completed.push({...mission});
+        const earned = missionReward(mission.kind);
+        reward.xp += earned.xp;
+        reward.cash += earned.cash ?? 0;
+        reward.popularity += earned.popularity ?? 0;
       }
     }
     this.missions = this.missions.filter(mission => mission.current<mission.target);
-    if (reward) {
-      this.reward(reward);
+    if (reward.xp) {
+      this.completed.push(...completed);
+      this.reward(reward,completed);
       this.progress(metrics);
     }
     this.fillMissions(metrics);

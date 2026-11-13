@@ -1,0 +1,102 @@
+#agenda-xp {
+  position: relative;
+  margin-top: 11px;
+  padding-top: 8px;
+  border-top: 1px solid #adc4ad38;
+  color: #f8db8c;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+#agenda-xp > div:first-child { display: flex; justify-content: space-between; gap: .3rem; }
+.xp-track { margin-top: 5px; height: 5px; border-radius: 8px; background: #ffffff21; overflow: hidden; }
+#agenda-xp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg,#dcaa47,#ffe8a2);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 230ms ease-out;
+}
+#agenda-reward {
+  position: absolute;
+  inset: calc(100% + 8px) 0 auto auto;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #183126;
+  color: #ffe3a0;
+  text-align: right;
+}
+#agenda-reward:empty { display: none; }
+.progression-link {
+  appearance: none; border: 0; padding: 3px 0; background: none;
+  color: #f3d784; font: 680 11px system-ui,sans-serif; cursor: pointer;
+}
+#attribute-points-badge { padding: 1px 4px; border-radius: 4px; background: #f3d784; color: #192419; }
+.progression-dialog {
+  position: fixed;
+  box-sizing: border-box;
+  width: min(460px,calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  border: 1px solid #b6a66d;
+  border-radius: 16px;
+  padding: clamp(14px,4vw,28px);
+  background: #173228;
+  color: #f4ecda;
+  box-shadow: 0 18px 75px #0009;
+}
+.progression-dialog::backdrop { background: #060f0ac4; }
+.progression-dialog h2,.progression-dialog p { margin: 0; }
+#level-up-dialog {
+  --party-display: ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  isolation: isolate;
+  overflow: hidden;
+  text-align: center;
+  border-color: #f6cf72;
+  background: radial-gradient(ellipse at 50% 28%,#365943,#142a21 70%);
+  box-shadow: 0 18px 75px #000a,0 0 42px #efbd5152;
+}
+#level-up-dialog header,.progression-buttons { position: relative; z-index: 1; }
+#level-up-title { color: #ffdb85; font: 850 clamp(22px,5.5vw,38px)/1.1 var(--party-display,system-ui,sans-serif); }
+.level-up-number { display: grid; gap: 0; margin: 12px 0 8px; }
+.level-up-number span { letter-spacing: .2em; font-size: 12px; font-weight: 750; }
+.level-up-number strong {
+  color: #ffebac;
+  text-shadow: 0 2px 0 #725422,0 0 30px #f3bb59b3;
+  font: 850 clamp(46px,11vw,86px)/1 var(--party-display,system-ui,sans-serif);
+}
+#level-up-points { color: #fbe7a8; font-weight: 750; }
+.progression-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.level-up-rays {
+  position: absolute; inset: -65%; z-index: -1; opacity: .5;
+  background: repeating-conic-gradient(from 10deg at 50% 49%,#ffe9a22c 0 7deg,transparent 7deg 24deg);
+  mask-image: radial-gradient(ellipse,#000 0%,transparent 56%);
+}
+.level-up-sparks { position: absolute; inset: 0; pointer-events: none; }
+.level-up-sparks i {
+  position: absolute; left: 50%; top: 42%; width: 5px; height: 5px;
+  border-radius: 1px; background: #ffd568; opacity: 0;
+}
+#attributes-dialog header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+#attributes-xp { margin-top: 4px; font-size: 12px; color: #bfd4c2; }
+#attributes-available { margin: 14px 0; color: #f9d982; font-weight: 750; }
+#attribute-list { display: grid; gap: 7px; }
+#attribute-list section { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; border-radius: 7px; padding: 5px 0; }
+#attribute-list small { display: block; color: #c4d4c5; font-size: 11px; }
+#attribute-list section > span { font-size: 13px; font-variant-numeric: tabular-nums; }
+#attribute-list button { min-width: 42px; }
+@media (prefers-reduced-motion: no-preference) {
+  #level-up-dialog[open] { animation: level-up-enter 380ms cubic-bezier(.18,.76,.27,1.2) both; }
+  #level-up-dialog[open] .level-up-number { animation: level-up-number 440ms 100ms ease-out both; }
+  #level-up-dialog[open] .level-up-rays { animation: level-up-rays 900ms ease-out both; }
+  #level-up-dialog[open] .level-up-sparks i { animation: level-up-spark 720ms var(--delay) ease-out both; }
+  @keyframes level-up-enter { from { opacity: 0; transform: translateY(12px) scale(.84); } }
+  @keyframes level-up-number { from { opacity: 0; transform: scale(.65); } 64% { transform: scale(1.12); } }
+  @keyframes level-up-rays { from { opacity: .15; transform: rotate(-12deg); } }
+  @keyframes level-up-spark {
+    0% { opacity: 0; transform: rotate(var(--angle)) translateX(10px); }
+    24% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--angle)) translateX(var(--distance)) rotate(100deg); }
+  }
+}
+@media (prefers-reduced-motion: reduce) { #agenda-xp-fill { transition: none; } }

@@ -59,7 +59,7 @@ test('teleport reconciliation drops pending moves from the previous movement mod
 
 test('sprinting spends stamina in the shared movement step and falls back to walking when empty', () => {
   const state:ControlState = {
-    player:{id:'p',nick:'P',character:0,x:140,y:146,direction:0,moving:false,speed:80,stamina:1.25},
+    player:{id:'p',nick:'P',character:0,x:140,y:146,direction:0,moving:false,speed:80,stamina:1.25,canSprint:true},
     route:[],ack:0,
   };
   const motion = {x:1,y:0};

@@ -8,7 +8,7 @@ import { canReachObject, objects, type GameplayAction, type GameplayView } from 
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
-import { missionCategory, missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
+import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -282,7 +282,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         const progress = mission.kind==='fortuna' ? `${money(mission.current)}/${money(mission.target)}` :
           timedAgendas.has(mission.kind) ? `${Math.floor(mission.current/1000)}/${mission.target/1000} s` :
           mission.target>1 ? `${mission.current}/${mission.target}` : '';
-        detail.textContent = [missionCategory(mission.kind),progress].filter(Boolean).join(' · ');
+        detail.textContent = progress;
+        detail.hidden = !progress;
       }
       return row;
     }
