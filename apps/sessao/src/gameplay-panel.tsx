@@ -1,3 +1,4 @@
+import { PhoneCamera } from './ui/phone-camera';
 import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
@@ -14,7 +15,7 @@ import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
-import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
+import { button, contactFace, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
@@ -59,6 +60,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const callHost = document.createElement('div');
   callHost.className = 'phone-app-content';
   const callRoot = createRoot(callHost);
+  const cameraHost = document.createElement('div');
+  cameraHost.className = 'phone-app-content';
+  const cameraRoot = createRoot(cameraHost);
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -244,7 +248,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
-    photos.stopPreview();
+    if (!phone || app!=='Câmera') cameraRoot.render(null);
     const cards:HTMLElement[] = [];
     if (stash) {
       flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
@@ -406,7 +410,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.game && snakeBoard) paintSnake(snakeBoard,state.game);
         cards.push(snakeHost);
       }
-      if (app==='Câmera') photos.renderCamera(cards,phase,openPersonalAlbum);
+      if (app==='Câmera') {
+        flushSync(()=>cameraRoot.render(<PhoneCamera count={photos.count} available={phase==='negotiation'}
+          preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>));
+        cards.push(cameraHost);
+      }
       if (app==='Álbum') photos.renderAlbum(cards,contacts,directory,
         state.locations.includes('press') && phase==='negotiation');
     }
@@ -518,7 +526,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
-    photos.stopPreview();
+    cameraRoot.render(null);
+    renderKey = '';
     selection = undefined;
     assigningSlot = undefined;
     highlightSlot();
@@ -655,6 +664,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       delete element('object-request').dataset.request;
       navigationRoot.unmount();
       callRoot.unmount();
+      cameraRoot.unmount();
       snakeRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();

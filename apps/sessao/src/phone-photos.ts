@@ -1,7 +1,6 @@
-import { button, contactFace, glyph, node } from './gameplay-ui';
+import { button, contactFace, node } from './gameplay-ui';
 import { objects, type GameplayAction } from './gameplay';
-import { emptyPhotoAccess, PHOTO_LIMIT, type PhotoAccessView, type Photo, type PhotoScene } from './photography';
-import type { Phase } from './plenary';
+import { emptyPhotoAccess, type PhotoAccessView, type Photo, type PhotoScene } from './photography';
 import type { Contact, DirectoryContact } from './politics';
 
 export function createPhonePhotos(
@@ -68,26 +67,14 @@ export function createPhonePhotos(
       photoId = photoRecipient = undefined;
     },
     clearRecipient() { photoRecipient = undefined; },
-    stopPreview() { cameraPreview = undefined; },
     closePresentation() { if (showing) closePresentation(); },
     albumKey(contacts:Contact[], press:boolean) {
       return [albumTab,photos.album.map(({photo})=>photo.id),photos.publicPhotos.map(photo=>photo.id),
         showing && photos.shown,photoId,photoRecipient,contacts,press];
     },
-    renderCamera(cards:HTMLElement[], phase:Phase, openAlbum:()=>void) {
-      cameraPreview = node('canvas');
-      cameraPreview.className = 'camera-preview';
-      cameraPreview.setAttribute('aria-label','Enquadramento da câmera');
-      drawPhoto(cameraPreview);
-      cards.push(cameraPreview);
-      const capture = (label:string,kind:'photo'|'selfie') => {
-        const shutter = button(label,()=>send({kind}));
-        shutter.disabled = phase!=='negotiation' || photos.album.length>=PHOTO_LIMIT;
-        shutter.prepend(glyph('camera'));
-        return shutter;
-      };
-      cards.push(capture('Tirar foto','photo'),capture('Selfie','selfie'));
-      cards.push(button(`Abrir álbum · ${photos.album.length}/${PHOTO_LIMIT}`,openAlbum));
+    setPreview(canvas:HTMLCanvasElement|null) {
+      cameraPreview = canvas ?? undefined;
+      if (canvas) drawPhoto(canvas);
     },
     renderAlbum(cards:HTMLElement[], contacts:Contact[], directory:DirectoryContact[], publishable:boolean) {
       const entry = albumTab==='personal' ? photos.album.find(entry=>entry.photo.id===photoId) : undefined;

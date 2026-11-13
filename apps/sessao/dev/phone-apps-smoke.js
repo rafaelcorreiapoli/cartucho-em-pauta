@@ -20,4 +20,15 @@ async page => {
   await dialog.getByRole('button',{name:'Telefone',pressed:true}).waitFor();
   await page.keyboard.press('2');
   await dialog.getByRole('button',{name:'Snake'}).waitFor();
+  await page.keyboard.press('3');
+  const preview = dialog.getByRole('img',{name:'Enquadramento da câmera'});
+  await preview.waitFor();
+  await page.waitForFunction(()=>document.querySelector('.camera-preview').getContext('2d').getImageData(0,0,1,1).data[3]>0);
+  await page.keyboard.press('6');
+  await dialog.getByRole('button',{name:/Abrir álbum · 1\//}).waitFor();
+  await page.keyboard.press('7');
+  await preview.waitFor({state:'detached'});
+  const photo = dialog.getByRole('button',{name:/Abrir fotografia/});
+  await photo.click();
+  await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();
 }
