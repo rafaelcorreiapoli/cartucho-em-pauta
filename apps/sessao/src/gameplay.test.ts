@@ -33,6 +33,7 @@ test('treasury prompts use the carried amount and identity and disappear when re
 });
 
 test('the inventory offers the healing shortcut for the selected kit',()=>{
+  expect(objects.firstAidKit.portrait).toBe('retrato-primeiros-socorros.webp');
   const control = consumableAction({id:17,kind:'firstAidKit'});
   expect(control).toEqual({label:'Curar',key:'1',action:{kind:'use',item:17}});
   expect(readGameplayAction(control?.action)).toMatchObject({kind:'use',item:17});
