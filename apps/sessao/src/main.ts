@@ -22,6 +22,7 @@ import { createElectionPanel } from './election-panel';
 import { GameAudio } from './game-audio';
 import { installHudHelp } from './hud-help';
 import { createGame } from './game';
+import { createPoliticsSender } from './politics';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
@@ -273,7 +274,7 @@ async function connect(join: () => Promise<Room>) {
       else gameplay.feedback(message);
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
-    const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
+    const political = createPoliticsPanel(joined.sessionId,createPoliticsSender(command => joined.send('politics',command)),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
     const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify,id=>joined.send('mail-examine',id),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>joined.send('complaint-submit',{id,photo}));

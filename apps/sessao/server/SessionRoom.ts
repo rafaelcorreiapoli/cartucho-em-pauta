@@ -16,7 +16,7 @@ import { Room, ServerError, type Client } from 'colyseus';
 import { isolationRoom, localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
-import { readPoliticsAction } from '../src/politics';
+import { readPoliticsAction, readTransferToken } from '../src/politics';
 import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/nick';
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -35,6 +35,7 @@ export class SessionRoom extends Room {
 
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
+  private lastTransferToken = new Map<string,number>();
   private lastFieldToken = new Map<string,number>();
   private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
@@ -280,7 +281,14 @@ export class SessionRoom extends Room {
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || player.knockedOut || player.carrying) return;
+      if (!action || !player) return;
+      if (action.kind==='transfer') {
+        const token = readTransferToken(raw);
+        if (token===undefined || token<=(this.lastTransferToken.get(player.id) ?? 0)) return;
+        // A replay must stay inert even if the first attempt failed a proximity or balance check.
+        this.lastTransferToken.set(player.id,token);
+      }
+      if (player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
       this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
       this.resetFinishedMatch(now);
@@ -454,6 +462,7 @@ export class SessionRoom extends Room {
     this.match.leave(client.sessionId,this.clock.currentTime);
     this.resetFinishedMatch(this.clock.currentTime);
     this.players.delete(client.sessionId);
+    this.lastTransferToken.delete(client.sessionId);
     this.lastFieldToken.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }

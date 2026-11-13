@@ -131,6 +131,21 @@ export type PoliticsAction =
   | {kind:'accept' | 'cancel'; offer:number}
   | {kind:'hearing'; target:string};
 
+export type PoliticsCommand = PoliticsAction & {token?:number};
+
+export function createPoliticsSender(send:(command:PoliticsCommand)=>void) {
+  let transferToken = 0;
+  return (action:PoliticsAction) => {
+    send(action.kind==='transfer' ? {...action,token:++transferToken} : action);
+  };
+}
+
+export function readTransferToken(data:unknown) {
+  if (!data || typeof data!=='object' || !('token' in data)) return;
+  const {token} = data;
+  if (typeof token==='number' && Number.isSafeInteger(token) && token>0) return token;
+}
+
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export function readPoliticsAction(data:unknown): PoliticsAction | undefined {

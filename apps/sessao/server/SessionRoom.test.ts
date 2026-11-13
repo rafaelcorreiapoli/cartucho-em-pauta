@@ -170,7 +170,10 @@ test('clients share movement and voice, then receive private roles and payments'
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
       .reduce((sum,mission)=>sum+(missionReward(mission.kind).cash ?? 0),0);
-    second.send('politics',{kind:'transfer',to:third.sessionId,amount:2,clandestine:true});
+    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:true,token:1};
+    second.send('politics',{...transfer,token:undefined});
+    second.send('politics',transfer);
+    second.send('politics',{...transfer,amount:1});
     await until(() => secondView?.politics?.wallet===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
     expect(firstView!.politics?.wallet).toBe(8);
     expect(firstView!.politics?.evidence).toEqual([]);
@@ -181,6 +184,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('election',{kind:'invest',amount:2});
     await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
+    expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.invested).toBe(2);
     expect(firstView!.election?.personal?.invested).toBe(0);
     await first.leave();
