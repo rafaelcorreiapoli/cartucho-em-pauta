@@ -10,7 +10,7 @@ for (const [name,skin] of [
   ['José Sarney','sarney'],
   ['Alexandre Frota','alexandre-frota'],
   ['Sergio Moro','sergio-moro'],
-  ['Nestor Cerveró','nestor-cervero'],
+  ['Inês Brasil','ines-brasil'],
 ] as const) {
   const character = NAMES.indexOf(name);
 
@@ -28,3 +28,15 @@ for (const [name,skin] of [
     expect(downedArt(character,2)).toMatchObject({key:`${skin}-fall`,frame:11,flipX:false});
   });
 }
+
+test('the replacement skins ship all three combat sheets at the Phaser atlas dimensions', async ()=>{
+  for (const skin of ['alexandre-frota','ines-brasil']) {
+    for (const action of ['attack','hit','fall']) {
+      const asset = Bun.file(new URL(`../public/assets/${skin}-${action}.webp`,import.meta.url));
+      expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
+      const header = new DataView(await asset.slice(21,25).arrayBuffer());
+      const dimensions = header.getUint32(0,true);
+      expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,384]);
+    }
+  }
+});

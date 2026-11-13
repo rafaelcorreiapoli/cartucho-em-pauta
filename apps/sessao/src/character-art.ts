@@ -15,7 +15,7 @@ const combatCharacters:Record<(typeof NAMES)[number],string> = {
   'José Sarney':'sarney',
   'Alexandre Frota':'alexandre-frota',
   'Sergio Moro':'sergio-moro',
-  'Nestor Cerveró':'nestor-cervero',
+  'Inês Brasil':'ines-brasil',
 };
 const combatActions = ['attack','hit','fall'] as const;
 const hitFrameMs = 55;
