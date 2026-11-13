@@ -1,12 +1,13 @@
-import { weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
+import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
 import { canReachObject } from '../src/gameplay';
+import { MAX_STAMINA } from '../src/movement';
 import { aidRadius } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
 const recoveryTime = 8_000;
 const recoveryShield = 4_000;
-type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'hpBonus'|'attackBonus'|'defenseBonus'>;
+type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
 
@@ -90,6 +91,9 @@ export class Combat {
     const state = this.state(attacker);
     if (attacker.knockedOut || attacker.carrying) return 'Ataque indisponível.';
     if (state.attackAt>now) return 'A arma está em recarga.';
+    const stamina = attacker.stamina ?? attacker.staminaMax ?? MAX_STAMINA;
+    if (!canSwingWeapon(stamina,weapon)) return 'Stamina insuficiente para atacar.';
+    attacker.stamina = stamina-weapons[weapon].staminaCost;
     state.attackAt = now+weapons[weapon].cooldown;
     state.pending = true;
     attacker.swing = {weapon,startedAt:now,angle:Combat.facingAngles[attacker.direction ?? 0]};

@@ -307,7 +307,7 @@ export class Gameplay {
         ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
       const last = findRoute({...mapEntrance,barriers},{x,y}).at(-1);
       if (last?.x!==x || last.y!==y) continue;
-      const kind = this.random()<.8 ? 'briefcase' : 'bundle';
+      const kind = 'briefcase';
       this.create(kind,this.groundPlace(kind,{x,y},now));
       console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;

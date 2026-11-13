@@ -539,3 +539,18 @@ test('megaphone reserves one channel, keeps the modulator active and releases on
   expect(game.megaphoneSpeaker()).toBeUndefined();
   expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
 });
+
+test('attacks spend stamina exactly once and insufficient stamina does not start cooldown',()=>{
+  const {alice,game,world,buyGear} = setup();
+  buyGear(alice,'baton');
+  const weapon = game.view(alice,world).inventory[0];
+  game.act(alice,{kind:'equip',item:weapon.id},world);
+  alice.stamina = weapons.baton.staminaCost-1;
+  expect(game.act(alice,{kind:'attack'},world)).toContain('Stamina insuficiente');
+  expect(game.view(alice,world).equipmentCooldowns?.[weapon.id]).toBeUndefined();
+  alice.stamina = weapons.baton.staminaCost;
+  expect(game.act(alice,{kind:'attack'},world)).toBeUndefined();
+  expect(alice.stamina).toBe(0);
+  expect(game.act(alice,{kind:'attack'},world)).toContain('recarga');
+  expect(alice.stamina).toBe(0);
+});

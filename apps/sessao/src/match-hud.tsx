@@ -1,3 +1,4 @@
+import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
@@ -139,12 +140,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
       const active = item.kind==='binoculars' ? state?.binocularSeconds : item.kind==='megaphone' ? state?.megaphoneSeconds : undefined;
       const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const weapon = equippedWeapon([item]);
       const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
-      if (entry.tile.title===label) continue;
+      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : label;
+      if (entry.tile.title===tooltip) continue;
       entry.tile.dataset.active = String(!!active || item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
       entry.timer.hidden = !time;
-      entry.tile.title = label;
+      entry.tile.title = tooltip;
       entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
       if (item.kind==='xray' || item.kind==='megaphone') {
         entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));

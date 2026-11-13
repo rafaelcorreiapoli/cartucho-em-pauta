@@ -8,6 +8,7 @@ export const weapons = {
     impactMs:140,
     hitRadius:2.5,
     cooldown:1_250,
+    staminaCost:10,
     damage:12,
     strengthScale:.28,
   },
@@ -47,4 +48,8 @@ export function weaponImpactSegment(swing:WeaponSwing) {
     handle:{x:handX-offsetX*grip,y:handY-offsetY*grip},
     tip:{x:handX+offsetX*(1-grip),y:handY+offsetY*(1-grip)},
   };
+}
+
+export function canSwingWeapon(stamina:number,weapon:WeaponKind) {
+  return stamina>=weapons[weapon].staminaCost;
 }

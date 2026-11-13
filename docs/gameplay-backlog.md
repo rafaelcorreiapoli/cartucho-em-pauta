@@ -67,7 +67,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | CHAR-06 | Stamina e regeneração | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
 | CHAR-07 | Corrida e consumo de stamina | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
 | CHAR-08 | Corrida condicionada ao Tênis de Corrida da Senhora | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
-| CHAR-09 | Ataques com cooldown e custo de stamina | PARCIAL | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | Combate controla recarga. O gasto de stamina está na corrida; falta custo por golpe. | Baixa |
+| CHAR-09 | Ataques com cooldown e custo de stamina | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | O porrete consome 10 de stamina por golpe. Teste Bun cobre recarga e rejeição sem gasto. Chrome validou o atalho Espaço e o aviso de stamina insuficiente. | — |
 | CHAR-10 | Armas e combate corpo a corpo | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
 | CHAR-11 | Porrete funcional | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
 | CHAR-12 | Nocaute no lugar de eliminação física | IMPLEMENTADO | Combat.ts, Transport.ts, CharacterProgression.ts, Foundations.test.ts, progression-hud.tsx; PR 12, 15 | — | — |
@@ -166,7 +166,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ECO-13 | Embolso exclusivamente no cofre próprio | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 | ECO-14 | Entrega de dinheiro físico à Tesouraria | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 | ECO-15 | Origem narrativa: impostos dos contribuintes | NÃO VERIFICÁVEL | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | A emissão tem regras contábeis e logs. Falta evidência de apresentação sistemática como imposto ao jogador. | — |
-| ECO-16 | Maletas como única emissão monetária recorrente | PARCIAL | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | O spawn recorrente emite maletas e maços. A regra de emissão exclusiva por maleta não está aplicada. | Baixa |
+| ECO-16 | Maletas como única emissão monetária recorrente | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | A geração recorrente cria exclusivamente maletas. Teste Bun cobre geração, visibilidade e custódia. Chrome validou coleta por Objetos próximos e entrada no inventário. | — |
 | ECO-17 | Salários debitados do Orçamento Público | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 | ECO-18 | Pagamento proporcional de salários em caso de insuficiência | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 | ECO-19 | Salários de humanos e NPCs na mesma folha | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |

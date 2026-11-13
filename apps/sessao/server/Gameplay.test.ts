@@ -132,7 +132,7 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   world.now = 4000;
   game.tick(world,true);
   const [item] = game.view(alice,world).nearby;
-  expect(item.kind).toBe('bundle');
+  expect(item.kind).toBe('briefcase');
   world.now = 59000;
   expect(game.act(alice,{kind:'collect',item:item.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
