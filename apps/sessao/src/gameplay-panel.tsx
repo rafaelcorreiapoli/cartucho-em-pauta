@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { officeRules } from './private-offices';
 import { markShortcut } from './action-shortcuts';
@@ -53,6 +54,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
   const slotsRoot = createRoot(slots);
+  const equipmentHost = document.createElement('div');
+  const equipmentRoot = createRoot(equipmentHost);
   const nearbyItems = element('nearby-items');
   const nearbyButton = element<HTMLButtonElement>('nearby-objects');
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
@@ -197,32 +200,22 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     if (equipmentOpen) {
       const equipped = state.equipped ?? [];
-      if (equipped.length) {
-        const list = node('ul');
-        list.className = 'equipment-list';
-        for (const gear of equipped) {
-          const row = node('li');
-          row.append(itemArt(gear.kind),node('strong',itemName(gear)));
-          if (phase==='negotiation' && !state.vitality?.recovery) {
-            row.append(button('Desequipar',()=>send({kind:'unequip',item:gear.id})));
-            if (gear.kind==='voiceModulator' && state.modulator) {
-              const {active,battery,recharge} = state.modulator;
-              const toggle = button(active ? `Desligar · ${battery}s` : recharge ? `Recarga · ${recharge}s` : 'Ligar modulador',
-                ()=>send({kind:'toggle-modulator'}));
-              toggle.disabled = recharge>0;
-              row.append(toggle);
-            }
-          }
-          list.append(row);
-        }
-        cards.push(list);
-      } else {
-        const empty = node('p','Nenhum item equipado.');
-        empty.className = 'equipment-empty';
-        empty.prepend(glyph('inventory'));
-        cards.push(empty);
-      }
+      flushSync(()=>equipmentRoot.render(equipped.length ? <ul className="equipment-list">
+        {equipped.map(gear=><li key={gear.id}>
+          <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[gear.kind].portrait} alt="" draggable={false}/>
+          <strong>{itemName(gear)}</strong>
+          {phase==='negotiation' && !state.vitality?.recovery && <>
+            <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:'unequip',item:gear.id})}>Desequipar</button>
+            {gear.kind==='voiceModulator' && state.modulator &&
+              <button type="button" className="hud-button hud-button--secondary" disabled={state.modulator.recharge>0}
+                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? `Desligar · ${state.modulator.battery}s` :
+                  state.modulator.recharge ? `Recarga · ${state.modulator.recharge}s` : 'Ligar modulador'}</button>}
+          </>}
+        </li>)}
+      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>));
+      cards.push(equipmentHost);
     }
+
     if (item) {
       const card = objectCard(item);
       const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
@@ -551,6 +544,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       navigation.replaceChildren();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
+      equipmentRoot.unmount();
       nearbyItems.replaceChildren();
       setNearbyExpanded(false);
     },
