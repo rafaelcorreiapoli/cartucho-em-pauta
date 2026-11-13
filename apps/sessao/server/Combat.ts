@@ -1,9 +1,8 @@
 import { equipment } from '../src/equipment';
 import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
-import { canReachObject } from '../src/gameplay';
 import { MAX_STAMINA } from '../src/movement';
-import { aidRadius, recoveryRules } from '../src/medical';
+import { canReachDownedPlayer, recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
 type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
@@ -140,7 +139,7 @@ export class Combat {
   }
 
   aid(actor:Combatant, target:Combatant|undefined, now:number) {
-    if (!target || target===actor || !canReachObject(actor,target,{radius:aidRadius,clearFloor:true,handsFree:true}) || !target.knockedOut) return false;
+    if (!target || !canReachDownedPlayer(actor,target)) return false;
     this.recover(target,this.state(target),now);
     return true;
   }

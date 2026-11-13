@@ -16,7 +16,7 @@ import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
 import { Transport } from './Transport';
-import { aidRadius, firstAidKit, infirmary } from '../src/medical';
+import { canReachDownedPlayer, firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
 import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
@@ -1065,7 +1065,7 @@ export class Gameplay {
         this.phone.leave(player,world);
         return 'Jogador carregado.';
       }
-      if (!target?.knockedOut || !canReachObject(player,target,{radius:aidRadius,clearFloor:true})) return 'Aproxime-se do jogador nocauteado.';
+      if (!target || !canReachDownedPlayer(player,target)) return 'Aproxime-se do jogador nocauteado.';
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
@@ -1074,7 +1074,7 @@ export class Gameplay {
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
       const activeUntil = world.now+binoculars.duration;
       this.binocularUse.set(id,{activeUntil,readyAt:activeUntil+binoculars.cooldown});
-      return 'Binóculo ativo por 10 s.';
+      return `Binóculo ativo por ${binoculars.duration/1000} s.`;
     }
     if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);

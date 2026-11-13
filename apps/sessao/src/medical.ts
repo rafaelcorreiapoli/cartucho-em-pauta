@@ -1,3 +1,5 @@
+import { canInteract, type InteractionActor } from './interactions';
+
 export const infirmary = {
   x:913,y:486,
   door:[806,468,6,35],
@@ -16,6 +18,11 @@ export const recoveryRules = {
 } as const;
 
 export const aidRadius = 20;
+
+export function canReachDownedPlayer(actor:InteractionActor & {id:string}, target:InteractionActor & {id:string}) {
+  return actor.id!==target.id && !!target.knockedOut &&
+    canInteract(actor,target,{radius:aidRadius,clearFloor:true,handsFree:true});
+}
 export const carrySpeedFactor = .65;
 
 const firstAidHealing = 35;

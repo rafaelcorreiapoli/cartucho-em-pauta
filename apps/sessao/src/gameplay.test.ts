@@ -1,3 +1,4 @@
+import { canReachDownedPlayer } from './medical';
 import {expect,test} from 'bun:test';
 import {agendaProject,canReachStation,stations,voteIntentSummary} from './plenary';
 import {canVerifyDocumentAt,consumableAction,objects,readGameplayAction,treasuryDeliveries} from './gameplay';
@@ -94,4 +95,14 @@ test('item descriptions show the active equipment rules',()=>{
   expect(objects.xray.description).toContain('10 s');
   expect(objects.vest.description).toContain('35%');
   expect(objects.firstAidKit.description).toContain('35 PV');
+});
+
+test('the aid prompt requires a reachable downed teammate and free hands',()=>{
+  const actor = {id:'a',x:140,y:146};
+  const target = {id:'b',x:152,y:146,knockedOut:true};
+  expect(canReachDownedPlayer(actor,target)).toBe(true);
+  expect(canReachDownedPlayer(actor,{...target,id:actor.id})).toBe(false);
+  expect(canReachDownedPlayer({...actor,carrying:true},target)).toBe(false);
+  expect(canReachDownedPlayer(actor,{...target,knockedOut:false})).toBe(false);
+  expect(canReachDownedPlayer({...actor,barriers:[[145,140,2,12]]},target)).toBe(false);
 });

@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { equippedWeapon, xray } from './equipment';
 import { doorDestination } from './interactions';
-import { aidRadius, infirmary } from './medical';
+import { canReachDownedPlayer, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
@@ -239,8 +239,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
         for (const target of roster) {
-          if (target.id===id) continue;
-          if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
+          if (canReachDownedPlayer(player,target)) {
             actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
             if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
             actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
