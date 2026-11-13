@@ -16,7 +16,7 @@ import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
 import { Transport } from './Transport';
-import { aidRadius, infirmary } from '../src/medical';
+import { aidRadius, firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
 import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
@@ -950,7 +950,7 @@ export class Gameplay {
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
       const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear' && kind!=='forensicKit') return 'Produto indisponível.';
+      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear' && kind!=='forensicKit' && kind!=='firstAidKit') return 'Produto indisponível.';
       if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
@@ -958,7 +958,7 @@ export class Gameplay {
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
       if (gear && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : foods[kind].price)) return 'Saldo insuficiente.';
+      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : objects[kind].price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {
@@ -1207,10 +1207,14 @@ export class Gameplay {
           this.event(world,player,'concealment-started',data,undefined,{witnesses:[]});
           return `Dinheiro oculto por ${concealment.duration/1000} s.`;
         }
+        if (data.kind==='firstAidKit') {
+          if (this.healthFraction(player,world.now)>=1) return 'Seus PV já estão cheios.';
+          this.combat.heal(player,firstAidKit.healing);
+        }
         this.remove(item);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
         this.event(world,player,'used',data);
-        return 'Objeto utilizado.';
+        return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
         if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';
         this.remove(item);

@@ -554,3 +554,28 @@ test('attacks spend stamina exactly once and insufficient stamina does not start
   expect(game.act(alice,{kind:'attack'},world)).toContain('recarga');
   expect(alice.stamina).toBe(0);
 });
+
+test('first aid kits heal the owner once, cap healing and are kept at full health',()=>{
+  const {alice,bob,game,balance,events,world,buyGear} = setup();
+  expect(buyGear(bob,'firstAidKit')).toBe('Compra guardada no inventário.');
+  expect(balance.get(bob.id)).toBe(3.5);
+  const kit = game.view(bob,world).inventory[0];
+  const use = {kind:'use',item:kit.id} as const;
+  expect(game.act(bob,use,world)).toBe('Seus PV já estão cheios.');
+  expect(game.view(bob,world).inventory).toEqual([kit]);
+
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  game.act(alice,use,world);
+  expect(game.view(bob,world).inventory).toEqual([kit]);
+
+  expect(game.act(bob,use,world)).toBe('Primeiros socorros aplicados.');
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
+  game.act(bob,use,world);
+  expect(game.view(bob,world).inventory).toEqual([]);
+  expect(events.filter(event=>event.type==='used')).toHaveLength(1);
+});

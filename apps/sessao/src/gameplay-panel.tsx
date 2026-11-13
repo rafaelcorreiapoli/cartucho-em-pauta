@@ -12,7 +12,7 @@ import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
@@ -237,10 +237,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
-        if ('use' in definition) {
-          const label = item.kind==='mensalUnderwear' ? 'Usar' : item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
-          act(label,'use',undefined,'1');
-        }
+        const consumable = consumableAction(item);
+        if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
         if ('exposable' in definition) {
           const exposed = state.exposed.includes(item.id);
           act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');

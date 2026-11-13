@@ -10,3 +10,12 @@ export const infirmary = {
 
 export const aidRadius = 20;
 export const carrySpeedFactor = .65;
+
+export const firstAidKit = {
+  name:'Kit de primeiros socorros',
+  description:'Recupera até 35 PV de quem usar.',
+  portrait:'maca-enfermaria.webp',
+  price:1.5,
+  healing:35,
+  use:'consume',
+} as const;

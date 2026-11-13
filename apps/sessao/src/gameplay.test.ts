@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {agendaProject,voteIntentSummary} from './plenary';
-import {canVerifyDocumentAt,readGameplayAction,treasuryDeliveries} from './gameplay';
+import {canVerifyDocumentAt,consumableAction,readGameplayAction,treasuryDeliveries} from './gameplay';
 
 test('document verification is offered only at the two document counters',()=>{
   expect(canVerifyDocumentAt('secretary')).toBe(true);
@@ -30,4 +30,11 @@ test('treasury prompts use the carried amount and identity and disappear when re
     {label:'Entregar R$ 80 mil ao tesoureiro',action:{kind:'deliver',place:'treasury',item:7}},
   ]);
   expect(treasuryDeliveries([coffee])).toEqual([]);
+});
+
+test('the inventory offers the healing shortcut for the selected kit',()=>{
+  const control = consumableAction({id:17,kind:'firstAidKit'});
+  expect(control).toEqual({label:'Curar',key:'1',action:{kind:'use',item:17}});
+  expect(readGameplayAction(control?.action)).toMatchObject({kind:'use',item:17});
+  expect(consumableAction({id:18,kind:'forensicKit'})).toBeUndefined();
 });

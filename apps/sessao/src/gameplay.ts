@@ -1,3 +1,4 @@
+import { firstAidKit } from './medical';
 import { money } from './politics';
 import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
@@ -15,6 +16,7 @@ import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 import { spyProducts, type SpyView } from "./surveillance";
 
 export const objects = {
+  firstAidKit,
   forensicKit:{name:'Kit de Perícia',portrait:'retrato-documento.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
   ...spyProducts,
@@ -41,6 +43,14 @@ export const documentTemplates = {
 } as const;
 
 export type ObjectKind = keyof typeof objects;
+
+export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
+  const {kind} = item;
+  if (!('use' in objects[kind])) return;
+  const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' ? 'Usar' :
+    kind==='coffee' || kind==='energyDrink' ? 'Beber' : 'Comer';
+  return {label,key:'1',action:{kind:'use',item:item.id}} as const;
+}
 
 export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>) {
   if (typeof itemOrKind!=='string' && itemOrKind.cash!==undefined) return itemOrKind.cash;
