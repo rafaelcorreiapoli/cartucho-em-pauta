@@ -93,7 +93,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const food = isFood(item.kind) ? foods[item.kind] : undefined;
     return <article className="object-card" key={item.id}>
       <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
-      <details><summary>Inspecionar</summary><p>{doc?.description ?? definition.description}</p>
+      {bagOpen && chooseQuantity && <>
+        <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
+        <p className="bag-description">{doc?.description ?? definition.description}</p>
+      </>}
+      <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
+        {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
         {doc && <>
           <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
           <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
@@ -109,7 +114,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
           disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
       </div>}
-      {chooseQuantity && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+      {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
+        disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
+        <span>Adicionar à hotbar</span><kbd>⇧1–6</kbd>
+      </button>}
+      {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
         <span>Adicionar à hotbar</span>
         {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
           disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
@@ -266,6 +275,27 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <p className="bag-capacity">{inventory.length} / {INVENTORY_SLOTS} slots</p>
         </div>
         <div className="bag-detail">{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
+        <footer className="bag-preview">
+          <strong>Hotbar</strong>
+          <div className="bag-preview-slots">
+            {hotbar.map((id,index)=>{
+              const pinned = inventory.find(entry=>entry.id===id);
+              return <button type="button" key={index} className="item-tile"
+                disabled={!item || !canPinToHotbar(item)} aria-pressed={!!item && item.id===id}
+                aria-label={`Vincular ao slot ${index+1}`} aria-keyshortcuts={item && canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
+                onClick={()=>{
+                  if (!item) return;
+                  hotbar = id===item.id ? hotbar.map((entry,slot)=>slot===index ? undefined : entry) : assignHotbarSlot(hotbar,index,item.id);
+                  highlightSlot();
+                  renderKey = '';
+                  render();
+                }}>
+                <kbd className="slot-key">{index+1}</kbd>
+                {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
+              </button>;
+            })}
+          </div>
+        </footer>
       </div>;
     }
     if (bagOpen && !item) {
@@ -463,6 +493,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
       objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
       event.preventDefault();
+      return;
+    }
+    if (dialog.open && bagOpen && event.shiftKey && /^Digit[1-6]$/.test(event.code) &&
+        !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      const buttons = objectsHost.querySelectorAll<HTMLButtonElement>('.bag-preview-slots button');
+      event.preventDefault();
+      buttons[Number(event.code.at(-1))-1]?.click();
       return;
     }
     if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
