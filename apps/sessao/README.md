@@ -109,6 +109,21 @@ netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist
 
 O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
 
+## Teste da loja no Chrome
+
+Com `SESSAO_LOCAL_SOLO=1 bun dev/market-smoke-server.ts`, o jogador de teste começa no Apoio Técnico.
+Sirva o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2605 bun run dev --port 5212`.
+Abra a página no Playwright CLI com `dev/private-call-chrome.json` e execute
+`run-code --filename=dev/market-smoke.js`.
+
+## Teste do histórico de votações no Chrome
+
+Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
+Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
+`dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
+O teste usa os resultados publicados pelo gameserver e clica nas setas reais do HUD.
+
 ## Métricas do gameserver
 
 O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use

@@ -286,7 +286,7 @@
 
 #session #open-action-shortcuts { display: none; }
 
-#command-deck #legislative-dock { grid-column: 2; }
+#command-deck #legislative-dock { grid-column: 2; overflow: visible; }
 #command-deck #last-vote { pointer-events: auto; z-index: 5; }
 #command-deck .deck-tools { grid-column: 3; }
 #session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
