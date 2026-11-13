@@ -42,23 +42,22 @@ function Meter({label,value,max,tone,target}:{label:string;value:number;max:numb
 type Congress = {stability:number;budget:number};
 function Parliament({state}:{state:ReturnType<typeof channel<Congress>>}) {
   const {stability,budget} = useSyncExternalStore(state.subscribe,state.get);
-  return <section className="react-parliament flex items-center gap-3" aria-label="Parlamento">
-    <Resource icon="shield" label="Estabilidade" value={stability} max={100} tone={stability<45 ? 'danger' : 'stability'} target={45}
-      help="Projetos e decisões afetam a estabilidade. A meta da sessão é 45. A zero, o Parlamento entra em colapso."/>
-    <Resource icon="wallet" label="Orçamento Público" value={budget} max={Math.max(100,budget)} tone="budget" formatted={money(budget)}
-      help="Paga projetos e verbas de gabinete. Cada ponto de déficit custa 2 pontos de estabilidade."/>
-  </section>;
-}
-
-function Resource({icon,label,help,formatted,...meter}:{icon:string;label:string;help:string;formatted?:string;
-  value:number;max:number;tone:string;target?:number}) {
-  return <div className="react-resource grid gap-1" data-tone={meter.tone}>
-    <div className="flex items-center gap-1.5">
-      <button type="button" className="resource-help" aria-label={label} data-help={help}><Icon name={icon}/></button>
-      <span>{label}</span><strong className="tabular-nums">{formatted ?? meter.value}</strong>
+  return <section className="congress-meter grid gap-1.5 text-center" aria-label="Parlamento">
+    <div className="congress-meter-label flex items-center justify-center gap-2">
+      <button type="button" className="resource-help" aria-label="Como funciona a estabilidade"
+        data-help="Projetos e decisões afetam a estabilidade. A meta da sessão é 45. A zero, o Parlamento entra em colapso."><Icon name="ballot"/></button>
+      <span>Estabilidade institucional</span>
     </div>
-    <Meter label={label} {...meter}/>
-  </div>;
+    <div className="congress-meter-track flex items-center gap-2">
+      <Meter label="Estabilidade institucional" value={stability} max={100} tone={stability<45 ? 'danger' : 'stability'} target={45}/>
+      <strong className="tabular-nums">{stability}</strong>
+    </div>
+    <div className="congress-budget flex items-center justify-center gap-2">
+      <button type="button" className="resource-help" aria-label="Como funciona o orçamento público"
+        data-help="Paga projetos e verbas de gabinete. Cada ponto de déficit custa 2 pontos de estabilidade."><Icon name="wallet"/></button>
+      <span>Orçamento público</span><strong className="tabular-nums">{money(budget)}</strong>
+    </div>
+  </section>;
 }
 
 function HudPanel({children}:{children:ReactNode}) {
@@ -107,13 +106,19 @@ function Vitals({profile,stamina}:{profile:ReturnType<typeof channel<Profile|und
   if (!stats) return null;
   const earned = stats.xp-stats.start;
   const goal = stats.next===undefined ? 0 : stats.next-stats.start;
-  return <div className="react-vitals grid gap-1">
+  return <div className="react-vitals grid gap-1.5">
     {stats.hp!==undefined && stats.maxHp!==undefined &&
-      <Meter label="PV" value={stats.hp} max={stats.maxHp} tone="health"/>}
-    <Meter label="Stamina" value={energy.current} max={energy.max} tone="stamina"/>
-    <div className="react-xp">
+      <div className="vital-row" data-tone="health"><span aria-hidden="true">PV</span>
+        <Meter label="PV" value={stats.hp} max={stats.maxHp} tone="health"/>
+        <small>{stats.hp}/{stats.maxHp}</small>
+      </div>}
+    <div className="vital-row" data-tone="stamina"><span aria-hidden="true">ϟ</span>
+      <Meter label="Stamina" value={energy.current} max={energy.max} tone="stamina"/>
+      <small>{energy.current}/{energy.max}</small>
+    </div>
+    <div className="vital-row" data-tone="xp"><span aria-hidden="true">XP</span>
       <Meter label="XP" value={goal ? earned : 1} max={goal || 1} tone="xp"/>
-      <small>{goal ? `${earned}/${goal} XP` : 'MAX'}</small>
+      <small>{goal ? `${earned}/${goal}` : 'MAX'}</small>
     </div>
   </div>;
 }

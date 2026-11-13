@@ -34,6 +34,7 @@ import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
 import './rts-hud.css';
+import './ui/congress-overlay.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);

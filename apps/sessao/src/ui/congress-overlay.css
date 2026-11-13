@@ -1,0 +1,73 @@
+/* The match HUD overlays the world; its empty areas keep accepting map input. */
+#session:not([data-phase="lobby"]) {
+  display: block;
+  --hud-edge: clamp(12px, 2vw, 32px);
+}
+#session:not([data-phase="lobby"]) #world { position: absolute; inset: 0; }
+#command-strip, #command-deck {
+  position: absolute;
+  inset-inline: 0;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+#command-strip > *, #command-deck > section > * { pointer-events: auto; }
+#command-strip {
+  top: 0;
+  align-items: start;
+  padding: 14px var(--hud-edge) 30px;
+  background: linear-gradient(#070f0beb, #080f0b00);
+}
+#command-strip #congress-dock { border: 0; padding: 0; background: none; }
+.congress-meter { width: clamp(210px, 28vw, 420px); }
+.congress-meter-label {
+  color: var(--color-hud-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.congress-meter-track {
+  padding: 3px 9px 3px 4px;
+  border: 1px solid #7cc69891;
+  border-radius: 999px;
+  background: #07120de0;
+}
+.congress-meter-track .react-meter { height: 9px; flex: 1; }
+.congress-meter-track .react-meter span { background: linear-gradient(90deg,#41ad7c,var(--meter-tone)); }
+.congress-meter-track strong { color: var(--color-hud-budget); font-size: 19px; line-height: 1; }
+.congress-budget { color: var(--color-hud-muted); font-size: 12px; }
+.congress-budget strong { color: var(--color-hud-budget); }
+#command-deck {
+  bottom: 0;
+  min-height: var(--deck-height);
+  align-items: end;
+  background: linear-gradient(0deg,#080f0bf2,#080f0b00);
+}
+#command-deck > section + section { border-left: 0; }
+#command-deck #profile-dock { align-self: end; }
+#command-deck #profile-dock .portrait { border-radius: 12px; }
+#profile-dock .deck-identity { flex: 0 1 210px; }
+.vital-row {
+  display: grid;
+  grid-template-columns: 1.3rem minmax(32px,1fr) 4.4em;
+  align-items: center;
+  gap: .35rem;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.vital-row > span { color: var(--meter-tone); font-weight: 800; }
+.vital-row > small { text-align: right; }
+.vital-row .react-meter { height: 5px; }
+#world #agenda-dock {
+  inset: auto auto calc(var(--deck-height) + 12px) var(--hud-edge);
+  width: min(270px, 28vw);
+}
+#agenda-dock .react-agenda {
+  border: 0;
+  border-left: 2px solid #75cb9caa;
+  border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(90deg,#0a1712eb,#0a171200);
+}
+#world #hud-notices { inset: 88px var(--hud-edge) auto auto; }
