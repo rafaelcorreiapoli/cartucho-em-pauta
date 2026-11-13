@@ -265,7 +265,7 @@ test('the infirmary can treat a passenger and heals only after a valid payment',
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   expect(findRoute({x:140,y:146},{x:infirmary.x,y:infirmary.y}).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
   game.act(alice,{kind:'carry',target:bob.id},world);
-  Object.assign(alice,{x:873,y:461});
+  Object.assign(alice,{x:803,y:461});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   Object.assign(alice,{x:infirmary.x,y:infirmary.y});
   game.tick(world,true);

@@ -24,9 +24,9 @@ export const walls: Rect[] = [
   [480,161,70,11], [591,161,194,11], [827,161,123,11],
   [10,392,105,11], [156,392,244,11], [446,392,334,11], [825,392,125,11],
   [814,270,10,133],
-  [876,403,6,infirmary.door[1]-403],
-  [876,infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
-  [882,530,13,11],
+  [infirmary.door[0],403,6,infirmary.door[1]-403],
+  [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
+  [812,530,83,11],
   [316,270,10,65], [316,374,10,18], [592,270,10,65], [592,374,10,18],
   [316,403,10,65], [316,507,10,23], [592,403,10,65], [592,507,10,23],
   [eastAnnex.left,eastAnnex.top-10,eastAnnex.right-eastAnnex.left+10,10],
@@ -46,13 +46,13 @@ export const walls: Rect[] = [
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
-  [128,460],[354,430],[433,460],[713,460],[822,463],
+  [128,460],[354,430],[433,460],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
   ...Object.values(mapNpcs).map(({counter:{x,y}})=>[x,y] as const),
 ] as const;
 export const furnishings = [
-  {texture:'infirmary-stretcher',area:[897,426,38,35],footprint:8},
-  {texture:'infirmary-doctor',area:[infirmary.doctor.x-16,infirmary.doctor.y-38,32,38],footprint:5},
+  {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
+  {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},
   {frame:0, area:[197,33,86,29], footprint:10},
   {frame:0, area:[414,570,132,38], footprint:12},
   {frame:1, area:[559,598,22,18], footprint:7},
@@ -66,7 +66,6 @@ export const furnishings = [
   {frame:3, area:[922,210,22,31], footprint:9},
   {frame:4, area:[31,300,28,37], footprint:10},
   {frame:4, area:[513,298,28,37], footprint:10},
-  {frame:0, area:[706,437,183,29], footprint:10},
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
 ] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
@@ -181,7 +180,7 @@ export const rooms = [
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
   {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
-  {name:'Galeria', bounds:[602,403,280,127], color:0x56736e},
+  {name:'Galeria', bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];
 

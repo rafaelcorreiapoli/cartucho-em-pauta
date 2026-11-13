@@ -45,7 +45,7 @@ export function drawMap(scene: Phaser.Scene) {
   fill(0x24473e,278,552,404,185);
   fill(0x355f50,282,556,396,177);
   fill(0x789383,453,620,54,120,.23);
-  rug(617,418,260,102);
+  rug(617,418,184,102);
   const [doorX,doorY,doorW,doorH] = infirmary.door;
   fill(0x9b8d6d,doorX,doorY,doorW,doorH);
   rug(78,306,135,75);
