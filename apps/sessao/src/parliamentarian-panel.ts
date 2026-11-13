@@ -4,6 +4,10 @@ import type { ParliamentarianDeal } from './parliamentarians';
 import { money } from './politics';
 import type { PlenaryView, Vote } from './plenary';
 
+export function refreshVoteOffer(amount:number,minimum:number) {
+  return minimum===0 ? 0 : Math.max(amount,minimum);
+}
+
 export function createParliamentarianPanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#parliamentarian-dialog')!;
   const title = dialog.querySelector('h2')!;
@@ -34,7 +38,7 @@ export function createParliamentarianPanel(send:(action:object)=>void) {
     const summary = node('p');
     if (quote) {
       const minimum = deal.minimum[quote.vote];
-      quote.amount = Math.max(quote.amount,minimum);
+      quote.amount = refreshVoteOffer(quote.amount,minimum);
       const offer = quote;
       summary.textContent = minimum ? `Contraproposta · mínimo de ${money(minimum)}` : 'Aceita sem pagamento.';
       if (minimum) {
