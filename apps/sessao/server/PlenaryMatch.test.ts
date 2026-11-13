@@ -472,3 +472,36 @@ test('failed mail payments and expired cash preserve the ledger across retries',
   expect(mail.view()).toHaveLength(1);
   expect(summary()).toMatchObject({reserveFees:8.5,transferred:1,expired:3,discrepancy:0});
 });
+
+test('the agenda counts queued ballots even at the end of the standard project rotation',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  Reflect.set(match,'round',2);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  const prepareDraw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['oposicao','cafe','passeio','selfieSolo']);
+  };
+  const active = () => match.view(host.id,ids,10).politics!.missions.active;
+  prepareDraw();
+  match.refreshAgendaEligibility();
+  expect(active().some(mission=>mission.kind==='oposicao')).toBe(false);
+
+  const world = match.gameplayWorld(people,10,()=>false);
+  const file = (project:number) => world.publish({
+    type:'filed',actor:host.id,kind:'document',project,position:stations.amendment,at:10,witnesses:[],
+  });
+  file(2);
+  prepareDraw();
+  file(0);
+  expect(active().find(mission=>mission.kind==='oposicao')).toMatchObject({current:0,target:2});
+
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'no',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(active().find(mission=>mission.kind==='oposicao')).toMatchObject({current:1,target:2});
+  match.vote(host.id,'no',NEGOTIATION_MS+BALLOT_MS+1);
+  match.advance(NEGOTIATION_MS+2*BALLOT_MS);
+  expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'oposicao'}));
+});

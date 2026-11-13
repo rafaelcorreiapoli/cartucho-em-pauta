@@ -62,7 +62,11 @@ export class PlenaryMatch {
     this.economy.setAgendaInventory(...inventory);
   }
 
-  refreshAgendaEligibility() { this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round%bills.length,id=>!!this.election.office(id)); }
+  refreshAgendaEligibility() {
+    const scheduled = this.agenda.size+Number(this.phase==='ballot');
+    const ballotsLeft = Math.max(scheduled,bills.length-this.round%bills.length);
+    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id));
+  }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
 
@@ -283,6 +287,7 @@ export class PlenaryMatch {
         if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
           if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
           this.agenda.add(event.project);
+          this.refreshAgendaEligibility();
         }
         this.complaints.record(event,this.started);
         this.economy.recordGameplay(event);
@@ -523,13 +528,13 @@ export class PlenaryMatch {
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else {
       this.round++;
-      this.refreshAgendaEligibility();
       if (this.agenda.size) {
         this.resetVote();
         this.project = this.agenda.values().next().value;
         if (this.project!==undefined) this.agenda.delete(this.project);
         this.ends = now+BALLOT_MS;
       } else this.nextRound(now);
+      this.refreshAgendaEligibility();
     }
   }
 

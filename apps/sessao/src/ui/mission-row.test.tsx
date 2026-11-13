@@ -19,3 +19,11 @@ test('the furniture spending objective displays currency on both sides of its pr
   const markup = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'ostentacao',current:3,target:5}}/>);
   expect(markup).toContain('R$ 30 mil / R$ 50 mil');
 });
+
+test('an opposition mission shows progress across successive ballots',()=>{
+  const mission:Mission = {id:3,kind:'oposicao',current:1,target:2};
+  const markup = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(markup).toContain('Vote contra dois projetos rejeitados');
+  expect(markup).toContain('1 / 2');
+  expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});
