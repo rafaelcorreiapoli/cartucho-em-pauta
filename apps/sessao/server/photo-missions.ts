@@ -44,8 +44,8 @@ export const photoMissions = {
     event.type==='installed' && event.kind==='portrait' && event.replaced && !privateOffices.some(office=>office.id===event.place) ? fact(event.item!) : []},
   reserva:{target:1,players:1,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.place==='coffeeVip' ? fact(event.item!) : []},
-  fiscalVip:{target:1,players:2,facts:capture((photo,actor)=>
-    photo.decorations.some(item=>item.kind==='vip' && people(photo,actor).some(person=>
+  fiscalVip:{target:1,players:3,facts:capture((photo,actor)=>
+    photo.decorations.some(item=>item.kind==='vip' && item.owner.id!==actor && people(photo,actor).some(person=>
       person.id!==item.owner.id && Math.hypot(person.x-item.x,person.y-item.y)<=12)) ? fact(photo.id) : [])},
   mandaVip:{target:1,players:2,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.replaced ? fact(event.item!) : []},

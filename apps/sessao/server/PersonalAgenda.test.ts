@@ -347,7 +347,7 @@ test('collective missions wait for enough available players while office visits 
 
 test('photo missions use live portrait and VIP installations when drawing',()=>{
   const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
-  const [owner,colleague] = players;
+  const [owner,colleague,visitor] = players;
   const game = new Gameplay();
   const economy = new PoliticalEconomy();
   economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
@@ -378,6 +378,16 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
   expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
+  Object.assign(owner,installationSites.coffeeVip.point);
+  Object.assign(colleague,installationSites.coffeeVip.point);
+  world.now += 5_000;
+  expect(game.act(owner,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+  const completedVip = () => economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='fiscalVip');
+  expect(completedVip()).toBe(false);
+  Object.assign(visitor,installationSites.coffeeVip.point);
+  world.now += 5_000;
+  expect(game.act(owner,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+  expect(completedVip()).toBe(true);
   expect(economy.transfer(colleague.id,owner.id,1,false,0)).toBe(true);
   expect(draw(true)).toContain('mandaVip');
   expect(draw(true)).not.toContain('reforma');
@@ -530,4 +540,13 @@ test('players without one of the six offices can visit a colleague but cannot dr
   const active = economy.view(visitor.id,[],0,false,()=>true)!.missions.active;
   expect(active.map(mission=>mission.kind)).toEqual(['visitaAlvo','passeio','selfieSolo']);
   expect(game.hasOffice(active[0].person!.id)).toBe(true);
+});
+
+test('the VIP inspection needs a photographer, a plate owner and a visitor',()=>{
+  const agenda = new PersonalAgenda(metrics,2,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalVip','cafe','passeio','selfieSolo']);
+  const withVip = {...metrics,hasAgendaDecoration:()=>true};
+  agenda.updateEligibility(withVip,2,true,3,0,[{id:'b',name:'Bia'}],new Set(['a','b']));
+  expect(agenda.view(withVip).active.map(mission=>mission.kind)).toEqual(['cafe','passeio','selfieSolo']);
 });
