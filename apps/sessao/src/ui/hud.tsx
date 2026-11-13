@@ -1,30 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
-import type { Player } from '../map';
-import { MAX_STAMINA } from '../movement';
-import type { PlenaryView } from '../plenary';
+import { createHudModel, type HudModel } from './hud-model';
 import { missionTitle, money, timedAgendas, type Mission } from '../politics';
 import './theme.css';
-
-function channel<T>(initial:T) {
-  let value = initial;
-  let key = JSON.stringify(initial);
-  const listeners = new Set<()=>void>();
-  return {
-    get:()=>value,
-    subscribe(listener:()=>void) {
-      listeners.add(listener);
-      return ()=>{ listeners.delete(listener); };
-    },
-    update(next:T) {
-      const nextKey = JSON.stringify(next);
-      if (nextKey===key) return;
-      key = nextKey;
-      value = next;
-      for (const listener of listeners) listener();
-    },
-  };
-}
 
 function Icon({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
@@ -39,7 +17,6 @@ function Meter({label,value,max,tone,target}:{label:string;value:number;max:numb
   </div>;
 }
 
-type Congress = {stability:number;budget:number};
 function Laurel({right=false}:{right?:boolean}) {
   return <svg className={`congress-laurel${right ? ' congress-laurel-right' : ''}`} viewBox="0 0 30 68" aria-hidden="true">
     <path d="M26 65C5 51 1 26 18 5" fill="none" stroke="currentColor" strokeWidth="1.2"/>
@@ -47,7 +24,7 @@ function Laurel({right=false}:{right?:boolean}) {
   </svg>;
 }
 
-function Parliament({state}:{state:ReturnType<typeof channel<Congress>>}) {
+function Parliament({state}:{state:HudModel['congress']}) {
   const {stability,budget} = useSyncExternalStore(state.subscribe,state.get);
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
@@ -75,8 +52,7 @@ function HudPanel({children}:{children:ReactNode}) {
     aria-labelledby="agenda-title">{children}</aside>;
 }
 
-type Agenda = {active:Mission[]; recent:Mission[]; announcement:string};
-function AgendaPanel({state}:{state:ReturnType<typeof channel<Agenda|undefined>>}) {
+function AgendaPanel({state}:{state:HudModel['agenda']}) {
   const agenda = useSyncExternalStore(state.subscribe,state.get);
   if (!agenda) return null;
   return <HudPanel>
@@ -112,9 +88,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
   </li>;
 }
 
-type Profile = {hp?:number; maxHp?:number; xp:number; start:number; next?:number; level:number};
-type Stamina = {current:number; max:number};
-function Vitals({profile,stamina}:{profile:ReturnType<typeof channel<Profile|undefined>>; stamina:ReturnType<typeof channel<Stamina>>}) {
+function Vitals({profile,stamina}:{profile:HudModel['profile']; stamina:HudModel['stamina']}) {
   const stats = useSyncExternalStore(profile.subscribe,profile.get);
   const energy = useSyncExternalStore(stamina.subscribe,stamina.get);
   if (!stats) return null;
@@ -137,8 +111,7 @@ function Vitals({profile,stamina}:{profile:ReturnType<typeof channel<Profile|und
   </div>;
 }
 
-type PersonalResources = {wallet:number; popularity:number};
-function ProfileResources({state}:{state:ReturnType<typeof channel<PersonalResources|undefined>>}) {
+function ProfileResources({state}:{state:HudModel['resources']}) {
   const resources = useSyncExternalStore(state.subscribe,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
@@ -147,26 +120,22 @@ function ProfileResources({state}:{state:ReturnType<typeof channel<PersonalResou
   </div>;
 }
 
-function Level({state}:{state:ReturnType<typeof channel<Profile|undefined>>}) {
+function Level({state}:{state:HudModel['profile']}) {
   const profile = useSyncExternalStore(state.subscribe,state.get);
   return profile && <strong className="react-level tabular-nums" aria-label={`Nível ${profile.level}`}>NV {profile.level}</strong>;
 }
 
-function Broadcast({state}:{state:ReturnType<typeof channel<boolean>>}) {
+function Broadcast({state}:{state:HudModel['broadcast']}) {
   const active = useSyncExternalStore(state.subscribe,state.get);
   return active && <div className="react-broadcast rounded-hud bg-hud-surface text-hud-ink" role="status">📣 Transmissão por Megafone</div>;
 }
 
 export function mountReactHud() {
-  const broadcast = channel(false);
+  const model = createHudModel();
+  const {broadcast,congress,agenda,profile,stamina,resources} = model;
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
   broadcastRoot.render(<Broadcast state={broadcast}/>);
-  const congress = channel<Congress>({stability:48,budget:32});
-  const agenda = channel<Agenda|undefined>(undefined);
-  const profile = channel<Profile|undefined>(undefined);
-  const stamina = channel<Stamina>({current:MAX_STAMINA,max:MAX_STAMINA});
   const vitalsRoot = createRoot(document.getElementById('profile-vitals')!);
-  const resources = channel<PersonalResources|undefined>(undefined);
   const resourcesRoot = createRoot(document.getElementById('profile-resources')!);
   resourcesRoot.render(<ProfileResources state={resources}/>);
   const levelRoot = createRoot(document.getElementById('profile-level-mount')!);
@@ -176,31 +145,10 @@ export function mountReactHud() {
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
   parliamentRoot.render(<Parliament state={congress}/>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
-  let matchId:number|undefined;
   return {
     broadcast: broadcast.update,
-    player(player:Player) {
-      const max = player.staminaMax ?? MAX_STAMINA;
-      stamina.update({current:Math.floor(player.stamina ?? max),max});
-    },
-    render(view:PlenaryView) {
-      congress.update({stability:view.stability,budget:view.budget});
-      const progress = view.phase==='lobby' ? undefined : view.politics?.progression;
-      if (matchId!==progress?.matchId) {
-        matchId = progress?.matchId;
-        agenda.update(undefined);
-      }
-      resources.update(progress && view.politics ? {wallet:view.politics.wallet,popularity:view.politics.popularity} : undefined);
-      profile.update(progress && {hp:view.gameplay?.vitality?.hp,maxHp:view.gameplay?.vitality?.max,
-        xp:progress.xp,start:progress.levelStart,next:progress.nextLevelXp,level:progress.level});
-      const missions = view.phase==='lobby' ? undefined : view.politics?.missions;
-      if (!missions) { agenda.update(undefined); return; }
-      const previous = agenda.get();
-      const recent = missions.completed.slice(-2);
-      const fresh = previous ? recent.filter(mission=>!previous.recent.some(done=>done.id===mission.id)) : [];
-      agenda.update({active:missions.active,recent,announcement:fresh.length
-        ? fresh.map(mission=>'Concluído: '+missionTitle(mission)).join('. ') : previous?.announcement ?? ''});
-    },
+    player: model.player,
+    render: model.render,
     destroy() { broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
   };
 }
