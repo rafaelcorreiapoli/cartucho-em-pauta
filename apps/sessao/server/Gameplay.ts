@@ -181,6 +181,11 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
+  hasPhotoDecoration(id:string, kind:'portrait'|'vip') {
+    return [...this.installations.values()].some(item=>item.kind===kind &&
+      (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
+  }
+
   officeStock(id:string) {
     const office = this.privateOffices.ownedBy(id);
     return office ? decorSlots.filter(isOfficeFurniture).filter(kind=>!this.installations.has(`office:${office.id}:${kind}`)) : [];

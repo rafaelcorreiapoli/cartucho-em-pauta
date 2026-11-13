@@ -332,3 +332,37 @@ test('collective missions wait for enough available players while office visits 
   draw();
   expect(active()).toContainEqual(selfie);
 });
+
+test('photo missions use live portrait and VIP installations when drawing',()=>{
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const [owner,colleague] = players;
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,(id,kind)=>game.hasPhotoDecoration(id,kind));
+  const {agenda} = Reflect.get(economy,'accounts').get(owner.id);
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['autorretrato','fiscalVip','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    return economy.view(owner.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  const install = (player:Player, place:'hall'|'coffeeVip') => {
+    const {kind,point} = installationSites[place];
+    expect(game.act(player,{kind:'buy',target:kind},world)).toContain('inventário');
+    const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
+    Object.assign(player,point);
+    expect(game.act(player,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+  };
+
+  expect(draw()).toContain('autorretrato');
+  expect(draw()).not.toContain('fiscalVip');
+  install(owner,'hall');
+  expect(economy.spend(owner.id,6)).toBe(true);
+  install(colleague,'coffeeVip');
+  expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
+  expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+  expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
+});

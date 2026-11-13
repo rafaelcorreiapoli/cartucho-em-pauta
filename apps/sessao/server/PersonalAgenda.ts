@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]}>;
+  hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean}>;
 const furnitureSpendingTarget = 5;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
@@ -214,6 +214,9 @@ export class PersonalAgenda {
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
+    if (kind==='autorretrato' && !metrics.hasPhotoDecoration?.('portrait') &&
+        metrics.wallet<shop.portrait && !metrics.owns?.('portrait')) return false;
+    if (kind==='fiscalVip' && !metrics.hasPhotoDecoration?.('vip')) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
     const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
     if ((kind==='televisao' && !stock.includes('officeTv')) || (kind==='poltrona' && !stock.includes('officeChair'))) return false;
