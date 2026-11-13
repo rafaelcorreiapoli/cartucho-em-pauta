@@ -34,6 +34,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
+  let inLobby = true;
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -111,6 +112,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
+      this.cameras.main.setVisible(!inLobby);
       for (let character=0;character<NAMES.length;character++) {
         const {sheet,frame} = characterArt(character);
         for (let direction=0;direction<3;direction++) {
@@ -306,6 +308,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
 
     update(time: number, delta: number) {
+      if (inLobby) return;
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
@@ -629,6 +632,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       local.reconcile(snapshot);
     },
     setMatchPhase(phase:Phase) {
+      inLobby = phase==='lobby';
+      if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
       if (!running) fog.hidden = true;
