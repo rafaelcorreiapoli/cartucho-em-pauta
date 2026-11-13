@@ -129,7 +129,8 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
     const key = event.key.toLowerCase()==='i' ? 'p' : event.key.toLowerCase();
     const control = key==='y' || key==='r'
       ? root.querySelector<HTMLElement>(key==='y' ? '[data-vote="yes"]' : '[data-vote="no"]')
-      : controls.find(([shortcut])=>shortcut===key)?.[1];
+      : controls.find(([shortcut])=>shortcut===key)?.[1] ??
+        (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
     if (!control) return;
     const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle' || control===settingsButton;
     if (viaApp ? control.matches(':disabled,[hidden]') || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
