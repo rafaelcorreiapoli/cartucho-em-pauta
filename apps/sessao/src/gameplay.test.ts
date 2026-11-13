@@ -61,7 +61,7 @@ for (const portrait of new Set(Object.values(objects).map(item=>item.portrait)))
 }
 
 // These portraits use the extended WebP header for their transparent canvas.
-for (const kind of ['coffee','forensicKit','firstAidKit'] as const) {
+for (const kind of ['coffee','forensicKit','firstAidKit','baton'] as const) {
   test(`the ${kind} portrait has a 256 × 256 canvas and alpha`,async()=>{
     const portrait = objects[kind].portrait;
     const asset = Bun.file(new URL('../public/assets/'+portrait,import.meta.url));
