@@ -300,6 +300,7 @@
 #session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
 #session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }
 .incident-panel {
+  anchor-name: --active-incidents;
   width: min(270px, 38vw);
   margin-inline-start: auto;
   padding: 9px;
@@ -821,4 +822,13 @@
   justify-self: center;
   width: min(100%, 960px);
   box-sizing: border-box;
+}
+
+#session:has(.election-and-incidents #active-fire) #world #hud-notices {
+  inset-block-start: anchor(--active-incidents bottom, 190px);
+  margin-block-start: 8px;
+}
+#session[data-phase="ballot"][data-in-plenary="true"] #world #hud-notices {
+  inset-block-start: 88px;
+  margin-block-start: 0;
 }

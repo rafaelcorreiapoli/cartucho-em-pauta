@@ -1,5 +1,5 @@
 import { createElement as createIcon, Hand, Footprints, Cpu } from 'lucide';
-import {fireOptions,fireSites} from './fire';
+import {fireOptions} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountNotices } from './ui/notices';
@@ -481,7 +481,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
             view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : view.hearing?.target ?? '',true);
         }
-        if (view.fire && !previous.fire) notify('Incêndio',fireSites[view.fire.site].name,true);
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
         if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
         if (view.stability<stabilityRules.target && previous.stability>=stabilityRules.target) notify('Estabilidade abaixo da meta',`${view.stability} de ${stabilityRules.maximum}`,true);
