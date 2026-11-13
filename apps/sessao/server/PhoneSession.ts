@@ -98,7 +98,7 @@ export class PhoneSession {
     const call = this.calls.get(id);
     switch (action.kind) {
       case 'call': {
-        const target = world.players.find(person => person.id===action.target && person.id!==id);
+        const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
         if (!target || !world.voice(id) || !world.voice(target.id)) return 'Os dois jogadores precisam ativar a voz.';
         if (call || this.calls.has(target.id)) return 'Linha ocupada.';
         const next = {from:id,to:target.id,connected:false,expires:world.now+20_000};

@@ -1,3 +1,6 @@
+import { Parliamentarians } from './Parliamentarians';
+import { ParliamentarianTalk } from './ParliamentarianTalk';
+import { npcRules } from '../src/parliamentarians';
 import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
@@ -16,6 +19,11 @@ import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/ni
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
 
+function countFromStart(request:unknown) {
+  if (!request || typeof request!=='object' || !('npcs' in request)) return 0;
+  return typeof request.npcs==='number' && Number.isInteger(request.npcs) ? Math.max(0,Math.min(3,request.npcs)) : npcRules.count;
+}
+
 export class SessionRoom extends Room {
   maxClients = MAX_PLAYERS;
   maxMessagesPerSecond = 100;
@@ -26,13 +34,13 @@ export class SessionRoom extends Room {
   private lastFieldToken = new Map<string,number>();
   private matchObjectsActive = false;
   private gameplayWorld() {
-    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player),this.clock.currentTime,
+    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.clock.currentTime,
       id=>this.voice.has(id));
     return {
       ...world,
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       vision:(id:string)=>this.gameplay.vision(id),
-      present:(id:string)=>!!this.clients.getById(id),
+      present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         world.publish(event);
         const pickup = event.type==='collected' || event.type==='recovered';
@@ -46,6 +54,8 @@ export class SessionRoom extends Room {
   }
 
   private match = new PlenaryMatch();
+  private parliamentarians = new Parliamentarians();
+  private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
   private lastPhotos = new Map<string,{revision:number; key:string}>();
 
@@ -54,6 +64,9 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
+    this.match.logEconomy(this.gameplay.physicalCash());
+    this.npcTalk.reset();
+    this.parliamentarians.reset(0,now);
     const players = [...this.players.values()].map(state=>state.player);
     this.gameplay.reset(now,Math.random,players);
     for (const player of players) player.speed = undefined;
@@ -99,10 +112,15 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
-    this.onMessage('start-match', (client, count:unknown) => {
+    this.onMessage('start-match', (client, countRequest:unknown) => {
       const players = [...this.players.values()].map(state=>state.player);
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,count===2 ? 2 : 1)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        const count = Math.min(countFromStart(countRequest),PLENARY_SEATS.length-players.length);
+        this.parliamentarians.reset(count,this.clock.currentTime);
+        this.npcTalk.reset();
+        for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
+        this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
           Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
@@ -132,7 +150,7 @@ export class SessionRoom extends Room {
     this.onMessage('gameplay',(client, raw:unknown) => {
       const action = readGameplayAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (!action || !player || this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           !canUseGameplayAction(action,this.match.phase==='negotiation')) return;
       if (needsFieldToken(action.kind)) {
         const last = this.lastFieldToken.get(player.id) ?? 0;
@@ -146,6 +164,13 @@ export class SessionRoom extends Room {
         if (state) state.route = [];
         this.movementQueue.get(client.sessionId)?.splice(0);
       }
+    });
+    this.onMessage('npc-deal',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) return;
+      if (this.gameplay.hasOfficeChannel(player.id)) return;
+      const result = this.npcTalk.act(player,raw,this.gameplayWorld());
+      if (result) client.send('gameplay-feedback',result);
     });
     this.onMessage('allocate-attribute',(client,raw:unknown)=>{
       const request = readAttributeRequest(raw);
@@ -196,10 +221,21 @@ export class SessionRoom extends Room {
       }
       const players = [...this.players.values()].map(state => state.player);
       const now = this.clock.currentTime;
+      const wasBallot = this.match.phase==='ballot';
       this.match.advance(now);
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
       this.gameplay.tick(world,this.match.phase==='negotiation');
+      const paused = this.npcTalk.tick(world,this.match.phase==='negotiation');
+      this.parliamentarians.tick(now,STEP_MS/1000,paused,this.match.phase==='negotiation');
+      if (!wasBallot && this.match.phase==='ballot') {
+        this.parliamentarians.stopRoutes();
+        this.parliamentarians.players.forEach((npc,index)=>{
+          Object.assign(npc,PLENARY_SEATS[PLENARY_SEATS.length-1-index],{direction:2});
+          const intention = this.parliamentarians.intention(npc.id,this.match.projectRound);
+          if (intention) this.match.recordNpcVote(npc.id,intention);
+        });
+      }
       const plenary = this.match.phase==='ballot';
       for (const [index,[id,state]] of [...this.players].entries()) {
         if (!!state.plenary===plenary) continue;
@@ -230,6 +266,11 @@ export class SessionRoom extends Room {
           this.lastPhotos.set(id,{revision:photoRevision,key});
           if (lastPhotos?.key!==key && (lastPhotos || this.match.running)) client.send('photo-state',photos);
         }
+        if (view.gameplay && this.match.phase==='negotiation') {
+          view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
+          view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
+          view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);
+        }
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
@@ -237,8 +278,8 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id);
-          const visible = plenary ? players.filter(inPlenary) :
-            players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
+          const visible = plenary ? world.players.filter(inPlenary) :
+            world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
@@ -264,6 +305,7 @@ export class SessionRoom extends Room {
   async onDrop(client:Client) {
     if (!this.match.running) return;
     this.leaveVoice(client.sessionId);
+    this.npcTalk.leave(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),false);
     this.movementQueue.get(client.sessionId)?.splice(0);
@@ -284,6 +326,7 @@ export class SessionRoom extends Room {
     this.leaveVoice(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
+    this.npcTalk.leave(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),true);
     this.match.leave(client.sessionId,this.clock.currentTime);

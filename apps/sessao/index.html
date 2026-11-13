@@ -142,6 +142,12 @@
             <option value="2">2 infiltrados</option>
           </select>
         </label>
+        <label>Parlamentares NPC
+          <select id="parliamentarian-count">
+            <option value="0">Nenhum</option><option value="1">1</option>
+            <option value="2" selected>2</option><option value="3">3</option>
+          </select>
+        </label>
         <button class="hud-button" id="start-match" type="button">Iniciar sessão</button>
         <p id="start-hint"></p>
       </section>
@@ -480,6 +486,10 @@
           <button class="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
           <button class="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autofocus>Depois</button>
         </form>
+      </dialog>
+      <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title">
+        <header><h2 id="parliamentarian-title"></h2><form method="dialog"><button class="hud-button hud-button--secondary">Encerrar</button></form></header>
+        <div class="parliamentarian-options"></div>
       </dialog>
       <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title">
         <header>

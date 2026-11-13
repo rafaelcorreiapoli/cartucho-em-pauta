@@ -11,6 +11,7 @@ type Result = {cycle:number; offices:Elected[]; previous:Map<string,Office>; sal
 
 export class ElectionCycle {
   private people = new Map<string,Candidate>();
+  private paidDeputies = new Set<string>();
   private cycle = 1;
   private due = 0;
   private result?:Result;
@@ -25,6 +26,7 @@ export class ElectionCycle {
 
   reset(contacts:(Contact & {character?:number})[], now:number, random:()=>number) {
     this.people.clear();
+    this.paidDeputies.clear();
     this.cycle = 1;
     this.due = now+rules.interval;
     this.result = this.broadcast = this.notice = undefined;
@@ -42,6 +44,8 @@ export class ElectionCycle {
         interviewed:false,incumbent:0,scandal:0,noise:this.noise(),tie:random(),payStarted:now,accrued:0});
     }
   }
+
+  addDeputy(id:string) { this.paidDeputies.add(id); }
 
   private senateSeats(count:number) { return Math.min(Math.floor(count/3),Math.max(0,count-2)); }
   private noise() { return (this.random()-.5)*4; }
@@ -199,6 +203,7 @@ export class ElectionCycle {
         person.noise = this.noise();
         person.payStarted = this.due;
       }
+      for (const id of this.paidDeputies) pay(id,offices.deputy.salary);
       this.result = {cycle:this.cycle,previous,salaries,offices:elected.sort((a,b) => officeKeys.indexOf(a.office)-officeKeys.indexOf(b.office))};
       this.announce(`Eleição ${this.cycle}: ${president.name} assume a Presidência.`);
       this.cycle++;

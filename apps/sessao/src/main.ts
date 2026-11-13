@@ -1,3 +1,4 @@
+import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
@@ -198,6 +199,7 @@ async function connect(join: () => Promise<Room>) {
     let fieldToken = 0;
     const sendGameplay = (action:GameplayAction) =>
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+    const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
     const hud = createMatchHud(joined.sessionId,station => {
@@ -206,6 +208,7 @@ async function connect(join: () => Promise<Room>) {
       map.focus({preventScroll:true});
     },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
+      if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
@@ -249,6 +252,7 @@ async function connect(join: () => Promise<Room>) {
       election.render(view);
       gameplay.render(view);
       market.render(view);
+      npcPanel.update(view);
       const disguise = view.gameplay?.modulator?.active ?? false;
       if (disguiseActive!==disguise) {
         disguiseActive = disguise;
@@ -328,6 +332,7 @@ async function connect(join: () => Promise<Room>) {
       progression.destroy();
       gameplay.destroy();
       market.destroy();
+      npcPanel.destroy();
       if (room!==joined) return;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');

@@ -8,11 +8,12 @@ import { canReachObject, objects, type GameplayAction, type GameplayView } from 
 import { setCharacterPortrait } from './character-art';
 import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
+import { npcRules } from './parliamentarians';
 import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
-type FieldAction = GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
+type FieldAction = {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -128,7 +129,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const state = view?.gameplay;
     const channel = state?.officeChannel;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
-    progress.hidden = !breach;
+    const robbery = state?.robberyProgress;
+    progress.hidden = !breach && robbery===undefined;
+    if (robbery!==undefined) {
+      progress.max = npcRules.robberyMs;
+      progress.value = robbery;
+      progress.setAttribute('aria-label','Roubando dinheiro');
+      actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
+    }
     progressLabel.hidden = !breach;
     if (breach) {
       progress.max = breach.duration;
@@ -142,7 +150,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
-    if (state && player && channel?.kind!=='office-cash') {
+    if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
+      for (const npc of state.parliamentarians ?? []) {
+        actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
+          action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
+      }
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
@@ -304,7 +316,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const player = own;
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     renderField(exploring ? view : undefined,player);
-    const canInteract = exploring && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash';
+    const canInteract = exploring && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
     let best = STATION_RADIUS;
     if (canInteract && player) {

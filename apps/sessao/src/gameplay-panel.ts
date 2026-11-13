@@ -11,7 +11,7 @@ import { money } from './politics';
 import { offices } from './elections';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
@@ -82,7 +82,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     );
     if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: ${offices[doc.requiredOffice].name}`));
     if (isFood(item.kind)) summary.append(node('p',`1 un. · ${foods[item.kind].category} · ${describeFood(foods[item.kind].effect)}`));
-    if ('amount' in definition) summary.append(node('p',`R$ ${definition.amount*10} mil`));
+    const cash = cashAmount(item);
+    if (cash) summary.append(node('p',money(cash)));
     card.append(heading,summary);
     return card;
   }

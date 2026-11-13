@@ -14,6 +14,8 @@ export const AGENDA_TRANSFER_MIN = 3;
 
 export const agendas = {
   protocolo:'Protocole um documento válido',
+  rouboNpc:'Roube a carteira de um parlamentar NPC',
+  votoNpc:'Compre um voto de um parlamentar NPC',
   embolso:'Embolse uma maleta no seu cofre',
   recebido:'Receba dinheiro de outro parlamentar',
   pagamento:'Faça uma transferência',

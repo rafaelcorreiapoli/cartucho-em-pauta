@@ -480,7 +480,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.npc ? `${player.nick} · NPC` : player.nick)
           .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed ?? [];
         const itemsKey = exposed.map(item=>item.kind).join(',');
@@ -497,7 +497,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
-          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : 'Assessor')
+          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : title ? offices[title].name : player.npc ? 'Deputado' : 'Assessor')
           .setColor(title ? officeColors[title] : '#cbd6db');
         if (moving && !pose && !combatArt) {
           sprite.play(`${character}-${row}`,true);

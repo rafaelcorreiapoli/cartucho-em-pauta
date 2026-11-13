@@ -21,10 +21,14 @@ export class PoliticalEconomy {
   private offers = new Map<number,Offer>();
   private serial = 0;
   private matchId = 0;
+  private rewardReserve = 0;
+  private npcIds = new Set<string>();
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number) {
     this.matchId++;
+    this.npcIds.clear();
+    this.rewardReserve = contacts.length*8;
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
     this.accounts.clear();
     this.records.clear();
@@ -45,7 +49,9 @@ export class PoliticalEconomy {
           missions:completed.map(({id,kind})=>({id,kind})),amount:reward.xp,xp:after.xp}));
         if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:contact.id,
           matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
-        if (reward.cash) this.credit(account,reward.cash);
+        const cash = Math.min(this.rewardReserve,reward.cash ?? 0);
+        this.rewardReserve -= cash;
+        this.credit(account,cash);
         if (reward.popularity) account.popularity = cap(account.popularity+reward.popularity);
       });
       this.accounts.set(contact.id,{
@@ -63,6 +69,34 @@ export class PoliticalEconomy {
     console.info(JSON.stringify({event:'attribute-allocated',playerId:id,matchId,attribute,
       increment:attributeUpgrades[attribute].bonus,pointsInvested:progression.view().invested[attribute]}));
     return true;
+  }
+
+  addParliamentarian(contact:DirectoryContact, wallet:number) {
+    const sample = this.accounts.values().next().value;
+    if (!sample) return;
+    this.npcIds.add(contact.id);
+    const {agenda,progression,...initial} = sample;
+    this.contacts.set(contact.id,contact);
+    this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
+      progression:new CharacterProgression(this.matchId)});
+    console.info(JSON.stringify({event:'money-issued',source:'npc-start',id:contact.id,amount:wallet}));
+  }
+
+  totals() {
+    let humans = 0, npcs = 0;
+    for (const [id,account] of this.accounts) {
+      if (this.npcIds.has(id)) npcs += account.wallet;
+      else humans += account.wallet;
+    }
+    return {humans,npcs,reserve:this.rewardReserve};
+  }
+
+  takeWallet(id:string) {
+    const account = this.accounts.get(id);
+    if (!account) return 0;
+    const amount = account.wallet;
+    account.wallet = 0;
+    return amount;
   }
 
   wallet(id:string) { return this.accounts.get(id)?.wallet ?? 0; }
@@ -101,6 +135,7 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account || amount>account.wallet) return false;
     account.wallet -= amount;
+    this.rewardReserve += amount;
     return true;
   }
 
@@ -130,7 +165,7 @@ export class PoliticalEconomy {
     source.payments++;
     source.wallet -= amount;
     this.credit(recipient,amount);
-    recipient.agenda.recordPayment(recipient,from);
+    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from);
     source.agenda.recordTransfer(source,amount);
     this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
     return true;
@@ -150,6 +185,7 @@ export class PoliticalEconomy {
     const account = this.accounts.get(id);
     if (!account || account.wallet<CAMPAIGN_COST || account.campaignRound===round) return;
     account.wallet -= CAMPAIGN_COST;
+    this.rewardReserve += CAMPAIGN_COST;
     account.campaignRound = round;
     this.changePopularity(id,17);
   }
@@ -279,7 +315,7 @@ export class PoliticalEconomy {
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number) {
     for (const id of players) {
       const account = this.accounts.get(id);
-      if (account) account.agenda.updateEligibility(account,players.size,!account.suspended,ballotsLeft);
+      if (account) account.agenda.updateEligibility(account,players.size,!account.suspended,ballotsLeft,this.npcIds.size);
     }
   }
 
@@ -293,7 +329,7 @@ export class PoliticalEconomy {
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,
       paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
-      directory:[...this.contacts.values()].map(contact => ({
+      directory:[...this.contacts.values()].filter(contact=>!this.npcIds.has(contact.id)).map(contact => ({
         ...contact,popularity:this.accounts.get(contact.id)!.popularity,eligible:eligible(contact.id),
       })),
       evidence:[...account.known].filter(key => !this.published.has(key)).map(key => this.records.get(key)!),

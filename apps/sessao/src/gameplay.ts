@@ -1,3 +1,4 @@
+import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { foods } from './food';
 import type { DialogueView, NpcId } from './npcs';
@@ -32,15 +33,16 @@ export const documentTemplates = {
 
 export type ObjectKind = keyof typeof objects;
 
-export function cashAmount(kind:ObjectKind) {
-  const item = objects[kind];
+export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>) {
+  if (typeof itemOrKind!=='string' && itemOrKind.cash!==undefined) return itemOrKind.cash;
+  const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
 export type DocumentData = {
   author:string; title:string; edited:boolean; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
-export type WorldItem = {id:number; kind:ObjectKind; document?:DocumentData};
+export type WorldItem = {id:number; kind:ObjectKind; cash?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; item:WorldItem};
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
@@ -76,6 +78,9 @@ export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActio
 export type ExposedItem = {id:number; kind:ObjectKind};
 
 export type GameplayView = {
+  parliamentarians?:{id:string;name:string;down:boolean}[];
+  parliamentarianDeal?:ParliamentarianDeal;
+  robberyProgress?:number;
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};
@@ -87,7 +92,7 @@ export type GameplayView = {
   exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {
-  type:'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  type:'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   actor:string; target?:string; item?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; damage?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 

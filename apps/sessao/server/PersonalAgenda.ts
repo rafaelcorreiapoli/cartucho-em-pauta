@@ -7,6 +7,8 @@ type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
 
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
+  rouboNpc:(event:GameplayEvent) => event.type==='npc-robbed',
+  votoNpc:(event:GameplayEvent) => event.type==='npc-vote-bought',
   embolso:(event:GameplayEvent) => event.type==='money-pocketed' && event.kind==='briefcase',
   assinar:(event:GameplayEvent) => event.type==='signed' && !!event.target && event.target!==event.actor,
   transporte:(event:GameplayEvent) => event.type==='room-entered' && event.kind==='briefcase' && event.target===event.actor,
@@ -50,6 +52,7 @@ export class PersonalAgenda {
   private seenEvents = new Set<string>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
   private furnishingPurchases = 0;
+  private npcCount = 0;
   private cannotVote = false;
   private ballotsLeft = 3;
 
@@ -79,7 +82,8 @@ export class PersonalAgenda {
     if (mission) this.progress(metrics,{assinaturas:this.countFacts(mission,[{value:signer,group:String(document)}])});
   }
 
-  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number) {
+  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0) {
+    this.npcCount = npcCount;
     this.playerCount = playerCount;
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
@@ -92,8 +96,10 @@ export class PersonalAgenda {
   }
 
   private availableInMatch(kind:Agenda, remaining:number) {
+    if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
-    if (players>this.playerCount) return false;
+    const participants = kind==='assinaturas' ? this.playerCount+this.npcCount : this.playerCount;
+    if (players>participants) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
     }
@@ -122,7 +128,9 @@ export class PersonalAgenda {
       if (matches?.(event)) gains[kind] = 1;
       const rule = photoMissions[kind as keyof typeof photoMissions];
       if (rule && (kind!=='pizzada' || scandalPizza)) {
-        gains[kind] = this.countFacts(mission,rule.facts(event));
+        const photo = event.photo;
+        const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
+        gains[kind] = this.countFacts(mission,rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event));
       }
       if (kind==='assinaturas' && event.type==='edited' && event.item!==undefined) {
         const facts = this.factsByMission.get(mission.id);

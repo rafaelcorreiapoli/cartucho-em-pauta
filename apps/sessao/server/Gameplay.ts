@@ -150,13 +150,48 @@ export class Gameplay {
     return data;
   }
 
+  hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
+
+  physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
+
+  signableDocuments(player:Player,npc:Player,world:GameplayWorld) {
+    return this.inventory(player.id).flatMap(({data})=>{
+      const doc = data.document;
+      return doc && !doc.signatures.some(person=>person.id===npc.id) &&
+        (!doc.requiredOffice || world.office(npc.id)===doc.requiredOffice)
+        ? [{id:data.id,title:doc.title}] : [];
+    });
+  }
+
+  signWithNpc(player:Player,npc:Player,itemId:number,price:number,world:GameplayWorld) {
+    if (!this.signableDocuments(player,npc,world).some(document=>document.id===itemId)) return 'Documento indisponível.';
+    if (price && !world.payNpc?.(player.id,npc.id,price)) return 'Pagamento indisponível.';
+    const item = this.items.get(itemId)!;
+    item.data.document!.signatures.push({id:npc.id,name:npc.nick});
+    this.event(world,npc,'signed',item.data,player.id);
+    console.info(JSON.stringify({event:'npc-signature',from:player.id,to:npc.id,amount:price,item:itemId}));
+    return 'Assinatura obtida.';
+  }
+
+  robNpc(player:Player,npc:Player,world:GameplayWorld) {
+    if (!this.available(player.id)) return 'Inventário cheio.';
+    const amount = world.takeWallet?.(npc.id) ?? 0;
+    if (!amount) return 'O parlamentar está sem dinheiro.';
+    const cash = this.create('briefcase',{holder:player.id});
+    cash.cash = amount;
+    this.expose(player.id,cash.id);
+    publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind});
+    console.info(JSON.stringify({event:'npc-robbery',from:npc.id,to:player.id,amount,item:cash.id}));
+    return 'Maleta roubada. Leve-a ao seu cofre.';
+  }
+
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
     facts?:Partial<Pick<GameplayEvent,'photo'|'place'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
-  private groundPlace(kind:ObjectKind, {x,y}:Motion, now:number):GroundPlace {
-    return {ground:{x,y},expires:cashAmount(kind) ? now+cashLifetime : undefined};
+  private groundPlace(kind:ObjectKind | WorldItem, {x,y}:Motion, now:number):GroundPlace {
+    return {ground:{x,y},expires:cashAmount(kind) && (typeof kind==='string' || kind.cash===undefined) ? now+cashLifetime : undefined};
   }
 
   private groundItems(now:number) {
@@ -173,7 +208,7 @@ export class Gameplay {
     this.nextCashSpawn = now+8000+this.random()*10000;
     const ground = this.groundItems(now);
     const barriers = this.privateOffices.doors(now);
-    if (ground.length>=maxGroundItems || ground.filter(item=>cashAmount(item.kind)).length>=8) return;
+    if (ground.length>=maxGroundItems || ground.filter(item=>cashAmount(item)).length>=8) return;
     for (let attempt=0;attempt<16;attempt++) {
       const x = 24+Math.floor(this.random()*(WIDTH-48));
       const y = 24+Math.floor(this.random()*(HEIGHT-48));
@@ -183,6 +218,7 @@ export class Gameplay {
       if (last?.x!==x || last.y!==y) continue;
       const kind = cashKinds[Math.floor(this.random()*cashKinds.length)];
       this.create(kind,this.groundPlace(kind,{x,y},now));
+      console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;
     }
   }
@@ -259,7 +295,7 @@ export class Gameplay {
     this.stopModulator(player.id,world.now);
     if (!permanent) return;
     this.combat.leave(player);
-    for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data.kind,player,world.now));
+    for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data,player,world.now));
     for (const [id,request] of this.requests) {
       if (request.from===player.id || request.to===player.id) this.requests.delete(id);
     }
@@ -311,7 +347,7 @@ export class Gameplay {
       decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
-      contacts:world.players.filter(other => other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
+      contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
       ground:ground.map(({id,kind,x,y,document}) => ({id,kind,x,y,title:document?.title})),
@@ -461,7 +497,7 @@ export class Gameplay {
       }
       if (own && this.privateOffices.near(player,office,'safe')) {
         for (const item of items) {
-          const amount = cashAmount(item.kind);
+          const amount = cashAmount(item);
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
         }
       }
@@ -568,7 +604,7 @@ export class Gameplay {
     const target = kind==='office-cash' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
     if (!offices.near(player,office,target)) return 'Aproxime-se do alvo.';
     const level = this.toolLevel(item.data);
-    const duration = target==='safe' ? (own && cashAmount(item.data.kind) ? officeRules.cashMs : undefined)
+    const duration = target==='safe' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
     if (!duration) return target==='safe' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
     offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+duration,level});
@@ -598,7 +634,7 @@ export class Gameplay {
       }
       this.remove(item);
       if (target==='safe') {
-        world.earn(id,cashAmount(item.data.kind)!);
+        world.earn(id,cashAmount(item.data)!);
         this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id});
         world.feedback?.(id,'Dinheiro embolsado.');
       } else {
@@ -801,7 +837,7 @@ export class Gameplay {
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
       if (!accessible || !this.available(id)) return 'Objeto fora de alcance ou inventário cheio.';
       this.move(item,{holder:id});
-      if (cashAmount(data.kind)) this.expose(id,data.id);
+      if (cashAmount(data)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
@@ -816,7 +852,7 @@ export class Gameplay {
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
-        const target = world.players.find(person => person.id===action.target && person.id!==id && canReachObject(player,person));
+        const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id && canReachObject(player,person));
         if (!target) return 'Aproxime-se do destinatário.';
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return 'Este jogador não pode assinar o documento.';
@@ -829,7 +865,7 @@ export class Gameplay {
       }
       case 'drop':
         if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
-        this.move(item,this.groundPlace(item.data.kind,player,world.now));
+        this.move(item,this.groundPlace(item.data,player,world.now));
         this.event(world,player,'dropped',data);
         return 'Objeto largado.';
       case 'store':
@@ -843,7 +879,7 @@ export class Gameplay {
       case 'deliver':
         return 'Leve o dinheiro ao cofre do seu gabinete.';
       case 'use':
-        if (cashAmount(data.kind)) return 'Leve o dinheiro ao cofre do seu gabinete.';
+        if (cashAmount(data)) return 'Leve o dinheiro ao cofre do seu gabinete.';
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
         this.remove(item);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
@@ -903,7 +939,7 @@ export class Gameplay {
         if (this.transfers.length>16) this.transfers.shift();
       }
       this.move(item,{holder:player.id});
-      if (cashAmount(item.data.kind)) this.expose(player.id,item.data.id);
+      if (cashAmount(item.data)) this.expose(player.id,item.data.id);
       this.event(world,owner,'transferred',item.data,player.id);
       return 'Objeto recebido.';
     }

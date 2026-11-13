@@ -142,3 +142,8 @@
 #attribute-list .attribute-selected { background: #e1ba601f; }
 #attribute-list [aria-pressed="true"], .attribute-preview { color: #ffda85; }
 #attribute-resources section > span { text-align: right; }
+
+#parliamentarian-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.parliamentarian-options { display: grid; gap: 8px; margin-top: 14px; }
+.parliamentarian-options h3 { margin: 8px 0 0; color: #ffda85; font-size: 1rem; }
+.parliamentarian-options p:empty { display: none; }
