@@ -44,7 +44,7 @@ export const officeGoods = {
   decoder:{name:'Decodificador',description:'Arrombamento nível 4.',portrait:'retrato-gazua.webp',price:4,attack:4},
   masterDecoder:{name:'Ferramenta especializada',description:'Arrombamento nível 5.',portrait:'retrato-gazua.webp',price:5,attack:5},
   doorLock:{name:'Reforço de porta',description:'Aumenta a segurança da porta em um nível.',portrait:'retrato-fechadura.webp',price:2},
-  cabinetLock:{name:'Reforço de armário',description:'Aumenta a segurança do armário em um nível.',portrait:'retrato-fechadura.webp',price:2},
+  cabinetLock:{name:'Reforço de armário',description:'Aumenta a segurança do armário em um nível.',portrait:'retrato-fechadura-armario.webp',price:2},
   officeTv:{name:'TV de 85 polegadas',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tv.webp',price:3},
   officeRug:{name:'Tapete persa',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tapete.webp',price:2},
   officeChair:{name:'Poltrona de couro',description:'Instalação no seu gabinete incluída.',portrait:'retrato-poltrona.webp',price:2},
