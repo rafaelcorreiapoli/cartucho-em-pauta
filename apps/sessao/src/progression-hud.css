@@ -3,8 +3,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  width: min(100%, 198px);
-  margin-top: 4px;
+  width: 100%;
   font-variant-numeric: tabular-nums;
 }
 #profile-level {
@@ -19,7 +18,7 @@
 .xp-track {
   position: relative;
   flex: 1;
-  min-width: 72px;
+  min-width: 0;
   height: var(--profile-meter-height);
   overflow: hidden;
   border: 1px solid var(--profile-meter-stroke);
@@ -41,7 +40,7 @@
   place-items: center;
   color: #fff5ff;
   text-shadow: 0 1px 2px #1b1225;
-  font: 800 11px/1 system-ui,sans-serif;
+  font: 800 9px/1 system-ui,sans-serif;
 }
 #profile-xp-reward {
   position: absolute;

@@ -80,9 +80,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const progress = element<HTMLProgressElement>('office-progress');
   const progressLabel = element('office-progress-label');
   const officeBadge = element('own-office');
-  const vitality = element('vitality');
-  const vitalityNumber = element('vitality-number');
-  const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
   const gearStrip = element('equipped-gear');
   const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
   const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
@@ -487,15 +484,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
       }
       renderEquipped(view.gameplay);
-      const hp = view.gameplay?.vitality;
-      vitality.hidden = !hp;
-      if (hp) {
-        vitalityMeter.max = hp.max;
-        vitalityMeter.value = hp.hp;
-        const health = hp.hp/hp.max;
-        vitalityMeter.style.setProperty('--hp-fill',health>.55 ? '#69d878' : health>.25 ? '#ffc260' : '#ff6663');
-        vitalityNumber.textContent = hp.recovery ? `${own?.carried ? 'Em transporte' : 'Nocaute'} · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
-      }
+
       previous = view;
       actions(view);
     },
@@ -527,7 +516,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       progress.hidden = officeBadge.hidden = true;
       shortcuts.replaceChildren();
       fieldActions.replaceChildren();
-      vitality.hidden = true;
     },
   };
 }

@@ -209,10 +209,10 @@
           <section id="profile-dock" aria-label="Seu personagem">
             <div class="profile-portrait">
               <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
-              <div id="vitality" class="vitality" hidden>
-                <progress id="vitality-meter" aria-label="Pontos de vida"></progress>
-                <strong id="vitality-number"></strong>
-              </div>
+              <footer id="profile-xp" hidden>
+                <div class="xp-track"><span id="profile-xp-fill" aria-hidden="true"></span><span id="profile-xp-value"></span></div>
+                <div id="profile-xp-reward" role="status"></div>
+              </footer>
             </div>
             <div class="deck-identity">
               <div class="profile-name-row">
@@ -222,10 +222,6 @@
               </div>
               <small id="hud-office" hidden>Ex-parlamentar</small>
               <small id="own-office" hidden></small>
-              <footer id="profile-xp" hidden>
-                <div class="xp-track"><span id="profile-xp-fill" aria-hidden="true"></span><span id="profile-xp-value"></span></div>
-                <div id="profile-xp-reward" role="status"></div>
-              </footer>
             </div>
           </section>
           <section id="legislative-dock" aria-label="Situação legislativa">
