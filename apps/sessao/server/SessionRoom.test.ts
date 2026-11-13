@@ -1,3 +1,4 @@
+import type {ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
 import {stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
@@ -50,7 +51,11 @@ test('clients share movement and voice, then receive private roles and payments'
     });
     first.onMessage('players',() => {});
     const positions = new Map<string,Player>();
-    const track = (room:Room) => room.onMessage('control',(state:{player:Player})=>positions.set(room.sessionId,state.player));
+    const controls = new Map<string,ControlState>();
+    const track = (room:Room) => room.onMessage('control',(state:ControlState)=>{
+      controls.set(room.sessionId,state);
+      positions.set(room.sessionId,state.player);
+    });
     track(first);
     track(second);
     let seq = 0;
@@ -160,11 +165,15 @@ test('clients share movement and voice, then receive private roles and payments'
     await Promise.all([second,third].map(async(peer,index)=>{
       const destination = {x:140+index*12,y:146};
       let sequence = 100;
-      peer.send('input',{seq:sequence,destination,sprint:true});
+      const revision = controls.get(peer.sessionId)?.revision;
+      peer.send('input',{seq:sequence-1,destination,sprint:true});
+      await Bun.sleep(60);
+      expect(controls.get(peer.sessionId)?.ack).toBeLessThan(sequence-1);
+      peer.send('input',{seq:sequence,revision,destination,sprint:true});
       for (let attempt=0;attempt<350;attempt++) {
         const player = positions.get(peer.sessionId)!;
         if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
-        peer.send('input',{seq:++sequence,sprint:true});
+        peer.send('input',{seq:++sequence,revision,sprint:true});
         await Bun.sleep(52);
       }
       throw new Error('Could not reach the transfer point from the assigned office');

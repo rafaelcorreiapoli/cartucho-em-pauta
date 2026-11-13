@@ -1,5 +1,5 @@
 import type { Player } from './map';
-import { applyInput, type ControlState, type MovementInput } from './movement';
+import { applyInput, MAX_QUEUED_INPUTS, type ControlState, type MovementInput } from './movement';
 
 const HISTORY_MS = 100;
 
@@ -11,16 +11,17 @@ export class PredictedMovement {
   constructor(private send: (input: MovementInput) => void) {}
 
   input(command: Omit<MovementInput,'seq'>) {
-    if (!this.state || this.pending.length >= 20) return;
-    const input = {seq:++this.seq,...command,plenary:this.state.plenary};
+    if (!this.state || this.pending.length >= MAX_QUEUED_INPUTS) return false;
+    const input = {seq:++this.seq,...command,plenary:this.state.plenary,revision:this.state.revision};
     this.pending.push(input);
     applyInput(this.state,input);
     this.send(input);
+    return true;
   }
 
   reconcile(snapshot: ControlState) {
     this.seq = Math.max(this.seq,snapshot.ack);
-    if (!!this.state?.isolated!==!!snapshot.isolated) this.pending = [];
+    if (this.state?.revision!==snapshot.revision || !!this.state?.isolated!==!!snapshot.isolated) this.pending = [];
     else this.pending = this.pending.filter(input => input.seq>snapshot.ack && !!input.plenary===!!snapshot.plenary);
     this.state = {...snapshot,player:{...snapshot.player},route:[...snapshot.route]};
     for (const input of this.pending) applyInput(this.state,input);

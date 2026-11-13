@@ -36,6 +36,12 @@ export class SessionRoom extends Room {
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
 
+  private resetMovement(state:ControlState) {
+    this.movementQueue.get(state.player.id)?.splice(0);
+    state.route = [];
+    state.revision = (state.revision ?? 0)+1;
+  }
+
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
   private lastRoomCommandToken = new Map<string,number>();
@@ -180,8 +186,7 @@ export class SessionRoom extends Room {
         for (const [id,state] of this.players) {
           const {player} = state;
           Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
-          state.route = [];
-          this.movementQueue.get(id)?.splice(0);
+          this.resetMovement(state);
           player.speed = characterStats[player.character].speed;
           player.stamina = MAX_STAMINA;
           player.sprinting = undefined;
@@ -292,8 +297,7 @@ export class SessionRoom extends Room {
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
-        if (state) state.route = [];
-        this.movementQueue.get(client.sessionId)?.splice(0);
+        if (state) this.resetMovement(state);
       }
     });
     this.onMessage('npc-deal',(client,raw:unknown)=>{
@@ -342,7 +346,7 @@ export class SessionRoom extends Room {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
       const queue = this.movementQueue.get(client.sessionId);
-      if (!input || !state || !queue || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
+      if (!input || !state || !queue || input.revision!==state.revision || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
     });
@@ -388,10 +392,9 @@ export class SessionRoom extends Room {
         const wasIsolated = state.isolated;
         state.isolated = isolated;
         state.plenary = plenary;
-        state.route = [];
+        this.resetMovement(state);
         state.player.moving = false;
         state.player.sprinting = undefined;
-        this.movementQueue.get(id)?.splice(0);
         if (isolated) {
           this.npcTalk.leave(id);
           this.gameplay.stopMegaphone(id,world);
@@ -475,10 +478,9 @@ export class SessionRoom extends Room {
     this.npcTalk.leave(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),false);
-    this.movementQueue.get(client.sessionId)?.splice(0);
     const state = this.players.get(client.sessionId);
     if (state) {
-      state.route = [];
+      this.resetMovement(state);
       state.player.moving = false;
     }
     this.match.setPlayerConnected(client.sessionId,false);

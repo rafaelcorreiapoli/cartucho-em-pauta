@@ -194,6 +194,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       });
     }
+    localSprite() { return this.views.get(ownId)?.sprite; }
     playerHead() {
       const camera = this.cameras.main;
       const sprite = this.views.get(ownId)?.sprite;
@@ -321,8 +322,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
         if (destination) {
-          local.input({destination,sprint});
-          destination = undefined;
+          if (local.input({destination,sprint})) destination = undefined;
         } else if (keys.size || manual) {
           const motion = {x:0,y:0};
           for (const key of keys) {
@@ -471,7 +471,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.views.set(id,view);
         }
         const {sprite,label,office} = view;
-        const blend = own && Math.hypot(sprite.x-player.x,sprite.y-player.y)<40 ? 1-Math.exp(-delta/20) : 1;
+        const blend = own && Math.hypot(sprite.x-player.x,sprite.y-player.y)<40 ? 1-Math.exp(-delta/55) : 1;
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
         const swing = latest.swing;
@@ -653,12 +653,21 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },
     reconcile(snapshot: ControlState) {
-      if (!!snapshot.plenary!==!!local.state?.plenary) {
+      const before = local.state;
+      const reset = before?.revision!==snapshot.revision || !!before?.plenary!==!!snapshot.plenary ||
+        !!before?.isolated!==!!snapshot.isolated;
+      if (reset) {
         stop();
         destination = undefined;
+        manual = false;
         history.clear();
       }
       local.reconcile(snapshot);
+      const after = local.state!;
+      if (!before || reset) {
+        const sprite = scene.sys.isActive() ? scene.localSprite() : undefined;
+        sprite?.setPosition(after.player.x,after.player.y);
+      }
     },
     setMatchPhase(phase:Phase) {
       inLobby = phase==='lobby';

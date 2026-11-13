@@ -9,8 +9,8 @@ export const MAX_QUEUED_INPUTS = 8;
 export const MAX_STAMINA = baseStamina;
 const staminaDrain = 25*STEP_SECONDS;
 const staminaRecovery = 20*STEP_SECONDS;
-export type MovementInput = { seq: number; plenary?:boolean; sprint?:true; motion?: Motion; destination?: Motion; door?:number };
-export type ControlState = { player: Player; route: Motion[]; ack: number; plenary?:boolean; isolated?:boolean };
+export type MovementInput = { seq: number; revision?:number; plenary?:boolean; sprint?:true; motion?: Motion; destination?: Motion; door?:number };
+export type ControlState = { player: Player; route: Motion[]; ack: number; revision?:number; plenary?:boolean; isolated?:boolean };
 
 function recoverStamina(player:Player) {
   const max = player.staminaMax ?? MAX_STAMINA;
@@ -75,26 +75,28 @@ export function readInput(data: unknown): MovementInput | undefined {
   if (!data || typeof data !== 'object' || !('seq' in data) ||
       typeof data.seq !== 'number' || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
   const seq = data.seq;
+  const revision = 'revision' in data && typeof data.revision==='number' && Number.isSafeInteger(data.revision) && data.revision>=0
+    ? data.revision : undefined;
   const plenary = 'plenary' in data && data.plenary===true;
   const sprint = 'sprint' in data && data.sprint===true ? true : undefined;
   if ('door' in data) {
     if (typeof data.door==='number' && Number.isInteger(data.door) && data.door>=0 && data.door<PLENARY_DOORS.length) {
-      return {seq,door:data.door,plenary,sprint};
+      return {seq,revision,door:data.door,plenary,sprint};
     }
     return;
   }
   if ('destination' in data) {
     const destination = point(data.destination);
     if (destination && destination.x>=0 && destination.y>=0 && destination.x<WIDTH && destination.y<HEIGHT) {
-      return {seq,destination,plenary,sprint};
+      return {seq,revision,destination,plenary,sprint};
     }
     return;
   }
   if ('motion' in data) {
     const motion = point(data.motion);
     const clamp = (value: number) => Math.max(-1,Math.min(1,value));
-    if (motion) return {seq,plenary,sprint,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
+    if (motion) return {seq,revision,plenary,sprint,motion:{x:clamp(motion.x),y:clamp(motion.y)}};
     return;
   }
-  return {seq,plenary,sprint};
+  return {seq,revision,plenary,sprint};
 }

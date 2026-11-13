@@ -110,3 +110,18 @@ test('a restored movement controller resumes above the live room acknowledgement
   expect(sent[0]?.seq).toBe(71);
   expect(client.state?.player.x).toBeGreaterThan(player.x);
 });
+
+test('prediction keeps the queue bounded and never replays old input after a same-phase teleport',()=>{
+  const sent:MovementInput[] = [];
+  const client = new PredictedMovement(input=>sent.push(input));
+  const player = {id:'p',nick:'P',character:0,x:140,y:146,moving:false,direction:0};
+  client.reconcile({player,route:[],ack:0,revision:1});
+  for (let i=0;i<20;i++) client.input({motion:{x:1,y:0}});
+  expect(sent).toHaveLength(8);
+  expect(sent.every(input=>readInput(input)?.revision===1)).toBe(true);
+  const spawn = {...player,y:190};
+  client.reconcile({player:spawn,route:[],ack:0,revision:2});
+  expect(client.state?.player).toEqual(spawn);
+  expect(client.input({motion:{x:1,y:0}})).toBe(true);
+  expect(sent.at(-1)).toMatchObject({seq:9,revision:2});
+});
