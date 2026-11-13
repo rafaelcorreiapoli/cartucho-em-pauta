@@ -17,7 +17,7 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
   }
 }
 
-export function createPlenaryPanel(id:string, send:(type:string, data:number|{infiltrators:number}) => void, command:ReturnType<typeof createRoomCommandSender>) {
+export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   function countPicker(id:string,initial:number) {
@@ -34,14 +34,14 @@ export function createPlenaryPanel(id:string, send:(type:string, data:number|{in
   }
   const infiltrators = countPicker('infiltrator-count',1);
   const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
-  for (const button of npcButtons) button.onclick = ()=>send('lobby-npc-count',Number(button.dataset.count));
+  for (const button of npcButtons) button.onclick = ()=>command('lobby-npc-count',{count:Number(button.dataset.count)});
   const brief = element('project-outcome-brief');
   let briefTimer:number | undefined;
   function clearBrief() {
     window.clearTimeout(briefTimer);
     brief.hidden = true;
   }
-  start.onclick = () => send('start-match',{infiltrators:infiltrators()});
+  start.onclick = () => command('start-match',{infiltrators:infiltrators()});
   for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
   for (const button of votes) button.onclick = () => command('bill-vote',{vote:button.dataset.vote as Vote});
 

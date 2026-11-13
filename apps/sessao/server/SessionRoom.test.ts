@@ -63,7 +63,7 @@ test('clients share movement and voice, then receive private roles and payments'
     };
     await until(() => seen.length===2);
     const start = findFirst()!;
-    first.send('character',2);
+    first.send('character',{character:2,token:1});
     for (let step=0;step<10;step++) {
       first.send('input',{seq:++seq,motion:{x:0,y:-1}});
       await Bun.sleep(50);
@@ -116,7 +116,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.onMessage('gameplay-feedback',() => {});
     second.onMessage('photo-state',(view:PhotoAccessView) => { secondPhotos = view; });
     third.onMessage('photo-state',(view:PhotoAccessView) => { thirdPhotos = view; });
-    first.send('start-match');
+    first.send('start-match',{npcs:0,token:2});
     await until(() => [firstView,secondView,thirdView].every(view => view?.phase==='negotiation'));
     expect([firstView!,secondView!,thirdView!].filter(view => view.role==='Infiltrado')).toHaveLength(1);
     expect([firstView!,secondView!,thirdView!].every(view => !view.infiltratorName)).toBe(true);
@@ -128,29 +128,32 @@ test('clients share movement and voice, then receive private roles and payments'
       return !!player && roomAt(player)===assigned[index].name;
     }));
     expect(findFirst()).toBeUndefined();
-    first.send('gameplay',{kind:'install',place:'constructor',item:1});
-    first.send('gameplay',{kind:'photo'});
+    first.send('gameplay',{action:{kind:'install',place:'constructor',item:1},token:1310});
+    const photoCommand = {action:{kind:'photo'},token:1320};
+    first.send('gameplay',photoCommand);
+    first.send('gameplay',photoCommand);
     await until(() => feedback.includes('Aproxime-se do local.') && firstPhotos?.album.length===1);
-    const strike = {kind:'attack',token:1};
-    first.send('gameplay',strike);
-    first.send('gameplay',strike);
-    first.send('gameplay',{kind:'treat',token:2});
+    const strike = {kind:'attack'};
+    const strikeToken = 1340;
+    first.send('gameplay',{action:strike,token:strikeToken});
+    first.send('gameplay',{action:strike,token:strikeToken});
+    first.send('gameplay',{action:{kind:'treat'},token:1370});
     await until(() => feedback.includes('Atendimento indisponível.'));
     expect(feedback.filter(message=>message==='Equipe uma arma.')).toHaveLength(1);
-    second.send('gameplay',{kind:'photo'});
+    second.send('gameplay',{action:{kind:'photo'},token:1400});
     await until(() => secondPhotos?.album.length===1);
     expect(firstPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([first.sessionId]);
     expect(secondPhotos?.album.map(entry=>entry.photo.author.id)).toEqual([second.sessionId]);
     expect(thirdPhotos?.album ?? []).toEqual([]);
-    first.send('gameplay',{kind:'call',target:second.sessionId});
+    first.send('gameplay',{action:{kind:'call',target:second.sessionId},token:1450});
     await until(() => secondView?.gameplay?.call?.state==='incoming' && firstView?.gameplay?.call?.state==='outgoing');
     expect(thirdView!.gameplay?.call).toBeUndefined();
-    second.send('gameplay',{kind:'answer'});
+    second.send('gameplay',{action:{kind:'answer'},token:1480});
     await until(() => secondView?.gameplay?.call?.state==='connected' &&
       secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
     expect(secondRange.filter(([peer]) => peer===first.sessionId)).toHaveLength(1);
     expect(firstOutbound).toContain(second.sessionId);
-    second.send('gameplay',{kind:'hangup'});
+    second.send('gameplay',{action:{kind:'hangup'},token:1530});
     await until(() => !secondView?.gameplay?.call &&
       !secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
     await Promise.all([second,third].map(async(peer,index)=>{
@@ -170,7 +173,7 @@ test('clients share movement and voice, then receive private roles and payments'
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
       .reduce((sum,mission)=>sum+(missionReward(mission.kind).cash ?? 0),0);
-    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:true,token:1};
+    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:true,token:1730};
     second.send('politics',{...transfer,token:undefined});
     second.send('politics',transfer);
     second.send('politics',{...transfer,amount:1});
@@ -182,9 +185,9 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
     second.send('election',{kind:'invest',amount:1,token:transfer.token});
-    second.send('election',{kind:'invest',amount:2,token:2});
-    second.send('election',{kind:'invest',amount:2,token:2});
-    second.send('politics',{...transfer,token:2});
+    second.send('election',{kind:'invest',amount:2,token:1850});
+    second.send('election',{kind:'invest',amount:2,token:1850});
+    second.send('politics',{...transfer,token:1850});
     await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
@@ -210,7 +213,7 @@ test('clients share movement and voice, then receive private roles and payments'
     solo.onMessage('control',() => {});
     solo.onMessage('photo-state',() => {});
     solo.onMessage('plenary',(view:PlenaryView) => { soloView = view; });
-    solo.send('start-match',1);
+    solo.send('start-match',{npcs:0,token:1});
     await until(() => soloView?.phase==='negotiation');
     expect(soloView!).toMatchObject({solo:true,role:'Parlamentar',electorate:1,
       election:{personal:{office:'deputy'}}});
@@ -271,7 +274,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const positions = Reflect.get(room,'players') as Map<string,{player:Player}>;
     const match = new PlenaryMatch(1);
     Reflect.set(room,'match',match);
-    carrier.send('start-match');
+    carrier.send('start-match',{npcs:0,token:1});
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
     const routes = new Map<string,[string,number,boolean?,boolean?][]>();
     let broadcast = false;
@@ -287,25 +290,25 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const gearView = ()=>views.get(carrier.sessionId)?.gameplay;
     await wait(()=>routes.has(passenger.sessionId));
     expect(routes.get(passenger.sessionId)?.some(([id])=>id===carrier.sessionId)).toBe(false);
-    carrier.send('gameplay',{kind:'talk',target:'vendor'});
+    carrier.send('gameplay',{action:{kind:'talk',target:'vendor'},token:2900});
     await wait(()=>!!gearView()?.dialogue);
-    carrier.send('gameplay',{kind:'dialogue-choice',target:'products',token:gearView()?.dialogue?.token});
+    carrier.send('gameplay',{action:{kind:'dialogue-choice',target:'products',token:gearView()?.dialogue?.token},token:2920});
     await wait(()=>gearView()?.dialogue?.shop===true);
-    carrier.send('gameplay',{kind:'shop-buy',target:'megaphone',token:gearView()?.dialogue?.token});
+    carrier.send('gameplay',{action:{kind:'shop-buy',target:'megaphone',token:gearView()?.dialogue?.token},token:2940});
     await wait(()=>!!gearView()?.inventory.find(item=>item.kind==='megaphone'));
-    carrier.send('gameplay',{kind:'equip',item:gearView()?.inventory.find(item=>item.kind==='megaphone')?.id});
+    carrier.send('gameplay',{action:{kind:'equip',item:gearView()?.inventory.find(item=>item.kind==='megaphone')?.id},token:2960});
     await wait(()=>!!gearView()?.equipped?.find(item=>item.kind==='megaphone'));
-    carrier.send('gameplay',{kind:'toggle-megaphone',token:1});
+    carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:2980});
     await wait(()=>broadcast && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     await Bun.sleep(120);
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
-    carrier.send('gameplay',{kind:'toggle-megaphone',token:2});
+    carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:3040});
     await wait(()=>!broadcast && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
     carrier.send('voice-leave');
     passenger.send('voice-leave');
-    carrier.send('gameplay',{kind:'dialogue-close'});
+    carrier.send('gameplay',{action:{kind:'dialogue-close'},token:3080});
     await wait(()=>!gearView()?.dialogue);
     purchases.clear();
     const carrierAccount = Reflect.get(Reflect.get(match,'economy'),'accounts').get(carrier.sessionId);
@@ -324,68 +327,68 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
-    passenger.send('room-activity',{activity:'coffee',token:1});
+    passenger.send('room-activity',{activity:'coffee',token:3270});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
-    carrier.send('gameplay',{kind:'talk',target:'vendor'});
+    carrier.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3320});
     await wait(()=>!!gameplay()?.dialogue);
-    carrier.send('gameplay',{kind:'dialogue-choice',target:'products',token:gameplay()?.dialogue?.token});
+    carrier.send('gameplay',{action:{kind:'dialogue-choice',target:'products',token:gameplay()?.dialogue?.token},token:3340});
     await wait(()=>gameplay()?.dialogue?.shop===true);
-    carrier.send('gameplay',{kind:'shop-buy',target:'baton',token:gameplay()?.dialogue?.token});
+    carrier.send('gameplay',{action:{kind:'shop-buy',target:'baton',token:gameplay()?.dialogue?.token},token:3360});
     await wait(()=>gameplay()?.inventory.some(item=>item.kind==='baton')===true);
     const purchase = purchases.get(carrier.sessionId);
     expect(purchase).toEqual(gameplay()?.inventory.find(item=>item.kind==='baton'));
     expect(purchases.has(passenger.sessionId)).toBe(false);
-    carrier.send('gameplay',{kind:'shop-buy',target:'spyCamera',token:gameplay()?.dialogue?.token});
+    carrier.send('gameplay',{action:{kind:'shop-buy',target:'spyCamera',token:gameplay()?.dialogue?.token},token:3410});
     await wait(()=>gameplay()?.inventory.some(item=>item.kind==='spyCamera')===true);
     const camera = gameplay()!.inventory.find(item=>item.kind==='spyCamera')!;
     Object.assign(positions.get(carrier.sessionId)!.player,{x:240,y:250});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:245,y:252});
-    carrier.send('spy',{kind:'install',site:'coffee',item:camera.id,token:1});
+    carrier.send('spy',{kind:'install',site:'coffee',item:camera.id,token:3460});
     await wait(()=>gameplay()?.surveillance?.progress!==undefined);
     await Bun.sleep(5100);
     await wait(()=>gameplay()?.surveillance?.channels.length===1);
     const channel = gameplay()!.surveillance!.channels[0].id;
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
-    passenger.send('spy',{kind:'open',channel,token:2});
-    carrier.send('spy',{kind:'open',channel,token:2});
+    passenger.send('spy',{kind:'open',channel,token:3520});
+    carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>spyFrames.get(carrier.sessionId)?.people.some(person=>person.id===passenger.sessionId)===true);
     await wait(()=>gameplay()?.surveillance?.selected===channel);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
-    carrier.send('spy',{kind:'close',token:3});
-    carrier.send('spy',{kind:'open',channel,token:2});
+    carrier.send('spy',{kind:'close',token:3580});
+    carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     const passengerGameplay = ()=>views.get(passenger.sessionId)?.gameplay;
-    passenger.send('gameplay',{kind:'talk',target:'vendor'});
+    passenger.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3630});
     await wait(()=>!!passengerGameplay()?.dialogue);
-    passenger.send('gameplay',{kind:'dialogue-choice',target:'products',token:passengerGameplay()?.dialogue?.token});
+    passenger.send('gameplay',{action:{kind:'dialogue-choice',target:'products',token:passengerGameplay()?.dialogue?.token},token:3650});
     await wait(()=>passengerGameplay()?.dialogue?.shop===true);
-    passenger.send('gameplay',{kind:'shop-buy',target:'xray',token:passengerGameplay()?.dialogue?.token});
+    passenger.send('gameplay',{action:{kind:'shop-buy',target:'xray',token:passengerGameplay()?.dialogue?.token},token:3670});
     await wait(()=>passengerGameplay()?.inventory.some(item=>item.kind==='xray')===true);
-    passenger.send('gameplay',{kind:'equip',item:passengerGameplay()?.inventory.find(item=>item.kind==='xray')?.id});
+    passenger.send('gameplay',{action:{kind:'equip',item:passengerGameplay()?.inventory.find(item=>item.kind==='xray')?.id},token:3690});
     await wait(()=>passengerGameplay()?.equipped?.some(item=>item.kind==='xray')===true);
     const safe = privateOffices.find(office=>office.id===gameplay()?.ownOffice)!;
     Object.assign(positions.get(passenger.sessionId)!.player,safe.safe);
-    for (let repeat=0;repeat<2;repeat++) passenger.send('gameplay',{kind:'scan-xray',token:1});
+    for (let repeat=0;repeat<2;repeat++) passenger.send('gameplay',{action:{kind:'scan-xray'},token:3730});
     await wait(()=>passengerGameplay()?.equipped?.find(item=>item.kind==='xray')?.charges===2);
     expect(passengerGameplay()?.xrayVision?.targets).toContainEqual(expect.objectContaining({id:safe.id,balance:views.get(carrier.sessionId)?.politics?.wallet}));
     expect(gameplay()?.xrayVision).toBeUndefined();
     expect(feedback.get(passenger.sessionId)?.filter(message=>message==='Raio X ativado.')).toHaveLength(1);
     expect(feedback.get(carrier.sessionId)?.includes('Raio X ativado.')).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
-    carrier.send('gameplay',{kind:'equip',item:purchase?.id});
+    carrier.send('gameplay',{action:{kind:'equip',item:purchase?.id},token:3800});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
     for (let token=3;token<=6;token++) {
-      carrier.send('gameplay',{kind:'attack',token});
+      carrier.send('gameplay',{action:{kind:'attack'},token:3830+token});
       if (token===3) await wait(()=>visible.some(player=>player.id===passenger.sessionId && player.health===.74 && player.hit!==undefined));
       if (token<6) await Bun.sleep(1300);
     }
     await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);
-    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:7});
+    carrier.send('gameplay',{action:{kind:'carry',target:passenger.sessionId},token:3880});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     const progressionBeforeReconnect = progression();
     const gearBeforeReconnect = views.get(passenger.sessionId)?.gameplay?.equipped;
@@ -407,7 +410,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(passenger.sessionId)?.politics?.wallet).toBe(walletBeforeReconnect);
     const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
     expect(passengerOffice).toBeDefined();
-    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:8});
+    carrier.send('gameplay',{action:{kind:'carry',target:passenger.sessionId},token:4100});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
@@ -415,7 +418,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
-    passenger.send('bill-vote',{vote:'yes',token:3});
+    passenger.send('bill-vote',{vote:'yes',token:4180});
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
     const infraction = views.get(passenger.sessionId)?.complaints?.available[0];
     expect(infraction).toMatchObject({kind:'hit'});
@@ -423,7 +426,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='negotiation');
     Object.assign(positions.get(passenger.sessionId)!.player,stations.audit);
-    passenger.send('complaint-submit',{id:infraction!.id,token:4});
+    passenger.send('complaint-submit',{id:infraction!.id,token:4260});
     await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
     expect(views.get(carrier.sessionId)?.complaints?.history[0]).toMatchObject({kind:'hit',accused:positions.get(carrier.sessionId)!.player.nick});
 
@@ -462,7 +465,7 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
       peer.onMessage('plenary',(view:PlenaryView)=>phases.set(peer.sessionId,view.phase));
       for (const key of ['control','mail-state','mail-reports','photo-state']) peer.onMessage(key,()=>{});
     }
-    host.send('start-match',{npcs:3});
+    host.send('start-match',{npcs:3,token:1});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
     Reflect.set(Reflect.get(room,'match'),'ends',room.clock.currentTime);

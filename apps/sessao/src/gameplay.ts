@@ -99,9 +99,6 @@ const articulationActions = new Set<GameplayActionKind>([
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
   return articulating || !articulationActions.has(action.kind);
 }
-const replaySensitiveActions = new Set<GameplayActionKind>([...officeActions,'attack','aid','carry','release','treat','toggle-megaphone','toggle-modulator','scan-xray','recharge-xray','use-binoculars']);
-export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActions.has(kind);
-
 export type ExposedItem = {id:number; kind:ObjectKind};
 
 export type GameplayView = {

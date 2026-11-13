@@ -1,3 +1,4 @@
+import type { GameplayAction } from './gameplay';
 import type { FireAction } from './fire';
 import type { RoomActivity } from './room-activities';
 import type { ElectionAction } from './elections';
@@ -6,6 +7,10 @@ import type { Action, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
 type RoomActions = {
+  character:{character:number};
+  'lobby-npc-count':{count:number};
+  'start-match':{infiltrators?:number;npcs?:number};
+  gameplay:{action:GameplayAction};
   spy:object;
   'npc-deal':object;
   'fire-action':{kind:FireAction;site:number};

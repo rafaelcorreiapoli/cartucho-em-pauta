@@ -6,7 +6,7 @@ import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
-import { needsFieldToken, type GameplayAction } from './gameplay';
+import { type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
@@ -87,7 +87,7 @@ const buttons = NAMES.map((name,index) => {
   button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
   button.setAttribute('aria-pressed','false');
   button.onclick = () => {
-    room?.send('character',index);
+    roomCommand?.('character',{character:index});
   };
   characters.append(button);
   return button;
@@ -106,6 +106,7 @@ function applyVoiceEquipment(current:RoomVoice|undefined) {
 }
 let matchRunning = false;
 let room: Room | undefined;
+let roomCommand:ReturnType<typeof createRoomCommandSender>|undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
 try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
@@ -164,6 +165,7 @@ function showLobby(message: string) {
   game?.destroy();
   game = undefined;
   room = undefined;
+  roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   session.hidden = true;
@@ -178,6 +180,8 @@ async function connect(join: () => Promise<Room>) {
   try {
     const joined = await join();
     room = joined;
+    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
+    roomCommand = sendCommand;
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
     });
@@ -209,10 +213,7 @@ async function connect(join: () => Promise<Room>) {
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
-    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
-    let fieldToken = 0;
-    const sendGameplay = (action:GameplayAction) =>
-      joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+    const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
@@ -287,10 +288,7 @@ async function connect(join: () => Promise<Room>) {
     joined.send('mail-read');
     const projectPicker = mountProjectPicker();
     const results = mountResults();
-    const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
-      joined.send(type,data);
-      map.focus({preventScroll:true});
-    },(channel,action)=>{
+    const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote') map.focus({preventScroll:true});
     });

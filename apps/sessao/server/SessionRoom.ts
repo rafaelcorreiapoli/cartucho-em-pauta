@@ -6,7 +6,7 @@ import { npcRules } from '../src/parliamentarians';
 import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
-import { canUseGameplayAction, needsFieldToken, readGameplayAction } from '../src/gameplay';
+import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
@@ -37,7 +37,6 @@ export class SessionRoom extends Room {
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
   private lastRoomCommandToken = new Map<string,number>();
-  private lastFieldToken = new Map<string,number>();
   private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
   private consumeRoomCommand(id:string,raw:unknown) {
@@ -142,12 +141,15 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
-    this.onMessage('lobby-npc-count',(client,value:unknown)=>{
+    this.onMessage('lobby-npc-count',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('count' in raw) || !this.consumeRoomCommand(client.sessionId,raw)) return;
+      const value = raw.count;
       if (this.match.running || this.players.keys().next().value!==client.sessionId ||
           typeof value!=='number' || !Number.isInteger(value) || value<0 || value>3) return;
       this.lobbyNpcCount = value;
     });
     this.onMessage('start-match', (client, countRequest:unknown) => {
+      if (!this.consumeRoomCommand(client.sessionId,countRequest)) return;
       const players = [...this.players.values()].map(state=>state.player);
       if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
         this.internalMail.reset();
@@ -262,15 +264,11 @@ export class SessionRoom extends Room {
       if (result) client.send('gameplay-feedback',result);
     });
     this.onMessage('gameplay',(client, raw:unknown) => {
-      const action = readGameplayAction(raw);
+      if (!raw || typeof raw!=='object' || !('action' in raw)) return;
+      const action = readGameplayAction(raw.action);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (!action || !player || !this.consumeRoomCommand(player.id,raw) || this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           !canUseGameplayAction(action,this.match.phase==='negotiation')) return;
-      if (needsFieldToken(action.kind)) {
-        const last = this.lastFieldToken.get(player.id) ?? 0;
-        if (action.token===undefined || action.token<=last) return;
-        this.lastFieldToken.set(player.id,action.token);
-      }
       const text = this.gameplay.act(player,action,this.gameplayWorld());
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
@@ -329,7 +327,9 @@ export class SessionRoom extends Room {
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
     });
-    this.onMessage('character', (client, character: unknown) => {
+    this.onMessage('character', (client, raw:unknown) => {
+      if (!raw || typeof raw!=='object' || !('character' in raw) || !this.consumeRoomCommand(client.sessionId,raw)) return;
+      const {character} = raw;
       const player = this.players.get(client.sessionId)?.player;
       if (!this.match.running && player && typeof character === 'number' && Number.isInteger(character) && character >= 0 && character < NAMES.length) {
         player.character = character;
@@ -480,7 +480,6 @@ export class SessionRoom extends Room {
     this.resetFinishedMatch(this.clock.currentTime);
     this.players.delete(client.sessionId);
     this.lastRoomCommandToken.delete(client.sessionId);
-    this.lastFieldToken.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }
 }
