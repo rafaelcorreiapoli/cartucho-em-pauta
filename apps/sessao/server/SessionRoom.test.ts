@@ -321,11 +321,12 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>passengerGameplay()?.equipped?.some(item=>item.kind==='xray')===true);
     const safe = privateOffices.find(office=>office.id===gameplay()?.ownOffice)!;
     Object.assign(positions.get(passenger.sessionId)!.player,safe.safe);
-    await wait(()=>passengerGameplay()?.xrayTargets?.some(target=>target.id===safe.id)===true);
-    for (let repeat=0;repeat<2;repeat++) passenger.send('gameplay',{kind:'scan-xray',place:safe.id,token:1});
+    for (let repeat=0;repeat<2;repeat++) passenger.send('gameplay',{kind:'scan-xray',token:1});
     await wait(()=>passengerGameplay()?.equipped?.find(item=>item.kind==='xray')?.charges===2);
-    expect(feedback.get(passenger.sessionId)?.filter(message=>message.startsWith('Raio X ·'))).toHaveLength(1);
-    expect(feedback.get(carrier.sessionId)?.some(message=>message.startsWith('Raio X ·'))).toBe(false);
+    expect(passengerGameplay()?.xrayVision?.targets).toContainEqual(expect.objectContaining({id:safe.id,balance:views.get(carrier.sessionId)?.politics?.wallet}));
+    expect(gameplay()?.xrayVision).toBeUndefined();
+    expect(feedback.get(passenger.sessionId)?.filter(message=>message==='Raio X ativado.')).toHaveLength(1);
+    expect(feedback.get(carrier.sessionId)?.includes('Raio X ativado.')).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     carrier.send('gameplay',{kind:'equip',item:purchase?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);

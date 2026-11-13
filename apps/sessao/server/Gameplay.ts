@@ -46,6 +46,7 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
+  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>}>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
@@ -66,6 +67,7 @@ export class Gameplay {
     this.album.reset();
     this.exposed.clear();
     this.concealedUntil.clear();
+    this.scanning.clear();
     this.installations.clear();
     this.servings.clear();
     this.clearedSites.clear();
@@ -233,6 +235,11 @@ export class Gameplay {
 
   tick(world:GameplayWorld, exploring:boolean) {
     this.album.tick(world.now);
+    for (const [id,scan] of this.scanning) {
+      const player = world.players.find(player=>player.id===id);
+      if (!exploring || scan.ends<=world.now || !player || player.knockedOut || player.carried ||
+          this.wearing(id,'xray')?.id!==scan.item) this.scanning.delete(id);
+    }
     for (const [id,ends] of this.concealedUntil) {
       if (ends>world.now) continue;
       this.concealedUntil.delete(id);
@@ -300,6 +307,7 @@ export class Gameplay {
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.surveillance.leave(player.id,permanent);
+    this.scanning.delete(player.id);
     this.privateOffices.channels.delete(player.id);
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
@@ -357,7 +365,7 @@ export class Gameplay {
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
-      xrayTargets:!world.plenary && this.wearing(id,'xray') ? this.xrayTargets(player,world).map(({owner:_owner,...target})=>target) : undefined,
+      xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
       vitality:this.combat.view(player,world.now),
@@ -765,17 +773,28 @@ export class Gameplay {
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
 
-  private xrayTargets(player:Player,world:GameplayWorld) {
-    const options:{id:string;name:string;owner:string;safe?:true}[] = world.players
-      .filter(target=>target.npc && world.present?.(target.id)!==false &&
-        canReachObject(player,target,{radius:xray.range,clearFloor:true}))
-      .map(({id,nick})=>({id,name:nick,owner:id}));
-    for (const office of this.privateOffices.offices.values()) {
-      if (!office.owner || office.owner===player.id || !this.privateOffices.isInside(player,office) ||
-          !canReachObject(player,office.layout.safe,{radius:xray.range,clearFloor:true})) continue;
-      options.push({id:office.layout.id,name:`Cofre do ${office.layout.name}`,owner:office.owner,safe:true});
+  private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {
+    const scan = this.scanning.get(player.id);
+    if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
+        this.wearing(player.id,'xray')?.id!==scan.item || !world.wallet) return;
+    const radius = this.vision(player.id);
+    const targets:NonNullable<GameplayView['xrayVision']>['targets'] = [];
+    const add = (id:string,owner:string,{x,y}:Motion,safe?:true)=>{
+      let balance = scan.balances.get(id);
+      if (balance===undefined) {
+        balance = world.wallet!(owner);
+        scan.balances.set(id,balance);
+      }
+      targets.push({id,x,y,safe,balance});
+    };
+    for (const target of world.players) {
+      if (target.npc && world.present?.(target.id)!==false && worldVisible(player,target,radius)) add(target.id,target.id,target);
     }
-    return options;
+    for (const office of this.privateOffices.offices.values()) {
+      const {owner,layout} = office;
+      if (owner && owner!==player.id && worldVisible(player,layout.safe,radius)) add(layout.id,owner,layout.safe,true);
+    }
+    return {remaining:Math.ceil((scan.ends-world.now)/1000),targets};
   }
 
   private useXray(player:Player,action:GameplayAction,world:GameplayWorld) {
@@ -789,15 +808,13 @@ export class Gameplay {
       this.event(world,player,'xray-recharged',item,undefined,{witnesses:[]});
       return `Raio X recarregado · ${item.charges}/${xray.capacity}`;
     }
+    if (action.target!==undefined || action.place!==undefined) return 'Ative o Raio X para varrer sua visão.';
+    if (this.scanning.delete(player.id)) return 'Raio X desativado.';
     if (!item.charges) return 'Raio X sem cargas. Recarregue no Apoio Técnico.';
-    const target = this.xrayTargets(player,world).find(target=>target.id===(action.place ?? action.target) &&
-      !!target.safe===(action.place!==undefined));
-    if (!target || !world.wallet) return 'Alvo fora de alcance ou sem visibilidade.';
-    const balance = world.wallet(target.owner);
     item.charges--;
-    this.event(world,player,'xray-scanned',item,target.owner,{witnesses:[]});
-    const amount = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(balance*10_000);
-    return `Raio X · ${target.name} · ${amount} · ${item.charges}/${xray.capacity} cargas`;
+    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map()});
+    this.event(world,player,'xray-scanned',item,undefined,{witnesses:[]});
+    return 'Raio X ativado.';
   }
 
   private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {

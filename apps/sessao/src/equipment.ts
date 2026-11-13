@@ -19,7 +19,7 @@ export function equippedWeapon(items:readonly {kind:string}[] = []) {
 }
 
 export const concealment = {duration:45_000,price:2} as const;
-export const xray = {capacity:3,rechargePrice:1,range:20} as const;
+export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as const;
 
 export const binocularBonus = 2;
 export const voiceBattery = 25_000;

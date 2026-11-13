@@ -203,7 +203,7 @@ async function connect(join: () => Promise<Room>) {
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
     const surveillance = createSurveillancePanel(action=>joined.send('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
-    joined.onDrop(()=>surveillance.render(undefined));
+    joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
     const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
@@ -231,7 +231,8 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('pickup');
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (message.startsWith('Raio X · ')) hud.notify('Raio X',message.slice('Raio X · '.length));
+      if (message==='Raio X ativado.') audio.cue('vote');
+      else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
@@ -246,6 +247,9 @@ async function connect(join: () => Promise<Room>) {
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      const scan = view.gameplay?.xrayVision;
+      const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
+      if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
       if (view.phase==='negotiation' && view.remaining<=30 && (previousView?.remaining ?? 0)>30) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');

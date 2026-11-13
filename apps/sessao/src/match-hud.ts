@@ -118,9 +118,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const time = charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
-      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${charges} cargas` : name;
+      const time = item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s\n${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : name;
       if (entry.tile.title===label) continue;
+      entry.tile.dataset.active = String(item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
       entry.timer.hidden = !time;
       entry.tile.title = label;
@@ -183,9 +184,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
           action:{kind:'deliver',place:'treasury',item:item.id}});
       }
-      for (const target of state.xrayTargets ?? []) actions.push({
-        label:`Raio X · ${target.name}`,icon:'search',
-        action:target.safe ? {kind:'scan-xray',place:target.id} : {kind:'scan-xray',target:target.id},
+      if (state.equipped?.some(item=>item.kind==='xray')) actions.push({
+        label:state.xrayVision ? 'Desativar Raio X' : 'Ativar Raio X',icon:'search',action:{kind:'scan-xray'},
       });
       if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
         label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},

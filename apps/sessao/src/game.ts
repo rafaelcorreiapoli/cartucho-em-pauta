@@ -3,8 +3,8 @@ import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { mapNpcs } from './npcs';
-import { binocularBonus } from './equipment';
-import { canReachObject, objects, type GroundItem } from './gameplay';
+import { binocularBonus, xray } from './equipment';
+import { canReachObject, cashAmount, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
@@ -266,6 +266,44 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
     }
 
+    private xrayLabels = new Map<string,{label:Phaser.GameObjects.Text; sweep:Phaser.GameObjects.Graphics; since:number}>();
+    private xrayMoney = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+
+    private drawXray(time:number,observer:Motion|undefined,radius:number) {
+      const targets = negotiating && observer ? plenaryView?.gameplay?.xrayVision?.targets ?? [] : [];
+      const visible = new Set<string>();
+      for (const target of targets) {
+        const sprite = target.safe ? undefined : this.views.get(target.id)?.sprite;
+        if (!target.safe && !sprite?.visible) continue;
+        const point = sprite ?? target;
+        if (!observer || !worldVisible(observer,target,radius)) continue;
+        visible.add(target.id);
+        let entry = this.xrayLabels.get(target.id);
+        if (!entry) {
+          const label = this.add.text(0,0,this.xrayMoney.format(target.balance*10_000),{
+            fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#b9fff9',
+            backgroundColor:'#0c2829',padding:{x:4,y:2},resolution:3,
+          }).setOrigin(.5,1).setDepth(HEIGHT+28);
+          const sweep = this.add.graphics().setDepth(HEIGHT+27);
+          entry = {label,sweep,since:time};
+          this.xrayLabels.set(target.id,entry);
+        }
+        const foot = point.y-(target.safe ? officeFixtures.safe.footOffset : 0);
+        const height = target.safe ? officeFixtures.safe.height : 32;
+        const width = target.safe ? officeFixtures.safe.width : 18;
+        const progress = Math.min(1,(time-entry.since)/xray.sweep);
+        entry.label.setPosition(point.x,foot-height-7).setAlpha(Math.min(1,progress*4));
+        entry.sweep.clear().lineStyle(.75,0x7cfbf0,.55+Math.sin(time/200)*.18)
+          .strokeRoundedRect(point.x-width/2,foot-height,width,height,3);
+        if (progress<1) entry.sweep.fillStyle(0x9bfff6,.8).fillRect(point.x-width/2,foot-height+progress*height,width,1);
+      }
+      for (const [id,entry] of this.xrayLabels) if (!visible.has(id)) {
+        entry.label.destroy();
+        entry.sweep.destroy();
+        this.xrayLabels.delete(id);
+      }
+    }
+
     update(time: number, delta: number) {
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
@@ -482,7 +520,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
           .setColor(player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed ?? [];
-        const itemsKey = exposed.map(item=>item.kind).join(',');
+        const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
+        const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
         if (view.itemsKey!==itemsKey) {
           view.itemsKey = itemsKey;
           view.items.removeAll(true);
@@ -490,6 +529,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const offset = (index-(exposed.length-1)/2)*13;
             const backdrop = this.add.rectangle(offset,0,11.5,11.5,0x10211b,.84).setStrokeStyle(.5,0x637f6d);
             const icon = this.add.image(offset,0,`item-${kind}`).setDisplaySize(10,10);
+            if (concealed && cashAmount(kind)) {
+              backdrop.setAlpha(.38);
+              icon.setAlpha(.38);
+            }
             view.items.add([backdrop,icon]);
           });
         }
@@ -528,6 +571,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           }
         }
       }
+      this.drawXray(time,ownPlayer,visionRadius);
     }
   }
   const scene = new Plenary();
@@ -573,6 +617,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
+    clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },
     reconcile(snapshot: ControlState) {
       if (!!snapshot.plenary!==!!local.state?.plenary) {

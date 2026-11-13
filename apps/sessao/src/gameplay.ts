@@ -18,7 +18,7 @@ export const objects = {
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
-  xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:'Consulta discretamente o saldo de parlamentares e cofres próximos.'},
+  xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:'Cada carga revela por 10 s o saldo de NPCs e cofres dentro da sua visão.'},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
   document:{exposable:true,name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
   gift:{exposable:true,name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
@@ -94,7 +94,7 @@ export type GameplayView = {
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
   concealmentSeconds?:number;
-  xrayTargets?:{id:string;name:string;safe?:true}[];
+  xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
   equipmentCooldowns?:Record<number,number>;
   modulator?:{active:boolean; battery:number; recharge:number};
   exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
