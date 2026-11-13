@@ -491,7 +491,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
         if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {
           notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
-            view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : element('bill').textContent ?? '',true);
+            view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : view.hearing?.target ?? '',true);
         }
         if (view.fire && !previous.fire) notify('Incêndio',fireSites[view.fire.site].name,true);
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);

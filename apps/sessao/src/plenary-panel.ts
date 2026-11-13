@@ -1,3 +1,4 @@
+import {mountProjectHeading} from './ui/project-heading';
 import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
 import {mountProjectImpact} from './ui/project-impact';
@@ -46,6 +47,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
 
   }
 
+  const heading = mountProjectHeading(element('project-heading'));
   const impact = mountProjectImpact(element('impact'));
   const history = mountVoteHistory(element<HTMLDetailsElement>('vote-history'));
 
@@ -63,7 +65,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         brief.render(next.outcome);
       }
       view = next;
-      const {phase,remaining,role,players,host,round} = view;
+      const {phase,role,players,host} = view;
       const hearing = view.hearing;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
@@ -91,13 +93,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       const crisis = element('active-fire');
       crisis.hidden = !view.fire;
       crisis.textContent = view.fire ? `🔥 ${fireSites[view.fire.site].name} · ${view.fire.remaining} s · ${view.fire.paused ? 'Pausado' : `−${view.fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`}` : '';
-      element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Afastamento' : 'Votação';
-      element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
-      const clock = element('clock');
-      element('clock-label').textContent = phase==='negotiation' ? 'Votação em' : 'Tempo de voto';
-      const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
-      clockChip.hidden = !running;
-      clockChip.dataset.urgent = String(remaining<=10);
+      if (running) heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
@@ -114,20 +110,11 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         button.setAttribute('aria-pressed',String(button.dataset.intent===ownIntent));
         if (button.dataset.intent==='clear') button.hidden = !ownIntent;
       }
-      const queued = view.queuedProjects?.length ?? 0;
-      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}${queued ? ` · +${queued} na pauta` : ''}`;
-      const title = hearing ? hearing.target : agendaProject(view).name;
-      element('bill').textContent = title;
+      const title = hearing?.target ?? agendaProject(view).name;
       element('project-details-title').textContent = title;
       element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
       impact.render(view.yes,view.no,running && !hearing);
       ballot.render(view);
-      if (view.isolationSeconds) {
-        element('clock-label').textContent = 'Isolamento';
-        const seconds = view.isolationSeconds;
-        clock.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
-        clockChip.dataset.urgent = String(seconds<=10);
-      }
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
       const clue = [view.auditNote ?? '', view.amended ? 'Emenda protocolada. Os efeitos já estão atualizados.' : '',
@@ -140,7 +127,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); },
+    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();
