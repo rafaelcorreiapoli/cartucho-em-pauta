@@ -113,6 +113,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
       this.load.image('infirmary-stretcher',import.meta.env.BASE_URL+'assets/'+'maca-enfermaria.webp');
       this.load.image('infirmary-doctor',import.meta.env.BASE_URL+'assets/'+'drauzio-varella.webp');
+      this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
+      this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
       this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
@@ -165,7 +167,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
         const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = id!=='snackVendor' ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
+        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
         }).setOrigin(.5,0).setDepth(1) : undefined;

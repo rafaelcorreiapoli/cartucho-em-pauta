@@ -1,7 +1,7 @@
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
-import { mapNpcs, snackBar } from './npcs';
+import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
 
 export const WIDTH = 1136;
 export const HEIGHT = 759;
@@ -26,7 +26,7 @@ export const walls: Rect[] = [
   [814,270,10,133],
   [infirmary.door[0],403,6,infirmary.door[1]-403],
   [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
-  [812,530,83,11],
+  [882,530,13,11],
   [316,270,10,65], [316,374,10,18], [592,270,10,65], [592,374,10,18],
   [316,403,10,65], [316,507,10,23], [592,403,10,65], [592,507,10,23],
   [eastAnnex.left,eastAnnex.top-10,eastAnnex.right-eastAnnex.left+10,10],
@@ -48,9 +48,11 @@ export const desks = [
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
   [128,460],[354,430],[433,460],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
-  ...Object.values(mapNpcs).map(({counter:{x,y}})=>[x,y] as const),
+  [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
+  {texture:'technical-shelf',area:[602,174,40,30],footprint:5},
+  {texture:'snack-counter',area:[npcs.snackVendor.counter.x-12,npcs.snackVendor.counter.y-10,55,29],footprint:13},
   {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
   {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},
   {frame:0, area:[197,33,86,29], footprint:10},

@@ -7,7 +7,7 @@ export const snackBar = {
 } as const;
 
 export const npcs = {
-  vendor:{name:'João Appolinário',sprite:'joao-appolinario.webp',x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar',catalog:'equipment'},
+  vendor:{name:'João Appolinário',sprite:'joao-appolinario.webp',x:631,y:208,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
@@ -63,7 +63,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
         {id:'budget',label:'O que dá para levar com R$ 50 mil?',next:'budget',requires:{wallet:5}},
         {id:'coffee',label:'Aceita um cafezinho?',next:'coffee',requires:{item:'coffee'}},
         {id:'president',label:'Tem desconto para a Presidência?',next:'president',requires:{office:'president'}},
-        {id:'evidence',label:'O balcão também guarda segredos?',next:'evidence',requires:{evidence:'clandestine-transfer'}},
+        {id:'evidence',label:'A estante também guarda segredos?',next:'evidence',requires:{evidence:'clandestine-transfer'}},
         {id:'mission',label:'Onde fica o cafezinho?',next:'mission',requires:{mission:'cafe'}},
         {id:'leave',label:'Deixa pra lá',action:'close'},
       ],
@@ -77,7 +77,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     evidence:{
-      text:'O balcão guarda troco. Segredo é melhor levar à Controladoria.',
+      text:'A estante guarda bugigangas. Segredo é melhor levar à Controladoria.',
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     mission:{
