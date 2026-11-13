@@ -165,16 +165,17 @@ test('a long route across the Congress remains walkable after compressing straig
   expect(state.player.y).toBeCloseTo(destination.y);
 });
 
-test('remote movement interpolates through a late snapshot instead of waiting at the last position',()=>{
+test('a walking NPC interpolates through a late snapshot and stops when snapshots run out',()=>{
   const history = new PlayerHistory();
-  const player = {id:'remote',nick:'Remoto',character:0,x:100,y:146,moving:true,direction:1};
+  const player = {id:'npc-parliamentarian-1',nick:'José Sarney',npc:true,character:4,x:100,y:146,moving:true,direction:1};
   history.add([player],0);
   history.add([{...player,x:110}],100);
   expect(history.sample(260,player.id)?.x).toBe(106);
   history.add([{...player,x:120}],280);
   expect([280,300,320,350,400,450].map(now=>history.sample(now,player.id)!.x))
     .toEqual([108,110,110+10*20/180,110+10*50/180,110+10*100/180,110+10*150/180]);
-  expect(history.sample(500,player.id)?.x).toBe(120);
+  expect(history.sample(450,player.id)?.moving).toBe(true);
+  expect(history.sample(500,player.id)).toMatchObject({x:120,moving:false,npc:true});
   history.add([],510);
   expect(history.sample(710,player.id)).toBeUndefined();
 });

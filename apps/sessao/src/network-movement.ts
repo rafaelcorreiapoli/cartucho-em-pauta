@@ -44,7 +44,10 @@ export class PlayerHistory {
     const after = this.snapshots.findIndex(snapshot => snapshot.at>=at);
     const first = this.snapshots[Math.max(0,after-1)];
     const second = this.snapshots[after];
-    if (!second) return this.snapshots.at(-1)?.players.find(player => player.id===id);
+    if (!second) {
+      const latest = this.snapshots.at(-1)?.players.find(player => player.id===id);
+      return latest?.moving ? {...latest,moving:false} : latest;
+    }
     const from = first.players.find(player => player.id===id);
     const to = second.players.find(player => player.id===id);
     if (!from || !to || first===second) return to;
@@ -53,7 +56,7 @@ export class PlayerHistory {
       ...to,
       x:from.x+(to.x-from.x)*ratio,
       y:from.y+(to.y-from.y)*ratio,
-      moving:from.x!==to.x || from.y!==to.y || to.moving,
+      moving:from.x!==to.x || from.y!==to.y,
     };
   }
 }
