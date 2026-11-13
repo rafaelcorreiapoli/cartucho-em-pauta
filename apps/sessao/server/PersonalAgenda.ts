@@ -57,8 +57,6 @@ const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   equipamento:equipment.binoculars.price,
-  poltrona:officeGoods.officeChair.price,
-  televisao:officeGoods.officeTv.price,
   comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
   pagamento:AGENDA_TRANSFER_MIN,
@@ -254,8 +252,11 @@ export class PersonalAgenda {
     if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
     const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
-    if ((kind==='televisao' && !stock.includes('officeTv')) || (kind==='poltrona' && !stock.includes('officeChair'))) return false;
-    if (kind==='gabinete' && !stock.some(item=>officeGoods[item].price<=metrics.wallet || metrics.owns?.(item))) return false;
+    const canBuyFurniture = (item:OfficeFurniture) => stock.includes(item) && officeGoods[item].price<=metrics.wallet;
+    const canInstallFurniture = (item:OfficeFurniture) => !!metrics.owns?.(item) || canBuyFurniture(item);
+    if (kind==='televisao' && !canInstallFurniture('officeTv')) return false;
+    if (kind==='poltrona' && !canBuyFurniture('officeChair')) return false;
+    if (kind==='gabinete' && !furnitureKinds.some(canInstallFurniture)) return false;
     if (kind==='ostentacao') {
       const availableSpend = stock.reduce((sum,item)=>sum+officeGoods[item].price,0);
       if (Math.min(availableSpend,metrics.wallet)<furnitureSpendingTarget) return false;

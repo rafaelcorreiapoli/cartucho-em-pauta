@@ -6,6 +6,7 @@ import { PoliticalEconomy } from './PoliticalEconomy';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
 import type { Player } from '../src/map';
+import { decorPoint, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
 
 const metrics = {wallet:8,popularity:40};
@@ -253,7 +254,7 @@ test('the scandal pizza mission becomes eligible only after a public finding',()
 test('furniture missions use the actual cabinet slots and prices at assignment',()=>{
   const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
   const game = new Gameplay();
-  game.reset(0,()=>0,[player]);
+  game.reset(0,()=>0,[player],()=>0);
   const economy = new PoliticalEconomy();
   economy.reset([{id:player.id,name:player.nick}],()=>0);
   economy.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
@@ -281,6 +282,17 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
   buy('officeRug');
   buy('officeChair');
   expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+
+  const layout = privateOffices[0];
+  Object.assign(player,decorPoint(layout,'officeTv'));
+  const installed = game.view(player,world).decorations.find(item=>item.kind==='officeTv')!;
+  expect(game.act(player,{kind:'office-remove',place:layout.id,item:installed.id},world)).toBe('Decoração recolhida.');
+  expect(economy.spend(player.id,1)).toBe(true);
+  expect(draw()).toEqual(['gabinete','televisao','cafe']);
+  expect(game.act(player,{kind:'office-install',place:layout.id,item:installed.id},world)).toBe('Decoração instalada.');
+  const completed = economy.view(player.id,[],0,false,()=>true)!.missions.completed.map(mission=>mission.kind);
+  expect(completed).toContain('televisao');
+  expect(completed).toContain('gabinete');
 });
 
 test('decoration missions require enough money or an item already in the inventory',()=>{
