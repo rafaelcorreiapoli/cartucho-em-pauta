@@ -3,11 +3,9 @@ import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type Wea
 import { characterStats } from '../src/character-stats';
 import { canReachObject } from '../src/gameplay';
 import { MAX_STAMINA } from '../src/movement';
-import { aidRadius } from '../src/medical';
+import { aidRadius, recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
-const recoveryTime = 8_000;
-const recoveryShield = 4_000;
 type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
@@ -47,8 +45,8 @@ export class Combat {
   }
 
   private recover(player:Combatant, state:Vitality, now:number) {
-    state.hp = Math.ceil(this.max(player)*.45);
-    state.protectedUntil = now+recoveryShield;
+    state.hp = Math.ceil(this.max(player)*recoveryRules.healthFraction);
+    state.protectedUntil = now+recoveryRules.protectionMs;
     state.recoverAt = 0;
     player.knockedOut = undefined;
   }
@@ -132,9 +130,9 @@ export class Combat {
     const damage = Math.max(1,Math.round(strike)-(target.defenseBonus ?? 0));
     const victim = this.state(target);
     victim.hp = Math.max(0,victim.hp-damage);
-    target.hit = now+250;
+    target.hit = now+recoveryRules.hitStunMs;
     if (!victim.hp) {
-      victim.recoverAt = now+recoveryTime;
+      victim.recoverAt = now+recoveryRules.knockoutMs;
       target.knockedOut = true;
       this.interrupt(target);
     }

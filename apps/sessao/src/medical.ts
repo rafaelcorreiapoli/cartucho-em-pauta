@@ -8,6 +8,13 @@ export const infirmary = {
   healing:35,
 } as const;
 
+export const recoveryRules = {
+  knockoutMs:8_000,
+  protectionMs:4_000,
+  healthFraction:.45,
+  hitStunMs:250,
+} as const;
+
 export const aidRadius = 20;
 export const carrySpeedFactor = .65;
 

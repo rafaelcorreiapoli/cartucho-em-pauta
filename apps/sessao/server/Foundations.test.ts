@@ -4,7 +4,7 @@ import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
 import { canStand, movementSpeed, roomAt, worldVisible, VISION_RADIUS, type Player } from '../src/map';
-import { infirmary } from '../src/medical';
+import { infirmary, recoveryRules } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
@@ -175,7 +175,7 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   expect(combat.view(bob,141).hp).toBe(83);
   expect(combat.attack(alice,142)).toBe('A arma está em recarga.');
   for (const now of [1300,2600,3900,5200]) strike(now);
-  expect(combat.view(bob,5340).hp).toBe(0);
+  expect(combat.view(bob,5340)).toMatchObject({hp:0,recovery:recoveryRules.knockoutMs/1000});
   expect(bob.knockedOut).toBe(true);
   const movement = {player:bob,route:[{x:164,y:146}],ack:0};
   applyInput(movement,{seq:1,motion:{x:1,y:0}});
