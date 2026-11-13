@@ -59,3 +59,17 @@ for (const portrait of new Set(Object.values(objects).map(item=>item.portrait)))
     expect(header.getUint32(4,true)+8).toBe(asset.size);
   });
 }
+
+// These portraits use the extended WebP header for their transparent canvas.
+for (const kind of ['coffee','forensicKit','firstAidKit'] as const) {
+  test(`the ${kind} portrait has a 256 × 256 canvas and alpha`,async()=>{
+    const portrait = objects[kind].portrait;
+    const asset = Bun.file(new URL('../public/assets/'+portrait,import.meta.url));
+    expect(await asset.slice(12,16).text()).toBe('VP8X');
+    const header = new DataView(await asset.slice(20,30).arrayBuffer());
+    expect(header.getUint8(0) & 0x10).toBe(0x10);
+    // WebP stores each canvas dimension minus one in three little-endian bytes.
+    expect(header.getUint32(4,true) & 0xffffff).toBe(255);
+    expect(header.getUint8(7)+(header.getUint16(8,true)<<8)).toBe(255);
+  });
+}
