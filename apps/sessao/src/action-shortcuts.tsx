@@ -1,3 +1,4 @@
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
@@ -148,7 +149,7 @@ export function ShortcutPalette({entries,page,total,changePage}:{
   return <>
     <header>
       <h2 id="action-shortcuts-title">Atalhos de teclado</h2>
-      <form method="dialog"><button className="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form>
+      <DialogDismiss label="Fechar atalhos">Esc</DialogDismiss>
     </header>
     <p>Use os números para agir. Use ← e → para mudar de página.</p>
     <div className="shortcut-list">

@@ -1,3 +1,4 @@
+import { DialogDismiss } from './ui/dialog-dismiss';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import {useState} from 'react';
@@ -24,7 +25,7 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
   if (quote && amount!==quote.amount) setQuote({...quote,amount});
   return <>
     <header><h2 id="parliamentarian-title">{deal.name}</h2>
-      <form method="dialog"><button className="hud-button hud-button--secondary">Encerrar</button></form>
+      <DialogDismiss className="hud-button hud-button--secondary">Encerrar</DialogDismiss>
     </header>
     <div className="parliamentarian-options">
       <p>Carteira · {money(deal.wallet)}</p>

@@ -1,3 +1,4 @@
+import { DialogDismiss } from './dialog-dismiss';
 import { documentRules } from '../internal-mail';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -11,7 +12,7 @@ export function mountProjectPicker() {
       if (dialog.open) return;
       flushSync(()=>root.render(<>
         <header><h2 id="project-picker-title">{title}</h2>
-          <form method="dialog"><button className="hud-icon-button" aria-label="Fechar">×</button></form>
+          <DialogDismiss label="Fechar">×</DialogDismiss>
         </header>
         <form className="grid gap-2" onSubmit={event=>{
           event.preventDefault();

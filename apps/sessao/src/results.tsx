@@ -1,3 +1,4 @@
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
@@ -53,7 +54,7 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
           </li>)}</ul>
         </section>)}
       </div>
-      <form method="dialog"><button className="hud-button">Continuar</button></form>
+      <DialogDismiss className="hud-button">Continuar</DialogDismiss>
     </div>
   </section>;
 }

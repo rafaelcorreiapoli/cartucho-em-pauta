@@ -1,3 +1,4 @@
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { CSSProperties, FormEvent } from 'react';
@@ -73,9 +74,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       else send({kind,to:String(data.get('candidate') ?? '')});
     };
     flushSync(()=>campaignRoot.render(<>
-      <header><h2 id="campaign-title">Minha campanha</h2><form method="dialog">
-        <button className="hud-icon-button" aria-label="Fechar campanha">×</button>
-      </form></header>
+      <header><h2 id="campaign-title">Minha campanha</h2><DialogDismiss label="Fechar campanha">×</DialogDismiss></header>
       <form id="invest-form" onSubmit={event=>submit('invest',event)}>
         <label>Investir em campanha (R$ 10 mil por unidade)
           <input id="investment" name="amount" type="number" defaultValue={1} min={1} max={max} step={1} required/>
