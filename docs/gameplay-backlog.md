@@ -106,7 +106,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | POL-10 | Apresentação e protocolo de projetos | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | Projetos protocolados entram na pauta da rodada em ordem de protocolo. Na falta de propostas, entra o projeto padrão. | — |
 | POL-11 | Requisitos de assinatura para projetos | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | Protocolo exige carimbos e assinaturas válidas para agendar. Socket cobre documento válido e recusa do adulterado; cliente resolve projeto e histórico por identificador. | — |
 | POL-12 | Emendas e alterações legítimas de projetos | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
-| POL-13 | Intenções e compromissos de voto | PARCIAL | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | NPCs aceitam compromissos pagos. Acordos de humanos continuam sociais, sem voto vinculado. | Média |
+| POL-13 | Intenções e compromissos de voto | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | Intenção pública e revogável no HUD; voto independente. Testes cobrem publicação, retirada, voto contrário e limpeza. | — |
 | POL-14 | Apuração autoritativa | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
 | POL-15 | Estabilidade Institucional como condição coletiva | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
 | POL-16 | Vitória dos Infiltrados por colapso | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
@@ -501,12 +501,12 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | AFA-08 | Bloqueio de participação física/institucional durante afastamento | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Sala exclusiva, previsão de movimento confinada e ações institucionais bloqueadas. Testes de cliente e gameserver. | — |
 | AFA-09 | Retorno automático | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-10 | Preservação de patrimônio, gabinete e mandato | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
-| AFA-11 | Cooldown/imunidade contra afastamentos consecutivos | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Há limite de uma audiência por partida. Falta cooldown individual conforme o modelo proposto. | Média |
+| AFA-11 | Cooldown/imunidade contra afastamentos consecutivos | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Novas audiências são permitidas. Quem retorna do isolamento tem 120 s de imunidade. Testes verificam o bloqueio e a liberação. | — |
 | AFA-12 | Integração com sessões plenárias | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | A audiência leva os participantes ao Plenário. Afastados ficam na Sala de Isolamento e retornam à sessão se o prazo vencer durante a votação. | — |
 | AFA-13 | Afastamento pode criar oportunidade de invadir gabinete | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | O acusado sai do gabinete compulsoriamente por 60 s. Portas e cofres conservam as regras de segurança existentes. | — |
 | AFA-14 | Afastamento não reduz segurança de portas/cofres | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-15 | Afastamento não equivale à perda de mandato | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
-| AFA-16 | Proteção contra abuso e aprisionamento indefinido | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Temporizador autoritativo de 60 s, reconciliação descarta movimento pendente e a saída ocorre em ponto válido ou no Plenário. Mantido o limite de uma audiência por partida. | — |
+| AFA-16 | Proteção contra abuso e aprisionamento indefinido | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Temporizador autoritativo de 60 s, reconciliação descarta movimento pendente e a saída ocorre em ponto válido ou no Plenário. Novas audiências respeitam a imunidade individual. | — |
 
 ## CRI
 

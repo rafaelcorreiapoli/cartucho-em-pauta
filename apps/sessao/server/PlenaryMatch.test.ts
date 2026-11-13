@@ -287,3 +287,45 @@ test('an informal loan and a later manual repayment conserve both wallets',()=>{
   match.politics(borrower,{kind:'transfer',to:lender.id,amount:3,clandestine:true},group,10_001);
   expect([wallet(lender),wallet(borrower)]).toEqual([8,8]);
 });
+
+test('a public intention can be withdrawn or contradicted by the actual vote',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  match.declareVote(host.id,'yes',1);
+  expect(match.view(honest.id,ids,1).voteIntents).toEqual([{id:host.id,name:host.nick,vote:'yes'}]);
+  match.declareVote(host.id,null,2);
+  expect(match.view(honest.id,ids,2).voteIntents).toEqual([]);
+  match.declareVote(host.id,'yes',3);
+  match.advance(NEGOTIATION_MS);
+  match.declareVote(host.id,'no',NEGOTIATION_MS+1);
+  expect(match.view(honest.id,ids,NEGOTIATION_MS+1).voteIntents?.[0]?.vote).toBe('yes');
+  match.vote(host.id,'no',NEGOTIATION_MS+2);
+  expect(match.view(host.id,ids,NEGOTIATION_MS+2).vote).toBe('no');
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(match.view(honest.id,ids,NEGOTIATION_MS+BALLOT_MS).voteIntents).toEqual([]);
+});
+
+test('another hearing is possible but the isolated player has immunity after returning',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const accuse = (target:Player,now:number)=>match.politics(at(host,'panel'),{kind:'hearing',target:target.id},people,now);
+  match.politics(at(host,'press'),{kind:'campaign'},people,20);
+  match.politics(at(host,'press'),{kind:'campaign'},people,21);
+  accuse(honest,50);
+  match.vote(host.id,'yes',60);
+  match.vote(traitor.id,'yes',60);
+  const returned = 50+HEARING_MS+60_000;
+  match.advance(50+HEARING_MS);
+  match.advance(returned);
+  accuse(honest,returned+1);
+  expect(view(returned+1).phase).toBe('negotiation');
+  expect(view(returned+1).politics?.directory.find(p=>p.id===honest.id)?.eligible).toBe(false);
+  accuse(traitor,returned+2);
+  expect(view(returned+2).hearing?.target).toBe(traitor.nick);
+  match.advance(returned+2+HEARING_MS);
+  const expiry = returned+120_000;
+  match.advance(expiry);
+  accuse(honest,expiry);
+  expect(view(expiry).hearing?.target).toBe(honest.nick);
+});

@@ -276,6 +276,9 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (action && player && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
     });
+    this.onMessage('bill-intent',(client,vote:unknown)=>{
+      if (vote==='yes' || vote==='no' || vote==='clear') this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
+    });
     this.onMessage('bill-vote', (client, vote:unknown) => {
       if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
     });

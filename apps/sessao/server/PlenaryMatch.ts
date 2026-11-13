@@ -11,7 +11,7 @@ import {
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
-import { HEARING_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -92,13 +92,14 @@ export class PlenaryMatch {
   private initialPlayers = 0;
   private electorate = new Set<string>();
   private votes = new Map<string,Vote>();
+  private voteIntents = new Map<string,Vote>();
   private infiltrators = new Set<string>();
   private economy = new PoliticalEconomy();
   private election = new ElectionCycle();
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
   private hearingTarget?: string;
-  private hearingUsed = false;
+  private readonly hearingImmunity = new Map<string,number>();
   private hearingResult?: string;
   private interruptedTime = 0;
   private auditNotes = new Map<string,string>();
@@ -132,7 +133,7 @@ export class PlenaryMatch {
     this.economy.reset(contacts,random);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
-    this.hearingUsed = false;
+    this.hearingImmunity.clear();
     this.hearingTarget = this.hearingResult = undefined;
     this.stability = 48;
     this.budget = rules.startingBudget;
@@ -154,6 +155,7 @@ export class PlenaryMatch {
   }
 
   private resetVote() {
+    this.voteIntents.clear();
     this.agendaYesVotes.clear();
     this.votes.clear();
     this.npcVotes.clear();
@@ -167,6 +169,7 @@ export class PlenaryMatch {
   leave(id:string, now:number) {
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
+    this.voteIntents.delete(id);
     this.election.leave(id,now);
     this.refreshAgendaEligibility();
     this.economy.cancelOffers(id);
@@ -248,7 +251,10 @@ export class PlenaryMatch {
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       publish:event=>{
-        if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) this.agenda.add(event.project);
+        if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
+          if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
+          this.agenda.add(event.project);
+        }
         this.economy.recordGameplay(event);
       },
     };
@@ -262,6 +268,12 @@ export class PlenaryMatch {
 
   canHandleObjects(id:string, now:number) {
     return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+  }
+
+  declareVote(id:string,vote:Vote|null,now:number) {
+    if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id)) return;
+    if (vote===null) this.voteIntents.delete(id);
+    else this.voteIntents.set(id,vote);
   }
 
   vote(id:string, vote:Vote, now:number) {
@@ -331,9 +343,8 @@ export class PlenaryMatch {
         break;
       }
       case 'hearing':
-        if (!this.canVote(id) || this.hearingUsed || !this.economy.canCall(id) || !this.canVote(action.target) ||
-            id===action.target || !this.at(player,'panel')) break;
-        this.hearingUsed = true;
+        if (!this.canVote(id) || !this.economy.canCall(id) || !this.canVote(action.target) ||
+            (this.hearingImmunity.get(action.target) ?? 0)>now || id===action.target || !this.at(player,'panel')) break;
         this.hearingTarget = action.target;
         this.interruptedTime = this.ends-now;
         this.ends = now+HEARING_MS;
@@ -415,7 +426,9 @@ export class PlenaryMatch {
       const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
       const removed = this.canVote(target) && yes>=this.quorum();
       if (removed) {
+        this.voteIntents.delete(target);
         this.economy.suspend(target,now+SUSPENSION_MS);
+        this.hearingImmunity.set(target,now+SUSPENSION_MS+HEARING_IMMUNITY_MS);
         this.refreshAgendaEligibility();
         if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
       }
@@ -487,13 +500,14 @@ export class PlenaryMatch {
     return {
       phase:this.phase,round:this.round,project:this.projectIndex,queuedProjects:[...this.agenda],remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
+      voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
       amended:this.amended,canFraud:role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,!this.hearingUsed && this.canVote(id),id => this.canVote(id)) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now) : undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,

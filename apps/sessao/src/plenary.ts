@@ -30,15 +30,20 @@ export const agendaProject = ({round,project}: {round:number;project?:number}) =
 
 export type Impact = {stability:number; budget:number};
 export type Role = 'Parlamentar' | 'Infiltrado';
+export type VoteIntent = {id:string; name:string; vote:Vote};
 export type Vote = 'yes' | 'no';
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
 export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; project?:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type PlenaryView = {
   phase:Phase; round:number; project?:number; queuedProjects?:number[]; remaining:number; stability:number; budget:number; host?:string;
-  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
+  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
   yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string;
 };
+
+export function voteIntentSummary(intents:readonly VoteIntent[] = []) {
+  return intents.map(({name,vote})=>`${name} ${vote==='yes' ? 'a favor' : 'contra'}`).join(' · ');
+}

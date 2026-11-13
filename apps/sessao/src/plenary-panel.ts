@@ -1,7 +1,7 @@
 import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { Player } from './map';
-import { agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { voteIntentSummary, agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -43,6 +43,11 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
   start.onclick = () => send('start-match',{infiltrators:infiltrators()});
   for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
   for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
+
+  const intentButtons = [...element('intent-controls').querySelectorAll<HTMLButtonElement>('[data-intent]')];
+  for (const button of intentButtons) {
+    button.onclick = ()=>send('bill-intent',button.dataset.intent);
+  }
 
   function updateActions() {
     for (const button of actions) {
@@ -175,6 +180,16 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
+      const intents = voteIntentSummary(view.voteIntents);
+      const intentSummary = element('intent-summary');
+      intentSummary.hidden = !intents || !!hearing;
+      intentSummary.textContent = intents;
+      element('intent-controls').hidden = phase!=='negotiation' || !view.mandate || !!view.politics?.suspended;
+      const ownIntent = view.voteIntents?.find(intent=>intent.id===id)?.vote;
+      for (const button of intentButtons) {
+        button.setAttribute('aria-pressed',String(button.dataset.intent===ownIntent));
+        if (button.dataset.intent==='clear') button.hidden = !ownIntent;
+      }
       const queued = view.queuedProjects?.length ?? 0;
       element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}${queued ? ` · +${queued} na pauta` : ''}`;
       const title = hearing ? hearing.target : agendaProject(view).name;
