@@ -268,8 +268,12 @@ export class PersonalAgenda {
     if (kind==='poltrona' && !canBuyFurniture('officeChair')) return false;
     if (kind==='gabinete' && !furnitureKinds.some(canInstallFurniture)) return false;
     if (kind==='ostentacao') {
-      const availableSpend = stock.reduce((sum,item)=>sum+officeGoods[item].price,0);
-      if (Math.min(availableSpend,metrics.wallet)<furnitureSpendingTarget) return false;
+      let totals = [0];
+      for (const item of stock) {
+        const price = officeGoods[item].price;
+        totals = [...totals,...totals.map(total=>total+price).filter(total=>total<=metrics.wallet)];
+      }
+      if (!totals.some(total=>total>=furnitureSpendingTarget)) return false;
     }
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,true) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&

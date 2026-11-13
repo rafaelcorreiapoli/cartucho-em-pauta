@@ -6,7 +6,7 @@ import { PoliticalEconomy } from './PoliticalEconomy';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
 import type { Player } from '../src/map';
-import { decorPoint, privateOffices } from '../src/private-offices';
+import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
 
 const metrics = {wallet:8,popularity:40};
@@ -273,6 +273,9 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
     expect(game.act(player,{kind:'shop-buy',target,token:game.view(player,world).dialogue?.token},world)).toBe('Compra instalada no seu gabinete.');
   };
 
+  expect(economy.spend(player.id,4)).toBe(true);
+  expect(draw()).not.toContain('ostentacao');
+  economy.earn(player.id,4);
   expect(draw()).toContain('ostentacao');
   buy('officeTv');
   const afterTv = draw();
@@ -293,6 +296,25 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
   const completed = economy.view(player.id,[],0,false,()=>true)!.missions.completed.map(mission=>mission.kind);
   expect(completed).toContain('televisao');
   expect(completed).toContain('gabinete');
+});
+
+test('furniture spending is not drawn when no affordable basket reaches the target',()=>{
+  const state = {wallet:5,popularity:40,officeStock:()=>['officeTv','officeChair'] as const};
+  const price = officeGoods.officeChair.price;
+  try {
+    Reflect.set(officeGoods.officeChair,'price',3);
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['ostentacao','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    expect(agenda.hasActive('ostentacao')).toBe(false);
+    state.wallet = 6;
+    Reflect.set(agenda,'missions',[]);
+    agenda.updateEligibility(state,1,true,3);
+    expect(agenda.hasActive('ostentacao')).toBe(true);
+  } finally {
+    Reflect.set(officeGoods.officeChair,'price',price);
+  }
 });
 
 test('decoration missions require enough money or an item already in the inventory',()=>{
