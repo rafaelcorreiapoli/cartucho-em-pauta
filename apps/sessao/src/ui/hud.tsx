@@ -88,7 +88,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
   const timed = timedAgendas.has(mission.kind);
   const current = timed ? Math.floor(mission.current/1000) : mission.current;
   const target = timed ? mission.target/1000 : mission.target;
-  const progress = mission.kind==='fortuna' ? money(current)+' / '+money(target) :
+  const progress = (mission.kind==='fortuna' || mission.kind==='ostentacao') ? money(current)+' / '+money(target) :
     target>1 ? current+' / '+target+(timed ? ' s' : '') : '';
   return <li className="flex items-start gap-2" data-done={done}>
     <span className="react-mission-check" aria-hidden="true">{done && <Icon name="check"/>}</span>

@@ -1,3 +1,4 @@
+import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
@@ -9,7 +10,7 @@ import { PersonalAgenda } from './PersonalAgenda';
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -346,9 +347,9 @@ export class PoliticalEconomy {
     if (account) account.agenda.progress(account,{[kind]:1});
   }
 
-  setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean) {
+  setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[]) {
     for (const [id,account] of this.accounts) {
-      Object.assign(account,{owns:(kind:ObjectKind)=>owns(id,kind)});
+      Object.assign(account,{owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id))});
     }
   }
 

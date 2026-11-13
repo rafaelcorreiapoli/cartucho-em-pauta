@@ -248,3 +248,36 @@ test('the scandal pizza mission becomes eligible only after a public finding',()
   economy.recordOfficialScandal();
   expect(draw()).toBe(true);
 });
+
+test('furniture missions use the actual cabinet slots and prices at assignment',()=>{
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const game = new Gameplay();
+  game.reset(0,()=>0,[player]);
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:player.id,name:player.nick}],()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['ostentacao','gabinete','televisao','poltrona','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([player.id]),3);
+    return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  const buy = (target:string) => {
+    game.act(player,{kind:'talk',target:'vendor'},world);
+    game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+    expect(game.act(player,{kind:'shop-buy',target,token:game.view(player,world).dialogue?.token},world)).toBe('Compra instalada no seu gabinete.');
+  };
+
+  expect(draw()).toContain('ostentacao');
+  buy('officeTv');
+  const afterTv = draw();
+  expect(afterTv).not.toContain('ostentacao');
+  expect(afterTv).not.toContain('televisao');
+  expect(afterTv).toContain('gabinete');
+  buy('officeRug');
+  buy('officeChair');
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+});

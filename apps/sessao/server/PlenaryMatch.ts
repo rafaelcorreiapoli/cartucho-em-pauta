@@ -57,8 +57,8 @@ export class PlenaryMatch {
     console.info(JSON.stringify({event:'economy-totals',roomId,...this.economySummary(physical)}));
   }
 
-  setAgendaInventory(owns:Parameters<PoliticalEconomy['setAgendaInventory']>[0]) {
-    this.economy.setAgendaInventory(owns);
+  setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
+    this.economy.setAgendaInventory(...inventory);
   }
 
   refreshAgendaEligibility() { this.economy.updateAgendaEligibility(this.electorate,bills.length-this.round%bills.length,id=>!!this.election.office(id)); }

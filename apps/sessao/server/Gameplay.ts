@@ -181,6 +181,11 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
+  officeStock(id:string) {
+    const office = this.privateOffices.ownedBy(id);
+    return office ? decorSlots.filter(isOfficeFurniture).filter(kind=>!this.installations.has(`office:${office.id}:${kind}`)) : [];
+  }
+
   private wearing(id:string, kind:Gear) {
     return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }

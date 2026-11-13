@@ -1,12 +1,15 @@
 import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
-import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
+import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean; hasScandal?:()=>boolean}>;
+type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
+  hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]}>;
+const furnitureSpendingTarget = 5;
+const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
@@ -38,7 +41,7 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:5,
+  assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:furnitureSpendingTarget,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
@@ -68,7 +71,6 @@ export class PersonalAgenda {
   private missionCoffee = new Set<string>();
   private seenEvents = new Set<string>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
-  private furnishingPurchases = 0;
   private npcCount = 0;
   private cannotVote = false;
   private ballotsLeft = 3;
@@ -155,7 +157,6 @@ export class PersonalAgenda {
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
       gains.ostentacao = officeGoods[event.kind].price;
-      this.furnishingPurchases += gains.ostentacao;
     }
     for (const mission of this.missions) {
       const kind = mission.kind;
@@ -203,13 +204,17 @@ export class PersonalAgenda {
     if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
+    const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
+    if ((kind==='televisao' && !stock.includes('officeTv')) || (kind==='poltrona' && !stock.includes('officeChair'))) return false;
+    if (kind==='gabinete' && !stock.some(item=>officeGoods[item].price<=metrics.wallet || metrics.owns?.(item))) return false;
+    if (kind==='ostentacao') {
+      const availableSpend = stock.reduce((sum,item)=>sum+officeGoods[item].price,0);
+      if (Math.min(availableSpend,metrics.wallet)<furnitureSpendingTarget) return false;
+    }
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
-      (kind!=='televisao' || !this.acquired.has('officeTv')) &&
       (kind!=='campanha' || metrics.popularity<100) &&
-      (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars')) &&
-      (kind!=='poltrona' || !this.acquired.has('officeChair')) &&
-      (kind!=='ostentacao' || this.furnishingPurchases<=2);
+      (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars'));
   }
 
   private fillMissions(metrics:AgendaMetrics, initial=false) {

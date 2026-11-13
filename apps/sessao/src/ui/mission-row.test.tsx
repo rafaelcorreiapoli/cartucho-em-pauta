@@ -14,3 +14,8 @@ test('active and completed targeted missions render the public nickname',()=>{
     expect(complete).toContain('data-done="true"');
   }
 });
+
+test('the furniture spending objective displays currency on both sides of its progress',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'ostentacao',current:3,target:5}}/>);
+  expect(markup).toContain('R$ 30 mil / R$ 50 mil');
+});
