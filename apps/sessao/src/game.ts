@@ -87,7 +87,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   class Plenary extends Phaser.Scene {
     private safeProgress!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
-    private officeSigns = new Map<string,Phaser.GameObjects.Text>();
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
@@ -171,11 +170,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
         const [doorX,doorY,doorWidth,doorHeight] = office.door;
-        const sign = this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,'',{
-          fontFamily:'system-ui',fontSize:'3.6px',color:'#eee0ba',backgroundColor:'#152720',
+        this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
+          fontFamily:'system-ui',fontSize:'3.2px',color:'#eee0ba',backgroundColor:'#152720',
           align:'left',padding:{x:1.5,y:.5},resolution:4,
         }).setOrigin(0,.5).setDepth(2);
-        this.officeSigns.set(office.id,sign);
       }
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
@@ -375,7 +373,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.officeDoors.clear();
         for (const layout of privateOffices) {
           const office = officeViews?.find(entry=>entry.id===layout.id);
-          this.officeSigns.get(layout.id)?.setText(`${layout.id.padStart(2,'0')}${office?.owner ? ' · '+[...office.owner].slice(0,14).join('') : ''}`);
           const [x,y,w,h] = layout.door;
           const status = office?.door ?? 'open';
           if (status!=='open') {
