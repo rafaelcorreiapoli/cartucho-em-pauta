@@ -260,6 +260,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(metricsResponse.headers.get('content-type')).toContain('version=0.0.4');
     const metrics = await metricsResponse.text();
     expect(metrics).toContain('congresso_matches_started_total 3\n');
+    expect(metrics).toMatch(/congresso_simulation_ticks_total [1-9]\d*\n/);
     expect(metrics).not.toContain(solo.roomId);
     await solo.leave();
     const afterLeaving = await fetch(endpoint+'/metrics').then(response=>response.text());

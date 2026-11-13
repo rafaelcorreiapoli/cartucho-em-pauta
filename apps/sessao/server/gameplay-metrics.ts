@@ -1,4 +1,7 @@
 const metrics = {
+  simulation_ticks: 'Simulation ticks in active rooms.',
+  simulation_gaps_over_100ms: 'Active room ticks starting more than 100 ms after the previous tick.',
+  simulation_work_over_50ms: 'Active room ticks whose synchronous work exceeds 50 ms.',
   matches_started: 'Matches started.',
   matches_finished: 'Matches finished or abandoned.',
   reconnects: 'Players who reconnected to an active match.',
@@ -12,6 +15,11 @@ export function createGameplayMetrics(alert:(message:string)=>void = message=>co
   }
   return {
     increment,
+    observeSimulation(gapMs:number|undefined,workMs:number) {
+      increment('simulation_ticks');
+      if (gapMs!==undefined && gapMs>100) increment('simulation_gaps_over_100ms');
+      if (workMs>50) increment('simulation_work_over_50ms');
+    },
     finish(roomId:string,discrepancy:number) {
       increment('matches_finished');
       if (!discrepancy) return;

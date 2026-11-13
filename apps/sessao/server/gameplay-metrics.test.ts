@@ -18,3 +18,15 @@ test('metrics expose aggregate counts and log discrepancies privately',()=>{
   expect(exposition).toContain('congresso_economy_discrepancies_total 1\n');
   expect(exposition).not.toContain('private-room');
 });
+
+test('simulation metrics separate late ticks from expensive synchronous work',()=>{
+  const metrics = createGameplayMetrics();
+  metrics.observeSimulation(undefined,2);
+  metrics.observeSimulation(100,50);
+  metrics.observeSimulation(101,4);
+  metrics.observeSimulation(50,51);
+  const exposition = metrics.exposition();
+  expect(exposition).toContain('congresso_simulation_ticks_total 4\n');
+  expect(exposition).toContain('congresso_simulation_gaps_over_100ms_total 1\n');
+  expect(exposition).toContain('congresso_simulation_work_over_50ms_total 1\n');
+});

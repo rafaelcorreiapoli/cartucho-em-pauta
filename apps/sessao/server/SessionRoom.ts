@@ -361,7 +361,12 @@ export class SessionRoom extends Room {
         player.character = character;
       }
     });
+    let previousActiveTick:number|undefined;
     this.setSimulationInterval(() => {
+      const startedAt = performance.now();
+      const active = this.match.running && this.clients.length>0;
+      const gap = active && previousActiveTick!==undefined ? startedAt-previousActiveTick : undefined;
+      previousActiveTick = active ? startedAt : undefined;
       for (const [id,state] of this.players) {
         const input = this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);
@@ -457,6 +462,7 @@ export class SessionRoom extends Room {
         } else client.send('players',players);
         client.send('control',state);
       }
+      if (active) gameplayMetrics.observeSimulation(gap,performance.now()-startedAt);
     },STEP_MS);
   }
 
