@@ -43,3 +43,8 @@ test('the VIP inspection identifies the visitor as the subject of the photo',()=
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'fiscalVip',current:0,target:1}}/>);
   expect(markup).toContain('Fotografe um visitante na área VIP de outro parlamentar.');
 });
+
+test('the phone photo objective names both eligible rooms',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'celularFoto',current:0,target:1}}/>);
+  expect(markup).toContain('Antecâmara ou nas Comissões');
+});

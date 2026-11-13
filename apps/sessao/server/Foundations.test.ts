@@ -210,6 +210,14 @@ function knockOut(match:ReturnType<typeof setup>) {
   }
 }
 
+test('the camera cannot count a disconnected player awaiting reconnection',()=>{
+  const {alice,bob,game,world} = setup();
+  const connectedWorld = {...world,present:(id:string)=>id===alice.id};
+  expect(game.act(alice,{kind:'selfie'},connectedWorld)).toBe('Foto guardada no álbum.');
+  expect(game.photoView(alice.id,world.now).album[0]?.photo.people.map(person=>person.id)).toEqual([alice.id]);
+  expect(world.players).toContain(bob);
+});
+
 test('transport is exclusive, follows authoritative movement and drops on valid floor', () => {
   const match = setup();
   const {alice,bob,game,world,events} = match;

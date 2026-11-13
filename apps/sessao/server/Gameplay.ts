@@ -627,7 +627,7 @@ export class Gameplay {
 
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
-    const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
+    const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
