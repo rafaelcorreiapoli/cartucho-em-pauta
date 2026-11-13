@@ -13,7 +13,7 @@ function MailPhoto({photo,draw}:{photo:Photo;draw:(canvas:HTMLCanvasElement,phot
   return <figure><canvas ref={canvas} style={{width:'100%',height:'auto'}}/><figcaption>Fotografia #{photo.id}</figcaption></figure>;
 }
 
-function Attachment({attachment,draw}:{attachment:MailAttachment;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void}) {
+export function Attachment({attachment,draw}:{attachment:MailAttachment;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void}) {
   if (attachment.kind==='photo') return <MailPhoto photo={attachment.photo} draw={draw}/>;
   const report = attachment.kind==='report' ? attachment.report : undefined;
   const document = attachment.kind==='document' ? attachment.document : attachment.report.document;

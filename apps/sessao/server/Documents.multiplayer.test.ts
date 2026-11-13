@@ -7,6 +7,7 @@ import {PlenaryMatch} from './PlenaryMatch';
 import {stations,type PlenaryView} from '../src/plenary';
 import {reprography} from '../src/room-activities';
 import {npcs} from '../src/npcs';
+import type {PhotoAccessView} from '../src/photography';
 import type {Player} from '../src/map';
 import type {ForensicReport,InternalNotice} from '../src/internal-mail';
 
@@ -35,12 +36,16 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     rooms.push(caio);
     const views = new Map<string,PlenaryView>();
     const inboxes = new Map<string,InternalNotice[]>();
+    const photos = new Map<string,PhotoAccessView>();
+    const mailErrors = new Map<string,string|null>();
     const reports = new Map<string,ForensicReport[]>();
     for (const peer of rooms) {
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('mail-state',(mail:InternalNotice[])=>inboxes.set(peer.sessionId,mail));
       peer.onMessage('mail-reports',(mail:ForensicReport[])=>reports.set(peer.sessionId,mail));
-      for (const name of ['players','control','photo-state','gameplay-feedback','mail-result','item-obtained']) peer.onMessage(name,()=>{});
+      peer.onMessage('photo-state',(view:PhotoAccessView)=>photos.set(peer.sessionId,view));
+      peer.onMessage('mail-result',(error:string|null)=>mailErrors.set(peer.sessionId,error));
+      for (const name of ['players','control','gameplay-feedback','item-obtained']) peer.onMessage(name,()=>{});
     }
     const room = matchMaker.getLocalRoomById(alice.roomId) as SessionRoom;
     const match = new PlenaryMatch(1);
@@ -74,6 +79,9 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     bia.send('gameplay',{kind:'accept',item:request.id});
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.signatures.some(signer=>signer.id===bia.sessionId)));
     await wait(()=>views.get(alice.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='assinaturaAlvo'));
+    move(alice,stations.audit);
+    alice.send('mail-publish',{subject:'Original assinado',body:'Segue o original',attachment:{kind:'document',id:original.id}});
+    const authenticPublication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Original assinado'));
     move(alice,reprography);
     alice.send('gameplay',{kind:'edit',item:original.id,target:'1'});
     await wait(()=>state(alice)?.forgeryRemaining);
@@ -81,8 +89,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await Bun.sleep(4900);
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===1));
     move(alice,stations.audit);
+    // Advance the rate-limit boundary without waiting through a full game phase.
+    Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(alice.sessionId);
     alice.send('mail-publish',{subject:'Proposta assinada',body:'Segue documento',attachment:{kind:'document',id:original.id}});
-    const publication = await wait(()=>inboxes.get(bia.sessionId)?.[0]);
+    const publication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Proposta assinada'));
     expect(publication.attachment).toMatchObject({kind:'document',document:{id:original.id,signatures:['Caio','Bia']}});
     expect(JSON.stringify(publication)).not.toContain('authentic');
     move(alice,reprography);
@@ -92,7 +102,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===2));
     bia.send('mail-read');
     await Bun.sleep(100);
-    expect(inboxes.get(bia.sessionId)?.[0]).toEqual(publication);
+    expect(inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Proposta assinada')).toEqual(publication);
     move(bia,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     bia.send('gameplay',{kind:'talk',target:'vendor'});
     const dialogue = await wait(()=>state(bia)?.dialogue);
@@ -105,10 +115,33 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(report.authentic).toBe(false);
     expect(reports.get(alice.sessionId)).toEqual([]);
     await wait(()=>state(bia)?.inventory.some(item=>item.kind==='forensicKit')===false);
+    move(caio,{x:npcs.vendor.x+8,y:npcs.vendor.y+11});
+    caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false});
+    await wait(()=>views.get(bia.sessionId)?.politics?.wallet===7);
+    const nextShop = await wait(()=>{
+      const current = state(bia)?.dialogue;
+      return current?.shop && current.token!==shop.token ? current : undefined;
+    });
+    bia.send('gameplay',{kind:'shop-buy',target:'forensicKit',token:nextShop.token});
+    await wait(()=>state(bia)?.inventory.find(item=>item.kind==='forensicKit'));
+    bia.send('mail-examine',authenticPublication.id);
+    const originalReport = await wait(()=>reports.get(bia.sessionId)?.find(entry=>entry.notice===authenticPublication.id));
+    expect(originalReport.authentic).toBe(true);
+    expect(reports.get(alice.sessionId)).toEqual([]);
     move(bia,stations.audit);
     bia.send('mail-publish',{subject:'Contraexposição',body:'Laudo anexo',attachment:{kind:'report',id:report.notice}});
     const rebuttal = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Contraexposição'));
     expect(rebuttal.attachment).toEqual({kind:'report',report});
+
+    move(caio,stations.audit);
+    caio.send('gameplay',{kind:'selfie'});
+    const photo = await wait(()=>photos.get(caio.sessionId)?.album[0]?.photo);
+    Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(bia.sessionId);
+    bia.send('mail-publish',{subject:'Foto alheia',body:'Tentativa',attachment:{kind:'photo',id:photo.id}});
+    await wait(()=>mailErrors.get(bia.sessionId)==='Anexo indisponível.');
+    caio.send('mail-publish',{subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
+    const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
+    expect(photoNotice.attachment).toEqual({kind:'photo',photo});
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

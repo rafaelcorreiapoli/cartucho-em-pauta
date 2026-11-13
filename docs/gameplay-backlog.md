@@ -372,7 +372,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 |---|---|---|---|---|---|
 | DOC-01 | Documentos físicos vinculados a projetos | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-02 | Adulteração documental | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | A Reprografia exige proximidade, um projeto diferente e cinco segundos; a operação cancela ao sair. | — |
-| DOC-03 | Kit de Perícia e laudos | PARCIAL | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Kit, consumo e laudo testados. Falta validação manual e cobertura dos dois resultados em multiplayer. | Baixa |
+| DOC-03 | Kit de Perícia e laudos | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Teste multiplayer cobre laudos verdadeiro e falso, consumo do kit e privacidade. Testes React conferem veredito e documento exibidos. | — |
 | DOC-04 | Chantagem e blefe emergentes | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-05 | Emissão de documentos na Secretaria | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-06 | Identidade única por documento | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
@@ -411,7 +411,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | FOTO-05 | Mostrar fotografia para jogador próximo | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-06 | Compartilhar ou transferir cópia | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-07 | Vender fotografias e informações | PENDENTE | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | Compartilhamento de cópia existe; venda de evidência financeira é outro fluxo. Falta venda de fotos. | Média |
-| FOTO-08 | Publicar fotografia no Correio Interno | PARCIAL | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | Correio aceita e renderiza foto. Falta teste ponta a ponta do anexo de foto. | Baixa |
+| FOTO-08 | Publicar fotografia no Correio Interno | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | Teste multiplayer cobre selfie anexada, recebimento por outro jogador e rejeição de foto alheia. Teste React cobre o canvas e a legenda. | — |
 | FOTO-09 | Evidência de interações observáveis | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-10 | Fotos de dinheiro carregado | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-11 | Fotos de embolso e doação | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
