@@ -31,4 +31,9 @@ async page => {
   const photo = dialog.getByRole('button',{name:/Abrir fotografia/});
   await photo.click();
   await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();
+  await dialog.getByText('Original',{exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'Excluir do meu álbum'}).click();
+  await dialog.getByText('O álbum está vazio.',{exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'Publicadas'}).click();
+  await dialog.getByText('Nenhuma foto publicada.',{exact:true}).waitFor();
 }
