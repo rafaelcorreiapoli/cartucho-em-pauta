@@ -209,25 +209,26 @@ async function connect(join: () => Promise<Room>) {
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
+    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
     let fieldToken = 0;
     const sendGameplay = (action:GameplayAction) =>
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
-    const surveillance = createSurveillancePanel(action=>joined.send('spy',action));
+    const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
-    const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
+    const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      option=>joined.send('spy',option));
+      option=>sendCommand('spy',option));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
+    },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
-      if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
-      if (action.kind==='fire') { joined.send('fire-action',action.option); return; }
-      if (action.kind==='spy') { joined.send('spy',action.option); return; }
+      if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
+      if (action.kind==='spy') { sendCommand('spy',action.option); return; }
       if (action.kind==='edit-document') {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
         return;
@@ -273,7 +274,6 @@ async function connect(join: () => Promise<Room>) {
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
-    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();

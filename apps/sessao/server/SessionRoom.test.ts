@@ -324,7 +324,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
-    passenger.send('room-activity','coffee');
+    passenger.send('room-activity',{activity:'coffee',token:1});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
@@ -343,18 +343,21 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const camera = gameplay()!.inventory.find(item=>item.kind==='spyCamera')!;
     Object.assign(positions.get(carrier.sessionId)!.player,{x:240,y:250});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:245,y:252});
-    carrier.send('spy',{kind:'install',site:'coffee',item:camera.id});
+    carrier.send('spy',{kind:'install',site:'coffee',item:camera.id,token:1});
     await wait(()=>gameplay()?.surveillance?.progress!==undefined);
     await Bun.sleep(5100);
     await wait(()=>gameplay()?.surveillance?.channels.length===1);
     const channel = gameplay()!.surveillance!.channels[0].id;
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
-    passenger.send('spy',{kind:'open',channel});
-    carrier.send('spy',{kind:'open',channel});
+    passenger.send('spy',{kind:'open',channel,token:2});
+    carrier.send('spy',{kind:'open',channel,token:2});
     await wait(()=>spyFrames.get(carrier.sessionId)?.people.some(person=>person.id===passenger.sessionId)===true);
+    await wait(()=>gameplay()?.surveillance?.selected===channel);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
-    carrier.send('spy',{kind:'close'});
+    carrier.send('spy',{kind:'close',token:3});
+    carrier.send('spy',{kind:'open',channel,token:2});
+    await wait(()=>gameplay()?.surveillance?.selected===undefined);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     const passengerGameplay = ()=>views.get(passenger.sessionId)?.gameplay;
     passenger.send('gameplay',{kind:'talk',target:'vendor'});
@@ -412,7 +415,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
-    passenger.send('bill-vote',{vote:'yes',token:1});
+    passenger.send('bill-vote',{vote:'yes',token:3});
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
     const infraction = views.get(passenger.sessionId)?.complaints?.available[0];
     expect(infraction).toMatchObject({kind:'hit'});
@@ -420,7 +423,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='negotiation');
     Object.assign(positions.get(passenger.sessionId)!.player,stations.audit);
-    passenger.send('complaint-submit',{id:infraction!.id,token:2});
+    passenger.send('complaint-submit',{id:infraction!.id,token:4});
     await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
     expect(views.get(carrier.sessionId)?.complaints?.history[0]).toMatchObject({kind:'hit',accused:positions.get(carrier.sessionId)!.player.nick});
 

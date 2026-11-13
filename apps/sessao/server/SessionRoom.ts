@@ -235,9 +235,11 @@ export class SessionRoom extends Room {
         if (result) client.send('audit-result',result);
       }
     });
-    this.onMessage('room-activity', (client, activity:unknown) => {
+    this.onMessage('room-activity', (client, raw:unknown) => {
+      if (!raw || typeof raw!=='object' || !('activity' in raw)) return;
+      const {activity} = raw;
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
+      if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
     });
@@ -246,7 +248,7 @@ export class SessionRoom extends Room {
     });
     this.onMessage('spy',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
       const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
       if (result) client.send('gameplay-feedback',result);
@@ -255,6 +257,7 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
           !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='ignite' && raw.kind!=='extinguish')) return;
+      if (!this.consumeRoomCommand(player.id,raw)) return;
       const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime);
       if (result) client.send('gameplay-feedback',result);
     });
@@ -278,7 +281,7 @@ export class SessionRoom extends Room {
     });
     this.onMessage('npc-deal',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) return;
+      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) return;
       if (this.gameplay.hasOfficeChannel(player.id)) return;
       const result = this.npcTalk.act(player,raw,this.gameplayWorld());
       if (result) client.send('gameplay-feedback',result);

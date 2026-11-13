@@ -4,7 +4,7 @@ import type { ParliamentarianDeal } from './parliamentarians';
 import { money } from './politics';
 import type { PlenaryView, Vote } from './plenary';
 
-export function createParliamentarianPanel(send:(action:unknown)=>void) {
+export function createParliamentarianPanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#parliamentarian-dialog')!;
   const title = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('.parliamentarian-options')!;

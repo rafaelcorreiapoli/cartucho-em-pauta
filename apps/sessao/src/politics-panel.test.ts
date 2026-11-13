@@ -18,6 +18,8 @@ test('political, election and mail commands share a sequence on the room connect
   send('mail-examine',{notice:7});
   send('bill-intent',{vote:'yes'});
   send('bill-vote',{vote:'no'});
+  send('spy',{kind:'close'});
+  send('room-activity',{activity:'coffee'});
   send('politics',transfer);
   expect(commands).toEqual([
     ['politics',{...transfer,token:1}],
@@ -25,7 +27,9 @@ test('political, election and mail commands share a sequence on the room connect
     ['mail-examine',{notice:7,token:3}],
     ['bill-intent',{vote:'yes',token:4}],
     ['bill-vote',{vote:'no',token:5}],
-    ['politics',{...transfer,token:6}],
+    ['spy',{kind:'close',token:6}],
+    ['room-activity',{activity:'coffee',token:7}],
+    ['politics',{...transfer,token:8}],
   ]);
   expect(readRoomCommandToken({token:1})).toBe(1);
   for (const token of [undefined,0,-1,1.2,Infinity,'1']) expect(readRoomCommandToken({token})).toBeUndefined();

@@ -1,9 +1,15 @@
+import type { FireAction } from './fire';
+import type { RoomActivity } from './room-activities';
 import type { ElectionAction } from './elections';
 import type { PoliticsAction } from './politics';
 import type { Action, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
 type RoomActions = {
+  spy:object;
+  'npc-deal':object;
+  'fire-action':{kind:FireAction;site:number};
+  'room-activity':{activity:RoomActivity};
   politics:PoliticsAction;
   election:ElectionAction;
   'mail-publish':{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};

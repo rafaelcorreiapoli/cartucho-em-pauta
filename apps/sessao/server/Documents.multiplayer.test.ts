@@ -223,10 +223,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>views.get(infiltrator.sessionId)?.sabotageFireSite===0);
     expect(views.get(firefighter.sessionId)?.sabotageFireSite).toBeUndefined();
     move(infiltrator,fireSites[0]);
-    infiltrator.send('fire-action',{kind:'ignite',site:0});
+    infiltrator.send('fire-action',{kind:'ignite',site:0,token:6});
     await wait(()=>views.get(firefighter.sessionId)?.fire?.site===0);
     move(firefighter,fireSites[0].extinguisher);
-    firefighter.send('fire-action',{kind:'extinguish',site:0});
+    firefighter.send('fire-action',{kind:'extinguish',site:0,token:7});
     await wait(()=>feedback.get(firefighter.sessionId)==='Incêndio apagado.');
     await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
   } finally {
