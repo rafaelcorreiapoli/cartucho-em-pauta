@@ -137,13 +137,12 @@ function Vitals({profile,stamina}:{profile:ReturnType<typeof channel<Profile|und
   </div>;
 }
 
-type PersonalResources = {wallet:number; popularity:number; stability:number};
+type PersonalResources = {wallet:number; popularity:number};
 function ProfileResources({state}:{state:ReturnType<typeof channel<PersonalResources|undefined>>}) {
   const resources = useSyncExternalStore(state.subscribe,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
     <span title="Popularidade"><Icon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
-    <span title="Estabilidade institucional"><Icon name="shield"/>Est. <strong>{resources.stability}</strong></span>
     <span title="Dinheiro na carteira"><Icon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
   </div>;
 }
@@ -191,7 +190,7 @@ export function mountReactHud() {
         matchId = progress?.matchId;
         agenda.update(undefined);
       }
-      resources.update(progress && view.politics ? {wallet:view.politics.wallet,popularity:view.politics.popularity,stability:view.stability} : undefined);
+      resources.update(progress && view.politics ? {wallet:view.politics.wallet,popularity:view.politics.popularity} : undefined);
       profile.update(progress && {hp:view.gameplay?.vitality?.hp,maxHp:view.gameplay?.vitality?.max,
         xp:progress.xp,start:progress.levelStart,next:progress.nextLevelXp,level:progress.level});
       const missions = view.phase==='lobby' ? undefined : view.politics?.missions;

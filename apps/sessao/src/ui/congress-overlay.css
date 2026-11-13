@@ -146,7 +146,7 @@
 
 #command-strip #congress-dock { grid-column: 2; }
 #command-strip #election-dock { grid-column: 3; }
-#command-deck { --profile-width: clamp(350px, 31vw, 490px); }
+#command-deck { --profile-width: clamp(262.5px, 23.25vw, 367.5px); }
 #command-deck #profile-dock {
   display: grid;
   grid-template-columns: auto minmax(0,1fr);
@@ -206,7 +206,7 @@
 @media (max-width: 640px) {
   #command-strip #congress-dock { grid-column: 2; }
   #command-strip #election-dock { grid-column: 1 / -1; }
-  #command-deck #profile-dock { width: min(350px, 52vw); }
+  #command-deck #profile-dock { width: min(262.5px, 39vw); }
 }
 
 #command-deck .deck-tools {
