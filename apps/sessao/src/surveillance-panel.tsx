@@ -1,5 +1,6 @@
 import { markShortcut } from './action-shortcuts';
-import { button, glyph, node } from './gameplay-ui';
+import { createRoot } from 'react-dom/client';
+import { button, node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
 import type { PhotoScene } from './photography';
 import type { SpyView } from './surveillance';
@@ -9,6 +10,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   const badge = launch.querySelector('span')!;
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
   const list = document.querySelector<HTMLElement>('#spy-channels')!;
+  const channelsRoot = createRoot(list);
   const monitor = document.querySelector<HTMLElement>('#spy-monitor')!;
   const viewport = node('div');
   viewport.className = 'spy-viewport';
@@ -29,37 +31,33 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const channels = view?.channels ?? [];
     const selected = channels.find(channel=>channel.id===view?.selected && !channel.removed);
     const audio = channels.find(channel=>channel.id===view?.audio && !channel.removed);
-    list.replaceChildren();
-    if (!channels.length) list.append(node('p','Instale um grampo ou uma câmera do Apoio Técnico para abrir um canal.'));
     const size = 4;
     const last = Math.max(0,Math.ceil(channels.length/size)-1);
     page = Math.min(page,last);
-    channels.slice(page*size,(page+1)*size).forEach((channel,index)=>{
-      const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
-      const control = button('',()=>{
-        focusedChannel = channel.id;
-        send({kind:'open',channel:channel.id});
-        update();
-      });
-      control.classList.add('spy-channel');
-      control.disabled = channel.removed;
-      control.classList.toggle('spy-active',channel.active);
-      control.setAttribute('aria-pressed',String(selected?.id===channel.id || audio?.id===channel.id));
-      const text = node('span');
-      text.append(node('strong',channel.name),node('small',channel.room+' · '+label));
-      control.append(glyph(channel.kind==='wiretap' ? 'mic' : 'camera'),text);
-      if (!channel.removed) markShortcut(control,String(index+1));
-      list.append(control);
-    });
-    if (last>0) {
-      const back = button('‹',()=>{page--;update();});
-      const nextPage = button('›',()=>{page++;update();});
-      back.disabled = page===0;
-      nextPage.disabled = page===last;
-      markShortcut(back,'ArrowLeft','←');
-      markShortcut(nextPage,'ArrowRight','→');
-      list.append(back,node('span',` ${page+1} / ${last+1} `),nextPage);
-    }
+    channelsRoot.render(<>
+      {!channels.length && <p>Instale um grampo ou uma câmera do Apoio Técnico para abrir um canal.</p>}
+      {channels.slice(page*size,(page+1)*size).map((channel,index)=>{
+        const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
+        return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
+          disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
+          aria-keyshortcuts={channel.removed ? undefined : String(index+1)} onClick={()=>{
+            focusedChannel = channel.id;
+            send({kind:'open',channel:channel.id});
+            update();
+          }}>
+          <svg className="hud-glyph" aria-hidden="true"><use href={channel.kind==='wiretap' ? '#icon-mic' : '#icon-camera'}/></svg>
+          <span><strong>{channel.name}</strong><small>{channel.room} · {label}</small></span>
+          {!channel.removed && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
+        </button>;
+      })}
+      {last>0 && <div className="flex items-center gap-2">
+        <button type="button" className="hud-button hud-button--secondary" disabled={page===0}
+          aria-label="Página anterior" onClick={()=>{page--;update();}}>‹</button>
+        <span>{page+1} / {last+1}</span>
+        <button type="button" className="hud-button hud-button--secondary" disabled={page===last}
+          aria-label="Próxima página" onClick={()=>{page++;update();}}>›</button>
+      </div>}
+    </>);
     monitor.replaceChildren();
     if (selected) monitor.append(node('h3',selected.name),viewport);
     if (audio) monitor.append(node('p',`${audio.name} · ${view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}`));
@@ -138,6 +136,12 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       live ??= createSurveillanceViewport(viewport);
       live.receive(frame);
     },
-    destroy() { stopViewport(); launch.onclick = null; dialog.onclose = null; dialog.close(); launch.hidden = true; },
+    destroy() {
+      channelsRoot.unmount();
+      stopViewport();
+      launch.onclick = dialog.onclose = dialog.onkeydown = null;
+      dialog.close();
+      launch.hidden = true;
+    },
   };
 }
