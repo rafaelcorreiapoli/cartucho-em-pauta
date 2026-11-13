@@ -10,6 +10,7 @@ import { applyFacts, photoMissions } from './photo-missions';
 type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
   canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
+const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
@@ -45,12 +46,12 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  articulacao:3, escandalo:3, entrega:4, assinaturas:3, assinar:2,
+  articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:furnitureSpendingTarget,
+  assinaturas:signatureTarget, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:furnitureSpendingTarget,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
@@ -158,8 +159,13 @@ export class PersonalAgenda {
     // Isolation is temporary. Keep collective missions already in progress.
     const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='jogarOculto';
     const humans = usesAvailablePlayers ? this.availableTargets?.size ?? this.playerCount : this.playerCount;
-    const participants = humans+(kind==='assinaturas' ? this.npcCount : 0);
-    if (players>participants) return false;
+    if (kind==='assinaturas') {
+      const available = this.availableTargets;
+      const colleagues = drawing && available
+        ? this.targets.filter(person=>available.has(person.id)).length
+        : Math.max(0,this.playerCount-1);
+      if (colleagues+this.npcCount<signatureTarget) return false;
+    } else if (players>humans) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
     }

@@ -439,3 +439,23 @@ test('a settled transfer can only advance each agenda once even after a new obje
   agenda.recordPayment(metrics,'b',42);
   expect(agenda.view(metrics).active.find(mission=>mission.id===102)?.current).toBe(0);
 });
+
+test('a signature objective needs two other available signers and retains progress during temporary isolation',()=>{
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
+  const targets = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
+  const available = new Set(['b']);
+  agenda.updateEligibility(metrics,3,true,3,0,targets,available);
+  expect(agenda.hasActive('assinaturas')).toBe(false);
+
+  Reflect.set(agenda,'missions',[]);
+  agenda.updateEligibility(metrics,3,true,3,1,targets,available);
+  expect(agenda.hasActive('assinaturas')).toBe(true);
+  agenda.recordSignature(metrics,21,'b');
+  available.clear();
+  agenda.updateEligibility(metrics,3,true,3,1,targets,available);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='assinaturas')?.current).toBe(1);
+  agenda.recordSignature(metrics,21,'npc');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
+});
