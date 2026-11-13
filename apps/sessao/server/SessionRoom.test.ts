@@ -83,6 +83,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(end.x).toBe(start.x);
     const acknowledged = new Set<number>();
     const firstBurstSeq = seq+1;
+    const visualSnapshotsBeforeBurst = observed.length;
     first.onMessage('control',(state:ControlState)=>{
       if (state.ack>=firstBurstSeq && state.ack<firstBurstSeq+MAX_QUEUED_INPUTS) acknowledged.add(state.ack);
     });
@@ -91,6 +92,7 @@ test('clients share movement and voice, then receive private roles and payments'
     }
     await until(()=>controls.get(first.sessionId)?.ack===seq);
     expect([...acknowledged]).toEqual(Array.from({length:MAX_QUEUED_INPUTS},(_,index)=>firstBurstSeq+index));
+    expect(observed.length-visualSnapshotsBeforeBurst).toBeLessThan(MAX_QUEUED_INPUTS);
     first.send('input',{seq:++seq,destination:{x:240,y:70}});
     for (let step=0;step<55;step++) {
       if (Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1) break;

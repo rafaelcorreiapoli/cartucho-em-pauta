@@ -362,6 +362,7 @@ export class SessionRoom extends Room {
       }
     });
     let previousActiveTick:number|undefined;
+    let sendPlayerSnapshot = true;
     this.setSimulationInterval(() => {
       const startedAt = performance.now();
       const active = this.match.running && this.clients.length>0;
@@ -454,14 +455,15 @@ export class SessionRoom extends Room {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
         }
-        if (this.match.running) {
+        if (sendPlayerSnapshot && this.match.running) {
           const vision = this.gameplay.vision(id,now);
           const visible = state.plenary ? world.players.filter(inPlenary) :
             world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
-        } else client.send('players',players);
+        } else if (sendPlayerSnapshot) client.send('players',players);
         client.send('control',state);
       }
+      sendPlayerSnapshot = !sendPlayerSnapshot;
       if (active) gameplayMetrics.observeSimulation(gap,performance.now()-startedAt);
     },STEP_MS);
   }
