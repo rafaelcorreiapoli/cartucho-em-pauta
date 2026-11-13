@@ -3,7 +3,7 @@ import { money } from './politics';
 import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
-import { concealment } from './equipment';
+import { binoculars, concealment, equipment, megaphone, xray } from './equipment';
 import { foods } from './food';
 import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
@@ -23,16 +23,16 @@ export const objects = {
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
-  xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:'Cada carga revela por 10 s o saldo de NPCs e cofres dentro da sua visão.'},
+  xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
   document:{exposable:true,name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
   gift:{exposable:true,name:'Presente institucional',portrait:'retrato-presente.webp',description:'Uma lembrancinha. A etiqueta diz “sem contrapartida”.'},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:'Uma reserva que os outros podem ignorar.'},
-  binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão por 10 s. Recarga automática de 30 s.'},
-  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:'Transmite sua voz para todo o Congresso por até 15 s.'},
+  binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
+  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
-  vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
+  vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
   baton:{name:'Porrete',portrait:'retrato-porrete.webp',description:'Golpeia um jogador próximo.'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'; amount?:number; destructible?:boolean; price?:number; attack?:number}>;

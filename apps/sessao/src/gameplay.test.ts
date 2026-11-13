@@ -87,3 +87,11 @@ test('station controls share the reach, wall and hands-free rules',()=>{
   expect(canReachStation({...player,barriers:[[station.x+3,station.y-2,2,4]]},'coffee')).toBe(false);
   expect(canReachStation({...player,x:station.x+24},'coffee')).toBe(false);
 });
+
+test('item descriptions show the active equipment rules',()=>{
+  expect(objects.binoculars.description).toContain('10 s. Recarga automática de 30 s');
+  expect(objects.megaphone.description).toContain('15 s');
+  expect(objects.xray.description).toContain('10 s');
+  expect(objects.vest.description).toContain('35%');
+  expect(objects.firstAidKit.description).toContain('35 PV');
+});

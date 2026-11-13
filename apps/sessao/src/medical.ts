@@ -11,11 +11,13 @@ export const infirmary = {
 export const aidRadius = 20;
 export const carrySpeedFactor = .65;
 
+const firstAidHealing = 35;
+
 export const firstAidKit = {
   name:'Kit de primeiros socorros',
-  description:'Recupera até 35 PV de quem usar.',
+  description:`Recupera até ${firstAidHealing} PV de quem usar.`,
   portrait:'retrato-primeiros-socorros.webp',
   price:1.5,
-  healing:35,
+  healing:firstAidHealing,
   use:'consume',
 } as const;

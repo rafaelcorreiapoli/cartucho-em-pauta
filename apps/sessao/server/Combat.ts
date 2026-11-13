@@ -1,3 +1,4 @@
+import { equipment } from '../src/equipment';
 import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
 import { canReachObject } from '../src/gameplay';
@@ -127,7 +128,7 @@ export class Combat {
   private damage(attacker:Combatant, target:Combatant, armor:boolean, now:number, weapon:WeaponKind) {
     const profile = weapons[weapon];
     const base = characterStats[attacker.character].attack;
-    const strike = (profile.damage+base*profile.strengthScale+(attacker.attackBonus ?? 0))*(armor ? .65 : 1);
+    const strike = (profile.damage+base*profile.strengthScale+(attacker.attackBonus ?? 0))*(armor ? 1-equipment.vest.damageReduction : 1);
     const damage = Math.max(1,Math.round(strike)-(target.defenseBonus ?? 0));
     const victim = this.state(target);
     victim.hp = Math.max(0,victim.hp-damage);
