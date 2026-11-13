@@ -1,3 +1,4 @@
+import {assignHotbarSlot, emptyHotbar, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
@@ -67,6 +68,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let nearbyKey = '';
   let inventoryKey = '';
   let inventoryItems:WorldItem[] = [];
+  let hotbar = emptyHotbar();
+  let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
   let app:App = 'Telefone';
@@ -104,6 +107,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
           disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
       </div>}
+      {chooseQuantity && <div className="flex flex-wrap gap-1" role="group" aria-label="Adicionar à hotbar">
+        <span>Hotbar</span>
+        {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
+          aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
+          onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
+        {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
+          onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
+      </div>}
       {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
         aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
     </article>;
@@ -122,6 +133,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     equipmentOpen = equipment;
     stashOpen = stash;
     bagOpen = bag;
+    if (!bag) assigningSlot = undefined;
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
@@ -206,7 +218,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,assigningSlot,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
@@ -221,7 +233,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
           const item = state.inventory[index];
           return item ? <button key={item.id} type="button" className="item-tile" title={itemName(item)}
-            onClick={()=>open({id:item.id,source:'inventory'})}>
+            onClick={()=>{
+              if (assigningSlot===undefined) open({id:item.id,source:'inventory'});
+              else { hotbar = assignHotbarSlot(hotbar,assigningSlot,item.id); dialog.close(); }
+            }}>
             <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait}/>
             <span>{itemName(item)}</span>
           </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={index}>+</span>;
@@ -378,15 +393,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (key===inventoryKey) return;
     inventoryKey = key;
     inventoryItems = inventory;
+    hotbar = reconcileHotbar(hotbar,inventory);
     highlightSlot();
   }
 
   function highlightSlot() {
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
-      const item = inventoryItems[index];
+      const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
       const shortcut = index+1;
       const badge = <kbd className="slot-key" aria-hidden="true">{shortcut}</kbd>;
-      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}<span className="slot-plus">+</span></span>;
+      if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
+        aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
+        onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
+        {badge}<span className="slot-plus" aria-hidden="true">+</span>
+      </button>;
       const name = itemName(item);
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
         aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
@@ -452,6 +472,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const closed = () => {
     photos.stopPreview();
     selection = undefined;
+    assigningSlot = undefined;
     highlightSlot();
     if (previous?.gameplay?.game) send({kind:'game-stop'});
     photos.closePresentation();
