@@ -13,8 +13,8 @@ import { canStand, localPerception, characterVisible, type Player } from '../src
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
-const ids = ['lula','bolsonaro','trump'];
-const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','Trump'][character],character,x:140+36*character,y:146,direction:0,moving:false}));
+const ids = ['lula','bolsonaro','clodovil'];
+const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','Clodovil'][character],character,x:140+36*character,y:146,direction:0,moving:false}));
 const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
@@ -71,7 +71,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
     }
   }
   match.advance(ELECTION_RULES.matchDuration);
-  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump'});
+  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Clodovil'});
 });
 
 test('nearby voices can carry past a wall without revealing the speaker', () => {

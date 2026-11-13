@@ -5,10 +5,10 @@ import { NAMES } from './map';
 for (const [name,skin] of [
   ['Lula','lula'],
   ['Bolsonaro','bolsonaro'],
-  ['Trump','trump'],
+  ['Clodovil','clodovil'],
   ['Tiririca','tiririca'],
   ['José Sarney','sarney'],
-  ['Jean Wyllys','jean-wyllys'],
+  ['Alexandre Frota','alexandre-frota'],
   ['Sergio Moro','sergio-moro'],
   ['Nestor Cerveró','nestor-cervero'],
 ] as const) {

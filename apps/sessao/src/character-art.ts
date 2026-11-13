@@ -10,10 +10,10 @@ export const characterSheets = [
 const combatCharacters:Record<(typeof NAMES)[number],string> = {
   Lula:'lula',
   Bolsonaro:'bolsonaro',
-  Trump:'trump',
+  Clodovil:'clodovil',
   Tiririca:'tiririca',
   'José Sarney':'sarney',
-  'Jean Wyllys':'jean-wyllys',
+  'Alexandre Frota':'alexandre-frota',
   'Sergio Moro':'sergio-moro',
   'Nestor Cerveró':'nestor-cervero',
 };
