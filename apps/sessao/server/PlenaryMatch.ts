@@ -423,7 +423,9 @@ export class PlenaryMatch {
     if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id) || !this.election.open(now)) return;
     const spend = (amount:number) => this.economy.spend(id,amount);
     switch (action.kind) {
-      case 'invest': this.election.invest(id,action.amount,spend); break;
+      case 'invest':
+        if (this.at(player,'press')) this.election.invest(id,action.amount,spend);
+        break;
       case 'advertise':
         if (this.at(player,'press') && this.election.advertise(id,spend)) this.publishActivity(player,'advertisement-aired',now);
         break;
@@ -434,7 +436,9 @@ export class PlenaryMatch {
         }
         break;
       case 'interview': if (hasVoice && this.at(player,'tv')) this.election.interview(id,now); break;
-      case 'support': this.election.support(id,action.to); break;
+      case 'support':
+        if (this.at(player,'press')) this.election.support(id,action.to);
+        break;
       case 'object':
         if (this.at(player,'panel') && !this.objection() && this.election.object(id)) this.objector = id;
         break;

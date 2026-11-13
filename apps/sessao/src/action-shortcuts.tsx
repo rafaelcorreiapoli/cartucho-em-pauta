@@ -18,7 +18,7 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
 const quickActions = [
   ...apps.map(({id,key})=>[key.toLowerCase(),'#'+id] as const),
   ['j','#politics-dock > summary'],
-  ['l','#election-dock > summary'],
+  ['l','#open-election-polls'],
 ] as const;
 
 function available(control:HTMLElement) {

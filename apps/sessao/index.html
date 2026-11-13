@@ -100,6 +100,7 @@
               <button class="hud-button hud-button--secondary" data-action="fraud" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar</span></button>
             </div>
             <div class="station-grid" id="station-election-actions" hidden>
+              <button class="hud-button hud-button--secondary" id="election-actions" data-station="press" type="button" aria-haspopup="dialog" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Investir na campanha</button>
               <button class="hud-button hud-button--secondary" id="advertise" data-station="press" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span>Propaganda<small>R$ 20 mil</small></span></button>
               <button class="hud-button hud-button--secondary" id="speech" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Discursar</span></button>
               <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
@@ -172,17 +173,9 @@
           </div>
           <div id="congress-dock" class="hud-module"></div>
           <div class="election-and-incidents">
-            <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-              <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
-              <div class="hud-panel politics-content">
-                <div id="election-cycle"></div>
-                <section aria-label="Pesquisa eleitoral">
-                  <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
-                  <div id="election-polls"></div>
-                </section>
-                <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
-              </div>
-            </details>
+            <div id="election-dock" class="hud-strip hud-module" hidden>
+              <button id="open-election-polls" class="hud-option" type="button" aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)"></button>
+            </div>
             <div id="active-fire-mount"></div>
           </div>
         </header>
@@ -307,6 +300,15 @@
       </dialog>
       <dialog id="session-finale" aria-labelledby="session-finale-title"></dialog>
       <dialog id="legislative-brief" class="hud-panel" aria-labelledby="legislative-brief-title"></dialog>
+      <dialog id="election-poll-dialog" class="hud-panel" aria-labelledby="election-poll-title">
+        <header><h2 id="election-poll-title">Pesquisa eleitoral</h2>
+          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar pesquisa eleitoral">×</button></form>
+        </header>
+        <div id="election-cycle"></div>
+        <section aria-label="Pesquisa eleitoral">
+          <div id="election-polls"></div>
+        </section>
+      </dialog>
       <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title"></dialog>
       <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>

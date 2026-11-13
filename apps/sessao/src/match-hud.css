@@ -265,7 +265,7 @@
   }
   #profile-dock .portrait { --portrait-size: 33px; }
   .profile-values { gap: .3rem; font-size: .68rem; }
-  #session #election-dock > summary { flex-wrap: wrap; gap: .2rem .3rem; padding: .35rem; }
+  #session #election-dock > #open-election-polls { flex-wrap: wrap; gap: .2rem .3rem; padding: .35rem; }
   #election-timer { font-size: .68rem; }
   #legislative-dock { max-height: 28dvh; }
   #session:is([data-phase="ballot"],[data-phase="hearing"]) #legislative-dock { max-height: 40dvh; width: min(305px,calc(100% - 2 * var(--hud-edge))); z-index: 4; }
@@ -474,7 +474,7 @@
 #congress-heading { color: #f3e3b9; }
 #congress-dock:has([data-low="true"]) { border-color: var(--party-coral); }
 #session #election-dock { border-color: #9b9767; }
-#session #election-dock > summary { background: #294334; }
+#session #election-dock > #open-election-polls { background: #294334; }
 #election-timer { color: var(--party-gold); }
 #session #election-dock[data-urgency="soon"] { border-color: #e1b974; }
 #session #election-dock[data-urgency="high"] { border-color: #ffc579; }
@@ -607,8 +607,8 @@
   #congress-dock #stability { color: var(--party-mint); }
   .stability-resource:has([data-low="true"]) #stability { color: var(--party-coral); }
   #congress-dock .resource progress { height: 8px; }
-  #session #election-dock > summary { padding: .65rem .7rem; gap: .6rem; }
-  #session #election-dock > summary > .hud-glyph { width: 24px; height: 24px; }
+  #session #election-dock > #open-election-polls { padding: .65rem .7rem; gap: .6rem; }
+  #session #election-dock > #open-election-polls > .hud-glyph { width: 24px; height: 24px; }
   #current-office { font-size: .78rem; }
   #election-position { font: 850 1.17rem/1.1 var(--party-display); }
   #election-timer { font-size: 1.22rem; }

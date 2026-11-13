@@ -206,6 +206,7 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
+    Object.assign(positions.get(second.sessionId)!,stations.press);
     second.send('election',{kind:'invest',amount:1,token:transfer.token});
     second.send('election',{kind:'invest',amount:2,token:1850});
     second.send('election',{kind:'invest',amount:2,token:1850});
@@ -240,6 +241,7 @@ test('clients share movement and voice, then receive private roles and payments'
     }
     // The current view can change independently of the room's command sequence.
     second.send('politics',transfer);
+    Object.assign(positions.get(second.sessionId)!,stations.press);
     second.send('election',{kind:'invest',amount:2,token:1870});
     await until(() => secondView?.election?.personal?.invested===2);
     expect(secondView!.politics?.wallet).toBe(6);

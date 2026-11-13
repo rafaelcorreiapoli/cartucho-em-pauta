@@ -5,7 +5,8 @@ import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, PLENARY_SEATS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
-  officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void) {
+  officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void,
+  pressDesk?:(art:Phaser.GameObjects.Image)=>void) {
   const graphics = scene.add.graphics();
   const fill = (color:number, x:number, y:number, width:number, height:number, alpha=1) => {
     graphics.fillStyle(color,alpha).fillRect(x,y,width,height);
@@ -93,7 +94,8 @@ export function drawMap(scene: Phaser.Scene,
 
   for (const [x,y] of desks) {
     if ((x!==treasurer.counter.x || y!==treasurer.counter.y)) prop(2,x+13,y-17,19,23,y+1);
-    prop(1,x,y-3,45,23,y+20);
+    const desk = prop(1,x,y-3,45,23,y+20);
+    if (x===851 && y===210) pressDesk?.(desk);
   }
   for (const furnishing of furnishings) {
     const [x,y,w,h] = furnishing.area;
