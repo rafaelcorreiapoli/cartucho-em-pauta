@@ -43,8 +43,13 @@ export class InternalMail {
     if (!subject || !body || subject.length>internalMailRules.subjectLength || body.length>internalMailRules.bodyLength) {
       return 'Confira o tamanho do assunto e da mensagem.';
     }
+    const forward = 'forwardedFrom' in raw ? raw.forwardedFrom : undefined;
+    const source = forward===undefined ? undefined : this.notices.find(notice=>notice.id===forward);
+    if (forward!==undefined && !source) return 'Comunicado original indisponível.';
     const reference = 'attachment' in raw ? raw.attachment : undefined;
-    const resolved = reference===undefined ? undefined : resolve?.(reference);
+    if (source && reference!==undefined) return 'O encaminhamento preserva o anexo original.';
+    const resolved = source ? source.attachment && {attachment:source.attachment,authentic:this.authenticity.get(source.id)} :
+      reference===undefined ? undefined : resolve?.(reference);
     if (reference!==undefined && !resolved) return 'Anexo indisponível.';
     if (!world.spend?.(player.id,internalMailRules.fee)) return 'Saldo insuficiente para publicar.';
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);
@@ -52,7 +57,7 @@ export class InternalMail {
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
     const expired = this.notices[internalMailRules.history-1];
     if (expired) this.authenticity.delete(expired.id);
-    this.notices = [{id,author:player.nick,subject,body,attachment:resolved && structuredClone(resolved.attachment)},
+    this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
       ...this.notices].slice(0,internalMailRules.history);
   }
 }

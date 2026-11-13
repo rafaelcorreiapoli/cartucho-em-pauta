@@ -26,7 +26,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | SYS-14 | Proteção contra duplicação e concorrência de comandos | PARCIAL | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | Tokens, revisão e validação de posse cobrem ações críticas. Falta política uniforme de replay. | Média |
 | SYS-15 | Observabilidade, logs e métricas de gameplay | PARCIAL | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | Há logs estruturados de economia e XP. Falta painel de métricas e alertas. | Média |
 | SYS-16 | Tratamento consistente de desconexões definitivas | IMPLEMENTADO | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | — | — |
-| SYS-17 | Persistência do estado durante a partida | PARCIAL | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | Estado preservado em memória durante a vida da sala, inclusive reconexão. Reiniciar a máquina perde a partida. | Alta |
+| SYS-17 | Persistência do estado durante a partida | IMPLEMENTADO | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | A reconexão preserva o estado enquanto a sala está ativa. Socket verifica XP, agenda, carteira e equipamento; cliente retoma a sequência de movimentos. | — |
 | SYS-18 | Testes automatizados de regras de gameplay | IMPLEMENTADO | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | — | — |
 | SYS-19 | Sistema de áudio e gerenciamento de SFX | IMPLEMENTADO | SessionRoom.ts, PlenaryMatch.ts, SessionRoom.test.ts, game-audio.ts; PR 8, 11, 15 | — | — |
 
@@ -119,7 +119,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 
 | ID | Funcionalidade | Estado | Evidência | Observação | Complexidade |
 |---|---|---|---|---|---|
-| ELE-01 | Cargos políticos existentes no domínio | PARCIAL | ElectionCycle.ts, ElectionCycle.test.ts, PlenaryMatch.ts, results.tsx; PR 14, 15 | Cargos existem no domínio. A disputa atual usa mandato único. | Média |
+| ELE-01 | Cargos políticos existentes no domínio | IMPLEMENTADO | ElectionCycle.ts, ElectionCycle.test.ts, PlenaryMatch.ts, results.tsx; PR 14, 15 | Renovação usa mandato único, por decisão de produto. Testes validam a apuração no servidor e a apresentação no cliente. | — |
 | ELE-02 | Sistema de eleições periódicas | IMPLEMENTADO | ElectionCycle.ts, ElectionCycle.test.ts, PlenaryMatch.ts, results.tsx; PR 14, 15 | — | — |
 | ELE-03 | Popularidade individual | IMPLEMENTADO | ElectionCycle.ts, ElectionCycle.test.ts, PlenaryMatch.ts, results.tsx; PR 14, 15 | — | — |
 | ELE-04 | Campanhas financiadas com patrimônio pessoal | IMPLEMENTADO | ElectionCycle.ts, ElectionCycle.test.ts, PlenaryMatch.ts, results.tsx; PR 14, 15 | — | — |
@@ -181,7 +181,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ECO-28 | Conversão de dinheiro roubado em objeto físico | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 | ECO-29 | Integridade monetária sem duplicações | PARCIAL | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | Há testes de custódia, compra e resgate sem duplicação. Falta verificação abrangente do livro-caixa em todas as operações. | Média |
 | ECO-30 | Métricas de criação, circulação e destinação de dinheiro | PARCIAL | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | Logs registram emissão e totais. Falta visão consolidada de circulação e destino por partida. | Média |
-| ECO-31 | Empréstimos e acordos financeiros informais | PARCIAL | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | Transferência permite empréstimo informal. Não há contrato, saldo devedor ou cobrança. | Média |
+| ECO-31 | Empréstimos e acordos financeiros informais | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | Empréstimo informal usa transferências manuais para entrega e devolução. Testes verificam comandos do HUD e conservação dos dois saldos. | — |
 | ECO-32 | Pagamentos e promessas entre jogadores sem execução automática de acordos verbais | IMPLEMENTADO | PoliticalEconomy.ts, PlenaryMatch.ts, Gameplay.ts, PrivateOffices.test.ts; PR 12, 14, 15 | — | — |
 
 ## GAB
@@ -363,7 +363,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | COM-19 | Snapshots imutáveis de anexos | IMPLEMENTADO | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | InternalMail clona o artefato publicado. O teste com três clientes altera o original depois e confere o anexo. | — |
 | COM-20 | Distinção entre comunicado e denúncia formal | IMPLEMENTADO | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | — | — |
 | COM-21 | Publicações sem penalidade automática | IMPLEMENTADO | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | — | — |
-| COM-22 | Encaminhamento de documentos e laudos | PARCIAL | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | Documento e laudo podem ser publicados. Falta encaminhar um comunicado existente ou entregar laudo em privado. | Média |
+| COM-22 | Encaminhamento de documentos e laudos | IMPLEMENTADO | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | Encaminhamento de comunicado público preserva o anexo e referencia o original. Laudos privados são entregues a quem fez a perícia, conforme o anexo. Testes React e socket. | — |
 | COM-23 | Acordos verbais não garantidos pelo sistema | IMPLEMENTADO | voice.ts, SessionRoom.ts, InternalMail.ts, internal-mail.tsx, Documents.multiplayer.test.ts; PR 8, 13, 15 | — | — |
 
 ## DOC
@@ -388,7 +388,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | DOC-16 | Alteração aparente preservando assinaturas | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-17 | Falsificação sem validade institucional para novo projeto | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-18 | Documentos falsificados circulando no mundo | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
-| DOC-19 | Versionamento ou snapshots imutáveis | PARCIAL | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Publicações guardam snapshots exatos e o servidor retém original. Não existe histórico consultável de todas as versões físicas. | Média |
+| DOC-19 | Versionamento ou snapshots imutáveis | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Comunicados e laudos preservam snapshots imutáveis. Testes de socket verificam que uma nova adulteração não altera o anexo anterior. | — |
 | DOC-20 | Perícia de documento anexado a comunicado | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-21 | Laudo VERDADEIRO/FALSO | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-22 | Laudo recebido privadamente | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |

@@ -100,3 +100,13 @@ test('isolation prediction confines the player and discards movement on release'
   client.input({motion:{x:0,y:-1}});
   expect(client.state?.player.y).toBeLessThan(isolationRoom.exit.y);
 });
+
+test('a restored movement controller resumes above the live room acknowledgement',()=>{
+  const sent:MovementInput[] = [];
+  const client = new PredictedMovement(input=>sent.push(input));
+  const player = {id:'p',nick:'P',character:0,x:140,y:146,moving:false,direction:0};
+  client.reconcile({player,route:[],ack:70});
+  client.input({motion:{x:1,y:0}});
+  expect(sent[0]?.seq).toBe(71);
+  expect(client.state?.player.x).toBeGreaterThan(player.x);
+});

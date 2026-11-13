@@ -26,3 +26,24 @@ test('mail requires presence and payment and rejects a duplicate without chargin
   mail.reset();
   expect(mail.view()).toEqual([]);
 });
+
+test('forwarding only resolves existing public notices and preserves the original verdict',()=>{
+  const mail = new InternalMail();
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...stations.audit};
+  let charges = 0;
+  const world:GameplayWorld = {players:[player],now:100,voice:()=>false,earn:()=>{},office:()=>undefined,publish:()=>{},
+    spend(){ charges++; return true; }};
+  const message = {subject:'Proposta',body:'Segue a proposta'};
+  const document = {id:1,title:'Proposta',signatures:[]};
+  expect(mail.publish(player,{...message,forwardedFrom:99},world)).toContain('indisponível');
+  expect(charges).toBe(0);
+  expect(mail.publish(player,{...message,attachment:{kind:'document',id:1}},world,
+    ()=>({attachment:{kind:'document',document},authentic:true}))).toBeUndefined();
+  world.now += 100_000;
+  expect(mail.publish(player,{...message,forwardedFrom:1,attachment:{kind:'document',id:2}},world)).toContain('anexo original');
+  expect(charges).toBe(1);
+  expect(mail.publish(player,{...message,forwardedFrom:1},world)).toBeUndefined();
+  expect(mail.examine('b',2,()=>true)).toBeUndefined();
+  expect(mail.reportsFor('b')).toEqual([{notice:2,document,authentic:true}]);
+  expect(mail.reportsFor('a')).toEqual([]);
+});

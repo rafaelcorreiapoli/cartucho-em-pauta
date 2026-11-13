@@ -26,7 +26,11 @@ export function Attachment({attachment,draw}:{attachment:MailAttachment;draw:(ca
   </section>;
 }
 
-export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef})=>void,
+export function ForwardedNotice({notice}:{notice:InternalNotice}) {
+  return notice.forwardedFrom===undefined ? null : <small>Encaminhado do comunicado #{notice.forwardedFrom}</small>;
+}
+
+export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number})=>void,
   notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#internal-mail')!;
   const root = createRoot(dialog);
@@ -34,6 +38,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   let reports:readonly ForensicReport[] = [];
   let notices:readonly InternalNotice[] = [];
   let composing = false;
+  let source:InternalNotice|undefined;
   let pending = false;
   let error:string|null = null;
   let reviewing:number|undefined;
@@ -51,14 +56,14 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         error = null;
         const choice = choices[Number(data.get('attachment'))-1];
         const attachment = choice && {kind:choice.kind,id:choice.id};
-        publish({subject:String(data.get('subject')),body:String(data.get('body')),attachment});
+        publish({subject:String(data.get('subject')),body:String(data.get('body')),attachment,forwardedFrom:source?.id});
         render();
       }}>
-        <label>Assunto<input name="subject" required maxLength={internalMailRules.subjectLength}/></label>
+        <label>Assunto<input name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
         <label>Mensagem<textarea name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
-        <label>Anexo <select name="attachment"><option value="">Sem anexo</option>
+        {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <label>Anexo <select name="attachment"><option value="">Sem anexo</option>
           {choices.map((choice,index)=><option key={choice.kind+'-'+choice.id} value={index+1}>{choice.label}</option>)}
-        </select></label>
+        </select></label>}
         <p role="status">{error}</p>
         <button className="hud-button" disabled={pending}>Publicar · {money(internalMailRules.fee)}</button>
       </form> : <div className="grid gap-3">
@@ -68,6 +73,8 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         {notices.length===0 && <p>Nenhum comunicado publicado.</p>}
         {notices.map(notice=><article className="mail-entry" key={notice.id}>
           <h3>{notice.subject}</h3><small>{notice.author}</small><p>{notice.body}</p>
+          <ForwardedNotice notice={notice}/>
+          <button type="button" className="hud-button hud-button--secondary" onClick={()=>{source=notice;composing=true;error=null;render();}}>Encaminhar</button>
           {notice.attachment && <Attachment draw={draw} attachment={notice.attachment}/>}
           {notice.attachment?.kind==='document' && <button type="button" className="hud-button"
             disabled={reports.some(report=>report.notice===notice.id)} onClick={()=>{reviewing=notice.id;render();}}>Realizar perícia</button>}
@@ -84,6 +91,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
     open(compose=false,attachments:readonly AttachmentChoice[] = []) {
       if (dialog.open) return;
       composing = compose;
+      source = undefined;
       choices = [...attachments,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
       pending = false;
       reviewing = undefined;

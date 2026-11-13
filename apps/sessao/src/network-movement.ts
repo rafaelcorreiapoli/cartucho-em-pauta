@@ -19,6 +19,7 @@ export class PredictedMovement {
   }
 
   reconcile(snapshot: ControlState) {
+    this.seq = Math.max(this.seq,snapshot.ack);
     if (!!this.state?.isolated!==!!snapshot.isolated) this.pending = [];
     else this.pending = this.pending.filter(input => input.seq>snapshot.ack && !!input.plenary===!!snapshot.plenary);
     this.state = {...snapshot,player:{...snapshot.player},route:[...snapshot.route]};

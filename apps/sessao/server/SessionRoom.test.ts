@@ -377,6 +377,9 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:7});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     const progressionBeforeReconnect = progression();
+    const gearBeforeReconnect = views.get(passenger.sessionId)?.gameplay?.equipped;
+    const walletBeforeReconnect = views.get(passenger.sessionId)?.politics?.wallet;
+    expect(gearBeforeReconnect?.find(item=>item.kind==='xray')?.charges).toBe(2);
     const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
     expect(agendaBeforeReconnect?.active).toHaveLength(3);
     let reconnected = false;
@@ -389,6 +392,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     expect(progression()).toEqual(progressionBeforeReconnect);
+    expect(views.get(passenger.sessionId)?.gameplay?.equipped).toEqual(gearBeforeReconnect);
+    expect(views.get(passenger.sessionId)?.politics?.wallet).toBe(walletBeforeReconnect);
     const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
     expect(passengerOffice).toBeDefined();
     carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:8});

@@ -69,6 +69,10 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
   };
 }
 
+export function manualTransfer(to:string,amount:number,clandestine:boolean):PoliticsAction|undefined {
+  if (to && Number.isSafeInteger(amount) && amount>0) return {kind:'transfer',to,amount,clandestine};
+}
+
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
   const dock = el<HTMLDetailsElement>('politics-dock');
   const trade = el<HTMLDetailsElement>('trade-dock');
@@ -116,7 +120,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
 
   el<HTMLFormElement>('trade').onsubmit = event => {
     event.preventDefault();
-    if (target.value) send({kind:'transfer',to:target.value,amount:amount.value,clandestine:privacy.value==='private'});
+    const action = manualTransfer(target.value,amount.value,privacy.value==='private');
+    if (action) send(action);
   };
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {
     event.preventDefault();

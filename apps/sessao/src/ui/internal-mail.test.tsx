@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Attachment} from './internal-mail';
+import {Attachment,ForwardedNotice} from './internal-mail';
 
 const document = {id:3,title:'Auxílio Churrasco',signatures:['Rafa']};
 
@@ -24,4 +24,11 @@ test('the mail renders a photo attachment in a canvas with its photo number',()=
   const html = renderToStaticMarkup(<Attachment draw={()=>{}} attachment={{kind:'photo',photo}}/>);
   expect(html).toContain('<canvas');
   expect(html).toContain('Fotografia #9');
+});
+
+
+test('the Correio identifies a forwarded notice by its original number',()=>{
+  const notice = {id:9,author:'Bia',subject:'Enc: Proposta',body:'Segue a proposta'};
+  expect(renderToStaticMarkup(<ForwardedNotice notice={{...notice,forwardedFrom:4}}/>)).toContain('comunicado #4');
+  expect(renderToStaticMarkup(<ForwardedNotice notice={notice}/>)).toBe('');
 });

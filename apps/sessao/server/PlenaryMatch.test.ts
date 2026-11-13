@@ -272,3 +272,18 @@ test('only infiltrators can start a fire, and nearby parliamentarians can put it
   expect(match.actOnFire({...honest,...fireSites[site].extinguisher},'extinguish',site,now+fireRules.tick)).toBe('Incêndio apagado.');
   expect(view(honest,now+fireRules.tick).fire).toBeUndefined();
 });
+
+test('an informal loan and a later manual repayment conserve both wallets',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const lender = {...host,x:140,y:146};
+  const borrower = {...honest,x:148,y:146};
+  const group = [lender,borrower,traitor];
+  const wallet = (player:Player) => match.view(player.id,ids,0).politics!.wallet;
+  match.politics(lender,{kind:'transfer',to:borrower.id,amount:3,clandestine:true},group,1);
+  expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
+  match.advance(10_000);
+  expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
+  match.politics(borrower,{kind:'transfer',to:lender.id,amount:3,clandestine:true},group,10_001);
+  expect([wallet(lender),wallet(borrower)]).toEqual([8,8]);
+});

@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react';
 import type { ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
 
-function ElectionResult({result}:{result:NonNullable<ElectionView['result']>}) {
+export function ElectionResult({result}:{result:NonNullable<ElectionView['result']>}) {
   return <section className="grid gap-2">
     <h3>Renovação de Mandato {result.cycle}</h3>
     {result.offices.map((person,index)=>{

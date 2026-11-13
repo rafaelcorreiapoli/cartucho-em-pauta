@@ -157,6 +157,12 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
 
+    Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
+    caio.send('mail-publish',{subject:'Enc: Proposta assinada',body:'Revisem a proposta',forwardedFrom:publication.id});
+    const forwarded = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.forwardedFrom===publication.id));
+    expect(forwarded.attachment).toEqual(publication.attachment);
+    expect(forwarded.author).toBe('Caio');
+    expect(JSON.stringify(forwarded)).not.toContain('authentic');
     move(alice,stations.amendment);
     feedback.delete(alice.sessionId);
     alice.send('gameplay',{kind:'file',item:original.id,place:'protocol'});
