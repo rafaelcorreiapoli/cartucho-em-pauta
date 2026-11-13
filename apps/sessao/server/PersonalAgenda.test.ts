@@ -2,6 +2,7 @@ import { installationSites } from '../src/installations';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { PersonalAgenda } from './PersonalAgenda';
+import { Parliamentarians } from './Parliamentarians';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
@@ -674,4 +675,45 @@ test('incoming payment missions require distinct colleagues who can still pay',(
   expect(view(1).missions.active.find(mission=>mission.kind==='articulacao')?.current).toBe(1);
   expect(economy.transfer('c','a',1,false,1)).toBe(true);
   expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['recebido','articulacao']);
+});
+
+test('solo signature missions require enough money and payment quota for the NPC signatures',()=>{
+  const owner:Player = {...terminals.secretary.point,id:'a',nick:'A',direction:0,moving:false,character:0};
+  const members = new Parliamentarians();
+  members.reset(3,0);
+  const [free,paid] = members.players;
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:owner.id,name:owner.nick,character:owner.character}],()=>0);
+  for (const npc of members.players) economy.addParliamentarian({id:npc.id,name:npc.nick,character:npc.character},1);
+  const game = new Gameplay();
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,undefined,undefined,
+    id=>members.players.map(npc=>members.signature(npc.id,id)));
+  const {agenda} = Reflect.get(economy,'accounts').get(owner.id);
+  const view = (round:number)=>economy.view(owner.id,[],round,false,()=>true)!;
+  const draw = (round:number)=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([owner.id]),3,()=>true,round);
+    return agenda.hasActive('assinaturas');
+  };
+  expect(economy.spend(owner.id,7)).toBe(true);
+  expect(draw(0)).toBe(false);
+  economy.earn(owner.id,1);
+  for (let i=0, limit=view(0).paymentsLeft;i<limit;i++) {
+    expect(economy.transfer(owner.id,paid.id,1,true,0)).toBe(true);
+    expect(economy.transfer(paid.id,owner.id,1,true,0)).toBe(true);
+  }
+  expect(draw(0)).toBe(false);
+  expect(draw(1)).toBe(true);
+  const quota = view(1).paymentsLeft;
+  const world:GameplayWorld = {players:[owner,...members.players],now:1,voice:()=>false,office:()=>undefined,
+    earn:()=>{},publish:event=>economy.recordGameplay(event),
+    payNpc:(from,to,price)=>economy.transfer(from,to,price,true,1)};
+  game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world);
+  const [document] = game.view(owner,world).inventory;
+  for (const npc of [free,paid]) {
+    expect(game.signWithNpc(owner,npc,document.id,members.signature(npc.id,owner.id),world)).toBe('Assinatura obtida.');
+  }
+  expect(view(1).missions.completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
+  expect(view(1).paymentsLeft).toBe(quota-1);
 });

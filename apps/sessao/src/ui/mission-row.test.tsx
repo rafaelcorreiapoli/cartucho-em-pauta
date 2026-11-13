@@ -65,3 +65,11 @@ test('the pizza mission shows the shared table as a way to complete it',()=>{
   const mission:Mission = {id:6,kind:'pizza',current:0,target:1};
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('pegue uma fatia no Cafezinho');
 });
+
+test('the signature objective identifies the same-document requirement and shows distinct signer progress',()=>{
+  const mission:Mission = {id:7,kind:'assinaturas',current:1,target:2};
+  const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(active).toContain('duas assinaturas no mesmo documento');
+  expect(active).toContain('1 / 2');
+  expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});

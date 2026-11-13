@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -154,7 +154,8 @@ export class PersonalAgenda {
     this.fillMissions(metrics);
   }
 
-  private availableInMatch(kind:Agenda, remaining:number, drawing=false) {
+  private availableInMatch(kind:Agenda, remaining:number, metrics?:AgendaMetrics) {
+    const drawing = metrics!==undefined;
     if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='presidenteFoto') return false;
@@ -168,7 +169,8 @@ export class PersonalAgenda {
       const colleagues = drawing && available
         ? this.targets.filter(person=>available.has(person.id)).length
         : Math.max(0,this.playerCount-1);
-      if (colleagues+this.npcCount<signatureTarget) return false;
+      const needed = signatureTarget-colleagues;
+      if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
     } else if (players>humans) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
@@ -282,7 +284,7 @@ export class PersonalAgenda {
       }
       if (!totals.some(total=>total>=furnitureSpendingTarget)) return false;
     }
-    return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,true) &&
+    return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,metrics) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
       (kind!=='campanha' || metrics.popularity<100) &&
       (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars'));

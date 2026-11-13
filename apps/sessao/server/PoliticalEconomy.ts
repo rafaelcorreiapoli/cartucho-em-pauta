@@ -388,9 +388,15 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:'portrait'|'vip',replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[]) {
     for (const [id,account] of this.accounts) {
-      Object.assign(account,{installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
+        const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
+        const total = prices.reduce((sum,price)=>sum+price,0);
+        return prices.length===needed && total<=account.wallet &&
+          prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
+      });
+      Object.assign(account,{canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }
