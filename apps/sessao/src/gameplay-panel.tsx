@@ -1,3 +1,4 @@
+import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './hotbar';
@@ -18,7 +19,6 @@ import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
-import type { DirectoryContact } from './politics';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 type InteractionArea = (player:Motion) => boolean;
@@ -56,6 +56,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
   const navigationRoot = createRoot(navigation);
+  const callHost = document.createElement('div');
+  callHost.className = 'phone-call-content';
+  const callRoot = createRoot(callHost);
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -194,22 +197,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     app = next;
     photos.resetSelection();
     render();
-  }
-
-  function phoneContacts(contacts:DirectoryContact[]) {
-    if (!contacts.length) return node('p','Ninguém mais na sala.');
-    const grid = node('div');
-    grid.className = 'phone-contacts';
-    for (const person of contacts) {
-      const tile = button('',()=>send({kind:'call',target:person.id}));
-      tile.className = 'phone-contact';
-      tile.setAttribute('aria-label',`Ligar para ${person.name}`);
-      const dial = glyph('handset');
-      dial.classList.add('phone-contact-dial');
-      tile.append(contactFace(person),node('strong',person.name),dial);
-      grid.append(tile);
-    }
-    return grid;
   }
 
   function render() {
@@ -406,26 +393,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (phone) {
       cards.push(node('h3',app));
       if (app==='Telefone') {
-        const call = state.call;
-        if (call) {
-          const caller = node('div');
-          caller.className = 'phone-caller';
-          const person = directory.find(person=>person.id===call.peer.id) ?? call.peer;
-          const status = call.state==='incoming' ? 'Chamada recebida' : call.state==='outgoing' ? 'Chamando…' : 'Em ligação';
-          caller.append(contactFace(person),node('strong',person.name),node('span',status));
-          cards.push(caller);
-          if (call.state==='incoming') {
-            const answer = button('Atender',()=>send({kind:'answer'}));
-            answer.classList.add('phone-answer');
-            answer.prepend(glyph('handset'));
-            cards.push(answer);
-          }
-          const hangup = button(call.state==='incoming' ? 'Recusar' : 'Encerrar',()=>send({kind:'hangup'}));
-          hangup.classList.add('phone-hangup');
-          hangup.prepend(glyph('cross'));
-          cards.push(hangup);
-        } else if (phase==='negotiation') cards.push(phoneContacts(directory.filter(person=>person.id!==ownId)));
-        else cards.push(node('p','Ligações ficam disponíveis durante a articulação.'));
+        flushSync(()=>callRoot.render(<PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
+          available={phase==='negotiation'} send={send}/>));
+        cards.push(callHost);
       }
       if (app==='Joguinhos') {
         if (phase!=='negotiation') cards.push(node('p','O jogo está disponível durante a articulação.'));
@@ -691,6 +661,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       tools.hidden = element('object-request').hidden = true;
       delete element('object-request').dataset.request;
       navigationRoot.unmount();
+      callRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       equipmentRoot.unmount();
