@@ -1,6 +1,5 @@
 import {useState} from 'react';
-import {manualTransfer} from '../politics-panel';
-import {money,type PoliticsAction,type PoliticsView} from '../politics';
+import {manualTransfer,money,type PoliticsAction,type PoliticsView} from '../politics';
 import {PhoneContactFace} from './phone-call';
 
 export function PhonePix({politics,send}:{politics:PoliticsView;send:(action:PoliticsAction)=>void}) {

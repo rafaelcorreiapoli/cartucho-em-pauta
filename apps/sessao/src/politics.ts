@@ -162,3 +162,7 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
       if ('target' in data && typeof data.target==='string') return {kind:'hearing',target:data.target};
   }
 }
+
+export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
+  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
+}

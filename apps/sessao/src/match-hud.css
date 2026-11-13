@@ -351,7 +351,6 @@
 .social-header h2 { margin: 0; font-size: 1.1rem; line-height: 1.15; }
 .social-header p { margin: .25rem 0 0; color: #d6cfb5; font-size: .75rem; }
 #social-docks h3 { margin: 0 0 .4rem; font-size: .8rem; color: #e5d2a8; }
-#social-docks #trade { margin-top: .75rem; }
 .social-empty {
   display: grid;
   justify-items: center;
@@ -367,26 +366,11 @@
 .social-empty p { margin: 0; color: #d6cfb5; font-size: .75rem; line-height: 1.35; }
 #social-docks section[aria-label="Provas privadas"] { margin-top: .75rem; }
 #ledger { margin-top: .65rem; }
-#trade-contact .game-choice { min-height: 42px; padding: .2rem .55rem .2rem .25rem; }
 #social-docks .game-choice[aria-pressed="true"] {
   background: #384231;
   border-color: #d7b574;
   color: #fae0a2;
 }
-#trade-controls { display: grid; gap: .5rem; margin-top: .35rem; }
-.transfer-setting {
-  display: grid;
-  grid-template-columns: 3.35rem minmax(0, 1fr);
-  gap: .45rem;
-  align-items: center;
-  color: #d6cfb5;
-  font-size: .76rem;
-}
-#trade-controls .game-stepper output { flex: 1; min-width: 0; }
-#trade-controls .game-stepper button { user-select: none; }
-#trade-private { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0; padding: 2px; border-radius: 6px; background: #12201d; border: 1px solid #7e76534d; }
-#trade-private .game-choice { justify-content: center; padding: .35rem .2rem; border: 1px solid transparent; background: transparent; min-height: 33px; font-size: .75rem; }
-#trade-private .game-choice[aria-pressed="true"] { background: #384231; border-color: #a79763; }
 
 
 
@@ -657,8 +641,7 @@
 .station-key:empty { display: none; }
 #stations .hud-button:has(.station-key:not(:empty)) { padding-top: 1.25rem; }
 
-.trade-wallet { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
-.trade-wallet strong, .electoral-metrics strong {
+.electoral-metrics strong {
   color: var(--party-gold);
   font: 850 1.25rem/1.15 var(--party-display);
 }

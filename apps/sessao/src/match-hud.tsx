@@ -57,9 +57,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
 
   const quickActions = ([
-    {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
+    {target:'grant',panel:'institutional-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
     {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
-    {target:'hearing-target',panel:'trade-dock',label:'Convocar afastamento',station:'panel',icon:'ballot'},
+    {target:'hearing-target',panel:'institutional-dock',label:'Convocar afastamento',station:'panel',icon:'ballot'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
   ] as const).map(action => {
     const control = element<HTMLButtonElement>(action.target);

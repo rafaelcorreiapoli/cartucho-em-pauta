@@ -211,7 +211,7 @@ async function connect(join: () => Promise<Room>) {
     },{signal:hudListeners.signal});
     for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
-    document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
+    document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),

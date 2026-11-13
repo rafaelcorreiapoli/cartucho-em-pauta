@@ -261,33 +261,11 @@
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
               <div id="social-docks">
-                <details id="trade-dock" class="social-module" name="game-panels" hidden>
-                  <summary class="social-trigger" title="Negociação"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span class="sr-only">Negociação</span></summary>
+                <details id="institutional-dock" class="social-module" name="game-panels" hidden>
+                  <summary class="social-trigger" title="Ações institucionais"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="sr-only">Ações institucionais</span></summary>
                   <div class="politics-content social-panel">
-                    <header class="social-header"><div><h2>Negociação</h2><p class="trade-wallet"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="trade-balance"></strong><small>Na carteira</small></p></div><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma afastamento, vá ao Painel com 55 de popularidade.">?</button></header>
+                    <header class="social-header"><h2>Ações institucionais</h2></header>
                     <div id="politics-actions">
-                      <form id="trade">
-                        <div class="social-empty" id="trade-empty" hidden>
-                          <svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>
-                          <strong>Ninguém por perto</strong>
-                          <p>Aproxime-se de outro jogador para negociar.</p>
-                        </div>
-                        <div id="trade-recipients" hidden>
-                          <h3>Para quem?</h3>
-                          <div class="choice-grid" id="trade-contact" role="group" aria-label="Destinatário da transferência"></div>
-                        </div>
-                        <div id="trade-controls" hidden>
-                          <div class="transfer-setting">
-                            <span id="trade-value-label">Valor</span>
-                            <div class="game-stepper" id="trade-amount" role="group" aria-labelledby="trade-value-label"></div>
-                          </div>
-                          <div class="transfer-setting">
-                            <span id="trade-privacy-label">Registro</span>
-                            <div class="choice-grid" id="trade-private" role="group" aria-labelledby="trade-privacy-label"></div>
-                          </div>
-                          <button class="hud-button" id="transfer" type="submit">Transferir</button>
-                        </div>
-                      </form>
                       <form id="cabinet-form" hidden>
                         <div class="section-label">Destino da verba</div>
                         <div class="choice-grid" id="grant-split" role="group" aria-label="Destino da verba"></div>
