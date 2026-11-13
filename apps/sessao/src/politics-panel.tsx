@@ -69,8 +69,8 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
   };
 }
 
-export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity):PoliticsAction|undefined {
-  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet) return {kind:'transfer',to,amount,clandestine};
+export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
+  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
 }
 
 export function canBuyEvidence(offer:Pick<Offer,'from'|'price'>, contacts:ReadonlySet<string>, wallet:number, paymentsLeft:number) {
@@ -124,7 +124,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
 
   el<HTMLFormElement>('trade').onsubmit = event => {
     event.preventDefault();
-    const action = manualTransfer(target.value,amount.value,privacy.value==='private',view?.politics?.wallet ?? 0);
+    const action = manualTransfer(target.value,amount.value,privacy.value==='private',view?.politics?.wallet ?? 0,view?.politics?.paymentsLeft ?? 0);
     if (action) send(action);
   };
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {

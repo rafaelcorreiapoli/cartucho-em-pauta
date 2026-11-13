@@ -10,7 +10,7 @@ import { PersonalAgenda } from './PersonalAgenda';
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  canPay?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasPhotoDecoration?:(kind:'portrait'|'vip')=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -22,6 +22,7 @@ export class PoliticalEconomy {
   private offers = new Map<number,Offer>();
   private serial = 0;
   private matchId = 0;
+  private agendaRound = 0;
   private rewardReserve = 0;
   private transferred = 0;
   private reserveFees = 0;
@@ -31,6 +32,7 @@ export class PoliticalEconomy {
 
   reset(contacts:DirectoryContact[], random:()=>number) {
     this.matchId++;
+    this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
     this.npcIds.clear();
     this.rewardReserve = contacts.length*8;
@@ -43,7 +45,8 @@ export class PoliticalEconomy {
     this.scandalPizzas.clear();
     this.officialScandal = false;
     for (const contact of contacts) {
-      const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal()};
+      const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
+        canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
@@ -81,7 +84,7 @@ export class PoliticalEconomy {
     const sample = this.accounts.values().next().value;
     if (!sample) return;
     this.npcIds.add(contact.id);
-    const {agenda,progression,...initial} = sample;
+    const {agenda,progression,canPay:_canPay,...initial} = sample;
     this.contacts.set(contact.id,contact);
     this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
       progression:new CharacterProgression(this.matchId)});
@@ -362,7 +365,8 @@ export class PoliticalEconomy {
     }
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0) {
+    this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id)));
     for (const id of players) {
       const account = this.accounts.get(id);
@@ -371,6 +375,11 @@ export class PoliticalEconomy {
       if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets,availableTargets);
     }
+  }
+
+  private paymentsLeft(id:string,round:number) {
+    const account = this.accounts.get(id);
+    return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }
 
   view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
@@ -382,7 +391,7 @@ export class PoliticalEconomy {
       missions:account.agenda.view(account),
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,
-      paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
+      paymentsLeft:this.paymentsLeft(id,round),
       directory:[...this.contacts.values()].filter(contact=>!this.npcIds.has(contact.id)).map(contact => ({
         ...contact,popularity:this.accounts.get(contact.id)!.popularity,eligible:eligible(contact.id),
       })),

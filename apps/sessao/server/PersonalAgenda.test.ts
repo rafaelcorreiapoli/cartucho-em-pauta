@@ -366,3 +366,27 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
 });
+
+test('transfer missions wait until the payment quota renews even when the wallet has funds',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const view = (round:number) => economy.view('a',[],round,false,()=>true)!;
+  const limit = view(0).paymentsLeft;
+  for (let i=0;i<limit;i++) {
+    expect(economy.transfer('a','b',1,false,0)).toBe(true);
+    expect(economy.transfer('b','a',1,false,0)).toBe(true);
+  }
+  const draw = (round:number) => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pagamento','dinheiroAlvo','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3,()=>true,round);
+    return view(round).missions.active.map(mission=>mission.kind);
+  };
+  expect(view(0)).toMatchObject({wallet:8,paymentsLeft:0});
+  expect(draw(0)).toEqual(['cafe','passeio','selfieSolo']);
+  expect(draw(1)).toEqual(['pagamento','dinheiroAlvo','cafe']);
+  expect(economy.transfer('a','b',3,false,1)).toBe(true);
+  expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['pagamento','dinheiroAlvo']);
+});

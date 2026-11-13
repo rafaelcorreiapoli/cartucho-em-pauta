@@ -65,7 +65,7 @@ export class PlenaryMatch {
   refreshAgendaEligibility() {
     const scheduled = this.agenda.size+Number(this.phase==='ballot');
     const ballotsLeft = Math.max(scheduled,bills.length-this.round%bills.length);
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id));
+    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round);
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
