@@ -310,7 +310,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
     carrier.send('spy',{kind:'close'});
-    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     const passengerGameplay = ()=>views.get(passenger.sessionId)?.gameplay;
     passenger.send('gameplay',{kind:'talk',target:'vendor'});
     await wait(()=>!!passengerGameplay()?.dialogue);

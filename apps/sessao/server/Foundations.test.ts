@@ -38,7 +38,14 @@ function setup() {
     game.act(buyer,{kind:'dialogue-choice',target:'products',token},world);
     return game.view(buyer,world).dialogue?.token;
   };
-  return {alice,bob,game,events,balance,world,openShop};
+  const buyGear = (buyer:Player,target:string) => {
+    const position = {x:buyer.x,y:buyer.y};
+    Object.assign(buyer,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    const result = game.act(buyer,{kind:'shop-buy',target,token:openShop(buyer)},world);
+    Object.assign(buyer,position);
+    return result;
+  };
+  return {alice,bob,game,events,balance,world,openShop,buyGear};
 }
 
 test('the vendor is reachable, maintains separate dialogue sessions and accepts each purchase token once', () => {
@@ -89,8 +96,8 @@ test('the Lanchonete is reachable and each vendor sells only its own catalog', (
 });
 
 test('equipping changes custody, binocular range and voice battery without stacking bonuses', () => {
-  const {alice,game,world,openShop} = setup();
-  game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world);
+  const {alice,game,world,buyGear} = setup();
+  buyGear(alice,'binoculars');
   const binocular = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:binocular.id},world);
   expect(game.view(alice,world).inventory).toEqual([]);
@@ -106,11 +113,11 @@ test('equipping changes custody, binocular range and voice battery without stack
   expect(game.view(alice,world).equipmentCooldowns?.[binocular.id]).toBe(30);
   world.now += 30_000;
   expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('ativo');
-  expect(game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world)).toBe('Você já tem este equipamento.');
+  expect(buyGear(alice,'binoculars')).toBe('Você já tem este equipamento.');
   game.act(alice,{kind:'unequip',item:binocular.id},world);
   expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
 
-  game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
+  buyGear(alice,'voiceModulator');
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;
   game.act(alice,{kind:'equip',item:modulator.id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
@@ -126,14 +133,14 @@ test('equipping changes custody, binocular range and voice battery without stack
 });
 
 test('the shop does not debit rejected purchases and only equipped weapons can hit', () => {
-  const {alice,bob,game,balance,events,world,openShop} = setup();
+  const {alice,bob,game,balance,events,world,buyGear} = setup();
   balance.set(alice.id,1);
-  expect(game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world)).toBe('Saldo insuficiente.');
+  expect(buyGear(alice,'baton')).toBe('Saldo insuficiente.');
   expect(balance.get(alice.id)).toBe(1);
   expect(game.view(alice,world).inventory).toEqual([]);
 
   balance.set(alice.id,12);
-  expect(game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world)).toBe('Compra guardada no inventário.');
+  expect(buyGear(alice,'baton')).toBe('Compra guardada no inventário.');
   const weapon = game.view(alice,world).inventory[0];
   expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Equipe uma arma.');
   expect(game.act(bob,{kind:'equip',item:weapon.id},world)).toBe('O equipamento não está com você.');
@@ -184,16 +191,16 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   combat.tick([alice,bob],11000,false);
   expect(bob.knockedOut).toBeUndefined();
   expect(combat.view(bob,11000).hp).toBe(45);
-  Object.assign(alice,{x:620,y:206});
-  Object.assign(bob,{x:642,y:206});
+  Object.assign(alice,{x:663,y:230});
+  Object.assign(bob,{x:685,y:230});
   strike(16_000);
   expect(combat.view(bob,16_140).hp).toBe(45);
 });
 
 
 function knockOut(match:ReturnType<typeof setup>) {
-  const {alice,bob,game,world,openShop} = match;
-  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear} = match;
+  buyGear(alice,'baton');
   game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
   for (const now of [100,1400,2700,4000]) {
     world.now = now;
@@ -312,8 +319,8 @@ test('dialogue eligibility is private and checked again when the player chooses'
 });
 
 test('modulator recharge follows the item when another player collects and equips it', () => {
-  const {alice,bob,game,world,openShop} = setup();
-  game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear} = setup();
+  buyGear(alice,'voiceModulator');
   const {id} = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
@@ -334,7 +341,7 @@ test('doors, furniture and actors without a player session use the shared world 
   const closed = {player:player('Bia',480,554),route:[],ack:0,plenary:true};
   applyInput(closed,{seq:1,door:1,plenary:true});
   expect(closed.player.y).toBe(554);
-  expect(worldVisible({x:625,y:201},{x:625,y:249},VISION_RADIUS+2)).toBe(false);
+  expect(worldVisible({x:675,y:201},{x:675,y:249},VISION_RADIUS+2)).toBe(false);
   expect(worldVisible({x:550,y:195},{x:550,y:282},VISION_RADIUS+2)).toBe(false);
   expect(worldVisible({x:500,y:140},{x:587,y:140})).toBe(false);
   expect(worldVisible({x:500,y:140},{x:587,y:140},VISION_RADIUS+2)).toBe(true);
@@ -397,9 +404,9 @@ const consumableCases:[FoodKind,number,number][] = [
 
 for (const [kind,hp,stamina] of consumableCases) {
   test(`${kind} can be bought and consumed once by its owner`,()=>{
-    const {alice,bob,game,world,openShop,balance,events} = setup();
+    const {alice,bob,game,world,openShop,buyGear,balance,events} = setup();
     balance.set(bob.id,12);
-    game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+    buyGear(alice,'baton');
     game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
     for (let strike=0;strike<3;strike++) {
       game.act(alice,{kind:'attack'},world);
@@ -447,8 +454,8 @@ for (const [kind,hp,stamina] of consumableCases) {
 }
 
 test('upgraded stats change baton damage and recovery, and stamina requires equipped shoes to sprint',()=>{
-  const {alice,bob,game,world,openShop,events} = setup();
-  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear,events} = setup();
+  buyGear(alice,'baton');
   const weapon = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:weapon.id},world);
   game.act(alice,{kind:'attack'},world);
@@ -481,7 +488,7 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   expect(runner.sprinting).toBeUndefined();
   for (let i=0;i<30;i++) restMovement(runner);
   expect(runner.stamina).toBe(110);
-  game.act(runner,{kind:'shop-buy',target:'runningShoes',token:openShop(runner)},world);
+  buyGear(runner,'runningShoes');
   const shoes = game.view(runner,world).inventory.find(item=>item.kind==='runningShoes')!;
   expect(game.act(runner,{kind:'equip',item:shoes.id},world)).toBe('Equipado.');
   applyInput(move,{seq:2,motion:{x:1,y:0},sprint:true});

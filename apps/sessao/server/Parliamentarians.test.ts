@@ -1,3 +1,4 @@
+import { npcs } from '../src/npcs';
 import { expect,test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { Parliamentarians } from './Parliamentarians';
@@ -50,9 +51,11 @@ test('signature and competing vote offers transfer existing money and the commit
   Object.assign(a,{x:631,y:197,direction:1});
   Object.assign(npc,{x:643,y:197});
   Object.assign(b,{x:636,y:208});
+  Object.assign(a,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(a,{kind:'talk',target:'vendor'},world(10));
   game.act(a,{kind:'dialogue-choice',target:'products',token:game.view(a,world(10)).dialogue?.token},world(10));
   game.act(a,{kind:'shop-buy',target:'baton',token:game.view(a,world(10)).dialogue?.token},world(10));
+  Object.assign(a,{x:631,y:197});
   const baton = game.view(a,world(10)).inventory.find(item=>item.kind==='baton')!;
   game.act(a,{kind:'equip',item:baton.id},world(10));
   const walletBeforeRobbery = world(11).wallet!(a.id);
