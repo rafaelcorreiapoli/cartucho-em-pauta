@@ -54,6 +54,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MAP-18 | Secretaria e Protocolo funcionais | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-19 | Corregedoria funcional | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Balcão abre o fluxo de denúncia formal para ocorrências registradas e mantém auditoria e comunicados. | — |
 | MAP-20 | Cafezinho/Cantina com NPC vendedor de alimentos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
+| MAP-21 | Luz do jogador apaga perto de uma quina de parede | PENDENTE | Relato e captura da Sala de Imprensa | Pós-goal. Reproduzir junto à quina no corredor da Sala de Imprensa. A luz local deve permanecer visível em posições caminháveis junto à parede, com o recorte e o degradê preservados. Cobrir com teste de regressão e verificar no Chrome. | Alta |
 
 ## CHAR
 
