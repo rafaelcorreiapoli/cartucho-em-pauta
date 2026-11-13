@@ -55,10 +55,6 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  logEconomy(physical:number,roomId:string) {
-    console.info(JSON.stringify({event:'economy-totals',roomId,...this.economySummary(physical)}));
-  }
-
   setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
     this.economy.setAgendaInventory(...inventory);
   }

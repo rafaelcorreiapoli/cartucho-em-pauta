@@ -1,3 +1,4 @@
+import { gameplayMetrics } from './gameplay-metrics';
 import { isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
 import { megaphone } from '../src/equipment';
@@ -83,7 +84,9 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
-    this.match.logEconomy(this.gameplay.physicalCash(),this.roomId);
+    const summary = this.match.economySummary(this.gameplay.physicalCash());
+    console.info(JSON.stringify({event:'economy-totals',roomId:this.roomId,...summary}));
+    gameplayMetrics.finish(this.roomId,summary.discrepancy);
     this.npcTalk.reset();
     this.parliamentarians.reset(0,now);
     const players = [...this.players.values()].map(state=>state.player);
@@ -184,6 +187,7 @@ export class SessionRoom extends Room {
           player.sprinting = undefined;
         }
         this.matchObjectsActive = true;
+        gameplayMetrics.increment('matches_started');
         void this.lock();
       }
     });
@@ -478,6 +482,7 @@ export class SessionRoom extends Room {
   }
 
   onReconnect(client:Client) {
+    gameplayMetrics.increment('reconnects');
     this.match.setPlayerConnected(client.sessionId,true);
     this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);

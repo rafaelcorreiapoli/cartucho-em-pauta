@@ -109,6 +109,16 @@ netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist
 
 O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
 
+## Métricas do gameserver
+
+O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use
+`sum by (__name__) (increase({__name__=~"congresso_.+_total",app="cartuchao-sessao-poc"}[1h]))`
+para acompanhar inícios, encerramentos, reconexões e divergências na última hora.
+Para monitorar divergências de saldo, a expressão é
+`sum(increase(congresso_economy_discrepancies_total{app="cartuchao-sessao-poc"}[15m])) > 0`.
+O log `economy-discrepancy` identifica a sala para investigação. Os contadores
+reiniciam com o processo e a coleta depende de a máquina estar ativa.
+
 ## Teste local de filtro de voz
 
 No Mac com Apple Silicon, o laboratório usa [rvc-mlx-realtime](https://github.com/tizee/rvc-mlx-realtime) e FFmpeg. Aponte `RVC_LAB_DIR` para uma pasta com o conversor em `rvc-mlx-realtime/`, seu ambiente em `rvc-mlx-realtime/.venv/` e os arquivos `.pth` e `.index` originais em `models/`. Os modelos comunitários vêm das páginas [Lula](https://huggingface.co/LH6582/Lula) e [Bolsonaro](https://huggingface.co/LH6582/Bolsonaro) do usuário LH6582 no Hugging Face.

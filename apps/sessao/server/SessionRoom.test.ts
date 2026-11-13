@@ -237,6 +237,16 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(soloView!).toMatchObject({solo:true,role:'Parlamentar',electorate:1,
       election:{personal:{office:'deputy'}}});
 
+    const metricsResponse = await fetch(endpoint+'/metrics');
+    expect(metricsResponse.headers.get('content-type')).toContain('version=0.0.4');
+    const metrics = await metricsResponse.text();
+    expect(metrics).toContain('congresso_matches_started_total 3\n');
+    expect(metrics).not.toContain(solo.roomId);
+    await solo.leave();
+    const afterLeaving = await fetch(endpoint+'/metrics').then(response=>response.text());
+    expect(afterLeaving).toMatch(/congresso_matches_finished_total [1-9]/);
+
+
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();
