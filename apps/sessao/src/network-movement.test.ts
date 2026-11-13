@@ -125,3 +125,28 @@ test('prediction keeps the queue bounded and never replays old input after a sam
   expect(client.input({motion:{x:1,y:0}})).toBe(true);
   expect(sent.at(-1)).toMatchObject({seq:9,revision:2});
 });
+
+test('bursty confirmations and a stalled connection do not rewind predicted movement',()=>{
+  const server:ControlState = {
+    player:{id:'p',nick:'P',character:0,x:140,y:146,moving:false,direction:0,speed:12},
+    route:[],ack:0,revision:1,
+  };
+  const wire:MovementInput[] = [];
+  const client = new PredictedMovement(input=>wire.push(input));
+  client.reconcile(server);
+  let furthest = server.player.x;
+  for (let tick=0;tick<45;tick++) {
+    if (tick<32) client.input({motion:{x:1,y:0}});
+    // Model a transport stall, followed by several queued packets arriving together.
+    if (tick>=12 && wire.length) applyInput(server,readInput(wire.shift())!);
+    else restMovement(server.player);
+    if (tick%4===0 || tick===44) client.reconcile(server);
+    const x = client.state!.player.x;
+    expect(x+1e-6).toBeGreaterThanOrEqual(furthest);
+    furthest = x;
+    expect(wire.length).toBeLessThanOrEqual(8);
+  }
+  expect(wire).toHaveLength(0);
+  expect(client.state!.player.x).toBeCloseTo(server.player.x);
+  expect(server.player.x).toBeGreaterThan(150);
+});
