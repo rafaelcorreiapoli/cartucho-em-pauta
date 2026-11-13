@@ -63,7 +63,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   let reports:readonly ForensicReport[] = [];
   let notices:readonly InternalNotice[] = [];
   let composing = false;
-  let atDesk = false;
+  let exploring = false;
   let complaints:ComplaintView = {available:[],history:[]};
   let source:InternalNotice|undefined;
   let pending = false;
@@ -71,6 +71,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   let reviewing:number|undefined;
 
   function render() {
+    const attachments = [...choices,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
     root.render(<>
       {composing && <h3>Publicar comunicado</h3>}
       {composing ? <form className="grid gap-3" onSubmit={event=>{
@@ -79,7 +80,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         const data = new FormData(event.currentTarget);
         pending = true;
         error = null;
-        const choice = choices[Number(data.get('attachment'))-1];
+        const choice = attachments.find(choice=>choice.kind+'-'+choice.id===data.get('attachment'));
         const attachment = choice && {kind:choice.kind,id:choice.id};
         publish({subject:String(data.get('subject')),body:String(data.get('body')),attachment,forwardedFrom:source?.id});
         render();
@@ -87,12 +88,23 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         <label>Assunto<input name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
         <label>Mensagem<textarea name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
         {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <label>Anexo <select name="attachment"><option value="">Sem anexo</option>
-          {choices.map((choice,index)=><option key={choice.kind+'-'+choice.id} value={index+1}>{choice.label}</option>)}
+          {attachments.map(choice=><option key={choice.kind+'-'+choice.id} value={choice.kind+'-'+choice.id}>{choice.label}</option>)}
         </select></label>}
         <p role="status">{error}</p>
         <button className="hud-button" disabled={pending}>Publicar · {money(internalMailRules.fee)}</button>
+        <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={()=>{
+          composing = false;
+          source = undefined;
+          render();
+        }}>Voltar ao Correio</button>
       </form> : <div className="grid gap-3">
-        <ComplaintDesk view={complaints} photos={choices.filter(choice=>choice.kind==='photo')} submit={atDesk ? submit : undefined}/>
+        <button type="button" className="hud-button" disabled={!exploring} onClick={()=>{
+          composing = true;
+          source = undefined;
+          error = null;
+          render();
+        }}>Novo comunicado</button>
+        <ComplaintDesk view={complaints} photos={choices.filter(choice=>choice.kind==='photo')} submit={exploring && complaints.atDesk ? submit : undefined}/>
         {reports.map(report=><article className="mail-entry" key={'report-'+report.notice}>
           <h3>Perícia concluída</h3><Attachment draw={draw} attachment={{kind:'report',report}}/>
         </article>)}
@@ -100,7 +112,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         {notices.map(notice=><article className="mail-entry" key={notice.id}>
           <h3>{notice.subject}</h3><small>{notice.author}</small><p>{notice.body}</p>
           <ForwardedNotice notice={notice}/>
-          <button type="button" className="hud-button hud-button--secondary" onClick={()=>{source=notice;composing=true;error=null;render();}}>Encaminhar</button>
+          <button type="button" className="hud-button hud-button--secondary" disabled={!exploring} onClick={()=>{source=notice;composing=true;error=null;render();}}>Encaminhar</button>
           {notice.attachment && <Attachment draw={draw} attachment={notice.attachment}/>}
           {notice.attachment?.kind==='document' && <button type="button" className="hud-button"
             disabled={reports.some(report=>report.notice===notice.id)} onClick={()=>{reviewing=notice.id;render();}}>Realizar perícia</button>}
@@ -114,11 +126,10 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   }
 
   return {
-    open(compose=false,attachments:readonly AttachmentChoice[] = [],desk=false) {
-      composing = compose;
-      atDesk = desk;
+    open(attachments:readonly AttachmentChoice[]) {
+      composing = false;
       source = undefined;
-      choices = [...attachments,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
+      choices = attachments;
       pending = false;
       reviewing = undefined;
       error = null;
@@ -142,7 +153,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
     reports(next:readonly ForensicReport[]) {
       if (next[0] && next[0].notice!==reports[0]?.notice) notify('Perícia concluída',next[0].document.title);
       reports = next;
-      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
+      if (host.isConnected && !!host.closest('dialog[open]')) render();
     },
     result(message:string|null) {
       if (!composing) return;
@@ -151,11 +162,15 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
       if (!message) composing = false;
       render();
     },
-    phase(exploring:boolean) {
-      if (exploring || (!composing && !atDesk)) return;
-      composing = atDesk = false;
-      source = undefined;
-      render();
+    phase(next:boolean) {
+      if (exploring===next) return;
+      exploring = next;
+      if (!exploring) {
+        composing = false;
+        pending = false;
+        source = undefined;
+      }
+      if (host.closest('dialog[open]')) render();
     },
     destroy() { root.unmount(); originalParent.append(host); },
   };

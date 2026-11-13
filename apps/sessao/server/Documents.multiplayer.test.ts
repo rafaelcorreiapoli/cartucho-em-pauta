@@ -89,7 +89,6 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     bia.send('gameplay',{action:{kind:'accept',item:request.id},token:890});
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.signatures.some(signer=>signer.id===bia.sessionId)));
     await wait(()=>views.get(alice.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='assinaturaAlvo'));
-    move(alice,stations.audit);
     alice.send('mail-publish',{token:930,subject:'Original assinado',body:'Segue o original',attachment:{kind:'document',id:original.id}});
     const authenticPublication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Original assinado'));
     move(alice,reprography);
@@ -101,7 +100,6 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(alice,stations.secretary);
     alice.send('gameplay',{action:{kind:'verify-document',item:original.id,place:'secretary'},token:1020});
     await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
-    move(alice,stations.audit);
     // Advance the rate-limit boundary without waiting through a full game phase.
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(alice.sessionId);
     alice.send('mail-publish',{token:1070,subject:'Proposta assinada',body:'Segue documento',attachment:{kind:'document',id:original.id}});
@@ -143,7 +141,6 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const originalReport = await wait(()=>reports.get(bia.sessionId)?.find(entry=>entry.notice===authenticPublication.id));
     expect(originalReport.authentic).toBe(true);
     expect(reports.get(alice.sessionId)).toEqual([]);
-    move(bia,stations.audit);
     bia.send('mail-publish',{token:1470,subject:'Contraexposição',body:'Laudo anexo',attachment:{kind:'report',id:report.notice}});
     const rebuttal = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Contraexposição'));
     expect(rebuttal.attachment).toEqual({kind:'report',report});

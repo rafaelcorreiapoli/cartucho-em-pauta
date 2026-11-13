@@ -450,8 +450,12 @@ export class PlenaryMatch {
     return {available:this.complaints.available(id,actor=>this.economy.name(actor)),history:this.complaints.history()};
   }
 
+  canFileComplaint(player:Player,now:number) {
+    return this.phase==='negotiation' && this.canHandleObjects(player.id,now) && this.at(player,'audit');
+  }
+
   submitComplaint(player:Player,id:number,now:number,photo?:Photo) {
-    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !this.at(player,'audit')) {
+    if (!this.canFileComplaint(player,now)) {
       return 'Vá ao balcão da Corregedoria durante a articulação.';
     }
     const result = this.complaints.submit(player.id,id,actor=>this.economy.name(actor),photo);

@@ -1,7 +1,5 @@
-import { canReachObject } from '../src/gameplay';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
-import { stations } from '../src/plenary';
 import type { GameplayWorld } from './gameplay-world';
 
 export class InternalMail {
@@ -34,7 +32,6 @@ export class InternalMail {
   view() { return this.notices; }
 
   publish(player:Player, raw:unknown, world:GameplayWorld,resolve?:(ref:unknown)=>{attachment:MailAttachment;authentic?:boolean}|undefined) {
-    if (!canReachObject(player,stations.audit,{handsFree:true})) return 'Aproxime-se do balcão da Corregedoria.';
     if ((this.cooldowns.get(player.id) ?? 0)>world.now) return 'Aguarde para publicar outro comunicado.';
     if (!raw || typeof raw!=='object' || !('subject' in raw) || !('body' in raw) ||
       typeof raw.subject!=='string' || typeof raw.body!=='string') return 'Preencha o assunto e a mensagem.';

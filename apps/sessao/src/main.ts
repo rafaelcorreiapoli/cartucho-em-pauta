@@ -223,7 +223,11 @@ async function connect(join: () => Promise<Room>) {
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open());
+      option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
+        ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
+          [{kind:'document' as const,id:item.id,label:item.document.title}]),
+        ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
+      ]));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -239,20 +243,6 @@ async function connect(join: () => Promise<Room>) {
       }
       if (action.kind==='request-document') {
         projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}));
-        return;
-      }
-      if (action.kind==='complaint-desk') {
-        gameplay.openMail();
-        mail.open(false,mailPhotos.map(({photo})=>({kind:'photo',id:photo.id,label:'Fotografia #'+photo.id})),true);
-        return;
-      }
-      if (action.kind==='compose-mail') {
-        gameplay.openMail();
-        mail.open(true,[
-          ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
-            [{kind:'document' as const,id:item.id,label:item.document.title}]),
-          ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
-        ]);
         return;
       }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }

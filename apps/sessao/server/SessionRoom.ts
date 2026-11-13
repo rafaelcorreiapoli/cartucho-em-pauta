@@ -221,7 +221,8 @@ export class SessionRoom extends Room {
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw)) return;
-      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
+      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+          player.knockedOut || player.carrying || player.carried) {
         client.send('mail-result','Publicação indisponível nesta fase.');
         return;
       }
@@ -413,7 +414,10 @@ export class SessionRoom extends Room {
         const state = this.players.get(id);
         if (!state) continue;
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
-        if (this.match.running) view.complaints = this.match.complaintView(id);
+        if (this.match.running) {
+          view.complaints = this.match.complaintView(id);
+          if (this.match.canFileComplaint(state.player,now)) view.complaints.atDesk = true;
+        }
         view.lobbyNpcCount = this.lobbyNpcCount;
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running ? this.gameplay.photoRevision : -1;

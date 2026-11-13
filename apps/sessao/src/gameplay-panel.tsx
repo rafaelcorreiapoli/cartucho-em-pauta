@@ -658,7 +658,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
-    openMail() { app = 'Correio'; open(); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);

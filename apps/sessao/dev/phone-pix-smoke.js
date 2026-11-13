@@ -24,6 +24,7 @@ async page => {
     await pix.getByRole('button',{name:'Bia',exact:true}).click();
     await page.keyboard.press('5');
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
+
     await receiver.locator(dialog).locator('.pix-balance').getByText('R$ 90 mil',{exact:true}).waitFor();
 
     await receiver.keyboard.press('Escape');
@@ -36,6 +37,17 @@ async page => {
     if (!await pix.getByRole('button',{name:'Transferir'}).isDisabled()) throw Error('Pix kept a distant recipient enabled');
     await page.keyboard.press('5');
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
+
+    await receiver.keyboard.press('c');
+    for (const client of [page,receiver]) {
+      await client.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();
+    }
+    const mail = page.locator(dialog).locator('#phone-mail');
+    await mail.getByRole('button',{name:'Novo comunicado'}).click();
+    await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
+    await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
+    await mail.getByRole('button',{name:/^Publicar/}).click();
+    await receiver.locator(dialog).getByRole('heading',{name:'Aviso do Cafezinho'}).waitFor();
   } finally {
     await receiver.close();
   }
