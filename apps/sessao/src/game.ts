@@ -330,13 +330,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             motion.x += x;
             motion.y += y;
           }
-          local.input({motion,sprint});
+          const sent = local.input({motion,sprint});
+          manual = keys.size>0 || !sent;
         } else if (local.state.route.length) {
           local.input({sprint});
         } else {
           restMovement(local.state.player);
         }
-        manual = keys.size>0;
       }
       if (!this.extinguishers.length) {
         this.extinguishers = fireSites.map(({extinguisher:{x,y}})=>this.add.text(x,y,'🧯',{fontSize:'16px',resolution:3})
@@ -443,7 +443,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const latest of players) {
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
-        const {id,character,direction,moving} = player;
+        const {id,character,direction} = player;
         const {sheet,frame} = characterArt(character);
         let view = this.views.get(id);
         if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !worldVisible(ownPlayer,player,visionRadius))) {
@@ -471,9 +471,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.views.set(id,view);
         }
         const {sprite,label,office} = view;
-        const blend = own && Math.hypot(sprite.x-player.x,sprite.y-player.y)<40 ? 1-Math.exp(-delta/55) : 1;
+        const distance = Math.hypot(sprite.x-player.x,sprite.y-player.y);
+        const blend = own && distance>.1 && distance<40 ? 1-Math.exp(-delta/35) : 1;
         const x = Phaser.Math.Linear(sprite.x,player.x,blend);
         const y = Phaser.Math.Linear(sprite.y,player.y,blend);
+        const moving = player.moving && Math.hypot(x-sprite.x,y-sprite.y)>.015;
         const swing = latest.swing;
         if (swing && swing.startedAt!==view.swingAt) {
           view.swingAt = swing.startedAt;
