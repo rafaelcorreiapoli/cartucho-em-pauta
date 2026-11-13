@@ -565,14 +565,6 @@
 .gear-slot-empty { display: grid; height: 100%; place-items: center; color: #c4cdb1; }
 .gear-slot-empty[hidden] { display: none; }
 .gear-slot-empty .hud-glyph { width: 42%; height: 42%; }
-.gear-slot-number {
-  position: absolute;
-  right: 5px;
-  bottom: 3px;
-  color: #f3d78f;
-  font: 750 11px/1 system-ui,sans-serif;
-  pointer-events: none;
-}
 .gear-slot .equipped-gear-tile {
   position: relative;
   display: block;
@@ -584,7 +576,7 @@
   background: transparent;
 }
 .gear-slot:has(.equipped-gear-tile[data-active="true"]) { border-color: #84edca; }
-.gear-slot .equipped-gear-footer { position: absolute; inset: auto 14px 2px 3px; }
+.gear-slot .equipped-gear-footer { position: absolute; inset: auto 4px 3px 4px; }
 .gear-slot .equipped-gear-key { font-size: 8px; }
 .gear-slot .equipped-gear-timer { font-size: 8px; }
 #command-strip #equipped-gear:not([hidden]) {

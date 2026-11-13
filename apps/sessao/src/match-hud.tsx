@@ -1,3 +1,4 @@
+import { createElement as createIcon, Hand, Footprints, Gem, Puzzle } from 'lucide';
 import {fireOptions,fireSites} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
@@ -83,7 +84,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let progressKey = '';
   const officeBadge = element('own-office');
   const gearStrip = element('equipped-gear');
-  const gearSlots = ['Mãos','Pés','Acessório 1','Acessório 2'].map((label,index)=>{
+  const gearSlots = [
+    {label:'Mãos',icon:Hand},
+    {label:'Pés',icon:Footprints},
+    {label:'Acessório 1',icon:Gem},
+    {label:'Acessório 2',icon:Puzzle},
+  ].map(({label,icon})=>{
     const slot = node('div');
     slot.className = 'gear-slot';
     slot.setAttribute('role','listitem');
@@ -91,11 +97,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const empty = node('span');
     empty.className = 'gear-slot-empty';
     empty.setAttribute('aria-label',label+' · vazio');
-    empty.append(hudGlyph(index===0 ? 'star' : index===1 ? 'map' : 'inventory'));
-    const badge = node('span',String(index+1));
-    badge.className = 'gear-slot-number';
-    badge.setAttribute('aria-hidden','true');
-    slot.append(empty,badge);
+    empty.append(createIcon(icon,{class:'hud-glyph','aria-hidden':'true'}));
+    slot.append(empty);
     gearStrip.append(slot);
     return {slot,empty};
   });
