@@ -6,7 +6,7 @@ import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
@@ -78,6 +78,18 @@ export class Gameplay {
     if (!kit) return false;
     this.remove(kit);
     return true;
+  }
+
+  private documentRequirements(item:WorldItem) {
+    const document = item.document!;
+    const missing = document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp));
+    const recorded = this.signedProjects.get(item.id);
+    const valid = document.project===undefined ? document.signatures.length :
+      document.signatures.filter(person=>recorded?.get(person.id)?.project===document.project).length;
+    if (valid!==document.signatures.length) return 'O documento não atende aos requisitos formais.';
+    const signatures = document.requiredSignatures-valid;
+    if (signatures>0) missing.push(`${signatures} assinatura(s)`);
+    if (missing.length) return `Falta: ${missing.join(', ')}.`;
   }
 
   private signProject(item:WorldItem,signer:Player,now:number) {
@@ -1210,16 +1222,14 @@ export class Gameplay {
         data.document.stamps.push(terminal.stamp);
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
+      case 'verify-document':
+        if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
+        return this.documentRequirements(data) ?? 'Documento atende aos requisitos formais.';
       case 'file': {
         if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
         if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
-        const missing = data.document.requiredStamps.filter(stamp => !data.document!.stamps.includes(stamp));
-        const signed = this.signedProjects.get(data.id);
-        const validSignatures = data.document.project===undefined ? data.document.signatures :
-          data.document.signatures.filter(person=>signed?.get(person.id)?.project===data.document!.project);
-        const signatures = data.document.requiredSignatures-validSignatures.length;
-        if (data.document.project!==undefined && validSignatures.length!==data.document.signatures.length) return 'O documento não atende aos requisitos formais.';
-        if (missing.length || signatures>0) return `Falta: ${[...missing,...(signatures>0 ? [`${signatures} assinatura(s)`] : [])].join(', ')}.`;
+        const error = this.documentRequirements(data);
+        if (error) return error;
         const filed = [...this.items.values()].filter(item=>'filed' in item.place);
         if (filed.length>=24) this.remove(filed[0]);
         this.move(item,{filed:true});

@@ -12,7 +12,7 @@ import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
@@ -263,6 +263,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           const terminal = terminals[place as keyof typeof terminals];
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
           if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
+          if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }

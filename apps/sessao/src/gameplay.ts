@@ -60,7 +60,7 @@ export const INVENTORY_SLOTS = 6;
 const phoneActions = ['call','answer','hangup','game-start','game-stop','game-turn'] as const;
 type PhoneActionKind = typeof phoneActions[number];
 
-const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
+const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
@@ -136,3 +136,4 @@ export const terminals = {
   protocol:{point:stations.amendment,title:'Protocolo',file:true},
 } as const;
 export type Terminal = keyof typeof terminals;
+export const canVerifyDocumentAt = (place:string|undefined) => place==='secretary' || place==='protocol';

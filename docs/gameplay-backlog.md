@@ -397,7 +397,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | DOC-25 | Laudo não identifica automaticamente falsificador | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-26 | Proteção contra falsificação de laudos | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 | DOC-27 | Documentos falsos não alteram votos ou projetos | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
-| DOC-28 | Verificação formal na Secretaria/Protocolo | PARCIAL | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Protocolo rejeita assinaturas incompatíveis. A Secretaria emite documentos; não expõe uma ação de verificação formal. | Média |
+| DOC-28 | Verificação formal na Secretaria/Protocolo | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | Secretaria e Protocolo oferecem verificação formal, com as mesmas regras usadas no protocolo. Testes de ação contextual e de resposta pelo socket. | — |
 | DOC-29 | Documentos como anexos do Correio Interno | IMPLEMENTADO | Gameplay.ts, InternalMail.ts, project-picker.tsx, Documents.multiplayer.test.ts; PR 9, 15 | — | — |
 
 ## FOTO

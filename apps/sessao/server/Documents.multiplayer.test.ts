@@ -40,6 +40,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const inboxes = new Map<string,InternalNotice[]>();
     const photos = new Map<string,PhotoAccessView>();
     const mailErrors = new Map<string,string|null>();
+    const feedback = new Map<string,string>();
     const controls = new Map<string,ControlState>();
     const reports = new Map<string,ForensicReport[]>();
     for (const peer of rooms) {
@@ -49,7 +50,8 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
       peer.onMessage('photo-state',(view:PhotoAccessView)=>photos.set(peer.sessionId,view));
       peer.onMessage('mail-result',(error:string|null)=>mailErrors.set(peer.sessionId,error));
       peer.onMessage('control',(state:ControlState)=>controls.set(peer.sessionId,state));
-      for (const name of ['players','gameplay-feedback','item-obtained']) peer.onMessage(name,()=>{});
+      peer.onMessage('gameplay-feedback',(message:string)=>feedback.set(peer.sessionId,message));
+      for (const name of ['players','item-obtained']) peer.onMessage(name,()=>{});
     }
     const room = matchMaker.getLocalRoomById(alice.roomId) as SessionRoom;
     const match = new PlenaryMatch(1);
@@ -72,6 +74,9 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(bia,{x:stations.secretary.x+8,y:stations.secretary.y});
     alice.send('gameplay',{kind:'supply',place:'secretary',target:'project-0'});
     const original = await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===0));
+    alice.send('gameplay',{kind:'verify-document',item:original.id,place:'secretary'});
+    await wait(()=>feedback.get(alice.sessionId)?.startsWith('Falta:'));
+    expect(feedback.get(alice.sessionId)).toContain('assinatura');
     move(caio,{x:stations.secretary.x-8,y:stations.secretary.y});
     alice.send('gameplay',{kind:'sign-request',item:original.id,target:caio.sessionId});
     const wrongSigner = await wait(()=>state(caio)?.requests.find(item=>item.kind==='signature'));
@@ -92,6 +97,9 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(state(alice)?.inventory.find(item=>item.id===original.id)?.document?.project).toBe(0);
     await Bun.sleep(4900);
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===1));
+    move(alice,stations.secretary);
+    alice.send('gameplay',{kind:'verify-document',item:original.id,place:'secretary'});
+    await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
     move(alice,stations.audit);
     // Advance the rate-limit boundary without waiting through a full game phase.
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(alice.sessionId);
