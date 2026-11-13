@@ -90,7 +90,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.signatures.some(signer=>signer.id===bia.sessionId)));
     await wait(()=>views.get(alice.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='assinaturaAlvo'));
     move(alice,stations.audit);
-    alice.send('mail-publish',{subject:'Original assinado',body:'Segue o original',attachment:{kind:'document',id:original.id}});
+    alice.send('mail-publish',{token:1,subject:'Original assinado',body:'Segue o original',attachment:{kind:'document',id:original.id}});
     const authenticPublication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Original assinado'));
     move(alice,reprography);
     alice.send('gameplay',{kind:'edit',item:original.id,target:'1'});
@@ -104,7 +104,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(alice,stations.audit);
     // Advance the rate-limit boundary without waiting through a full game phase.
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(alice.sessionId);
-    alice.send('mail-publish',{subject:'Proposta assinada',body:'Segue documento',attachment:{kind:'document',id:original.id}});
+    alice.send('mail-publish',{token:2,subject:'Proposta assinada',body:'Segue documento',attachment:{kind:'document',id:original.id}});
     const publication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Proposta assinada'));
     expect(publication.attachment).toMatchObject({kind:'document',document:{id:original.id,signatures:['Caio','Bia']}});
     expect(JSON.stringify(publication)).not.toContain('authentic');
@@ -123,7 +123,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const shop = await wait(()=>state(bia)?.dialogue?.shop ? state(bia)?.dialogue : undefined);
     bia.send('gameplay',{kind:'shop-buy',target:'forensicKit',token:shop.token});
     await wait(()=>state(bia)?.inventory.find(item=>item.kind==='forensicKit'));
-    bia.send('mail-examine',publication.id);
+    bia.send('mail-examine',{notice:publication.id,token:1});
     const report = await wait(()=>reports.get(bia.sessionId)?.[0]);
     expect(report.authentic).toBe(false);
     expect(reports.get(alice.sessionId)).toEqual([]);
@@ -138,12 +138,13 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     });
     bia.send('gameplay',{kind:'shop-buy',target:'forensicKit',token:nextShop.token});
     await wait(()=>state(bia)?.inventory.find(item=>item.kind==='forensicKit'));
-    bia.send('mail-examine',authenticPublication.id);
+    bia.send('mail-examine',{notice:authenticPublication.id,token:1});
+    bia.send('mail-examine',{notice:authenticPublication.id,token:2});
     const originalReport = await wait(()=>reports.get(bia.sessionId)?.find(entry=>entry.notice===authenticPublication.id));
     expect(originalReport.authentic).toBe(true);
     expect(reports.get(alice.sessionId)).toEqual([]);
     move(bia,stations.audit);
-    bia.send('mail-publish',{subject:'Contraexposição',body:'Laudo anexo',attachment:{kind:'report',id:report.notice}});
+    bia.send('mail-publish',{token:3,subject:'Contraexposição',body:'Laudo anexo',attachment:{kind:'report',id:report.notice}});
     const rebuttal = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Contraexposição'));
     expect(rebuttal.attachment).toEqual({kind:'report',report});
 
@@ -151,17 +152,19 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     caio.send('gameplay',{kind:'selfie'});
     const photo = await wait(()=>photos.get(caio.sessionId)?.album[0]?.photo);
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(bia.sessionId);
-    bia.send('mail-publish',{subject:'Foto alheia',body:'Tentativa',attachment:{kind:'photo',id:photo.id}});
+    bia.send('mail-publish',{token:4,subject:'Foto alheia',body:'Tentativa',attachment:{kind:'photo',id:photo.id}});
     await wait(()=>mailErrors.get(bia.sessionId)==='Anexo indisponível.');
-    caio.send('mail-publish',{subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
+    caio.send('mail-publish',{token:2,subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
 
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
-    caio.send('mail-publish',{subject:'Enc: Proposta assinada',body:'Revisem a proposta',forwardedFrom:publication.id});
+    caio.send('mail-publish',{token:2,subject:'Reenvio',body:'Não deve publicar'});
+    caio.send('mail-publish',{token:3,subject:'Enc: Proposta assinada',body:'Revisem a proposta',forwardedFrom:publication.id});
     const forwarded = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.forwardedFrom===publication.id));
     expect(forwarded.attachment).toEqual(publication.attachment);
     expect(forwarded.author).toBe('Caio');
+    expect(inboxes.get(alice.sessionId)?.some(entry=>entry.subject==='Reenvio')).toBe(false);
     expect(JSON.stringify(forwarded)).not.toContain('authentic');
     move(alice,stations.amendment);
     feedback.delete(alice.sessionId);
@@ -170,7 +173,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     economy.changePopularity(alice.sessionId,40);
     move(alice,stations.panel);
-    alice.send('politics',{kind:'hearing',target:bia.sessionId,token:1});
+    alice.send('politics',{kind:'hearing',target:bia.sessionId,token:3});
     await wait(()=>views.get(bia.sessionId)?.phase==='hearing' && controls.get(bia.sessionId)?.plenary);
     expect(inPlenary(controls.get(bia.sessionId)!.player)).toBe(true);
     alice.send('bill-vote','yes');

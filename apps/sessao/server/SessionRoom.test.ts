@@ -420,7 +420,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='negotiation');
     Object.assign(positions.get(passenger.sessionId)!.player,stations.audit);
-    passenger.send('complaint-submit',{id:infraction!.id});
+    passenger.send('complaint-submit',{id:infraction!.id,token:1});
     await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
     expect(views.get(carrier.sessionId)?.complaints?.history[0]).toMatchObject({kind:'hit',accused:positions.get(carrier.sessionId)!.player.nick});
 

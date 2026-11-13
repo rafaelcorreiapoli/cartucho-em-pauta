@@ -22,7 +22,7 @@ import { createElectionPanel } from './election-panel';
 import { GameAudio } from './game-audio';
 import { installHudHelp } from './hud-help';
 import { createGame } from './game';
-import { createPoliticalSender } from './political-commands';
+import { createRoomCommandSender } from './room-commands';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
@@ -273,12 +273,12 @@ async function connect(join: () => Promise<Room>) {
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
-    const sendPolitical = createPoliticalSender((channel,command)=>joined.send(channel,command));
-    const election = createElectionPanel(joined.sessionId,action => sendPolitical('election',action),() => voice?.active ?? false);
-    const political = createPoliticsPanel(joined.sessionId,action => sendPolitical('politics',action),() => map.focus({preventScroll:true}));
+    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
+    const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
+    const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
-    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify,id=>joined.send('mail-examine',id),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      (id,photo)=>joined.send('complaint-submit',{id,photo}));
+    const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
+      (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
     const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
     mailButton.onclick = () => mail.open();

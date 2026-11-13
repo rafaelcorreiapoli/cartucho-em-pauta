@@ -17,7 +17,7 @@ import { isolationRoom, localPerception, worldVisible, NAMES, PLENARY_SEATS, inP
 import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
-import { readPoliticalToken } from '../src/political-commands';
+import { readRoomCommandToken } from '../src/room-commands';
 import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/nick';
 import { MAX_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -36,14 +36,14 @@ export class SessionRoom extends Room {
 
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
-  private lastPoliticalToken = new Map<string,number>();
+  private lastRoomCommandToken = new Map<string,number>();
   private lastFieldToken = new Map<string,number>();
   private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
-  private consumePoliticalCommand(id:string,raw:unknown) {
-    const token = readPoliticalToken(raw);
-    if (token===undefined || token<=(this.lastPoliticalToken.get(id) ?? 0)) return false;
-    this.lastPoliticalToken.set(id,token);
+  private consumeRoomCommand(id:string,raw:unknown) {
+    const token = readRoomCommandToken(raw);
+    if (token===undefined || token<=(this.lastRoomCommandToken.get(id) ?? 0)) return false;
+    this.lastRoomCommandToken.set(id,token);
     return true;
   }
 
@@ -177,6 +177,7 @@ export class SessionRoom extends Room {
     this.onMessage('complaint-submit',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !raw || typeof raw!=='object' || !('id' in raw) || typeof raw.id!=='number' || !Number.isSafeInteger(raw.id)) return;
+      if (!this.consumeRoomCommand(player.id,raw)) return;
       const photoId = 'photo' in raw ? raw.photo : undefined;
       const photo = photoId===undefined ? undefined :
         this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===photoId)?.photo;
@@ -191,17 +192,19 @@ export class SessionRoom extends Room {
       client.send('mail-state',this.internalMail.view());
       client.send('mail-reports',this.internalMail.reportsFor(client.sessionId));
     });
-    this.onMessage('mail-examine',(client,notice:unknown)=>{
+    this.onMessage('mail-examine',(client,raw:unknown)=>{
       const id = client.sessionId;
       const player = this.players.get(id)?.player;
-      if (!player || player.knockedOut || player.carried || this.match.phase!=='negotiation' || this.match.isolated(id)) return;
-      const error = this.internalMail.examine(id,notice,()=>this.gameplay.consumeForensicKit(id));
+      if (!raw || typeof raw!=='object' || !('notice' in raw) || !Number.isSafeInteger(raw.notice)) return;
+      if (!player || !this.consumeRoomCommand(id,raw) || player.knockedOut || player.carried || this.match.phase!=='negotiation' || this.match.isolated(id)) return;
+      const error = this.internalMail.examine(id,raw.notice,()=>this.gameplay.consumeForensicKit(id));
       if (error) client.send('gameplay-feedback',error);
       else client.send('mail-reports',this.internalMail.reportsFor(id));
     });
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
+      if (!player || !this.consumeRoomCommand(player.id,raw)) return;
+      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
         client.send('mail-result','Publicação indisponível nesta fase.');
         return;
       }
@@ -289,7 +292,7 @@ export class SessionRoom extends Room {
     this.onMessage('politics', (client, raw:unknown) => {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || !this.consumePoliticalCommand(player.id,raw) || player.knockedOut || player.carrying) return;
+      if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
       this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
       this.resetFinishedMatch(now);
@@ -297,7 +300,7 @@ export class SessionRoom extends Room {
     this.onMessage('election', (client, raw:unknown) => {
       const action = readElectionAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (action && player && this.consumePoliticalCommand(player.id,raw) && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      if (action && player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
     });
     this.onMessage('bill-intent',(client,vote:unknown)=>{
       if (vote==='yes' || vote==='no' || vote==='clear') this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
@@ -463,7 +466,7 @@ export class SessionRoom extends Room {
     this.match.leave(client.sessionId,this.clock.currentTime);
     this.resetFinishedMatch(this.clock.currentTime);
     this.players.delete(client.sessionId);
-    this.lastPoliticalToken.delete(client.sessionId);
+    this.lastRoomCommandToken.delete(client.sessionId);
     this.lastFieldToken.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);
   }
