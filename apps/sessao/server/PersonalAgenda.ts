@@ -1,3 +1,4 @@
+import { shop } from '../src/installations';
 import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
@@ -58,6 +59,11 @@ const purchaseRequirements:Partial<Record<Agenda,number>> = {
 const consumableRequirements = {
   pizza:'pizza',pizzaAlvo:'pizza',fatias:'pizza',pizzada:'pizza',lagosta:'lobster',bombom:'chocolates',
 } as const satisfies Partial<Record<Agenda,ObjectKind>>;
+
+const decorationRequirements = {
+  retrato:'portrait',retratoGabinete:'portrait',reforma:'portrait',
+  reserva:'vip',mandaVip:'vip',
+} as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
 const activeMissionCount = 3;
 
@@ -202,6 +208,8 @@ export class PersonalAgenda {
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
+    const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
+    if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
     const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));

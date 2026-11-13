@@ -1,3 +1,4 @@
+import { installationSites } from '../src/installations';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { PersonalAgenda } from './PersonalAgenda';
@@ -279,5 +280,31 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
   expect(afterTv).toContain('gabinete');
   buy('officeRug');
   buy('officeChair');
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+});
+
+test('decoration missions require enough money or an item already in the inventory',()=>{
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...terminals.credentials.point};
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:player.id,name:player.nick}],()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['retrato','reserva','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([player.id]),3);
+    return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  expect(draw()).toContain('reserva');
+  expect(game.act(player,{kind:'buy',target:'portrait'},world)).toContain('inventário');
+  expect(economy.spend(player.id,6)).toBe(true);
+  expect(draw()).toEqual(['retrato','cafe','passeio']);
+  const portrait = game.view(player,world).inventory.find(item=>item.kind==='portrait')!;
+  Object.assign(player,installationSites.hall.point);
+  expect(game.act(player,{kind:'install',place:'hall',item:portrait.id},world)).toBe('Objeto instalado.');
+  expect(economy.view(player.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='retrato')).toBe(true);
   expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
 });
