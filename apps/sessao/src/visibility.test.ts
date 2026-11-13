@@ -24,5 +24,15 @@ test('shadow starts at the far wall face with no opening for the avatar',()=>{
 test('light does not run along a wall viewed end-on',()=>{
   const origin = {x:140,y:146,barriers:[[153,144,45,4]] as const};
   const east = wallVision(origin,60).find(point=>Math.abs(point.dy)<1e-8 && point.dx>0);
-  expect(east?.x).toBeCloseTo(17);
+  expect(east?.x).toBeCloseTo(13);
+});
+
+test('a perpendicular wall does not light up beyond the corridor junction',()=>{
+  const origin = {x:191,y:145};
+  const south = wallVision(origin,50).find(point=>Math.abs(point.dx)<1e-8 && point.dy>0);
+  expect(south?.y).toBeCloseTo(16);
+
+  const besideJunction = {x:180,y:145};
+  const exposedFace = wallVision(besideJunction,50).find(point=>Math.abs(point.dx)<1e-8 && point.dy>0);
+  expect(exposedFace?.y).toBeCloseTo(27);
 });
