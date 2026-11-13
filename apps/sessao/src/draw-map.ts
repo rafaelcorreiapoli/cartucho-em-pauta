@@ -46,10 +46,8 @@ export function drawMap(scene: Phaser.Scene) {
   fill(0x355f50,282,556,396,177);
   fill(0x789383,453,620,54,120,.23);
   rug(617,418,260,102);
-  fill(0xe7f0e6,898,438,30,28);
-  fill(0x47796a,900,440,26,24);
-  fill(0xfff5e7,910,445,6,14);
-  fill(0xfff5e7,906,449,14,6);
+  const [doorX,doorY,doorW,doorH] = infirmary.door;
+  fill(0x9b8d6d,doorX,doorY,doorW,doorH);
   rug(78,306,135,75);
   rug(725,32,197,73);
   for (const [x,y,w,h] of walls) {
@@ -104,7 +102,11 @@ export function drawMap(scene: Phaser.Scene) {
     fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',color:'#fff4dc',
     backgroundColor:'#263a31aa',resolution:3,padding:{x:4,y:2},
   }).setOrigin(.5,0).setDepth(1);
-  return [tribune,budgetDesk,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  const doctor = scene.add.text(infirmary.doctor.x,infirmary.doctor.y+2,infirmary.doctor.name,{
+    fontFamily:'system-ui',fontSize:'5px',fontStyle:'bold',color:'#eef6df',
+    backgroundColor:'#203b33',padding:{x:2,y:1},resolution:3,
+  }).setOrigin(.5,0).setDepth(1);
+  return [tribune,budgetDesk,doctor,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

@@ -210,7 +210,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
       if (state.treatment) {
-        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Tratar ferimentos'} · ${money(infirmary.price)}`,
+        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Consultar Médico Cubano'} · ${money(infirmary.price)}`,
           icon:'shield',action:{kind:'treat'}});
       }
       if (player.carrying) {
