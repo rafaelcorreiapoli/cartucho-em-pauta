@@ -53,7 +53,7 @@ const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
-const roster = document.querySelector<HTMLUListElement>('#room-roster')!;
+const portraitPlayers:HTMLElement[] = [];
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
@@ -74,7 +74,10 @@ const buttons = NAMES.map((name,index) => {
   const caption = document.createElement('span');
   caption.className = 'character-name';
   caption.textContent = name;
-  button.append(portrait,caption);
+  const players = document.createElement('span');
+  players.className = 'character-players';
+  portraitPlayers.push(players);
+  button.append(portrait,players,caption);
   const stats = characterStats[index];
   button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
   button.setAttribute('aria-pressed','false');
@@ -194,7 +197,7 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    roster.replaceChildren();
+    for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
@@ -330,15 +333,17 @@ async function connect(join: () => Promise<Room>) {
         if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
       }
       if (matchRunning) return;
-      const names = players.filter(player => player.id!==joined.sessionId).map(player => player.nick);
-      const key = names.join('|');
+      const others = players.filter(player=>player.id!==joined.sessionId);
+      const key = JSON.stringify(others.map(({id,nick,character})=>[id,nick,character]));
       if (rosterKey===key) return;
       rosterKey = key;
-      roster.replaceChildren(...names.map(name => {
-        const slot = document.createElement('li');
-        slot.textContent = name;
-        return slot;
-      }));
+      for (const labels of portraitPlayers) labels.replaceChildren();
+      for (const player of others) {
+        const label = document.createElement('span');
+        label.textContent = player.nick;
+        label.title = player.nick;
+        portraitPlayers[player.character]?.append(label);
+      }
     });
     joined.onReconnect(() => { suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
