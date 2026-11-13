@@ -3,8 +3,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
-  await page.getByRole('button',{name:/Conversar.*Doutor Gambiarra/}).click();
-  await page.getByRole('button',{name:'Ver produtos'}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
   const dialog = page.locator('#market-dialog');
   const slots = dialog.locator('.market-products > *');
   const detail = dialog.getByRole('region',{name:'Produto selecionado'});
@@ -24,8 +23,9 @@ async page => {
   if (await bounds()!==initial) throw Error('Selection moved catalog');
   await page.keyboard.press('Enter');
   const equip = page.locator('#equip-purchase-dialog');
-  await equip.getByText('Binóculo',{exact:true}).waitFor();
-  await page.keyboard.press('2');
-  await equip.waitFor({state:'hidden'});
-  if (!await detail.getByRole('button',{name:'Adquirido'}).isDisabled()) throw Error('Repeated purchase enabled');
+  const acquired = detail.getByRole('button',{name:'Adquirido'});
+  await acquired.waitFor();
+  if (!await acquired.isDisabled() || await equip.isVisible()) throw Error('Free equipment slot should not prompt');
+  await page.keyboard.press('Escape');
+  await page.locator('#equipped-gear').getByRole('button',{name:/Binóculo/}).waitFor();
 }

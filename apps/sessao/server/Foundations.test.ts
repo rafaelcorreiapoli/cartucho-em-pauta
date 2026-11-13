@@ -589,7 +589,7 @@ test('first aid kits heal the owner once, cap healing and are kept at full healt
 });
 
 test('identical snacks share a slot and support partial offers and drops',()=>{
-  const {alice,bob,game,world,openShop,balance} = setup();
+  const {alice,bob,game,world,openShop,balance,events} = setup();
   Object.assign(alice,npcs.snackVendor.interaction);
   const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'coxinha',token:openShop(buyer,'snackVendor')},world);
   for (let index=0;index<5;index++) expect(buy(alice)).toBe('Compra guardada no inventário.');
@@ -598,6 +598,9 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(alice)).toHaveLength(1);
   const {id:item} = inventory(alice)[0];
   expect(inventory(alice)[0].quantity).toBe(5);
+  const purchases = events.filter(event=>event.type==='purchased');
+  expect(new Set(purchases.map(event=>event.item)).size).toBe(5);
+  expect(purchases.map(event=>event.inventoryItem)).toEqual(Array(5).fill(item));
   expect(game.act(alice,{kind:'use',item,quantity:5},world)).toBe('Objeto utilizado.');
   expect(inventory(alice)[0].quantity).toBe(4);
 
@@ -635,4 +638,25 @@ test('hands and feet are independent of the two accessory spaces',()=>{
   for (const kind of ['baton','runningShoes','binoculars','megaphone']) expect(equip(kind)).toBe('Equipado.');
   expect(equip('vest')).toBe('Os dois espaços de acessórios estão ocupados.');
   expect(game.view(alice,world).equipped).toHaveLength(4);
+});
+
+test('direct shop equips into free slots and swaps only the confirmed accessory',()=>{
+  const {alice,game,balance,world} = setup();
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  balance.set(alice.id,30);
+  game.act(alice,{kind:'open-shop',target:'vendor'},world);
+  const view = ()=>game.view(alice,world);
+  expect(view().dialogue?.shop).toBe(true);
+  const buy = (target:string)=>game.act(alice,{kind:'shop-buy',target,token:view().dialogue?.token},world);
+  expect(buy('binoculars')).toBe('Compra equipada.');
+  expect(buy('vest')).toBe('Compra equipada.');
+  expect(buy('megaphone')).toBe('Compra guardada no inventário.');
+  const [binocular,vest] = view().equipped!;
+  const [megaphone] = view().inventory;
+  expect(view().equipped?.map(item=>item.kind)).toEqual(['binoculars','vest']);
+  expect(game.act(alice,{kind:'replace-gear',item:megaphone.id,token:vest.id},world)).toBe('O equipamento neste espaço mudou.');
+  expect(game.act(alice,{kind:'replace-gear',item:megaphone.id,token:binocular.id},world)).toBe('Equipado.');
+  expect(view().inventory.map(item=>item.kind)).toEqual(['binoculars']);
+  expect(view().equipped?.map(item=>item.kind)).toEqual(['vest','megaphone']);
+  expect(balance.get(alice.id)).toBe(21);
 });

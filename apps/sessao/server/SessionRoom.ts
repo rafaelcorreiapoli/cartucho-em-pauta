@@ -8,7 +8,7 @@ import { npcRules } from '../src/parliamentarians';
 import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
-import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
+import { consumableAction, canUseGameplayAction, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
@@ -75,6 +75,9 @@ export class SessionRoom extends Room {
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
           this.clients.getById(event.actor)?.send('gear-purchased',{id:event.item,kind:event.kind});
+        } else if (event.type==='purchased' && event.item!==undefined && event.kind &&
+          consumableAction({id:event.item,kind:event.kind})) {
+          this.clients.getById(event.actor)?.send('consumable-purchased',event.inventoryItem ?? event.item);
         }
       },
     };

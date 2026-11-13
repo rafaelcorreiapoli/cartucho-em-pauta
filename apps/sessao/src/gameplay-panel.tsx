@@ -5,7 +5,7 @@ import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
-import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './hotbar';
+import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
@@ -92,7 +92,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let nearbyKey = '';
   let inventoryKey = '';
   let inventoryItems:WorldItem[] = [];
-  let hotbar = emptyHotbar();
+  let hotbar:readonly (number|undefined)[] = emptyHotbar();
+  const purchases = new Set<number>();
   let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
@@ -464,10 +465,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function renderSlots(inventory:WorldItem[]) {
     const key = JSON.stringify(inventory);
-    if (key===inventoryKey) return;
+    if (key===inventoryKey && !purchases.size) return;
     inventoryKey = key;
     inventoryItems = inventory;
     hotbar = reconcileHotbar(hotbar,inventory);
+    for (const item of inventory) {
+      if (purchases.delete(item.id) && consumableAction(item)) hotbar = pinPurchasedConsumable(hotbar,item.id);
+    }
     highlightSlot();
   }
 
@@ -667,6 +671,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
+    purchasedConsumable(id:number) { purchases.add(id); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);

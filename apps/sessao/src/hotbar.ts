@@ -14,3 +14,8 @@ export function reconcileHotbar(slots:readonly (number|undefined)[], inventory:r
 export function emptyHotbar() {
   return Array<number|undefined>(INVENTORY_SLOTS).fill(undefined);
 }
+
+export function pinPurchasedConsumable(slots:readonly (number|undefined)[], item:number) {
+  const free = slots.indexOf(undefined);
+  return free<0 || slots.includes(item) ? slots : assignHotbarSlot(slots,free,item);
+}

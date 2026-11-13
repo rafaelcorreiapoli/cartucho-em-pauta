@@ -256,7 +256,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
       } else {
         for (const target of state.npcNearby ?? []) {
-          actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
+          actions.push({label:`Abrir loja · ${npcs[target].name}`,icon:'inventory',action:{kind:'open-shop',target}});
         }
         for (const target of roster) {
           if (canReachDownedPlayer(player,target)) {

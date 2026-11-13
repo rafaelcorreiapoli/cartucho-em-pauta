@@ -41,3 +41,10 @@ export function equipmentSlots<T extends {kind:string}>(items:readonly T[]): (T|
   }
   return [groups.hands[0],groups.feet[0],...Array.from({length:accessorySlots},(_,index)=>groups.accessory[index])];
 }
+
+export function gearConflict<T extends {kind:string}>(kind:Gear, equipped:readonly T[]) {
+  const same = equipped.find(item=>isGear(item.kind) && equipment[item.kind].slot===equipment[kind].slot);
+  if (same || equipmentGroup(kind)!=='accessory') return same;
+  const accessories = equipped.filter(item=>isGear(item.kind) && equipmentGroup(item.kind)==='accessory');
+  return accessories.length>=accessorySlots ? accessories[0] : undefined;
+}

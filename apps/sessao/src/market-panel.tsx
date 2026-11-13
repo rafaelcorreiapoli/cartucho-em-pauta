@@ -2,7 +2,7 @@ import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
-import { isGear } from './equipment';
+import { gearConflict, isGear } from './equipment';
 import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -28,14 +28,16 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     markShortcut(yes,'1');
     markShortcut(no,'2');
   }
+  let replacement:number|undefined;
   let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
   yes.onclick = () => {
     const item = purchase?.id;
+    const token = replacement;
     prompt.close();
-    if (item!==undefined) send({kind:'equip',item});
+    if (item!==undefined && token!==undefined) send({kind:'replace-gear',item,token});
   };
   no.onclick = () => prompt.close();
-  const dismissPurchase = () => { purchase = undefined; };
+  const dismissPurchase = () => { purchase = undefined; replacement = undefined; };
   prompt.addEventListener('close',dismissPurchase);
   const pageSize = 9;
   let page = 0;
@@ -89,7 +91,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const furniture = isOfficeFurniture(kind);
       const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
       const stack = inventory.some(entry=>entry.kind===kind) && canStackItem(kind);
-      const noSpace = !furniture && !stack && inventory.length>=INVENTORY_SLOTS;
+      const needsSpace = !isGear(kind) || !!gearConflict(kind,equipped);
+      const noSpace = needsSpace && !furniture && !stack && inventory.length>=INVENTORY_SLOTS;
       const status = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : noSpace ? 'Inventário cheio' :
         wallet<price ? 'Saldo insuficiente' : undefined;
       return {kind,item,price,status,hasItem};
@@ -152,12 +155,16 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   return {
     render(view:PlenaryView) {
       const inventory = view.gameplay?.inventory ?? [];
+      const equipped = view.gameplay?.equipped ?? [];
+      if (purchase && equipped.some(item=>item.id===purchase?.id)) purchase = undefined;
+      const conflict = purchase && isGear(purchase.kind) ? gearConflict(purchase.kind,equipped) : undefined;
       if (view.phase!=='negotiation' || view.gameplay?.vitality?.recovery ||
-        (prompt.open && !inventory.some(item=>item.id===purchase?.id))) {
+        (prompt.open && (replacement!==conflict?.id || !inventory.some(item=>item.id===purchase?.id)))) {
         purchase = undefined;
         if (prompt.open) prompt.close();
-      } else if (!prompt.open && purchase && inventory.some(item=>item.id===purchase?.id)) {
-        purchasedName.textContent = objects[purchase.kind].name;
+      } else if (!prompt.open && conflict && purchase && inventory.some(item=>item.id===purchase?.id)) {
+        replacement = conflict.id;
+        purchasedName.textContent = `${objects[conflict.kind].name} → ${objects[purchase.kind].name}`;
         prompt.showModal();
       }
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
@@ -179,7 +186,6 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         selected = 0;
       }
       const wallet = view.politics?.wallet ?? 0;
-      const equipped = view.gameplay?.equipped ?? [];
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;

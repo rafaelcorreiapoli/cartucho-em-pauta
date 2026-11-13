@@ -4,7 +4,7 @@ import { dialogues, npcs, type DialogueCondition, type DialogueNode, type Dialog
 
 type Eligibility = (condition:DialogueCondition)=>boolean;
 
-type Session = {npc:NpcId; node:string; shop:boolean; token:number};
+type Session = {npc:NpcId; node:string; shop:boolean; direct?:boolean; token:number};
 
 export class NpcDialogues {
   private sessions = new Map<string,Session>();
@@ -30,9 +30,9 @@ export class NpcDialogues {
     return (Object.keys(npcs) as NpcId[]).filter(key=>this.nearby(player,key));
   }
 
-  open(player:Player, target?:string) {
+  open(player:Player, target?:string, direct=false) {
     if (!target || !Object.hasOwn(npcs,target) || !this.nearby(player,target as NpcId)) return 'Aproxime-se para conversar.';
-    this.sessions.set(player.id,{npc:target as NpcId,node:'start',shop:false,token:++this.serial});
+    this.sessions.set(player.id,{npc:target as NpcId,node:'start',shop:direct,direct,token:++this.serial});
   }
 
   private active(player:Player) {
@@ -55,10 +55,10 @@ export class NpcDialogues {
     session.token = ++this.serial;
   }
 
-  purchase(player:Player, token:number|undefined, buy:(npc:NpcId)=>string|undefined) {
+  purchase(player:Player, token:number|undefined, buy:(npc:NpcId,direct:boolean)=>string|undefined) {
     const session = this.active(player);
     if (!session?.shop || token!==session.token) return 'Abra o catálogo do vendedor.';
-    const result = buy(session.npc);
+    const result = buy(session.npc,!!session.direct);
     if (!result) session.token = ++this.serial;
     return result;
   }
