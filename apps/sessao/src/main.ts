@@ -10,7 +10,7 @@ import type { PhotoAccessView } from './photography';
 import { createSurveillancePanel } from './surveillance-panel';
 import type { PhotoScene } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
-import { showNewResults } from './results';
+import { mountResults } from './results';
 import { setCharacterPortrait } from './character-art';
 import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
@@ -245,7 +245,7 @@ async function connect(join: () => Promise<Room>) {
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
-    const reactHud = mountReactHud();
+    const reactHud = mountReactHud();    const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
       if (type!=='bill-vote') map.focus({preventScroll:true});
@@ -290,7 +290,7 @@ async function connect(join: () => Promise<Room>) {
       suppressXpEffect = false;
       progression.render(view);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
-      const resultSound = showNewResults(view,previousView);
+      const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
       game?.setPlenaryView(view);
@@ -353,7 +353,7 @@ async function connect(join: () => Promise<Room>) {
       hudListeners.abort();
       panel.destroy();
       hud.destroy();
-      reactHud.destroy();
+      reactHud.destroy();      results.destroy();
       progression.destroy();
       surveillance.destroy();
       gameplay.destroy();
