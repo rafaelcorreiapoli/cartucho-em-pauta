@@ -1122,5 +1122,5 @@ button.item-tile:active { transform: translateY(3px); }
 
 .phone-app-icon { position: relative; }
 .phone-app-icon .action-key { position: absolute; inset: 3px 3px auto auto; }
-.phone-call-content { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .55rem; }
-.phone-call-content .phone-contact > kbd { position: absolute; inset: 5px 5px auto auto; }
+.phone-app-content { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .55rem; }
+.phone-app-content .phone-contact > kbd { position: absolute; inset: 5px 5px auto auto; }

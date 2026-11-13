@@ -1,3 +1,4 @@
+import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
@@ -5,10 +6,9 @@ import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
-import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
-import { createPhoneSnake, snakeDirection } from './phone-snake';
+import { paintSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
@@ -57,7 +57,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const navigation = element('phone-apps');
   const navigationRoot = createRoot(navigation);
   const callHost = document.createElement('div');
-  callHost.className = 'phone-call-content';
+  callHost.className = 'phone-app-content';
   const callRoot = createRoot(callHost);
   const target = element<HTMLSelectElement>('gameplay-target');
 
@@ -90,7 +90,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let bagOpen = false;
   const bagFilters = ['Todos','Equipamentos','Consumíveis'] as const;
   let bagFilter:typeof bagFilters[number] = 'Todos';
-  const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
+  const snakeHost = document.createElement('div');
+  snakeHost.className = 'phone-app-content';
+  const snakeRoot = createRoot(snakeHost);
+  let snakeBoard:HTMLCanvasElement|null = null;
+  const setSnakeBoard = (board:HTMLCanvasElement|null) => { snakeBoard = board; };
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
   let renderKey = '';
@@ -234,8 +238,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
-      state.game?.status;
-    if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
+      [state.game?.status,state.game?.score];
+    if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
     const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
@@ -398,20 +402,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         cards.push(callHost);
       }
       if (app==='Joguinhos') {
-        if (phase!=='negotiation') cards.push(node('p','O jogo está disponível durante a articulação.'));
-        else if (!state.game) {
-          const game = button('Snake',()=>send({kind:'game-start'}));
-          game.className = 'snake-launch';
-          game.prepend(glyph('snake'));
-          markShortcut(game,'5');
-          cards.push(game);
-        } else {
-          cards.push(snake.element);
-          if (state.game.status==='won' || state.game.status==='lost') {
-            cards.push(button('Jogar de novo',()=>send({kind:'game-start'})));
-          }
-          cards.push(button('Voltar aos joguinhos',()=>send({kind:'game-stop'})));
-        }
+        flushSync(()=>snakeRoot.render(<PhoneSnake game={state.game} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>));
+        if (state.game && snakeBoard) paintSnake(snakeBoard,state.game);
+        cards.push(snakeHost);
       }
       if (app==='Câmera') photos.renderCamera(cards,phase,openPersonalAlbum);
       if (app==='Álbum') photos.renderAlbum(cards,contacts,directory,
@@ -662,6 +655,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       delete element('object-request').dataset.request;
       navigationRoot.unmount();
       callRoot.unmount();
+      snakeRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       equipmentRoot.unmount();

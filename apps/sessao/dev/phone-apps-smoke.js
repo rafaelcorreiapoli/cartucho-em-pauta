@@ -11,6 +11,11 @@ async page => {
   await dialog.getByRole('button',{name:'Joguinhos',pressed:true}).waitFor();
   await page.keyboard.press('5');
   await dialog.locator('.phone-snake canvas').waitFor();
+  await page.keyboard.press('ArrowRight');
+  await dialog.getByText('1 / 5 frutas',{exact:true}).waitFor();
+  await dialog.getByText('Fim de jogo',{exact:true}).waitFor();
+  await page.keyboard.press('5');
+  await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
   await page.keyboard.press('1');
   await dialog.getByRole('button',{name:'Telefone',pressed:true}).waitFor();
   await page.keyboard.press('2');
