@@ -146,7 +146,10 @@ export function FireNotice({fire}:{fire:FireView}) {
   return <aside id="active-fire" className="incident-panel" aria-labelledby="incidents-title">
     <h2 id="incidents-title"><Icon name="alert"/>Incidentes ativos <span>(1)</span></h2>
     <article className="incident-fire">
-      <span className="incident-flame" aria-hidden="true">🔥</span>
+      <svg className="hud-glyph incident-flame" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 22a7 7 0 0 0 7-7c0-3-2-5-3-6 0 2-1 3-2 3 1-4-1-8-4-10 0 4-1 6-3 8a7 7 0 0 0 5 12Z"/>
+        <path d="M12 22a3 3 0 0 0 3-3c0-2-2-3-3-5-1 2-3 3-3 5a3 3 0 0 0 3 3Z"/>
+      </svg>
       <div><strong>Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
       {!fire.paused && <p><Icon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}

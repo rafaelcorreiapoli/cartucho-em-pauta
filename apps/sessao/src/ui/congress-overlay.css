@@ -66,7 +66,7 @@
   inset: auto auto var(--hud-edge) var(--hud-edge);
   width: var(--profile-width);
 }
-#agenda-dock .react-agenda {
+:is(#agenda-dock .react-agenda, .incident-panel) {
   position: relative;
   padding: 5px 10px 5px 17px;
   border: 0;
@@ -77,7 +77,7 @@
   text-shadow: 0 1px 3px #000;
   font-size: 14px;
 }
-#agenda-dock .react-agenda::before {
+:is(#agenda-dock .react-agenda, .incident-panel)::before {
   content: "";
   position: absolute;
   inset: 5px auto 4px 0;
@@ -303,10 +303,6 @@
   anchor-name: --active-incidents;
   width: min(270px, 38vw);
   margin-inline-start: auto;
-  padding: 9px;
-  border: 1px solid #8f794b;
-  border-radius: 12px;
-  background: #101e17eb;
   pointer-events: none;
 }
 .incident-panel h2, .incident-fire p {
@@ -315,20 +311,16 @@
   gap: 6px;
   margin: 0;
 }
-.incident-panel h2 { margin-bottom: 7px; color: #f2d89c; font-size: 13px; }
+.incident-panel h2 { margin-bottom: 9px; font-size: 14px; }
 .incident-fire {
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
   align-items: center;
   gap: 4px 7px;
-  padding: 8px;
-  border: 1px solid #cf695e85;
-  border-radius: 8px;
-  background: linear-gradient(130deg,#6a29264d,#221b18aa);
 }
 .incident-fire strong, .incident-fire small { display: block; }
 .incident-fire small { color: var(--color-hud-muted); }
-.incident-flame { font-size: 19px; }
+.incident-flame { width: 19px; height: 19px; color: var(--color-hud-muted); }
 .incident-time { color: #f2d89c; font-variant-numeric: tabular-nums; }
 .incident-fire p { grid-column: 1/-1; color: #ffb1a2; font-size: 11px; }
 @media (max-width: 640px) {
