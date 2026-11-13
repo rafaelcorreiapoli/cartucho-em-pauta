@@ -44,7 +44,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const feedback = new Map<string,string>();
     const controls = new Map<string,ControlState>();
     const reports = new Map<string,ForensicReport[]>();
+    const pixNotices = new Map<string,{from:string;amount:number}>();
     for (const peer of rooms) {
+      peer.onMessage('pix-received',(notice:{from:string;amount:number})=>pixNotices.set(peer.sessionId,notice));
+      peer.onMessage('audit-result',()=>{});
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('mail-state',(mail:InternalNotice[])=>inboxes.set(peer.sessionId,mail));
       peer.onMessage('mail-reports',(mail:ForensicReport[])=>reports.set(peer.sessionId,mail));
@@ -128,8 +131,16 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>state(bia)?.inventory.some(item=>item.kind==='forensicKit')===false);
     move(caio,stations.secretary);
     caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false,token:1320});
-    await wait(()=>views.get(bia.sessionId)?.politics?.evidence.find(entry=>
+    const pix = await wait(()=>views.get(bia.sessionId)?.politics?.evidence.find(entry=>
       entry.kind==='clandestine-transfer' && entry.from===caio.sessionId && entry.to===bia.sessionId && entry.amount===4));
+    expect([...pixNotices]).toEqual([[bia.sessionId,{from:'Caio',amount:4}]]);
+    const alicePolitics = () => views.get(alice.sessionId)?.politics;
+    expect(alicePolitics()?.evidence.some(entry=>entry.id===pix.id)).toBe(false);
+    expect(alicePolitics()?.ledger.some(entry=>entry.id===pix.id)).toBe(false);
+    move(alice,stations.audit);
+    alice.send('plenary-action',{action:'audit',token:1330});
+    await wait(()=>alicePolitics()?.evidence.find(entry=>entry.id===pix.id));
+    expect(alicePolitics()?.ledger.some(entry=>entry.id===pix.id)).toBe(false);
     const nextShop = await wait(()=>{
       const current = state(bia)?.dialogue;
       return current?.shop && current.token!==shop.token ? current : undefined;
