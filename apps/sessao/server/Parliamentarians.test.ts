@@ -101,5 +101,23 @@ test('NPC routes stay on valid floor and stop for a negotiation',()=>{
       expect(canStand(npc.x,npc.y)).toBe(true);
     }
   } finally { Math.random = random; }
-  expect(npc).toMatchObject({x:140,y:146});
+  expect(npc).toMatchObject({x:140,y:146,moving:false});
+});
+
+test('an NPC stops walking on the first tick after it reaches its destination',()=>{
+  const members = new Parliamentarians();
+  members.reset(1,0);
+  const [npc] = members.players;
+  Object.assign(npc,{x:136,y:146});
+  const random = Math.random;
+  Math.random = ()=>.99;
+  try {
+    const paused = new Set<string>();
+    members.tick(0,.1,paused,true);
+    expect(npc).toMatchObject({x:140,y:146,moving:true});
+    members.tick(100,.1,paused,true);
+    expect(npc).toMatchObject({x:140,y:146,moving:false});
+    members.tick(npcRules.pauseMs-1,.1,paused,true);
+    expect(npc).toMatchObject({x:140,y:146,moving:false});
+  } finally { Math.random = random; }
 });

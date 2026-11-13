@@ -64,7 +64,10 @@ export class Parliamentarians {
         member.route = findRoute(player,destination);
         member.next = now+npcRules.pauseMs;
       }
-      if (!member.route.length) continue;
+      if (!member.route.length) {
+        player.moving = false;
+        continue;
+      }
       followRoute(player,member.route,seconds,(x,y)=>canStand(x,y) && !player.barriers?.some(rect=>blockedBy(rect,x,y)));
       if (!member.route.length) member.next = now+npcRules.pauseMs;
     }
