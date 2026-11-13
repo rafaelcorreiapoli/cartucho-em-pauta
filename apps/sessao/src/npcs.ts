@@ -7,8 +7,8 @@ export const snackBar = {
 } as const;
 
 export const npcs = {
-  vendor:{name:'Seu Balcão',character:4,x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar',catalog:'equipment'},
-  snackVendor:{name:'Tia do Lanche',sprite:'tia-do-lanche.webp',x:886,y:328,direction:0,
+  vendor:{name:'João Appolinário',sprite:'joao-appolinario.webp',x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar',catalog:'equipment'},
+  snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
@@ -39,7 +39,7 @@ export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
   snacks:{
     start:{
-      text:'Chega mais, Excelência. Tem café passado e lanche quente. O que vai ser?',
+      text:'Oi, amiguinho! Tem café passado e lanche quentinho. O que vai ser?',
       options:[
         {id:'products',label:'Ver cardápio',action:'shop'},
         {id:'special',label:'O que saiu agora?',next:'special'},

@@ -3,7 +3,7 @@ import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
 import { concealment, equipment, gearKinds, isGear } from './equipment';
 import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
-import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
+import { button, glyph, itemPortrait, node } from './gameplay-ui';
 import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
@@ -189,12 +189,10 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       if (!state.shop) {
         const line = node('div');
         line.className = 'market-line';
-        const face = 'sprite' in npc ? node('img') : contactFace({id:state.npc,name:npc.name,character:npc.character});
-        if (face instanceof HTMLImageElement && 'sprite' in npc) {
-          face.className = 'phone-contact-face market-npc-face';
-          face.src = import.meta.env.BASE_URL+'assets/'+npc.sprite;
-          face.alt = '';
-        }
+        const face = node('img');
+        face.className = 'phone-contact-face market-npc-face';
+        face.src = import.meta.env.BASE_URL+'assets/'+npc.sprite;
+        face.alt = '';
         line.append(face,node('p',state.text));
         const choices = node('div');
         choices.className = 'market-choices';
