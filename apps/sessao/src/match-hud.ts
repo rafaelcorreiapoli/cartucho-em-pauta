@@ -13,7 +13,9 @@ import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } fr
 import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
-type FieldAction = {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
+import type { SpyOption } from "./surveillance";
+
+type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -130,7 +132,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const channel = state?.officeChannel;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
-    progress.hidden = !breach && robbery===undefined;
+    const spy = state?.surveillance;
+    progress.hidden = !breach && robbery===undefined && spy?.progress===undefined;
+    if (spy?.progress!==undefined && !breach && robbery===undefined) {
+      progress.max = 1;
+      progress.value = spy.progress;
+      progress.setAttribute('aria-label','Interação de espionagem em andamento');
+    }
+    for (const option of spy?.options ?? []) actions.push({
+      label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
+    });
     if (robbery!==undefined) {
       progress.max = npcRules.robberyMs;
       progress.value = robbery;

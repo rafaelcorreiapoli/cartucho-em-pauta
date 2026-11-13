@@ -761,3 +761,25 @@ img.market-art {
   .agenda-list { gap: 5px; margin-top: 6px; }
   .mission-copy small { font-size: 10px; }
 }
+
+#open-surveillance { position: relative; }
+#open-surveillance span:not([hidden]) {
+  position: absolute;
+  inset: -5px -4px auto auto;
+  padding: 0 .35em;
+  border-radius: 1em;
+  background: #a8f7c8;
+  color: #122c20;
+  font-weight: 800;
+}
+#surveillance-dialog { width: min(720px, 90vw); }
+#surveillance-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.spy-console { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.6fr); gap: 1rem; }
+#spy-channels, #spy-monitor { padding: .8rem; border-radius: .6rem; background: #101c18; }
+#spy-monitor canvas { display: block; width: 100%; margin-bottom: .6rem; border: 1px solid #4b816a; background: #09120f; }
+#spy-monitor button { margin: .25rem; }
+.spy-channel { width: 100%; display: flex; gap: .65rem; align-items: center; margin-bottom: .45rem; text-align: left; }
+.spy-channel small, .spy-channel strong { display: block; }
+.spy-channel small { opacity: .8; }
+.spy-channel.spy-active { border-color: #8dedb0; box-shadow: inset 3px 0 #8dedb0; }
+.spy-channel[aria-pressed="true"] { background: #285344; }

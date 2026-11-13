@@ -78,22 +78,25 @@ export class SessionRoom extends Room {
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
   }
 
+  private spyFrameAt = 0;
+
   private routeVoice(speaker:string|undefined) {
     const participants = [...this.voice].flatMap(id=>{
       const player = this.players.get(id)?.player;
       return player ? [player] : [];
     });
     const spatial = this.match.phase==='negotiation';
-    const volume = (listener:Player, talker:Player) =>
+    const localVolume = (listener:Player, talker:Player) =>
       !spatial || talker.id===speaker || this.gameplay.callPeer(listener.id)===talker.id
         ? 1 : localPerception(listener,talker).volume;
+    const volume = (listener:Player,talker:Player)=>Math.max(localVolume(listener,talker),spatial ? this.gameplay.spyVolume(listener,talker) : 0);
     for (const player of participants) {
       const others = participants.filter(peer=>peer.id!==player.id);
       const client = this.clients.getById(player.id);
       if (!client) continue;
       client.send('voice-send',others.filter(peer=>volume(peer,player)>0).map(peer=>peer.id));
       if (spatial) {
-        const levels = others.map(peer=>[peer.id,volume(player,peer)] as const);
+        const levels = others.map(peer=>[peer.id,volume(player,peer),localVolume(player,peer)>0] as const);
         client.send('voice-range',levels.filter(([,level])=>level>0));
       }
     }
@@ -146,6 +149,16 @@ export class SessionRoom extends Room {
       if (!player || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) client.send('room-activity-result',result);
+    });
+    this.onMessage('voice-activity',client=>{
+      if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.clock.currentTime);
+    });
+    this.onMessage('spy',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+          this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
+      const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
+      if (result) client.send('gameplay-feedback',result);
     });
     this.onMessage('gameplay',(client, raw:unknown) => {
       const action = readGameplayAction(raw);
@@ -252,6 +265,8 @@ export class SessionRoom extends Room {
       }
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
+      const sendSpyFrame = now>=this.spyFrameAt && this.match.phase==='negotiation';
+      if (sendSpyFrame) this.spyFrameAt = now+150;
       for (const client of this.clients) {
         const id = client.sessionId;
         const state = this.players.get(id);
@@ -267,6 +282,11 @@ export class SessionRoom extends Room {
           if (lastPhotos?.key!==key && (lastPhotos || this.match.running)) client.send('photo-state',photos);
         }
         if (view.gameplay && this.match.phase==='negotiation') {
+          view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
+          if (sendSpyFrame) {
+            const frame = this.gameplay.spyFrame(state.player,world);
+            if (frame) client.send('spy-frame',frame);
+          }
           view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);

@@ -4,6 +4,8 @@ import type { ExposedItem, GroundItem, ObjectKind } from './gameplay';
 import { localPerception, type Motion } from './map';
 import type { Contact } from './politics';
 
+import type { CameraOrigin } from "./surveillance";
+
 export const PHOTO_WIDTH = 152;
 export const PHOTO_HEIGHT = 128;
 export const PHOTO_LOOK_UP = 19;
@@ -16,10 +18,10 @@ export type Decoration = Motion & {
   id:number; kind:'portrait'|'vip'|'pizza'|Extract<OfficeGood,'officeTv'|'officeRug'|'officeChair'>; owner:Contact; character:number; marked?:boolean; slices?:number; privateOffice?:string;
 };
 export type PhotoScene = {
-  center:Motion; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
+  center:Motion; camera?:CameraOrigin; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
 };
 export type Photo = PhotoScene & {
-  id:number; author:Contact; at:number; location:string; selfie:boolean;
+  id:number; source?:{kind:"surveillance"; channel:string}; author:Contact; at:number; location:string; selfie:boolean;
   transfers:{from:string; to:string; kind:ObjectKind; item:number}[];
 };
 export type AlbumEntry = {photo:Photo; access:'original'|'copy'};

@@ -8,6 +8,10 @@ import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
 
+import { isSpyProduct, spyProducts, type SpyProduct } from "./surveillance";
+
+const spyKinds = Object.keys(spyProducts) as SpyProduct[];
+
 export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
   const heading = dialog.querySelector('h2')!;
@@ -61,13 +65,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     toolbar.append(funds);
     const products = node('div');
     products.className = 'market-products';
-    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds] : foodKinds;
+    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds] : foodKinds;
     const owned = [...inventory,...equipped];
     const full = inventory.length>=INVENTORY_SLOTS;
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     for (const [index,kind] of visible.entries()) {
       const food = isFood(kind) ? foods[kind] : undefined;
-      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : foods[kind].price;
+      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : foods[kind].price;
       const item = objects[kind];
       const card = node('article');
       card.className = 'market-product';

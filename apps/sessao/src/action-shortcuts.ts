@@ -12,7 +12,7 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
 }
 
 const quickActions = [
-  ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['v','#voice-toggle'],
+  ['g','#open-surveillance'], ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['v','#voice-toggle'],
   ['n','#trade-dock > summary'], ['b','#politics-dock > summary'],
   ['p','#election-dock > summary'],
   ['y','[data-vote="yes"]'], ['r','[data-vote="no"]'],
