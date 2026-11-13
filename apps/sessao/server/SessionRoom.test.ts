@@ -561,6 +561,7 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
+  const {gameplayMetrics} = await import('./gameplay-metrics');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
   await reservation.stop();
@@ -604,6 +605,33 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
       const players = states.get(peer.sessionId)!;
       expect(players.filter(player=>player.npc)).toHaveLength(3);
       expect(players.map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
+    }
+
+    const count = ()=>Number(gameplayMetrics.exposition().match(/^congresso_economy_discrepancies_total (\d+)$/m)?.[1]);
+    const previous = count();
+    const alerts:unknown[] = [];
+    const error = console.error;
+    console.error = (...args)=>{
+      const [message] = args;
+      if (typeof message==='string' && message.startsWith('{"event":"economy-discrepancy"')) alerts.push(JSON.parse(message));
+      else error(...args);
+    };
+    try {
+      const match = Reflect.get(room,'match');
+      const economy = Reflect.get(match,'economy');
+      // Inject an untracked credit, then finish through actual socket departures.
+      Reflect.get(economy,'accounts').get(host.sessionId).wallet += 1;
+      const physical = Reflect.get(room,'gameplay').physicalCash();
+      expect(match.economySummary(physical).discrepancy).toBe(-1);
+      await Promise.all(rooms.slice(2).map(peer=>peer.leave()));
+      await wait(()=>phases.get(host.sessionId)==='finished');
+      expect(count()).toBe(previous+1);
+      expect(alerts).toEqual([{event:'economy-discrepancy',roomId:host.roomId,discrepancy:-1}]);
+      await Promise.all(rooms.slice(0,2).map(peer=>peer.leave()));
+      expect(count()).toBe(previous+1);
+      expect(alerts).toHaveLength(1);
+    } finally {
+      console.error = error;
     }
   } finally {
     await Promise.allSettled(rooms.map(peer=>peer.leave()));
