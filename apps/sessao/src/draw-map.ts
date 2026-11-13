@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { npcs, snackBar } from './npcs';
+import { mapNpcs, npcs, snackBar } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import { roomActivities } from './room-activities';
 import { infirmary } from './medical';
@@ -83,7 +83,7 @@ export function drawMap(scene: Phaser.Scene) {
     }
   }
   for (const [x,y] of desks) {
-    if (!Object.values(npcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
+    if (!Object.values(mapNpcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   const snackCounter = npcs.snackVendor.counter;

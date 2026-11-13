@@ -5,6 +5,10 @@ import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
   vision?:(id:string)=>number;
+  plenary?:boolean;
+  hasMandate?:(id:string)=>boolean;
+  deposit?:(id:string,amount:number)=>boolean;
+  lootWallet?:(id:string,fraction:number)=>number;
   takeWallet?:(id:string)=>number;
   payNpc?:(from:string,to:string,amount:number)=>boolean;
   feedback?:(id:string,message:string)=>void;

@@ -53,7 +53,7 @@ export class SessionRoom extends Room {
     };
   }
 
-  private match = new PlenaryMatch();
+  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
   private parliamentarians = new Parliamentarians();
   private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
@@ -260,6 +260,7 @@ export class SessionRoom extends Room {
         if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
       }
       for (const player of players) {
+        player.former = this.match.running ? this.match.former(player.id) : undefined;
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id) : undefined;
       }

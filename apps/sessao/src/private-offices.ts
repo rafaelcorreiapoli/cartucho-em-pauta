@@ -34,7 +34,7 @@ export const officeFixtures = {
 export type OfficeLayout = typeof privateOffices[number];
 
 export const officeRules = {
-  cashMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],
+  safeLootFraction:1, cashMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],
 } as const;
 
 export const officeGoods = {
@@ -76,11 +76,11 @@ export const isOfficeGood = (kind:unknown):kind is OfficeGood => typeof kind==='
 
 export type OfficeDoorState = 'open'|'closed'|'locked'|'breached';
 export type OfficeView = {id:string; owner?:string; door:OfficeDoorState; cabinetBreached?:true};
-export type OfficeAction = 'office-open'|'office-close'|'office-lock'|'office-unlock'|'office-cash'|
+export type OfficeAction = 'office-open'|'office-close'|'office-lock'|'office-unlock'|'office-cash'|'office-breach-safe'|'office-upgrade-safe'|
   'office-stash'|'office-take'|'office-breach-door'|'office-breach-cabinet'|'office-upgrade-door'|'office-upgrade-cabinet'|
   'office-install'|'office-remove'|'office-cancel';
 export const officeActions:readonly OfficeAction[] = [
-  'office-open','office-close','office-lock','office-unlock','office-cash','office-stash','office-take',
+  'office-open','office-close','office-lock','office-unlock','office-cash','office-breach-safe','office-upgrade-safe','office-stash','office-take',
   'office-breach-door','office-breach-cabinet','office-upgrade-door','office-upgrade-cabinet','office-install','office-remove','office-cancel',
 ];
 export type OfficeOption = {label:string; kind:OfficeAction; place?:string; item?:number};

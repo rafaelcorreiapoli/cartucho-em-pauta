@@ -8,7 +8,6 @@ import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
-import { offices } from './elections';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
@@ -82,7 +81,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       node('p',`Assinaturas ${doc.signatures.length}/${doc.requiredSignatures} · ${doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}`),
       node('p',`Carimbos ${doc.stamps.length}/${doc.requiredStamps.length} · ${doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? `✓ ${stamp}` : stamp).join(', ')}`),
     );
-    if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: ${offices[doc.requiredOffice].name}`));
+    if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: Parlamentar`));
     if (isFood(item.kind)) summary.append(node('p',`1 un. · ${foods[item.kind].category} · ${describeFood(foods[item.kind].effect)}`));
     const cash = cashAmount(item);
     if (cash) summary.append(node('p',money(cash)));
@@ -230,6 +229,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
+        if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach((option,index)=>{
           const control = button(option.label,()=>{

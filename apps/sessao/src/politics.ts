@@ -120,7 +120,7 @@ export type PoliticsAction =
   | {kind:'accept' | 'cancel'; offer:number}
   | {kind:'hearing'; target:string};
 
-export const money = (units:number) => `R$ ${units*10} mil`;
+export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   if (!data || typeof data!=='object' || !('kind' in data)) return;

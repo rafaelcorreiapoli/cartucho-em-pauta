@@ -4,9 +4,8 @@ import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, objects, type GameplayAction, type GameplayView } from './gameplay';
+import { canReachObject, cashAmount, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
-import { offices } from './elections';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
@@ -58,7 +57,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const quickActions = ([
     {target:'grant',panel:'trade-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
     {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
-    {target:'hearing-target',panel:'trade-dock',label:'Convocar cassação',station:'panel',icon:'ballot'},
+    {target:'hearing-target',panel:'trade-dock',label:'Convocar afastamento',station:'panel',icon:'ballot'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
   ] as const).map(action => {
     const control = element<HTMLButtonElement>(action.target);
@@ -165,6 +164,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       for (const npc of state.parliamentarians ?? []) {
         actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
           action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
+      }
+      if (state.locations.includes('treasury')) for (const item of state.inventory) {
+        const amount = cashAmount(item);
+        if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
+          action:{kind:'deliver',place:'treasury',item:item.id}});
       }
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
@@ -411,11 +415,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (politics) {
         const personal = view.election?.personal;
         const office = personal?.office;
-        const power = office ? offices[office].power : 'Você pode acompanhar a pesquisa como assessor.';
+        const power = office ? 'Mandato ativo. Você pode votar e disputar a próxima renovação.' : 'Ex-parlamentar. Você mantém seus bens e pode circular pelo Congresso.';
         element('office-power').dataset.help = power;
         element('office-salary').textContent = personal ? money(personal.salary) : '—';
         const label = element('hud-office');
-        label.textContent = office ? offices[office].name : 'Assessor';
+        label.textContent = view.mandate ? 'Parlamentar' : 'Ex-parlamentar';
         label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
@@ -431,9 +435,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
       if (previous) {
         const past = previous.politics;
+        const payroll = view.election?.result;
+        if (payroll?.expectedSalary && payroll.cycle!==previous.election?.result?.cycle) {
+          const percent = Math.round(100*payroll.salary/payroll.expectedSalary);
+          notify('Salário parlamentar',`${money(payroll.salary)} de ${money(payroll.expectedSalary)} · ${percent}%${percent<100 ? ' · Orçamento insuficiente' : ''}`);
+        }
         const notice = view.election?.notice;
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
-          notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Resultado eleitoral' : 'Eleições',notice.text);
+          notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Renovação de Mandato' : 'Campanha',notice.text);
         }
         if (view.phase==='negotiation' && view.remaining<=30 && previous.remaining>30) {
           notify('Convocação',`Sessão no Plenário em ${view.remaining} s.`);

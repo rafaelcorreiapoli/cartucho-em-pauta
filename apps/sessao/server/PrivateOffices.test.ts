@@ -6,7 +6,7 @@ import { canStand, localPerception, wallBetween, type Player } from '../src/map'
 import { MAX_PLAYERS } from '../src/plenary';
 import { clearSegment, findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
-import { npcs } from '../src/npcs';
+import { npcs, treasurer } from '../src/npcs';
 import { INVENTORY_SLOTS, terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
 
 function atDoor(office:OfficeLayout,inside:boolean) {
@@ -82,7 +82,7 @@ test('cash can only be converted once at the owners safe, with interruption and 
   act(owner,'collect',undefined,cash.id);
   expect(game.visibleItems(owner.id)[0]?.id).toBe(cash.id);
   expect(act(owner,'use',undefined,cash.id)).toContain('cofre');
-  expect(act(owner,'deliver','treasury',cash.id)).toContain('cofre');
+  expect(act(owner,'deliver','treasury',cash.id)).toContain('Tesouraria');
   Object.assign(owner,other.safe);
   expect(act(owner,'office-cash',other.id,cash.id)).toContain('titular');
   Object.assign(owner,home.safe);
@@ -145,6 +145,7 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   tick(5000);
   expect(game.view(visitor,world).offices?.[0].door).toBe('breached');
   expect(findRoute(visitor,atDoor(home,true)).at(-1)).toEqual(atDoor(home,true));
+  Object.assign(owner,{x:140,y:146});
   Object.assign(visitor,home.cabinet);
   expect(game.view(visitor,world).officeStash).toBeUndefined();
   expect(act(visitor,'office-breach-cabinet',home.id,lowTool)).toContain('insuficiente');
@@ -209,4 +210,50 @@ test('decoration persists and a plenary call cancels breach without spending the
   expect(game.view(visitor,world).inventory.some(item=>item.id===tool)).toBe(true);
   expect(game.view(visitor,world).officeStash).toBeUndefined();
   expect(game.view(owner,world).decorations.some(item=>item.id===tv)).toBe(true);
+});
+
+test('the safe protects an incapacitated owner and converts only the current wallet into physical cash',()=>{
+  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const [home] = privateOffices;
+  const tool = buy(visitor,'lockpick');
+  let balance = 20;
+  world.lootWallet = (id,fraction)=>{
+    if (id!==owner.id) return 0;
+    const taken = balance*fraction;
+    balance -= taken;
+    return taken;
+  };
+  Object.assign(owner,home.spawn,{knockedOut:true});
+  Object.assign(visitor,home.safe);
+  expect(act(visitor,'office-breach-safe',home.id,tool)).toContain('titular');
+  Object.assign(owner,{x:140,y:146,knockedOut:false});
+  act(visitor,'office-breach-safe',home.id,tool);
+  tick(1000);
+  balance = 17;
+  tick(officeRules.breachTimes[0]);
+  expect(balance).toBe(0);
+  const inventory = game.view(visitor,world).inventory;
+  expect(inventory).toHaveLength(1);
+  expect(inventory[0]).toMatchObject({kind:'briefcase',cash:17});
+  expect(game.view(owner,world).ownOffice).toBe(home.id);
+  expect(game.physicalCash()).toBeGreaterThanOrEqual(17);
+});
+
+test('the treasury redeems a physical briefcase exactly once',()=>{
+  const {players:[owner],game,world,act,tick} = setup();
+  let deposited = 0;
+  world.deposit = (_id,amount)=>{ deposited += amount; return true; };
+  tick(4000);
+  const cash = game.view(owner,world).nearby[0];
+  act(owner,'collect',undefined,cash.id);
+  expect(act(owner,'deliver','treasury',cash.id)).toContain('Tesouraria');
+  expect(deposited).toBe(0);
+  Object.assign(owner,treasurer.interaction);
+  expect(canStand(owner.x,owner.y)).toBe(true);
+  expect(findRoute({x:140,y:146},treasurer.interaction).at(-1)).toEqual(treasurer.interaction);
+  expect(game.view(owner,world).locations).toContain('treasury');
+  expect(act(owner,'deliver','treasury',cash.id)).toContain('entregues');
+  expect(act(owner,'deliver','treasury',cash.id)).toBe('Objeto indisponível.');
+  expect(deposited).toBe(3);
+  expect(game.physicalCash()).toBe(0);
 });

@@ -1,7 +1,7 @@
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
-import { npcs, snackBar } from './npcs';
+import { mapNpcs, snackBar } from './npcs';
 
 export const WIDTH = 1136;
 export const HEIGHT = 759;
@@ -45,7 +45,7 @@ export const desks = [
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
   [128,460],[354,430],[433,460],[713,460],[822,463],
   [274,614],[274,677],[643,614],[643,677],
-  ...Object.values(npcs).map(({counter:{x,y}})=>[x,y] as const),
+  ...Object.values(mapNpcs).map(({counter:{x,y}})=>[x,y] as const),
 ] as const;
 export const furnishings = [
   {frame:0, area:[197,33,86,29], footprint:10},
@@ -72,14 +72,14 @@ const obstacles = [
     const {width,footOffset} = officeFixtures[kind];
     return [x-width/2,y-footOffset-5,width,5];
   })),
-  ...Object.values(npcs).map(({x,y}):Rect => [x-5,y-5,10,5]),
+  ...Object.values(mapNpcs).map(({x,y}):Rect => [x-5,y-5,10,5]),
   ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
   ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
     [x,y+height-footprint,width,footprint]),
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; character: number; direction: number; moving: boolean; pocketing?:boolean; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; pocketing?:boolean; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 

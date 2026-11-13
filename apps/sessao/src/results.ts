@@ -1,5 +1,5 @@
 import { setCharacterPortrait } from './character-art';
-import { officeKeys, offices, type ElectionView } from './elections';
+import { type ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
 
 function node<K extends keyof HTMLElementTagNameMap>(tag:K, text:string) {
@@ -20,25 +20,19 @@ function icon(name:string) {
 
 function electionResult(result:NonNullable<ElectionView['result']>) {
   const section = document.createElement('section');
-  section.append(node('h3',`Resultado da eleição ${result.cycle}`));
-  for (const office of officeKeys) {
-    const winners = result.offices.filter(person => person.office===office);
-    const heading = node('h4',offices[office].name);
-    heading.prepend(icon('ballot'));
-    section.append(heading);
-    if (!winners.length) section.append(node('p','Sem eleitos'));
-    for (const winner of winners) {
-      const row = document.createElement('div');
-      row.className = 'result-winner';
-      const portrait = node('span','');
-      portrait.className = 'portrait';
-      portrait.setAttribute('aria-hidden','true');
-      setCharacterPortrait(portrait,winner.character);
-      const name = node('span',winner.name);
-      if (winner.race!==winner.office) name.append(node('small',`Votos na disputa de ${offices[winner.race].name}`));
-      row.append(portrait,name,node('strong',`${winner.percentage}%`));
-      section.append(row);
-    }
+  section.append(node('h3',`Renovação de Mandato ${result.cycle}`));
+  for (const [index,person] of result.offices.entries()) {
+    const row = node('div','');
+    row.className = 'result-winner';
+    const portrait = node('span','');
+    portrait.className = 'portrait';
+    setCharacterPortrait(portrait,person.character);
+    const lost = person.id===result.eliminated;
+    const name = node('span',`${index+1}º · ${person.name}`);
+    if (lost) name.append(node('small','Mandato perdido'));
+    row.dataset.effect = lost ? 'loss' : 'neutral';
+    row.append(portrait,name,node('strong',`${person.percentage}%`));
+    section.append(row);
   }
   return section;
 }

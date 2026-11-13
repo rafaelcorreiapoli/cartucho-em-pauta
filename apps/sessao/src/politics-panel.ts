@@ -118,7 +118,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     const politics = view?.politics;
     if (!politics || !view) return;
     const exploring = view.phase==='negotiation';
-    el('cabinet-form').hidden = !exploring || !at('cabinet') || view.election?.personal?.office!=='deputy' || politics.grantUsed || politics.suspended;
+    el('cabinet-form').hidden = !exploring || !at('cabinet') || !view.mandate || politics.grantUsed || politics.suspended;
     el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
     el('campaign').hidden = !exploring || !at('press');
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;

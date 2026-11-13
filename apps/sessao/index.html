@@ -172,7 +172,7 @@
               <div class="resource budget-resource">
                 <div class="resource-readout">
                   <button class="resource-help" type="button" aria-label="Como funciona o orçamento público" data-help="O orçamento público paga projetos e verbas de gabinete. Cada projeto pode aumentar ou reduzir o saldo. Se uma decisão deixar o orçamento negativo, cada ponto de déficit custa 2 pontos de estabilidade."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button>
-                  <label for="budget-meter">Orçamento</label>
+                  <label for="budget-meter">Orçamento Público</label>
                   <strong id="budget"></strong>
                 </div>
                 <progress id="budget-meter" max="100" value="32"></progress>
@@ -180,17 +180,17 @@
             </div>
           </section>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-            <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small>Eleição em</small><strong id="election-timer"></strong></span></summary>
+            <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small>Renovação em</small><strong id="election-timer"></strong></span></summary>
             <div class="hud-panel politics-content">
               <div class="electoral-metrics">
                 <div><span><button class="resource-help profile-help" type="button" aria-label="Investimento na campanha" data-help="Total que você já gastou na campanha deste ciclo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span><strong id="election-wallet"></strong></div>
               </div>
               <details id="election-result" hidden>
-                <summary id="election-result-title">Última eleição</summary>
+                <summary id="election-result-title">Última renovação</summary>
                 <p id="election-result-detail"></p>
               </details>
               <section aria-label="Pesquisa eleitoral">
-                <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="As barras mostram estimativas de intenção de voto por cargo. A apuração usa uma pequena margem de incerteza. Quem não se eleger disputa as vagas restantes.">?</button></div>
+                <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
                 <div id="election-polls"></div>
               </section>
               <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
@@ -321,7 +321,7 @@
                 <details id="trade-dock" class="social-module" name="game-panels" hidden>
                   <summary class="social-trigger" title="Negociação"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span class="sr-only">Negociação</span></summary>
                   <div class="politics-content social-panel">
-                    <header class="social-header"><div><h2>Negociação</h2><p class="trade-wallet"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="trade-balance"></strong><small>Na carteira</small></p></div><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma cassação, vá ao Painel com 55 de popularidade.">?</button></header>
+                    <header class="social-header"><div><h2>Negociação</h2><p class="trade-wallet"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="trade-balance"></strong><small>Na carteira</small></p></div><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma afastamento, vá ao Painel com 55 de popularidade.">?</button></header>
                     <div id="politics-actions">
                       <form id="trade">
                         <div class="social-empty" id="trade-empty" hidden>
@@ -352,7 +352,7 @@
                       </form>
                       <button class="hud-button hud-button--secondary" id="campaign" type="button" hidden>Fazer campanha · R$ 20 mil</button>
                       <form id="hearing-form" hidden>
-                        <div class="section-label">Convocar cassação</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da cassação"></div>
+                        <div class="section-label">Convocar afastamento</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
                         <button class="hud-button" id="hearing-confirm" type="submit">Convocar votação</button>
                       </form>
                     </div>
@@ -433,13 +433,6 @@
           <h2 id="campaign-title"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</h2>
           <button id="close-campaign" class="hud-icon-button" type="button" aria-label="Fechar campanha"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button>
         </header>
-        <form id="registration">
-          <label>Candidatura <select id="election-race">
-            <option value="president">Presidência</option><option value="senator">Senado</option><option value="deputy">Câmara</option>
-          </select></label>
-          <button class="hud-button" id="register-race" type="submit">Confirmar candidatura</button>
-        </form>
-        <p id="registration-hint"></p>
         <form id="invest-form">
           <label>Investir em campanha (R$ 10 mil por unidade)
             <input id="investment" type="number" value="1" min="1" step="1" required>
