@@ -71,7 +71,10 @@ const buttons = NAMES.map((name,index) => {
   portrait.className = 'portrait';
   setCharacterPortrait(portrait,index);
   portrait.setAttribute('aria-hidden','true');
-  button.append(portrait,name);
+  const caption = document.createElement('span');
+  caption.className = 'character-name';
+  caption.textContent = name;
+  button.append(portrait,caption);
   const stats = characterStats[index];
   button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
   button.setAttribute('aria-pressed','false');

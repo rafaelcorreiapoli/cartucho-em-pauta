@@ -61,23 +61,37 @@ p { margin:.5rem 0; }
 #room-roster { list-style:none; padding:0; display:flex; flex-wrap:wrap; gap:.3rem; margin:.6rem 0 .9rem; }
 #room-roster li { border:1px solid #9e927a66; border-radius:3px; padding:.2rem .4rem; }
 #characters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.4rem; margin:.45rem 0 .85rem; }
-.character-option { flex-direction:column; padding:.45rem .2rem; font-size:.78rem; }
-.character-option .portrait { --portrait-size:64px; }
+.character-option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.character-option .portrait { --portrait-size: 96cqw; }
 .character-option[aria-pressed="true"] { border-color: var(--hud-gold); background: #334638; }
+.character-name {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  place-items: center;
+  min-height: 2.2em;
+  padding-inline: .25em;
+  background: linear-gradient(0deg,#0d1a15 15%,#0d1a15db 75%,#0d1a1566);
+  color: #fff1cd;
+  font: 800 clamp(10px,10cqw,17px)/1.1 system-ui,sans-serif;
+  letter-spacing: -.015em;
+  white-space: nowrap;
+}
 @media (min-width: 921px) {
   #session[data-phase="lobby"] #plenary {
-    width: 720px;
+    width: 760px;
     padding: 1.35rem;
   }
   #characters { gap: .75rem; margin: .65rem 0 1rem; }
-  #characters .character-option {
-    justify-content: flex-start;
-    gap: .5rem;
-    padding: .65rem .45rem;
-    font-size: .9rem;
-    white-space: nowrap;
-  }
-  .character-option .portrait { --portrait-size: clamp(88px, 13vh, 116px); }
 }
 .portrait {
   --portrait-size:46px;
