@@ -184,12 +184,16 @@ export class PersonalAgenda {
     return Math.max(0,applyFacts(seen,facts)-mission.current);
   }
 
-  recordGameplay(metrics:AgendaMetrics, event:GameplayEvent, scandalPizza:boolean) {
+  acceptGameplayEvent(event:GameplayEvent) {
     const key = event.type==='photo-published' && event.photo
       ? JSON.stringify([event.type,event.photo.id])
       : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
-    if (this.seenEvents.has(key)) return;
+    if (this.seenEvents.has(key)) return false;
     this.seenEvents.add(key);
+    return true;
+  }
+
+  applyGameplayEvent(metrics:AgendaMetrics, event:GameplayEvent, scandalPizza:boolean) {
     const gains:Partial<Record<Agenda,number>> = {};
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
@@ -233,7 +237,6 @@ export class PersonalAgenda {
       }
     }
     this.progress(metrics,gains);
-    return true;
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {

@@ -367,7 +367,7 @@ export class PoliticalEconomy {
 
   recordGameplay(event:GameplayEvent) {
     const account = this.accounts.get(event.actor);
-    if (!account) return;
+    if (!account || !account.agenda.acceptGameplayEvent(event)) return;
     if (event.kind==='pizza' && event.item!==undefined) {
       if (event.type==='installed' && this.hasPublicScandal()) {
         this.scandalPizzas.add(event.item);
@@ -379,8 +379,8 @@ export class PoliticalEconomy {
       account.selfieBonus = true;
       account.popularity = cap(account.popularity+4);
     }
-    const recorded = account.agenda.recordGameplay(account,event,this.scandalPizzas.has(event.item ?? -1));
-    if (recorded && event.type==='signed' && event.target && event.target!==event.actor && event.item!==undefined) {
+    account.agenda.applyGameplayEvent(account,event,this.scandalPizzas.has(event.item ?? -1));
+    if (event.type==='signed' && event.target && event.target!==event.actor && event.item!==undefined) {
       const owner = this.accounts.get(event.target);
       owner?.agenda.recordSignature(owner,event.item,event.actor);
     }

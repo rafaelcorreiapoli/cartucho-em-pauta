@@ -12,6 +12,10 @@ import { npcs } from '../src/npcs';
 
 const metrics = {wallet:8,popularity:40};
 
+function recordAgendaEvent(agenda:PersonalAgenda,event:GameplayEvent) {
+  if (agenda.acceptGameplayEvent(event)) agenda.applyGameplayEvent(metrics,event,false);
+}
+
 function event(type:GameplayEvent['type'], extra:Partial<GameplayEvent> = {}):GameplayEvent {
   return {type,actor:'a',at:1,position:{x:0,y:0},witnesses:[],...extra};
 }
@@ -75,12 +79,12 @@ test('hidden play counts only witnessed-free gameplay time and duplicate samples
     agenda.progress(metrics,Object.fromEntries(active.map(mission=>[mission.kind,mission.target])));
   }
   const hidden = () => agenda.view(metrics).active.find(mission=>mission.kind==='jogarOculto');
-  agenda.recordGameplay(metrics,event('game-played',{at:2,duration:100,witnesses:['b']}),false);
+  recordAgendaEvent(agenda,event('game-played',{at:2,duration:100,witnesses:['b']}));
   expect(hidden()?.current).toBe(0);
   for (let i=0;i<300;i++) {
     const sample = event('game-played',{at:3+i*100,duration:100});
-    agenda.recordGameplay(metrics,sample,false);
-    agenda.recordGameplay(metrics,sample,false);
+    recordAgendaEvent(agenda,sample);
+    recordAgendaEvent(agenda,sample);
     if (i===149) expect(hidden()?.current).toBe(15_000);
   }
   expect(agenda.view(metrics).completed.at(-1)?.kind).toBe('jogarOculto');
@@ -194,7 +198,7 @@ test('mission draws skip unavailable offices, exhausted purchases and unaffordab
   const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['presidenteFoto','protocolo','comprarLagosta','televisao','cafe','passeio','selfieSolo']);
-  agenda.recordGameplay(metrics,event('purchased',{kind:'officeTv'}),false);
+  recordAgendaEvent(agenda,event('purchased',{kind:'officeTv'}));
   // Keep the deck fixed so changes to the account are the only eligibility inputs.
   Reflect.set(agenda,'missions',[]);
   agenda.updateEligibility(metrics,3,false,3);
@@ -520,7 +524,7 @@ test('buying an NPC vote is drawn only when a paid quote is affordable and payme
   expect(draw(3,true,false).hasActive('votoNpc')).toBe(false);
   const agenda = draw(3,true);
   expect(agenda.hasActive('votoNpc')).toBe(true);
-  agenda.recordGameplay(metrics,event('npc-vote-bought'),false);
+  recordAgendaEvent(agenda,event('npc-vote-bought'));
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'votoNpc'}));
 });
 
@@ -716,4 +720,29 @@ test('solo signature missions require enough money and payment quota for the NPC
   }
   expect(view(1).missions.completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
   expect(view(1).paymentsLeft).toBe(quota-1);
+});
+
+test('replayed installations cannot turn a pre-scandal pizza into a scandal pizza',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b','c','d']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const account = Reflect.get(economy,'accounts').get('a');
+  const installation = event('installed',{kind:'pizza',item:15,place:'pizza'});
+  economy.recordGameplay(installation);
+  economy.recordOfficialScandal();
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+  economy.updateAgendaEligibility(ids,3);
+  expect(account.agenda.hasActive('pizzada')).toBe(true);
+  economy.recordGameplay({...installation});
+  for (const [index,guest] of ['b','c','d'].entries()) {
+    economy.recordGameplay(event('slice',{at:index+2,kind:'pizza',item:15,target:guest}));
+  }
+  const mission = ()=>economy.view('a',[],0,false,()=>true)!.missions;
+  expect(mission().active).toContainEqual(expect.objectContaining({kind:'pizzada',current:0}));
+  economy.recordGameplay({...installation,at:10});
+  for (const [index,guest] of ['b','c','d'].entries()) {
+    economy.recordGameplay(event('slice',{at:index+11,kind:'pizza',item:15,target:guest}));
+  }
+  expect(mission().completed).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
 });
