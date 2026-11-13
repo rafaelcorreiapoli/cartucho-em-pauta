@@ -10,6 +10,8 @@ export const SPEED = 88;
 export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
+export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
+
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
 export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
@@ -37,6 +39,7 @@ export const walls: Rect[] = [
   [139,114,38,11], [203,114,14,11], [263,114,14,11], [303,114,38,11],
   [187,161,9,98], [282,161,9,98],
   [10,161,59,11], [105,161,113,11], [262,161,79,11],
+  [59,645,141,10],[59,655,6,94],[194,655,6,94],[59,749,141,10],
   ...privateOffices.flatMap(({bounds:[x,y,w,h],door:[dx,dy,dw,dh],inside,shared}):Rect[]=>[
     ...(shared.has('west') ? [] : [[x-6,y,6,h] as Rect]),
     ...(shared.has('east') ? [] : [[x+w,y,6,h] as Rect]),
@@ -96,10 +99,17 @@ export function blockedBy(rect:Rect,x:number,y:number) {
   return x+6>left+epsilon && x-6<left+width-epsilon && y>top+epsilon && y-7<top+height-epsilon;
 }
 
+const southRooms = [...privateOffices,isolationRoom].filter(({bounds})=>bounds[1]>=541);
+
 export function canStand(x: number, y: number) {
   if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom))) return false;
-  if (y>541 && (x<274 || x>686) && !privateOffices.some(({bounds:[left,top,width,height]})=>top>=541 && x>=left && x<=left+width && y<=top+height)) return false;
+  if (y>541 && (x<274 || x>686) && !southRooms.some(({bounds:[left,top,width,height]})=> x>=left && x<=left+width && y>=top && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
+}
+
+export function canStandInIsolation(x:number,y:number) {
+  const [left,top,width,height] = isolationRoom.bounds;
+  return x>=left+6 && x<=left+width-6 && y>=top+7 && y<=top+height && canStand(x,y);
 }
 
 export function inPlenary({x,y}:Motion) {
@@ -169,6 +179,7 @@ export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
 
 export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
+  {...isolationRoom,color:0x61716a},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
   {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},

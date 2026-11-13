@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { canStandInPlenary, inPlenary, PLENARY_SEATS } from './map';
+import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
 import { PredictedMovement } from './network-movement';
 import { applyInput, readInput, restMovement, type ControlState, type MovementInput } from './movement';
@@ -87,4 +87,16 @@ test('sprinting spends stamina in the shared movement step and falls back to wal
   expect(state.player.x).toBeCloseTo(162.6);
   expect(state.player.sprinting).toBeUndefined();
   expect(state.player.stamina).toBe(1.75);
+});
+
+test('isolation prediction confines the player and discards movement on release',()=>{
+  const client = new PredictedMovement(()=>{});
+  const player = {id:'p',nick:'P',character:0,x:isolationRoom.spawn.x,y:662,moving:false,direction:0};
+  client.reconcile({player,route:[],ack:0,isolated:true});
+  client.input({motion:{x:0,y:-1}});
+  expect(client.state?.player.y).toBe(662);
+  client.reconcile({player:{...player,...isolationRoom.exit},route:[],ack:0});
+  expect(client.state?.player).toMatchObject(isolationRoom.exit);
+  client.input({motion:{x:0,y:-1}});
+  expect(client.state?.player.y).toBeLessThan(isolationRoom.exit.y);
 });

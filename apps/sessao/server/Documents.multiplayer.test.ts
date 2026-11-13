@@ -4,11 +4,13 @@ import {defineRoom,defineServer,matchMaker} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from './SessionRoom';
 import {PlenaryMatch} from './PlenaryMatch';
+import type {ControlState} from '../src/movement';
+import {SUSPENSION_MS} from '../src/politics';
+import {inPlenary,isolationRoom,type Player} from '../src/map';
 import {stations,type PlenaryView} from '../src/plenary';
 import {reprography} from '../src/room-activities';
 import {npcs} from '../src/npcs';
 import type {PhotoAccessView} from '../src/photography';
-import type {Player} from '../src/map';
 import type {ForensicReport,InternalNotice} from '../src/internal-mail';
 
 test('players sign, publish, alter, examine and counterpublish snapshots over the room socket',async()=>{
@@ -38,6 +40,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const inboxes = new Map<string,InternalNotice[]>();
     const photos = new Map<string,PhotoAccessView>();
     const mailErrors = new Map<string,string|null>();
+    const controls = new Map<string,ControlState>();
     const reports = new Map<string,ForensicReport[]>();
     for (const peer of rooms) {
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
@@ -45,7 +48,8 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
       peer.onMessage('mail-reports',(mail:ForensicReport[])=>reports.set(peer.sessionId,mail));
       peer.onMessage('photo-state',(view:PhotoAccessView)=>photos.set(peer.sessionId,view));
       peer.onMessage('mail-result',(error:string|null)=>mailErrors.set(peer.sessionId,error));
-      for (const name of ['players','control','gameplay-feedback','item-obtained']) peer.onMessage(name,()=>{});
+      peer.onMessage('control',(state:ControlState)=>controls.set(peer.sessionId,state));
+      for (const name of ['players','gameplay-feedback','item-obtained']) peer.onMessage(name,()=>{});
     }
     const room = matchMaker.getLocalRoomById(alice.roomId) as SessionRoom;
     const match = new PlenaryMatch(1);
@@ -143,6 +147,24 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     caio.send('mail-publish',{subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
+
+    economy.changePopularity(alice.sessionId,40);
+    move(alice,stations.panel);
+    alice.send('politics',{kind:'hearing',target:bia.sessionId});
+    await wait(()=>views.get(bia.sessionId)?.phase==='hearing' && controls.get(bia.sessionId)?.plenary);
+    expect(inPlenary(controls.get(bia.sessionId)!.player)).toBe(true);
+    alice.send('bill-vote','yes');
+    caio.send('bill-vote','yes');
+    await wait(()=>views.get(alice.sessionId)?.hearing?.voted===2);
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>controls.get(bia.sessionId)?.isolated);
+    expect(controls.get(bia.sessionId)?.player).toMatchObject(isolationRoom.spawn);
+    expect(views.get(bia.sessionId)?.isolationSeconds).toBe(60);
+    expect(state(bia)).toBeUndefined();
+    const accountBia = Reflect.get(economy,'accounts').get(bia.sessionId);
+    accountBia.suspendedUntil -= SUSPENSION_MS;
+    await wait(()=>controls.get(bia.sessionId)?.isolated===false);
+    expect(controls.get(bia.sessionId)?.player).toMatchObject(isolationRoom.exit);
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

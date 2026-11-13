@@ -9,7 +9,7 @@ import {
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
-import { HEARING_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { HEARING_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -192,7 +192,7 @@ export class PlenaryMatch {
 
   roomActivity(player:Player, activity:RoomActivity, now:number):RoomActivityResult | undefined {
     const {id} = player;
-    if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || !this.at(player,activity)) return;
+    if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
     const bill = bills[this.round%bills.length].name;
     switch (activity) {
       case 'cabinet': return {activity,text:`O orçamento público está em ${money(this.budget)}.`};
@@ -242,8 +242,10 @@ export class PlenaryMatch {
     return this.phase==='negotiation' && now<this.ends && this.electorate.has(id) && this.economy.allocate(id,request);
   }
 
+  isolated(id:string) { return this.running && this.economy.suspended(id); }
+
   canHandleObjects(id:string, now:number) {
-    return this.electorate.has(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+    return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
   }
 
   vote(id:string, vote:Vote, now:number) {
@@ -277,7 +279,7 @@ export class PlenaryMatch {
     const {id} = player;
     const privateDeal = action.kind==='transfer' || action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
     if ((this.phase!=='negotiation' && !(this.phase==='ballot' && privateDeal)) ||
-      now>=this.ends || !this.electorate.has(id)) return;
+      now>=this.ends || !this.electorate.has(id) || this.isolated(id)) return;
     const near = (target:string) => players.some(other => other.id===target && this.nearby(player,other));
     switch (action.kind) {
       case 'grant': {
@@ -368,6 +370,7 @@ export class PlenaryMatch {
 
   advance(now:number) {
     if (!this.running) return;
+    if (this.economy.expireSuspensions(now)) this.refreshAgendaEligibility();
     if (now>=this.started+rules.matchDuration) {
       this.finish(this.stability>0 ? 'Parlamentar' : 'Infiltrado','O tempo da sessão terminou.');
       return;
@@ -382,7 +385,7 @@ export class PlenaryMatch {
       const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
       const removed = this.canVote(target) && yes>=this.quorum();
       if (removed) {
-        this.economy.suspend(target);
+        this.economy.suspend(target,now+SUSPENSION_MS);
         this.refreshAgendaEligibility();
         if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
       }
@@ -425,7 +428,6 @@ export class PlenaryMatch {
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else {
       this.round++;
-      this.economy.clearSuspensions();
       this.refreshAgendaEligibility();
       this.nextRound(now);
     }
@@ -454,6 +456,7 @@ export class PlenaryMatch {
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,!this.hearingUsed && this.canVote(id),id => this.canVote(id)) : undefined,
+      isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
       hearingResult:this.hearingResult,

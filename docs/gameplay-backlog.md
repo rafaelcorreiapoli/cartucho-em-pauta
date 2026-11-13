@@ -49,7 +49,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MAP-13 | Câmeras institucionais fixas em áreas comuns | PENDENTE | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Existem câmeras escondidas dos jogadores. Falta rede institucional fixa. | Média |
 | MAP-14 | Distribuição estratégica de esconderijos para dispositivos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-15 | Sala de Reprografia para adulteração documental | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
-| MAP-16 | Sala de isolamento para afastamentos | PENDENTE | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | A votação de afastamento existe. Falta recinto de isolamento. | Alta |
+| MAP-16 | Sala de isolamento para afastamentos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Sala física no mapa, com posição de isolamento e ponto de retorno. Coberta por teste de cliente e socket. | — |
 | MAP-17 | Tesouraria funcional | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-18 | Secretaria e Protocolo funcionais | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-19 | Corregedoria funcional | PARCIAL | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Balcão oferece auditoria e comunicados. Falta atendimento e denúncia por infração com dossiê. | Alta |
@@ -496,14 +496,14 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | AFA-03 | Inclusão do pedido na pauta | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-04 | Defesa do acusado | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | A fase exibe o acusado e abre votação. Falta etapa de defesa dedicada. | Média |
 | AFA-05 | Votação majoritária | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
-| AFA-06 | Afastamento temporário aprovado | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Audiência aprovada suspende direitos até a apuração seguinte. Falta afastamento físico. | Alta |
-| AFA-07 | Sala de isolamento | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Falta sala de isolamento. | Alta |
-| AFA-08 | Bloqueio de participação física/institucional durante afastamento | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Suspensão bloqueia ações institucionais. Falta confinamento físico dedicado. | Alta |
+| AFA-06 | Afastamento temporário aprovado | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Afastamento autoritativo de 60 s, com contador no HUD e retorno automático. Testes de regra e socket. | — |
+| AFA-07 | Sala de isolamento | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Sala física no mapa, com confinamento e retorno testados. | — |
+| AFA-08 | Bloqueio de participação física/institucional durante afastamento | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Sala exclusiva, previsão de movimento confinada e ações institucionais bloqueadas. Testes de cliente e gameserver. | — |
 | AFA-09 | Retorno automático | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-10 | Preservação de patrimônio, gabinete e mandato | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-11 | Cooldown/imunidade contra afastamentos consecutivos | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Há limite de uma audiência por partida. Falta cooldown individual conforme o modelo proposto. | Média |
-| AFA-12 | Integração com sessões plenárias | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Audiência é uma fase autoritativa; falta aplicar confinamento físico de plenário à audiência. | Alta |
-| AFA-13 | Afastamento pode criar oportunidade de invadir gabinete | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Não há deslocamento compulsório para abrir janela de invasão do gabinete. | Alta |
+| AFA-12 | Integração com sessões plenárias | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | A audiência leva os participantes ao Plenário. Afastados ficam na Sala de Isolamento e retornam à sessão se o prazo vencer durante a votação. | — |
+| AFA-13 | Afastamento pode criar oportunidade de invadir gabinete | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | O acusado sai do gabinete compulsoriamente por 60 s. Portas e cofres conservam as regras de segurança existentes. | — |
 | AFA-14 | Afastamento não reduz segurança de portas/cofres | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-15 | Afastamento não equivale à perda de mandato | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | — | — |
 | AFA-16 | Proteção contra abuso e aprisionamento indefinido | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, PlenaryMatch.test.ts; PR 8, 14 | Sessão tem temporizadores e suspensão é limpa. Falta proteção específica do futuro isolamento físico. | Alta |

@@ -13,7 +13,7 @@ import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
-import { localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
+import { isolationRoom, localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
@@ -104,7 +104,10 @@ export class SessionRoom extends Room {
     const localVolume = (listener:Player, talker:Player) =>
       !spatial || talker.id===speaker || this.gameplay.callPeer(listener.id)===talker.id
         ? 1 : localPerception(listener,talker).volume;
-    const volume = (listener:Player,talker:Player)=>talker.id===broadcaster ? megaphone.volume : Math.max(localVolume(listener,talker),spatial ? this.gameplay.spyVolume(listener,talker) : 0);
+    const volume = (listener:Player,talker:Player)=> {
+      if (!spatial && (this.match.isolated(listener.id) || this.match.isolated(talker.id))) return 0;
+      return talker.id===broadcaster ? megaphone.volume : Math.max(localVolume(listener,talker),spatial ? this.gameplay.spyVolume(listener,talker) : 0);
+    };
     for (const player of participants) {
       const others = participants.filter(peer=>peer.id!==player.id);
       const client = this.clients.getById(player.id);
@@ -168,7 +171,7 @@ export class SessionRoom extends Room {
     this.onMessage('mail-examine',(client,notice:unknown)=>{
       const id = client.sessionId;
       const player = this.players.get(id)?.player;
-      if (!player || player.knockedOut || player.carried || this.match.phase!=='negotiation') return;
+      if (!player || player.knockedOut || player.carried || this.match.phase!=='negotiation' || this.match.isolated(id)) return;
       const error = this.internalMail.examine(id,notice,()=>this.gameplay.consumeForensicKit(id));
       if (error) client.send('gameplay-feedback',error);
       else client.send('mail-reports',this.internalMail.reportsFor(id));
@@ -309,15 +312,25 @@ export class SessionRoom extends Room {
           if (intention) this.match.recordNpcVote(npc.id,intention);
         });
       }
-      const plenary = this.match.phase==='ballot';
+      const inSession = this.match.phase==='ballot' || this.match.phase==='hearing';
       for (const [index,[id,state]] of [...this.players].entries()) {
-        if (!!state.plenary===plenary) continue;
+        const isolated = this.match.isolated(id);
+        const plenary = inSession && !isolated;
+        if (!!state.plenary===plenary && !!state.isolated===isolated) continue;
+        const wasIsolated = state.isolated;
+        state.isolated = isolated;
         state.plenary = plenary;
         state.route = [];
         state.player.moving = false;
         state.player.sprinting = undefined;
         this.movementQueue.get(id)?.splice(0);
-        if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
+        if (isolated) {
+          this.npcTalk.leave(id);
+          this.gameplay.stopMegaphone(id,world);
+          this.gameplay.leave(state.player,world,false);
+          Object.assign(state.player,isolationRoom.spawn,{direction:0});
+        } else if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
+        else if (wasIsolated) Object.assign(state.player,isolationRoom.exit,{direction:2});
       }
       for (const player of players) {
         player.former = this.match.running ? this.match.former(player.id) : undefined;
@@ -360,7 +373,7 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
-          const visible = plenary ? world.players.filter(inPlenary) :
+          const visible = state.plenary ? world.players.filter(inPlenary) :
             world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);

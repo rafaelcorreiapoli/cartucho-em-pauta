@@ -9,7 +9,7 @@ import { PersonalAgenda } from './PersonalAgenda';
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  selfieBonus:boolean; known:Set<number>; suspended:boolean;
+  selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -57,7 +57,7 @@ export class PoliticalEconomy {
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
-        known:new Set(),suspended:false,
+        known:new Set(),
       });
     }
   }
@@ -140,7 +140,7 @@ export class PoliticalEconomy {
   }
 
   name(id:string) { return this.contacts.get(id)?.name ?? 'Jogador'; }
-  suspended(id:string) { return this.accounts.get(id)?.suspended ?? false; }
+  suspended(id:string) { return this.accounts.get(id)?.suspendedUntil!==undefined; }
   canCall(id:string) { return (this.accounts.get(id)?.popularity ?? 0)>=HEARING_POPULARITY && !this.suspended(id); }
   cancelOffers(id?:string) {
     for (const [key,offer] of this.offers) if (!id || offer.from===id || offer.to===id) this.offers.delete(key);
@@ -173,7 +173,7 @@ export class PoliticalEconomy {
 
   grant(id:string, diverted:Split, budget:number, round:number) {
     const account = this.accounts.get(id);
-    if (!account || account.grantUsed || account.suspended || budget<CABINET_GRANT) return;
+    if (!account || account.grantUsed || this.suspended(id) || budget<CABINET_GRANT) return;
     account.grantUsed = true;
     this.credit(account,diverted);
     account.agenda.progress(account);
@@ -278,12 +278,24 @@ export class PoliticalEconomy {
     }
   }
 
-  clearSuspensions() { for (const account of this.accounts.values()) account.suspended = false; }
+  expireSuspensions(now:number) {
+    let changed = false;
+    for (const account of this.accounts.values()) {
+      if (account.suspendedUntil===undefined || account.suspendedUntil>now) continue;
+      account.suspendedUntil = undefined;
+      changed = true;
+    }
+    return changed;
+  }
 
-  suspend(id:string) {
+  suspensionRemaining(id:string,now:number) {
+    return Math.max(0,Math.ceil(((this.accounts.get(id)?.suspendedUntil ?? now)-now)/1000));
+  }
+
+  suspend(id:string,until:number) {
     const account = this.accounts.get(id);
     if (account) {
-      account.suspended = true;
+      account.suspendedUntil = until;
       account.popularity = cap(account.popularity-20);
     }
   }
@@ -319,7 +331,7 @@ export class PoliticalEconomy {
       const account = this.accounts.get(id);
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
-      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !account.suspended,
+      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets);
     }
   }
@@ -327,9 +339,9 @@ export class PoliticalEconomy {
   view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
-    const {wallet,walletIncome,popularity,grantUsed,suspended} = account;
+    const {wallet,walletIncome,popularity,grantUsed} = account;
     return {
-      wallet,walletIncome,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
+      wallet,walletIncome,popularity,grantUsed,suspended:this.suspended(id),campaigned:account.campaignRound===round,
       missions:account.agenda.view(account),
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,

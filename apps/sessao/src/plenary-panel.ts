@@ -185,6 +185,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'afastar' : 'aprovar'}`;
       const progress = element<HTMLProgressElement>('vote-progress');
       updateProgress(progress,view.voted,Math.max(1,view.electorate));
+      if (view.isolationSeconds) {
+        element('clock-label').textContent = 'Isolamento';
+        const seconds = view.isolationSeconds;
+        clock.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+        clockChip.dataset.urgent = String(seconds<=10);
+      }
       if (!view.mandate || view.politics?.suspended) element('quorum').textContent = view.mandate ? 'Você está afastado da votação.' : 'Ex-parlamentar · Sem direito a voto.';
       const castVote = hearing?.vote ?? view.vote;
       const state = element('vote-state');

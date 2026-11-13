@@ -130,7 +130,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(honest).politics?.wallet).toBe(11);
 });
 
-test('campaign unlocks a hearing, then a wrong removal costs stability and the player can still trade', () => {
+test('campaign unlocks a hearing, then a wrong removal costs stability and isolates the player for sixty seconds', () => {
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
@@ -149,10 +149,17 @@ test('campaign unlocks a hearing, then a wrong removal costs stability and the p
   expect(view(honest).politics?.suspended).toBe(true);
   expect(view(honest).role).toBe('Parlamentar');
   match.politics(honest,{kind:'transfer',to:host.id,amount:1,clandestine:false},people,resumed+1);
-  expect(view(host).politics?.wallet).toBe(7);
+  expect(view(host).politics?.wallet).toBe(6);
+  expect(match.view(honest.id,ids,resumed).isolationSeconds).toBe(60);
+  expect(match.canHandleObjects(honest.id,resumed)).toBe(false);
+  match.advance(resumed+59_999);
+  expect(match.view(honest.id,ids,resumed+59_999).isolationSeconds).toBe(1);
+  match.advance(resumed+60_000);
+  expect(match.view(honest.id,ids,resumed+60_000).isolationSeconds).toBeUndefined();
+  expect(match.canHandleObjects(honest.id,resumed+60_000)).toBe(true);
   match.advance(resumed+NEGOTIATION_MS-50);
   match.vote(honest.id,'yes',resumed+NEGOTIATION_MS);
-  expect(view(honest).vote).toBeUndefined();
+  expect(view(honest).vote).toBe('yes');
 });
 
 test('rooms with at least six players may choose two infiltrators', () => {
