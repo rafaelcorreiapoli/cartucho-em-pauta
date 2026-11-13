@@ -7,8 +7,8 @@ import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -243,7 +243,14 @@ export class PersonalAgenda {
     }
     if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
-    if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
+    if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) {
+      if (kind!=='fatias' && kind!=='pizzada') return false;
+      const pizza = metrics.installedPizza?.();
+      const required = photoMissions[kind].target;
+      if (!pizza || pizza.slices<required || (kind==='pizzada' && !metrics.isScandalPizza?.(pizza.id))) return false;
+      const guests = this.targets.filter(person=>this.targetAvailable(kind,person.id) && !pizza.served.has(person.id));
+      if (guests.length<required) return false;
+    }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;

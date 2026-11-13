@@ -579,3 +579,38 @@ test('scandal missions require known evidence against another player and retire 
   expect(view('d').missions.completed.some(mission=>mission.kind==='escandalo')).toBe(false);
   expect(economy.publish('d',evidence)).toBeUndefined();
 });
+
+test('a pizza already served at the Cafezinho can support a mission without money for another',()=>{
+  const players:Player[] = ['a','b','c','d'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...npcs.snackVendor.interaction}));
+  const [host,...guests] = players;
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  const ids = new Set(players.map(player=>player.id));
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,undefined,id=>game.installedPizza(id));
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:event=>economy.recordGameplay(event)};
+  game.act(host,{kind:'talk',target:'snackVendor'},world);
+  game.act(host,{kind:'dialogue-choice',target:'products',token:game.view(host,world).dialogue?.token},world);
+  game.act(host,{kind:'shop-buy',target:'pizza',token:game.view(host,world).dialogue?.token},world);
+  const pizza = game.view(host,world).inventory.find(item=>item.kind==='pizza')!;
+  expect(economy.spend(host.id,6)).toBe(true);
+  economy.recordOfficialScandal();
+  players.forEach(player=>Object.assign(player,installationSites.pizza.point));
+  expect(game.act(host,{kind:'install',place:'pizza',item:pizza.id},world)).toBe('Objeto instalado.');
+  const view = ()=>economy.view(host.id,[],0,false,()=>true)!.missions;
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pizzada','fatias','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3);
+    return view().active.map(mission=>mission.kind);
+  };
+  expect(draw()).toEqual(['pizzada','fatias','cafe']);
+  expect(game.act(guests[0],{kind:'slice',item:pizza.id},world)).toBe('Fatia servida.');
+  expect(draw()).toEqual(['fatias','cafe','passeio']);
+  for (const guest of guests.slice(1)) expect(game.act(guest,{kind:'slice',item:pizza.id},world)).toBe('Fatia servida.');
+  expect(view().completed.some(mission=>mission.kind==='fatias')).toBe(true);
+  expect(economy.spend(host.id,economy.wallet(host.id))).toBe(true);
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+});

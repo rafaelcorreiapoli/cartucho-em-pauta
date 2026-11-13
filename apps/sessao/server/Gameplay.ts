@@ -193,6 +193,12 @@ export class Gameplay {
       (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
   }
 
+  installedPizza(id:string) {
+    const pizza = this.installations.get('pizza');
+    if (pizza?.owner.id!==id || !pizza.slices) return;
+    return {id:pizza.id,slices:pizza.slices,served:this.servings.get(pizza.id) ?? new Set<string>()};
+  }
+
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
 
   officeStock(id:string) {

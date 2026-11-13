@@ -5,14 +5,14 @@ import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
-import { PersonalAgenda } from './PersonalAgenda';
+import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
 
 type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number}>;
 
-type Account = {
+type Account = AgendaMetrics & {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -50,6 +50,7 @@ export class PoliticalEconomy {
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
+        isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
         npcHasCash:()=>[...this.npcIds].some(id=>this.wallet(id)>0),
         canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
         canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
@@ -387,9 +388,9 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:'portrait'|'vip',replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>) {
     for (const [id,account] of this.accounts) {
-      Object.assign(account,{hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }
