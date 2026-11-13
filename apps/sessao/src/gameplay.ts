@@ -1,7 +1,7 @@
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { foods } from './food';
-import type { DialogueView, NpcId } from './npcs';
+import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
 import type { Motion } from './map';
@@ -121,7 +121,7 @@ export const terminals = {
   cabinet:{point:stations.cabinet,title:'Mesa de Verbas',stamp:'Gabinete'},
   archive:{point:stations.archive,title:'Arquivo',storage:true},
   credentials:{point:stations.credentials,title:'Credenciamento',supply:'gift'},
-  treasury:{point:{x:500,y:494},title:'Tesouraria'},
+  treasury:{point:treasurer.interaction,title:treasurer.label},
   protocol:{point:stations.amendment,title:'Protocolo',file:true},
 } as const;
 export type Terminal = keyof typeof terminals;

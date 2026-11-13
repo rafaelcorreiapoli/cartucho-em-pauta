@@ -167,7 +167,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       if (state.locations.includes('treasury')) for (const item of state.inventory) {
         const amount = cashAmount(item);
-        if (amount) actions.push({label:`Entregar ${money(amount)} à Tesouraria`,icon:'wallet',
+        if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
           action:{kind:'deliver',place:'treasury',item:item.id}});
       }
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});

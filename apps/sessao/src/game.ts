@@ -2,7 +2,7 @@ import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, pr
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
-import { npcs } from './npcs';
+import { mapNpcs } from './npcs';
 import { binocularBonus } from './equipment';
 import { canReachObject, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
@@ -95,7 +95,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
       for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
-      for (const [id,npc] of Object.entries(npcs)) {
+      for (const [id,npc] of Object.entries(mapNpcs)) {
         if ('sprite' in npc) this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
       for (const [kind,{sprite}] of Object.entries(officeFurniture)) {
@@ -154,7 +154,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
-      this.npcViews = Object.entries(npcs).map(([id,npc])=>{
+      this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
         const art = 'character' in npc ? characterArt(npc.character) : undefined;
         const sprite = art
           ? this.add.sprite(npc.x,npc.y,art.sheet.key,art.frame+npc.direction*4).setTint(0xffd7a2)

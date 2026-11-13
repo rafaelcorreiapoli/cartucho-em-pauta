@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { npcs, snackBar } from './npcs';
+import { mapNpcs, npcs, snackBar } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import { roomActivities } from './room-activities';
 import { infirmary } from './medical';
@@ -83,7 +83,7 @@ export function drawMap(scene: Phaser.Scene) {
     }
   }
   for (const [x,y] of desks) {
-    if (!Object.values(npcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
+    if (!Object.values(mapNpcs).some(({counter})=>x===counter.x && y===counter.y)) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   const snackCounter = npcs.snackVendor.counter;
@@ -102,11 +102,7 @@ export function drawMap(scene: Phaser.Scene) {
     fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',color:'#fff4dc',
     backgroundColor:'#263a31aa',resolution:3,padding:{x:4,y:2},
   }).setOrigin(.5,0).setDepth(1);
-  const treasury = scene.add.text(500,481,'TESOURARIA',{
-    fontFamily:'system-ui',fontSize:'6px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
-    padding:{x:4,y:2},
-  }).setOrigin(.5,0).setDepth(1);
-  return [tribune,budgetDesk,treasury,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  return [tribune,budgetDesk,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

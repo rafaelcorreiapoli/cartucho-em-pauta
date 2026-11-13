@@ -12,6 +12,13 @@ export const npcs = {
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
+export const treasurer = {
+  name:'Tesoureiro', character:6, x:499, y:453, direction:0,
+  counter:{x:477,y:459}, interaction:{x:499,y:489}, label:'Tesouraria',
+} as const;
+
+export const mapNpcs = {...npcs,treasurer};
+
 export type NpcId = keyof typeof npcs;
 export type DialogueCondition = {
   wallet?:number;

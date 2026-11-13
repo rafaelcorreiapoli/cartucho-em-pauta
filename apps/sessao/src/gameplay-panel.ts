@@ -229,7 +229,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
-        if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar à Tesouraria','deliver','treasury');
+        if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach((option,index)=>{
           const control = button(option.label,()=>{

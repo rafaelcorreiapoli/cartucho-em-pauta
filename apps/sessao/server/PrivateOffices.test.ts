@@ -6,7 +6,7 @@ import { canStand, localPerception, wallBetween, type Player } from '../src/map'
 import { MAX_PLAYERS } from '../src/plenary';
 import { clearSegment, findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
-import { npcs } from '../src/npcs';
+import { npcs, treasurer } from '../src/npcs';
 import { INVENTORY_SLOTS, terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
 
 function atDoor(office:OfficeLayout,inside:boolean) {
@@ -246,7 +246,12 @@ test('the treasury redeems a physical briefcase exactly once',()=>{
   tick(4000);
   const cash = game.view(owner,world).nearby[0];
   act(owner,'collect',undefined,cash.id);
-  Object.assign(owner,terminals.treasury.point);
+  expect(act(owner,'deliver','treasury',cash.id)).toContain('Tesouraria');
+  expect(deposited).toBe(0);
+  Object.assign(owner,treasurer.interaction);
+  expect(canStand(owner.x,owner.y)).toBe(true);
+  expect(findRoute({x:140,y:146},treasurer.interaction).at(-1)).toEqual(treasurer.interaction);
+  expect(game.view(owner,world).locations).toContain('treasury');
   expect(act(owner,'deliver','treasury',cash.id)).toContain('entregues');
   expect(act(owner,'deliver','treasury',cash.id)).toBe('Objeto indisponível.');
   expect(deposited).toBe(3);
