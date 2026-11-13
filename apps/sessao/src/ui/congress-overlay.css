@@ -252,7 +252,8 @@
 }
 #congress-apps > [aria-label="Aplicativos"] { grid-row: 1; }
 #congress-apps > [aria-label="Mochila"] { grid-row: 2; }
-.congress-app-toggle { border-radius: 28%; }
+.congress-app-toggle { position: relative; border-radius: 28%; }
+#congress-apps > button .slot-key { inset: 4px auto auto 5px; font-size: 11px; }
 .congress-app-toggle .hud-glyph { width: 49%; height: 49%; color: #e9dfb5; }
 .congress-app-toggle svg[fill="currentColor"] { fill: currentColor; stroke: none; }
 .congress-app-panel {
