@@ -82,8 +82,8 @@
   position: absolute;
   inset: 5px auto 4px 0;
   width: 2px;
-  background: linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent);
-  filter: drop-shadow(0 0 4px #60e1af9c);
+  background: var(--hud-edge-gradient, linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent));
+  filter: drop-shadow(0 0 4px var(--hud-edge-glow, #60e1af9c));
 }
 #agenda-dock .react-agenda h2 { font-size: 15px; }
 #agenda-dock .agenda-icon {
@@ -305,13 +305,23 @@
   margin-inline-start: auto;
   pointer-events: none;
 }
-.incident-panel h2, .incident-fire p {
+.incident-panel {
+  --hud-edge-gradient: linear-gradient(transparent,#ff776b 23%,#e24640 76%,transparent);
+  --hud-edge-glow: #ff574b9c;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .incident-panel[data-paused="false"]::before { animation: incident-pulse 1.25s ease-in-out infinite alternate; }
+}
+@keyframes incident-pulse {
+  from { opacity: .4; }
+  to { opacity: 1; }
+}
+.incident-fire p {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
 }
-.incident-panel h2 { margin-bottom: 9px; font-size: 14px; }
 .incident-fire {
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
