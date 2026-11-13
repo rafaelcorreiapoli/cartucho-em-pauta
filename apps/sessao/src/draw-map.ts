@@ -91,8 +91,10 @@ export function drawMap(scene: Phaser.Scene) {
     scene.add.image(snackCounter.x+10+index*12,snackCounter.y+7,`item-${kind}`)
       .setDisplaySize(11,11).setDepth(snackCounter.y+21);
   }
-  for (const {frame,area:[x,y,w,h]} of furnishings) {
-    prop(frame,x,y,w,h,y+h);
+  for (const furnishing of furnishings) {
+    const [x,y,w,h] = furnishing.area;
+    if (furnishing.texture) scene.add.image(x,y,furnishing.texture).setOrigin(0).setDisplaySize(w,h).setDepth(y+h);
+    else if (furnishing.frame!==undefined) prop(furnishing.frame,x,y,w,h,y+h);
   }
 
   const tribune = scene.add.text(570,591,'TRIBUNA',{

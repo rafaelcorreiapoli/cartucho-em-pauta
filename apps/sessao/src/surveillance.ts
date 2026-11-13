@@ -12,7 +12,7 @@ export const isSpyProduct = (kind:unknown):kind is SpyProduct => typeof kind==='
 export const spyRules = {install:5000,inspect:3000,remove:3000,recover:3000,range:70,reach:19,limit:2,sample:250,hold:1400} as const;
 const both = ['wiretap','spyCamera'] as const;
 export const hideouts = [
-  {id:'coffee',name:'Bebedouro',room:'Cafezinho',x:247,y:243,accepts:both},
+  {id:'coffee',name:'Cafeteira',room:'Cafezinho',x:247,y:243,accepts:both},
   {id:'press',name:'Vaso',room:'Sala de Imprensa',x:933,y:244,accepts:both},
   {id:'committee',name:'Mesa',room:'Comissões',x:788,y:352,accepts:both},
   {id:'meeting',name:'Mesa',room:'Antecâmara',x:307,y:66,accepts:['wiretap'] as readonly SpyDevice[]},

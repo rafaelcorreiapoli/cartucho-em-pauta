@@ -55,7 +55,7 @@ export const furnishings = [
   {frame:3, area:[651,554,30,40], footprint:9},
   {frame:3, area:[301,28,22,28], footprint:7},
   {frame:4, area:[18,192,25,30], footprint:10},
-  {frame:5, area:[239,208,16,33], footprint:10},
+  {texture:'coffee-maker', area:[236,211,22,30], footprint:10},
   {frame:4, area:[651,36,30,37], footprint:10},
   {frame:4, area:[896,29,32,39], footprint:10},
   {frame:3, area:[922,210,22,31], footprint:9},
@@ -64,7 +64,7 @@ export const furnishings = [
   {frame:0, area:[706,437,183,29], footprint:10},
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
-] satisfies {frame:number; area:Rect; footprint:number}[];
+] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
 const obstacles = [
   ...walls,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{

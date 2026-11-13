@@ -455,7 +455,7 @@ button.equipped-gear-tile { cursor: pointer; }
 #world #nearby-items .station-key { min-width: 17px; min-height: 17px; font-size: 10px; }
 #world #hud-notices {
   position: fixed;
-  inset: calc(var(--strip-height) + 10px) auto auto max(12px, env(safe-area-inset-left));
+  inset: calc(var(--strip-height) + 10px) max(12px, env(safe-area-inset-right)) auto auto;
   transform: none;
   width: min(280px,35vw);
   margin: 0;
@@ -731,8 +731,7 @@ img.market-art {
 #agenda-dock {
   position: absolute;
   z-index: 3;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
+  inset: auto auto 12px max(clamp(14px, 2vw, 32px), env(safe-area-inset-left));
   width: min(290px, 43vw);
   box-sizing: border-box;
   padding: 12px;
