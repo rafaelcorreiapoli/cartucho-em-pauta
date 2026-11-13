@@ -71,3 +71,40 @@
   background: linear-gradient(90deg,#0a1712eb,#0a171200);
 }
 #world #hud-notices { inset: 88px var(--hud-edge) auto auto; }
+
+#command-deck #gameplay-tools { display: none; }
+#congress-apps { position: relative; color: var(--color-hud-ink); }
+.congress-app-toggle, .congress-app-panel button {
+  color: inherit;
+  cursor: pointer;
+}
+.congress-app-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #78977c;
+  border-radius: 10px;
+  background: linear-gradient(#1e3829,#102018);
+}
+.congress-app-toggle .hud-glyph { width: 21px; height: 21px; color: var(--color-hud-budget); }
+.congress-app-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(330px, calc(100vw - 32px));
+  border: 1px solid #6d9476;
+  background: linear-gradient(155deg,#192e23,#0e1d16 72%);
+  box-shadow: 0 12px 32px #0008;
+}
+.congress-app-panel header button { background: none; border: 0; }
+.congress-app {
+  border: 1px solid var(--color-hud-border);
+  background: #23413469;
+}
+.congress-app:hover, .congress-app-toggle[aria-expanded="true"] {
+  border-color: var(--color-hud-budget);
+  background: #2b4a37;
+}
+.congress-app .hud-glyph { flex: none; color: var(--color-hud-budget); }
+.congress-app kbd { font-size: 10px; color: var(--color-hud-muted); }

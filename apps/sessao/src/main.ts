@@ -1,6 +1,7 @@
 import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
+import { mountAppLauncher } from './ui/app-launcher';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
@@ -279,6 +280,7 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
+    const appLauncher = mountAppLauncher();
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -334,6 +336,7 @@ async function connect(join: () => Promise<Room>) {
       }
       suppressXpEffect = false;
       progression.render(view);
+      appLauncher.render();
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
@@ -404,6 +407,7 @@ async function connect(join: () => Promise<Room>) {
       election.destroy();
       political.destroy();
       hud.destroy();
+      appLauncher.destroy();
       reactHud.destroy();      results.destroy();
       projectPicker.destroy();
       mailButton.onclick = null;
