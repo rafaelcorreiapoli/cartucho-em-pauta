@@ -582,3 +582,30 @@ test('an approved project with a fractional deficit applies the same rounded pen
   expect(deficitStabilityLoss(outcome.deficit)).toBe(7);
   expect(outcome.applied.stability).toBe(Math.floor(22*24.7/28)-7);
 });
+
+test('the last ballot does not redraw a voting mission from an already credited vote',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  Reflect.set(match,'round',2);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votacao','apoio','cafe','passeio','selfieSolo','leitura']);
+  match.refreshAgendaEligibility();
+  const missions = ()=>match.view(host.id,ids,0).politics!.missions;
+  expect(missions().active.map(m=>m.kind)).toContain('votacao');
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'no',NEGOTIATION_MS+1);
+  expect(missions().completed.map(m=>m.kind)).toEqual(['votacao']);
+  expect(missions().active.map(m=>m.kind)).toContain('apoio');
+  expect(missions().active.map(m=>m.kind)).not.toContain('votacao');
+  match.vote(host.id,'yes',NEGOTIATION_MS+2);
+  expect(missions().completed.map(m=>m.kind)).toEqual(['votacao','apoio']);
+  expect(missions().active.map(m=>m.kind)).not.toContain('apoio');
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votacao','apoio','cafe']);
+  match.refreshAgendaEligibility();
+  expect(missions().active.map(m=>m.kind)).toContain('votacao');
+  expect(missions().active.map(m=>m.kind)).toContain('apoio');
+});

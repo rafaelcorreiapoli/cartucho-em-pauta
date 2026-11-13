@@ -321,7 +321,7 @@ export class PoliticalEconomy {
 
   recordVote(id:string, first:boolean, firstSupport:boolean) {
     const account = this.accounts.get(id);
-    if (account) account.agenda.progress(account,{votacao:Number(first),apoio:Number(firstSupport)});
+    if (account) account.agenda.recordVote(account,first,firstSupport);
   }
 
   billResult(votes:Map<string,Vote>, passed:boolean, popular:boolean) {
@@ -402,6 +402,7 @@ export class PoliticalEconomy {
   }
 
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set()) {
+    if (this.agendaRound!==round) for (const account of this.accounts.values()) account.agenda.resetBallot();
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
     const eligiblePayers = () => [...availableTargets].filter(id=>

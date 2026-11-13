@@ -3,6 +3,7 @@ import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
 import {missionReward} from '../politics';
 import type {Player} from '../map';
+import {NEGOTIATION_MS} from '../plenary';
 import {terminals} from '../gameplay';
 import {createHudModel} from './hud-model';
 
@@ -136,4 +137,25 @@ test('replayed pizza installation leaves the HUD unchanged until a valid Pizzada
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('pizzada').xp);
   expect(agendaUpdates).toBe(1);
+});
+
+test('the HUD replaces a credited voting mission without offering it again on the last ballot',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(player.id,[player],0,()=>0);
+  Reflect.set(match,'round',2);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votacao','apoio','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  match.advance(NEGOTIATION_MS);
+  const hud = createHudModel();
+  const render = ()=>hud.render(match.view(player.id,[player.id],NEGOTIATION_MS+1));
+  render();
+  expect(hud.agenda.get()?.active.map(mission=>mission.kind)).toContain('votacao');
+  match.vote(player.id,'no',NEGOTIATION_MS+1);
+  render();
+  expect(hud.agenda.get()?.recent.map(mission=>mission.kind)).toContain('votacao');
+  expect(hud.agenda.get()?.active.map(mission=>mission.kind)).not.toContain('votacao');
+  expect(hud.agenda.get()?.active.map(mission=>mission.kind)).toContain('apoio');
 });

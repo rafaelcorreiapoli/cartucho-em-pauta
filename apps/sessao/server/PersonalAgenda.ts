@@ -88,6 +88,18 @@ export class PersonalAgenda {
   private npcCount = 0;
   private cannotVote = false;
   private ballotsLeft = 3;
+  private votedThisBallot = false;
+  private supportedThisBallot = false;
+
+  resetBallot() {
+    this.votedThisBallot = this.supportedThisBallot = false;
+  }
+
+  recordVote(metrics:AgendaMetrics, first:boolean, firstSupport:boolean) {
+    this.votedThisBallot ||= first;
+    this.supportedThisBallot ||= firstSupport;
+    this.progress(metrics,{votacao:Number(first),apoio:Number(firstSupport)});
+  }
   private targets:readonly Contact[] = [];
   private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
@@ -173,7 +185,8 @@ export class PersonalAgenda {
       if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
     } else if (players>humans) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
-      return !this.cannotVote && this.ballotsLeft>=remaining;
+      const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
+      return !this.cannotVote && this.ballotsLeft-Number(consumed)>=remaining;
     }
     return !this.cannotVote || !['protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
