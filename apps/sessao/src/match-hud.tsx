@@ -1,3 +1,4 @@
+import {fireOptions,fireSites} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountNotices } from './ui/notices';
@@ -19,7 +20,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
+type FieldAction = {kind:'fire'; option:{kind:'ignite'|'extinguish';site:number}} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -169,6 +170,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
     const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
+    if (state && player) {
+      const option = fireOptions(player,view?.fire,view?.sabotageFireSite);
+      if (option) actions.push({label:option.label,icon:'alert',action:{kind:'fire',option}});
+    }
     const channel = state?.officeChannel;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
@@ -413,6 +418,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
             view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : element('bill').textContent ?? '',true);
         }
+        if (view.fire && !previous.fire) notify('Incêndio',fireSites[view.fire.site].name,true);
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
         if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
         if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);

@@ -112,7 +112,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | POL-16 | Vitória dos Infiltrados por colapso | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
 | POL-17 | Vitória dos Parlamentares por sobrevivência até o fim | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
 | POL-18 | Vitória dos Parlamentares quando todos os Infiltrados perdem mandato | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
-| POL-19 | Efeitos de crises e projetos sobre a Estabilidade | PARCIAL | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | Projetos alteram estabilidade. Falta sistema de crises dinâmicas. | Alta |
+| POL-19 | Efeitos de crises e projetos sobre a Estabilidade | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
 | POL-20 | Não revelar facção por comportamentos econômicos suspeitos | IMPLEMENTADO | PlenaryMatch.ts, PlenaryMatch.test.ts, PoliticalEconomy.ts, Gameplay.ts; PR 8, 14, 15 | — | — |
 
 ## ELE
@@ -513,20 +513,20 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | ID | Funcionalidade | Estado | Evidência | Observação | Complexidade |
 |---|---|---|---|---|---|
 | CRI-01 | Estabilidade Institucional como barra principal | IMPLEMENTADO | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | — | — |
-| CRI-02 | Crises dinâmicas e espontâneas | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta sistema de ocorrência e ciclo de vida de crises. | Alta |
-| CRI-03 | Incêndios | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta incêndio no mapa. | Alta |
+| CRI-02 | Crises dinâmicas e espontâneas | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-03 | Incêndios | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
 | CRI-04 | Falhas elétricas/técnicas | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta falha técnica dinâmica. | Alta |
-| CRI-05 | Sabotagens deliberadas | PARCIAL | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Infiltrado pode fraudar projeto. Falta sabotagem física que inicie crises. | Alta |
-| CRI-06 | Perda gradual de Estabilidade durante crises | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta dano gradual à estabilidade por crise ativa. | Alta |
-| CRI-07 | Reparos e resolução presencial de crises | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta reparo presencial de crise. | Alta |
-| CRI-08 | Uso de extintores | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta extintor funcional. | Média |
-| CRI-09 | Projetos que reduzem frequência de crises | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta efeito de projeto sobre frequência de crises. | Alta |
-| CRI-10 | Projetos que alteram recursos e riscos | PARCIAL | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Projetos alteram recursos. Falta risco de crise como efeito. | Alta |
-| CRI-11 | Pausa ou tratamento especial das crises durante Plenário | PENDENTE | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Falta regra de pausa de crises em Plenário. | Média |
-| CRI-12 | HUD de origem e intensidade das perdas | PARCIAL | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | HUD mostra estabilidade e efeitos de projetos. Falta fonte, duração e intensidade de perdas por crise. | Média |
+| CRI-05 | Sabotagens deliberadas | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-06 | Perda gradual de Estabilidade durante crises | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-07 | Reparos e resolução presencial de crises | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-08 | Uso de extintores | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-09 | Projetos que reduzem frequência de crises | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-10 | Projetos que alteram recursos e riscos | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-11 | Pausa ou tratamento especial das crises durante Plenário | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
+| CRI-12 | HUD de origem e intensidade das perdas | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
 | CRI-13 | Relação entre déficit público e Estabilidade | IMPLEMENTADO | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | — | — |
 | CRI-14 | Efeitos públicos de projetos aprovados | IMPLEMENTADO | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | — | — |
-| CRI-15 | Infiltrados explorando crises e disputas políticas | PARCIAL | PlenaryMatch.ts, plenary.ts, hud.tsx; PR 8, 14 | Infiltrados podem fraudar e negociar. Falta explorar crises dinâmicas. | Alta |
+| CRI-15 | Infiltrados explorando crises e disputas políticas | IMPLEMENTADO | Fire.ts, fire.ts, Fire.test.ts, fire.test.ts, Documents.multiplayer.test.ts | Incêndio espontâneo ou provocado, extintor fixo no mapa, perda gradual e pausa no Plenário. Teto do Cafezinho aprovado adia novas ocorrências. | — |
 
 ## UI
 

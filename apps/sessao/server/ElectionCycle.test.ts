@@ -1,3 +1,4 @@
+import {fireRules,fireSites} from '../src/fire';
 import { expect, test } from 'bun:test';
 import { ELECTION_RULES as rules } from '../src/elections';
 import { stations, NEGOTIATION_MS, BALLOT_MS } from '../src/plenary';
@@ -80,9 +81,13 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   // Break the initial tie so the two infiltrators finish last in succession.
   for (const player of humans.slice(2)) world.deposit!(player.id,4);
   world.deposit!('1',1);
+  match.advance(fireRules.firstAfter);
+  const site = view('2',fireRules.firstAfter).fire!.site;
+  expect(match.actOnFire({...humans[2],...fireSites[site].extinguisher},'extinguish',site,fireRules.firstAfter)).toBe('Incêndio apagado.');
   match.advance(NEGOTIATION_MS);
   match.vote('2','yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
+  match.advance(rules.interval-1);
   const before = view('2',rules.interval);
   match.advance(rules.interval);
   const after = view('2',rules.interval);

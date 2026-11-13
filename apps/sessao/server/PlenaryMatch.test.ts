@@ -1,3 +1,4 @@
+import {fireRules,fireSites} from '../src/fire';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
@@ -250,4 +251,24 @@ test('validated filings schedule distinct successive ballots, with the standard 
   expect(view(NEGOTIATION_MS+BALLOT_MS*2).outcomes.map(result=>result.project)).toEqual([2,0]);
   match.advance(NEGOTIATION_MS*2+BALLOT_MS*2);
   expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
+});
+
+test('only infiltrators can start a fire, and nearby parliamentarians can put it out',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const now = fireRules.firstAfter/2;
+  match.advance(now);
+  const view = (player:Player, at=now) => match.view(player.id,ids,at);
+  const site = view(traitor).sabotageFireSite!;
+  expect(site).toBeDefined();
+  expect(view(honest).sabotageFireSite).toBeUndefined();
+  expect(match.actOnFire({...honest,...fireSites[site]},'ignite',site,now)).toBeUndefined();
+  expect(match.actOnFire(traitor,'ignite',site,now)).toBeUndefined();
+  expect(match.actOnFire({...traitor,...fireSites[site]},'ignite',site,now)).toBe('Incêndio provocado.');
+  expect(view(honest).fire?.site).toBe(site);
+  match.advance(now+fireRules.tick);
+  expect(view(honest,now+fireRules.tick).stability).toBe(48-fireRules.damage);
+  expect(match.actOnFire(honest,'extinguish',site,now+fireRules.tick)).toBeUndefined();
+  expect(match.actOnFire({...honest,...fireSites[site].extinguisher},'extinguish',site,now+fireRules.tick)).toBe('Incêndio apagado.');
+  expect(view(honest,now+fireRules.tick).fire).toBeUndefined();
 });

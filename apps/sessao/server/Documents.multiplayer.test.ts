@@ -1,3 +1,4 @@
+import {fireRules,fireSites} from '../src/fire';
 import {expect,test} from 'bun:test';
 import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
@@ -199,6 +200,22 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='ballot');
     expect(views.get(bia.sessionId)?.project).toBe(1);
+
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
+    const fire = Reflect.get(match,'fire');
+    Reflect.set(fire,'clock',fireRules.firstAfter/2);
+    const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;
+    const firefighter = rooms.find(peer=>peer!==infiltrator)!;
+    await wait(()=>views.get(infiltrator.sessionId)?.sabotageFireSite===0);
+    expect(views.get(firefighter.sessionId)?.sabotageFireSite).toBeUndefined();
+    move(infiltrator,fireSites[0]);
+    infiltrator.send('fire-action',{kind:'ignite',site:0});
+    await wait(()=>views.get(firefighter.sessionId)?.fire?.site===0);
+    move(firefighter,fireSites[0].extinguisher);
+    firefighter.send('fire-action',{kind:'extinguish',site:0});
+    await wait(()=>feedback.get(firefighter.sessionId)==='Incêndio apagado.');
+    await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

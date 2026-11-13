@@ -225,6 +225,7 @@ async function connect(join: () => Promise<Room>) {
     },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='fire') { joined.send('fire-action',action.option); return; }
       if (action.kind==='spy') { joined.send('spy',action.option); return; }
       if (action.kind==='edit-document') {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);

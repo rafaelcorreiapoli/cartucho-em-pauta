@@ -1,3 +1,4 @@
+import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
@@ -90,6 +91,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private textResolution = 3;
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
+    private flames?:Phaser.GameObjects.Text;
+    private extinguishers:Phaser.GameObjects.Text[] = [];
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -334,6 +337,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         manual = keys.size>0;
       }
+      if (!this.extinguishers.length) {
+        this.extinguishers = fireSites.map(({extinguisher:{x,y}})=>this.add.text(x,y,'🧯',{fontSize:'16px',resolution:3})
+          .setOrigin(.5,.8).setDepth(y));
+      }
+      const fire = plenaryView?.fire;
+      if (fire) {
+        const {x,y} = fireSites[fire.site];
+        this.flames ??= this.add.text(x,y,'🔥',{fontSize:'27px',resolution:3}).setOrigin(.5,.8);
+        this.flames.setPosition(x,y).setDepth(y+1).setVisible(!fire.paused)
+          .setScale(1+Math.sin(time/145)*.06);
+      } else this.flames?.setVisible(false);
       this.renderGroundItems();
       this.renderDecorations();
       const officeViews = plenaryView?.gameplay?.offices;

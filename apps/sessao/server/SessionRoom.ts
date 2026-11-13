@@ -223,6 +223,13 @@ export class SessionRoom extends Room {
       const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
       if (result) client.send('gameplay-feedback',result);
     });
+    this.onMessage('fire-action',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
+          !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='ignite' && raw.kind!=='extinguish')) return;
+      const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime);
+      if (result) client.send('gameplay-feedback',result);
+    });
     this.onMessage('gameplay',(client, raw:unknown) => {
       const action = readGameplayAction(raw);
       const player = this.players.get(client.sessionId)?.player;

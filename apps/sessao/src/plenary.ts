@@ -1,3 +1,4 @@
+import type {FireView} from './fire';
 import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
@@ -20,9 +21,9 @@ export const stations = {
 export type Station = keyof typeof stations;
 export const STATION_RADIUS = 23;
 export const bills = [
-  {name:'Auxílio Churrasco', description:'Cria um auxílio para financiar churrascos.', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8}},
-  {name:'Wi-Fi na Praça', description:'Instala internet pública gratuita em praças.', yes:{stability:16,budget:-22}, no:{stability:-18,budget:6}},
-  {name:'Teto do Cafezinho', description:'Limita os gastos públicos com cafezinho.', yes:{stability:-12,budget:23}, no:{stability:12,budget:-19}},
+  {name:'Auxílio Churrasco', description:'Cria um auxílio para financiar churrascos.', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8},fireSafety:false},
+  {name:'Wi-Fi na Praça', description:'Instala internet pública gratuita em praças.', yes:{stability:16,budget:-22}, no:{stability:-18,budget:6},fireSafety:false},
+  {name:'Teto do Cafezinho', description:'Limita os gastos com cafezinho e aumenta o intervalo entre incêndios.', yes:{stability:-12,budget:23}, no:{stability:12,budget:-19},fireSafety:true},
 ] as const;
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];
@@ -38,6 +39,6 @@ export type PlenaryView = {
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; vote?:Vote; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
-  isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
+  fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string;
   yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string;
 };

@@ -1,3 +1,4 @@
+import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
 import type { Player } from './map';
 import { agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
@@ -152,6 +153,9 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
         '';
+      const crisis = element('active-fire');
+      crisis.hidden = !view.fire;
+      crisis.textContent = view.fire ? `🔥 ${fireSites[view.fire.site].name} · ${view.fire.remaining} s · ${view.fire.paused ? 'Pausado' : `−${view.fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`}` : '';
       element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Afastamento' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');

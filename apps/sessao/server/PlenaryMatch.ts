@@ -1,3 +1,5 @@
+import {Fire} from './Fire';
+import {canActOnFire,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
@@ -19,6 +21,7 @@ export class PlenaryMatch {
   phase: Phase = 'lobby';
   private round = 0;
   private project?:number;
+  private readonly fire = new Fire();
   private readonly agenda = new Set<number>();
   private get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
@@ -125,6 +128,7 @@ export class PlenaryMatch {
     for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.started = now;
+    this.fire.reset(now);
     this.economy.reset(contacts,random);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -380,8 +384,22 @@ export class PlenaryMatch {
     };
   }
 
+  actOnFire(player:Player, action:FireAction, site:number, now:number) {
+    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site,action)) return;
+    if (action==='extinguish') return this.fire.extinguish(site) ? 'Incêndio apagado.' : undefined;
+    if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
+  }
+
   advance(now:number) {
     if (!this.running) return;
+    const damage = this.fire.advance(now,this.phase==='negotiation');
+    if (damage) {
+      this.stability = clamp(this.stability-damage);
+      if (!this.stability) {
+        this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O incêndio derrubou a estabilidade.');
+        return;
+      }
+    }
     if (this.economy.expireSuspensions(now)) this.refreshAgendaEligibility();
     if (now>=this.started+rules.matchDuration) {
       this.finish(this.stability>0 ? 'Parlamentar' : 'Infiltrado','O tempo da sessão terminou.');
@@ -430,6 +448,7 @@ export class PlenaryMatch {
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
     const balance = this.budget+Math.min(0,impact.budget);
+    if (passed && bills[this.projectIndex].fireSafety) this.fire.increaseSafety();
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
     this.budget = Math.max(0,Math.round(balance*10)/10);
@@ -475,6 +494,8 @@ export class PlenaryMatch {
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,!this.hearingUsed && this.canVote(id),id => this.canVote(id)) : undefined,
+      fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
+      sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
