@@ -406,7 +406,7 @@ export class PoliticalEconomy {
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
-      account.canReceivePayments = required=>eligiblePayers().filter(payer=>payer!==id).length>=required;
+      Object.assign(account,{canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets,availableTargets);
     }
