@@ -240,6 +240,11 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
 
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
+    // A new command token does not make an already filed item available again.
+    move(alice,stations.amendment);
+    alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2120});
+    await wait(()=>feedback.get(alice.sessionId)==='O objeto não está com você.');
+    expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     const fire = Reflect.get(match,'fire');
     Reflect.set(fire,'clock',fireRules.firstAfter/2);
     const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;
