@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { CSSProperties, FormEvent } from 'react';
-import { ELECTION_RULES, type ElectionAction } from './elections';
+import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
 import type { Player } from './map';
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
 import { money } from './politics';
@@ -9,9 +9,45 @@ import { money } from './politics';
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const actionButtons = ['advertise','speech','interview','object'] as const;
 
+export function ElectionSummary({rank,candidate,atRisk,remaining}:{
+  rank:number; candidate?:ElectionView['polls'][number]; atRisk:boolean; remaining:number;
+}) {
+  const trend = candidate?.trend ?? 0;
+  return <>
+    <svg className="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>
+    <span className="election-summary"><span id="current-office">Renovação de Mandato</span>
+      <strong id="election-position">{candidate && `${rank+1}º · ${candidate.estimate}%${atRisk ? ' · Em risco' : ''}${trend ? ` · ${trend>0 ? '+' : ''}${trend} pp` : ''}`}</strong>
+    </span>
+    <span className="election-clock" hidden={!remaining}><small className="sr-only">Renovação em</small>
+      <strong id="election-timer">{Math.floor(remaining/60)}:{String(remaining%60).padStart(2,'0')}</strong>
+    </span>
+  </>;
+}
+
+function ElectionCycle({invested,result}:{invested?:number;result?:ElectionView['result']}) {
+  const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
+  return <>
+    <div className="electoral-metrics">
+      <div><span><button className="resource-help profile-help" type="button" aria-label="Investimento na campanha"
+        data-help="Total que você já gastou na campanha deste ciclo."><svg className="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span>
+        <strong id="election-wallet">{invested===undefined ? '—' : money(invested)}</strong></div>
+    </div>
+    {result && <details id="election-result" key={result.cycle}>
+      <summary>Renovação {result.cycle}</summary>
+      <p>{eliminated && `${eliminated} perdeu o mandato. `}
+        {!!result.expectedSalary && `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).`}
+      </p>
+    </details>}
+  </>;
+}
+
 export function createElectionPanel(id:string, send:(action:ElectionAction) => void, hasVoice:()=>boolean) {
   const dock = el<HTMLDetailsElement>('election-dock');
   const notice = el('electoral-notice');
+  const summaryRoot = createRoot(dock.querySelector('summary')!);
+  let summaryKey = '';
+  const cycleRoot = createRoot(el('election-cycle'));
+  let cycleKey = '';
   let view:PlenaryView | undefined;
   let own:Player | undefined;
   let lastResult = 0;
@@ -85,18 +121,19 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       const race = election.polls;
       const rank = race?.findIndex(candidate => candidate.id===id) ?? -1;
       const candidate = rank>=0 ? race?.[rank] : undefined;
-      el('current-office').textContent = 'Renovação de Mandato';
-      el('election-position').textContent = candidate ? `${rank+1}º · ${candidate.estimate}%${rank===race.length-1 && race.length>ELECTION_RULES.minimumMandates ? ' · Em risco' : ''}${candidate.trend ? ` · ${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : ''}` : '';
+      const summary = {rank,candidate,atRisk:rank===race.length-1 && race.length>ELECTION_RULES.minimumMandates,
+        remaining:view.phase==='finished' ? 0 : remaining};
+      const nextSummaryKey = JSON.stringify(summary);
+      if (nextSummaryKey!==summaryKey) {
+        summaryKey = nextSummaryKey;
+        summaryRoot.render(<ElectionSummary {...summary}/>);
+      }
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
-      const timer = el('election-timer');
-      timer.textContent = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
-      timer.parentElement!.hidden = view.phase==='finished' || remaining===0;
-      el('election-wallet').textContent = personal ? money(personal.invested) : '—';
-      el('election-result').hidden = !result;
-      el('election-result-title').textContent = result ? `Renovação ${result.cycle}` : 'Última renovação';
-      el('election-result-detail').textContent = result ?
-        (result.eliminated ? `${result.offices.find(person=>person.id===result.eliminated)?.name} perdeu o mandato. ` : '')+
-        (result.expectedSalary ? `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).` : '') : '';
+      const nextCycleKey = JSON.stringify([personal?.invested,result]);
+      if (nextCycleKey!==cycleKey) {
+        cycleKey = nextCycleKey;
+        cycleRoot.render(<ElectionCycle invested={personal?.invested} result={result}/>);
+      }
       if (result && result.cycle!==lastResult) {
         lastResult = result.cycle;
         if (!campaign.open) dock.open = false;
@@ -139,6 +176,8 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       campaign.close();
       campaignRoot.unmount();
       pollsRoot.unmount();
+      summaryRoot.unmount();
+      cycleRoot.unmount();
       openCampaign.onclick = null;
       for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = null;
     },

@@ -153,15 +153,9 @@
           <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
           <div id="congress-dock" class="hud-module"></div>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-            <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small class="sr-only">Renovação em</small><strong id="election-timer"></strong></span></summary>
+            <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
             <div class="hud-panel politics-content">
-              <div class="electoral-metrics">
-                <div><span><button class="resource-help profile-help" type="button" aria-label="Investimento na campanha" data-help="Total que você já gastou na campanha deste ciclo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span><strong id="election-wallet"></strong></div>
-              </div>
-              <details id="election-result" hidden>
-                <summary id="election-result-title">Última renovação</summary>
-                <p id="election-result-detail"></p>
-              </details>
+              <div id="election-cycle"></div>
               <section aria-label="Pesquisa eleitoral">
                 <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
                 <div id="election-polls"></div>
