@@ -12,8 +12,8 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
 }
 
 const quickActions = [
-  ['g','#open-surveillance'], ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['v','#voice-toggle'],
-  ['n','#trade-dock > summary'], ['b','#politics-dock > summary'],
+  ['g','#open-surveillance'], ['e','#open-equipment'], ['i','#open-attributes'], ['c','#open-phone'], ['u','#open-mail'], ['v','#voice-toggle'],
+  ['n','#trade-dock > summary'], ['j','#politics-dock > summary'],
   ['p','#election-dock > summary'],
   ['y','[data-vote="yes"]'], ['r','[data-vote="no"]'],
 ] as const;

@@ -21,3 +21,8 @@ export function readVoiceSignal(value: unknown): VoiceSignal | undefined {
     }
   }
 }
+
+export function showsSpeakerIdentity(route:readonly [string,number,boolean?,boolean?]) {
+  const [,volume,local,broadcast] = route;
+  return volume>0 && local!==false && !broadcast;
+}

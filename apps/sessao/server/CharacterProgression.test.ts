@@ -29,7 +29,9 @@ test('attribute requests cannot be replayed, forged or carried across matches',(
   economy.recordGameplay({...worldEvent,type:'filed',at:1,item:1,kind:'document'});
   economy.recordGameplay({...worldEvent,type:'filed',at:1,item:1,kind:'document'});
   economy.recordGameplay({...worldEvent,type:'money-pocketed',at:2,item:2,kind:'briefcase'});
-  economy.recordActivity('a','cafe');
+  const coffee = {type:'coffee-drunk',...worldEvent,at:1} as const;
+  economy.recordGameplay(coffee);
+  economy.recordGameplay(coffee);
   expect(view()).toMatchObject({xp:110,available:1});
   expect(view('b')).toMatchObject({xp:0,available:0});
   const request = {attribute:'hp',matchId:firstMatch,revision:0} as const;

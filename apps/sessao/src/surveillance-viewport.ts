@@ -27,6 +27,11 @@ export function createSurveillanceViewport(parent:HTMLElement) {
       for (const [kind,item] of Object.entries(officeFurniture)) this.load.image(`furniture-${kind}`,assets+item.sprite);
       this.load.image(officeFixtures.safe.texture,assets+'gabinete-cofre.webp');
       this.load.image(officeFixtures.cabinet.texture,assets+'gabinete-armario.webp');
+      this.load.image('infirmary-stretcher',assets+'maca-enfermaria.webp');
+      this.load.image('infirmary-doctor',assets+'drauzio-varella.webp');
+      this.load.image('technical-shelf',assets+'estante-apoio-tecnico.webp');
+      this.load.image('snack-counter',assets+'balcao-lanchonete.webp');
+      this.load.image('coffee-maker',assets+'cafeteira.webp');
       this.load.spritesheet('office',assets+'office-hd.png',{frameWidth:192,frameHeight:112});
     }
 

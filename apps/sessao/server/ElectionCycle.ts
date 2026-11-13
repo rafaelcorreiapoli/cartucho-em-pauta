@@ -44,6 +44,8 @@ export class ElectionCycle {
   addDeputy(id:string) { this.paidDeputies.add(id); }
 
   private noise() { return (this.random()-.5)*4; }
+  get currentCycle() { return this.cycle; }
+
   get eliminated() { return this.result?.eliminated; }
   office(id:string) { return this.people.get(id)?.office; }
   open(now:number) { return this.cycle>rules.cycles || now<this.due; }
@@ -61,6 +63,11 @@ export class ElectionCycle {
   invest(id:string, amount:number, spend:(amount:number)=>boolean) {
     const person = this.people.get(id);
     if (person && amount>0 && person.invested+amount<=rules.investmentCap && spend(amount)) person.invested += amount;
+  }
+
+  canCampaignAction(id:string,kind:'propaganda'|'discurso') {
+    const person = this.people.get(id);
+    return !!person && !(kind==='propaganda' ? person.advertised : person.spoke);
   }
 
   advertise(id:string, spend:(amount:number)=>boolean) {
@@ -157,13 +164,9 @@ export class ElectionCycle {
       const total = scores.reduce((sum,score)=>sum+score,0);
       const eliminated = ranked.length>rules.minimumMandates ? ranked.at(-1) : undefined;
       if (eliminated) this.leave(eliminated.id,now);
-      const salaries = settle([...this.people.keys(),...this.paidDeputies]);
       const offices = ranked.map((person,index)=>({id:person.id,name:person.name,character:person.character,
         office:person.office,race:person.race,percentage:Math.round(100*scores[index]/total)}));
-      this.result = {cycle:this.cycle,offices,salaries,eliminated:eliminated?.id};
       this.announce(eliminated ? `${eliminated.name} perdeu o mandato.` : 'Renovação concluída. Mandatos preservados.');
-      this.cycle++;
-      this.due += rules.interval;
       this.objected = false;
       for (const person of this.people.values()) {
         person.invested = person.scandal = 0;
@@ -171,6 +174,10 @@ export class ElectionCycle {
         person.support = undefined;
         person.noise = this.noise();
       }
+      const salaries = settle([...this.people.keys(),...this.paidDeputies]);
+      this.result = {cycle:this.cycle,offices,salaries,eliminated:eliminated?.id};
+      this.cycle++;
+      this.due += rules.interval;
       this.previousPoll.clear();
       this.nextPoll = now;
     }

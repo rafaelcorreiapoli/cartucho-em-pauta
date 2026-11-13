@@ -4,6 +4,8 @@ export const CABINET_GRANT = 4;
 export const CAMPAIGN_COST = 2;
 export const HEARING_POPULARITY = 55;
 export const HEARING_MS = 35_000;
+export const SUSPENSION_MS = 60_000;
+export const HEARING_IMMUNITY_MS = 120_000;
 export const TRADE_RADIUS = 44;
 export const PAYMENTS_PER_ROUND = 6;
 export const splits = [0,1,2,3] as const;
@@ -12,7 +14,16 @@ export type Split = typeof splits[number];
 export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
 
+export const targetedAgendas = {
+  documentoAlvo:'Entregue um documento a',
+  assinaturaAlvo:'Consiga uma assinatura de',
+  pizzaAlvo:'Entregue uma pizza a',
+  dinheiroAlvo:'Faça uma transferência para',
+  visitaAlvo:'Visite o gabinete de',
+  selfieAlvo:'Tire uma selfie com',
+} as const;
 export const agendas = {
+  ...targetedAgendas,
   protocolo:'Protocole um documento válido',
   rouboNpc:'Roube a carteira de um parlamentar NPC',
   votoNpc:'Compre um voto de um parlamentar NPC',
@@ -73,7 +84,7 @@ export const agendas = {
   cafe: 'Tome um cafezinho',
   leitura: 'Estude o projeto na Biblioteca',
   credencial: 'Confira sua credencial',
-  auditoria: 'Faça uma auditoria na Controladoria',
+  auditoria: 'Faça uma auditoria na Corregedoria',
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
@@ -96,8 +107,8 @@ const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
 export const missionReward = (kind:Agenda):MissionReward =>
   rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
 export const timedAgendas = new Set<Agenda>(['jogar','jogarOculto','pausaCafe']);
-export type Mission = {id:number; kind:Agenda; current:number; target:number};
-export const missionTitle = ({kind,target}:Mission) => kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
+export type Mission = {id:number; kind:Agenda; current:number; target:number; person?:Contact};
+export const missionTitle = ({kind,target,person}:Mission) => person ? `${kind==='dinheiroAlvo' ? 'Transfira '+money(AGENDA_TRANSFER_MIN)+' para' : agendas[kind]} ${person.name}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];
 export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversion';
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};

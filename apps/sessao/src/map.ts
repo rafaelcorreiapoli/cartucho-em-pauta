@@ -1,13 +1,16 @@
+import { reprography } from './room-activities';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
-import { mapNpcs, snackBar } from './npcs';
+import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
 
 export const WIDTH = 1136;
 export const HEIGHT = 759;
 export const SPEED = 88;
 export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
+
+export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
@@ -24,6 +27,9 @@ export const walls: Rect[] = [
   [480,161,70,11], [591,161,194,11], [827,161,123,11],
   [10,392,105,11], [156,392,244,11], [446,392,334,11], [825,392,125,11],
   [814,270,10,133],
+  [infirmary.door[0],403,6,infirmary.door[1]-403],
+  [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
+  [882,530,13,11],
   [316,270,10,65], [316,374,10,18], [592,270,10,65], [592,374,10,18],
   [316,403,10,65], [316,507,10,23], [592,403,10,65], [592,507,10,23],
   [eastAnnex.left,eastAnnex.top-10,eastAnnex.right-eastAnnex.left+10,10],
@@ -33,6 +39,7 @@ export const walls: Rect[] = [
   [139,114,38,11], [203,114,14,11], [263,114,14,11], [303,114,38,11],
   [187,161,9,98], [282,161,9,98],
   [10,161,59,11], [105,161,113,11], [262,161,79,11],
+  [59,645,141,10],[59,655,6,94],[194,655,6,94],[59,749,141,10],
   ...privateOffices.flatMap(({bounds:[x,y,w,h],door:[dx,dy,dw,dh],inside,shared}):Rect[]=>[
     ...(shared.has('west') ? [] : [[x-6,y,6,h] as Rect]),
     ...(shared.has('east') ? [] : [[x+w,y,6,h] as Rect]),
@@ -43,11 +50,15 @@ export const walls: Rect[] = [
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
-  [128,460],[354,430],[433,460],[713,460],[822,463],
+  [128,460],[354,430],[433,460],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
-  ...Object.values(mapNpcs).map(({counter:{x,y}})=>[x,y] as const),
+  [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
+  {texture:'technical-shelf',area:[653,174,40,30],footprint:5},
+  {texture:'snack-counter',area:[npcs.snackVendor.counter.x-12,npcs.snackVendor.counter.y-10,55,29],footprint:13},
+  {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
+  {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},
   {frame:0, area:[197,33,86,29], footprint:10},
   {frame:0, area:[414,570,132,38], footprint:12},
   {frame:1, area:[559,598,22,18], footprint:7},
@@ -55,16 +66,15 @@ export const furnishings = [
   {frame:3, area:[651,554,30,40], footprint:9},
   {frame:3, area:[301,28,22,28], footprint:7},
   {frame:4, area:[18,192,25,30], footprint:10},
-  {frame:5, area:[239,208,16,33], footprint:10},
+  {texture:'coffee-maker', area:[236,211,22,30], footprint:10},
   {frame:4, area:[651,36,30,37], footprint:10},
   {frame:4, area:[896,29,32,39], footprint:10},
   {frame:3, area:[922,210,22,31], footprint:9},
   {frame:4, area:[31,300,28,37], footprint:10},
   {frame:4, area:[513,298,28,37], footprint:10},
-  {frame:0, area:[706,437,183,29], footprint:10},
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
-] satisfies {frame:number; area:Rect; footprint:number}[];
+] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
 const obstacles = [
   ...walls,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{
@@ -89,10 +99,17 @@ export function blockedBy(rect:Rect,x:number,y:number) {
   return x+6>left+epsilon && x-6<left+width-epsilon && y>top+epsilon && y-7<top+height-epsilon;
 }
 
+const southRooms = [...privateOffices,isolationRoom].filter(({bounds})=>bounds[1]>=541);
+
 export function canStand(x: number, y: number) {
   if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom))) return false;
-  if (y>541 && (x<274 || x>686) && !privateOffices.some(({bounds:[left,top,width,height]})=>top>=541 && x>=left && x<=left+width && y<=top+height)) return false;
+  if (y>541 && (x<274 || x>686) && !southRooms.some(({bounds:[left,top,width,height]})=> x>=left && x<=left+width && y>=top && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
+}
+
+export function canStandInIsolation(x:number,y:number) {
+  const [left,top,width,height] = isolationRoom.bounds;
+  return x>=left+6 && x<=left+width-6 && y>=top+7 && y<=top+height && canStand(x,y);
 }
 
 export function inPlenary({x,y}:Motion) {
@@ -162,12 +179,13 @@ export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
 
 export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
+  {...isolationRoom,color:0x61716a},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
   {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
-  {name:'Controladoria', bounds:[713,10,237,104], color:0x527473},
+  {name:'Corregedoria', bounds:[713,10,237,104], color:0x527473},
   {name:'Apoio Técnico', bounds:[480,172,223,87], color:0x777d75},
   {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
   {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
@@ -176,7 +194,7 @@ export const rooms = [
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
   {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
-  {name:'Galeria', bounds:[602,403,280,127], color:0x56736e},
+  {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];
 

@@ -1,33 +1,36 @@
+import { marketProduct } from '../src/market-catalog';
+import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
-import { decorPoint, decorSlots, isOfficeFurniture, isOfficeGood, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
+import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
-import { stations } from '../src/plenary';
+import { bills, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
 import { Transport } from './Transport';
-import { aidRadius, infirmary } from '../src/medical';
+import { canReachDownedPlayer } from '../src/interactions';
+import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binocularBonus, equippedWeapon, equipment, isGear, type Gear } from '../src/equipment';
+import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
-import { cameraSees, isSpyProduct, spyProducts, spyRules, type SpyDevice } from "../src/surveillance";
+import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
-type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number};
+type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number; quantity?:number};
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
 const cashLifetime = 55_000;
@@ -46,6 +49,9 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
+  private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
+  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>}>();
+  private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
   private installations = new Map<string,Decoration>();
@@ -56,6 +62,77 @@ export class Gameplay {
   private random = Math.random;
   private nextCashSpawn = Infinity;
 
+  private readonly forgery = new Map<string,{item:number;project:number;end:number}>();
+  private readonly signedProjects = new Map<number,Map<string,{project:number;at:number}>>();
+
+  documentAttachment(owner:string,id:number) {
+    const item = this.inventory(owner).find(({data})=>data.id===id)?.data;
+    if (!item?.document || item.document.project===undefined) return;
+    const document = item.document;
+    const signatures = this.signedProjects.get(id);
+    const authentic = document.signatures.every(signer=>signatures?.get(signer.id)?.project===document.project);
+    const {title,description} = document;
+    return {document:{id,title,description,signatures:document.signatures.map(({name})=>name)},authentic};
+  }
+
+  consumeForensicKit(owner:string) {
+    const kit = this.inventory(owner).find(({data})=>data.kind==='forensicKit');
+    if (!kit) return false;
+    this.remove(kit);
+    return true;
+  }
+
+  private documentRequirements(item:WorldItem) {
+    const document = item.document!;
+    const missing = document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp));
+    const recorded = this.signedProjects.get(item.id);
+    const valid = document.project===undefined ? document.signatures.length :
+      document.signatures.filter(person=>recorded?.get(person.id)?.project===document.project).length;
+    if (valid!==document.signatures.length) return 'O documento não atende aos requisitos formais.';
+    const signatures = document.requiredSignatures-valid;
+    if (signatures>0) missing.push(`${signatures} assinatura(s)`);
+    if (missing.length) return `Falta: ${missing.join(', ')}.`;
+  }
+
+  private signProject(item:WorldItem,signer:Player,now:number) {
+    if (item.document?.project===undefined) return;
+    const history = this.signedProjects.get(item.id) ?? new Map();
+    history.set(signer.id,{project:item.document.project,at:now});
+    this.signedProjects.set(item.id,history);
+  }
+
+  private readonly originalDocuments = new Map<number,NonNullable<WorldItem['document']>>();
+  private megaphoneBroadcast?: {owner:string;item:number;until:number};
+  private megaphoneRecharge = new Map<number,{owner:string;until:number}>();
+
+  megaphoneSpeaker() { return this.megaphoneBroadcast?.owner; }
+
+  stopMegaphone(id:string,world:GameplayWorld) {
+    const active = this.megaphoneBroadcast;
+    if (active?.owner!==id) return;
+    this.megaphoneBroadcast = undefined;
+    this.megaphoneRecharge.set(active.item,{owner:id,until:world.now+megaphone.cooldown});
+    const player = world.players.find(player=>player.id===id);
+    if (player) publishGameplay(world,player,'megaphone-ended',{item:active.item,kind:'megaphone',witnesses:[]});
+    world.feedback?.(id,'Megafone encerrado.');
+  }
+
+  private updateMegaphone(world:GameplayWorld,exploring:boolean) {
+    const active = this.megaphoneBroadcast;
+    if (active) {
+      const player = world.players.find(player=>player.id===active.owner);
+      if (!exploring || !player || player.knockedOut || player.carried || !world.voice(active.owner) ||
+          this.wearing(active.owner,'megaphone')?.id!==active.item || world.now>=active.until) {
+        this.stopMegaphone(active.owner,world);
+      }
+    }
+    for (const [item,recharge] of this.megaphoneRecharge) {
+      if (world.now<recharge.until) continue;
+      this.megaphoneRecharge.delete(item);
+      if (this.wearing(recharge.owner,'megaphone')?.id===item) world.feedback?.(recharge.owner,'Megafone pronto.');
+    }
+  }
+
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.items.clear();
     this.surveillance.reset();
@@ -64,6 +141,9 @@ export class Gameplay {
     this.syncOfficeDoors(players,now);
     this.album.reset();
     this.exposed.clear();
+    this.concealedUntil.clear();
+    this.scanning.clear();
+    this.binocularUse.clear();
     this.installations.clear();
     this.servings.clear();
     this.clearedSites.clear();
@@ -74,6 +154,11 @@ export class Gameplay {
     this.combat.reset(players);
     this.transport.reset();
     this.modulator.reset();
+    this.megaphoneBroadcast = undefined;
+    this.megaphoneRecharge.clear();
+    this.originalDocuments.clear();
+    this.forgery.clear();
+    this.signedProjects.clear();
     for (const player of players) {
       player.pocketing = undefined;
       player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
@@ -94,6 +179,25 @@ export class Gameplay {
     return [...this.items.values()].filter(({place}) => 'equipped' in place && place.equipped===id);
   }
 
+  owns(id:string,kind:ObjectKind) {
+    return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
+  }
+
+  hasAgendaDecoration(id:string, kind:'portrait'|'vip', replacement=false) {
+    if (replacement) return Object.entries(installationSites).some(([site,definition])=>{
+      if (definition.kind!==kind) return false;
+      const installed = this.installations.get(site);
+      return installed ? installed.owner.id!==id : this.clearedSites.get(site)?.by===id;
+    });
+    return [...this.installations.values()].some(item=>item.kind===kind &&
+      (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
+  }
+
+  officeStock(id:string) {
+    const office = this.privateOffices.ownedBy(id);
+    return office ? decorSlots.filter(isOfficeFurniture).filter(kind=>!this.installations.has(`office:${office.id}:${kind}`)) : [];
+  }
+
   private wearing(id:string, kind:Gear) {
     return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }
@@ -103,7 +207,18 @@ export class Gameplay {
     return hp/max;
   }
 
-  vision(id:string) { return VISION_RADIUS+(this.wearing(id,'binoculars') ? binocularBonus : 0); }
+  private binocularRemaining(id:string,now:number) {
+    return this.wearing(id,'binoculars') ? Math.max(0,(this.binocularUse.get(id)?.activeUntil ?? 0)-now) : 0;
+  }
+
+  vision(id:string,now:number) {
+    return VISION_RADIUS*(this.binocularRemaining(id,now) ? binoculars.multiplier : 1);
+  }
+
+  private stopBinoculars(id:string) {
+    const use = this.binocularUse.get(id);
+    if (use) use.activeUntil = 0;
+  }
 
   officeSpawn(id:string) { return this.privateOffices.spawnFor(id); }
 
@@ -113,6 +228,30 @@ export class Gameplay {
   }
 
   private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
+
+  private stack(id:string,kind:ObjectKind,except?:number) {
+    return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
+  }
+
+  private takeUnits(item:Item,quantity:number):Item {
+    const remaining = itemQuantity(item.data)-quantity;
+    if (remaining===0) return item;
+    item.data.quantity = remaining;
+    this.clearRequests(item.data.id);
+    const split = {data:{id:++this.serial,kind:item.data.kind,quantity},place:item.place};
+    this.items.set(split.data.id,split);
+    return split;
+  }
+
+  private addToInventory(item:Item,id:string) {
+    const stack = this.stack(id,item.data.kind,item.data.id);
+    if (stack) {
+      stack.data.quantity = itemQuantity(stack.data)+itemQuantity(item.data);
+      this.remove(item);
+    } else {
+      this.move(item,{holder:id});
+    }
+  }
 
   private move(item:Item, place:Place) {
     this.hide(item);
@@ -125,6 +264,8 @@ export class Gameplay {
   }
 
   private remove(item:Item) {
+    this.originalDocuments.delete(item.data.id);
+    this.signedProjects.delete(item.data.id);
     this.hide(item);
     this.items.delete(item.data.id);
     if (item.data.kind==='voiceModulator') this.modulator.remove(item.data.id);
@@ -141,15 +282,17 @@ export class Gameplay {
     this.exposed.set(id,items);
   }
 
-  visibleItems(id:string) {
+  visibleItems(id:string,now=Infinity,observer?:string) {
+    const concealed = observer!==id && (this.concealedUntil.get(id) ?? 0)>now;
     return [...this.exposed.get(id) ?? []].flatMap(itemId=>{
       const item = this.items.get(itemId);
-      return item && 'holder' in item.place && item.place.holder===id ? [{id:itemId,kind:item.data.kind}] : [];
+      return item && 'holder' in item.place && item.place.holder===id && !(concealed && cashAmount(item.data)) ? [{id:itemId,kind:item.data.kind}] : [];
     });
   }
 
   private create(kind:ObjectKind, place:Place) {
     const data:WorldItem = {id:++this.serial,kind};
+    if (kind==='xray') data.charges = xray.capacity;
     this.items.set(data.id,{data,place});
     return data;
   }
@@ -172,6 +315,7 @@ export class Gameplay {
     if (price && !world.payNpc?.(player.id,npc.id,price)) return 'Pagamento indisponível.';
     const item = this.items.get(itemId)!;
     item.data.document!.signatures.push({id:npc.id,name:npc.nick});
+    this.signProject(item.data,npc,world.now);
     this.event(world,npc,'signed',item.data,player.id);
     console.info(JSON.stringify({event:'npc-signature',from:player.id,to:npc.id,amount:price,item:itemId}));
     return 'Assinatura obtida.';
@@ -190,7 +334,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'photo'|'place'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'photo'|'project'|'place'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -204,10 +348,10 @@ export class Gameplay {
   }
 
   private visibleGround(player:Player,now:number) {
-    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id)));
+    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
   }
 
-  private spawnCash(now:number) {
+  private spawnCash({now,cashFlow}:GameplayWorld) {
     if (now<this.nextCashSpawn) return;
     this.nextCashSpawn = now+8000+this.random()*10000;
     const ground = this.groundItems(now);
@@ -222,21 +366,54 @@ export class Gameplay {
       if (last?.x!==x || last.y!==y) continue;
       const kind = 'briefcase';
       this.create(kind,this.groundPlace(kind,{x,y},now));
+      cashFlow?.('spawned',cashAmount(kind)!);
       console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;
     }
   }
 
   tick(world:GameplayWorld, exploring:boolean) {
+    for (const [id,operation] of this.forgery) {
+      const player = world.players.find(person=>person.id===id);
+      const item = this.inventory(id).find(({data})=>data.id===operation.item)?.data;
+      if (!exploring || !player || world.present?.(id)===false || !item?.document ||
+          !canReachObject(player,terminals.reprography.point,{handsFree:true})) {
+        this.forgery.delete(id);
+        world.feedback?.(id,'Adulteração interrompida.');
+      } else if (world.now>=operation.end) {
+        this.forgery.delete(id);
+        const bill = bills[operation.project];
+        if (!this.originalDocuments.has(item.id)) this.originalDocuments.set(item.id,structuredClone(item.document));
+        Object.assign(item.document,{project:operation.project,title:bill.name,description:bill.description});
+        this.clearRequests(item.id);
+        this.event(world,player,'edited',item);
+        world.feedback?.(id,'Documento adulterado.');
+      }
+    }
     this.album.tick(world.now);
+    for (const [id,scan] of this.scanning) {
+      const player = world.players.find(player=>player.id===id);
+      if (!exploring || scan.ends<=world.now || !player || player.knockedOut || player.carried ||
+          this.wearing(id,'xray')?.id!==scan.item) this.scanning.delete(id);
+    }
+    for (const [id,ends] of this.concealedUntil) {
+      if (ends>world.now) continue;
+      this.concealedUntil.delete(id);
+      const player = world.players.find(player=>player.id===id);
+      if (player) publishGameplay(world,player,'concealment-ended',{witnesses:[]});
+    }
     this.transfers = this.transfers.filter(event=>world.now-event.at<=2400);
     for (const item of this.items.values()) {
-      if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
+      if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) {
+        const amount = cashAmount(item.data);
+        if (amount) world.cashFlow?.('expired',amount);
+        this.remove(item);
+      }
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
-    if (exploring) this.spawnCash(world.now);
+    if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
     this.recordRoomVisits(world,exploring);
@@ -259,8 +436,10 @@ export class Gameplay {
       },
     });
     this.tickOfficeChannels(world,exploring);
+    this.updateMegaphone(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
+      if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (!exploring || player.knockedOut || !world.voice(player.id)) this.stopModulator(player.id,world.now);
     }
   }
@@ -290,6 +469,8 @@ export class Gameplay {
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.surveillance.leave(player.id,permanent);
+    this.scanning.delete(player.id);
+    this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
@@ -300,6 +481,7 @@ export class Gameplay {
     this.dialogues.close(player.id);
     this.stopModulator(player.id,world.now);
     if (!permanent) return;
+    this.concealedUntil.delete(player.id);
     this.combat.leave(player);
     for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data,player,world.now));
     for (const [id,request] of this.requests) {
@@ -309,6 +491,7 @@ export class Gameplay {
 
   phoneActivity(id:string) { return this.phone.activity(id); }
   callPeer(id:string) { return this.phone.callPeer(id); }
+  disconnectCall(id:string,world:GameplayWorld) { this.phone.disconnectCall(id,world); }
 
   get photoRevision() { return this.album.revision; }
   photoView(id:string,now:number) { return this.album.view(id,now); }
@@ -331,6 +514,8 @@ export class Gameplay {
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
       const seconds = item.kind==='voiceModulator' ? modulator?.recharge :
+        item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
+        item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
     }
@@ -339,18 +524,23 @@ export class Gameplay {
       if (request.to!==id) return [];
       const item = this.items.get(request.item);
       const from = world.players.find(other => other.id===request.from);
-      return item && from ? [{id:request.id,kind:request.kind,item:item.data,from:{id:from.id,name:from.nick}}] : [];
+      return item && from ? [{id:request.id,kind:request.kind,item:request.quantity===undefined ? item.data : {...item.data,quantity:request.quantity},from:{id:from.id,name:from.nick}}] : [];
     });
     return {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
+      megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
+      binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
+      concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
+      xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
-      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id)).visible),
+      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
@@ -426,7 +616,7 @@ export class Gameplay {
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
         direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
-        exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),
+        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
       decorations:[...this.installations.values()].filter(visible).map(item=>({...item})),
@@ -438,7 +628,7 @@ export class Gameplay {
     const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        pocketing:person.pocketing,exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
@@ -631,8 +821,8 @@ export class Gameplay {
       if (!item) return 'Objeto indisponível.';
       if (kind==='office-take') {
         if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return 'Objeto indisponível.';
-        if (!this.available(player.id)) return 'Inventário cheio.';
-        this.move(item,{holder:player.id});
+        if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+        this.addToInventory(item,player.id);
       } else {
         if (!('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
         if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return 'Armário cheio.';
@@ -723,7 +913,7 @@ export class Gameplay {
         const cash = this.create('briefcase',{holder:id});
         cash.cash = amount;
         this.expose(id,cash.id);
-        this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id,witnesses:[]});
+        this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id});
         world.feedback?.(id,`Maleta de ${money(amount)} retirada do cofre.`);
         world.feedback?.(owner,'Seu cofre foi saqueado.');
         continue;
@@ -752,22 +942,69 @@ export class Gameplay {
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
 
-  private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
+  private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {
+    const scan = this.scanning.get(player.id);
+    if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
+        this.wearing(player.id,'xray')?.id!==scan.item || !world.wallet) return;
+    const radius = this.vision(player.id,world.now);
+    const targets:NonNullable<GameplayView['xrayVision']>['targets'] = [];
+    const add = (id:string,owner:string,{x,y}:Motion,safe?:true)=>{
+      let balance = scan.balances.get(id);
+      if (balance===undefined) {
+        balance = world.wallet!(owner);
+        scan.balances.set(id,balance);
+      }
+      targets.push({id,x,y,safe,balance});
+    };
+    for (const target of world.players) {
+      if (target.npc && world.present?.(target.id)!==false && worldVisible(player,target,radius)) add(target.id,target.id,target);
+    }
+    for (const office of this.privateOffices.offices.values()) {
+      const {owner,layout} = office;
+      if (owner && owner!==player.id && worldVisible(player,layout.safe,radius)) add(layout.id,owner,layout.safe,true);
+    }
+    return {remaining:Math.ceil((scan.ends-world.now)/1000),targets};
+  }
+
+  private useXray(player:Player,action:GameplayAction,world:GameplayWorld) {
+    const item = this.wearing(player.id,'xray');
+    if (!item) return 'Equipe o Raio X.';
+    if (action.kind==='recharge-xray') {
+      if (!canReachObject(player,npcs.vendor)) return 'Recarregue no Apoio Técnico.';
+      if ((item.charges ?? 0)>=xray.capacity) return 'Raio X já está carregado.';
+      if (!world.spend?.(player.id,xray.rechargePrice)) return 'Saldo insuficiente.';
+      item.charges = xray.capacity;
+      this.event(world,player,'xray-recharged',item,undefined,{witnesses:[]});
+      return `Raio X recarregado · ${item.charges}/${xray.capacity}`;
+    }
+    if (action.target!==undefined || action.place!==undefined) return 'Ative o Raio X para varrer sua visão.';
+    if (this.scanning.delete(player.id)) return 'Raio X desativado.';
+    if (!item.charges) return 'Raio X sem cargas. Recarregue no Apoio Técnico.';
+    item.charges--;
+    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map()});
+    this.event(world,player,'xray-scanned',item,undefined,{witnesses:[]});
+    return 'Raio X ativado.';
+  }
+
+  private buyProduct(player:Player, requested:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,npc=>{
-      const gear = isGear(kind);
-      const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind)) return 'Produto indisponível.';
-      if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
+      const product = marketProduct(npcs[npc].catalog,requested);
+      if (!product) {
+        return marketProduct('equipment',requested) || marketProduct('food',requested)
+          ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
+      }
+      const {kind,price} = product;
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
-      } else if (!this.available(id)) return 'Inventário cheio.';
-      if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
-      const data = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
+      } else if (!this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
+      if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
+      if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
+      const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
+      if (canStackItem(kind)) this.addToInventory(this.items.get(data.id)!,id);
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
@@ -807,6 +1044,8 @@ export class Gameplay {
     if (!('equipped' in item.place) || item.place.equipped!==id) return 'Equipamento indisponível.';
     if (!this.available(id)) return 'Inventário cheio.';
     this.move(item,{holder:id});
+    if (item.data.kind==='binoculars') this.stopBinoculars(id);
+    if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
     if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
     this.event(world,player,'unequipped',item.data);
@@ -856,12 +1095,33 @@ export class Gameplay {
         this.phone.leave(player,world);
         return 'Jogador carregado.';
       }
-      if (!target?.knockedOut || !canReachObject(player,target,{radius:aidRadius,clearFloor:true})) return 'Aproxime-se do jogador nocauteado.';
+      if (!target || !canReachDownedPlayer(player,target)) return 'Aproxime-se do jogador nocauteado.';
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
+    if (action.kind==='use-binoculars') {
+      if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
+      if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
+      const activeUntil = world.now+binoculars.duration;
+      this.binocularUse.set(id,{activeUntil,readyAt:activeUntil+binoculars.cooldown});
+      return `Binóculo ativo por ${binoculars.duration/1000} s.`;
+    }
+    if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
+    if (action.kind==='toggle-megaphone') {
+      if (this.megaphoneSpeaker()===id) {
+        this.stopMegaphone(id,world);
+        return;
+      }
+      const item = this.wearing(id,'megaphone');
+      if (!item || !world.voice(id)) return 'Equipe o Megafone e ative a voz.';
+      if (this.megaphoneBroadcast) return 'Canal de Megafone ocupado.';
+      if ((this.megaphoneRecharge.get(item.id)?.until ?? 0)>world.now) return 'Megafone em recarga.';
+      this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration};
+      this.event(world,player,'megaphone-started',item,undefined,{witnesses:[]});
+      return 'Megafone ativo.';
+    }
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');
       if (!item || !world.voice(id)) return 'Equipe o modulador e ative a voz.';
@@ -909,14 +1169,17 @@ export class Gameplay {
     if (action.kind==='supply') {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
-      if (this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
+      if (!(terminal.supply==='document' && action.target?.startsWith('project-')) && this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
+        const project = action.target?.startsWith('project-') ? Number(action.target.slice(8)) : undefined;
+        const bill = project===undefined ? undefined : bills[project];
+        if (project!==undefined && (!action.target || !/^project-[0-9]+$/.test(action.target) || !bill)) { this.remove(this.items.get(data.id)!); return 'Projeto indisponível.'; }
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
         const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
           template.office : undefined;
         data.document = {
-          author:player.nick,title:template.title,edited:false,signatures:[],stamps:[],
+          author:player.nick,title:bill?.name ?? template.title,project,description:bill?.description,edited:false,signatures:[],stamps:[],
           requiredSignatures:Math.min(template.signatures,Math.max(0,world.players.length-1)),
           requiredStamps:[...template.stamps],requiredOffice,
         };
@@ -931,14 +1194,17 @@ export class Gameplay {
     if (action.kind==='collect' || action.kind==='recover') {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
-      if (!accessible || !this.available(id)) return 'Objeto fora de alcance ou inventário cheio.';
-      this.move(item,{holder:id});
+      if (!accessible || !this.available(id) && !this.stack(id,data.kind)) return 'Objeto fora de alcance ou inventário cheio.';
+      this.addToInventory(item,id);
       if (cashAmount(data)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
     if (!('holder' in item.place) || item.place.holder!==id) return 'O objeto não está com você.';
     const definition = objects[data.kind];
+    const quantity = action.quantity ?? itemQuantity(data);
+    if ((action.kind==='offer' || action.kind==='drop') &&
+      (!Number.isSafeInteger(quantity) || quantity<1 || quantity>itemQuantity(data))) return 'Quantidade indisponível.';
     switch (action.kind) {
       case 'expose':
         if (!('exposable' in definition)) return 'Este objeto fica guardado.';
@@ -956,14 +1222,16 @@ export class Gameplay {
         this.clearRequests(data.id);
         const key = ++this.serial;
         this.requests.set(key,{id:key,kind:action.kind==='offer' ? 'offer' : 'signature',
-          item:data.id,from:id,to:target.id,expires:world.now+25_000});
+          item:data.id,from:id,to:target.id,expires:world.now+25_000,quantity:action.kind==='offer' && canStackItem(data.kind) ? quantity : undefined});
         return 'Pedido enviado.';
       }
-      case 'drop':
+      case 'drop': {
         if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
-        this.move(item,this.groundPlace(item.data,player,world.now));
-        this.event(world,player,'dropped',data);
+        const dropped = this.takeUnits(item,quantity);
+        this.move(dropped,this.groundPlace(dropped.data,player,world.now));
+        this.event(world,player,'dropped',dropped.data);
         return 'Objeto largado.';
+      }
       case 'store':
         if (!place || !terminal || !('storage' in terminal)) return 'Aproxime-se de um armário.';
         if ([...this.items.values()].filter(({place:location})=>'storage' in location && location.storage===place).length>=12) {
@@ -982,41 +1250,54 @@ export class Gameplay {
       case 'use':
         if (cashAmount(data)) return 'Leve o dinheiro ao cofre do seu gabinete.';
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
-        this.remove(item);
+        if (data.kind==='mensalUnderwear') {
+          if ((this.concealedUntil.get(id) ?? 0)>world.now) return 'Você já está ocultando dinheiro.';
+          this.remove(item);
+          this.concealedUntil.set(id,world.now+concealment.duration);
+          this.event(world,player,'concealment-started',data,undefined,{witnesses:[]});
+          return `Dinheiro oculto por ${concealment.duration/1000} s.`;
+        }
+        if (data.kind==='firstAidKit') {
+          if (this.healthFraction(player,world.now)>=1) return 'Seus PV já estão cheios.';
+          this.combat.heal(player,firstAidKit.healing);
+        }
+        const consumed = this.takeUnits(item,1);
+        this.remove(consumed);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
-        this.event(world,player,'used',data);
-        return 'Objeto utilizado.';
+        this.event(world,player,'used',consumed.data);
+        return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
         if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';
         this.remove(item);
         this.event(world,player,'destroyed',data);
         return 'Objeto destruído.';
-      case 'edit':
-        if (!data.document) return 'Selecione um documento.';
-        if (data.document.edited) return 'Este documento já foi adulterado.';
-        data.document.edited = true;
-        data.document.title += ' · versão retificada';
-        data.document.signatures = [];
-        data.document.stamps = [];
-        this.clearRequests(data.id);
-        this.event(world,player,'edited',data);
-        return 'Documento adulterado. Assinaturas e carimbos precisam ser refeitos.';
+      case 'edit': {
+        if (!data.document || data.document.project===undefined) return 'Selecione um documento de projeto.';
+        const project = Number(action.target);
+        if (!action.target || !/^[0-9]+$/.test(action.target) || !Number.isInteger(project) || !bills[project] || project===data.document.project) return 'Escolha outro projeto.';
+        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return 'Aproxime-se da estação de Reprografia.';
+        if (this.forgery.has(id)) return 'Adulteração em andamento.';
+        this.forgery.set(id,{item:data.id,project,end:world.now+documentRules.forgeryMs});
+        return 'Adulteração iniciada.';
+      }
       case 'stamp':
         if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
         if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
         data.document.stamps.push(terminal.stamp);
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
+      case 'verify-document':
+        if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
+        return this.documentRequirements(data) ?? 'Documento atende aos requisitos formais.';
       case 'file': {
         if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
         if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
-        const missing = data.document.requiredStamps.filter(stamp => !data.document!.stamps.includes(stamp));
-        const signatures = data.document.requiredSignatures-data.document.signatures.length;
-        if (missing.length || signatures>0) return `Falta: ${[...missing,...(signatures>0 ? [`${signatures} assinatura(s)`] : [])].join(', ')}.`;
+        const error = this.documentRequirements(data);
+        if (error) return error;
         const filed = [...this.items.values()].filter(item=>'filed' in item.place);
         if (filed.length>=24) this.remove(filed[0]);
         this.move(item,{filed:true});
-        this.event(world,player,'filed',data);
+        this.event(world,player,'filed',data,undefined,{project:data.document.project});
         return 'Documento protocolado.';
       }
     }
@@ -1035,14 +1316,17 @@ export class Gameplay {
       return 'O portador ou objeto está fora de alcance.';
     }
     if (request.kind==='offer') {
-      if (!this.available(player.id)) return 'Inventário cheio.';
+      if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+      const quantity = request.quantity ?? itemQuantity(item.data);
+      if (quantity>itemQuantity(item.data)) return 'Quantidade indisponível.';
+      const transferred = this.takeUnits(item,quantity);
       if (this.exposed.get(owner.id)?.has(item.data.id)) {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
         if (this.transfers.length>16) this.transfers.shift();
       }
-      this.move(item,{holder:player.id});
-      if (cashAmount(item.data)) this.expose(player.id,item.data.id);
-      this.event(world,owner,'transferred',item.data,player.id);
+      this.addToInventory(transferred,player.id);
+      if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
+      this.event(world,owner,'transferred',transferred.data,player.id);
       return 'Objeto recebido.';
     }
     const doc = item.data.document;
@@ -1050,6 +1334,7 @@ export class Gameplay {
       (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});
+    this.signProject(item.data,player,world.now);
     this.event(world,player,'signed',item.data,owner.id);
     return 'Documento assinado.';
   }

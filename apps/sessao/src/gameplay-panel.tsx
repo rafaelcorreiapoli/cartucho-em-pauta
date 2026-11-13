@@ -1,4 +1,6 @@
-import { officeRules } from './private-offices';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { OfficeStash } from './ui/office-stash';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
@@ -10,7 +12,7 @@ import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 import type { DirectoryContact } from './politics';
@@ -35,8 +37,9 @@ function itemArt(kind:ObjectKind) {
   return itemPortrait(kind);
 }
 
-function itemName(item:Pick<WorldItem,'kind'|'document'>) {
-  return item.document?.title ?? objects[item.kind].name;
+function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
+  const name = item.document?.title ?? objects[item.kind].name;
+  return itemQuantity(item)>1 ? `${name} ×${itemQuantity(item)}` : name;
 }
 
 import type { SpyOption } from "./surveillance";
@@ -51,11 +54,19 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const equipmentButton = element<HTMLButtonElement>('open-equipment');
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
+  const slotsRoot = createRoot(slots);
+  const equipmentHost = document.createElement('div');
+  const equipmentRoot = createRoot(equipmentHost);
+  const objectsHost = document.createElement('div');
+  const objectsRoot = createRoot(objectsHost);
+  const requestBox = element('object-request');
+  const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
   const nearbyButton = element<HTMLButtonElement>('nearby-objects');
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
+  let inventoryItems:WorldItem[] = [];
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
   let app:App = 'Telefone';
@@ -67,30 +78,45 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let previous:PlenaryView | undefined;
   let renderKey = '';
   let targetKey = '';
+  let quantity = 1;
 
-  function objectCard(item:WorldItem) {
-    const card = node('article');
-    card.className = 'object-card';
+  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false) {
     const definition = objects[item.kind];
-    const heading = node('h3',itemName(item));
-    heading.prepend(itemArt(item.kind));
-    const summary = node('details');
-    summary.append(node('summary','Inspecionar'),node('p',definition.description));
     const doc = item.document;
-    if (doc) summary.append(
-      node('p',`Assinaturas ${doc.signatures.length}/${doc.requiredSignatures} · ${doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}`),
-      node('p',`Carimbos ${doc.stamps.length}/${doc.requiredStamps.length} · ${doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? `✓ ${stamp}` : stamp).join(', ')}`),
-    );
-    if (doc?.requiredOffice) summary.append(node('p',`Assinatura exigida: Parlamentar`));
-    if (isFood(item.kind)) summary.append(node('p',`1 un. · ${foods[item.kind].category} · ${describeFood(foods[item.kind].effect)}`));
     const cash = cashAmount(item);
-    if (cash) summary.append(node('p',money(cash)));
-    card.append(heading,summary);
-    return card;
+    const food = isFood(item.kind) ? foods[item.kind] : undefined;
+    return <article className="object-card" key={item.id}>
+      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
+      <details><summary>Inspecionar</summary><p>{doc?.description ?? definition.description}</p>
+        {doc && <>
+          <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
+          <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
+          {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+        </>}
+        {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
+        {!!cash && <p>{money(cash)}</p>}
+      </details>
+      {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
+        <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
+          disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
+        <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
+        <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
+          disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
+      </div>}
+      {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
+        aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+    </article>;
   }
+  function changeQuantity(item:WorldItem,delta:number) {
+    quantity = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    render();
+  }
+
+  type ObjectAction = {label:string;run:()=>void;key?:string};
 
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
     selection = item;
+    quantity = 1;
     decorationId = decoration;
     equipmentOpen = equipment;
     stashOpen = stash;
@@ -172,82 +198,64 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
     photos.stopPreview();
     const cards:HTMLElement[] = [];
     if (stash) {
-      cards.push(node('p',`${stash.items.length}/${officeRules.stashSlots} slots${stash.level ? ` · Segurança nível ${stash.level}` : ' · Arrombado'}`));
-      for (const item of stash.items) {
-        const card = objectCard(item);
-        card.append(button('Retirar',()=>send({kind:'office-take',place:stash.id,item:item.id})));
-        cards.push(card);
-      }
+      flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
+      cards.push(objectsHost);
     }
     if (equipmentOpen) {
       const equipped = state.equipped ?? [];
-      if (equipped.length) {
-        const list = node('ul');
-        list.className = 'equipment-list';
-        for (const gear of equipped) {
-          const row = node('li');
-          row.append(itemArt(gear.kind),node('strong',itemName(gear)));
-          if (phase==='negotiation' && !state.vitality?.recovery) {
-            row.append(button('Desequipar',()=>send({kind:'unequip',item:gear.id})));
-            if (gear.kind==='voiceModulator' && state.modulator) {
-              const {active,battery,recharge} = state.modulator;
-              const toggle = button(active ? `Desligar · ${battery}s` : recharge ? `Recarga · ${recharge}s` : 'Ligar modulador',
-                ()=>send({kind:'toggle-modulator'}));
-              toggle.disabled = recharge>0;
-              row.append(toggle);
-            }
-          }
-          list.append(row);
-        }
-        cards.push(list);
-      } else {
-        const empty = node('p','Nenhum item equipado.');
-        empty.className = 'equipment-empty';
-        empty.prepend(glyph('inventory'));
-        cards.push(empty);
-      }
+      flushSync(()=>equipmentRoot.render(equipped.length ? <ul className="equipment-list">
+        {equipped.map(gear=><li key={gear.id}>
+          <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[gear.kind].portrait} alt="" draggable={false}/>
+          <strong>{itemName(gear)}</strong>
+          {phase==='negotiation' && !state.vitality?.recovery && <>
+            <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:'unequip',item:gear.id})}>Desequipar</button>
+            {gear.kind==='megaphone' &&
+              <button type="button" className="hud-button hud-button--secondary" disabled={!!state.equipmentCooldowns?.[gear.id]}
+                onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
+                  state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
+            {gear.kind==='voiceModulator' && state.modulator &&
+              <button type="button" className="hud-button hud-button--secondary" disabled={state.modulator.recharge>0}
+                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? `Desligar · ${state.modulator.battery}s` :
+                  state.modulator.recharge ? `Recarga · ${state.modulator.recharge}s` : 'Ligar modulador'}</button>}
+          </>}
+        </li>)}
+      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>));
+      cards.push(equipmentHost);
     }
+
     if (item) {
-      const card = objectCard(item);
-      const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
-        const control = button(label,()=>send({kind,item:item.id,target:target.value,place}));
-        card.append(control);
-        return control;
+      const actions:ObjectAction[] = [];
+      const act = (label:string,kind:GameplayAction['kind'],place?:string,key?:string) => {
+        const transferQuantity = (kind==='offer' || kind==='drop') && itemQuantity(item)>1
+          ? {quantity:selectedItemQuantity(item,quantity)} : {};
+        actions.push({label,key,run:()=>send({kind,item:item.id,target:target.value,place,...transferQuantity})});
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
         if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach((option,index)=>{
-          const control = button(option.label,()=>{
-            sendSpy(option);
-            dialog.close();
-          });
-          markShortcut(control,String(index+1));
-          card.append(control);
+          actions.push({label:option.label,key:String(index+1),run:()=>{ sendSpy(option); dialog.close(); }});
         });
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
-        if ('use' in definition) {
-          const label = item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
-          const use = act(label,'use');
-          if (isFood(item.kind)) markShortcut(use,'1');
-        }
+        const consumable = consumableAction(item);
+        if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
         if ('exposable' in definition) {
           const exposed = state.exposed.includes(item.id);
           act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');
@@ -263,15 +271,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
         act('Largar','drop');
         if ('destructible' in definition) act('Destruir','destroy');
-        if (item.document) act('Adulterar','edit');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
           if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
+          if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
-      cards.push(card);
+      flushSync(()=>objectsRoot.render(objectCard(item,actions,selection?.source==='inventory')));
+      cards.push(objectsHost);
     }
     if (decoration) {
       const card = node('article');
@@ -353,34 +362,44 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const key = JSON.stringify(inventory);
     if (key===inventoryKey) return;
     inventoryKey = key;
-    slots.replaceChildren(...Array.from({length:INVENTORY_SLOTS},(_,index) => {
-      const item = inventory[index];
-      const slot = item ? itemButton(item.kind,itemName(item),'Abrir',()=>open({id:item.id,source:'inventory'})) : node('span');
-      if (item) {
-        slot.dataset.item = String(item.id);
-        slot.setAttribute('aria-haspopup','dialog');
-        slot.setAttribute('aria-keyshortcuts',`Shift+${index+1}`);
-        slot.title += ` (Shift+${index+1})`;
-      } else {
-        slot.className = 'item-tile item-tile-empty';
-        slot.setAttribute('aria-hidden','true');
-      }
-      const key = node('kbd',`⇧${index+1}`);
-      key.className = 'slot-key';
-      key.setAttribute('aria-hidden','true');
-      slot.append(key);
-      return slot;
-    }));
+    inventoryItems = inventory;
     highlightSlot();
   }
 
   function highlightSlot() {
-    for (const slot of slots.querySelectorAll('button[data-item]')) {
-      slot.setAttribute('aria-expanded',String(selection?.source==='inventory' && slot.getAttribute('data-item')===String(selection.id)));
-    }
+    slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+      const item = inventoryItems[index];
+      const shortcut = index+1;
+      const badge = <kbd className="slot-key" aria-hidden="true">⇧{shortcut}</kbd>;
+      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}</span>;
+      const name = itemName(item);
+      return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
+        aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
+        aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
+        onClick={()=>open({id:item.id,source:'inventory'})}>
+        <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
+        <span className="item-caption">{name}</span>{badge}
+      </button>;
+    }));
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
+    if (dialog.open && selection?.source==='inventory' && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
+        !event.metaKey && !hudConsumesKeys(event.target) && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
+      const control = objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      if (control) {
+        event.preventDefault();
+        control.click();
+        return;
+      }
+    }
+    if (dialog.open && stashOpen && !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
+        !event.metaKey && !hudConsumesKeys(event.target) && /^Digit[1-6]$/.test(event.code)) {
+      const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
+      objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
+      event.preventDefault();
+      return;
+    }
     if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
     const slot = slots.children[Number(event.code.at(-1))-1];
@@ -505,26 +524,23 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         app = 'Telefone';
         open();
       }
-      const requestBox = element('object-request');
       const requestKey = information ? `info-${information.id}` : String(incoming?.id ?? '');
       if (requestKey!==requestBox.dataset.request) {
         requestBox.dataset.request = requestKey;
         requestBox.hidden = !incoming && !information;
         if (information) {
-          const card = node('article');
-          card.className = 'object-card';
-          card.append(node('p',`${information.from.name} quer ${information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.`),
-            button('Aceitar',()=>send({kind:'info-accept',item:information.id})),
-            button('Recusar',()=>send({kind:'info-decline',item:information.id})));
-          requestBox.replaceChildren(card);
+          requestRoot.render(<article className="object-card">
+            <p>{information.from.name} quer {information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.</p>
+            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-accept',item:information.id})}>Aceitar</button>
+            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-decline',item:information.id})}>Recusar</button>
+          </article>);
         } else if (incoming) {
-          const item = incoming.item;
-          const card = objectCard(item);
-          card.prepend(node('p',`${incoming.from.name} ${incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}`));
-          card.append(button(incoming.kind==='signature' ? 'Assinar' : 'Aceitar',()=>send({kind:'accept',item:incoming.id})),
-            button('Recusar',()=>send({kind:'decline',item:incoming.id})));
-          requestBox.replaceChildren(card);
-        } else requestBox.replaceChildren();
+          requestRoot.render(<><p>{incoming.from.name} {incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}</p>
+            {objectCard(incoming.item,[
+              {label:incoming.kind==='signature' ? 'Assinar' : 'Aceitar',run:()=>send({kind:'accept',item:incoming.id})},
+              {label:'Recusar',run:()=>send({kind:'decline',item:incoming.id})},
+            ])}</>);
+        } else requestRoot.render(null);
       }
       render();
     },
@@ -553,7 +569,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       delete element('object-request').dataset.request;
       navigation.replaceChildren();
       slots.hidden = nearbyButton.hidden = true;
-      slots.replaceChildren();
+      slotsRoot.unmount();
+      equipmentRoot.unmount();
+      objectsRoot.unmount();
+      requestRoot.unmount();
       nearbyItems.replaceChildren();
       setNearbyExpanded(false);
     },

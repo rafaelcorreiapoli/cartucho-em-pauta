@@ -1,7 +1,6 @@
-import { canReachObject } from '../src/gameplay';
 import { blockedBy, canStand, type Player } from '../src/map';
 import { clearSegment } from '../src/navigation';
-import { aidRadius } from '../src/medical';
+import { canReachDownedPlayer } from '../src/interactions';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type Pair = {carrier:Player; passenger:Player};
@@ -12,9 +11,8 @@ export class Transport {
   passenger(carrier:Player) { return this.pairs.get(carrier.id)?.passenger; }
 
   carry(carrier:Player, passenger:Player|undefined, world:GameplayWorld) {
-    if (!passenger || passenger===carrier || carrier.carrying || carrier.knockedOut ||
-        !passenger.knockedOut || passenger.carried || world.present?.(passenger.id)===false ||
-        !canReachObject(carrier,passenger,{radius:aidRadius,clearFloor:true,handsFree:true}) || !canStand(carrier.x,carrier.y)) return false;
+    if (!passenger || passenger.carried || world.present?.(passenger.id)===false ||
+        !canReachDownedPlayer(carrier,passenger) || !canStand(carrier.x,carrier.y)) return false;
     const pair = {carrier,passenger};
     this.pairs.set(carrier.id,pair);
     carrier.carrying = true;

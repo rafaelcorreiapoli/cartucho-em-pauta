@@ -4,7 +4,7 @@ import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
 import { canStand, movementSpeed, roomAt, worldVisible, VISION_RADIUS, type Player } from '../src/map';
-import { infirmary } from '../src/medical';
+import { infirmary, recoveryRules } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
@@ -38,11 +38,20 @@ function setup() {
     game.act(buyer,{kind:'dialogue-choice',target:'products',token},world);
     return game.view(buyer,world).dialogue?.token;
   };
-  return {alice,bob,game,events,balance,world,openShop};
+  const buyGear = (buyer:Player,target:string) => {
+    const position = {x:buyer.x,y:buyer.y};
+    Object.assign(buyer,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    const result = game.act(buyer,{kind:'shop-buy',target,token:openShop(buyer)},world);
+    Object.assign(buyer,position);
+    return result;
+  };
+  return {alice,bob,game,events,balance,world,openShop,buyGear};
 }
 
 test('the vendor is reachable, maintains separate dialogue sessions and accepts each purchase token once', () => {
   const {alice,bob,game,events,balance,world,openShop} = setup();
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  Object.assign(bob,{x:npcs.vendor.x+9,y:alice.y});
   expect(canStand(npcs.vendor.x,npcs.vendor.y)).toBe(false);
   expect(findRoute({x:140,y:146},{x:alice.x,y:alice.y}).at(-1)).toEqual({x:alice.x,y:alice.y});
   expect(game.act(alice,{kind:'shop-buy',target:'baton',token:1},world)).toBe('Abra o catálogo do vendedor.');
@@ -73,6 +82,7 @@ test('the Lanchonete is reachable and each vendor sells only its own catalog', (
   expect(roomAt(counter)).toBe(snackBar.name);
   expect(findRoute({x:140,y:146},counter).at(-1)).toEqual(counter);
   expect(canStand(npcs.snackVendor.x,npcs.snackVendor.y)).toBe(false);
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   const gearToken = openShop(alice);
   expect(game.act(alice,{kind:'shop-buy',target:'pizza',token:gearToken},world)).toBe('Este produto não é vendido aqui.');
   expect(game.act(alice,{kind:'talk',target:'snackVendor'},world)).toBe('Aproxime-se para conversar.');
@@ -86,19 +96,28 @@ test('the Lanchonete is reachable and each vendor sells only its own catalog', (
 });
 
 test('equipping changes custody, binocular range and voice battery without stacking bonuses', () => {
-  const {alice,game,world,openShop} = setup();
-  game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world);
+  const {alice,game,world,buyGear} = setup();
+  buyGear(alice,'binoculars');
   const binocular = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:binocular.id},world);
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(alice,world).equipped).toEqual([binocular]);
   expect(game.view(alice,world).equipmentCooldowns).toEqual({});
-  expect(game.vision(alice.id)).toBe(VISION_RADIUS+2);
-  expect(game.act(alice,{kind:'shop-buy',target:'binoculars',token:openShop(alice)},world)).toBe('Você já tem este equipamento.');
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  game.act(alice,{kind:'use-binoculars'},world);
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS*1.65);
+  expect(game.view(alice,world).binocularSeconds).toBe(10);
+  expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('recarga');
+  world.now += 10_000;
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  expect(game.view(alice,world).equipmentCooldowns?.[binocular.id]).toBe(30);
+  world.now += 30_000;
+  expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('ativo');
+  expect(buyGear(alice,'binoculars')).toBe('Você já tem este equipamento.');
   game.act(alice,{kind:'unequip',item:binocular.id},world);
-  expect(game.vision(alice.id)).toBe(VISION_RADIUS);
+  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
 
-  game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
+  buyGear(alice,'voiceModulator');
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;
   game.act(alice,{kind:'equip',item:modulator.id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
@@ -114,14 +133,14 @@ test('equipping changes custody, binocular range and voice battery without stack
 });
 
 test('the shop does not debit rejected purchases and only equipped weapons can hit', () => {
-  const {alice,bob,game,balance,events,world,openShop} = setup();
+  const {alice,bob,game,balance,events,world,buyGear} = setup();
   balance.set(alice.id,1);
-  expect(game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world)).toBe('Saldo insuficiente.');
+  expect(buyGear(alice,'baton')).toBe('Saldo insuficiente.');
   expect(balance.get(alice.id)).toBe(1);
   expect(game.view(alice,world).inventory).toEqual([]);
 
   balance.set(alice.id,12);
-  expect(game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world)).toBe('Compra guardada no inventário.');
+  expect(buyGear(alice,'baton')).toBe('Compra guardada no inventário.');
   const weapon = game.view(alice,world).inventory[0];
   expect(game.act(alice,{kind:'attack',target:bob.id},world)).toBe('Equipe uma arma.');
   expect(game.act(bob,{kind:'equip',item:weapon.id},world)).toBe('O equipamento não está com você.');
@@ -156,7 +175,7 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   expect(combat.view(bob,141).hp).toBe(83);
   expect(combat.attack(alice,142)).toBe('A arma está em recarga.');
   for (const now of [1300,2600,3900,5200]) strike(now);
-  expect(combat.view(bob,5340).hp).toBe(0);
+  expect(combat.view(bob,5340)).toMatchObject({hp:0,recovery:recoveryRules.knockoutMs/1000});
   expect(bob.knockedOut).toBe(true);
   const movement = {player:bob,route:[{x:164,y:146}],ack:0};
   applyInput(movement,{seq:1,motion:{x:1,y:0}});
@@ -172,16 +191,16 @@ test('combat respects armor, obstacles, cooldown, aid, recovery protection and t
   combat.tick([alice,bob],11000,false);
   expect(bob.knockedOut).toBeUndefined();
   expect(combat.view(bob,11000).hp).toBe(45);
-  Object.assign(alice,{x:620,y:206});
-  Object.assign(bob,{x:642,y:206});
+  Object.assign(alice,{x:663,y:230});
+  Object.assign(bob,{x:685,y:230});
   strike(16_000);
   expect(combat.view(bob,16_140).hp).toBe(45);
 });
 
 
 function knockOut(match:ReturnType<typeof setup>) {
-  const {alice,bob,game,world,openShop} = match;
-  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear} = match;
+  buyGear(alice,'baton');
   game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
   for (const now of [100,1400,2700,4000]) {
     world.now = now;
@@ -256,6 +275,8 @@ test('the infirmary can treat a passenger and heals only after a valid payment',
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   expect(findRoute({x:140,y:146},{x:infirmary.x,y:infirmary.y}).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
   game.act(alice,{kind:'carry',target:bob.id},world);
+  Object.assign(alice,{x:803,y:461});
+  expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   Object.assign(alice,{x:infirmary.x,y:infirmary.y});
   game.tick(world,true);
   balance.set(alice.id,0);
@@ -284,7 +305,8 @@ test('dialogue eligibility is private and checked again when the player chooses'
   world.hasEvidence = (id,kind)=>id===alice.id && kind==='clandestine-transfer';
   Object.assign(alice, {x:240,y:250});
   game.act(alice,{kind:'supply',place:'coffee'},world);
-  Object.assign(alice, {x:631,y:197});
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  Object.assign(bob,{x:npcs.vendor.x+9,y:alice.y});
   for (const player of [alice,bob]) game.act(player,{kind:'talk',target:'vendor'},world);
   const options = (player:Player)=>game.view(player,world).dialogue?.options.map(choice=>choice.id);
   expect(options(alice)).toEqual(expect.arrayContaining(['coffee','president','evidence','mission']));
@@ -297,8 +319,8 @@ test('dialogue eligibility is private and checked again when the player chooses'
 });
 
 test('modulator recharge follows the item when another player collects and equips it', () => {
-  const {alice,bob,game,world,openShop} = setup();
-  game.act(alice,{kind:'shop-buy',target:'voiceModulator',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear} = setup();
+  buyGear(alice,'voiceModulator');
   const {id} = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
@@ -319,7 +341,7 @@ test('doors, furniture and actors without a player session use the shared world 
   const closed = {player:player('Bia',480,554),route:[],ack:0,plenary:true};
   applyInput(closed,{seq:1,door:1,plenary:true});
   expect(closed.player.y).toBe(554);
-  expect(worldVisible({x:625,y:201},{x:625,y:249},VISION_RADIUS+2)).toBe(false);
+  expect(worldVisible({x:675,y:201},{x:675,y:249},VISION_RADIUS+2)).toBe(false);
   expect(worldVisible({x:550,y:195},{x:550,y:282},VISION_RADIUS+2)).toBe(false);
   expect(worldVisible({x:500,y:140},{x:587,y:140})).toBe(false);
   expect(worldVisible({x:500,y:140},{x:587,y:140},VISION_RADIUS+2)).toBe(true);
@@ -382,9 +404,9 @@ const consumableCases:[FoodKind,number,number][] = [
 
 for (const [kind,hp,stamina] of consumableCases) {
   test(`${kind} can be bought and consumed once by its owner`,()=>{
-    const {alice,bob,game,world,openShop,balance,events} = setup();
+    const {alice,bob,game,world,openShop,buyGear,balance,events} = setup();
     balance.set(bob.id,12);
-    game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+    buyGear(alice,'baton');
     game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
     for (let strike=0;strike<3;strike++) {
       game.act(alice,{kind:'attack'},world);
@@ -432,8 +454,8 @@ for (const [kind,hp,stamina] of consumableCases) {
 }
 
 test('upgraded stats change baton damage and recovery, and stamina requires equipped shoes to sprint',()=>{
-  const {alice,bob,game,world,openShop,events} = setup();
-  game.act(alice,{kind:'shop-buy',target:'baton',token:openShop(alice)},world);
+  const {alice,bob,game,world,buyGear,events} = setup();
+  buyGear(alice,'baton');
   const weapon = game.view(alice,world).inventory[0];
   game.act(alice,{kind:'equip',item:weapon.id},world);
   game.act(alice,{kind:'attack'},world);
@@ -466,7 +488,7 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   expect(runner.sprinting).toBeUndefined();
   for (let i=0;i<30;i++) restMovement(runner);
   expect(runner.stamina).toBe(110);
-  game.act(runner,{kind:'shop-buy',target:'runningShoes',token:openShop(runner)},world);
+  buyGear(runner,'runningShoes');
   const shoes = game.view(runner,world).inventory.find(item=>item.kind==='runningShoes')!;
   expect(game.act(runner,{kind:'equip',item:shoes.id},world)).toBe('Equipado.');
   applyInput(move,{seq:2,motion:{x:1,y:0},sprint:true});
@@ -477,4 +499,119 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   game.reset(world.now,()=>0,[runner,bob],()=>0);
   expect(runner).toMatchObject({stamina:100});
   expect(game.view(bob,world).vitality).toMatchObject({hp:100,max:100});
+});
+
+test('megaphone reserves one channel, keeps the modulator active and releases on timeout or plenary',()=>{
+  const {alice,bob,game,world,buyGear} = setup();
+  const feedback:string[] = [];
+  world.feedback = (_,message)=>feedback.push(message);
+  const toggle = {kind:'toggle-megaphone'} as const;
+  expect(game.act(alice,toggle,world)).toContain('Equipe');
+  const buyAndEquip = (owner:Player,kind:'megaphone'|'voiceModulator') => {
+    expect(buyGear(owner,kind)).toBe('Compra guardada no inventário.');
+    const item = game.view(owner,world).inventory.find(item=>item.kind===kind)!;
+    expect(game.act(owner,{kind:'equip',item:item.id},world)).toBe('Equipado.');
+    return item.id;
+  };
+  const a = buyAndEquip(alice,'megaphone');
+  const b = buyAndEquip(bob,'megaphone');
+  buyAndEquip(alice,'voiceModulator');
+  game.act(alice,{kind:'toggle-modulator'},world);
+  expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
+  expect(game.megaphoneSpeaker()).toBe(alice.id);
+  expect(game.view(alice,world)).toMatchObject({megaphoneSeconds:15,modulator:{active:true}});
+  expect(game.act(bob,toggle,world)).toBe('Canal de Megafone ocupado.');
+  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBeUndefined();
+  world.now += 15_000;
+  game.tick(world,true);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+  expect(game.act(alice,toggle,world)).toBe('Megafone em recarga.');
+  expect(game.act(bob,toggle,world)).toBe('Megafone ativo.');
+  game.tick(world,false);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBe(45);
+  world.now += 45_000;
+  game.tick(world,true);
+  expect(feedback).toContain('Megafone pronto.');
+  expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
+  game.stopMegaphone(alice.id,world);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+});
+
+test('attacks spend stamina exactly once and insufficient stamina does not start cooldown',()=>{
+  const {alice,game,world,buyGear} = setup();
+  buyGear(alice,'baton');
+  const weapon = game.view(alice,world).inventory[0];
+  game.act(alice,{kind:'equip',item:weapon.id},world);
+  alice.stamina = weapons.baton.staminaCost-1;
+  expect(game.act(alice,{kind:'attack'},world)).toContain('Stamina insuficiente');
+  expect(game.view(alice,world).equipmentCooldowns?.[weapon.id]).toBeUndefined();
+  alice.stamina = weapons.baton.staminaCost;
+  expect(game.act(alice,{kind:'attack'},world)).toBeUndefined();
+  expect(alice.stamina).toBe(0);
+  expect(game.act(alice,{kind:'attack'},world)).toContain('recarga');
+  expect(alice.stamina).toBe(0);
+});
+
+test('first aid kits heal the owner once, cap healing and are kept at full health',()=>{
+  const {alice,bob,game,balance,events,world,buyGear} = setup();
+  expect(buyGear(bob,'firstAidKit')).toBe('Compra guardada no inventário.');
+  expect(balance.get(bob.id)).toBe(3.5);
+  const kit = game.view(bob,world).inventory[0];
+  const use = {kind:'use',item:kit.id} as const;
+  expect(game.act(bob,use,world)).toBe('Seus PV já estão cheios.');
+  expect(game.view(bob,world).inventory).toEqual([kit]);
+
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  game.act(alice,use,world);
+  expect(game.view(bob,world).inventory).toEqual([kit]);
+
+  expect(game.act(bob,use,world)).toBe('Primeiros socorros aplicados.');
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
+  game.act(bob,use,world);
+  expect(game.view(bob,world).inventory).toEqual([]);
+  expect(events.filter(event=>event.type==='used')).toHaveLength(1);
+});
+
+test('identical snacks share a slot and support partial offers and drops',()=>{
+  const {alice,bob,game,world,openShop,balance} = setup();
+  Object.assign(alice,npcs.snackVendor.interaction);
+  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'coxinha',token:openShop(buyer,'snackVendor')},world);
+  for (let index=0;index<5;index++) expect(buy(alice)).toBe('Compra guardada no inventário.');
+  expect(balance.get(alice.id)).toBe(9.5);
+  const inventory = (who:Player) => game.view(who,world).inventory;
+  expect(inventory(alice)).toHaveLength(1);
+  const {id:item} = inventory(alice)[0];
+  expect(inventory(alice)[0].quantity).toBe(5);
+  expect(game.act(alice,{kind:'use',item,quantity:5},world)).toBe('Objeto utilizado.');
+  expect(inventory(alice)[0].quantity).toBe(4);
+
+  Object.assign(bob,npcs.snackVendor.interaction);
+  expect(buy(bob)).toBe('Compra guardada no inventário.');
+  const offer = {kind:'offer',item,target:bob.id} as const;
+  expect(game.act(alice,{...offer,quantity:5},world)).toBe('Quantidade indisponível.');
+  expect(game.act(alice,{...offer,quantity:2},world)).toBe('Pedido enviado.');
+  const request = game.view(bob,world).requests[0];
+  expect(request.item.quantity).toBe(2);
+  expect(inventory(alice)[0].quantity).toBe(4);
+  const accept = {kind:'accept',item:request.id} as const;
+  expect(game.act(bob,accept,world)).toBe('Objeto recebido.');
+  expect(game.act(bob,accept,world)).toBe('Pedido indisponível.');
+  expect(inventory(alice)[0].quantity).toBe(2);
+  expect(inventory(bob)).toHaveLength(1);
+  expect(inventory(bob)[0].quantity).toBe(3);
+
+  expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
+  expect(inventory(alice)[0].quantity).toBe(1);
+  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind==='coxinha')!;
+  expect(dropped.quantity).toBe(1);
+  expect(game.act(bob,{kind:'collect',item:dropped.id},world)).toBe('Objeto recolhido.');
+  expect(inventory(bob)[0].quantity).toBe(4);
 });

@@ -1,11 +1,27 @@
-import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
-import type { GameplayEvent } from '../src/gameplay';
-import { agendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { shop } from '../src/installations';
+import { equipment } from '../src/equipment';
+import { foods } from '../src/food';
+import { ELECTION_RULES } from '../src/elections';
+import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
+import type { GameplayEvent, ObjectKind } from '../src/gameplay';
+import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
+type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+const furnitureSpendingTarget = 5;
+const signatureTarget = 2;
+const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  emenda:(event:GameplayEvent) => event.type==='amendment-filed',
+  cafe:(event:GameplayEvent) => event.type==='coffee-drunk',
+  leitura:(event:GameplayEvent) => event.type==='bill-studied',
+  credencial:(event:GameplayEvent) => event.type==='credential-checked',
+  propaganda:(event:GameplayEvent) => event.type==='advertisement-aired',
+  discurso:(event:GameplayEvent) => event.type==='speech-given',
+  auditoria:(event:GameplayEvent) => event.type==='audit-performed',
+
   protocolo:(event:GameplayEvent) => event.type==='filed',
   rouboNpc:(event:GameplayEvent) => event.type==='npc-robbed',
   votoNpc:(event:GameplayEvent) => event.type==='npc-vote-bought',
@@ -30,15 +46,34 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  articulacao:3, escandalo:3, entrega:4, assinaturas:3, assinar:2,
+  articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:2, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:5,
+  assinaturas:signatureTarget, passeio:3, jogar:30_000, jogarOculto:30_000, pausaCafe:10_000, ostentacao:furnitureSpendingTarget,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
+const purchaseRequirements:Partial<Record<Agenda,number>> = {
+  equipamento:equipment.binoculars.price,
+  poltrona:officeGoods.officeChair.price,
+  televisao:officeGoods.officeTv.price,
+  comprarLagosta:foods.lobster.price,
+  propaganda:ELECTION_RULES.advertisementCost,
+  pagamento:AGENDA_TRANSFER_MIN,
+  dinheiroAlvo:AGENDA_TRANSFER_MIN,
+};
+
+const consumableRequirements = {
+  pizza:'pizza',pizzaAlvo:'pizza',fatias:'pizza',pizzada:'pizza',lagosta:'lobster',bombom:'chocolates',
+} as const satisfies Partial<Record<Agenda,ObjectKind>>;
+
+const decorationRequirements = {
+  retrato:'portrait',retratoGabinete:'portrait',reforma:'portrait',
+  reserva:'vip',mandaVip:'vip',
+} as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
+
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -51,10 +86,22 @@ export class PersonalAgenda {
   private missionCoffee = new Set<string>();
   private seenEvents = new Set<string>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
-  private furnishingPurchases = 0;
   private npcCount = 0;
   private cannotVote = false;
   private ballotsLeft = 3;
+  private targets:readonly Contact[] = [];
+  private availableTargets:ReadonlySet<string>|undefined;
+  private visitedTargets = new Set<string>();
+  private readonly rewardedTargetItems = new Set<number>();
+  private pickTarget(kind:Agenda) {
+    const targets = this.targets.filter(person=>this.targetAvailable(kind,person.id));
+    return targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
+      targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
+  }
+
+  private targetAvailable(kind:Agenda,id:string) {
+    return kind==='visitaAlvo' || !this.availableTargets || this.availableTargets.has(id);
+  }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
     private reward:(reward:MissionReward, completed:Mission[])=>void) {
@@ -68,42 +115,61 @@ export class PersonalAgenda {
     this.fillMissions(metrics,true);
   }
 
-  recordPayment(metrics:AgendaMetrics, from:string) {
+  recordPayment(metrics:AgendaMetrics, from:string, transferId:number) {
+    const key = `payment:${transferId}`;
+    if (this.seenEvents.has(key)) return;
+    this.seenEvents.add(key);
     if (this.hasActive('articulacao')) this.missionPayers.add(from);
     this.progress(metrics,{recebido:1});
   }
 
-  recordTransfer(metrics:AgendaMetrics, amount:number) {
-    if (amount>=AGENDA_TRANSFER_MIN) this.progress(metrics,{pagamento:1});
+  recordTransfer(metrics:AgendaMetrics, amount:number,to:string,transferId:number) {
+    const key = `transfer:${transferId}`;
+    if (this.seenEvents.has(key)) return;
+    this.seenEvents.add(key);
+    if (amount>=AGENDA_TRANSFER_MIN) this.progress(metrics,{pagamento:1,dinheiroAlvo:Number(this.missions.some(m=>m.kind==='dinheiroAlvo' && m.person?.id===to))});
   }
 
   recordSignature(metrics:AgendaMetrics, document:number, signer:string) {
     const mission = this.missions.find(mission=>mission.kind==='assinaturas');
-    if (mission) this.progress(metrics,{assinaturas:this.countFacts(mission,[{value:signer,group:String(document)}])});
+    const targeted = this.missions.some(m=>m.kind==='assinaturaAlvo' && m.person?.id===signer);
+    if (mission || targeted) this.progress(metrics,{assinaturaAlvo:Number(targeted),
+      assinaturas:mission ? this.countFacts(mission,[{value:signer,group:String(document)}]) : 0});
   }
 
-  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0) {
+  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
+    this.targets = targets;
+    this.availableTargets = availableTargets;
     this.npcCount = npcCount;
     this.playerCount = playerCount;
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (this.availableInMatch(mission.kind,mission.target-mission.current)) return true;
+      if (this.availableInMatch(mission.kind,mission.target-mission.current) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       return false;
     });
     this.fillMissions(metrics);
   }
 
-  private availableInMatch(kind:Agenda, remaining:number) {
+  private availableInMatch(kind:Agenda, remaining:number, drawing=false) {
+    if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
-    const participants = kind==='assinaturas' ? this.playerCount+this.npcCount : this.playerCount;
-    if (players>participants) return false;
+    // Isolation is temporary. Keep collective missions already in progress.
+    const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='jogarOculto';
+    const humans = usesAvailablePlayers ? this.availableTargets?.size ?? this.playerCount : this.playerCount;
+    if (kind==='assinaturas') {
+      const available = this.availableTargets;
+      const colleagues = drawing && available
+        ? this.targets.filter(person=>available.has(person.id)).length
+        : Math.max(0,this.playerCount-1);
+      if (colleagues+this.npcCount<signatureTarget) return false;
+    } else if (players>humans) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
     }
-    return !this.cannotVote || !['propaganda','discurso','emenda','auditoria'].includes(kind);
+    return !this.cannotVote || !['protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
 
   private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
@@ -120,10 +186,20 @@ export class PersonalAgenda {
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
       gains.ostentacao = officeGoods[event.kind].price;
-      this.furnishingPurchases += gains.ostentacao;
     }
     for (const mission of this.missions) {
       const kind = mission.kind;
+      if (mission.person) {
+        const target = mission.person.id;
+        if (event.type==='transferred' && event.target===target && event.item!==undefined && !this.rewardedTargetItems.has(event.item) &&
+            (kind==='documentoAlvo' && event.kind==='document' || kind==='pizzaAlvo' && event.kind==='pizza')) {
+          this.rewardedTargetItems.add(event.item);
+          gains[kind] = 1;
+        }
+        if (kind==='visitaAlvo' && event.type==='room-entered' && event.target===target) gains[kind] = 1;
+        if (kind==='selfieAlvo' && event.type==='photo' && event.photo?.selfie &&
+            event.photo.people.some(person=>person.id===target)) gains[kind] = 1;
+      }
       const matches = activityMissions[kind as keyof typeof activityMissions];
       if (matches?.(event)) gains[kind] = 1;
       const rule = photoMissions[kind as keyof typeof photoMissions];
@@ -153,11 +229,35 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
-    return this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
+    if ((kind==='pagamento' || kind==='dinheiroAlvo') && metrics.canPay?.()===false) return false;
+    if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
+    if (kind==='votoNpc') {
+      if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;
+      if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;
+    }
+    if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
+    const food = consumableRequirements[kind as keyof typeof consumableRequirements];
+    if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
+    const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
+    if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
+    if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
+    if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
+        metrics.wallet<shop.portrait && !metrics.owns?.('portrait')) return false;
+    if (kind==='reforma' && !metrics.hasAgendaDecoration?.('portrait',true)) return false;
+    if (kind==='mandaVip' && !metrics.hasAgendaDecoration?.('vip',true)) return false;
+    if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;
+    if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
+    const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
+    if ((kind==='televisao' && !stock.includes('officeTv')) || (kind==='poltrona' && !stock.includes('officeChair'))) return false;
+    if (kind==='gabinete' && !stock.some(item=>officeGoods[item].price<=metrics.wallet || metrics.owns?.(item))) return false;
+    if (kind==='ostentacao') {
+      const availableSpend = stock.reduce((sum,item)=>sum+officeGoods[item].price,0);
+      if (Math.min(availableSpend,metrics.wallet)<furnitureSpendingTarget) return false;
+    }
+    return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,true) &&
+      metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
       (kind!=='campanha' || metrics.popularity<100) &&
-      (kind!=='equipamento' || !this.acquired.has('binoculars')) &&
-      (kind!=='poltrona' || !this.acquired.has('officeChair')) &&
-      (kind!=='ostentacao' || this.furnishingPurchases<=2);
+      (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars'));
   }
 
   private fillMissions(metrics:AgendaMetrics, initial=false) {
@@ -177,7 +277,8 @@ export class PersonalAgenda {
       if (kind==='campanha') target = Math.min(100,Math.max(target,metrics.popularity+15));
       if (kind==='articulacao') this.missionPayers.clear();
       if (kind==='entrega') this.missionCoffee.clear();
-      this.missions.push({id:++this.nextMissionId,kind,current:0,target});
+      const person = Object.hasOwn(targetedAgendas,kind) ? this.pickTarget(kind) : undefined;
+      this.missions.push({id:++this.nextMissionId,kind,current:0,target,person});
     }
   }
 
@@ -198,6 +299,7 @@ export class PersonalAgenda {
       if (current>=mission.target) {
         this.factsByMission.delete(mission.id);
         completed.push({...mission});
+        if (mission.person) this.visitedTargets.add(mission.kind+':'+mission.person.id);
         const earned = missionReward(mission.kind);
         reward.xp += earned.xp;
         reward.cash += earned.cash ?? 0;

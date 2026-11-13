@@ -1,15 +1,18 @@
+import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
-import type { GameplayEvent } from '../src/gameplay';
+import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { Vote } from '../src/plenary';
 import { PersonalAgenda } from './PersonalAgenda';
 
+type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number}>;
+
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  selfieBonus:boolean; known:Set<number>; suspended:boolean;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -21,12 +24,19 @@ export class PoliticalEconomy {
   private offers = new Map<number,Offer>();
   private serial = 0;
   private matchId = 0;
+  private agendaRound = 0;
   private rewardReserve = 0;
+  private transferred = 0;
+  private reserveFees = 0;
   private npcIds = new Set<string>();
+  private officialScandal = false;
   private scandalPizzas = new Set<number>();
 
-  reset(contacts:DirectoryContact[], random:()=>number) {
+  reset(contacts:DirectoryContact[], random:()=>number,
+    canAgendaAction?:(id:string,kind:'propaganda'|'discurso'|'emenda')=>boolean) {
     this.matchId++;
+    this.agendaRound = 0;
+    this.transferred = this.reserveFees = 0;
     this.npcIds.clear();
     this.rewardReserve = contacts.length*8;
     this.contacts = new Map(contacts.map(contact => [contact.id,contact]));
@@ -36,8 +46,12 @@ export class PoliticalEconomy {
     this.offers.clear();
     this.serial = 0;
     this.scandalPizzas.clear();
+    this.officialScandal = false;
     for (const contact of contacts) {
-      const metrics = {wallet:8,popularity:40};
+      const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
+        npcHasCash:()=>[...this.npcIds].some(id=>this.wallet(id)>0),
+        canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
+        canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
@@ -57,7 +71,7 @@ export class PoliticalEconomy {
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
         grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
-        known:new Set(),suspended:false,
+        known:new Set(),
       });
     }
   }
@@ -75,7 +89,7 @@ export class PoliticalEconomy {
     const sample = this.accounts.values().next().value;
     if (!sample) return;
     this.npcIds.add(contact.id);
-    const {agenda,progression,...initial} = sample;
+    const {agenda,progression,canPay:_canPay,canAgendaAction:_canAgendaAction,...initial} = sample;
     this.contacts.set(contact.id,contact);
     this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
       progression:new CharacterProgression(this.matchId)});
@@ -88,7 +102,7 @@ export class PoliticalEconomy {
       if (this.npcIds.has(id)) npcs += account.wallet;
       else humans += account.wallet;
     }
-    return {humans,npcs,reserve:this.rewardReserve};
+    return {humans,npcs,reserve:this.rewardReserve,transferred:this.transferred,reserveFees:this.reserveFees};
   }
 
   takeWallet(id:string,fraction=1) {
@@ -124,6 +138,13 @@ export class PoliticalEconomy {
     account.walletIncome = Math.round((account.walletIncome+amount)*10)/10;
   }
 
+  rewardFromReserve(id:string,amount:number) {
+    if (!this.accounts.has(id) || !Number.isSafeInteger(amount*10) || amount<=0) return;
+    const paid = Math.min(amount,this.rewardReserve);
+    this.rewardReserve = Math.round((this.rewardReserve-paid)*10)/10;
+    this.earn(id,paid);
+  }
+
   earn(id:string, amount:number) {
     const account = this.accounts.get(id);
     if (!account) return;
@@ -133,14 +154,15 @@ export class PoliticalEconomy {
 
   spend(id:string,amount:number) {
     const account = this.accounts.get(id);
-    if (!account || amount>account.wallet) return false;
-    account.wallet -= amount;
-    this.rewardReserve += amount;
+    if (!account || !Number.isSafeInteger(amount*10) || amount<=0 || amount>account.wallet) return false;
+    account.wallet = Math.round((account.wallet-amount)*10)/10;
+    this.rewardReserve = Math.round((this.rewardReserve+amount)*10)/10;
+    this.reserveFees = Math.round((this.reserveFees+amount)*10)/10;
     return true;
   }
 
   name(id:string) { return this.contacts.get(id)?.name ?? 'Jogador'; }
-  suspended(id:string) { return this.accounts.get(id)?.suspended ?? false; }
+  suspended(id:string) { return this.accounts.get(id)?.suspendedUntil!==undefined; }
   canCall(id:string) { return (this.accounts.get(id)?.popularity ?? 0)>=HEARING_POPULARITY && !this.suspended(id); }
   cancelOffers(id?:string) {
     for (const [key,offer] of this.offers) if (!id || offer.from===id || offer.to===id) this.offers.delete(key);
@@ -148,10 +170,12 @@ export class PoliticalEconomy {
 
   private record(kind:Evidence['kind'], from:string, amount:number, round:number, to?:string) {
     const id = ++this.serial;
-    this.records.set(id,{id,kind,from,to,amount,round});
+    const evidence:Evidence = {id,kind,from,to,amount,round};
+    this.records.set(id,evidence);
     this.accounts.get(from)?.known.add(id);
     if (to) this.accounts.get(to)?.known.add(id);
     if (kind==='public-transfer') this.published.add(id);
+    return evidence;
   }
 
   transfer(from:string, to:string, amount:number, clandestine:boolean, round:number) {
@@ -163,17 +187,26 @@ export class PoliticalEconomy {
     }
     if (source.payments>=PAYMENTS_PER_ROUND) return false;
     source.payments++;
+    this.transferred += amount;
     source.wallet -= amount;
     this.credit(recipient,amount);
-    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from);
-    source.agenda.recordTransfer(source,amount);
-    this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
+    const evidence = this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
+    this.recordTransferCompleted({id:evidence.id,from,to,amount});
     return true;
+  }
+
+  private recordTransferCompleted(event:TransferCompleted) {
+    const {from,to,amount} = event;
+    const recipient = this.accounts.get(to);
+    const source = this.accounts.get(from);
+    if (!source || !recipient) return;
+    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from,event.id);
+    source.agenda.recordTransfer(source,amount,to,event.id);
   }
 
   grant(id:string, diverted:Split, budget:number, round:number) {
     const account = this.accounts.get(id);
-    if (!account || account.grantUsed || account.suspended || budget<CABINET_GRANT) return;
+    if (!account || account.grantUsed || this.suspended(id) || budget<CABINET_GRANT) return;
     account.grantUsed = true;
     this.credit(account,diverted);
     account.agenda.progress(account);
@@ -186,6 +219,7 @@ export class PoliticalEconomy {
     if (!account || account.wallet<CAMPAIGN_COST || account.campaignRound===round) return;
     account.wallet -= CAMPAIGN_COST;
     this.rewardReserve += CAMPAIGN_COST;
+    this.reserveFees += CAMPAIGN_COST;
     account.campaignRound = round;
     this.changePopularity(id,17);
   }
@@ -193,7 +227,6 @@ export class PoliticalEconomy {
   audit(id:string, round:number, limit=1) {
     const account = this.accounts.get(id);
     if (!account) return;
-    this.recordActivity(id,'auditoria');
     if (account.auditRound!==round) {
       account.auditRound = round;
       account.audits = 0;
@@ -214,7 +247,7 @@ export class PoliticalEconomy {
     if (!seller?.known.has(evidence) || !recipient || recipient.known.has(evidence) ||
       this.published.has(evidence) || !Number.isSafeInteger(price) || price<0) return;
     if (price===0) {
-      recipient.known.add(evidence);
+      this.deliverEvidence(to,evidence);
       return;
     }
     this.cancelOutgoing(from);
@@ -233,8 +266,14 @@ export class PoliticalEconomy {
     if (!offer || offer.to!==buyer || this.published.has(offer.evidence) ||
       this.accounts.get(buyer)?.known.has(offer.evidence)) return;
     if (!this.transfer(buyer,offer.from,offer.price,true,round)) return;
-    this.accounts.get(buyer)?.known.add(offer.evidence);
-    this.offers.delete(id);
+    this.deliverEvidence(buyer,offer.evidence);
+  }
+
+  private deliverEvidence(recipient:string, evidence:number) {
+    this.accounts.get(recipient)?.known.add(evidence);
+    for (const [id,offer] of this.offers) {
+      if (offer.to===recipient && offer.evidence===evidence) this.offers.delete(id);
+    }
   }
 
   cancel(by:string, id:number) {
@@ -278,21 +317,39 @@ export class PoliticalEconomy {
     }
   }
 
-  clearSuspensions() { for (const account of this.accounts.values()) account.suspended = false; }
+  expireSuspensions(now:number) {
+    let changed = false;
+    for (const account of this.accounts.values()) {
+      if (account.suspendedUntil===undefined || account.suspendedUntil>now) continue;
+      account.suspendedUntil = undefined;
+      changed = true;
+    }
+    return changed;
+  }
 
-  suspend(id:string) {
+  suspensionRemaining(id:string,now:number) {
+    return Math.max(0,Math.ceil(((this.accounts.get(id)?.suspendedUntil ?? now)-now)/1000));
+  }
+
+  suspend(id:string,until:number) {
     const account = this.accounts.get(id);
     if (account) {
-      account.suspended = true;
+      account.suspendedUntil = until;
       account.popularity = cap(account.popularity-20);
     }
+  }
+
+  recordOfficialScandal() { this.officialScandal = true; }
+
+  private hasPublicScandal() {
+    return this.officialScandal || [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer');
   }
 
   recordGameplay(event:GameplayEvent) {
     const account = this.accounts.get(event.actor);
     if (!account) return;
     if (event.kind==='pizza' && event.item!==undefined) {
-      if (event.type==='installed' && [...this.published].some(key=>this.records.get(key)?.kind!=='public-transfer')) {
+      if (event.type==='installed' && this.hasPublicScandal()) {
         this.scandalPizzas.add(event.item);
       }
       if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
@@ -309,28 +366,43 @@ export class PoliticalEconomy {
     }
   }
 
-  recordActivity(id:string, kind:'auditoria'|'cafe'|'leitura'|'credencial'|'emenda'|'propaganda'|'discurso') {
-    const account = this.accounts.get(id);
-    if (account) account.agenda.progress(account,{[kind]:1});
+  setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
+    hasAgendaDecoration?:(id:string,kind:'portrait'|'vip',replacement?:boolean)=>boolean,
+    npcVotePrice?:(id:string)=>number|undefined) {
+    for (const [id,account] of this.accounts) {
+      Object.assign(account,{npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+        hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
+    }
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set()) {
+    this.agendaRound = round;
+    const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
     for (const id of players) {
+      if (disconnected.has(id)) continue;
       const account = this.accounts.get(id);
-      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !account.suspended,ballotsLeft,this.npcIds.size);
+      const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
+        .map(other=>({id:other,name:this.name(other)}));
+      if (account) account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
+        ballotsLeft,this.npcIds.size,targets,availableTargets);
     }
+  }
+
+  private paymentsLeft(id:string,round:number) {
+    const account = this.accounts.get(id);
+    return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }
 
   view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
-    const {wallet,walletIncome,popularity,grantUsed,suspended} = account;
+    const {wallet,walletIncome,popularity,grantUsed} = account;
     return {
-      wallet,walletIncome,popularity,grantUsed,suspended,campaigned:account.campaignRound===round,
+      wallet,walletIncome,popularity,grantUsed,suspended:this.suspended(id),campaigned:account.campaignRound===round,
       missions:account.agenda.view(account),
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,
-      paymentsLeft:PAYMENTS_PER_ROUND-(account.paymentRound===round ? account.payments : 0),
+      paymentsLeft:this.paymentsLeft(id,round),
       directory:[...this.contacts.values()].filter(contact=>!this.npcIds.has(contact.id)).map(contact => ({
         ...contact,popularity:this.accounts.get(contact.id)!.popularity,eligible:eligible(contact.id),
       })),

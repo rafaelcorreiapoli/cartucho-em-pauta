@@ -1,6 +1,8 @@
-import { money } from './politics';
+import {fireRules,fireSites} from './fire';
+import { updateProgress } from './progress-meter';
+import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { bills, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -15,26 +17,43 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
   }
 }
 
-export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number;npcs:number}) => void) {
+export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
-  const count = element<HTMLSelectElement>('infiltrator-count');
-  count.value = '1';
+  function countPicker(id:string,initial:number) {
+    let selected = initial;
+    const buttons = [...element(id).querySelectorAll<HTMLButtonElement>('[data-count]')];
+    for (const button of buttons) {
+      button.setAttribute('aria-pressed',String(Number(button.dataset.count)===selected));
+      button.onclick = ()=>{
+        selected = Number(button.dataset.count);
+        for (const option of buttons) option.setAttribute('aria-pressed',String(option===button));
+      };
+    }
+    return ()=>selected;
+  }
+  const infiltrators = countPicker('infiltrator-count',1);
+  const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
+  for (const button of npcButtons) button.onclick = ()=>command('lobby-npc-count',{count:Number(button.dataset.count)});
   const brief = element('project-outcome-brief');
   let briefTimer:number | undefined;
   function clearBrief() {
     window.clearTimeout(briefTimer);
     brief.hidden = true;
   }
-  start.onclick = () => send('start-match',{infiltrators:Number(count.value),npcs:Number(element<HTMLSelectElement>('parliamentarian-count').value)});
-  for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
-  for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
+  start.onclick = () => command('start-match',{infiltrators:infiltrators()});
+  for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
+  for (const button of votes) button.onclick = () => command('bill-vote',{vote:button.dataset.vote as Vote});
+
+  const intentButtons = [...element('intent-controls').querySelectorAll<HTMLButtonElement>('[data-intent]')];
+  for (const button of intentButtons) {
+    button.onclick = ()=>command('bill-intent',{vote:button.dataset.intent as Vote|'clear'});
+  }
 
   function updateActions() {
     for (const button of actions) {
       const action = button.dataset.action as Action;
-      const station = stations[action==='fraud' ? 'panel' : action];
-      const nearby = !!own && Math.hypot(own.x-station.x,own.y-station.y)<=STATION_RADIUS;
+      const nearby = !!own && canReachStation(own,action==='fraud' ? 'panel' : action);
       button.disabled = !nearby || (action==='amendment' && !!view?.amended);
     }
 
@@ -65,7 +84,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       dot.dataset.current = String(index===selected);
       return dot;
     }));
-    const bill = bills[outcome.round%bills.length].name;
+    const bill = agendaProject(outcome).name;
     const verdict = outcome.passed ? 'Passou!' : 'Caiu!';
     lastVote.dataset.result = outcome.passed ? 'passed' : 'failed';
     element('outcome-summary').textContent = verdict;
@@ -96,12 +115,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       }
       const historyChanged = next.outcomes.length!==view?.outcomes.length;
       if (!next.outcomes.length) clearBrief();
-      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished')) {
+      if (historyChanged && view && next.outcome && (next.phase==='negotiation' || next.phase==='finished' || next.phase==='ballot')) {
         clearBrief();
         const outcome = next.outcome;
         brief.dataset.passed = String(outcome.passed);
         element('brief-verdict').textContent = outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado';
-        element('brief-project').textContent = bills[outcome.round%bills.length].name;
+        element('brief-project').textContent = agendaProject(outcome).name;
         element('brief-yes').textContent = String(outcome.yes);
         element('brief-no').textContent = String(outcome.no);
         for (const key of ['stability','budget'] as const) {
@@ -118,13 +137,19 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const hearing = view.hearing;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
+      element('parliamentarian-setup').hidden = running;
+      const npcCount = view.lobbyNpcCount ?? 2;
+      for (const button of npcButtons) {
+        button.disabled = running || host!==id;
+        button.setAttribute('aria-pressed',String(Number(button.dataset.count)===npcCount));
+      }
       start.hidden = running || host!==id;
       const minimum = view.minimumPlayers ?? MIN_PLAYERS;
       start.disabled = players<minimum;
-      start.textContent = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
+      const startLabel = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
+      if (start.firstChild?.textContent?.trim()!==startLabel && start.firstChild) start.firstChild.textContent = startLabel+' ';
       element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
-      element('briefing').hidden = phase!=='lobby';
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
       const sessionResult = element('project-session-result');
@@ -133,6 +158,9 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
         '';
+      const crisis = element('active-fire');
+      crisis.hidden = !view.fire;
+      crisis.textContent = view.fire ? `🔥 ${fireSites[view.fire.site].name} · ${view.fire.remaining} s · ${view.fire.paused ? 'Pausado' : `−${view.fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`}` : '';
       element('phase').textContent = phase==='negotiation' ? 'Articulação' : hearing ? 'Afastamento' : 'Votação';
       element('clock').textContent = running ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}` : '';
       const clock = element('clock');
@@ -140,31 +168,34 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const clockChip = clock.closest<HTMLElement>('.clock-chip')!;
       clockChip.hidden = !running;
       clockChip.dataset.urgent = String(remaining<=10);
-      element('stability').textContent = String(view.stability);
-      const stability = element<HTMLProgressElement>('stability-meter');
-      stability.value = view.stability;
-      stability.dataset.low = String(view.stability<45);
-      element('budget').textContent = money(view.budget);
-      const budgetMeter = element<HTMLProgressElement>('budget-meter');
-      budgetMeter.max = Math.max(100,view.budget);
-      budgetMeter.value = view.budget;
       if (historyChanged) {
         selected = Math.max(0,view.outcomes.length-1);
         renderHistory();
         const result = view.outcomes[selected];
         element('outcome-announcement').textContent = result ?
-          `${bills[result.round%bills.length].name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
+          `${agendaProject(result).name}: ${result.passed ? 'aprovado' : 'rejeitado'}. ${result.yes} a favor, ${result.no} contra.` : '';
       }
       const objection = view.election?.objection;
       element('bill-objection').hidden = !objection || !!hearing || !running;
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}`;
-      const title = hearing ? hearing.target : bills[round%bills.length].name;
+      const intents = voteIntentSummary(view.voteIntents);
+      const intentSummary = element('intent-summary');
+      intentSummary.hidden = !intents || !!hearing;
+      intentSummary.textContent = intents;
+      element('intent-controls').hidden = phase!=='negotiation' || !view.mandate || !!view.politics?.suspended;
+      const ownIntent = view.voteIntents?.find(intent=>intent.id===id)?.vote;
+      for (const button of intentButtons) {
+        button.setAttribute('aria-pressed',String(button.dataset.intent===ownIntent));
+        if (button.dataset.intent==='clear') button.hidden = !ownIntent;
+      }
+      const queued = view.queuedProjects?.length ?? 0;
+      element('bill-round').textContent = hearing ? 'Votação de afastamento' : `Projeto ${round+1}${queued ? ` · +${queued} na pauta` : ''}`;
+      const title = hearing ? hearing.target : agendaProject(view).name;
       element('bill').textContent = title;
       element('project-details-title').textContent = title;
-      element('bill-description').textContent = hearing ? '' : bills[round%bills.length].description;
+      element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
       element('impact').hidden = !!hearing;
       showImpact('yes',view.yes);
       showImpact('no',view.no);
@@ -173,8 +204,13 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
       element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'afastar' : 'aprovar'}`;
       const progress = element<HTMLProgressElement>('vote-progress');
-      progress.max = Math.max(1,view.electorate);
-      progress.value = view.voted;
+      updateProgress(progress,view.voted,Math.max(1,view.electorate));
+      if (view.isolationSeconds) {
+        element('clock-label').textContent = 'Isolamento';
+        const seconds = view.isolationSeconds;
+        clock.textContent = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+        clockChip.dataset.urgent = String(seconds<=10);
+      }
       if (!view.mandate || view.politics?.suspended) element('quorum').textContent = view.mandate ? 'Você está afastado da votação.' : 'Ex-parlamentar · Sem direito a voto.';
       const castVote = hearing?.vote ?? view.vote;
       const state = element('vote-state');

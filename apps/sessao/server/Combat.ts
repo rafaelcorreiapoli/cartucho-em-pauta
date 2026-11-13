@@ -1,12 +1,12 @@
-import { weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
+import { equipment } from '../src/equipment';
+import { canSwingWeapon, weaponImpactSegment, weapons, type WeaponKind, type WeaponSwing } from '../src/weapons';
 import { characterStats } from '../src/character-stats';
-import { canReachObject } from '../src/gameplay';
-import { aidRadius } from '../src/medical';
+import { MAX_STAMINA } from '../src/movement';
+import { canReachDownedPlayer } from '../src/interactions';
+import { recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
-const recoveryTime = 8_000;
-const recoveryShield = 4_000;
-type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'hpBonus'|'attackBonus'|'defenseBonus'>;
+type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
 
@@ -45,8 +45,8 @@ export class Combat {
   }
 
   private recover(player:Combatant, state:Vitality, now:number) {
-    state.hp = Math.ceil(this.max(player)*.45);
-    state.protectedUntil = now+recoveryShield;
+    state.hp = Math.ceil(this.max(player)*recoveryRules.healthFraction);
+    state.protectedUntil = now+recoveryRules.protectionMs;
     state.recoverAt = 0;
     player.knockedOut = undefined;
   }
@@ -90,6 +90,9 @@ export class Combat {
     const state = this.state(attacker);
     if (attacker.knockedOut || attacker.carrying) return 'Ataque indisponível.';
     if (state.attackAt>now) return 'A arma está em recarga.';
+    const stamina = attacker.stamina ?? attacker.staminaMax ?? MAX_STAMINA;
+    if (!canSwingWeapon(stamina,weapon)) return 'Stamina insuficiente para atacar.';
+    attacker.stamina = stamina-weapons[weapon].staminaCost;
     state.attackAt = now+weapons[weapon].cooldown;
     state.pending = true;
     attacker.swing = {weapon,startedAt:now,angle:Combat.facingAngles[attacker.direction ?? 0]};
@@ -123,13 +126,13 @@ export class Combat {
   private damage(attacker:Combatant, target:Combatant, armor:boolean, now:number, weapon:WeaponKind) {
     const profile = weapons[weapon];
     const base = characterStats[attacker.character].attack;
-    const strike = (profile.damage+base*profile.strengthScale+(attacker.attackBonus ?? 0))*(armor ? .65 : 1);
+    const strike = (profile.damage+base*profile.strengthScale+(attacker.attackBonus ?? 0))*(armor ? 1-equipment.vest.damageReduction : 1);
     const damage = Math.max(1,Math.round(strike)-(target.defenseBonus ?? 0));
     const victim = this.state(target);
     victim.hp = Math.max(0,victim.hp-damage);
-    target.hit = now+250;
+    target.hit = now+recoveryRules.hitStunMs;
     if (!victim.hp) {
-      victim.recoverAt = now+recoveryTime;
+      victim.recoverAt = now+recoveryRules.knockoutMs;
       target.knockedOut = true;
       this.interrupt(target);
     }
@@ -137,7 +140,7 @@ export class Combat {
   }
 
   aid(actor:Combatant, target:Combatant|undefined, now:number) {
-    if (!target || target===actor || !canReachObject(actor,target,{radius:aidRadius,clearFloor:true,handsFree:true}) || !target.knockedOut) return false;
+    if (!target || !canReachDownedPlayer(actor,target)) return false;
     this.recover(target,this.state(target),now);
     return true;
   }

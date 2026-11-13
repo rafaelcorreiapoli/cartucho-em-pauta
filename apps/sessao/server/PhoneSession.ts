@@ -60,9 +60,13 @@ export class PhoneSession {
     this.games.delete(player.id);
   }
 
-  leave(player:Player, world:PhoneWorld) {
-    const call = this.calls.get(player.id);
+  disconnectCall(id:string, world:PhoneWorld) {
+    const call = this.calls.get(id);
     if (call) this.endCall(call,world);
+  }
+
+  leave(player:Player, world:PhoneWorld) {
+    this.disconnectCall(player.id,world);
     this.stopPhoneGame(player,world);
   }
 

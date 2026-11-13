@@ -2,9 +2,9 @@ import { privateOffices } from './private-offices';
 import { obstacleBetween, type Motion } from './map';
 
 export const spyProducts = {
-  wiretap:{name:'Grampo',price:2,portrait:'retrato-modulador.webp',description:'Escuta remota ao redor de um esconderijo.'},
-  spyCamera:{name:'Câmera escondida',price:3,portrait:'retrato-fotografia.webp',description:'Vigilância remota em um esconderijo.'},
-  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-binoculo.webp',description:'Inspeciona esconderijos sem ser consumido.'},
+  wiretap:{name:'Grampo',price:2,portrait:'retrato-grampo.webp',description:'Escuta remota ao redor de um esconderijo.'},
+  spyCamera:{name:'Câmera escondida',price:3,portrait:'retrato-camera-escondida.webp',description:'Vigilância remota em um esconderijo.'},
+  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-detector-escutas.webp',description:'Inspeciona esconderijos sem ser consumido.'},
 } as const;
 export type SpyProduct = keyof typeof spyProducts;
 export type SpyDevice = Exclude<SpyProduct,'bugDetector'>;
@@ -12,7 +12,7 @@ export const isSpyProduct = (kind:unknown):kind is SpyProduct => typeof kind==='
 export const spyRules = {install:5000,inspect:3000,remove:3000,recover:3000,range:70,reach:19,limit:2,sample:250,hold:1400} as const;
 const both = ['wiretap','spyCamera'] as const;
 export const hideouts = [
-  {id:'coffee',name:'Bebedouro',room:'Cafezinho',x:247,y:243,accepts:both},
+  {id:'coffee',name:'Cafeteira',room:'Cafezinho',x:247,y:243,accepts:both},
   {id:'press',name:'Vaso',room:'Sala de Imprensa',x:933,y:244,accepts:both},
   {id:'committee',name:'Mesa',room:'Comissões',x:788,y:352,accepts:both},
   {id:'meeting',name:'Mesa',room:'Antecâmara',x:307,y:66,accepts:['wiretap'] as readonly SpyDevice[]},
@@ -27,3 +27,8 @@ export function cameraSees(origin:Motion,subject:Motion) {
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
 export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number};
 export type SpyView = {channels:SpyChannel[]; options:SpyOption[]; selected?:number; audio?:number; muted:boolean; progress?:number};
+
+export function monitoredChannel(view?:SpyView) {
+  return view?.channels.find(channel=>!channel.removed &&
+    channel.id===(channel.kind==='wiretap' ? view.audio : view.selected));
+}

@@ -560,9 +560,7 @@
 #room-settings #room-label { grid-column: 1 / -1; margin-bottom: .2rem; }
 
 .profile-name { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
-#profile-role { color: #f7d572; }
-#profile-role[data-role="Parlamentar"] .hud-glyph { fill: currentColor; stroke-width: 1.2; }
-#profile-role[data-role="Infiltrado"] { color: #ff8490; }
+#profile-role { color: #ff8490; }
 
 @media (max-width: 480px) {
   #session { --hud-top-row: 184px; }

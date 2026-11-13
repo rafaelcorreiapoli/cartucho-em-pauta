@@ -29,10 +29,10 @@ export class ParliamentarianTalk {
     const session = this.sessions.get(player.id);
     const npc = session && this.target(session.target);
     if (!session || !npc || session.until<=world.now || !this.available(player,npc,false)) return;
-    return {id:npc.id,name:npc.nick,project:this.match.projectName,wallet:world.wallet?.(player.id) ?? 0,
+    return {id:npc.id,name:npc.nick,project:this.match.projectName,projectIndex:this.match.projectIndex,wallet:world.wallet?.(player.id) ?? 0,
       expiresIn:Math.ceil((session.until-world.now)/1000),
-      documents:this.gameplay.signableDocuments(player,npc,world).map(doc=>({...doc,price:this.members.signature(npc.id) ?? 0})),
-      minimum:{yes:this.members.minimum(npc.id,this.match.projectRound,'yes'),no:this.members.minimum(npc.id,this.match.projectRound,'no')}};
+      documents:this.gameplay.signableDocuments(player,npc,world).map(doc=>({...doc,price:this.members.signature(npc.id,player.id)})),
+      minimum:{yes:this.members.minimum(npc.id,this.match.projectRound,'yes',this.match.projectIndex,player.id),no:this.members.minimum(npc.id,this.match.projectRound,'no',this.match.projectIndex,player.id)}};
   }
 
   act(player:Player,raw:unknown,world:GameplayWorld) {
@@ -57,16 +57,18 @@ export class ParliamentarianTalk {
     if (raw.kind==='sign' && 'item' in raw && typeof raw.item==='number' && 'amount' in raw) {
       const document = deal.documents.find(doc=>doc.id===raw.item);
       if (!document || document.price!==raw.amount) return 'A proposta de assinatura mudou.';
-      return this.gameplay.signWithNpc(player,target,document.id,document.price,world);
+      const result = this.gameplay.signWithNpc(player,target,document.id,document.price,world);
+      if (result==='Assinatura obtida.') this.members.rememberAgreement(target.id,player.id);
+      return result;
     }
     if (raw.kind==='vote' && 'vote' in raw && (raw.vote==='yes' || raw.vote==='no') &&
         'amount' in raw && typeof raw.amount==='number' && Number.isSafeInteger(raw.amount) && raw.amount>=0 &&
-        'round' in raw && raw.round===this.match.projectRound) {
+        'round' in raw && raw.round===this.match.projectRound && 'project' in raw && raw.project===deal.projectIndex) {
       const minimum = deal.minimum[raw.vote];
       if (raw.amount<minimum) return 'Oferta recusada. O preço mudou.';
       if (minimum===0 && raw.amount>0) return 'Já aceita esse voto sem pagamento.';
       if (raw.amount && !world.payNpc?.(player.id,target.id,raw.amount)) return 'Pagamento indisponível.';
-      this.members.commit(target.id,this.match.projectRound,raw.vote,raw.amount);
+      this.members.commit(target.id,this.match.projectRound,raw.vote,raw.amount,deal.projectIndex,player.id);
       if (raw.amount) publishGameplay(world,player,'npc-vote-bought',{target:target.id});
       console.info(JSON.stringify({event:'npc-vote-deal',from:player.id,to:target.id,amount:raw.amount,round:raw.round}));
       return 'Voto comprometido.';

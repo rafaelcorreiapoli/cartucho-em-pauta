@@ -1,3 +1,4 @@
+import { npcs } from '../src/npcs';
 import { expect,test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { Parliamentarians } from './Parliamentarians';
@@ -39,10 +40,10 @@ test('signature and competing vote offers transfer existing money and the commit
   expect(document.document?.signatures.map(signer=>signer.id)).toEqual([npc.id]);
   expect(talk.act(a,{kind:'sign',target:npc.id,item:document.id,amount:2},world(4))).toBe('A proposta de assinatura mudou.');
   expect(members.intention(npc.id,0)).toBe('no');
-  expect(talk.act(a,{kind:'vote',target:npc.id,round:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
+  expect(talk.act(a,{kind:'vote',target:npc.id,round:0,project:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
   talk.act(b,{kind:'talk',target:npc.id},world(6));
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,vote:'no',amount:2},world(7))).toContain('recusada');
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
+  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:2},world(7))).toContain('recusada');
+  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
   expect(world(9).wallet!(npc.id)).toBe(starting+9);
   expect(world(9).wallet!(a.id)).toBe(3);
   expect(world(9).wallet!(b.id)).toBe(4);
@@ -50,9 +51,11 @@ test('signature and competing vote offers transfer existing money and the commit
   Object.assign(a,{x:631,y:197,direction:1});
   Object.assign(npc,{x:643,y:197});
   Object.assign(b,{x:636,y:208});
+  Object.assign(a,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(a,{kind:'talk',target:'vendor'},world(10));
   game.act(a,{kind:'dialogue-choice',target:'products',token:game.view(a,world(10)).dialogue?.token},world(10));
   game.act(a,{kind:'shop-buy',target:'baton',token:game.view(a,world(10)).dialogue?.token},world(10));
+  Object.assign(a,{x:631,y:197});
   const baton = game.view(a,world(10)).inventory.find(item=>item.kind==='baton')!;
   game.act(a,{kind:'equip',item:baton.id},world(10));
   const walletBeforeRobbery = world(11).wallet!(a.id);
@@ -120,4 +123,55 @@ test('an NPC stops walking on the first tick after it reaches its destination',(
     members.tick(npcRules.pauseMs-1,.1,paused,true);
     expect(npc).toMatchObject({x:140,y:146,moving:false});
   } finally { Math.random = random; }
+});
+
+test('NPC preferences are tied to projects and paid promises stay on the negotiated bill',()=>{
+  const {members,npcs:[npc]} = fixture();
+  expect(members.intention(npc.id,0,0)).toBe('yes');
+  expect(members.intention(npc.id,1,0)).toBe('yes');
+  expect(members.intention(npc.id,0,1)).toBe('no');
+  members.commit(npc.id,0,'yes',3,1);
+  expect(members.minimum(npc.id,0,'no',1)).toBe(4);
+  expect(members.minimum(npc.id,0,'no',0)).toBe(2);
+  expect(members.intention(npc.id,1,1)).toBe('no');
+  const {humans:[buyer],talk,match,world} = fixture();
+  const target = world(1).players.find(player=>player.npc)!;
+  Object.assign(buyer,{x:target.x+8,y:target.y});
+  talk.act(buyer,{kind:'talk',target:target.id},world(1));
+  expect(talk.view(buyer,world(1))?.projectIndex).toBe(0);
+  world(2).publish({type:'filed',actor:buyer.id,project:1,at:2,position:buyer,witnesses:[]});
+  expect(match.projectIndex).toBe(1);
+  expect(talk.view(buyer,world(3))?.projectIndex).toBe(1);
+  const balance = world(3).wallet!(buyer.id);
+  talk.act(buyer,{kind:'vote',target:target.id,round:0,project:0,vote:'no',amount:2},world(3));
+  expect(world(3).wallet!(buyer.id)).toBe(balance);
+
+});
+
+test('completed deals and witnessed aggression change only the relevant NPC quote',()=>{
+  const {members,npcs:[npc,other]} = fixture();
+  expect(members.signature(other.id,'a')).toBe(2);
+  members.commit(other.id,0,'yes',3,0,'a');
+  expect(members.signature(other.id,'a')).toBe(2);
+  expect(members.castVote(other.id,0,0)).toBe('yes');
+  expect(members.signature(other.id,'a')).toBe(1);
+  const hit = {type:'hit',actor:'a',target:'b',at:1,position:{x:140,y:146}} as const;
+  members.witnessAggression({...hit,witnesses:[other.id]});
+  members.witnessAggression({...hit,witnesses:[other.id]});
+  expect(members.signature(other.id,'a')).toBe(3);
+  expect(members.signature(other.id,'b')).toBe(2);
+  expect(members.signature(npc.id,'a')).toBe(0);
+  expect(members.minimum(other.id,1,'yes',0,'a')).toBe(4);
+  members.reset(2,2);
+  expect(members.signature(other.id,'a')).toBe(2);
+});
+
+test('agenda uses the same paid vote quote as the NPC negotiation',()=>{
+  const {members,npcs} = fixture();
+  const project = 0;
+  const buyer = 'a';
+  const prices = () => npcs.flatMap(npc=>[members.minimum(npc.id,0,'yes',project,buyer),members.minimum(npc.id,0,'no',project,buyer)]).filter(price=>price>0);
+  expect(members.cheapestPaidVote(buyer,0,project)).toBe(Math.min(...prices()));
+  for (const npc of npcs) members.commit(npc.id,0,'yes',10,project);
+  expect(members.cheapestPaidVote(buyer,0,project)).toBe(11);
 });

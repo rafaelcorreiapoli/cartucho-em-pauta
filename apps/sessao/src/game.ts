@@ -1,15 +1,18 @@
+import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
+import {wallVision,shadowOutline} from './visibility';
+import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
 import { mapNpcs } from './npcs';
-import { binocularBonus } from './equipment';
-import { canReachObject, objects, type GroundItem } from './gameplay';
+import { binoculars, xray } from './equipment';
+import { canReachObject, cashAmount, objects, type GroundItem } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
-import { bills, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
+import { agendaProject, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -17,7 +20,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { MAX_STAMINA, restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; metersReady?:boolean; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -26,14 +29,16 @@ const directions = new Map(Object.entries({
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
   combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
-  const fog = document.createElement('div');
-  fog.className = 'map-fog';
-  fog.hidden = true;
-  fog.setAttribute('aria-hidden','true');
-  parent.append(fog);
+  const penumbra = document.createElement('div');
+  penumbra.className = 'map-fog';
+  penumbra.hidden = true;
+  penumbra.setAttribute('aria-hidden','true');
+  parent.append(penumbra);
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
+  let inLobby = true;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -86,6 +91,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
+    private safeFraction = 0;
+    private drawnVisionRadius = VISION_RADIUS;
+    fog!:Phaser.GameObjects.Graphics;
+    private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
+    private flames?:Phaser.GameObjects.Text;
+    private extinguishers:Phaser.GameObjects.Text[] = [];
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -96,7 +107,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
-        if ('sprite' in npc) this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
+        this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
       for (const [kind,{sprite}] of Object.entries(officeFurniture)) {
         this.load.image(`furniture-${kind}`,import.meta.env.BASE_URL+'assets/'+sprite);
@@ -107,9 +118,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.spritesheet('installed-portraits',`${import.meta.env.BASE_URL}assets/retratos-elenco.webp`,{frameWidth:256,frameHeight:256});
       this.load.image(officeFixtures.safe.texture,`${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
       this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
+      this.load.image('infirmary-stretcher',import.meta.env.BASE_URL+'assets/'+'maca-enfermaria.webp');
+      this.load.image('infirmary-doctor',import.meta.env.BASE_URL+'assets/'+'drauzio-varella.webp');
+      this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
+      this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
+      this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
+      this.cameras.main.setVisible(!inLobby);
       for (let character=0;character<NAMES.length;character++) {
         const {sheet,frame} = characterArt(character);
         for (let direction=0;direction<3;direction++) {
@@ -129,6 +146,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this);
+      this.fog = this.add.graphics().setDepth(HEIGHT+90);
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
@@ -155,18 +173,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
       }
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
-        const art = 'character' in npc ? characterArt(npc.character) : undefined;
-        const sprite = art
-          ? this.add.sprite(npc.x,npc.y,art.sheet.key,art.frame+npc.direction*4).setTint(0xffd7a2)
-          : this.add.sprite(npc.x,npc.y,`npc-${id}`);
+        const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = art ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
+        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
         }).setOrigin(.5,0).setDepth(1) : undefined;
         return {sprite,label};
       });
-      this.marker = this.add.ellipse(0,0,22,9,0xf5d681,.2).setStrokeStyle(1,0xf5d681).setVisible(false);
+      this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
         keys.clear();
@@ -266,7 +281,46 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
     }
 
+    private xrayLabels = new Map<string,{label:Phaser.GameObjects.Text; sweep:Phaser.GameObjects.Graphics; since:number}>();
+    private xrayMoney = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+
+    private drawXray(time:number,observer:Motion|undefined,radius:number) {
+      const targets = negotiating && observer ? plenaryView?.gameplay?.xrayVision?.targets ?? [] : [];
+      const visible = new Set<string>();
+      for (const target of targets) {
+        const sprite = target.safe ? undefined : this.views.get(target.id)?.sprite;
+        if (!target.safe && !sprite?.visible) continue;
+        const point = sprite ?? target;
+        if (!observer || !worldVisible(observer,target,radius)) continue;
+        visible.add(target.id);
+        let entry = this.xrayLabels.get(target.id);
+        if (!entry) {
+          const label = this.add.text(0,0,this.xrayMoney.format(target.balance*10_000),{
+            fontFamily:'system-ui',fontSize:'7px',fontStyle:'bold',color:'#b9fff9',
+            backgroundColor:'#0c2829',padding:{x:4,y:2},resolution:3,
+          }).setOrigin(.5,1).setDepth(HEIGHT+28);
+          const sweep = this.add.graphics().setDepth(HEIGHT+27);
+          entry = {label,sweep,since:time};
+          this.xrayLabels.set(target.id,entry);
+        }
+        const foot = point.y-(target.safe ? officeFixtures.safe.footOffset : 0);
+        const height = target.safe ? officeFixtures.safe.height : 32;
+        const width = target.safe ? officeFixtures.safe.width : 18;
+        const progress = Math.min(1,(time-entry.since)/xray.sweep);
+        entry.label.setPosition(point.x,foot-height-7).setAlpha(Math.min(1,progress*4));
+        entry.sweep.clear().lineStyle(.75,0x7cfbf0,.55+Math.sin(time/200)*.18)
+          .strokeRoundedRect(point.x-width/2,foot-height,width,height,3);
+        if (progress<1) entry.sweep.fillStyle(0x9bfff6,.8).fillRect(point.x-width/2,foot-height+progress*height,width,1);
+      }
+      for (const [id,entry] of this.xrayLabels) if (!visible.has(id)) {
+        entry.label.destroy();
+        entry.sweep.destroy();
+        this.xrayLabels.delete(id);
+      }
+    }
+
     update(time: number, delta: number) {
+      if (inLobby) return;
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
@@ -288,6 +342,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         manual = keys.size>0;
       }
+      if (!this.extinguishers.length) {
+        this.extinguishers = fireSites.map(({extinguisher:{x,y}})=>this.add.text(x,y,'🧯',{fontSize:'16px',resolution:3})
+          .setOrigin(.5,.8).setDepth(y));
+      }
+      const fire = plenaryView?.fire;
+      if (fire) {
+        const {x,y} = fireSites[fire.site];
+        this.flames ??= this.add.text(x,y,'🔥',{fontSize:'27px',resolution:3}).setOrigin(.5,.8);
+        this.flames.setPosition(x,y).setDepth(y+1).setVisible(!fire.paused)
+          .setScale(1+Math.sin(time/145)*.06);
+      } else this.flames?.setVisible(false);
       this.renderGroundItems();
       this.renderDecorations();
       const officeViews = plenaryView?.gameplay?.offices;
@@ -310,6 +375,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.safeProgress.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
+      if (!negotiating || channel?.kind!=='office-cash') this.safeFraction = 0;
       if (negotiating && channel?.kind==='office-cash') {
         const safe = privateOffices.find(office=>office.id===channel.officeId)?.safe;
         if (safe) {
@@ -317,15 +383,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const x = safe.x-15;
           const y = safe.y-footOffset-height-8;
           const fraction = Phaser.Math.Clamp(channel.elapsed/channel.duration,0,1);
+          this.safeFraction = reducedMotion.matches || fraction<this.safeFraction ? fraction :
+            Phaser.Math.Linear(this.safeFraction,fraction,1-Math.exp(-delta/45));
           this.safeProgress.fillStyle(0x211a10,.95).fillRoundedRect(x,y,30,5,2);
           this.safeProgress.lineStyle(.75,0xffdb83).strokeRoundedRect(x,y,30,5,2);
-          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*fraction,2);
+          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*this.safeFraction,2);
         }
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const binoculars = plenaryView?.gameplay?.equipped?.some(item=>item.kind==='binoculars');
-      const visionRadius = VISION_RADIUS+(binoculars ? binocularBonus : 0);
+      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1);
+      const gap = visionRadius-this.drawnVisionRadius;
+      this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
+        ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
       for (const {sprite,label} of this.npcViews) {
         const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
         sprite.setVisible(visible);
@@ -333,14 +403,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
-      const agenda = plenaryView && bills[plenaryView.round%bills.length];
+      const agenda = plenaryView && agendaProject(plenaryView);
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Painel de votação');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
       const normalZoom = Math.max(1.5,Math.min(cssWidth/550,cssHeight/290),cssHeight/(cssWidth<=680 ? 310 : 360));
-      const cssZoom = inSession ? Math.min(normalZoom,cssWidth/580,cssHeight/340) : normalZoom;
+      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : normalZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
       if (resolution!==this.textResolution) {
@@ -462,7 +532,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const labelY = latest.carried ? y-51 : y+2;
         sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
-        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0))
+        const spriteDepth = y+(latest.carried ? 1 : 0);
+        if (!own && sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
+        sprite.setVisible(true).setPosition(spriteX,spriteY)
           .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
         view.health.setVisible(latest.health!==undefined);
         const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
@@ -470,8 +542,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const health = Phaser.Math.Clamp(latest.health,0,1);
           view.health.setPosition(x,barY);
           const staminaMax = player.staminaMax ?? MAX_STAMINA;
-          view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1),1);
-          view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
+          const stamina = Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1);
+          const blend = view.metersReady && !reducedMotion.matches ? 1-Math.exp(-delta/65) : 1;
+          const advance = (current:number,target:number)=>Math.abs(current-target)<.002 ? target : Phaser.Math.Linear(current,target,blend);
+          view.staminaFill.setScale(advance(view.staminaFill.scaleX,stamina),1);
+          const shownHealth = advance(view.healthFill.scaleX,health);
+          view.healthFill.setScale(shownHealth,1).setFillStyle(shownHealth>.55 ? 0x69d878 : shownHealth>.25 ? 0xffc260 : 0xff6663);
+          view.metersReady = true;
         }
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
@@ -479,10 +556,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
-          .setColor(player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df');
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick);
+        const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
+        // Phaser redraws and uploads the text texture on every setColor call.
+        if (label.style.color!==nameColor) label.setColor(nameColor);
         const exposed = latest.exposed ?? [];
-        const itemsKey = exposed.map(item=>item.kind).join(',');
+        const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
+        const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
         if (view.itemsKey!==itemsKey) {
           view.itemsKey = itemsKey;
           view.items.removeAll(true);
@@ -490,14 +570,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const offset = (index-(exposed.length-1)/2)*13;
             const backdrop = this.add.rectangle(offset,0,11.5,11.5,0x10211b,.84).setStrokeStyle(.5,0x637f6d);
             const icon = this.add.image(offset,0,`item-${kind}`).setDisplaySize(10,10);
+            if (concealed && cashAmount(kind)) {
+              backdrop.setAlpha(.38);
+              icon.setAlpha(.38);
+            }
             view.items.add([backdrop,icon]);
           });
         }
         view.items.setPosition(x,barY-10).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
-          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar')
-          .setColor(latest.former ? '#e6a38c' : '#cbd6db');
+          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
+        const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
+        if (office.style.color!==officeColor) office.setColor(officeColor);
         if (moving && !pose && !combatArt) {
           sprite.play(`${character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
@@ -506,28 +591,47 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
         }
         if (own) {
-          this.marker.setPosition(x,y-2).setDepth(y-1).setVisible(true);
+          if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
+          this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
-            const [left,top,width,height] = PLENARY_BOUNDS;
-            camera.centerOn(left+width/2,top+height/2-30);
+            camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
           } else camera.centerOn(x,y);
-          if (running) {
-            const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
-            const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
-            const radius = visionRadius*cssZoom;
-            fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
-            fog.style.clipPath = '';
-            if (inSession) {
-              const [left,top,width,height] = PLENARY_BOUNDS;
-              const x1 = (screenX+(left-x)*zoom)/density, x2 = x1+width*cssZoom;
-              const y1 = (screenY+(top-y)*zoom)/density, y2 = y1+height*cssZoom;
-              fog.style.background = '#000b';
-              fog.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x2}px ${y1}px, ${x2}px ${y2}px, ${x1}px ${y2}px, ${x1}px ${y1}px)`;
+          for (const part of [sprite,view.weapon,view.health,view.items,label,office]) {
+            if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
+          }
+          this.fog.clear().setVisible(running);
+          penumbra.hidden = !running || inSession;
+          if (running && inSession) {
+            const [left,top,width,height] = PLENARY_BOUNDS;
+            const edge = 4000;
+            this.fog.fillStyle(0x000000,.66)
+              .fillRect(-edge,-edge,edge*2,top+edge)
+              .fillRect(-edge,top,left+edge,height)
+              .fillRect(left+width,top,edge-left-width,height)
+              .fillRect(-edge,top+height,edge*2,edge-top-height);
+          } else if (running) {
+            const wallX = Math.round(x), wallY = Math.round(y), radius = Math.round(this.drawnVisionRadius);
+            const barriers = JSON.stringify(ownPlayer?.barriers ?? []);
+            const cached = this.fogGeometry;
+            if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.barriers!==barriers) {
+              this.fogGeometry = {x:wallX,y:wallY,radius,barriers,
+                points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
             }
-            fog.hidden = false;
+            this.fog.fillStyle(0x000000,.62);
+            const {points} = this.fogGeometry!;
+            const screenX = (wallX-camera.scrollX-camera.width/2)*cssZoom+camera.width/2/density;
+            const screenY = (wallY-camera.scrollY-camera.height/2)*cssZoom+camera.height/2/density;
+            const edge = radius*cssZoom;
+            penumbra.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${edge*.84}px, rgba(0,0,0,.62) ${edge*.99}px)`;
+            penumbra.style.clipPath = `polygon(${points.map(point=>`${screenX+point.x*cssZoom}px ${screenY+point.y*cssZoom}px`).join(',')})`;
+            const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
+            this.fog.beginPath().moveTo(first.x,first.y);
+            for (const point of outline) this.fog.lineTo(point.x,point.y);
+            this.fog.closePath().fillPath();
           }
         }
       }
+      this.drawXray(time,ownPlayer,visionRadius);
     }
   }
   const scene = new Plenary();
@@ -573,6 +677,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
+    clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) { plenaryView = view; },
     reconcile(snapshot: ControlState) {
       if (!!snapshot.plenary!==!!local.state?.plenary) {
@@ -583,16 +688,21 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       local.reconcile(snapshot);
     },
     setMatchPhase(phase:Phase) {
+      inLobby = phase==='lobby';
+      if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
-      if (!running) fog.hidden = true;
+      if (!running) {
+        scene.fog?.setVisible(false);
+        penumbra.hidden = true;
+      }
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
     destroy() {
       listeners.abort();
       resizeObserver?.disconnect();
+      penumbra.remove();
       game.destroy(true);
-      fog.remove();
     },
   };
 }

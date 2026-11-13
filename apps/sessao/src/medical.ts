@@ -1,10 +1,31 @@
 export const infirmary = {
-  x:912,y:492,
+  x:913,y:486,
+  door:[806,468,6,35],
+  doctor:{name:'Drauzio Varella',x:928,y:475},
   name:'Enfermaria',
-  bounds:[882,408,64,116],
+  bounds:[812,403,138,127],
   price:1,
   healing:35,
 } as const;
 
+export const recoveryRules = {
+  knockoutMs:8_000,
+  protectionMs:4_000,
+  healthFraction:.45,
+  hitStunMs:250,
+} as const;
+
 export const aidRadius = 20;
+
 export const carrySpeedFactor = .65;
+
+const firstAidHealing = 35;
+
+export const firstAidKit = {
+  name:'Kit de primeiros socorros',
+  description:`Recupera até ${firstAidHealing} PV de quem usar.`,
+  portrait:'retrato-primeiros-socorros.webp',
+  price:1.5,
+  healing:firstAidHealing,
+  use:'consume',
+} as const;

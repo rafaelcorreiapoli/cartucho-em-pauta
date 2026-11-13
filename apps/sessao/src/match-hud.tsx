@@ -1,37 +1,38 @@
-import { equippedWeapon } from './equipment';
-import { doorDestination } from './interactions';
-import { aidRadius, infirmary } from './medical';
+import {fireOptions,fireSites} from './fire';
+import { weapons } from './weapons';
+import { documentRules } from './internal-mail';
+import { mountNotices } from './ui/notices';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
+import { equippedWeapon, xray } from './equipment';
+import { canReachDownedPlayer, doorDestination } from './interactions';
+import { infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, objects, type GameplayAction, type GameplayView } from './gameplay';
+import { canReachObject, treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
-import { missionTitle, money, timedAgendas, type Mission, type PoliticsView } from './politics';
-import { stations as stationPoints, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { money } from './politics';
+import { stations as stationPoints, canReachStation, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'};
+type FieldAction = {kind:'fire'; option:{kind:'ignite'|'extinguish';site:number}} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'complaint-desk'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
-  const roleIcon = roleBadge.querySelector('use')!;
-  const agendaDock = element('agenda-dock');
-  const missionTemplate = element<HTMLTemplateElement>('agenda-mission');
-  const activeMissions = element('missions-active');
-  const completedMissions = element('missions-completed');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
   let xpEffect:HTMLElement | undefined;
-  let missionRenderKey = '';
-  const notices = element('hud-notices');
+  const notices = mountNotices(element('hud-notices'));
+  const {notify} = notices;
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
@@ -78,15 +79,29 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return {button,station};
   });
   const fieldActions = element('field-actions');
-  const progress = element<HTMLProgressElement>('office-progress');
-  const progressLabel = element('office-progress-label');
+  const progressRoot = createRoot(element('office-progress-mount'));
+  let progressKey = '';
   const officeBadge = element('own-office');
-  const vitality = element('vitality');
-  const vitalityNumber = element('vitality-number');
-  const vitalityMeter = element<HTMLProgressElement>('vitality-meter');
   const gearStrip = element('equipped-gear');
   const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
   const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+  const concealmentTimer = node('span');
+  concealmentTimer.className = 'equipped-gear-tile';
+  concealmentTimer.setAttribute('role','listitem');
+  const concealmentLabel = node('span');
+  concealmentLabel.className = 'equipped-gear-timer';
+  const concealmentFooter = node('span');
+  concealmentFooter.className = 'equipped-gear-footer';
+  concealmentFooter.append(concealmentLabel);
+  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
+  function useEquipped(kind:'scan-xray'|'attack'|'use-binoculars'|'toggle-megaphone') {
+    const equipped = previous?.gameplay?.equipped;
+    if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
+    if (kind==='attack' ? !equippedWeapon(equipped) : !equipped?.some(item=>item.kind===(kind==='scan-xray' ? 'xray' : kind==='toggle-megaphone' ? 'megaphone' : 'binoculars'))) return false;
+    sendField({kind});
+    return true;
+  }
+
   function renderEquipped(state?:GameplayView) {
     const equipped = state?.equipped ?? [];
     for (const [id,{tile}] of gearTiles) {
@@ -98,83 +113,123 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const name = objects[item.kind].name;
       let entry = gearTiles.get(item.id);
       if (!entry) {
-        const tile = node('span');
+        const shortcut = item.kind==='xray' ? 'X' : item.kind==='binoculars' ? 'B' : item.kind==='megaphone' ? 'M' : equippedWeapon([item]) ? 'Space' : undefined;
+        const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : shortcut==='B' ? 'use-binoculars' : shortcut==='M' ? 'toggle-megaphone' : 'attack')) : node('span');
         tile.className = 'equipped-gear-tile';
-        tile.setAttribute('role','listitem');
+        const footer = node('span');
+        footer.className = 'equipped-gear-footer';
+        const hint = shortcut ?? (item.kind==='runningShoes' ? 'Shift' : undefined);
+        if (hint) {
+          tile.setAttribute('aria-keyshortcuts',hint);
+          const badge = node('kbd',hint==='Space' ? 'Espaço' : hint.toUpperCase());
+          badge.className = 'equipped-gear-key';
+          badge.setAttribute('aria-hidden','true');
+          footer.append(badge);
+        }
+        if (!shortcut) tile.setAttribute('role','listitem');
         tile.dataset.kind = item.kind;
         const timer = node('span');
         timer.className = 'equipped-gear-timer';
         timer.setAttribute('aria-hidden','true');
-        tile.append(itemPortrait(item.kind),timer);
+        footer.prepend(timer);
+        tile.append(itemPortrait(item.kind),footer);
         gearStrip.append(tile);
         entry = {tile,timer};
         gearTiles.set(item.id,entry);
       }
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
-      const time = seconds ? `${secondsLabel.format(seconds)} s` : '';
-      const label = seconds ? `${name} · Recarga: ${time}` : name;
-      if (entry.tile.title===label) continue;
+      const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
+      const active = item.kind==='binoculars' ? state?.binocularSeconds : item.kind==='megaphone' ? state?.megaphoneSeconds : undefined;
+      const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const weapon = equippedWeapon([item]);
+      const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
+      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : label;
+      if (entry.tile.title===tooltip) continue;
+      entry.tile.dataset.active = String(!!active || item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
-      entry.timer.hidden = !seconds;
-      entry.tile.title = label;
-      entry.tile.setAttribute('aria-label',label);
+      entry.timer.hidden = !time;
+      entry.tile.title = tooltip;
+      entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
+      if (item.kind==='xray' || item.kind==='megaphone') {
+        entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
+      }
     }
-    gearStrip.hidden = equipped.length===0;
+    const remaining = state?.concealmentSeconds;
+    if (remaining) {
+      concealmentLabel.textContent = `${remaining} s`;
+      concealmentTimer.title = `Dinheiro oculto · ${remaining} s`;
+      if (!concealmentTimer.isConnected) gearStrip.append(concealmentTimer);
+    } else concealmentTimer.remove();
+    gearStrip.hidden = equipped.length===0 && !remaining;
   }
 
+  const fieldRoot = createRoot(fieldActions);
   let fieldKey = '';
   let roster:Player[] = [];
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
     const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
+    if (state && player) {
+      const option = fireOptions(player,view?.fire,view?.sabotageFireSite);
+      if (option) actions.push({label:option.label,icon:'alert',action:{kind:'fire',option}});
+    }
     const channel = state?.officeChannel;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
-    progress.hidden = !breach && robbery===undefined && spy?.progress===undefined;
-    if (spy?.progress!==undefined && !breach && robbery===undefined) {
-      progress.max = 1;
-      progress.value = spy.progress;
-      progress.setAttribute('aria-label','Interação de espionagem em andamento');
+    const meter = state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
+      detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : channel?.kind==='office-cash' ? {value:channel.elapsed,max:channel.duration,label:'Embolsando dinheiro'} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
+      detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
+      robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
+      spy?.progress!==undefined ? {value:spy.progress,max:1,label:'Interação de espionagem em andamento'} : undefined;
+    const meterKey = JSON.stringify(meter) ?? '';
+    if (progressKey!==meterKey) {
+      progressKey = meterKey;
+      progressRoot.render(meter ? <>
+        {meter.detail && <span id="office-progress-label">{meter.detail}</span>}
+        <div id="office-progress" className="react-meter" data-tone="budget" role="progressbar"
+          aria-label={meter.label} aria-valuenow={meter.value} aria-valuemin={0} aria-valuemax={meter.max}>
+          <span style={{transform:`scaleX(${Math.max(0,Math.min(1,meter.value/meter.max))})`}}/>
+        </div>
+      </> : null);
     }
     for (const option of spy?.options ?? []) actions.push({
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
-    if (robbery!==undefined) {
-      progress.max = npcRules.robberyMs;
-      progress.value = robbery;
-      progress.setAttribute('aria-label','Roubando dinheiro');
-      actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
-    }
-    progressLabel.hidden = !breach;
-    if (breach) {
-      progress.max = breach.duration;
-      progress.value = breach.elapsed;
-      progress.setAttribute('aria-label',breach.label);
-      progressLabel.textContent = `${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`;
-    }
+    if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
     const ownOffice = state?.ownOffice;
     officeBadge.hidden = !ownOffice;
     if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
+    if (state?.locations.includes('secretary')) actions.push({label:'Solicitar documento',icon:'document',action:{kind:'request-document'}});
+    if (state?.locations.includes('reprography')) {
+      for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {
+        actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id,project:item.document.project}});
+      }
+    }
+    if (state && player && canReachObject(player,stationPoints.audit,{handsFree:true})) {
+      actions.push({label:'Denunciar infração',icon:'shield',action:{kind:'complaint-desk'}});
+      actions.push({label:'Publicar comunicado',icon:'document',action:{kind:'compose-mail'}});
+    }
     if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
       for (const npc of state.parliamentarians ?? []) {
         actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
           action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
       }
-      if (state.locations.includes('treasury')) for (const item of state.inventory) {
-        const amount = cashAmount(item);
-        if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
-          action:{kind:'deliver',place:'treasury',item:item.id}});
+      if (state.locations.includes('treasury')) {
+        for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});
       }
+      if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
+        label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},
+      });
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
       if (state.treatment) {
-        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Tratar ferimentos'} · ${money(infirmary.price)}`,
+        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Consultar '+infirmary.doctor.name} · ${money(infirmary.price)}`,
           icon:'shield',action:{kind:'treat'}});
       }
       if (player.carrying) {
@@ -183,10 +238,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Conversar · ${npcs[target].name}`,icon:'document',action:{kind:'talk',target}});
         }
-        if (!player.knockedOut && equippedWeapon(state.equipped)) actions.unshift({label:'Golpear',icon:'alert',action:{kind:'attack'}});
         for (const target of roster) {
-          if (target.id===id) continue;
-          if (target.knockedOut && canReachObject(player,target,{radius:aidRadius,clearFloor:true})) {
+          if (canReachDownedPlayer(player,target)) {
             actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
             if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
             actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
@@ -197,12 +250,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const key = JSON.stringify(actions);
     if (key===fieldKey) return;
     fieldKey = key;
-    fieldActions.replaceChildren(...actions.map(({label,icon,action})=>{
-      const control = hudButton(label,()=>sendField(action));
-      control.prepend(hudGlyph(icon));
-      if (action.kind==='attack') control.dataset.key = 'Space';
-      return control;
-    }));
+    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action})=>
+      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" onClick={()=>sendField(action)}>
+        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
+      </button>)));
   }
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
@@ -211,7 +262,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     let index = 0;
     for (const button of actionButtons()) {
       const available = !button.disabled && !button.closest(unavailable);
-      const key = available ? button.dataset.key ?? (++index<=9 ? String(index) : null) : null;
+      const key = available ? (++index<=9 ? String(index) : null) : null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -225,7 +276,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         badge.setAttribute('aria-hidden','true');
         button.append(badge);
       }
-      badge.textContent = key==='Space' ? 'Espaço' : key;
+      badge.textContent = key;
       button.setAttribute('aria-keyshortcuts',key);
     }
   }
@@ -233,9 +284,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.addEventListener('click',refreshActionKeys);
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
-      event.metaKey || stations.hidden || hudConsumesKeys(event.target)) return;
-    const key = event.code==='Space' ? 'Space' : !event.shiftKey && /^[1-9]$/.test(event.key) ? event.key : undefined;
-    if (!key) return;
+      event.metaKey || hudConsumesKeys(event.target)) return;
+    const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : event.code==='KeyB' ? 'use-binoculars' : event.code==='KeyM' ? 'toggle-megaphone' : undefined;
+    if (equipmentAction) {
+      if (useEquipped(equipmentAction)) event.preventDefault();
+      return;
+    }
+    if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
+    const key = event.key;
     const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
     if (!button || button.disabled || button.closest(unavailable)) return;
     event.preventDefault();
@@ -255,77 +311,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     stationFeedback(button.dataset.station as Station);
   }
   stations.addEventListener('click',onStationClick,true);
-  const timers = new Map<HTMLElement,number>();
   let previous:PlenaryView | undefined;
-
-  agendaDock.hidden = true;
-  element('agenda-announcement').textContent = '';
-  function remove(node:HTMLElement) {
-    window.clearTimeout(timers.get(node));
-    timers.delete(node);
-    node.remove();
-    if (timers.size===0) notices.hidePopover();
-  }
-
-  function notify(title:string, text:string, critical=false) {
-    const current = [...timers.keys()];
-    if (current.length>=2) {
-      const replaceable = current.find(node => node.dataset.critical==='false');
-      if (!critical && !replaceable) return;
-      remove(replaceable ?? current[0]);
-    }
-    const node = document.createElement('div');
-    node.className = 'hud-module hud-notice';
-    node.dataset.critical = String(critical);
-    const heading = document.createElement('strong');
-    heading.textContent = title;
-    const description = document.createElement('span');
-    description.textContent = text;
-    node.append(heading,description);
-    notices.append(node);
-    if (notices.matches(':popover-open') && document.querySelector('dialog:modal')) notices.hidePopover();
-    if (!notices.matches(':popover-open')) notices.showPopover();
-    timers.set(node,window.setTimeout(() => remove(node),critical ? 7000 : 4500));
-  }
-
-  function renderMissions(missions:PoliticsView['missions'], prior?:PoliticsView['missions']) {
-    const recent = missions.completed.slice(-2);
-    const key = JSON.stringify([missions.active,recent]);
-    if (key===missionRenderKey) return;
-    missionRenderKey = key;
-    element('agenda-progress').textContent = `${missions.active.length} ativas`;
-    const newCompletions = prior ? recent.filter(mission=>!prior.completed.some(done=>done.id===mission.id)) : [];
-    if (newCompletions.length) {
-      element('agenda-announcement').textContent = newCompletions.map(mission=>`Concluído: ${missionTitle(mission)}`).join('. ');
-    }
-    function row(mission:Mission, done:boolean) {
-      const row = missionTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement;
-      row.dataset.done = String(done);
-      const title = row.querySelector('strong')!;
-      title.textContent = missionTitle(mission);
-      if (done) title.setAttribute('aria-label',`Concluído: ${title.textContent}`);
-      const detail = row.querySelector('small')!;
-      detail.hidden = done;
-      if (!done) {
-        const progress = mission.kind==='fortuna' ? `${money(mission.current)}/${money(mission.target)}` :
-          timedAgendas.has(mission.kind) ? `${Math.floor(mission.current/1000)}/${mission.target/1000} s` :
-          mission.target>1 ? `${mission.current}/${mission.target}` : '';
-        detail.textContent = progress;
-        detail.hidden = !progress;
-      }
-      return row;
-    }
-    activeMissions.replaceChildren(...missions.active.map(mission=>row(mission,false)));
-    completedMissions.hidden = !recent.length;
-    if (completedMissions.dataset.recent!==recent.map(mission=>mission.id).join(',')) {
-      completedMissions.dataset.recent = recent.map(mission=>mission.id).join(',');
-      completedMissions.replaceChildren(...recent.map(mission=>{
-        const entry = row(mission,true);
-        entry.classList.toggle('agenda-completed-now',newCompletions.includes(mission));
-        return entry;
-      }));
-    }
-  }
 
   function actions(view:PlenaryView | undefined = previous) {
     const player = own;
@@ -337,7 +323,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (canInteract && player) {
       for (const [key,point] of Object.entries(stationPoints) as [Station,Motion][]) {
         const distance = Math.hypot(player.x-point.x,player.y-point.y);
-        if (canReachObject(player,point,{radius:best,handsFree:true})) {
+        if (canReachStation(player,key,best)) {
           best = distance;
           context = key;
         }
@@ -349,9 +335,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     for (const {button,station} of activityButtons) button.hidden = context!==station;
     for (const button of stationActions) {
-      button.dataset.contextHidden = String(button.dataset.station!==context);
+      const hidden = String(button.dataset.station!==context);
+      if (button.dataset.contextHidden!==hidden) button.dataset.contextHidden = hidden;
     }
-    interviewHint.dataset.contextHidden = String(context!=='tv');
+    const hideInterview = String(context!=='tv');
+    if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
@@ -402,36 +390,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
     },
     render(view:PlenaryView) {
-      const infiltrator = view.role==='Infiltrado';
-      roleBadge.hidden = !view.role;
-      element('profile-role-label').textContent = view.role ?? '';
-      if (view.role) {
-        roleBadge.dataset.role = view.role;
-        roleBadge.dataset.help = infiltrator ? 'Infiltrado. Derrube a estabilidade.' : 'Parlamentar. Preserve a estabilidade.';
-        roleBadge.setAttribute('aria-label',view.role);
-        roleIcon.setAttribute('href',infiltrator ? '#icon-bug' : '#icon-star');
-      }
+      roleBadge.hidden = view.role!=='Infiltrado';
+      element('hud-office').hidden = view.mandate!==false;
       const politics = view.politics;
       if (politics) {
-        const personal = view.election?.personal;
-        const office = personal?.office;
-        const power = office ? 'Mandato ativo. Você pode votar e disputar a próxima renovação.' : 'Ex-parlamentar. Você mantém seus bens e pode circular pelo Congresso.';
-        element('office-power').dataset.help = power;
-        element('office-salary').textContent = personal ? money(personal.salary) : '—';
-        const label = element('hud-office');
-        label.textContent = view.mandate ? 'Parlamentar' : 'Ex-parlamentar';
-        label.dataset.office = office ?? 'advisor';
         element('hud-wallet').textContent = money(politics.wallet);
         element('hud-popularity').textContent = String(politics.popularity);
-        const prior = previous?.phase==='finished' ? undefined : previous?.politics?.missions;
-        if (!prior && previous?.phase==='finished') {
-          completedMissions.replaceChildren();
-          delete completedMissions.dataset.recent;
-          missionRenderKey = '';
-        }
-        renderMissions(politics.missions,prior);
       }
-      agendaDock.hidden = !politics || view.phase==='lobby';
 
       if (previous) {
         const past = previous.politics;
@@ -447,10 +412,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (view.phase==='negotiation' && view.remaining<=30 && previous.remaining>30) {
           notify('Convocação',`Sessão no Plenário em ${view.remaining} s.`);
         }
-        if (view.phase!==previous.phase && (view.phase==='ballot' || view.phase==='hearing')) {
+        if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {
           notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
             view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : element('bill').textContent ?? '',true);
         }
+        if (view.fire && !previous.fire) notify('Incêndio',fireSites[view.fire.site].name,true);
+        if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
+        if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
         if (view.stability<45 && previous.stability>=45) notify('Estabilidade abaixo da meta',`${view.stability} de 100`,true);
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);
         if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
@@ -459,13 +427,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
       }
       renderEquipped(view.gameplay);
-      const hp = view.gameplay?.vitality;
-      vitality.hidden = !hp;
-      if (hp) {
-        vitalityMeter.max = hp.max;
-        vitalityMeter.value = hp.hp;
-        vitalityNumber.textContent = hp.recovery ? `${own?.carried ? 'Em transporte' : 'Nocaute'} · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
-      }
+
       previous = view;
       actions(view);
     },
@@ -473,17 +435,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       roster = players;
       own = players.find(player => player.id===id);
       if (own) {
-        element('hud-nick').textContent = own.nick;
+        const nick = element('hud-nick');
+        if (nick.textContent!==own.nick) nick.textContent = own.nick;
         setCharacterPortrait(element('hud-portrait'),own.character);
       }
       actions();
     },
     destroy() {
       renderEquipped();
-      for (const node of timers.keys()) remove(node);
-      agendaDock.hidden = true;
-      completedMissions.replaceChildren();
-      delete completedMissions.dataset.recent;
+      notices.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
@@ -494,10 +454,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
-      progress.hidden = officeBadge.hidden = true;
+      officeBadge.hidden = true;
+      progressRoot.unmount();
       shortcuts.replaceChildren();
-      fieldActions.replaceChildren();
-      vitality.hidden = true;
+      fieldRoot.unmount();
     },
   };
 }

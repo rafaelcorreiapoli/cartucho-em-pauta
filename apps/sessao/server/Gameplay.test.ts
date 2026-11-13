@@ -1,3 +1,6 @@
+import { weapons } from '../src/weapons';
+import { privateOffices } from '../src/private-offices';
+
 import { npcs } from '../src/npcs';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
@@ -124,6 +127,8 @@ test('spawned and dropped cash share visibility and custody without immediate re
 
 test('cash on the ground expires after the same interval on spawn or drop', () => {
   const {alice,game,world} = setup();
+  const flows:string[] = [];
+  world.cashFlow = (kind,amount)=>flows.push(kind+":"+amount);
   const values = [0,0,.117,.172,.99];
   Object.assign(alice,{x:140,y:146});
   game.reset(0,()=>values.shift() ?? .5);
@@ -134,6 +139,10 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   world.now = 59000;
   expect(game.act(alice,{kind:'collect',item:item.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
+
+  game.tick(world,false);
+  game.tick(world,false);
+  expect(flows).toEqual(['spawned:3','expired:3']);
 
   const nextValues = [0,0,.117,.172,.99];
   game.reset(0,()=>nextValues.shift() ?? .5);
@@ -148,6 +157,8 @@ test('cash on the ground expires after the same interval on spawn or drop', () =
   world.now = 65000;
   expect(game.act(alice,{kind:'use',item:next.id},world)).toBe('Objeto indisponível.');
   expect(game.view(alice,world).ground).toEqual([]);
+  game.tick(world,false);
+  expect(flows).toEqual(['spawned:3','expired:3','spawned:3','expired:3']);
 });
 
 test('the camera freezes visible exposed objects and preserves permissions through show, copy and publish', () => {
@@ -260,7 +271,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   world.feedback = (id,message)=>{ feedback.set(id,message); };
   world.spend = ()=>true;
   const buy = (player:Player,kind:'wiretap'|'spyCamera'|'bugDetector')=>{
-    Object.assign(player,{x:631,y:197});
+    Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     game.act(player,{kind:'talk',target:'vendor'},world);
     game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
     game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);
@@ -331,5 +342,140 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(game.spyVolume(bob,watcher)).toBeGreaterThan(0);
   game.spyAction(bob,{kind:'mute',channel:audio.id},world);
   expect(game.spyVolume(bob,watcher)).toBe(0);
+  const replacementCamera = buy(bob,'spyCamera');
+  Object.assign(bob,{x:527,y:350});
+  game.spyAction(bob,{kind:'install',site:'library',item:replacementCamera.id},world);
+  world.now += 5000;
+  game.tick(world,true);
+  const cameraChannel = game.spyView(bob,world).channels.find(entry=>entry.kind==='spyCamera')!;
+  expect(cameraChannel).toBeDefined();
+  game.spyAction(bob,{kind:'open',channel:cameraChannel.id},world);
+  expect(game.spyView(bob,world)).toMatchObject({selected:cameraChannel.id,muted:false});
+  expect(game.spyView(bob,world).audio).toBeUndefined();
+  expect(game.spyVolume(bob,watcher)).toBe(0);
+  game.spyAction(bob,{kind:'open',channel:audio.id},world);
+  expect(game.spyView(bob,world).selected).toBeUndefined();
+  expect(game.spyFrame(bob,world)).toBeUndefined();
+  expect(game.spyVolume(bob,watcher)).toBeGreaterThan(0);
   expect(events.filter(event=>event.type.startsWith('spy-')).every(event=>event.witnesses.length===0)).toBe(true);
+});
+
+function buyTechnical(game:Gameplay,player:Player,world:GameplayWorld,kind:'mensalUnderwear'|'xray') {
+  Object.assign(player,npcs.vendor);
+  game.act(player,{kind:'talk',target:'vendor'},world);
+  game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);
+  return game.view(player,world).inventory.find(item=>item.kind===kind)!;
+}
+
+test('concealment filters cash from observers and photos through reconnect and cash swaps',()=>{
+  const {alice,bob,game,world,events} = setup();
+  world.spend = ()=>true;
+  game.reset(0,()=>.5);
+  const underwear = buyTechnical(game,alice,world,'mensalUnderwear');
+  Object.assign(alice,terminals.credentials.point);
+  game.act(alice,{kind:'supply',place:'credentials'},world);
+  const gift = game.view(alice,world).inventory.find(item=>item.kind==='gift')!;
+  game.act(alice,{kind:'expose',item:gift.id},world);
+  const npc = {...bob,id:'npc',npc:true as const};
+  world.takeWallet = ()=>12;
+  game.robNpc(alice,npc,world);
+  const cash = game.view(alice,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(game.visibleItems(alice.id,world.now)).toContainEqual({id:cash.id,kind:'briefcase'});
+  game.act(alice,{kind:'use',item:underwear.id},world);
+  expect(game.act(alice,{kind:'use',item:underwear.id},world)).toBe('Objeto indisponível.');
+  expect(game.visibleItems(alice.id,world.now)).toEqual([{id:gift.id,kind:'gift'}]);
+  expect(game.visibleItems(alice.id,world.now,alice.id)).toHaveLength(2);
+  expect(game.physicalCash()).toBe(12);
+  game.act(alice,{kind:'drop',item:cash.id},world);
+  expect(game.view(alice,world).ground.some(item=>item.id===cash.id)).toBe(true);
+  game.robNpc(alice,npc,world);
+  expect(game.visibleItems(alice.id,world.now)).toHaveLength(1);
+  Object.assign(alice,{x:240,y:250});
+  Object.assign(bob,{x:250,y:250});
+  game.act(bob,{kind:'photo'},world);
+  expect(game.photoView(bob.id,world.now).album[0]?.photo.people.find(person=>person.id===alice.id)?.exposed)
+    .toEqual([{id:gift.id,kind:'gift'}]);
+  world.now = 40_000;
+  game.leave(alice,world,false);
+  expect(game.view(alice,world).concealmentSeconds).toBe(5);
+  world.now = 45_000;
+  game.tick(world,false);
+  expect(game.view(alice,world).concealmentSeconds).toBeUndefined();
+  expect(game.visibleItems(alice.id,world.now)).toHaveLength(2);
+  expect(events.filter(event=>event.type.startsWith('concealment')).map(event=>event.witnesses)).toEqual([[],[]]);
+});
+
+test('Raio X spends one charge per window, follows visible targets and preserves snapshots',()=>{
+  const {alice,bob,watcher,game,world,events} = setup();
+  game.reset(0,()=>.5,world.players,()=>0);
+  const npc:Player = {...watcher,npc:true,x:250,y:250};
+  world.players[2] = npc;
+  let balance = 12;
+  world.wallet = ()=>balance;
+  let spent = 0;
+  world.spend = (_id,amount)=>{ spent += amount; return true; };
+  const scanner = buyTechnical(game,alice,world,'xray');
+  const activate = () => game.act(alice,{kind:'scan-xray'},world);
+  const vision = () => game.view(alice,world).xrayVision;
+  expect(activate()).toBe('Equipe o Raio X.');
+  game.act(alice,{kind:'equip',item:scanner.id},world);
+  expect(activate()).toBe('Raio X ativado.');
+  expect(scanner.charges).toBe(2);
+  expect(vision()?.targets).toEqual([]);
+  Object.assign(alice,{x:240,y:250,barriers:[[244,241,2,16]]});
+  expect(vision()?.targets.some(target=>target.id===npc.id)).toBe(false);
+  alice.barriers = undefined;
+  expect(vision()?.targets).toContainEqual(expect.objectContaining({id:npc.id,balance:12}));
+  npc.x++;
+  expect(vision()?.targets).toContainEqual(expect.objectContaining({id:npc.id,x:251}));
+  const office = privateOffices.find(office=>office.id===game.view(bob,world).ownOffice)!;
+  Object.assign(alice,office.safe);
+  balance = 30;
+  expect(vision()?.targets).toContainEqual(expect.objectContaining({id:office.id,balance:30}));
+  balance = 20;
+  expect(vision()?.targets).toContainEqual(expect.objectContaining({id:office.id,balance:30}));
+  expect(game.view(bob,world).xrayVision).toBeUndefined();
+  world.now = 10_000;
+  game.tick(world,true);
+  expect(vision()).toBeUndefined();
+  expect(activate()).toBe('Raio X ativado.');
+  expect(vision()?.targets).toContainEqual(expect.objectContaining({id:office.id,balance:20}));
+  expect(activate()).toBe('Raio X desativado.');
+  expect(vision()).toBeUndefined();
+  expect(activate()).toBe('Raio X ativado.');
+  expect(activate()).toBe('Raio X desativado.');
+  expect(activate()).toContain('sem cargas');
+  expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('Apoio Técnico');
+  Object.assign(alice,npcs.vendor);
+  expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('3/3');
+  expect(spent).toBe(6);
+  expect(events.filter(event=>event.type.startsWith('xray')).map(event=>event.witnesses)).toEqual([[],[],[],[]]);
+});
+
+test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
+  const {alice,bob,watcher,game,world,events} = setup();
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
+  Object.assign(bob,{x:alice.x+9,y:alice.y});
+  watcher.npc = true;
+  Object.assign(watcher,{x:alice.x-14,y:alice.y});
+  world.spend = ()=>true;
+  game.act(alice,{kind:'talk',target:'vendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  game.act(alice,{kind:'shop-buy',target:'baton',token:game.view(alice,world).dialogue?.token},world);
+  const weapon = game.view(alice,world).inventory.find(item=>item.kind==='baton')!;
+  game.act(alice,{kind:'equip',item:weapon.id},world);
+  const strike = (at:number) => {
+    world.now = at;
+    game.act(alice,{kind:'attack'},world);
+    world.now += weapons.baton.impactMs;
+    game.tick(world,true);
+    return events.filter(event=>event.type==='hit').at(-1);
+  };
+  expect(strike(100)?.witnesses).toEqual([watcher.id]);
+  world.vision = id=>id===watcher.id ? 10 : 100;
+  expect(strike(2000)?.witnesses).toEqual([]);
+  world.vision = ()=>100;
+  Object.assign(watcher,{x:720,y:240});
+  expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });

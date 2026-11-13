@@ -1,3 +1,4 @@
+import { installationSites } from '../src/installations';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { PersonalAgenda } from './PersonalAgenda';
@@ -104,4 +105,394 @@ test('the phone only emits play time after input and uses observer visibility th
   world.now = 200;
   game.tick(world,true);
   expect(samples.at(-1)).toMatchObject({duration:50,witnesses:['b']});
+});
+
+test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo'] as const)(
+  '%s completes only after the corresponding gameplay with the assigned person',
+  kind=>{
+    const economy = new PoliticalEconomy();
+    const players:Player[] = ['a','b','c'].map((id,character)=>({
+      id,nick:character===0 ? 'Autora' : 'Mesmo nome',character,x:140,y:146,direction:0,moving:false,
+    }));
+    const [owner,target,other] = players;
+    economy.reset(players.map(({id,nick:name,character})=>({id,name,character})),()=>0);
+    const agenda = Reflect.get(economy,'accounts').get(owner.id).agenda as PersonalAgenda;
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    const missions = () => economy.view(owner.id,[],0,false,()=>true)!.missions;
+    expect(missions().active.find(mission=>mission.kind===kind)?.person?.id).toBe(target.id);
+
+    const game = new Gameplay();
+    game.reset(0,()=>.5,players,()=>.5);
+    const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+      spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+    const interact = (recipient:Player) => {
+      const third = recipient===target ? other : target;
+      Object.assign(third,{x:800,y:490});
+      world.now += 3_000;
+      if (kind==='dinheiroAlvo') {
+        expect(economy.transfer(owner.id,recipient.id,3,true,0)).toBe(true);
+        return;
+      }
+      if (kind==='visitaAlvo') {
+        Object.assign(owner,{x:140,y:146});
+        game.tick(world,true);
+        Object.assign(owner,game.officeSpawn(recipient.id));
+        game.tick(world,true);
+        return;
+      }
+      if (kind==='selfieAlvo') {
+        Object.assign(owner,{x:140,y:146});
+        Object.assign(recipient,{x:148,y:146});
+        expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+        return;
+      }
+      if (kind==='documentoAlvo') {
+        Object.assign(owner,terminals.secretary.point);
+        game.act(owner,{kind:'supply',place:'secretary'},world);
+      } else {
+        Object.assign(owner,npcs.snackVendor.interaction);
+        game.act(owner,{kind:'talk',target:'snackVendor'},world);
+        game.act(owner,{kind:'dialogue-choice',target:'products',token:game.view(owner,world).dialogue?.token},world);
+        game.act(owner,{kind:'shop-buy',target:'pizza',token:game.view(owner,world).dialogue?.token},world);
+      }
+      Object.assign(owner,{x:140,y:146});
+      Object.assign(recipient,{x:148,y:146});
+      const item = game.view(owner,world).inventory.find(item=>item.kind===(kind==='pizzaAlvo' ? 'pizza' : 'document'))!;
+      game.act(owner,{kind:'offer',target:recipient.id,item:item.id},world);
+      const request = game.view(recipient,world).requests.find(request=>request.item.id===item.id)!;
+      game.act(recipient,{kind:'accept',item:request.id},world);
+      expect(game.view(recipient,world).inventory.some(entry=>entry.id===item.id)).toBe(true);
+    };
+    interact(other);
+    expect(missions().completed.some(mission=>mission.kind===kind)).toBe(false);
+    interact(target);
+    expect(missions().completed.find(mission=>mission.kind===kind)?.person?.id).toBe(target.id);
+    expect(missions().active).toHaveLength(3);
+  },
+);
+
+test('a player in isolation is replaced as a selfie target while their office remains visitable',()=>{
+  const targets = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
+  for (const kind of ['selfieAlvo','visitaAlvo'] as const) {
+    const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio']);
+    agenda.updateEligibility(metrics,3,true,3,0,targets,new Set(['b','c']));
+    const target = () => agenda.view(metrics).active.find(mission=>mission.kind===kind)?.person?.id;
+    expect(target()).toBe('b');
+    agenda.updateEligibility(metrics,3,true,3,0,targets,new Set(['c']));
+    expect(target()).toBe(kind==='selfieAlvo' ? 'c' : 'b');
+  }
+});
+
+test('mission draws skip unavailable offices, exhausted purchases and unaffordable objectives',()=>{
+  const metrics = {wallet:0,popularity:40};
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['presidenteFoto','protocolo','comprarLagosta','televisao','cafe','passeio','selfieSolo']);
+  agenda.recordGameplay(metrics,event('purchased',{kind:'officeTv'}),false);
+  // Keep the deck fixed so changes to the account are the only eligibility inputs.
+  Reflect.set(agenda,'missions',[]);
+  agenda.updateEligibility(metrics,3,false,3);
+  expect(agenda.view(metrics).active.map(mission=>mission.kind).sort()).toEqual(['cafe','passeio','selfieSolo']);
+  Reflect.set(agenda,'missions',[]);
+  metrics.wallet = 6;
+  agenda.updateEligibility(metrics,3,true,3);
+  const eligible = agenda.view(metrics).active.map(mission=>mission.kind);
+  expect(eligible).toContain('comprarLagosta');
+  expect(eligible).toContain('protocolo');
+  expect(eligible).not.toContain('televisao');
+});
+
+test('a carried pizza is an alternative to the purchase cost when drawing a mission',()=>{
+  const id = 'a';
+  const player:Player = {id,nick:'A',character:0,direction:0,moving:false,...npcs.snackVendor.interaction};
+  const economy = new PoliticalEconomy();
+  economy.reset([{id,name:'A',character:0}],()=>0);
+  const game = new Gameplay();
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  game.act(player,{kind:'talk',target:'snackVendor'},world);
+  game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'pizza',token:game.view(player,world).dialogue?.token},world);
+  const pizza = game.view(player,world).inventory.find(item=>item.kind==='pizza')!;
+  expect(economy.spend(id,6)).toBe(true);
+  const account = Reflect.get(economy,'accounts').get(id);
+  const active = () => economy.view(id,[],0,false,()=>true)!.missions.active;
+  const draw = () => {
+    Reflect.set(account.agenda,'missions',[]);
+    Reflect.set(account.agenda,'missionDeck',['pizza','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([id]),3);
+  };
+  draw();
+  expect(active().some(mission=>mission.kind==='pizza')).toBe(true);
+  game.act(player,{kind:'drop',item:pizza.id},world);
+  draw();
+  expect(active().some(mission=>mission.kind==='pizza')).toBe(false);
+});
+
+test('the scandal pizza mission becomes eligible only after a public finding',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = ['a','b','c','d'];
+  economy.reset(ids.map(id=>({id,name:id,character:0})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(ids),3);
+    return economy.view('a',[],0,false,()=>true)!.missions.active.some(mission=>mission.kind==='pizzada');
+  };
+  expect(draw()).toBe(false);
+  economy.recordOfficialScandal();
+  expect(draw()).toBe(true);
+});
+
+test('furniture missions use the actual cabinet slots and prices at assignment',()=>{
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const game = new Gameplay();
+  game.reset(0,()=>0,[player]);
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:player.id,name:player.nick}],()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['ostentacao','gabinete','televisao','poltrona','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([player.id]),3);
+    return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  const buy = (target:string) => {
+    game.act(player,{kind:'talk',target:'vendor'},world);
+    game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+    expect(game.act(player,{kind:'shop-buy',target,token:game.view(player,world).dialogue?.token},world)).toBe('Compra instalada no seu gabinete.');
+  };
+
+  expect(draw()).toContain('ostentacao');
+  buy('officeTv');
+  const afterTv = draw();
+  expect(afterTv).not.toContain('ostentacao');
+  expect(afterTv).not.toContain('televisao');
+  expect(afterTv).toContain('gabinete');
+  buy('officeRug');
+  buy('officeChair');
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+});
+
+test('decoration missions require enough money or an item already in the inventory',()=>{
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...terminals.credentials.point};
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:player.id,name:player.nick}],()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['retrato','reserva','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([player.id]),3);
+    return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  expect(draw()).toContain('reserva');
+  expect(game.act(player,{kind:'buy',target:'portrait'},world)).toContain('inventário');
+  expect(economy.spend(player.id,6)).toBe(true);
+  expect(draw()).toEqual(['retrato','cafe','passeio']);
+  const portrait = game.view(player,world).inventory.find(item=>item.kind==='portrait')!;
+  Object.assign(player,installationSites.hall.point);
+  expect(game.act(player,{kind:'install',place:'hall',item:portrait.id},world)).toBe('Objeto instalado.');
+  expect(economy.view(player.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='retrato')).toBe(true);
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+});
+
+test('collective missions wait for enough available players while office visits remain eligible',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = ['a','b','c','d'];
+  economy.reset(ids.map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  economy.suspend('d',1000);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','entrega','visitaGabinete','cafe','passeio']);
+  const draw = () => economy.updateAgendaEligibility(new Set(ids),3);
+  const active = () => economy.view('a',[],0,false,()=>true)!.missions.active;
+  draw();
+  expect(active().map(mission=>mission.kind)).toEqual(['visitaGabinete','cafe','passeio']);
+
+  economy.expireSuspensions(1000);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','entrega','visitaGabinete','cafe','passeio']);
+  draw();
+  const selfie = active().find(mission=>mission.kind==='selfie')!;
+  expect(selfie).toBeDefined();
+  economy.suspend('d',2000);
+  draw();
+  expect(active()).toContainEqual(selfie);
+});
+
+test('photo missions use live portrait and VIP installations when drawing',()=>{
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const [owner,colleague] = players;
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,(id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement));
+  const {agenda} = Reflect.get(economy,'accounts').get(owner.id);
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  const draw = (replacement=false) => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',replacement ? ['reforma','mandaVip','cafe','passeio','selfieSolo'] : ['autorretrato','fiscalVip','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    return economy.view(owner.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
+  const install = (player:Player, place:'hall'|'coffeeVip') => {
+    const {kind,point} = installationSites[place];
+    expect(game.act(player,{kind:'buy',target:kind},world)).toContain('inventário');
+    const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
+    Object.assign(player,point);
+    expect(game.act(player,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+  };
+
+  expect(draw()).toContain('autorretrato');
+  expect(draw()).not.toContain('fiscalVip');
+  expect(draw(true)).toEqual(['cafe','passeio','selfieSolo']);
+  install(owner,'hall');
+  expect(economy.spend(owner.id,6)).toBe(true);
+  install(colleague,'coffeeVip');
+  expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
+  expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+  expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
+  expect(economy.transfer(colleague.id,owner.id,1,false,0)).toBe(true);
+  expect(draw(true)).toContain('mandaVip');
+  expect(draw(true)).not.toContain('reforma');
+  Object.assign(owner,installationSites.coffeeVip.point);
+  const vip = game.view(owner,world).interactive.find(item=>item.kind==='vip')!;
+  expect(game.act(owner,{kind:'uninstall',item:vip.id},world)).toBe('Objeto retirado.');
+  expect(draw(true)).toContain('mandaVip');
+  expect(game.act(owner,{kind:'install',place:'coffeeVip',item:vip.id},world)).toBe('Objeto instalado.');
+  expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='mandaVip')).toBe(true);
+  expect(draw(true)).not.toContain('mandaVip');
+});
+
+test('transfer missions wait until the payment quota renews even when the wallet has funds',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const view = (round:number) => economy.view('a',[],round,false,()=>true)!;
+  const limit = view(0).paymentsLeft;
+  for (let i=0;i<limit;i++) {
+    expect(economy.transfer('a','b',1,false,0)).toBe(true);
+    expect(economy.transfer('b','a',1,false,0)).toBe(true);
+  }
+  const draw = (round:number) => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pagamento','dinheiroAlvo','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3,()=>true,round);
+    return view(round).missions.active.map(mission=>mission.kind);
+  };
+  expect(view(0)).toMatchObject({wallet:8,paymentsLeft:0});
+  expect(draw(0)).toEqual(['cafe','passeio','selfieSolo']);
+  expect(draw(1)).toEqual(['pagamento','dinheiroAlvo','cafe']);
+  expect(economy.transfer('a','b',3,false,1)).toBe(true);
+  expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['pagamento','dinheiroAlvo']);
+});
+
+test('a dropped contact is replaced without changing their own agenda during the grace period',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b','c']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfieAlvo','cafe','passeio']);
+  const view = (id:string) => economy.view(id,[],0,false,()=>true)!.missions;
+  economy.updateAgendaEligibility(ids,3);
+  expect(view('a').active.find(mission=>mission.kind==='selfieAlvo')?.person?.id).toBe('b');
+  const before = view('b');
+  economy.updateAgendaEligibility(ids,3,()=>true,0,new Set(['b']));
+  expect(view('a').active.find(mission=>mission.kind==='selfieAlvo')?.person?.id).toBe('c');
+  expect(view('b')).toEqual(before);
+});
+
+test('a settled transfer can only advance each agenda once even after a new objective is drawn',()=>{
+  const agenda = new PersonalAgenda(metrics,2,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[
+    {id:100,kind:'recebido',current:0,target:2},
+    {id:101,kind:'pagamento',current:0,target:2},
+  ]);
+  agenda.recordPayment(metrics,'b',42);
+  agenda.recordPayment(metrics,'b',42);
+  agenda.recordTransfer(metrics,3,'c',43);
+  agenda.recordTransfer(metrics,3,'c',43);
+  expect(agenda.view(metrics).active).toEqual(expect.arrayContaining([
+    expect.objectContaining({kind:'recebido',current:1}),
+    expect.objectContaining({kind:'pagamento',current:1}),
+  ]));
+  agenda.recordPayment(metrics,'b',44);
+  agenda.recordTransfer(metrics,3,'c',45);
+  expect(agenda.view(metrics).completed.map(mission=>mission.kind)).toEqual(['recebido','pagamento']);
+  Reflect.set(agenda,'missions',[{id:102,kind:'recebido',current:0,target:1}]);
+  agenda.recordPayment(metrics,'b',42);
+  expect(agenda.view(metrics).active.find(mission=>mission.id===102)?.current).toBe(0);
+});
+
+test('a signature objective needs two other available signers and retains progress during temporary isolation',()=>{
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
+  const targets = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
+  const available = new Set(['b']);
+  agenda.updateEligibility(metrics,3,true,3,0,targets,available);
+  expect(agenda.hasActive('assinaturas')).toBe(false);
+
+  Reflect.set(agenda,'missions',[]);
+  agenda.updateEligibility(metrics,3,true,3,1,targets,available);
+  expect(agenda.hasActive('assinaturas')).toBe(true);
+  agenda.recordSignature(metrics,21,'b');
+  available.clear();
+  agenda.updateEligibility(metrics,3,true,3,1,targets,available);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='assinaturas')?.current).toBe(1);
+  agenda.recordSignature(metrics,21,'npc');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
+});
+
+test('buying an NPC vote is drawn only when a paid quote is affordable and payment is available',()=>{
+  const draw = (price:number|undefined,canPay:boolean,canVote=true) => {
+    const state = {...metrics,npcVotePrice:()=>price,canPay:()=>canPay};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,canVote,3,1);
+    return agenda;
+  };
+  expect(draw(9,true).hasActive('votoNpc')).toBe(false);
+  expect(draw(undefined,true).hasActive('votoNpc')).toBe(false);
+  expect(draw(3,false).hasActive('votoNpc')).toBe(false);
+  expect(draw(3,true,false).hasActive('votoNpc')).toBe(false);
+  const agenda = draw(3,true);
+  expect(agenda.hasActive('votoNpc')).toBe(true);
+  agenda.recordGameplay(metrics,event('npc-vote-bought'),false);
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'votoNpc'}));
+});
+
+test('NPC robbery returns to the mission deck when an empty wallet is funded again',()=>{
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'Alice'}],()=>0);
+  economy.addParliamentarian({id:'npc',name:'Parlamentar'},3);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['rouboNpc','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(['a']),3);
+    return economy.hasMission('a','rouboNpc');
+  };
+  expect(draw()).toBe(true);
+  expect(economy.takeWallet('npc')).toBe(3);
+  expect(draw()).toBe(false);
+  expect(economy.transfer('a','npc',1,true,0)).toBe(true);
+  expect(draw()).toBe(true);
 });

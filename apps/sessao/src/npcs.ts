@@ -7,13 +7,13 @@ export const snackBar = {
 } as const;
 
 export const npcs = {
-  vendor:{name:'Seu Balcão',character:4,x:631,y:208,direction:0,counter:{x:609,y:214},dialogue:'convenience',label:'Mercado Parlamentar',catalog:'equipment'},
-  snackVendor:{name:'Tia do Lanche',sprite:'tia-do-lanche.webp',x:886,y:328,direction:0,
+  vendor:{name:'João Appolinário',sprite:'joao-appolinario.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
+  snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
 export const treasurer = {
-  name:'Tesoureiro', character:6, x:499, y:453, direction:0,
+  name:'Marcos Valério', sprite:'marcos-valerio.webp', x:499, y:453, direction:0,
   counter:{x:477,y:459}, interaction:{x:499,y:489}, label:'Tesouraria',
 } as const;
 
@@ -39,7 +39,7 @@ export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
   snacks:{
     start:{
-      text:'Chega mais, Excelência. Tem café passado e lanche quente. O que vai ser?',
+      text:'Oi, amiguinho! Tem café passado e lanche quentinho. O que vai ser?',
       options:[
         {id:'products',label:'Ver cardápio',action:'shop'},
         {id:'special',label:'O que saiu agora?',next:'special'},
@@ -63,7 +63,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
         {id:'budget',label:'O que dá para levar com R$ 50 mil?',next:'budget',requires:{wallet:5}},
         {id:'coffee',label:'Aceita um cafezinho?',next:'coffee',requires:{item:'coffee'}},
         {id:'president',label:'Tem desconto para a Presidência?',next:'president',requires:{office:'president'}},
-        {id:'evidence',label:'O balcão também guarda segredos?',next:'evidence',requires:{evidence:'clandestine-transfer'}},
+        {id:'evidence',label:'A estante também guarda segredos?',next:'evidence',requires:{evidence:'clandestine-transfer'}},
         {id:'mission',label:'Onde fica o cafezinho?',next:'mission',requires:{mission:'cafe'}},
         {id:'leave',label:'Deixa pra lá',action:'close'},
       ],
@@ -77,7 +77,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     evidence:{
-      text:'O balcão guarda troco. Segredo é melhor levar à Controladoria.',
+      text:'A estante guarda bugigangas. Segredo é melhor levar à Corregedoria.',
       options:[{id:'back',label:'Voltar',next:'start'}],
     },
     mission:{

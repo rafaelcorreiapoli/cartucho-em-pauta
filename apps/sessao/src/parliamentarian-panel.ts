@@ -4,10 +4,15 @@ import type { ParliamentarianDeal } from './parliamentarians';
 import { money } from './politics';
 import type { PlenaryView, Vote } from './plenary';
 
-export function createParliamentarianPanel(send:(action:unknown)=>void) {
+export function refreshVoteOffer(amount:number,minimum:number) {
+  return minimum===0 ? 0 : Math.max(amount,minimum);
+}
+
+export function createParliamentarianPanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#parliamentarian-dialog')!;
   const title = dialog.querySelector('h2')!;
   const body = dialog.querySelector<HTMLElement>('.parliamentarian-options')!;
+  let quotedProject:string|undefined;
   let key = '';
   let dismissed = false;
   let quote: {vote:Vote;amount:number}|undefined;
@@ -33,7 +38,7 @@ export function createParliamentarianPanel(send:(action:unknown)=>void) {
     const summary = node('p');
     if (quote) {
       const minimum = deal.minimum[quote.vote];
-      quote.amount = Math.max(quote.amount,minimum);
+      quote.amount = refreshVoteOffer(quote.amount,minimum);
       const offer = quote;
       summary.textContent = minimum ? `Contraproposta · mínimo de ${money(minimum)}` : 'Aceita sem pagamento.';
       if (minimum) {
@@ -44,7 +49,7 @@ export function createParliamentarianPanel(send:(action:unknown)=>void) {
         controls.push(less,more);
       }
       const commit = button(`Confirmar ${offer.vote==='yes' ? 'a favor' : 'contra'} · ${offer.amount ? money(offer.amount) : 'Grátis'}`,()=>{
-        send({kind:'vote',target:deal.id,round,vote:offer.vote,amount:offer.amount});
+        send({kind:'vote',target:deal.id,round,project:deal.projectIndex,vote:offer.vote,amount:offer.amount});
         quote = undefined;
         render(deal,round);
       });
@@ -66,7 +71,10 @@ export function createParliamentarianPanel(send:(action:unknown)=>void) {
         return;
       }
       if (dismissed) return;
-      const next = JSON.stringify([view.round,deal.id,deal.documents,deal.minimum,deal.wallet]);
+      const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.id]);
+      if (quotedProject!==projectKey) quote = undefined;
+      quotedProject = projectKey;
+      const next = JSON.stringify([projectKey,deal.documents,deal.minimum,deal.wallet]);
       if (key!==next) { key = next; render(deal,view.round); }
       if (!dialog.open && !document.querySelector('dialog:modal')) dialog.showModal();
     },

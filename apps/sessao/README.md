@@ -81,7 +81,7 @@ assessora: conversa, negocia e investiga, mas perde voto, verba e sabotagem.
 
 ## Mercado e equipamentos
 
-No Apoio Técnico, aproxime-se do **Seu Balcão** e use o atalho indicado para conversar. Abra o catálogo, compre um equipamento e selecione-o no inventário para equipar. O botão **Equipamentos** permite desequipar e controlar o modulador. O binóculo amplia a visão e o colete reduz o dano. Com o porrete equipado, pressione o número de **Golpear** ou clique no botão para atacar na direção em que o personagem está olhando. O golpe causa dano se encontrar outro jogador dentro do arco no momento do impacto. As barras acima dos personagens mostram a proporção de PV restante.
+No Apoio Técnico, aproxime-se do **João Appolinário** e use o atalho indicado para conversar. Abra o catálogo, compre um equipamento e selecione-o no inventário para equipar. O botão **Equipamentos** permite desequipar e controlar o modulador. O binóculo amplia a visão temporariamente com **B** e o colete reduz o dano. Com o porrete equipado, pressione **Espaço** ou clique no ícone equipado para atacar na direção em que o personagem está olhando. O golpe causa dano se encontrar outro jogador dentro do arco no momento do impacto. As barras acima dos personagens mostram a proporção de PV restante.
 
 Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica temporariamente nocauteado. Ele recupera parte dos PV em oito segundos ou pode ser socorrido por alguém próximo. Durante a recuperação há proteção temporária contra novos golpes.
 
@@ -89,7 +89,7 @@ Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica
 
 Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
 
-A Enfermaria fica no lado direito da Galeria. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
+A Enfermaria fica no lado direito da Sala de Reprografia. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
 
 ## Voz da sala
 
@@ -199,3 +199,35 @@ O **Cafezinho** vende a pizza e tem uma mesa para servir seis fatias. Cada pesso
 A barra superior concentra carteira, popularidade, indicadores do Parlamento e eleição. O mapa usa a faixa central como viewport do Phaser, incluindo fog, coordenadas de clique e feedback espacial. A faixa inferior reúne perfil, agenda sob demanda, projeto e votação, itens de uso rápido, equipamentos e comunicação. O resultado legislativo aparece temporariamente no centro do painel e fica disponível no histórico.
 
 Use as teclas numéricas indicadas para acionar o contexto atual, `Shift+1` a `Shift+6` para abrir um slot e `Esc` para fechar um painel. Os atalhos de local correspondem ao ponto de interação ao alcance. Os objetos disponíveis ficam em **Objetos próximos**.
+
+### Smoke test de chamada privada no Chrome
+
+Com `playwright-cli` disponível, inicie o gameserver com
+`SESSAO_LOCAL_SOLO=1 PORT=2597 bun server/index.ts`. Em outro terminal,
+execute `bunx vite --host 127.0.0.1 --port 5197 --strictPort`. No diretório
+deste app, execute:
+
+```sh
+playwright-cli -s=sessao-call open --browser=chrome --config=dev/private-call-chrome.json http://127.0.0.1:5197/
+playwright-cli -s=sessao-call run-code --filename=dev/private-call-smoke.js
+playwright-cli -s=sessao-call close
+```
+
+O teste injeta um sinal sintético e mede o áudio recebido por WebRTC em dois
+clientes da mesma sala. A saída de áudio é silenciada pelo teste, que também
+substitui a captura de microfone antes de iniciar o VoIP.
+
+### Smoke test do filtro de Megafone no Chrome
+
+Com o Vite e a sessão Chrome silenciosa da seção anterior, prepare uma fala
+sintética no macOS com a voz Luciana instalada e execute:
+
+```sh
+say -v Luciana -r 155 -o /tmp/sessao-megaphone-speech.aiff "Atenção, parlamentares. A sessão começa em cinco minutos. O projeto será votado no plenário."
+ffmpeg -y -i /tmp/sessao-megaphone-speech.aiff -ac 1 -ar 24000 /tmp/sessao-megaphone-speech.wav
+playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
+```
+
+O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
+no receptor. Ele verifica redução relativa de graves, presença de sinal com
+Megafone e Modulador ativos e ausência de picos próximos ao clipping.

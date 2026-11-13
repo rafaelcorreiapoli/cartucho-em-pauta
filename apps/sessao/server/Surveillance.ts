@@ -97,8 +97,10 @@ export class Surveillance {
       if (!device || device.owner!==id || device.removed) return;
       const selection = device.kind==='wiretap' ? this.listening : this.selected;
       if (raw.kind==='open') {
+        this.selected.delete(id);
+        this.listening.delete(id);
+        this.muted.delete(id);
         selection.set(id,device.id);
-        if (device.kind==='wiretap') this.muted.delete(id);
       }
       if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
       if (raw.kind==='mute' && this.listening.get(id)===device.id) {
