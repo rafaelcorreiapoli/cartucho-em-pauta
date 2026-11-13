@@ -80,3 +80,10 @@ test('the Treasury and luxury shop have separate entrances and a continuous divi
   expect(canStand(463,486)).toBe(false);
   expect(wallBetween({x:450,y:486},{x:475,y:486})).toBe(true);
 });
+
+test('the lower luxury shop doorway is centered inside the room',()=>{
+  expect(roomAt({x:530,y:524})).toBe('Gabinete de Luxo');
+  expect(canStand(530,535)).toBe(true);
+  expect(canStand(455,535)).toBe(false);
+  expect(wallBetween({x:530,y:519},{x:530,y:548})).toBe(false);
+});

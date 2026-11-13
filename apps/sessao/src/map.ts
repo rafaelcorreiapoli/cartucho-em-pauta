@@ -13,7 +13,7 @@ export type Rect = readonly [x: number, y: number, width: number, height: number
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
-export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
+export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
 export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
 
 export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
@@ -22,7 +22,7 @@ const [luxuryDoorX,luxuryDoorY,luxuryDoorWidth,luxuryDoorHeight] = treasuryLayou
 
 export const walls: Rect[] = [
   [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,530-eastAnnex.opening[1]],
-  [0,530,65,11], [194,530,90,11], [310,530,140,11], [510,530,128,11], [666,530,100,11], [895,530,65,11],
+  [0,530,65,11], [194,530,90,11], [310,530,PLENARY_DOORS[1][0]-310,11], [PLENARY_DOORS[1][0]+PLENARY_DOORS[1][2],530,638-PLENARY_DOORS[1][0]-PLENARY_DOORS[1][2],11], [666,530,100,11], [895,530,65,11],
   [258,541,10,218], [692,541,10,218], [268,749,424,10],
   [470,10,10,115], [470,161,10,98],
   [10,259,211,11], [261,259,397,11], [702,259,snackBar.door[0]-702,11], [897,259,53,11],
