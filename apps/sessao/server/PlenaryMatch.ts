@@ -100,12 +100,13 @@ export class PlenaryMatch {
 
   private renew(now:number) {
     const previous = this.election.eliminated;
+    const cycle = this.election.currentCycle;
     this.election.advance(now,this.popularity,ids=>this.settleBudget(ids));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
       this.votes.delete(eliminated);
-      this.refreshAgendaEligibility();
     }
+    if (cycle!==this.election.currentCycle) this.refreshAgendaEligibility();
     if (!this.stability) this.finish('Infiltrado','O Congresso entrou em colapso.');
     else if (this.infiltrators.size && [...this.infiltrators].every(id=>!this.election.office(id))) {
       this.finish('Parlamentar','Todos os infiltrados perderam o mandato.');
@@ -159,10 +160,12 @@ export class PlenaryMatch {
     this.started = now;
     this.fire.reset(now);
     this.complaints.reset();
-    this.economy.reset(contacts,random);
+    let campaignReady = false;
+    this.economy.reset(contacts,random,(id,kind)=>!campaignReady || this.election.canCampaignAction(id,kind));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
+    campaignReady = true;
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingImmunity.clear();
     this.hearingTarget = this.hearingResult = undefined;
