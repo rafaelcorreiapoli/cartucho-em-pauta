@@ -9,11 +9,11 @@ const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void) {
-  const xpPanel = element('agenda-xp');
-  const levelLabel = element('agenda-level');
-  const xpLabel = element('agenda-xp-value');
-  const fill = element('agenda-xp-fill');
-  const reward = element('agenda-reward');
+  const xpPanel = element('profile-xp');
+  const levelLabel = element('profile-level');
+  const xpLabel = element('profile-xp-value');
+  const fill = element('profile-xp-fill');
+  const reward = element('profile-xp-reward');
   const launch = element<HTMLButtonElement>('open-attributes');
   const badge = element('attribute-points-badge');
   const celebration = element<HTMLDialogElement>('level-up-dialog');
@@ -137,7 +137,9 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         requested = undefined;
       }
       badge.hidden = !progress.available;
-      badge.textContent = pointLabel(progress.available);
+      badge.textContent = String(progress.available);
+      launch.title = progress.available ? `Atributos (I) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (I)';
+      launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
       const inLevel = progress.xp-progress.levelStart;
       const step = progress.nextLevelXp===undefined ? 0 : progress.nextLevelXp-progress.levelStart;
       const fraction = step ? inLevel/step : 1;

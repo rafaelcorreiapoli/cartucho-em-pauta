@@ -117,11 +117,6 @@
           </header>
           <ul class="agenda-list" id="missions-completed" aria-label="Conclusões recentes" hidden></ul>
           <ul class="agenda-list" id="missions-active" aria-label="Objetivos ativos"></ul>
-          <footer id="agenda-xp" hidden>
-            <div><strong id="agenda-level"></strong><span id="agenda-xp-value"></span></div>
-            <div class="xp-track" aria-hidden="true"><span id="agenda-xp-fill"></span></div>
-            <div id="agenda-reward" role="status"></div>
-          </footer>
           <span id="agenda-announcement" class="sr-only" role="status"></span>
           <template id="agenda-mission">
             <li>
@@ -202,8 +197,12 @@
             <div class="deck-identity">
               <strong id="hud-nick"></strong>
               <span class="profile-office"><button class="resource-help profile-help" type="button" aria-label="Poderes do cargo" data-help="Veja o que seu cargo pode fazer." id='office-power'><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg></button><small id="hud-office"></small></span><small id="own-office" hidden></small>
+              <footer id="profile-xp" hidden>
+                <div><strong id="profile-level"></strong><span id="profile-xp-value"></span></div>
+                <div class="xp-track" aria-hidden="true"><span id="profile-xp-fill"></span></div>
+                <div id="profile-xp-reward" role="status"></div>
+              </footer>
               <div class="deck-profile-links">
-                <button id="open-attributes" type="button" class="progression-link" aria-haspopup="dialog" hidden>Atributos <span id="attribute-points-badge" hidden></span></button>
                 <details id="private-profile" name="game-panels">
                   <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><span>Perfil</span></summary>
                   <div class="hud-panel deck-popover">
@@ -307,6 +306,7 @@
             <div id="item-slots" role="group" aria-label="Itens carregados" hidden></div>
             <div class="deck-tool-row">
               <div id="gameplay-tools" hidden>
+                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (I)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
