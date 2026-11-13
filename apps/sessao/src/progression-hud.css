@@ -91,7 +91,6 @@
 #attributes-dialog { width: min(560px,calc(100vw - 24px)); }
 .attribute-columns { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); gap: 10px; }
 .attribute-panel { min-width: 0; padding: clamp(6px,2vw,12px); background: #10271e; border-radius: 9px; }
-.attribute-panel h3 { margin: 0 0 4px; color: #bdd2c1; font-size: 12px; }
 .attribute-panel section { display: grid; align-items: center; gap: 10px; min-height: 60px; border-bottom: 1px solid #ffffff15; }
 .attribute-panel section:last-child { border-bottom: 0; }
 #attribute-list section { grid-template-columns: minmax(0,1fr) auto auto; padding-inline: 6px; }

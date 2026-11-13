@@ -483,17 +483,15 @@
       </dialog>
       <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title">
         <header>
-          <div><h2 id="attributes-title">Atributos</h2><p id="attributes-xp"></p></div>
+          <div><h2 id="attributes-title" class="sr-only">Atributos</h2><p id="attributes-xp"></p></div>
           <form method="dialog"><button class="hud-button hud-button--secondary">Fechar</button></form>
         </header>
         <p id="attributes-available" role="status"></p>
         <div class="attribute-columns">
-          <section class="attribute-panel" aria-labelledby="attribute-list-title">
-            <h3 id="attribute-list-title">Atributos</h3>
+          <section class="attribute-panel" aria-label="Atributos">
             <div id="attribute-list"></div>
           </section>
-          <section class="attribute-panel" aria-labelledby="attribute-resources-title">
-            <h3 id="attribute-resources-title">Estatísticas de combate</h3>
+          <section class="attribute-panel" aria-label="Estatísticas de combate">
             <div id="attribute-resources"></div>
           </section>
         </div>
