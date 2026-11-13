@@ -287,3 +287,31 @@ test('stolen cash remains conserved through drop, pickup and a single treasury r
   expect(act(owner,'deliver','treasury',stolen.id)).toBe('Objeto indisponível.');
   expect(summary()).toEqual(after);
 });
+
+test('a locked office remains a visit objective and only entry completes it',()=>{
+  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const match = new PlenaryMatch(1);
+  match.start(owner.id,[owner,visitor],0,()=>.9);
+  Object.assign(world,match.gameplayWorld([owner,visitor],0,()=>false));
+  const economy = Reflect.get(match,'economy');
+  const agenda = Reflect.get(economy,'accounts').get(visitor.id).agenda;
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['visitaAlvo','cafe','passeio']);
+  const missionState = () => match.view(visitor.id,[owner.id,visitor.id],world.now).politics!.missions;
+  const home = privateOffices[0];
+  const tool = buy(visitor,'lockpick');
+  Object.assign(owner,atDoor(home,true));
+  expect(act(owner,'office-lock',home.id)).toBe('Porta trancada.');
+  Object.assign(owner,{x:140,y:146});
+  Object.assign(visitor,atDoor(home,false));
+  match.refreshAgendaEligibility();
+  expect(missionState().active.find(mission=>mission.kind==='visitaAlvo')?.person?.id).toBe(owner.id);
+  tick(1);
+  expect(act(visitor,'office-breach-door',home.id,tool)).toBeUndefined();
+  tick(officeRules.breachTimes[0]);
+  expect(missionState().completed.some(mission=>mission.kind==='visitaAlvo')).toBe(false);
+  expect(findRoute(visitor,home.spawn).at(-1)).toEqual(home.spawn);
+  Object.assign(visitor,home.spawn);
+  tick(1);
+  expect(missionState().completed.find(mission=>mission.kind==='visitaAlvo')?.person?.id).toBe(owner.id);
+});
