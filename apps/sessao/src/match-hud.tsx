@@ -10,7 +10,7 @@ import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
-import { canReachObject, cashAmount, objects, type GameplayAction, type GameplayView } from './gameplay';
+import { canReachObject, treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
@@ -219,10 +219,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
           action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
       }
-      if (state.locations.includes('treasury')) for (const item of state.inventory) {
-        const amount = cashAmount(item);
-        if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
-          action:{kind:'deliver',place:'treasury',item:item.id}});
+      if (state.locations.includes('treasury')) {
+        for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});
       }
       if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
         label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},

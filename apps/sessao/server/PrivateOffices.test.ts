@@ -1,3 +1,4 @@
+import {PlenaryMatch} from './PlenaryMatch';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
@@ -256,4 +257,33 @@ test('the treasury redeems a physical briefcase exactly once',()=>{
   expect(act(owner,'deliver','treasury',cash.id)).toBe('Objeto indisponível.');
   expect(deposited).toBe(3);
   expect(game.physicalCash()).toBe(0);
+});
+
+test('stolen cash remains conserved through drop, pickup and a single treasury redemption',()=>{
+  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const match = new PlenaryMatch(1);
+  match.start(owner.id,[owner,visitor],0,()=>.9);
+  Object.assign(world,match.gameplayWorld([owner,visitor],0,()=>false));
+  const home = privateOffices[0];
+  const summary = () => match.economySummary(game.physicalCash());
+  const tool = buy(visitor,'lockpick');
+  expect(summary()).toMatchObject({humans:15,reserve:17,reserveFees:1,discrepancy:0});
+  Object.assign(visitor,home.safe);
+  act(visitor,'office-breach-safe',home.id,tool);
+  tick(officeRules.breachTimes[0]);
+  const stolen = game.view(visitor,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(stolen.cash).toBe(8);
+  expect(summary().discrepancy).toBe(0);
+  Object.assign(visitor,{x:140,y:146});
+  Object.assign(owner,{x:148,y:146});
+  act(visitor,'drop',undefined,stolen.id);
+  act(owner,'collect',undefined,stolen.id);
+  expect(game.view(owner,world).inventory.find(item=>item.id===stolen.id)?.cash).toBe(8);
+  expect(summary().discrepancy).toBe(0);
+  Object.assign(owner,treasurer.interaction);
+  expect(act(owner,'deliver','treasury',stolen.id)).toContain('entregues');
+  const after = summary();
+  expect(after).toMatchObject({treasury:8,budget:40,discrepancy:0});
+  expect(act(owner,'deliver','treasury',stolen.id)).toBe('Objeto indisponível.');
+  expect(summary()).toEqual(after);
 });

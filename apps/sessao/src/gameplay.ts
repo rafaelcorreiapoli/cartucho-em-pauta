@@ -1,3 +1,4 @@
+import { money } from './politics';
 import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
@@ -46,6 +47,14 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
+export function treasuryDeliveries(inventory:readonly WorldItem[]) {
+  return inventory.flatMap(item=>{
+    const amount = cashAmount(item);
+    return amount ? [{label:`Entregar ${money(amount)} ao tesoureiro`,
+      action:{kind:'deliver',place:'treasury',item:item.id} as const}] : [];
+  });
+}
+
 export type DocumentData = {
   author:string; title:string; edited:boolean; project?:number; description?:string; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
