@@ -108,6 +108,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
 
     preload() {
+      this.load.image('cash-briefcase',import.meta.env.BASE_URL+'assets/maleta-social.png');
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
@@ -577,7 +578,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (grip && latest.cashInHand && !pose && !combatArt) {
           const walkFrame = typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
           const [handX,handY] = grip[walkFrame];
-          const briefcase = view.briefcase ??= this.add.image(0,0,'item-briefcase').setOrigin(.5,.12).setDisplaySize(12,12);
+          const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setOrigin(.5,.12).setScale(12/128);
           const side = facing===3 ? -1 : 1;
           briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
             .setFlipX(facing===3).setAlpha(concealed ? .38 : 1).setVisible(true)
