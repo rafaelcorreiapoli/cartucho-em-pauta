@@ -1,5 +1,5 @@
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
-import {wallVision,shadowOutline} from './visibility';
+import {wallVision} from './visibility';
 import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -103,6 +103,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
     fog!:Phaser.GameObjects.Graphics;
+    hideFogEdge() { this.fogEdge?.setVisible(false); }
+
+    private fogEdge!:Phaser.GameObjects.Image;
+    private fogTexture!:Phaser.Textures.CanvasTexture;
     private fogInSession = false;
     private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
     private flames?:Phaser.GameObjects.Text;
@@ -158,6 +162,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       syncCanvas();
       this.mapLabels = drawMap(this);
       this.fog = this.add.graphics().setDepth(3);
+      this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
+      this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
@@ -600,6 +606,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
           this.fog.setVisible(running);
+          this.fogEdge.setVisible(running && !inSession);
           if (running && inSession && !this.fogInSession) {
             this.fogInSession = true;
             this.fogGeometry = undefined;
@@ -619,31 +626,37 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.barriers!==barriers) {
               this.fogGeometry = {x:wallX,y:wallY,radius,barriers,
                 points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
-              this.fog.clear().fillStyle(0x000000,.62);
-              const {points} = this.fogGeometry!;
-              const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
-              this.fog.beginPath().moveTo(first.x,first.y);
-              for (const point of outline) this.fog.lineTo(point.x,point.y);
-              this.fog.closePath().fillPath();
-              // Paint the gradient on the map layer so it cannot cover depth-sorted actors.
-              for (let band=0;band<6;band++) {
-                const inner = radius*(.84+.025*band);
-                const outer = inner+radius*.025;
-                this.fog.fillStyle(0x000000,.62*((band+1)/6)**2);
-                for (let index=0;index<points.length;index++) {
-                  const a = points[index], b = points[(index+1)%points.length];
-                  const distanceA = Math.hypot(a.x,a.y), distanceB = Math.hypot(b.x,b.y);
-                  if (distanceA<=inner && distanceB<=inner) continue;
-                  const ai = Math.min(inner,distanceA), ao = Math.min(outer,distanceA);
-                  const bi = Math.min(inner,distanceB), bo = Math.min(outer,distanceB);
-                  this.fog.beginPath()
-                    .moveTo(wallX+a.dx*ai,wallY+a.dy*ai)
-                    .lineTo(wallX+a.dx*ao,wallY+a.dy*ao)
-                    .lineTo(wallX+b.dx*bo,wallY+b.dy*bo)
-                    .lineTo(wallX+b.dx*bi,wallY+b.dy*bi)
-                    .closePath().fillPath();
-                }
-              }
+              const {points} = this.fogGeometry;
+              const size = this.fogTexture.width;
+              const center = size/2;
+              const half = radius + 2;
+              const scale = center/half;
+              const ctx = this.fogTexture.context;
+              ctx.clearRect(0,0,size,size);
+              ctx.fillStyle = 'rgba(0,0,0,.62)';
+              ctx.fillRect(0,0,size,size);
+              ctx.save();
+              ctx.globalCompositeOperation = 'destination-out';
+              const edge = radius*scale;
+              const gradient = ctx.createRadialGradient(center,center,edge*.84,center,center,edge);
+              gradient.addColorStop(0,'black');
+              gradient.addColorStop(1,'transparent');
+              ctx.fillStyle = gradient;
+              ctx.beginPath();
+              for (const point of points) ctx.lineTo(center+point.x*scale,center+point.y*scale);
+              ctx.closePath();
+              ctx.fill();
+              ctx.restore();
+              this.fogTexture.refresh();
+              this.fogEdge.setPosition(wallX,wallY).setDisplaySize(half*2,half*2);
+
+              const left = wallX-half, top = wallY-half, right = wallX+half, bottom = wallY+half;
+              const extent = 4000;
+              this.fog.clear().fillStyle(0x000000,.62)
+                .fillRect(-extent,-extent,extent*2,top+extent)
+                .fillRect(-extent,top,left+extent,half*2)
+                .fillRect(right,top,extent-right,half*2)
+                .fillRect(-extent,bottom,extent*2,extent-bottom);
             }
           }
         }
@@ -720,6 +733,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       running = negotiating || phase==='ballot' || phase==='hearing';
       if (!running) {
         scene.fog?.setVisible(false);
+        scene.hideFogEdge();
       }
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
