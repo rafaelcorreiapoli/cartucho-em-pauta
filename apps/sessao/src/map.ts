@@ -51,7 +51,7 @@ export const desks = [
   [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
-  {texture:'technical-shelf',area:[602,174,40,30],footprint:5},
+  {texture:'technical-shelf',area:[653,174,40,30],footprint:5},
   {texture:'snack-counter',area:[npcs.snackVendor.counter.x-12,npcs.snackVendor.counter.y-10,55,29],footprint:13},
   {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
   {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},

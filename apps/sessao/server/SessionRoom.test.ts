@@ -1,3 +1,4 @@
+import { npcs } from '../src/npcs';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
@@ -276,12 +277,12 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(progression()).toMatchObject({available:2,invested:{stamina:1}});
     expect(snapshots.get(passenger.sessionId)?.staminaMax).toBe(110);
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
-    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
     passenger.send('room-activity','coffee');
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
-    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{kind:'talk',target:'vendor'});
     await wait(()=>!!gameplay()?.dialogue);

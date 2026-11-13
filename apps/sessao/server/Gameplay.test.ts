@@ -262,7 +262,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   world.feedback = (id,message)=>{ feedback.set(id,message); };
   world.spend = ()=>true;
   const buy = (player:Player,kind:'wiretap'|'spyCamera'|'bugDetector')=>{
-    Object.assign(player,{x:631,y:197});
+    Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     game.act(player,{kind:'talk',target:'vendor'},world);
     game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
     game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);

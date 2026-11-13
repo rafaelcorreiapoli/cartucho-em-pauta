@@ -43,6 +43,8 @@ function setup() {
 
 test('the vendor is reachable, maintains separate dialogue sessions and accepts each purchase token once', () => {
   const {alice,bob,game,events,balance,world,openShop} = setup();
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  Object.assign(bob,{x:npcs.vendor.x+9,y:alice.y});
   expect(canStand(npcs.vendor.x,npcs.vendor.y)).toBe(false);
   expect(findRoute({x:140,y:146},{x:alice.x,y:alice.y}).at(-1)).toEqual({x:alice.x,y:alice.y});
   expect(game.act(alice,{kind:'shop-buy',target:'baton',token:1},world)).toBe('Abra o catálogo do vendedor.');
@@ -73,6 +75,7 @@ test('the Lanchonete is reachable and each vendor sells only its own catalog', (
   expect(roomAt(counter)).toBe(snackBar.name);
   expect(findRoute({x:140,y:146},counter).at(-1)).toEqual(counter);
   expect(canStand(npcs.snackVendor.x,npcs.snackVendor.y)).toBe(false);
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   const gearToken = openShop(alice);
   expect(game.act(alice,{kind:'shop-buy',target:'pizza',token:gearToken},world)).toBe('Este produto não é vendido aqui.');
   expect(game.act(alice,{kind:'talk',target:'snackVendor'},world)).toBe('Aproxime-se para conversar.');
@@ -295,7 +298,8 @@ test('dialogue eligibility is private and checked again when the player chooses'
   world.hasEvidence = (id,kind)=>id===alice.id && kind==='clandestine-transfer';
   Object.assign(alice, {x:240,y:250});
   game.act(alice,{kind:'supply',place:'coffee'},world);
-  Object.assign(alice, {x:631,y:197});
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  Object.assign(bob,{x:npcs.vendor.x+9,y:alice.y});
   for (const player of [alice,bob]) game.act(player,{kind:'talk',target:'vendor'},world);
   const options = (player:Player)=>game.view(player,world).dialogue?.options.map(choice=>choice.id);
   expect(options(alice)).toEqual(expect.arrayContaining(['coffee','president','evidence','mission']));
