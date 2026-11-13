@@ -181,7 +181,12 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasPhotoDecoration(id:string, kind:'portrait'|'vip') {
+  hasAgendaDecoration(id:string, kind:'portrait'|'vip', replacement=false) {
+    if (replacement) return Object.entries(installationSites).some(([site,definition])=>{
+      if (definition.kind!==kind) return false;
+      const installed = this.installations.get(site);
+      return installed ? installed.owner.id!==id : this.clearedSites.get(site)?.by===id;
+    });
     return [...this.installations.values()].some(item=>item.kind===kind &&
       (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
   }

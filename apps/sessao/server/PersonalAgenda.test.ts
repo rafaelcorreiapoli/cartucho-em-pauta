@@ -339,13 +339,13 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   const game = new Gameplay();
   const economy = new PoliticalEconomy();
   economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
-  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,(id,kind)=>game.hasPhotoDecoration(id,kind));
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,(id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement));
   const {agenda} = Reflect.get(economy,'accounts').get(owner.id);
   const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
     spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
-  const draw = () => {
+  const draw = (replacement=false) => {
     Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['autorretrato','fiscalVip','cafe','passeio','selfieSolo']);
+    Reflect.set(agenda,'missionDeck',replacement ? ['reforma','mandaVip','cafe','passeio','selfieSolo'] : ['autorretrato','fiscalVip','cafe','passeio','selfieSolo']);
     economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
     return economy.view(owner.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
   };
@@ -359,12 +359,23 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
 
   expect(draw()).toContain('autorretrato');
   expect(draw()).not.toContain('fiscalVip');
+  expect(draw(true)).toEqual(['cafe','passeio','selfieSolo']);
   install(owner,'hall');
   expect(economy.spend(owner.id,6)).toBe(true);
   install(colleague,'coffeeVip');
   expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
   expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
+  expect(economy.transfer(colleague.id,owner.id,1,false,0)).toBe(true);
+  expect(draw(true)).toContain('mandaVip');
+  expect(draw(true)).not.toContain('reforma');
+  Object.assign(owner,installationSites.coffeeVip.point);
+  const vip = game.view(owner,world).interactive.find(item=>item.kind==='vip')!;
+  expect(game.act(owner,{kind:'uninstall',item:vip.id},world)).toBe('Objeto retirado.');
+  expect(draw(true)).toContain('mandaVip');
+  expect(game.act(owner,{kind:'install',place:'coffeeVip',item:vip.id},world)).toBe('Objeto instalado.');
+  expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='mandaVip')).toBe(true);
+  expect(draw(true)).not.toContain('mandaVip');
 });
 
 test('transfer missions wait until the payment quota renews even when the wallet has funds',()=>{
