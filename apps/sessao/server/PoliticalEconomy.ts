@@ -338,6 +338,12 @@ export class PoliticalEconomy {
     if (account) account.agenda.progress(account,{[kind]:1});
   }
 
+  setAgendaInventory(owns:(id:string,kind:import('../src/gameplay').ObjectKind)=>boolean) {
+    for (const [id,account] of this.accounts) {
+      Object.assign(account,{owns:(kind:import('../src/gameplay').ObjectKind)=>owns(id,kind)});
+    }
+  }
+
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true) {
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id)));
     for (const id of players) {

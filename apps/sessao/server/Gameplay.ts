@@ -177,6 +177,10 @@ export class Gameplay {
     return [...this.items.values()].filter(({place}) => 'equipped' in place && place.equipped===id);
   }
 
+  owns(id:string,kind:ObjectKind) {
+    return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
+  }
+
   private wearing(id:string, kind:Gear) {
     return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }
@@ -953,7 +957,7 @@ export class Gameplay {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
-      if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
+      if (gear && this.owns(id,kind)) return 'Você já tem este equipamento.';
       if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : kind==='forensicKit' ? documentRules.kitPrice : foods[kind].price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);

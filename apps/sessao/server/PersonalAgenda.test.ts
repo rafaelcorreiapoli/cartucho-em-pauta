@@ -204,3 +204,31 @@ test('mission draws skip unavailable offices, exhausted purchases and unaffordab
   expect(eligible).toContain('protocolo');
   expect(eligible).not.toContain('televisao');
 });
+
+test('a carried pizza is an alternative to the purchase cost when drawing a mission',()=>{
+  const id = 'a';
+  const player:Player = {id,nick:'A',character:0,direction:0,moving:false,...npcs.snackVendor.interaction};
+  const economy = new PoliticalEconomy();
+  economy.reset([{id,name:'A',character:0}],()=>0);
+  const game = new Gameplay();
+  economy.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+  game.act(player,{kind:'talk',target:'snackVendor'},world);
+  game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'pizza',token:game.view(player,world).dialogue?.token},world);
+  const pizza = game.view(player,world).inventory.find(item=>item.kind==='pizza')!;
+  expect(economy.spend(id,6)).toBe(true);
+  const account = Reflect.get(economy,'accounts').get(id);
+  const active = () => economy.view(id,[],0,false,()=>true)!.missions.active;
+  const draw = () => {
+    Reflect.set(account.agenda,'missions',[]);
+    Reflect.set(account.agenda,'missionDeck',['pizza','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set([id]),3);
+  };
+  draw();
+  expect(active().some(mission=>mission.kind==='pizza')).toBe(true);
+  game.act(player,{kind:'drop',item:pizza.id},world);
+  draw();
+  expect(active().some(mission=>mission.kind==='pizza')).toBe(false);
+});

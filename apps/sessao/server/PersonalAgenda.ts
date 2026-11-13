@@ -2,11 +2,11 @@ import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeGoods, privateOffices } from '../src/private-offices';
-import type { GameplayEvent } from '../src/gameplay';
+import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-type AgendaMetrics = Readonly<{wallet:number; popularity:number}>;
+type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean}>;
 
 const activityMissions = {
   protocolo:(event:GameplayEvent) => event.type==='filed',
@@ -51,6 +51,10 @@ const purchaseRequirements:Partial<Record<Agenda,number>> = {
   pagamento:AGENDA_TRANSFER_MIN,
   dinheiroAlvo:AGENDA_TRANSFER_MIN,
 };
+
+const consumableRequirements = {
+  pizza:'pizza',pizzaAlvo:'pizza',fatias:'pizza',pizzada:'pizza',lagosta:'lobster',bombom:'chocolates',
+} as const satisfies Partial<Record<Agenda,ObjectKind>>;
 
 const activeMissionCount = 3;
 
@@ -195,11 +199,14 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    const food = consumableRequirements[kind as keyof typeof consumableRequirements];
+    if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) return false;
+    if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
       (kind!=='televisao' || !this.acquired.has('officeTv')) &&
       (kind!=='campanha' || metrics.popularity<100) &&
-      (kind!=='equipamento' || !this.acquired.has('binoculars')) &&
+      (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars')) &&
       (kind!=='poltrona' || !this.acquired.has('officeChair')) &&
       (kind!=='ostentacao' || this.furnishingPurchases<=2);
   }
