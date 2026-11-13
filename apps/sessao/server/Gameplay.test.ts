@@ -1,3 +1,4 @@
+import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
 
 import { npcs } from '../src/npcs';
@@ -450,4 +451,31 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('3/3');
   expect(spent).toBe(6);
   expect(events.filter(event=>event.type.startsWith('xray')).map(event=>event.witnesses)).toEqual([[],[],[],[]]);
+});
+
+test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
+  const {alice,bob,watcher,game,world,events} = setup();
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
+  Object.assign(bob,{x:alice.x+9,y:alice.y});
+  watcher.npc = true;
+  Object.assign(watcher,{x:alice.x-14,y:alice.y});
+  world.spend = ()=>true;
+  game.act(alice,{kind:'talk',target:'vendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  game.act(alice,{kind:'shop-buy',target:'baton',token:game.view(alice,world).dialogue?.token},world);
+  const weapon = game.view(alice,world).inventory.find(item=>item.kind==='baton')!;
+  game.act(alice,{kind:'equip',item:weapon.id},world);
+  const strike = (at:number) => {
+    world.now = at;
+    game.act(alice,{kind:'attack'},world);
+    world.now += weapons.baton.impactMs;
+    game.tick(world,true);
+    return events.filter(event=>event.type==='hit').at(-1);
+  };
+  expect(strike(100)?.witnesses).toEqual([watcher.id]);
+  world.vision = id=>id===watcher.id ? 10 : 100;
+  expect(strike(2000)?.witnesses).toEqual([]);
+  world.vision = ()=>100;
+  Object.assign(watcher,{x:720,y:240});
+  expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });
