@@ -89,6 +89,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
+    private drawnVisionRadius = VISION_RADIUS;
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -372,6 +373,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1);
+      const gap = visionRadius-this.drawnVisionRadius;
+      this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
+        ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
       for (const {sprite,label} of this.npcViews) {
         const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
         sprite.setVisible(visible);
@@ -570,7 +574,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (running) {
             const screenX = (x-camera.scrollX-camera.width/2)*zoom+camera.width/2;
             const screenY = (y-camera.scrollY-camera.height/2)*zoom+camera.height/2;
-            const radius = visionRadius*cssZoom;
+            const radius = this.drawnVisionRadius*cssZoom;
             fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
             fog.style.clipPath = '';
             if (inSession) {
