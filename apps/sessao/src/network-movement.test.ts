@@ -150,3 +150,17 @@ test('bursty confirmations and a stalled connection do not rewind predicted move
   expect(client.state!.player.x).toBeCloseTo(server.player.x);
   expect(server.player.x).toBeGreaterThan(150);
 });
+
+test('a long route across the Congress remains walkable after compressing straight segments',()=>{
+  const start = {x:830.5,y:599};
+  const destination = {x:140,y:146};
+  const state:ControlState = {
+    player:{id:'p',nick:'P',character:0,direction:0,moving:false,...start},route:[],ack:0,
+  };
+  applyInput(state,{seq:1,destination});
+  expect(state.route.length).toBeGreaterThan(0);
+  expect(state.route.length).toBeLessThan(20);
+  for (let seq=2;state.route.length && seq<=400;seq++) applyInput(state,{seq});
+  expect(state.player.x).toBeCloseTo(destination.x);
+  expect(state.player.y).toBeCloseTo(destination.y);
+});
