@@ -1,3 +1,4 @@
+import {fireRules,fireSites,type FireView} from '../fire';
 import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
@@ -135,9 +136,24 @@ function Broadcast({state}:{state:HudModel['broadcast']}) {
   return active && <div className="react-broadcast rounded-hud bg-hud-surface text-hud-ink" role="status">📣 Transmissão por Megafone</div>;
 }
 
+export function FireNotice({fire}:{fire:FireView}) {
+  return <p id="active-fire" className="hud-feedback" aria-live="off">
+    <span aria-hidden="true">🔥 </span>{fireSites[fire.site].name} · {fire.remaining} s · {
+      fire.paused ? 'Pausado' : `−${fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`
+    }
+  </p>;
+}
+
+function ActiveFire({state}:{state:HudModel['fire']}) {
+  const fire = useSyncExternalStore(state.subscribe,state.get);
+  return fire && <FireNotice fire={fire}/>;
+}
+
 export function mountReactHud() {
   const model = createHudModel();
   const {broadcast,congress,agenda,profile,stamina,resources} = model;
+  const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
+  fireRoot.render(<ActiveFire state={model.fire}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
   broadcastRoot.render(<Broadcast state={broadcast}/>);
   const vitalsRoot = createRoot(document.getElementById('profile-vitals')!);
@@ -154,6 +170,6 @@ export function mountReactHud() {
     broadcast: broadcast.update,
     player: model.player,
     render: model.render,
-    destroy() { broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
+    destroy() { fireRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
   };
 }

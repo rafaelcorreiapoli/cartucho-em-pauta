@@ -1,3 +1,4 @@
+import type {FireView} from '../fire';
 import type { Player } from '../map';
 import { MAX_STAMINA } from '../movement';
 import { stabilityRules, type PlenaryView } from '../plenary';
@@ -31,6 +32,7 @@ function channel<T>(initial:T) {
 }
 
 export function createHudModel() {
+  const fire = channel<FireView|undefined>(undefined);
   const broadcast = channel(false);
   const congress = channel<Congress>({stability:stabilityRules.initial,budget:ELECTION_RULES.startingBudget});
   const agenda = channel<Agenda|undefined>(undefined);
@@ -39,12 +41,13 @@ export function createHudModel() {
   const resources = channel<PersonalResources|undefined>(undefined);
   let matchId:number|undefined;
   return {
-    broadcast,congress,agenda,profile,stamina,resources,
+    fire,broadcast,congress,agenda,profile,stamina,resources,
     player(player:Pick<Player,'stamina'|'staminaMax'>) {
       const max = player.staminaMax ?? MAX_STAMINA;
       stamina.update({current:Math.floor(player.stamina ?? max),max});
     },
     render(view:PlenaryView) {
+      fire.update(view.fire);
       congress.update({stability:view.stability,budget:view.budget});
       const progress = view.phase==='lobby' ? undefined : view.politics?.progression;
       const previous = matchId===progress?.matchId ? agenda.get() : undefined;

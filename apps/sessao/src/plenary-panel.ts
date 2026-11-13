@@ -1,7 +1,6 @@
 import {mountProjectDetails} from './ui/project-intents';
 import {mountProjectHeading} from './ui/project-heading';
 import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
-import {fireRules,fireSites} from './fire';
 import {mountProjectImpact} from './ui/project-impact';
 import { mountBallot } from './ui/ballot';
 import type { createRoomCommandSender } from './room-commands';
@@ -88,9 +87,6 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
           view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
         '';
-      const crisis = element('active-fire');
-      crisis.hidden = !view.fire;
-      crisis.textContent = view.fire ? `🔥 ${fireSites[view.fire.site].name} · ${view.fire.remaining} s · ${view.fire.paused ? 'Pausado' : `−${view.fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`}` : '';
       if (running) heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       details.render(view);
