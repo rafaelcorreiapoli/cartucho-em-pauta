@@ -124,6 +124,12 @@ export class PoliticalEconomy {
     account.walletIncome = Math.round((account.walletIncome+amount)*10)/10;
   }
 
+  rewardFromReserve(id:string,amount:number) {
+    const paid = Math.min(amount,this.rewardReserve);
+    this.rewardReserve -= paid;
+    this.earn(id,paid);
+  }
+
   earn(id:string, amount:number) {
     const account = this.accounts.get(id);
     if (!account) return;

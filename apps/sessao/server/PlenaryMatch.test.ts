@@ -340,3 +340,28 @@ test('a closed office door hides players from authoritative world visibility',()
   expect(worldVisible(outside,inside)).toBe(true);
   expect(worldVisible({...outside,barriers:[office.door]},inside)).toBe(false);
 });
+
+test('only a victim or direct witness can report an infraction, once, at the desk',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const desk = (player:Player)=>({...player,...stations.audit});
+  const world = match.gameplayWorld(people,10,()=>false);
+  const strike = {type:'hit',actor:traitor.id,target:honest.id,at:10,position:honest,witnesses:[]} as const;
+  world.publish({...strike,witnesses:[]});
+  const incident = match.complaintView(honest.id).available[0]!;
+  expect(match.complaintView(host.id).available).toEqual([]);
+  expect(match.submitComplaint(desk(host),incident.id,11)).toContain('indisponível');
+  expect(match.submitComplaint(honest,incident.id,11)).toContain('balcão');
+  expect(match.submitComplaint(desk(honest),incident.id,11)).toBeUndefined();
+  expect(match.submitComplaint(desk(honest),incident.id,11)).toContain('indisponível');
+  expect(match.complaintView(host.id).history).toEqual([incident]);
+  expect(match.view(honest.id,ids,11).politics?.wallet).toBe(9);
+  expect(match.view(traitor.id,ids,11).politics?.popularity).toBe(32);
+
+  world.publish({...strike,at:12,witnesses:[host.id]});
+  expect(match.complaintView(host.id).available).toEqual([]);
+  world.publish({...strike,at:10_011,witnesses:[host.id]});
+  const witnessed = match.complaintView(host.id).available[0]!;
+  expect(match.submitComplaint(desk(host),witnessed.id,10_012)).toBeUndefined();
+  expect(match.complaintView(honest.id).available).toEqual([]);
+});

@@ -24,8 +24,8 @@ export function gameplayWitnesses(players:Player[], actor:Player, target?:string
 
 type EventDetails = Partial<Omit<GameplayEvent,'type'|'actor'|'at'|'position'|'witnesses'>> & {witnesses?:Iterable<string>};
 
-export function publishGameplay(world:Pick<GameplayWorld,'players'|'now'|'publish'>, actor:Player,
+export function publishGameplay(world:Pick<GameplayWorld,'players'|'now'|'publish'|'present'>, actor:Player,
   type:GameplayEvent['type'], {witnesses,...details}:EventDetails = {}) {
   world.publish({type,actor:actor.id,at:world.now,position:{x:actor.x,y:actor.y},...details,
-    witnesses:[...(witnesses ?? gameplayWitnesses(world.players,actor,details.target))]});
+    witnesses:[...(witnesses ?? gameplayWitnesses(world.players.filter(player=>world.present?.(player.id)!==false && !player.knockedOut),actor,details.target))]});
 }

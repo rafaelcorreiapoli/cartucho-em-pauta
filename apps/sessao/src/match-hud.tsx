@@ -20,7 +20,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:'fire'; option:{kind:'ignite'|'extinguish';site:number}} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
+type FieldAction = {kind:'fire'; option:{kind:'ignite'|'extinguish';site:number}} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'compose-mail'} | {kind:'complaint-desk'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -211,6 +211,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
     }
     if (state && player && canReachObject(player,stationPoints.audit,{handsFree:true})) {
+      actions.push({label:'Denunciar infração',icon:'shield',action:{kind:'complaint-desk'}});
       actions.push({label:'Publicar comunicado',icon:'document',action:{kind:'compose-mail'}});
     }
     if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {

@@ -164,6 +164,19 @@ export class SessionRoom extends Room {
         void this.lock();
       }
     });
+    this.onMessage('complaint-submit',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || !raw || typeof raw!=='object' || !('id' in raw) || typeof raw.id!=='number' || !Number.isSafeInteger(raw.id)) return;
+      const photoId = 'photo' in raw ? raw.photo : undefined;
+      const photo = photoId===undefined ? undefined :
+        this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===photoId)?.photo;
+      if (photoId!==undefined && !photo) {
+        client.send('gameplay-feedback','Fotografia indisponível no seu álbum.');
+        return;
+      }
+      const error = this.match.submitComplaint(player,raw.id,this.clock.currentTime,photo);
+      if (error) client.send('gameplay-feedback',error);
+    });
     this.onMessage('mail-read',client=>{
       client.send('mail-state',this.internalMail.view());
       client.send('mail-reports',this.internalMail.reportsFor(client.sessionId));
@@ -356,6 +369,7 @@ export class SessionRoom extends Room {
         const state = this.players.get(id);
         if (!state) continue;
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
+        if (this.match.running) view.complaints = this.match.complaintView(id);
         view.lobbyNpcCount = this.lobbyNpcCount;
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running ? this.gameplay.photoRevision : -1;

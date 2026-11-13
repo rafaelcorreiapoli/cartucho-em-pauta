@@ -235,6 +235,10 @@ async function connect(join: () => Promise<Room>) {
         projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}));
         return;
       }
+      if (action.kind==='complaint-desk') {
+        mail.open(false,mailPhotos.map(({photo})=>({kind:'photo',id:photo.id,label:'Fotografia #'+photo.id})),true);
+        return;
+      }
       if (action.kind==='compose-mail') {
         mail.open(true,[
           ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
@@ -271,7 +275,8 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
-    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify,id=>joined.send('mail-examine',id),(canvas,photo)=>game?.drawPhoto(canvas,photo));
+    const mail = mountInternalMail(message=>joined.send('mail-publish',message),hud.notify,id=>joined.send('mail-examine',id),(canvas,photo)=>game?.drawPhoto(canvas,photo),
+      (id,photo)=>joined.send('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
     const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
     mailButton.onclick = () => mail.open();
@@ -315,6 +320,7 @@ async function connect(join: () => Promise<Room>) {
       }
       hud.render(view);
       reactHud.render(view);
+      mail.complaints(view.complaints);
       mail.phase(view.phase==='negotiation');
       const priorProgress = previousView?.politics?.progression;
       const currentProgress = view.politics?.progression;

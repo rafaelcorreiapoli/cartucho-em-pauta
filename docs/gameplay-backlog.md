@@ -52,7 +52,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MAP-16 | Sala de isolamento para afastamentos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Sala física no mapa, com posição de isolamento e ponto de retorno. Coberta por teste de cliente e socket. | — |
 | MAP-17 | Tesouraria funcional | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-18 | Secretaria e Protocolo funcionais | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
-| MAP-19 | Corregedoria funcional | PARCIAL | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Balcão oferece auditoria e comunicados. Falta atendimento e denúncia por infração com dossiê. | Alta |
+| MAP-19 | Corregedoria funcional | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Balcão abre o fluxo de denúncia formal para ocorrências registradas e mantém auditoria e comunicados. | — |
 | MAP-20 | Cafezinho/Cantina com NPC vendedor de alimentos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 
 ## CHAR
@@ -423,7 +423,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | FOTO-17 | Respeito ao fog of war | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-18 | Respeito ao anonimato e camuflagem | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
 | FOTO-19 | Diferença entre evidência visual e interpretação do autor | IMPLEMENTADO | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | — | — |
-| FOTO-20 | Integração com missões e Corregedoria | PARCIAL | PhotoAlbum.ts, photography.ts, photo-renderer.ts, phone-photos.ts, photo-missions.test.ts; PR 9, 13, 15 | Fotos concluem missões. Falta submissão formal de denúncia com foto na Corregedoria. | Alta |
+| FOTO-20 | Integração com missões e Corregedoria | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Foto do álbum pode complementar denúncia se mostrar o acusado perto do local e horário da ocorrência. Fotos de missões mantêm o fluxo existente. | — |
 
 ## ESP
 
@@ -470,22 +470,22 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 |---|---|---|---|---|---|
 | COR-01 | NPC ou balcão da Corregedoria | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | — | — |
 | COR-02 | Diálogo de atendimento | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Balcão abre ações diretamente. Falta diálogo de atendimento formal. | Média |
-| COR-03 | Submissão de evidências | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Provas podem ser auditadas e publicadas; falta submissão formal com artefatos e histórico. | Alta |
-| COR-04 | Verificação de infrações objetivas | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Auditoria detecta fraude legislativa e indícios econômicos. Falta verificador formal de agressão, roubo e foto. | Alta |
-| COR-05 | Recompensa ao denunciante quando cabível | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Há recompensas de missão por auditoria. Falta recompensa por denúncia formal julgada. | Média |
-| COR-06 | Penalidade de popularidade ao denunciado quando comprovado | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Escândalos econômicos podem alterar popularidade. Falta aplicar consequência em denúncias formais de outros tipos. | Alta |
-| COR-07 | Publicação oficial de escândalos | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Publicação econômica tem consequências. Falta boletim oficial de denúncia julgada. | Média |
+| COR-03 | Submissão de evidências | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Vítimas e testemunhas entregam ocorrência registrada e foto opcional no balcão. Validado por socket e HUD. | — |
+| COR-04 | Verificação de infrações objetivas | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Agressão e roubos dependem de ocorrências autoritativas. Foto isolada não abre caso. | — |
+| COR-05 | Recompensa ao denunciante quando cabível | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Denúncia confirmada paga até R$ 10 mil da reserva de recompensas. | — |
+| COR-06 | Penalidade de popularidade ao denunciado quando comprovado | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Denúncia confirmada reduz popularidade em 8 e registra escândalo eleitoral. | — |
+| COR-07 | Publicação oficial de escândalos | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Boletim oficial no Correio mostra a infração confirmada e o acusado. | — |
 | COR-08 | Plantão da Vergonha | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Falta a apresentação e o fluxo do Plantão da Vergonha. | Média |
 | COR-09 | Denúncias de agressão | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Eventos de dano existem. Falta registrar denúncia formal de agressão. | Alta |
 | COR-10 | Denúncias de roubo | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Eventos de roubo existem. Falta registrar denúncia formal de roubo. | Alta |
 | COR-11 | Denúncias baseadas em fotografias | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Álbum e anexos existem. Falta denúncia formal com fotografia. | Alta |
 | COR-12 | Histórico de denúncias | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Registro público econômico existe. Falta histórico de casos da Corregedoria. | Média |
-| COR-13 | Prevenção de denúncias duplicadas | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Há controles de publicação de provas. Falta deduplicação por caso e infrator no novo fluxo formal. | Média |
+| COR-13 | Prevenção de denúncias duplicadas | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Cada ocorrência é consumida uma vez; ações do mesmo tipo, autor e vítima são agrupadas por 10 s. | — |
 | COR-14 | NPC se desloca fisicamente para denunciar | PENDENTE | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Falta navegação autônoma de NPC para denúncia presencial. | Alta |
-| COR-15 | Conhecimento limitado à percepção do denunciante | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Gameplay registra testemunhas e fotos respeitam visão. Falta usar essa percepção para decidir denúncias formais. | Alta |
+| COR-15 | Conhecimento limitado à percepção do denunciante | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | A denúncia exige vítima ou testemunha com visão direta registrada no momento da ocorrência. | — |
 | COR-16 | Diferença entre denúncia oficial e comunicado público | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | — | — |
 | COR-17 | Consequências eleitorais da perda de popularidade | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | — | — |
-| COR-18 | Denúncias não revelam facção secreta | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, InternalMail.ts, PlenaryMatch.test.ts; PR 8, 14, 15 | Auditoria e publicação econômica preservam facção. Falta validar o futuro fluxo de denúncias formais. | Média |
+| COR-18 | Denúncias não revelam facção secreta | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | O boletim publica somente ocorrência, acusado e indicação de foto. Facção permanece privada. | — |
 
 ## AFA
 
@@ -597,6 +597,6 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | D-13 | Publicação não equivale a prova | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Correio publica snapshots e não aplica penalidade por texto. | — |
 | D-14 | Laudo comprova autenticidade, não autoria da falsificação | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Laudo contém versão e resultado, sem atribuir autoria. | — |
 | D-15 | Equipamentos de espionagem geram informação limitada | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Espionagem replica canais e frames conforme acesso. | — |
-| D-16 | Agressões furtivas exigem percepção legítima | PARCIAL | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Testemunhas e fog existem; falta aplicar percepção às denúncias de agressão. | Alta |
+| D-16 | Agressões furtivas exigem percepção legítima | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Testemunhas fora de visão, ausentes ou nocauteadas não recebem ocorrência de agressão. A vítima pode denunciar. | — |
 | D-17 | O jogo deve permitir blefes | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Missões privadas e documentos manipuláveis permitem blefe. | — |
 | D-18 | Satirizar através do gameplay | NÃO VERIFICÁVEL | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Há sátira em projetos, objetos e interações; qualidade é avaliação editorial. | — |

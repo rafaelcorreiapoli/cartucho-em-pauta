@@ -1,3 +1,4 @@
+import {infractionLabels,type ComplaintView} from '../complaints';
 import { useLayoutEffect, useRef } from 'react';
 import type { Photo } from '../photography';
 import { createRoot } from 'react-dom/client';
@@ -30,14 +31,39 @@ export function ForwardedNotice({notice}:{notice:InternalNotice}) {
   return notice.forwardedFrom===undefined ? null : <small>Encaminhado do comunicado #{notice.forwardedFrom}</small>;
 }
 
+export function ComplaintDesk({view,photos,submit}:{view:ComplaintView;photos:readonly {id:number;label:string}[];submit?:(id:number,photo?:number)=>void}) {
+  if (!view.history.length && !submit) return null;
+  return <section className="grid gap-2">
+    <h3>Corregedoria</h3>
+    {submit && !view.available.length && <p>Nenhuma infração que você presenciou está disponível para denúncia.</p>}
+    {submit && view.available.map(entry=><form className="mail-entry" key={entry.id} onSubmit={event=>{
+      event.preventDefault();
+      const photo = Number(new FormData(event.currentTarget).get('photo'));
+      submit(entry.id,photo || undefined);
+    }}>
+      <h4>{infractionLabels[entry.kind]} · {entry.accused}</h4>
+      {!!photos.length && <label>Foto complementar <select name="photo">
+        <option value="">Sem foto</option>
+        {photos.map(photo=><option value={photo.id} key={photo.id}>{photo.label}</option>)}
+      </select></label>}
+      <button type="submit" className="hud-button">Denunciar</button>
+    </form>)}
+    {!!view.history.length && <ul aria-label="Boletim oficial">
+      {view.history.map(entry=><li key={entry.id}>{infractionLabels[entry.kind]} confirmada · {entry.accused}{entry.hasPhoto && ' · Com foto'}</li>)}
+    </ul>}
+  </section>;
+}
+
 export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number})=>void,
-  notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void) {
+  notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void,submit:(id:number,photo?:number)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#internal-mail')!;
   const root = createRoot(dialog);
   let choices:readonly AttachmentChoice[] = [];
   let reports:readonly ForensicReport[] = [];
   let notices:readonly InternalNotice[] = [];
   let composing = false;
+  let atDesk = false;
+  let complaints:ComplaintView = {available:[],history:[]};
   let source:InternalNotice|undefined;
   let pending = false;
   let error:string|null = null;
@@ -67,6 +93,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         <p role="status">{error}</p>
         <button className="hud-button" disabled={pending}>Publicar · {money(internalMailRules.fee)}</button>
       </form> : <div className="grid gap-3">
+        <ComplaintDesk view={complaints} photos={choices.filter(choice=>choice.kind==='photo')} submit={atDesk ? submit : undefined}/>
         {reports.map(report=><article className="mail-entry" key={'report-'+report.notice}>
           <h3>Perícia concluída</h3><Attachment draw={draw} attachment={{kind:'report',report}}/>
         </article>)}
@@ -88,9 +115,10 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   }
 
   return {
-    open(compose=false,attachments:readonly AttachmentChoice[] = []) {
+    open(compose=false,attachments:readonly AttachmentChoice[] = [],desk=false) {
       if (dialog.open) return;
       composing = compose;
+      atDesk = desk;
       source = undefined;
       choices = [...attachments,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
       pending = false;
@@ -98,6 +126,12 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
       error = null;
       flushSync(render);
       dialog.showModal();
+    },
+    complaints(next?:ComplaintView) {
+      const updated = next ?? {available:[],history:[]};
+      if (JSON.stringify(updated)===JSON.stringify(complaints)) return;
+      complaints = updated;
+      if (dialog.open && !composing) render();
     },
     receive(next:readonly InternalNotice[]) {
       if (next[0] && next[0].id!==notices[0]?.id) notify('Correio Interno',next[0].subject);
@@ -116,7 +150,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
       if (!message) composing = false;
       render();
     },
-    phase(exploring:boolean) { if (!exploring && composing && dialog.open) dialog.close(); },
+    phase(exploring:boolean) { if (!exploring && (composing || atDesk) && dialog.open) dialog.close(); },
     destroy() { dialog.close(); root.unmount(); },
   };
 }

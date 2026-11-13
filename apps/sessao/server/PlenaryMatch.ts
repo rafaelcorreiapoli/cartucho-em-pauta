@@ -1,3 +1,6 @@
+import {Complaints} from './Complaints';
+import {complaintRules} from '../src/complaints';
+import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
 import {canActOnFire,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
@@ -21,6 +24,7 @@ export class PlenaryMatch {
   phase: Phase = 'lobby';
   private round = 0;
   private project?:number;
+  private readonly complaints = new Complaints();
   private readonly fire = new Fire();
   private readonly agenda = new Set<number>();
   private get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
@@ -130,6 +134,7 @@ export class PlenaryMatch {
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.started = now;
     this.fire.reset(now);
+    this.complaints.reset();
     this.economy.reset(contacts,random);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -255,6 +260,7 @@ export class PlenaryMatch {
           if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
           this.agenda.add(event.project);
         }
+        this.complaints.record(event,this.started);
         this.economy.recordGameplay(event);
       },
     };
@@ -393,6 +399,21 @@ export class PlenaryMatch {
       stability:impact.stability-(this.amended ? 8 : 0),
       budget:Math.min(0,impact.budget+(this.amended ? 16 : 0)+(misleading ? 24 : 0)),
     };
+  }
+
+  complaintView(id:string) {
+    return {available:this.complaints.available(id,actor=>this.economy.name(actor)),history:this.complaints.history()};
+  }
+
+  submitComplaint(player:Player,id:number,now:number,photo?:Photo) {
+    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !this.at(player,'audit')) {
+      return 'Vá ao balcão da Corregedoria durante a articulação.';
+    }
+    const result = this.complaints.submit(player.id,id,actor=>this.economy.name(actor),photo);
+    if (!result) return 'Caso indisponível ou fotografia incompatível.';
+    this.economy.rewardFromReserve(player.id,complaintRules.reward);
+    this.economy.changePopularity(result.actor,-complaintRules.popularityLoss);
+    this.election.scandal(result.actor);
   }
 
   actOnFire(player:Player, action:FireAction, site:number, now:number) {

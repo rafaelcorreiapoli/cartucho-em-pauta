@@ -1,3 +1,4 @@
+import {stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
@@ -406,6 +407,16 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
     passenger.send('bill-vote','yes');
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
+    const infraction = views.get(passenger.sessionId)?.complaints?.available[0];
+    expect(infraction).toMatchObject({kind:'hit'});
+    expect(views.get(carrier.sessionId)?.complaints?.available).toEqual([]);
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(passenger.sessionId)?.phase==='negotiation');
+    Object.assign(positions.get(passenger.sessionId)!.player,stations.audit);
+    passenger.send('complaint-submit',{id:infraction!.id});
+    await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
+    expect(views.get(carrier.sessionId)?.complaints?.history[0]).toMatchObject({kind:'hit',accused:positions.get(carrier.sessionId)!.player.nick});
+
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Attachment,ForwardedNotice} from './internal-mail';
+import {Attachment,ComplaintDesk,ForwardedNotice} from './internal-mail';
 
 const document = {id:3,title:'Auxílio Churrasco',signatures:['Rafa']};
 
@@ -31,4 +31,15 @@ test('the Correio identifies a forwarded notice by its original number',()=>{
   const notice = {id:9,author:'Bia',subject:'Enc: Proposta',body:'Segue a proposta'};
   expect(renderToStaticMarkup(<ForwardedNotice notice={{...notice,forwardedFrom:4}}/>)).toContain('comunicado #4');
   expect(renderToStaticMarkup(<ForwardedNotice notice={notice}/>)).toBe('');
+});
+
+test('the public bulletin shows the confirmed offense but hides the filing controls',()=>{
+  const entry = {id:2,kind:'hit' as const,accused:'Bia',at:10,hasPhoto:true as const};
+  const view = {available:[entry],history:[entry]};
+  const bulletin = renderToStaticMarkup(<ComplaintDesk view={view} photos={[]}/>);
+  expect(bulletin).toContain('Agressão confirmada · Bia · Com foto');
+  expect(bulletin).not.toContain('Denunciar');
+  const desk = renderToStaticMarkup(<ComplaintDesk view={view} photos={[{id:7,label:'Fotografia #7'}]} submit={()=>{}}/>);
+  expect(desk).toContain('Fotografia #7');
+  expect(desk).toContain('Denunciar');
 });

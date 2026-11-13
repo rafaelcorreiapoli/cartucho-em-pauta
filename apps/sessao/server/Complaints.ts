@@ -1,0 +1,59 @@
+import {complaintRules,type ComplaintCase,type InfractionKind} from '../src/complaints';
+import type {GameplayEvent} from '../src/gameplay';
+import type {Motion} from '../src/map';
+import type {Photo} from '../src/photography';
+
+type Case = {id:number;kind:InfractionKind;actor:string;at:number;position:Motion;eligible:Set<string>};
+
+export class Complaints {
+  private serial = 0;
+  private cases = new Map<number,Case>();
+  private recent = new Map<string,{id:number;at:number}>();
+  private decisions:ComplaintCase[] = [];
+
+  reset() {
+    this.cases.clear();
+    this.recent.clear();
+    this.decisions = [];
+  }
+
+  record(event:GameplayEvent,started:number) {
+    if (event.type!=='hit' && event.type!=='npc-robbed' && event.type!=='safe-robbed') return;
+    const eligible = new Set(event.witnesses);
+    if (event.target) eligible.add(event.target);
+    eligible.delete(event.actor);
+    if (!eligible.size) return;
+    const key = JSON.stringify([event.type,event.actor,event.target]);
+    const previous = this.recent.get(key);
+    if (previous && event.at-previous.at<complaintRules.incidentWindowMs) {
+      const entry = this.cases.get(previous.id);
+      if (entry) for (const witness of eligible) entry.eligible.add(witness);
+      return;
+    }
+    const id = ++this.serial;
+    this.recent.set(key,{id,at:event.at});
+    this.cases.set(id,{id,kind:event.type,actor:event.actor,at:Math.max(0,event.at-started),position:event.position,eligible});
+  }
+
+  available(id:string,name:(id:string)=>string) {
+    return [...this.cases.values()].filter(entry=>entry.eligible.has(id)).map(entry=>this.describe(entry,name));
+  }
+
+  history() { return this.decisions; }
+
+  submit(reporter:string,id:number,name:(id:string)=>string,photo?:Photo) {
+    const entry = this.cases.get(id);
+    if (!entry?.eligible.has(reporter)) return;
+    if (photo && (Math.abs(photo.at-entry.at)>complaintRules.photoWindowMs || !photo.people.some(person=>
+      person.id===entry.actor && Math.hypot(person.x-entry.position.x,person.y-entry.position.y)<=complaintRules.photoDistance))) return;
+    this.cases.delete(id);
+    const decision = this.describe(entry,name);
+    if (photo) decision.hasPhoto = true;
+    this.decisions = [decision,...this.decisions].slice(0,complaintRules.history);
+    return {actor:entry.actor,decision};
+  }
+
+  private describe({id,kind,actor,at}:Case,name:(id:string)=>string):ComplaintCase {
+    return {id,kind,accused:name(actor),at};
+  }
+}

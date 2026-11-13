@@ -862,7 +862,7 @@ export class Gameplay {
         const cash = this.create('briefcase',{holder:id});
         cash.cash = amount;
         this.expose(id,cash.id);
-        this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id,witnesses:[]});
+        this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id});
         world.feedback?.(id,`Maleta de ${money(amount)} retirada do cofre.`);
         world.feedback?.(owner,'Seu cofre foi saqueado.');
         continue;
