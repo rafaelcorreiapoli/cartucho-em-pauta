@@ -1,3 +1,4 @@
+import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -27,6 +28,17 @@ const apps = {
 } as const;
 type App = keyof typeof apps;
 type InteractionArea = (player:Motion) => boolean;
+
+const bagIcons = {bag:Backpack,food:Coffee,gear:Shirt,grid:Grid2X2,drop:Download};
+
+function BagIcon({name}:{name:keyof typeof bagIcons}) {
+  return <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">
+    {bagIcons[name].map(([tag,attrs],index)=>{
+      const Tag = tag as 'path'|'rect'|'line'|'circle';
+      return <Tag key={index} {...attrs}/>;
+    })}
+  </svg>;
+}
 
 function itemArt(kind:ObjectKind) {
   if (!isGear(kind) && itemSymbols[kind]) {
@@ -60,6 +72,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const equipmentRoot = createRoot(equipmentHost);
   const objectsHost = document.createElement('div');
   const objectsRoot = createRoot(objectsHost);
+  const bagTitleIcon = createIcon(Backpack, {class:'hud-glyph bag-title-icon','aria-hidden':'true'});
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
@@ -91,43 +104,58 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const doc = item.document;
     const cash = cashAmount(item);
     const food = isFood(item.kind) ? foods[item.kind] : undefined;
+    const isBag = bagOpen && chooseQuantity;
+    const controls = isBag ? [...actions].sort((first,second)=>{
+      const rank = (action:ObjectAction) => action.label==='Equipar' ? 0 : action.label==='Largar no chão' ? 1 : 2;
+      return rank(first)-rank(second);
+    }) : actions;
     return <article className="object-card" key={item.id}>
-      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
-      {bagOpen && chooseQuantity && <>
-        <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
-        <p className="bag-description">{doc?.description ?? definition.description}</p>
-      </>}
-      <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
-        {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
-        {doc && <>
-          <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
-          <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
-          {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+      <div className={isBag ? "bag-item-info" : "object-card-content"}>
+        <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
+        {bagOpen && chooseQuantity && <>
+          <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
+          <p className="bag-description">{doc?.description ?? definition.description}</p>
         </>}
-        {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
-        {!!cash && <p>{money(cash)}</p>}
-      </details>
-      {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
-        <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
-          disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
-        <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
-        <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
-          disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
-      </div>}
-      {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
-        disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
-        <span>Adicionar à hotbar</span><kbd>⇧1–6</kbd>
-      </button>}
-      {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
-        <span>Adicionar à hotbar</span>
-        {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
-          disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
-          onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
-        {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
-          onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
-      </div>}
-      {actions.map(({label,run,key,disabled})=><button type="button" key={label} className="hud-button hud-button--secondary"
-        aria-keyshortcuts={key} disabled={disabled} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+        <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
+          {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
+          {doc && <>
+            <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
+            <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
+            {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+          </>}
+          {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
+          {!!cash && <p>{money(cash)}</p>}
+        </details>
+        {isBag && !!previous?.gameplay?.contacts.length && <label className="bag-recipient">Jogador
+          <select value={target.value} onChange={event=>{target.value = event.currentTarget.value; renderKey = ''; render();}}>
+            <option value="">Escolha…</option>
+            {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+          </select>
+        </label>}
+        {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
+          <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
+            disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
+          <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
+          <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
+            disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
+        </div>}
+      </div>
+      <div className={isBag ? "bag-item-actions" : "object-card-content"}>
+        {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
+          disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
+          <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd>⇧1–6</kbd>
+        </button>}
+        {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+          <span><BagIcon name="grid"/>Adicionar à hotbar</span>
+          {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
+            disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
+            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
+          {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
+            onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
+        </div>}
+        {controls.map(({label,run,key,disabled})=><button type="button" key={label} className="hud-button hud-button--secondary"
+          aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+      </div>
     </article>;
   }
   function changeQuantity(item:WorldItem,delta:number) {
@@ -151,6 +179,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     photos.clearRecipient();
     renderKey = '';
     element('gameplay-title').textContent = bag ? 'Inventário' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    if (bag) element('gameplay-title').prepend(bagTitleIcon);
     navigation.hidden = object || equipment || stash || bag;
     dialog.dataset.mode = bag ? 'bag' : equipment || stash ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
@@ -222,10 +251,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       target.replaceChildren(new Option('Escolha…',''),...contacts.map(person=>new Option(person.name,person.id)));
       if (contacts.some(person=>person.id===selected)) target.value = selected;
     }
-    element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
+    element('gameplay-target-label').hidden = bagOpen || selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
@@ -248,9 +277,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       return <div className="bag-layout">
         <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
           {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
-            onClick={()=>{bagFilter = filter;selection = undefined;render();}}>{filter}</button>)}
+            onClick={()=>{bagFilter = filter;selection = undefined;render();}}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
         </div>
-        <div>
+        <div className="bag-storage">
           <div className="congress-bag">
             {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
               const entry = filtered[index];
@@ -272,11 +301,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
             })}
           </div>
-          <p className="bag-capacity">{inventory.length} / {INVENTORY_SLOTS} slots</p>
+          <p className="bag-capacity"><BagIcon name="bag"/>{inventory.length} / {INVENTORY_SLOTS} slots</p>
         </div>
         <div className="bag-detail">{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
         <footer className="bag-preview">
-          <strong>Hotbar</strong>
+          <strong>Hotbar <span>(atalhos rápidos)</span></strong>
           <div className="bag-preview-slots">
             {hotbar.map((id,index)=>{
               const pinned = inventory.find(entry=>entry.id===id);
@@ -345,10 +374,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
         if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
-        if ('exposable' in definition) {
-          const exposed = state.exposed.includes(item.id);
-          act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');
-        }
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : 'Instalar ou substituir';
@@ -468,10 +493,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         {badge}<span className="slot-plus" aria-hidden="true">+</span>
       </button>;
       const name = itemName(item);
+      const use = consumableAction(item);
+      const label = use ? `${use.label} · ${name}` : `Abrir ${name}`;
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
-        aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
+        aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
-        onClick={()=>open({id:item.id,source:'inventory'})}>
+        onClick={()=>use ? send(use.action) : open({id:item.id,source:'inventory'})}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
         {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </button>;
@@ -502,7 +529,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       buttons[Number(event.code.at(-1))-1]?.click();
       return;
     }
-    if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
+    if (dialog.open || slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
     const slot = slots.children[Number(event.code.at(-1))-1];
     if (!(slot instanceof HTMLButtonElement)) return;

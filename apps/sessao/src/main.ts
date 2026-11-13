@@ -267,6 +267,9 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
+    joined.onMessage('food-consumed',(cue:unknown)=>{
+      if (cue==='eat' || cue==='drink') audio.cue(cue);
+    });
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');

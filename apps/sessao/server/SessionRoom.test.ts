@@ -273,6 +273,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     rooms.push(passenger);
     const snapshots = new Map<string,Player>();
     const views = new Map<string,PlenaryView>();
+    const foodCues = new Map<string,string[]>();
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
     const spyFrames = new Map<string,PhotoScene>();
@@ -282,6 +283,9 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
+      const cues:string[] = [];
+      foodCues.set(peer.sessionId,cues);
+      peer.onMessage('food-consumed',(cue:string)=>cues.push(cue));
       peer.onMessage('gear-purchased',(item:{id:number;kind:string})=>purchases.set(peer.sessionId,item));
       const notices:string[] = [];
       feedback.set(peer.sessionId,notices);
@@ -367,6 +371,15 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('room-activity',{activity:'coffee',token:3270});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
+    const gameplaySystem = Reflect.get(room,'gameplay');
+    const snack = gameplaySystem.create('coxinha',{holder:passenger.sessionId});
+    const beverage = gameplaySystem.create('energyDrink',{holder:passenger.sessionId});
+    passenger.send('gameplay',{action:{kind:'use',item:snack.id},token:3280});
+    passenger.send('gameplay',{action:{kind:'use',item:snack.id},token:3281});
+    passenger.send('gameplay',{action:{kind:'use',item:beverage.id},token:3282});
+    await wait(()=>foodCues.get(passenger.sessionId)?.length===3);
+    expect(foodCues.get(passenger.sessionId)).toEqual(['drink','eat','drink']);
+    expect(foodCues.get(carrier.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3320});
