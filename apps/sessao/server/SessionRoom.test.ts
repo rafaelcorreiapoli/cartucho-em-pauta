@@ -8,7 +8,7 @@ import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
 import type { PhotoAccessView } from '../src/photography';
 import type { PlenaryView } from '../src/plenary';
-import { canStand, roomAt, type Player } from '../src/map';
+import { canStand, PLENARY_SEATS, roomAt, type Player } from '../src/map';
 
 test('clients share movement and voice, then receive private roles and payments', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
@@ -422,3 +422,49 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await server.gracefullyShutdown(false);
   }
 },25_000);
+
+test('six human clients see all three NPCs in distinct seats when the vote opens',async()=>{
+  const {defineRoom,defineServer,matchMaker} = await import('colyseus');
+  const {BunWebSockets} = await import('@colyseus/bun-websockets');
+  const {SessionRoom} = await import('./SessionRoom');
+  const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
+  const port = reservation.port!;
+  await reservation.stop();
+  const server = defineServer({gracefullyShutdown:false,transport:new BunWebSockets(),rooms:{plenary:defineRoom(SessionRoom)}});
+  const rooms:Room[] = [];
+  const wait = async (ready:()=>boolean) => {
+    for (let i=0;i<100;i++) {
+      if (ready()) return;
+      await Bun.sleep(30);
+    }
+    throw new Error('Expected plenary seating snapshot');
+  };
+  try {
+    await server.listen(port,'127.0.0.1');
+    const client = new Client(`http://127.0.0.1:${port}`);
+    const host = await client.create('plenary',{nick:'Pessoa 1'});
+    rooms.push(host);
+    for (let i=2;i<=6;i++) rooms.push(await client.joinById(host.roomId,{nick:`Pessoa ${i}`}));
+    const states = new Map<string,Player[]>();
+    const phases = new Map<string,PlenaryView['phase']>();
+    for (const peer of rooms) {
+      peer.onMessage('players',(players:Player[])=>states.set(peer.sessionId,players));
+      peer.onMessage('plenary',(view:PlenaryView)=>phases.set(peer.sessionId,view.phase));
+      for (const key of ['control','mail-state','mail-reports','photo-state']) peer.onMessage(key,()=>{});
+    }
+    host.send('start-match',{npcs:3});
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
+    const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    Reflect.set(Reflect.get(room,'match'),'ends',room.clock.currentTime);
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===9));
+    const expected = [...PLENARY_SEATS.slice(0,6),...PLENARY_SEATS.slice(-3)].map(({x,y})=>`${x},${y}`).sort();
+    for (const peer of rooms) {
+      const players = states.get(peer.sessionId)!;
+      expect(players.filter(player=>player.npc)).toHaveLength(3);
+      expect(players.map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
+    }
+  } finally {
+    await Promise.allSettled(rooms.map(peer=>peer.leave()));
+    await server.gracefullyShutdown(false);
+  }
+});

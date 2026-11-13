@@ -1,3 +1,4 @@
+import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision,shadowOutline} from './visibility';
 import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
@@ -409,7 +410,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
       const normalZoom = Math.max(1.5,Math.min(cssWidth/550,cssHeight/290),cssHeight/(cssWidth<=680 ? 310 : 360));
-      const cssZoom = inSession ? Math.min(normalZoom,cssWidth/580,cssHeight/340) : normalZoom;
+      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : normalZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
       if (resolution!==this.textResolution) {
@@ -593,8 +594,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
-            const [left,top,width,height] = PLENARY_BOUNDS;
-            camera.centerOn(left+width/2,top+height/2-30);
+            camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
           } else camera.centerOn(x,y);
           for (const part of [sprite,view.weapon,view.health,view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);

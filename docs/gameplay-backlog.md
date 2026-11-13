@@ -39,7 +39,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | MAP-03 | Salas e regiões identificáveis | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-04 | Portas e obstáculos interativos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-05 | Plenário: teletransporte e confinamento em sessões | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
-| MAP-06 | Plenário com espaço adequado para os participantes | PARCIAL | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | Há assentos e confinamento testados. Capacidade atual de humanos é seis; falta validar ocupação máxima com NPCs visualmente. | Baixa |
+| MAP-06 | Plenário com espaço adequado para os participantes | IMPLEMENTADO | SessionRoom.test.ts, plenary-camera.test.ts | Seis clientes recebem seis humanos e três NPCs em assentos distintos. Testes de enquadramento em três dimensões de mapa e conferência visual no Chrome com sala cheia. | — |
 | MAP-07 | Pontos de interação e objetos distribuídos pelo mapa | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-08 | Pathfinding e navegação de NPCs | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-09 | Objetos descartáveis e coletáveis no chão | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
