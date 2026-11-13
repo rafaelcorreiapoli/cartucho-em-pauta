@@ -2,6 +2,7 @@
 #session:not([data-phase="lobby"]) {
   display: block;
   --hud-edge: clamp(12px, 2vw, 32px);
+  --profile-width: clamp(262.5px, 23.25vw, 367.5px);
 }
 #session:not([data-phase="lobby"]) #world { position: absolute; inset: 0; }
 #command-strip, #command-deck {
@@ -61,7 +62,7 @@
 .vital-row .react-meter { height: 5px; }
 #world #agenda-dock {
   inset: auto auto calc(var(--deck-height) + 12px) var(--hud-edge);
-  width: min(270px, 28vw);
+  width: var(--profile-width);
 }
 #agenda-dock .react-agenda {
   position: relative;
@@ -146,7 +147,6 @@
 
 #command-strip #congress-dock { grid-column: 2; }
 #command-strip #election-dock { grid-column: 3; }
-#command-deck { --profile-width: clamp(262.5px, 23.25vw, 367.5px); }
 #command-deck #profile-dock {
   display: grid;
   grid-template-columns: auto minmax(0,1fr);
@@ -206,7 +206,7 @@
 @media (max-width: 640px) {
   #command-strip #congress-dock { grid-column: 2; }
   #command-strip #election-dock { grid-column: 1 / -1; }
-  #command-deck #profile-dock { width: min(262.5px, 39vw); }
+  #session:not([data-phase="lobby"]) { --profile-width: min(262.5px, 39vw); }
 }
 
 #command-deck .deck-tools {
