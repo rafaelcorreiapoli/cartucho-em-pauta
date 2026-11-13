@@ -9,3 +9,5 @@ Bun.plugin({
   },
 });
 await import('../server/index');
+
+export {};

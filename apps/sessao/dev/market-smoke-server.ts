@@ -5,11 +5,12 @@ import {npcs} from '../src/npcs';
 class TestRoom extends SessionRoom {
   onCreate() {
     super.onCreate();
+    const positioned = new WeakSet();
     this.clock.setInterval(()=>{
       if (Reflect.get(this,'match').phase!=='negotiation') return;
       for (const state of Reflect.get(this,'players').values()) {
-        if (state.testPositioned) continue;
-        state.testPositioned = true;
+        if (positioned.has(state)) continue;
+        positioned.add(state);
         Object.assign(state.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
       }
     },100);
