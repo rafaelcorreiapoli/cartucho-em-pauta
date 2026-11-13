@@ -130,6 +130,10 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
     complaints(next?:ComplaintView) {
       const updated = next ?? {available:[],history:[]};
       if (JSON.stringify(updated)===JSON.stringify(complaints)) return;
+      const latest = updated.history[0];
+      if (latest && complaints.history[0]?.id!==latest.id) {
+        notify('Boletim da Corregedoria',`${infractionLabels[latest.kind]} confirmada · ${latest.accused}`);
+      }
       complaints = updated;
       if (dialog.open && !composing) render();
     },
