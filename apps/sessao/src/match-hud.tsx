@@ -4,7 +4,7 @@ import { documentRules } from './internal-mail';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { equippedWeapon, xray } from './equipment';
+import { equippedWeapon, equipmentSlots, xray } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
 import { infirmary } from './medical';
 import { npcs } from './npcs';
@@ -83,6 +83,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let progressKey = '';
   const officeBadge = element('own-office');
   const gearStrip = element('equipped-gear');
+  const gearSlots = ['Mãos','Pés','Acessório 1','Acessório 2'].map((label,index)=>{
+    const slot = node('div');
+    slot.className = 'gear-slot';
+    slot.setAttribute('role','listitem');
+    slot.title = label;
+    const empty = node('span');
+    empty.className = 'gear-slot-empty';
+    empty.setAttribute('aria-label',label+' · vazio');
+    empty.append(hudGlyph(index===0 ? 'star' : index===1 ? 'map' : 'inventory'));
+    const badge = node('span',String(index+1));
+    badge.className = 'gear-slot-number';
+    badge.setAttribute('aria-hidden','true');
+    slot.append(empty,badge);
+    gearStrip.append(slot);
+    return {slot,empty};
+  });
   const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
   const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
   const concealmentTimer = node('span');
@@ -133,7 +149,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         timer.setAttribute('aria-hidden','true');
         footer.prepend(timer);
         tile.append(itemPortrait(item.kind),footer);
-        gearStrip.append(tile);
         entry = {tile,timer};
         gearTiles.set(item.id,entry);
       }
@@ -154,13 +169,19 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
       }
     }
+    equipmentSlots(equipped).forEach((item,index)=>{
+      const {slot,empty} = gearSlots[index];
+      const tile = item && gearTiles.get(item.id)?.tile;
+      empty.hidden = !!tile;
+      if (tile && tile.parentElement!==slot) slot.prepend(tile);
+    });
     const remaining = state?.concealmentSeconds;
     if (remaining) {
       concealmentLabel.textContent = `${remaining} s`;
       concealmentTimer.title = `Dinheiro oculto · ${remaining} s`;
       if (!concealmentTimer.isConnected) gearStrip.append(concealmentTimer);
     } else concealmentTimer.remove();
-    gearStrip.hidden = equipped.length===0 && !remaining;
+    gearStrip.hidden = !state;
   }
 
   const fieldRoot = createRoot(fieldActions);
@@ -500,6 +521,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     destroy() {
       renderEquipped();
+      gearSlots.forEach(({slot})=>slot.remove());
       notices.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();

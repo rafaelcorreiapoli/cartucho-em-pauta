@@ -615,3 +615,16 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(game.act(bob,{kind:'collect',item:dropped.id},world)).toBe('Objeto recolhido.');
   expect(inventory(bob)[0].quantity).toBe(4);
 });
+
+test('hands and feet are independent of the two accessory spaces',()=>{
+  const {alice,game,world,buyGear,balance} = setup();
+  balance.set(alice.id,20);
+  const equip = (kind:string) => {
+    expect(buyGear(alice,kind)).toBe('Compra guardada no inventário.');
+    const item = game.view(alice,world).inventory.find(item=>item.kind===kind)!;
+    return game.act(alice,{kind:'equip',item:item.id},world);
+  };
+  for (const kind of ['baton','runningShoes','binoculars','megaphone']) expect(equip(kind)).toBe('Equipado.');
+  expect(equip('vest')).toBe('Os dois espaços de acessórios estão ocupados.');
+  expect(game.view(alice,world).equipped).toHaveLength(4);
+});

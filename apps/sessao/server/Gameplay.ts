@@ -20,7 +20,7 @@ import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
+import { accessorySlots, equipmentGroup, binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -1035,7 +1035,10 @@ export class Gameplay {
     if (equip) {
       if (!('holder' in item.place) || item.place.holder!==id) return 'O equipamento não está com você.';
       const slot = equipment[item.data.kind].slot;
-      if (this.equipped(id).some(({data})=>isGear(data.kind) && equipment[data.kind].slot===slot)) return 'Este espaço já está ocupado.';
+      const equipped = this.equipped(id);
+      if (equipped.some(({data})=>isGear(data.kind) && equipment[data.kind].slot===slot)) return 'Este espaço já está ocupado.';
+      if (equipmentGroup(item.data.kind)==='accessory' && equipped.filter(({data})=>
+        isGear(data.kind) && equipmentGroup(data.kind)==='accessory').length>=accessorySlots) return 'Os dois espaços de acessórios estão ocupados.';
       this.move(item,{equipped:id});
       if (item.data.kind==='runningShoes') player.canSprint = true;
       this.event(world,player,'equipped',item.data);
