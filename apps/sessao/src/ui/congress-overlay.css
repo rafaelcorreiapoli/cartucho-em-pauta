@@ -598,7 +598,7 @@
   background: linear-gradient(150deg,#192e25b8,#071511ba);
   box-shadow: inset 0 0 6px #89ba9c28;
 }
-.gear-slot-empty { display: grid; height: 100%; place-items: center; color: #c4cdb1; }
+.gear-slot-empty { display: grid; height: 100%; place-items: center; color: #3c5549; }
 .gear-slot-empty[hidden] { display: none; }
 .gear-slot-empty .hud-glyph { width: 42%; height: 42%; }
 .gear-slot .equipped-gear-tile {
