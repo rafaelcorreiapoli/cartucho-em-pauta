@@ -83,7 +83,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
-    private groundMarkers = new Map<number,{marker:Phaser.GameObjects.Container; label:Phaser.GameObjects.Text}>();
+    private groundMarkers = new Map<number,Phaser.GameObjects.Container>();
     private renderedGround?:GroundItem[];
     private renderedDecorations?:Decoration[];
     private installed = new Map<number,{marker:Phaser.GameObjects.Container; label?:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
@@ -220,7 +220,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (this.renderedGround===groundItems) return;
       this.renderedGround = groundItems;
       const visible = new Set(groundItems.map(item=>item.id));
-      for (const [id,{marker}] of this.groundMarkers) {
+      for (const [id,marker] of this.groundMarkers) {
         if (visible.has(id)) continue;
         marker.destroy();
         this.groundMarkers.delete(id);
@@ -228,19 +228,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const item of groundItems) {
         const existing = this.groundMarkers.get(item.id);
         if (existing) {
-          existing.marker.setPosition(item.x,item.y).setDepth(item.y-1);
-          existing.label.setText(item.title ?? objects[item.kind].name);
+          existing.setPosition(item.x,item.y).setDepth(item.y-1);
           continue;
         }
         const symbol = itemSymbols[item.kind];
         const icon = symbol ? this.add.text(0,0,symbol,{fontSize:'15px',color:'#ffe08a',resolution:3}).setOrigin(.5,.8)
           : this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,.8).setDisplaySize(20,20);
-        const label = this.add.text(0,4,item.title ?? objects[item.kind].name,{
-          fontFamily:'system-ui',fontSize:'5px',color:'#fff5df',backgroundColor:'rgba(14,25,20,0.68)',
-          padding:{x:2,y:1},align:'center',wordWrap:{width:76},resolution:this.textResolution,
-        }).setOrigin(.5,0);
-        const marker = this.add.container(item.x,item.y,[icon,label]).setDepth(item.y-1);
-        this.groundMarkers.set(item.id,{marker,label});
+        const shadow = this.add.ellipse(0,2,15,5,0x09110e,.28);
+        const marker = this.add.container(item.x,item.y,[shadow,icon]).setDepth(item.y-1);
+        this.groundMarkers.set(item.id,marker);
       }
     }
 
@@ -416,7 +412,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (resolution!==this.textResolution) {
         this.textResolution = resolution;
         for (const label of this.mapLabels) label.setResolution(resolution);
-        for (const {label} of this.groundMarkers.values()) label.setResolution(resolution);
         for (const {label} of this.installed.values()) label?.setResolution(resolution);
         for (const view of this.views.values()) {
           view.label.setResolution(resolution);
