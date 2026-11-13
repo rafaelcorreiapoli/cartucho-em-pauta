@@ -478,3 +478,21 @@ test('buying an NPC vote is drawn only when a paid quote is affordable and payme
   agenda.recordGameplay(metrics,event('npc-vote-bought'),false);
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'votoNpc'}));
 });
+
+test('NPC robbery returns to the mission deck when an empty wallet is funded again',()=>{
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'Alice'}],()=>0);
+  economy.addParliamentarian({id:'npc',name:'Parlamentar'},3);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const draw = () => {
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['rouboNpc','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(['a']),3);
+    return economy.hasMission('a','rouboNpc');
+  };
+  expect(draw()).toBe(true);
+  expect(economy.takeWallet('npc')).toBe(3);
+  expect(draw()).toBe(false);
+  expect(economy.transfer('a','npc',1,true,0)).toBe(true);
+  expect(draw()).toBe(true);
+});
