@@ -119,13 +119,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         tile.className = 'equipped-gear-tile';
         const footer = node('span');
         footer.className = 'equipped-gear-footer';
-        if (shortcut) {
-          tile.setAttribute('aria-keyshortcuts',shortcut);
-          const badge = node('kbd',shortcut==='Space' ? 'Espaço' : shortcut);
+        const hint = shortcut ?? (item.kind==='runningShoes' ? 'Shift' : undefined);
+        if (hint) {
+          tile.setAttribute('aria-keyshortcuts',hint);
+          const badge = node('kbd',hint==='Space' ? 'Espaço' : hint.toUpperCase());
           badge.className = 'equipped-gear-key';
           badge.setAttribute('aria-hidden','true');
           footer.append(badge);
-        } else tile.setAttribute('role','listitem');
+        }
+        if (!shortcut) tile.setAttribute('role','listitem');
         tile.dataset.kind = item.kind;
         const timer = node('span');
         timer.className = 'equipped-gear-timer';
@@ -139,7 +141,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
       const time = item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
-      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : name;
+      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
       if (entry.tile.title===label) continue;
       entry.tile.dataset.active = String(item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
@@ -490,6 +492,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (hp) {
         vitalityMeter.max = hp.max;
         vitalityMeter.value = hp.hp;
+        const health = hp.hp/hp.max;
+        vitalityMeter.style.setProperty('--hp-fill',health>.55 ? '#69d878' : health>.25 ? '#ffc260' : '#ff6663');
         vitalityNumber.textContent = hp.recovery ? `${own?.carried ? 'Em transporte' : 'Nocaute'} · ${hp.recovery}s` : `${hp.hp}/${hp.max} PV`;
       }
       previous = view;

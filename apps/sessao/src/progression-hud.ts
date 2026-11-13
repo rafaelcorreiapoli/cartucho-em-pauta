@@ -154,7 +154,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       const before = latest?.matchId===progress?.matchId && !reconnecting ? latest : undefined;
       reconnecting = false;
       latest = progress;
-      xpPanel.hidden = !progress || next.phase==='lobby';
+      levelLabel.hidden = xpPanel.hidden = !progress || next.phase==='lobby';
       launch.hidden = !progress || next.phase==='lobby' || next.phase==='finished';
       if (next.phase!=='negotiation') {
         if (celebration.open) celebration.close('later');
@@ -173,7 +173,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       const inLevel = progress.xp-progress.levelStart;
       const step = progress.nextLevelXp===undefined ? 0 : progress.nextLevelXp-progress.levelStart;
       const fraction = step ? inLevel/step : 1;
-      levelLabel.textContent = String(progress.level);
+      levelLabel.textContent = `NV ${progress.level}`;
       levelLabel.setAttribute('aria-label',`Nível ${progress.level}`);
       xpLabel.textContent = step ? `${inLevel} / ${step} XP` : 'MAX';
       if (!before) {
@@ -232,7 +232,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       attributes.close();
       confirm.onclick = null;
       launch.onclick = null;
-      launch.hidden = xpPanel.hidden = true;
+      launch.hidden = levelLabel.hidden = xpPanel.hidden = true;
       sparks.replaceChildren();
       element('attribute-list').replaceChildren();
       element('attribute-resources').replaceChildren();
