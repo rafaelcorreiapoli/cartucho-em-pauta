@@ -1,3 +1,4 @@
+import {mountProjectIntents} from './ui/project-intents';
 import {mountProjectHeading} from './ui/project-heading';
 import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
@@ -5,7 +6,7 @@ import {mountProjectImpact} from './ui/project-impact';
 import { mountBallot } from './ui/ballot';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type PlenaryView, type Vote } from './plenary';
+import { agendaProject, MIN_PLAYERS, canReachStation, type Action, type PlenaryView } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -33,10 +34,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
   const ballot = mountBallot(element('ballot-host'),vote=>command('bill-vote',{vote}));
 
-  const intentButtons = [...element('intent-controls').querySelectorAll<HTMLButtonElement>('[data-intent]')];
-  for (const button of intentButtons) {
-    button.onclick = ()=>command('bill-intent',{vote:button.dataset.intent as Vote|'clear'});
-  }
+  const intents = mountProjectIntents(element('project-intents'),id,vote=>command('bill-intent',{vote}));
 
   function updateActions() {
     for (const button of actions) {
@@ -100,16 +98,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
       element('hearing-result').hidden = !view.hearingResult;
       if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      const intents = voteIntentSummary(view.voteIntents);
-      const intentSummary = element('intent-summary');
-      intentSummary.hidden = !intents || !!hearing;
-      intentSummary.textContent = intents;
-      element('intent-controls').hidden = phase!=='negotiation' || !view.mandate || !!view.politics?.suspended;
-      const ownIntent = view.voteIntents?.find(intent=>intent.id===id)?.vote;
-      for (const button of intentButtons) {
-        button.setAttribute('aria-pressed',String(button.dataset.intent===ownIntent));
-        if (button.dataset.intent==='clear') button.hidden = !ownIntent;
-      }
+      intents.render(view);
       const title = hearing?.target ?? agendaProject(view).name;
       element('project-details-title').textContent = title;
       element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
@@ -127,7 +116,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); },
+    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); intents.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();
