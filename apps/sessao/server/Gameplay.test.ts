@@ -292,6 +292,9 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   Object.assign(bob,{x:245,y:252});
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).toContain(bob.id);
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(alice.id);
+  Object.assign(watcher,{x:230,y:246,moving:true});
+  expect(game.spyFrame(alice,world)?.people).toContainEqual(expect.objectContaining({id:watcher.id,moving:true}));
+  Object.assign(watcher,{x:254,y:252,moving:false});
   alice.barriers = [[241,248,12,2]];
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(bob.id);
   alice.barriers = undefined;

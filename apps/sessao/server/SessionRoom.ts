@@ -266,7 +266,7 @@ export class SessionRoom extends Room {
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
       const sendSpyFrame = now>=this.spyFrameAt && this.match.phase==='negotiation';
-      if (sendSpyFrame) this.spyFrameAt = now+150;
+      if (sendSpyFrame) this.spyFrameAt = now+100;
       for (const client of this.clients) {
         const id = client.sessionId;
         const state = this.players.get(id);

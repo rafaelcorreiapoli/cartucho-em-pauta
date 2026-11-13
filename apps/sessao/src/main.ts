@@ -201,7 +201,7 @@ async function connect(join: () => Promise<Room>) {
     let fieldToken = 0;
     const sendGameplay = (action:GameplayAction) =>
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
-    const surveillance = createSurveillancePanel(action=>joined.send('spy',action),(canvas,frame)=>game?.drawPhoto(canvas,frame));
+    const surveillance = createSurveillancePanel(action=>joined.send('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>surveillance.render(undefined));
     const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));

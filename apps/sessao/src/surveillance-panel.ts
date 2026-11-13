@@ -1,16 +1,20 @@
 import { markShortcut } from './action-shortcuts';
 import { button, glyph, node } from './gameplay-ui';
+import { createSurveillanceViewport } from './surveillance-viewport';
 import type { PhotoScene } from './photography';
 import type { SpyView } from './surveillance';
 
-export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:HTMLCanvasElement,frame:PhotoScene)=>void) {
+export function createSurveillancePanel(send:(action:object)=>void) {
   const launch = document.querySelector<HTMLButtonElement>('#open-surveillance')!;
   const badge = launch.querySelector('span')!;
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
   const list = document.querySelector<HTMLElement>('#spy-channels')!;
   const monitor = document.querySelector<HTMLElement>('#spy-monitor')!;
-  const canvas = node('canvas');
-  canvas.setAttribute('aria-label','Imagem ao vivo da câmera');
+  const viewport = node('div');
+  viewport.className = 'spy-viewport';
+  viewport.setAttribute('aria-label','Visão ao vivo da câmera');
+  let live:ReturnType<typeof createSurveillanceViewport>|undefined;
+  function stopViewport() { live?.destroy(); live = undefined; }
   let view:SpyView|undefined;
   let key = '';
   let page = 0;
@@ -57,7 +61,7 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
       list.append(back,node('span',` ${page+1} / ${last+1} `),nextPage);
     }
     monitor.replaceChildren();
-    if (selected) monitor.append(node('h3',selected.name),canvas);
+    if (selected) monitor.append(node('h3',selected.name),viewport);
     if (audio) monitor.append(node('p',`${audio.name} · ${view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}`));
     const channel = [selected,audio].find(channel=>channel?.id===focusedChannel) ?? selected ?? audio;
     if (!channel) { monitor.append(node('p','Selecione um canal.')); return; }
@@ -105,6 +109,7 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
     update();
   };
   dialog.onclose = ()=>{
+    stopViewport();
     key = '';
     editing = undefined;
     send({kind:'close'});
@@ -119,7 +124,7 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
 
   return {
     render(next?:SpyView) {
-      if (next?.selected!==view?.selected) canvas.width = canvas.width;
+      if (next?.selected!==view?.selected) stopViewport();
       view = next;
       launch.hidden = !view;
       const active = view?.channels.filter(channel=>channel.active).length ?? 0;
@@ -128,7 +133,11 @@ export function createSurveillancePanel(send:(action:object)=>void,draw:(canvas:
       if (!view && dialog.open) dialog.close();
       update();
     },
-    frame(frame:PhotoScene) { if (dialog.open && view?.selected!==undefined) draw(canvas,frame); },
-    destroy() { launch.onclick = null; dialog.onclose = null; dialog.close(); launch.hidden = true; },
+    frame(frame:PhotoScene) {
+      if (!dialog.open || view?.selected===undefined) return;
+      live ??= createSurveillanceViewport(viewport);
+      live.receive(frame);
+    },
+    destroy() { stopViewport(); launch.onclick = null; dialog.onclose = null; dialog.close(); launch.hidden = true; },
   };
 }

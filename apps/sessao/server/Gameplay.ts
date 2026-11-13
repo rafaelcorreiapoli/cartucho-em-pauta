@@ -8,7 +8,7 @@ import { npcs, type DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
-import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
+import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
 import { stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
@@ -22,7 +22,7 @@ import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
-import { cameraSees, isSpyProduct, spyProducts, type SpyDevice } from "../src/surveillance";
+import { cameraSees, isSpyProduct, spyProducts, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
@@ -403,8 +403,11 @@ export class Gameplay {
     const device = this.surveillance.channel(player.id,'spyCamera');
     const frame = this.spyFrame(player,world);
     if (!device || !frame) return;
+    const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
+      Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
     const result = this.album.capture(player.id,world.now,id=>({
-      ...frame,id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
+      ...frame,people:frame.people.filter(inBounds),ground:frame.ground.filter(inBounds),
+      decorations:frame.decorations.filter(inBounds),id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
       location:device.room,selfie:false,source:{kind:'surveillance',channel:device.name},transfers:[],
     }));
     if (typeof result==='string') return result;
@@ -416,15 +419,14 @@ export class Gameplay {
     const device = this.surveillance.channel(player.id,'spyCamera');
     if (!device || player.knockedOut || player.carried) return;
     const barriers = player.barriers?.filter(([x,y,w,h])=>
-      Math.hypot(x+w/2-device.site.x,y+h/2-device.site.y)<=70+Math.hypot(w,h)/2);
+      Math.hypot(x+w/2-device.site.x,y+h/2-device.site.y)<=spyRules.range+Math.hypot(w,h)/2);
     const camera = this.surveillance.origin(device,barriers);
-    const center = {...camera,x:camera.x+camera.dx*26,y:camera.y+camera.dy*26+19};
-    const visible = (point:Motion)=>cameraSees(camera,point) &&
-      Math.abs(point.x-center.x)<68 && Math.abs(point.y-center.y+19)<55;
+    const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
+    const visible = (point:Motion)=>cameraSees(camera,point);
     return {center,camera,
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
-        direction:person.direction,knockedOut:person.knockedOut,carried:person.carried,
+        direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
         exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),

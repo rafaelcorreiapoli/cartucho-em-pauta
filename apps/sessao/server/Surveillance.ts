@@ -1,6 +1,6 @@
 import { canReachObject, type WorldItem } from '../src/gameplay';
-import { localPerception, type Player, type Rect } from '../src/map';
-import { cameraSees, hideouts, spyRules, type CameraOrigin, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
+import { localPerception, type Motion, type Player, type Rect } from '../src/map';
+import { cameraSees, hideouts, spyRules, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
 
 type Device = SpyChannel & {owner:string; site:Hideout; until:number; alertAt:number; installedAt:number};
 type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:number; target?:number; x:number;y:number; ends:number};
@@ -47,7 +47,7 @@ export class Surveillance {
     return device?.owner===id && !device.removed && device.kind===kind ? device : undefined;
   }
 
-  origin(device:Device,barriers?:readonly Rect[]):CameraOrigin { return {...device.site,barriers}; }
+  origin({site:{x,y}}:Device,barriers?:readonly Rect[]):Motion { return {x,y,barriers}; }
 
   volume(listener:Player,talker:Player) {
     const device = this.channel(listener.id,'wiretap');

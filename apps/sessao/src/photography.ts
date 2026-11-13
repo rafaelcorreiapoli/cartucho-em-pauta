@@ -4,21 +4,19 @@ import type { ExposedItem, GroundItem, ObjectKind } from './gameplay';
 import { localPerception, type Motion } from './map';
 import type { Contact } from './politics';
 
-import type { CameraOrigin } from "./surveillance";
-
 export const PHOTO_WIDTH = 152;
 export const PHOTO_HEIGHT = 128;
 export const PHOTO_LOOK_UP = 19;
 export const PHOTO_LIMIT = 12;
 export const ROOM_PHOTO_LIMIT = 144;
 export type PhotoPerson = Contact & Motion & {
-  character:number; direction:number; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:'call'|'game'; office?:Office;
+  character:number; direction:number; moving?:boolean; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:'call'|'game'; office?:Office;
 };
 export type Decoration = Motion & {
   id:number; kind:'portrait'|'vip'|'pizza'|Extract<OfficeGood,'officeTv'|'officeRug'|'officeChair'>; owner:Contact; character:number; marked?:boolean; slices?:number; privateOffice?:string;
 };
 export type PhotoScene = {
-  center:Motion; camera?:CameraOrigin; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
+  center:Motion; camera?:Motion; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
 };
 export type Photo = PhotoScene & {
   id:number; source?:{kind:"surveillance"; channel:string}; author:Contact; at:number; location:string; selfie:boolean;
