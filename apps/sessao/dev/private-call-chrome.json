@@ -1,0 +1,8 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "args": ["--mute-audio", "--deny-permission-prompts", "--autoplay-policy=no-user-gesture-required"]
+    }
+  }
+}

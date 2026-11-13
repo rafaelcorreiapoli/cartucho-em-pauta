@@ -199,3 +199,20 @@ O **Cafezinho** vende a pizza e tem uma mesa para servir seis fatias. Cada pesso
 A barra superior concentra carteira, popularidade, indicadores do Parlamento e eleição. O mapa usa a faixa central como viewport do Phaser, incluindo fog, coordenadas de clique e feedback espacial. A faixa inferior reúne perfil, agenda sob demanda, projeto e votação, itens de uso rápido, equipamentos e comunicação. O resultado legislativo aparece temporariamente no centro do painel e fica disponível no histórico.
 
 Use as teclas numéricas indicadas para acionar o contexto atual, `Shift+1` a `Shift+6` para abrir um slot e `Esc` para fechar um painel. Os atalhos de local correspondem ao ponto de interação ao alcance. Os objetos disponíveis ficam em **Objetos próximos**.
+
+### Smoke test de chamada privada no Chrome
+
+Com `playwright-cli` disponível, inicie o gameserver com
+`SESSAO_LOCAL_SOLO=1 PORT=2597 bun server/index.ts`. Em outro terminal,
+execute `bunx vite --host 127.0.0.1 --port 5197 --strictPort`. No diretório
+deste app, execute:
+
+```sh
+playwright-cli -s=sessao-call open --browser=chrome --config=dev/private-call-chrome.json http://127.0.0.1:5197/
+playwright-cli -s=sessao-call run-code --filename=dev/private-call-smoke.js
+playwright-cli -s=sessao-call close
+```
+
+O teste injeta um sinal sintético e mede o áudio recebido por WebRTC em dois
+clientes da mesma sala. A saída de áudio é silenciada pelo teste, que também
+substitui a captura de microfone antes de iniciar o VoIP.
