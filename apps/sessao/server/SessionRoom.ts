@@ -33,6 +33,7 @@ function countFromStart(request:unknown,lobbyCount:number) {
 export class SessionRoom extends Room {
   maxClients = MAX_PLAYERS;
   maxMessagesPerSecond = 100;
+  autoBatchMessages = true;
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
 
@@ -363,7 +364,8 @@ export class SessionRoom extends Room {
     });
     let previousActiveTick:number|undefined;
     let sendPlayerSnapshot = true;
-    this.setSimulationInterval(() => {
+    let projectedPhase = this.match.phase;
+    this.setFixedTimestep(() => {
       const startedAt = performance.now();
       const active = this.match.running && this.clients.length>0;
       const gap = active && previousActiveTick!==undefined ? startedAt-previousActiveTick : undefined;
@@ -419,12 +421,18 @@ export class SessionRoom extends Room {
       }
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
+      const projectWorld = sendPlayerSnapshot || projectedPhase!==this.match.phase;
+      projectedPhase = this.match.phase;
       const sendSpyFrame = now>=this.spyFrameAt && this.match.phase==='negotiation';
       if (sendSpyFrame) this.spyFrameAt = now+100;
       for (const client of this.clients) {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
+        if (!projectWorld) {
+          client.send('control',state);
+          continue;
+        }
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
         if (this.match.running) {
           view.complaints = this.match.complaintView(id);
@@ -455,17 +463,17 @@ export class SessionRoom extends Room {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
         }
-        if (sendPlayerSnapshot && this.match.running) {
+        if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
           const visible = state.plenary ? world.players.filter(inPlenary) :
             world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
-        } else if (sendPlayerSnapshot) client.send('players',players);
+        } else client.send('players',players);
         client.send('control',state);
       }
       sendPlayerSnapshot = !sendPlayerSnapshot;
       if (active) gameplayMetrics.observeSimulation(gap,performance.now()-startedAt);
-    },STEP_MS);
+    },1000/STEP_MS);
   }
 
   onJoin(client: Client, options?:{nick?:unknown}) {

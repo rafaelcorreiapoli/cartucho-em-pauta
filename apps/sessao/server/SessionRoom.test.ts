@@ -351,7 +351,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(routes.get(passenger.sessionId)).toEqual([]);
     expect(routes.get(carrier.sessionId)).toEqual([]);
     passenger.send('gameplay',{action:{kind:'answer'},token:1});
-    await wait(()=>routes.get(passenger.sessionId)?.some(([id,level])=>id===carrier.sessionId && level===1)===true);
+    await wait(()=>gearView()?.call?.state==='connected' &&
+      routes.get(passenger.sessionId)?.some(([id,level])=>id===carrier.sessionId && level===1)===true);
     expect(routes.get(carrier.sessionId)).toEqual([[passenger.sessionId,1,true,undefined]]);
     expect(gearView()?.call?.state).toBe('connected');
     passenger.send('gameplay',{action:{kind:'hangup'},token:2});
