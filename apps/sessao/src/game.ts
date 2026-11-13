@@ -622,7 +622,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const screenX = (wallX-camera.scrollX-camera.width/2)*cssZoom+camera.width/2/density;
             const screenY = (wallY-camera.scrollY-camera.height/2)*cssZoom+camera.height/2/density;
             const edge = radius*cssZoom;
-            penumbra.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${edge*.86}px, #0009 ${edge}px)`;
+            penumbra.style.background = `radial-gradient(circle at ${screenX}px ${screenY}px, transparent ${edge*.84}px, rgba(0,0,0,.62) ${edge*.99}px)`;
             penumbra.style.clipPath = `polygon(${points.map(point=>`${screenX+point.x*cssZoom}px ${screenY+point.y*cssZoom}px`).join(',')})`;
             const [first,...outline] = shadowOutline(points,wallX,wallY,4000);
             this.fog.beginPath().moveTo(first.x,first.y);
