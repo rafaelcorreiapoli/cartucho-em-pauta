@@ -80,6 +80,12 @@ export function drawMap(scene: Phaser.Scene) {
       scene.add.image(x,y-footOffset,texture).setOrigin(.5,1).setDisplaySize(width,height).setDepth(y-footOffset);
     }
   }
+  // The floor, rugs and walls never move. Draw their geometry once.
+  const backdrop = 'congress-map-backdrop';
+  if (!scene.textures.exists(backdrop)) graphics.generateTexture(backdrop,WIDTH,HEIGHT);
+  graphics.destroy();
+  scene.add.image(0,0,backdrop).setOrigin(0).setDepth(-1);
+
   for (const [x,y] of desks) {
     if ((x!==treasurer.counter.x || y!==treasurer.counter.y)) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);

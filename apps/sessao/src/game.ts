@@ -513,7 +513,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const labelY = latest.carried ? y-51 : y+2;
         sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
           .setAlpha(latest.knockedOut && !latest.carried ? .68 : 1);
-        sprite.setVisible(true).setPosition(spriteX,spriteY).setDepth(y+(latest.carried ? 1 : 0))
+        const spriteDepth = y+(latest.carried ? 1 : 0);
+        if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
+        sprite.setVisible(true).setPosition(spriteX,spriteY)
           .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
         view.health.setVisible(latest.health!==undefined);
         const barY = latest.carried ? spriteY-10 : latest.knockedOut ? y-10 : spriteY-40;
@@ -567,7 +569,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
         }
         if (own) {
-          this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setDepth(y-1).setVisible(true);
+          if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
+          this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
             const [left,top,width,height] = PLENARY_BOUNDS;
             camera.centerOn(left+width/2,top+height/2-30);

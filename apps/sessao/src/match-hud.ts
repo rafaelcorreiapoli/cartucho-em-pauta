@@ -388,9 +388,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     for (const {button,station} of activityButtons) button.hidden = context!==station;
     for (const button of stationActions) {
-      button.dataset.contextHidden = String(button.dataset.station!==context);
+      const hidden = String(button.dataset.station!==context);
+      if (button.dataset.contextHidden!==hidden) button.dataset.contextHidden = hidden;
     }
-    interviewHint.dataset.contextHidden = String(context!=='tv');
+    const hideInterview = String(context!=='tv');
+    if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
     const hasAction = stationActions.some(button => !button.disabled &&
       !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
@@ -491,7 +493,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       roster = players;
       own = players.find(player => player.id===id);
       if (own) {
-        element('hud-nick').textContent = own.nick;
+        const nick = element('hud-nick');
+        if (nick.textContent!==own.nick) nick.textContent = own.nick;
         setCharacterPortrait(element('hud-portrait'),own.character);
       }
       actions();
