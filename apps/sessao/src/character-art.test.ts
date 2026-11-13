@@ -2,7 +2,16 @@ import { expect, test } from 'bun:test';
 import { attackArt, downedArt, hitArt } from './character-art';
 import { NAMES } from './map';
 
-for (const [name,skin] of [['Lula','lula'],['Bolsonaro','bolsonaro']] as const) {
+for (const [name,skin] of [
+  ['Lula','lula'],
+  ['Bolsonaro','bolsonaro'],
+  ['Trump','trump'],
+  ['Tiririca','tiririca'],
+  ['José Sarney','sarney'],
+  ['Jean Wyllys','jean-wyllys'],
+  ['Sergio Moro','sergio-moro'],
+  ['Nestor Cerveró','nestor-cervero'],
+] as const) {
   const character = NAMES.indexOf(name);
 
   test(`${name} uses separate attack and hit frames`,()=>{

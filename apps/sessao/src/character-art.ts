@@ -7,9 +7,15 @@ export const characterSheets = [
   {key:'players-expansion',path:'assets/sprites-expansao.png'},
 ] as const;
 
-const combatCharacters:Partial<Record<(typeof NAMES)[number],string>> = {
+const combatCharacters:Record<(typeof NAMES)[number],string> = {
   Lula:'lula',
   Bolsonaro:'bolsonaro',
+  Trump:'trump',
+  Tiririca:'tiririca',
+  'José Sarney':'sarney',
+  'Jean Wyllys':'jean-wyllys',
+  'Sergio Moro':'sergio-moro',
+  'Nestor Cerveró':'nestor-cervero',
 };
 const combatActions = ['attack','hit','fall'] as const;
 const hitFrameMs = 55;
