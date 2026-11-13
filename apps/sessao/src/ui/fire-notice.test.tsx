@@ -9,6 +9,8 @@ test('the fire notice reads the authoritative loss rate and stops advertising da
   expect(fire.ignite(0)).toBe(true);
   expect(fire.advance(fireRules.tick,true)).toBe(fireRules.damage);
   const active = renderToStaticMarkup(<FireNotice fire={fire.view(true)!}/>);
+  expect(active).toContain("Incidentes ativos");
+  expect(active).toContain("Incêndio");
   expect(active).toContain(fireSites[0].name);
   expect(active).toContain(`−${fireRules.damage} de estabilidade a cada ${fireRules.tick/1000} s`);
   expect(fire.advance(fireRules.tick*2,false)).toBe(0);

@@ -87,7 +87,6 @@
         </div>
         <div id="electoral-notice-mount"></div>
         <div id="megaphone-status"></div>
-        <div id="active-fire-mount"></div>
         <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
         <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
@@ -172,17 +171,20 @@
             <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
           </div>
           <div id="congress-dock" class="hud-module"></div>
-          <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-            <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
-            <div class="hud-panel politics-content">
-              <div id="election-cycle"></div>
-              <section aria-label="Pesquisa eleitoral">
-                <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
-                <div id="election-polls"></div>
-              </section>
-              <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
-            </div>
-          </details>
+          <div class="election-and-incidents">
+            <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
+              <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
+              <div class="hud-panel politics-content">
+                <div id="election-cycle"></div>
+                <section aria-label="Pesquisa eleitoral">
+                  <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
+                  <div id="election-polls"></div>
+                </section>
+                <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
+              </div>
+            </details>
+            <div id="active-fire-mount"></div>
+          </div>
         </header>
         <div id="agenda-dock"></div>
         <footer id="command-deck" aria-label="Painel de partida">

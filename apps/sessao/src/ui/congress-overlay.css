@@ -148,7 +148,8 @@
 #agenda-dock .react-agenda header { column-gap: 12px; }
 
 #command-strip #congress-dock { grid-column: 2; }
-#command-strip #election-dock { grid-column: 3; }
+#command-strip .election-and-incidents { grid-column: 3; grid-row: 1; justify-self: end; min-width: 0; }
+.election-and-incidents > :not(:empty) + :not(:empty) { margin-top: 8px; }
 #command-strip #profile-dock {
   display: grid;
   grid-template-columns: auto minmax(0,1fr);
@@ -208,7 +209,7 @@
 }
 @media (max-width: 640px) {
   #command-strip #congress-dock { grid-column: 2; }
-  #command-strip #election-dock { grid-column: 1 / -1; }
+  #command-strip .election-and-incidents { grid-column: 1 / -1; grid-row: 3; }
   #session:not([data-phase="lobby"]) { --profile-width: min(262.5px, 39vw); }
 }
 
@@ -298,17 +299,37 @@
 #command-deck .deck-tools { grid-column: 3; }
 #session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
 #session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }
-#world #active-fire {
-  position: absolute;
-  z-index: 3;
-  top: 96px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 10px;
-  border-radius: 7px;
-  background: #281811e8;
+.incident-panel {
+  width: min(270px, 38vw);
+  margin-inline-start: auto;
+  padding: 9px;
+  border: 1px solid #8f794b;
+  border-radius: 12px;
+  background: #101e17eb;
   pointer-events: none;
 }
+.incident-panel h2, .incident-fire p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.incident-panel h2 { margin-bottom: 7px; color: #f2d89c; font-size: 13px; }
+.incident-fire {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 4px 7px;
+  padding: 8px;
+  border: 1px solid #cf695e85;
+  border-radius: 8px;
+  background: linear-gradient(130deg,#6a29264d,#221b18aa);
+}
+.incident-fire strong, .incident-fire small { display: block; }
+.incident-fire small { color: var(--color-hud-muted); }
+.incident-flame { font-size: 19px; }
+.incident-time { color: #f2d89c; font-variant-numeric: tabular-nums; }
+.incident-fire p { grid-column: 1/-1; color: #ffb1a2; font-size: 11px; }
 @media (max-width: 640px) {
   #command-deck #legislative-dock { grid-column: 1 / -1; }
   #command-deck .deck-tools { grid-column: 2; }
@@ -556,12 +577,11 @@
 @media (max-width: 760px) {
   #command-strip { grid-template-columns: minmax(0,1fr) auto; }
   #command-strip #congress-dock { grid-column: 1; }
-  #command-strip #election-dock { grid-column: 2; }
+  #command-strip .election-and-incidents { grid-column: 2; }
   .congress-meter { width: min(100%,320px); }
   .congress-laurel { display: none; }
 }
 #world #hud-notices { inset-block-start: max(88px, calc(58px + env(safe-area-inset-top))); }
-#world #active-fire { top: clamp(133px, 10vw, 175px); }
 
 #equipped-gear:not([hidden]) {
   --gear-size: clamp(42px,4.3vw,65px);
@@ -782,7 +802,7 @@
 
 /* Keep the vote and institutional stability visible while the player is in the chamber. */
 #session[data-phase="ballot"][data-in-plenary="true"] :is(
-  .character-dock, #agenda-dock, .deck-tools, #election-dock,
+  .character-dock, #agenda-dock, .deck-tools, .election-and-incidents,
   #context-hud, #connection-latency, #electoral-notice-mount
 ) { display: none; }
 

@@ -137,11 +137,15 @@ function Broadcast({state}:{state:HudModel['broadcast']}) {
 }
 
 export function FireNotice({fire}:{fire:FireView}) {
-  return <p id="active-fire" className="hud-feedback" aria-live="off">
-    <span aria-hidden="true">🔥 </span>{fireSites[fire.site].name} · {fire.remaining} s · {
-      fire.paused ? 'Pausado' : `−${fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`
-    }
-  </p>;
+  return <aside id="active-fire" className="incident-panel" aria-labelledby="incidents-title">
+    <h2 id="incidents-title"><Icon name="alert"/>Incidentes ativos <span>(1)</span></h2>
+    <article className="incident-fire">
+      <span className="incident-flame" aria-hidden="true">🔥</span>
+      <div><strong>Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
+      <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
+      {!fire.paused && <p><Icon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
+    </article>
+  </aside>;
 }
 
 function ActiveFire({state}:{state:HudModel['fire']}) {
