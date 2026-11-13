@@ -144,7 +144,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       entry.timer.hidden = !time;
       entry.tile.title = label;
       entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
-      if (item.kind==='xray') entry.tile.setAttribute('aria-pressed',String(!!state?.xrayVision));
+      if (item.kind==='xray' || item.kind==='megaphone') {
+        entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
+      }
     }
     const remaining = state?.concealmentSeconds;
     if (remaining) {

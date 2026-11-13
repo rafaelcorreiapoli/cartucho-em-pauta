@@ -131,6 +131,8 @@ export class RoomVoice {
     this.mic?.getTracks().forEach(track => track.stop());
     this.mic = undefined;
     this.outbound.clear();
+    this.broadcastSources.clear();
+    this.remoteOnly.clear();
     this.disguise?.stop();
     this.disguise = undefined;
     this.localMeter = undefined;
