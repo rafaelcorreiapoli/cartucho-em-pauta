@@ -109,8 +109,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
           disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
       </div>}
-      {chooseQuantity && <div className="flex flex-wrap gap-1" role="group" aria-label="Adicionar à hotbar">
-        <span>Hotbar</span>
+      {chooseQuantity && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+        <span>Adicionar à hotbar</span>
         {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
           disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
           onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
