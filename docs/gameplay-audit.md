@@ -38,3 +38,9 @@ O servidor mantém metadados de assinatura e o original de documentos adulterado
 5. Introduzir uma primeira crise presencial completa. Começar por uma fonte, um reparo e feedback de estabilidade. Integrar efeitos de projetos depois de testar concorrência e transição de fase.
 
 A auditoria combina inspeção de código, histórico Git e estado dos PRs com testes do projeto. Classificação estática não substitui uma rodada manual para balanceamento, coerência artística, inteligibilidade de voz ou situações dependentes da rede.
+
+### Retratos de itens
+
+Use os retratos do binóculo e do Raio X como referências de estilo para novas artes. Exporte o objeto isolado em WebP quadrado de 256 × 256, com transparência e margem livre. Confira a silhueta no tamanho do slot do inventário e o recorte no cartão da loja. Registre o nome do arquivo no catálogo em `apps/sessao/src/gameplay.ts` ou na definição de origem do item. Retratos existentes também usam 192 × 192 e alguns itens reutilizam sprites retangulares.
+
+O teste em `gameplay.test.ts` verifica nome, existência e cabeçalho WebP de todos os retratos do catálogo. A revisão do tamanho, da transparência e da direção artística continua visual.

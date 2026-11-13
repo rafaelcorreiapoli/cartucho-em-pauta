@@ -46,3 +46,15 @@ test('the forensic kit uses its own bundled WebP portrait',async()=>{
   expect(await file.exists()).toBe(true);
   expect(await file.slice(8,12).text()).toBe('WEBP');
 });
+
+for (const portrait of new Set(Object.values(objects).map(item=>item.portrait))) {
+  test(`the item catalog bundles ${portrait} as WebP`,async()=>{
+    expect(portrait).toMatch(/^[a-z0-9-]+\.webp$/);
+    const asset = Bun.file(new URL('../public/assets/'+portrait,import.meta.url));
+    expect(await asset.exists()).toBe(true);
+    expect(await asset.slice(0,4).text()).toBe('RIFF');
+    expect(await asset.slice(8,12).text()).toBe('WEBP');
+    const header = new DataView(await asset.slice(0,8).arrayBuffer());
+    expect(header.getUint32(4,true)+8).toBe(asset.size);
+  });
+}
