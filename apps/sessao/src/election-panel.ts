@@ -1,3 +1,4 @@
+import { updateProgress } from './progress-meter';
 import { setCharacterPortrait } from './character-art';
 import { ELECTION_RULES, type ElectionAction } from './elections';
 import type { Player } from './map';
@@ -16,6 +17,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   let own:Player | undefined;
   let lastResult = 0;
   let pollsKey = '';
+  const pollMeters = new Map<string,HTMLProgressElement>();
   let candidatesKey = '';
   dock.hidden = notice.hidden = true;
   dock.open = false;
@@ -108,6 +110,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         const list = document.createElement('ol');
         list.setAttribute('role','list');
         const candidates = election.polls;
+        for (const id of pollMeters.keys()) if (!candidates.some(candidate=>candidate.id===id)) pollMeters.delete(id);
         for (const [index,candidate] of candidates.entries()) {
           const row = document.createElement('li');
           const trend = candidate.trend ? `${candidate.trend>0 ? '+' : ''}${candidate.trend} pp` : '';
@@ -125,9 +128,9 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
             movement.dataset.effect = estimate.dataset.effect;
             estimate.after(movement);
           }
-          const meter = document.createElement('progress');
-          meter.max = 100;
-          meter.value = candidate.estimate;
+          const meter = pollMeters.get(candidate.id) ?? document.createElement('progress');
+          pollMeters.set(candidate.id,meter);
+          updateProgress(meter,candidate.estimate,100);
           meter.setAttribute('aria-label',`Intenção de voto de ${candidate.name}`);
           const card = document.createElement('div');
           card.className = 'poll-card';

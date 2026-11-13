@@ -1,3 +1,4 @@
+import { updateProgress } from './progress-meter';
 import { equippedWeapon, xray } from './equipment';
 import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
@@ -168,23 +169,20 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const spy = state?.surveillance;
     progress.hidden = !breach && robbery===undefined && spy?.progress===undefined;
     if (spy?.progress!==undefined && !breach && robbery===undefined) {
-      progress.max = 1;
-      progress.value = spy.progress;
+      updateProgress(progress,spy.progress,1);
       progress.setAttribute('aria-label','Interação de espionagem em andamento');
     }
     for (const option of spy?.options ?? []) actions.push({
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
     if (robbery!==undefined) {
-      progress.max = npcRules.robberyMs;
-      progress.value = robbery;
+      updateProgress(progress,robbery,npcRules.robberyMs);
       progress.setAttribute('aria-label','Roubando dinheiro');
       actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
     }
     progressLabel.hidden = !breach;
     if (breach) {
-      progress.max = breach.duration;
-      progress.value = breach.elapsed;
+      updateProgress(progress,breach.elapsed,breach.duration);
       progress.setAttribute('aria-label',breach.label);
       progressLabel.textContent = `${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`;
     }

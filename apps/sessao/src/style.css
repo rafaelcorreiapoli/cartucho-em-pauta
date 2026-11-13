@@ -286,3 +286,25 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
 .sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }
 .mute-option { display:flex; align-items:center; gap:.35rem; }
+
+@property --meter-ratio {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+progress.animated-progress {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: linear-gradient(to right,
+    var(--bar-color,#f2c77f) calc(var(--meter-ratio) * 100%),
+    #0d171a calc(var(--meter-ratio) * 100%));
+  transition: --meter-ratio 200ms ease-out;
+}
+progress.animated-progress::-webkit-progress-bar,
+progress.animated-progress::-webkit-progress-value { background: transparent; }
+progress.animated-progress::-moz-progress-bar { background: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  progress.animated-progress { transition: none; }
+}

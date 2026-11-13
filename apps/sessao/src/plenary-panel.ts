@@ -1,3 +1,4 @@
+import { updateProgress } from './progress-meter';
 import { money } from './politics';
 import type { Player } from './map';
 import { bills, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
@@ -161,12 +162,11 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       clockChip.dataset.urgent = String(remaining<=10);
       element('stability').textContent = String(view.stability);
       const stability = element<HTMLProgressElement>('stability-meter');
-      stability.value = view.stability;
+      updateProgress(stability,view.stability,100);
       stability.dataset.low = String(view.stability<45);
       element('budget').textContent = money(view.budget);
       const budgetMeter = element<HTMLProgressElement>('budget-meter');
-      budgetMeter.max = Math.max(100,view.budget);
-      budgetMeter.value = view.budget;
+      updateProgress(budgetMeter,view.budget,Math.max(100,view.budget));
       if (historyChanged) {
         selected = Math.max(0,view.outcomes.length-1);
         renderHistory();
@@ -192,8 +192,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
       const quorum = hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum;
       element('quorum').textContent = `${view.voted}/${view.electorate} votaram · ${quorum} ${quorum===1 ? 'voto' : 'votos'} a favor para ${hearing ? 'afastar' : 'aprovar'}`;
       const progress = element<HTMLProgressElement>('vote-progress');
-      progress.max = Math.max(1,view.electorate);
-      progress.value = view.voted;
+      updateProgress(progress,view.voted,Math.max(1,view.electorate));
       if (!view.mandate || view.politics?.suspended) element('quorum').textContent = view.mandate ? 'Você está afastado da votação.' : 'Ex-parlamentar · Sem direito a voto.';
       const castVote = hearing?.vote ?? view.vote;
       const state = element('vote-state');

@@ -17,7 +17,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { MAX_STAMINA, restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { HEIGHT, inPlenary, localPerception, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
+type View = { health:Phaser.GameObjects.Container; healthFill:Phaser.GameObjects.Rectangle; staminaFill:Phaser.GameObjects.Rectangle; metersReady?:boolean; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
   arrowleft:[-1,0], a:[-1,0], arrowright:[1,0], d:[1,0],
@@ -35,6 +35,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
   let inLobby = true;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
   let running = false;
@@ -512,8 +513,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const health = Phaser.Math.Clamp(latest.health,0,1);
           view.health.setPosition(x,barY);
           const staminaMax = player.staminaMax ?? MAX_STAMINA;
-          view.staminaFill.setScale(Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1),1);
-          view.healthFill.setScale(health,1).setFillStyle(health>.55 ? 0x69d878 : health>.25 ? 0xffc260 : 0xff6663);
+          const stamina = Phaser.Math.Clamp((player.stamina ?? staminaMax)/staminaMax,0,1);
+          const blend = view.metersReady && !reducedMotion.matches ? 1-Math.exp(-delta/65) : 1;
+          const advance = (current:number,target:number)=>Math.abs(current-target)<.002 ? target : Phaser.Math.Linear(current,target,blend);
+          view.staminaFill.setScale(advance(view.staminaFill.scaleX,stamina),1);
+          const shownHealth = advance(view.healthFill.scaleX,health);
+          view.healthFill.setScale(shownHealth,1).setFillStyle(shownHealth>.55 ? 0x69d878 : shownHealth>.25 ? 0xffc260 : 0xff6663);
+          view.metersReady = true;
         }
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
