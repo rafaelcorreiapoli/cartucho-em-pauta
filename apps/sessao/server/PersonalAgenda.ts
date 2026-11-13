@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -235,6 +235,10 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    if (kind==='recebido' || kind==='articulacao') {
+      const requiredPayers = kind==='articulacao' ? missionTargets.articulacao! : 1;
+      if (metrics.canReceivePayments?.(requiredPayers)===false) return false;
+    }
     if ((kind==='pagamento' || kind==='dinheiroAlvo') && metrics.canPay?.()===false) return false;
     if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
     if (kind==='votoNpc') {

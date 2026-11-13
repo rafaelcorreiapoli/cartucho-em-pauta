@@ -636,3 +636,28 @@ test('a pizza already served at the Cafezinho can support a mission without mone
   expect(economy.spend(host.id,economy.wallet(host.id))).toBe(true);
   expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
 });
+
+test('incoming payment missions require distinct colleagues who can still pay',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = new Set(['a','b','c']);
+  economy.reset([...ids].map(id=>({id,name:id})),()=>0);
+  const view = (round:number)=>economy.view('a',[],round,false,()=>true)!;
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  const draw = (round:number)=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['articulacao','recebido','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3,()=>true,round);
+    return view(round).missions.active.map(mission=>mission.kind);
+  };
+  const limit = economy.view('b',[],0,false,()=>true)!.paymentsLeft;
+  for (let i=0;i<limit;i++) expect(economy.transfer('b','c',1,false,0)).toBe(true);
+  expect(economy.spend('c',economy.wallet('c'))).toBe(true);
+  expect(draw(0)).toEqual(['cafe','passeio','selfieSolo']);
+  expect(draw(1)).toEqual(['recebido','cafe','passeio']);
+  economy.earn('c',1);
+  expect(draw(1)).toEqual(['articulacao','recebido','cafe']);
+  expect(economy.transfer('b','a',1,false,1)).toBe(true);
+  expect(view(1).missions.active.find(mission=>mission.kind==='articulacao')?.current).toBe(1);
+  expect(economy.transfer('c','a',1,false,1)).toBe(true);
+  expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['recebido','articulacao']);
+});
