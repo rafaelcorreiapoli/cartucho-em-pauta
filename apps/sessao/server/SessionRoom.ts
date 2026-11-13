@@ -73,7 +73,7 @@ export class SessionRoom extends Room {
     };
   }
 
-  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
+  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || process.env.SESSAO_PREVIEW_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
   private parliamentarians = new Parliamentarians();
   private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
