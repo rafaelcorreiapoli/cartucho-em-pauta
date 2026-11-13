@@ -1,4 +1,4 @@
-import {mountProjectIntents} from './ui/project-intents';
+import {mountProjectDetails} from './ui/project-intents';
 import {mountProjectHeading} from './ui/project-heading';
 import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
@@ -6,7 +6,7 @@ import {mountProjectImpact} from './ui/project-impact';
 import { mountBallot } from './ui/ballot';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { agendaProject, MIN_PLAYERS, canReachStation, type Action, type PlenaryView } from './plenary';
+import { MIN_PLAYERS, canReachStation, type Action, type PlenaryView } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
@@ -34,7 +34,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
   const ballot = mountBallot(element('ballot-host'),vote=>command('bill-vote',{vote}));
 
-  const intents = mountProjectIntents(element('project-intents'),id,vote=>command('bill-intent',{vote}));
+  const details = mountProjectDetails(element('project-details-content'),id,vote=>command('bill-intent',{vote}));
 
   function updateActions() {
     for (const button of actions) {
@@ -63,7 +63,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         brief.render(next.outcome);
       }
       view = next;
-      const {phase,role,players,host} = view;
+      const {phase,players,host} = view;
       const hearing = view.hearing;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
       element('infiltrator-setup').hidden = running || host!==id || players<6;
@@ -93,30 +93,14 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       crisis.textContent = view.fire ? `🔥 ${fireSites[view.fire.site].name} · ${view.fire.remaining} s · ${view.fire.paused ? 'Pausado' : `−${view.fire.damage} de estabilidade a cada ${fireRules.tick/1000} s`}` : '';
       if (running) heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
-      const objection = view.election?.objection;
-      element('bill-objection').hidden = !objection || !!hearing || !running;
-      element('bill-objection').textContent = objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '';
-      element('hearing-result').hidden = !view.hearingResult;
-      if (element('hearing-result').textContent!==view.hearingResult) element('hearing-result').textContent = view.hearingResult ?? '';
-      intents.render(view);
-      const title = hearing?.target ?? agendaProject(view).name;
-      element('project-details-title').textContent = title;
-      element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
+      details.render(view);
       impact.render(view.yes,view.no,running && !hearing);
       ballot.render(view);
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
-      const clue = [view.auditNote ?? '', view.amended ? 'Emenda protocolada. Os efeitos já estão atualizados.' : '',
-        view.reportedFraud ? 'Fraude denunciada. O painel mostra os números reais.' :
-        view.audit==='fraud' ? 'Fraude encontrada. Vá ao Painel para corrigir os números.' :
-        view.audit==='clean' ? 'A auditoria conferiu os valores do painel.' : '',
-        role==='Infiltrado' && !view.canFraud && !view.reportedFraud ? 'Você alterou os números que os outros veem no painel.' : '',
-      ].filter(Boolean).join(' ');
-      element('clue').hidden = !clue || !!hearing;
-      if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); intents.destroy(); },
+    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); details.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();
