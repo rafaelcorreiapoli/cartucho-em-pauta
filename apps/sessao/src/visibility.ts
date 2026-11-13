@@ -10,20 +10,34 @@ export function wallVision(origin:Motion,radius:number) {
   }
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
-    const distance = nearby.reduce((end,wall)=>Math.min(end,rayEntry(origin,dx,dy,wall)),radius);
+    let nearest = radius;
+    let distance = radius;
+    for (const wall of nearby) {
+      const [entry,exit] = raySpan(origin,dx,dy,wall);
+      if (entry>=nearest) continue;
+      nearest = entry;
+      distance = Math.min(radius,exit);
+    }
     return {x:dx*distance,y:dy*distance};
   });
 }
 
-function rayEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
+function raySpan(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
   const [nearX,farX] = slab(origin.x,dx,x,x+w);
   const [nearY,farY] = slab(origin.y,dy,y,y+h);
   const near = Math.max(nearX,nearY,0);
-  return near<=Math.min(farX,farY) ? near : Infinity;
+  const far = Math.min(farX,farY);
+  return near<=far ? [near,far] : [Infinity,Infinity];
 }
 
 function slab(origin:number,direction:number,min:number,max:number) {
   if (Math.abs(direction)<1e-9) return origin>=min && origin<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
   const a = (min-origin)/direction, b = (max-origin)/direction;
   return [Math.min(a,b),Math.max(a,b)];
+}
+
+export function localPlayerLightMask(x:number, top:number, bottom:number, zoom:number) {
+  const center = (top+bottom)/2;
+  const height = (bottom-top)/2;
+  return `radial-gradient(ellipse ${18*zoom}px ${height}px at ${x}px ${center}px, transparent 100%, #000 calc(100% + ${8*zoom}px))`;
 }

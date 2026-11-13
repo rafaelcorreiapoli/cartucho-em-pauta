@@ -1,4 +1,4 @@
-import {wallVision} from './visibility';
+import {localPlayerLightMask,wallVision} from './visibility';
 import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -624,6 +624,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
               fog.style.background = '#000b';
               fog.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x2}px ${y1}px, ${x2}px ${y2}px, ${x1}px ${y2}px, ${x1}px ${y1}px)`;
             }
+            const mask = localPlayerLightMask(
+              screenX/density+(spriteX-x)*cssZoom,
+              screenY/density+(Math.min(barY-16,labelY-2,spriteY-40)-y)*cssZoom,
+              screenY/density+(Math.max(spriteY,labelY+14)-y)*cssZoom,
+              cssZoom,
+            );
+            if (fog.style.maskImage!==mask) fog.style.maskImage = wallFog.style.maskImage = mask;
             fog.hidden = false;
           }
         }
