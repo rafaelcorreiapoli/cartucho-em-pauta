@@ -13,6 +13,14 @@ const furnitureSpendingTarget = 5;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  emenda:(event:GameplayEvent) => event.type==='amendment-filed',
+  cafe:(event:GameplayEvent) => event.type==='coffee-drunk',
+  leitura:(event:GameplayEvent) => event.type==='bill-studied',
+  credencial:(event:GameplayEvent) => event.type==='credential-checked',
+  propaganda:(event:GameplayEvent) => event.type==='advertisement-aired',
+  discurso:(event:GameplayEvent) => event.type==='speech-given',
+  auditoria:(event:GameplayEvent) => event.type==='audit-performed',
+
   protocolo:(event:GameplayEvent) => event.type==='filed',
   rouboNpc:(event:GameplayEvent) => event.type==='npc-robbed',
   votoNpc:(event:GameplayEvent) => event.type==='npc-vote-bought',

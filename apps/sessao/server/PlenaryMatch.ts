@@ -7,6 +7,7 @@ import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
 import type { GameplayWorld } from './gameplay-world';
+import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
@@ -221,6 +222,10 @@ export class PlenaryMatch {
     else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
   }
 
+  private publishActivity(player:Player,type:GameplayEvent['type'],now:number) {
+    this.economy.recordGameplay({type,actor:player.id,at:now,position:{x:player.x,y:player.y},witnesses:[]});
+  }
+
   act(player:Player, action:Action, now:number) {
     if (!this.canVote(player.id)) return;
     if (this.phase!=='negotiation' || now>=this.ends) {
@@ -233,7 +238,7 @@ export class PlenaryMatch {
     }
     if (action==='amendment' && !this.amended) {
       this.amended = true;
-      this.economy.recordActivity(player.id,'emenda');
+      this.publishActivity(player,'amendment-filed',now);
     }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
@@ -241,6 +246,7 @@ export class PlenaryMatch {
     }
     if (action==='audit') {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
+      this.publishActivity(player,'audit-performed',now);
       const note = this.economy.audit(player.id,this.round,1);
       if (note) this.auditNotes.set(player.id,note);
       const finding = this.reportedFraud ? 'O Painel já mostra os números corrigidos.' :
@@ -257,14 +263,14 @@ export class PlenaryMatch {
     switch (activity) {
       case 'cabinet': return {activity,text:`O orçamento público está em ${money(this.budget)}.`};
       case 'coffee':
-        this.economy.recordActivity(id,'cafe');
+        this.publishActivity(player,'coffee-drunk',now);
         return {activity,text:'Cafezinho tomado. De volta à articulação!'};
       case 'library':
-        this.economy.recordActivity(id,'leitura');
+        this.publishActivity(player,'bill-studied',now);
         return {activity,text:`Você estudou o projeto ${bill}.`};
       case 'committees': return {activity,text:`Votos a favor necessários para aprovar ${bill}: ${this.billQuorum()}.`};
       case 'credentials': {
-        this.economy.recordActivity(id,'credencial');
+        this.publishActivity(player,'credential-checked',now);
         const office = this.election.office(id);
         return {activity,text:office ? `${this.economy.name(id)} · Parlamentar · Salário previsto de ${money(rules.salary)} por ciclo.` :
           `${this.economy.name(id)} · Ex-parlamentar`};
@@ -412,11 +418,11 @@ export class PlenaryMatch {
     switch (action.kind) {
       case 'invest': this.election.invest(id,action.amount,spend); break;
       case 'advertise':
-        if (this.at(player,'press') && this.election.advertise(id,spend)) this.economy.recordActivity(id,'propaganda');
+        if (this.at(player,'press') && this.election.advertise(id,spend)) this.publishActivity(player,'advertisement-aired',now);
         break;
       case 'speech':
         if (this.at(player,'panel') && this.election.speech(id)) {
-          this.economy.recordActivity(id,'discurso');
+          this.publishActivity(player,'speech-given',now);
           this.economy.changePopularity(id,3);
         }
         break;

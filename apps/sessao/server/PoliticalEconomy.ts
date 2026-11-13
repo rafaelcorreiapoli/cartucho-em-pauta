@@ -214,7 +214,6 @@ export class PoliticalEconomy {
   audit(id:string, round:number, limit=1) {
     const account = this.accounts.get(id);
     if (!account) return;
-    this.recordActivity(id,'auditoria');
     if (account.auditRound!==round) {
       account.auditRound = round;
       account.audits = 0;
@@ -352,11 +351,6 @@ export class PoliticalEconomy {
       const owner = this.accounts.get(event.target);
       owner?.agenda.recordSignature(owner,event.item,event.actor);
     }
-  }
-
-  recordActivity(id:string, kind:'auditoria'|'cafe'|'leitura'|'credencial'|'emenda'|'propaganda'|'discurso') {
-    const account = this.accounts.get(id);
-    if (account) account.agenda.progress(account,{[kind]:1});
   }
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
