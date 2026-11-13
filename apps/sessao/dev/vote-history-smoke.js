@@ -2,7 +2,16 @@ async page => {
   await page.addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
   });
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.reload();
+  await page.evaluate(()=>{
+    window.hudSlides = [];
+    document.addEventListener('transitionrun',event=>{
+      if (event.propertyName==='translate' && ['agenda-dock','legislative-dock'].includes(event.target.id)) {
+        window.hudSlides.push(event.target.id);
+      }
+    });
+  });
   const measureHud = async (width,height) => {
     await page.setViewportSize({width,height});
     const selectors = {
@@ -36,16 +45,24 @@ async page => {
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
+  await page.locator('.plenary-countdown').getByText('Votação começa em').waitFor();
+  await page.waitForFunction(()=>!document.querySelector('.character-dock').getAnimations().length);
+
   for (const [width,height] of [[1280,720],[1024,600],[800,600]]) await measureHud(width,height);
   await page.setViewportSize({width:1280,height:720});
   await page.locator('#session[data-phase="ballot"]').waitFor();
   const exploring = ['.character-dock','#agenda-dock','.deck-tools','#election-dock','#context-hud'];
   for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
   await page.locator('#congress-dock').waitFor({state:'visible'});
+  await page.locator('.plenary-countdown').waitFor({state:'hidden'});
+  await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   await page.locator('[data-vote="yes"]').waitFor();
   await page.keyboard.press('y');
   await page.locator('#vote-state').getByText('Seu voto: aprovar').waitFor();
+  await page.evaluate(()=>{ window.hudSlides.length = 0; });
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
+  await page.locator('#legislative-dock').waitFor({state:'hidden'});
+  await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
   await page.locator('#session[data-phase="ballot"]').waitFor();
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});

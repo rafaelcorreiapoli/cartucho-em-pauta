@@ -74,3 +74,20 @@ test('the television notice follows the interview lifecycle and ignores unrelate
   hud.render({...active,phase:'finished'});
   expect(hud.television.get()).toBeUndefined();
 });
+
+test('the central countdown follows the authoritative last 30 seconds before voting',()=>{
+  const match = new PlenaryMatch(1);
+  const hud = createHudModel();
+  match.start(player.id,[{...player}],0,()=>0);
+  const render = (now:number) => hud.render(match.view(player.id,[player.id],now));
+  const deadline = match.view(player.id,[player.id],0).remaining*1000;
+  render(deadline-31_000);
+  expect(hud.countdown.get()).toBeUndefined();
+  render(deadline-30_000);
+  expect(hud.countdown.get()).toBe(30);
+  render(deadline-1000);
+  expect(hud.countdown.get()).toBe(1);
+  match.advance(deadline);
+  render(deadline);
+  expect(hud.countdown.get()).toBeUndefined();
+});

@@ -807,21 +807,41 @@
   #context-hud, #connection-latency, #electoral-notice-mount
 ) { display: none; }
 
-#session[data-phase="ballot"][data-in-plenary="true"] #command-strip {
-  grid-template-columns: minmax(0,1fr);
+@media (max-width: 760px) {
+  #session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
 }
-#session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
-  grid-column: 1;
-  justify-self: center;
-}
-#session[data-phase="ballot"][data-in-plenary="true"] #command-deck {
-  grid-template-columns: minmax(0,1fr);
-}
-#session[data-phase="ballot"][data-in-plenary="true"] #legislative-dock {
-  grid-column: 1;
-  justify-self: center;
-  width: min(100%, 960px);
+#command-deck #legislative-dock {
+  position: absolute;
+  inset: auto 0 0;
+  margin-inline: auto;
+  width: min(calc(100% - 2 * var(--hud-edge)), 960px);
   box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+    transition: translate 220ms ease, opacity 180ms ease, display 220ms allow-discrete;
+  }
+  #session :is(.character-dock, .election-and-incidents) { --hud-slide: 0 -24px; }
+  #session :is(#agenda-dock, .deck-tools, #context-hud, #legislative-dock) { --hud-slide: 0 24px; }
+
+  #session[data-phase="ballot"][data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
+  #session:not([data-in-plenary="true"]) #legislative-dock,
+  #session[data-phase="negotiation"] #legislative-dock {
+    translate: var(--hud-slide);
+    opacity: 0;
+    interactivity: inert;
+  }
+
+  @starting-style {
+    #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+      translate: var(--hud-slide);
+      opacity: 0;
+    }
+  }
 }
 
 #session:has(.election-and-incidents #active-fire) #world #hud-notices {
@@ -831,4 +851,24 @@
 #session[data-phase="ballot"][data-in-plenary="true"] #world #hud-notices {
   inset-block-start: 88px;
   margin-block-start: 0;
+}
+
+
+#congress-dock .congress-meter { zoom: .8; }
+.plenary-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: max-content;
+  margin: 7px auto 0;
+  padding: 4px 9px;
+  border: 1px solid #8f794b;
+  border-radius: 999px;
+  background: #101e17eb;
+}
+.plenary-countdown strong { color: #f2d89c; font-variant-numeric: tabular-nums; min-width: 4ch; }
+#command-strip #congress-dock {
+  flex-direction: column;
+  gap: 0;
 }

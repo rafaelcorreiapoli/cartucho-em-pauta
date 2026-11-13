@@ -26,9 +26,15 @@ function Laurel({right=false}:{right?:boolean}) {
   </svg>;
 }
 
-function Parliament({state}:{state:HudModel['congress']}) {
+function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudModel['countdown']}) {
   const values = useSyncExternalStore(state.subscribe,state.get);
-  return <ParliamentMetrics {...values}/>;
+  return <><ParliamentMetrics {...values}/><PlenaryCountdown state={countdown}/></>;
+}
+
+function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
+  const remaining = useSyncExternalStore(state.subscribe,state.get);
+  if (remaining===undefined) return null;
+  return <div className="plenary-countdown"><Icon name="clock"/>Votação começa em <strong>{remaining} s</strong></div>;
 }
 
 export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
@@ -181,7 +187,7 @@ export function mountReactHud() {
   levelRoot.render(<Level state={profile}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
-  parliamentRoot.render(<Parliament state={congress}/>);
+  parliamentRoot.render(<Parliament state={congress} countdown={model.countdown}/>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,
