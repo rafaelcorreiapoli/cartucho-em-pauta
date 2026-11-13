@@ -1,5 +1,6 @@
 import {fireRules,fireSites} from './fire';
 import { updateProgress } from './progress-meter';
+import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
 import { voteIntentSummary, agendaProject, MIN_PLAYERS, stations, STATION_RADIUS, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
 
@@ -16,7 +17,7 @@ function showImpact(prefix:'yes' | 'no', effect:Impact) {
   }
 }
 
-export function createPlenaryPanel(id:string, send:(type:string, data?:string|number|{infiltrators:number}) => void) {
+export function createPlenaryPanel(id:string, send:(type:string, data:number|{infiltrators:number}) => void, command:ReturnType<typeof createRoomCommandSender>) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   function countPicker(id:string,initial:number) {
@@ -41,12 +42,12 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
     brief.hidden = true;
   }
   start.onclick = () => send('start-match',{infiltrators:infiltrators()});
-  for (const button of actions) button.onclick = () => send('plenary-action',button.dataset.action);
-  for (const button of votes) button.onclick = () => send('bill-vote',button.dataset.vote);
+  for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
+  for (const button of votes) button.onclick = () => command('bill-vote',{vote:button.dataset.vote as Vote});
 
   const intentButtons = [...element('intent-controls').querySelectorAll<HTMLButtonElement>('[data-intent]')];
   for (const button of intentButtons) {
-    button.onclick = ()=>send('bill-intent',button.dataset.intent);
+    button.onclick = ()=>command('bill-intent',{vote:button.dataset.intent as Vote|'clear'});
   }
 
   function updateActions() {

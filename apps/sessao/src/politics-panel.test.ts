@@ -16,12 +16,16 @@ test('political, election and mail commands share a sequence on the room connect
   send('politics',transfer);
   send('election',{kind:'invest',amount:2});
   send('mail-examine',{notice:7});
+  send('bill-intent',{vote:'yes'});
+  send('bill-vote',{vote:'no'});
   send('politics',transfer);
   expect(commands).toEqual([
     ['politics',{...transfer,token:1}],
     ['election',{kind:'invest',amount:2,token:2}],
     ['mail-examine',{notice:7,token:3}],
-    ['politics',{...transfer,token:4}],
+    ['bill-intent',{vote:'yes',token:4}],
+    ['bill-vote',{vote:'no',token:5}],
+    ['politics',{...transfer,token:6}],
   ]);
   expect(readRoomCommandToken({token:1})).toBe(1);
   for (const token of [undefined,0,-1,1.2,Infinity,'1']) expect(readRoomCommandToken({token})).toBeUndefined();

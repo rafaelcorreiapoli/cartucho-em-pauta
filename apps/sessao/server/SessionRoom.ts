@@ -226,9 +226,11 @@ export class SessionRoom extends Room {
       client.send('mail-result',error ?? null);
       if (!error) this.broadcast('mail-state',this.internalMail.view());
     });
-    this.onMessage('plenary-action', (client, action:unknown) => {
+    this.onMessage('plenary-action', (client, raw:unknown) => {
+      if (!raw || typeof raw!=='object' || !('action' in raw)) return;
+      const {action} = raw;
       const player = this.players.get(client.sessionId)?.player;
-      if (player && !player.knockedOut && !player.carrying && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
+      if (player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
         const result = this.match.act(player,action,this.clock.currentTime);
         if (result) client.send('audit-result',result);
       }
@@ -302,11 +304,19 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (action && player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
     });
-    this.onMessage('bill-intent',(client,vote:unknown)=>{
-      if (vote==='yes' || vote==='no' || vote==='clear') this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
+    this.onMessage('bill-intent',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
+      const {vote} = raw;
+      if ((vote==='yes' || vote==='no' || vote==='clear') && this.consumeRoomCommand(client.sessionId,raw)) {
+        this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
+      }
     });
-    this.onMessage('bill-vote', (client, vote:unknown) => {
-      if (vote==='yes' || vote==='no') this.match.vote(client.sessionId,vote,this.clock.currentTime);
+    this.onMessage('bill-vote',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
+      const {vote} = raw;
+      if ((vote==='yes' || vote==='no') && this.consumeRoomCommand(client.sessionId,raw)) {
+        this.match.vote(client.sessionId,vote,this.clock.currentTime);
+      }
     });
     this.onMessage('input', (client, data: unknown) => {
       const input = readInput(data);

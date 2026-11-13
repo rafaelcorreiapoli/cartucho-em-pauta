@@ -289,7 +289,10 @@ async function connect(join: () => Promise<Room>) {
     const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
-      if (type!=='bill-vote') map.focus({preventScroll:true});
+      map.focus({preventScroll:true});
+    },(channel,action)=>{
+      sendCommand(channel,action);
+      if (channel!=='bill-vote') map.focus({preventScroll:true});
     });
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';

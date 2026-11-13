@@ -1,6 +1,6 @@
 import type { ElectionAction } from './elections';
 import type { PoliticsAction } from './politics';
-
+import type { Action, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
 type RoomActions = {
@@ -9,6 +9,9 @@ type RoomActions = {
   'mail-publish':{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};
   'mail-examine':{notice:number};
   'complaint-submit':{id:number;photo?:number};
+  'plenary-action':{action:Action};
+  'bill-intent':{vote:Vote|'clear'};
+  'bill-vote':{vote:Vote};
 };
 
 export function createRoomCommandSender(send:(channel:keyof RoomActions,command:RoomActions[keyof RoomActions] & {token:number})=>void) {
