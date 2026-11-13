@@ -53,7 +53,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const players = Reflect.get(room,'players') as Map<string,{player:Player}>;
     const move = (peer:Room,point:{x:number;y:number})=>Object.assign(players.get(peer.sessionId)!.player,point);
     const state = (peer:Room)=>views.get(peer.sessionId)?.gameplay;
-    alice.send('start-match');
+    alice.send('start-match',{npcs:0});
     await wait(()=>state(alice));
     const economy = Reflect.get(match,'economy');
     const account = Reflect.get(economy,'accounts').get(alice.sessionId);
@@ -115,9 +115,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(report.authentic).toBe(false);
     expect(reports.get(alice.sessionId)).toEqual([]);
     await wait(()=>state(bia)?.inventory.some(item=>item.kind==='forensicKit')===false);
-    move(caio,{x:npcs.vendor.x+8,y:npcs.vendor.y+11});
+    const balance = views.get(bia.sessionId)!.politics!.wallet;
+    move(caio,{x:npcs.vendor.x,y:npcs.vendor.y+21});
     caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false});
-    await wait(()=>views.get(bia.sessionId)?.politics?.wallet===7);
+    await wait(()=>views.get(bia.sessionId)?.politics?.wallet===balance+4);
     const nextShop = await wait(()=>{
       const current = state(bia)?.dialogue;
       return current?.shop && current.token!==shop.token ? current : undefined;
