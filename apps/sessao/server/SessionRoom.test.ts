@@ -1,6 +1,6 @@
 import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
-import {stations} from '../src/plenary';
+import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
@@ -267,6 +267,40 @@ test('clients share movement and voice, then receive private roles and payments'
     await solo.leave();
     const afterLeaving = await fetch(endpoint+'/metrics').then(response=>response.text());
     expect(afterLeaving).toMatch(/congresso_matches_finished_total [1-9]/);
+
+    await Promise.all([second.leave(),third.leave()]);
+    const full = await new Client(endpoint).create('plenary',{nick:'Lotação 1'});
+    rooms.push(full);
+    const lobby = [full];
+    for (let index=1;index<MAX_PLAYERS;index++) {
+      const peer = await new Client(endpoint).joinById(full.roomId,{nick:`Lotação ${index+1}`});
+      rooms.push(peer);
+      lobby.push(peer);
+    }
+    const active = new Set<string>();
+    for (const peer of lobby) {
+      track(peer);
+      peer.onMessage('players',()=>{});
+      peer.onMessage('plenary',(view:PlenaryView)=>{
+        if (view.phase==='negotiation' && view.electorate===MAX_PLAYERS) active.add(peer.sessionId);
+      });
+    }
+    full.send('start-match',{npcs:0,token:1});
+    await until(()=>active.size===MAX_PLAYERS && lobby.every(peer=>controls.get(peer.sessionId)?.revision!==undefined));
+    const readMetrics = async ()=>fetch(endpoint+'/metrics').then(response=>response.text());
+    const ticks = (value:string)=>Number(value.match(/^congresso_simulation_ticks_total (\d+)$/m)?.[1]);
+    const beforeBurst = await readMetrics();
+    for (let input=1;input<=8;input++) {
+      for (const peer of lobby) {
+        peer.send('input',{seq:input,revision:controls.get(peer.sessionId)!.revision,motion:{x:0,y:input%2 ? 1 : -1}});
+      }
+      await Bun.sleep(40);
+    }
+    await until(()=>lobby.every(peer=>controls.get(peer.sessionId)?.ack===8));
+    const afterBurst = await readMetrics();
+    expect(afterBurst).toContain('congresso_matches_started_total 4\n');
+    expect(ticks(afterBurst)).toBeGreaterThan(ticks(beforeBurst));
+    expect(afterBurst).not.toContain(full.roomId);
 
 
   } finally {
