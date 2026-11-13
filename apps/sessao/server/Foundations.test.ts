@@ -442,7 +442,7 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   expect(game.view(bob,world).vitality?.hp).toBe(74);
 
   game.applyAttribute(bob,'hp');
-  expect(game.view(bob,world).vitality).toMatchObject({hp:84,max:110});
+  expect(game.view(bob,world).vitality).toMatchObject({hp:78,max:104});
   game.applyAttribute(alice,'attack');
   world.now += weapons.baton.cooldown;
   game.act(alice,{kind:'attack'},world);

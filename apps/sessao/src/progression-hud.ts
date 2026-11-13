@@ -2,7 +2,7 @@ import { characterStats } from './character-stats';
 import type { Player } from './map';
 import type { PlenaryView } from './plenary';
 import { missionReward, money } from './politics';
-import { attributeUpgrades, baseDefense, baseStamina, type Attribute, type AttributeRequest, type Progression } from './progression';
+import { attributeUpgrades, baseAttribute, baseDefense, baseStamina, type Attribute, type AttributeRequest, type Progression } from './progression';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos`;
@@ -31,16 +31,25 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     const row = document.createElement('section');
     const info = document.createElement('div');
     const label = document.createElement('strong');
-    const bonus = document.createElement('small');
+    const resourceRow = document.createElement('section');
+    const resourceLabel = document.createElement('strong');
+    const resourceValue = document.createElement('span');
+    const {label:attributeLabel,resource,bonus} = attributeUpgrades[attribute];
     const value = document.createElement('span');
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hud-button hud-button--secondary';
-    button.textContent = `+${attributeUpgrades[attribute].bonus}`;
+    button.textContent = '+1';
+    button.title = `+1 ${attributeLabel} · +${bonus} ${resource}`;
     button.setAttribute('aria-keyshortcuts',String(index+1));
     button.setAttribute('aria-label',`Investir em ${attributeUpgrades[attribute].label}`);
     label.textContent = attributeUpgrades[attribute].label;
-    info.append(label,bonus);
+    const benefit = document.createElement('small');
+    benefit.textContent = `+1 dá +${bonus} ${attribute==='hp' ? 'PV máximos' : attribute==='stamina' ? 'stamina máxima' : resource}`;
+    info.append(label,benefit);
+    resourceLabel.textContent = resource;
+    resourceRow.append(resourceLabel,resourceValue);
+    element('attribute-resources').append(resourceRow);
     row.append(info,value,button);
     element('attribute-list').append(row);
     button.onclick = () => {
@@ -51,7 +60,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       for (const row of rows) row.button.disabled = true;
       send({attribute,revision:latest.revision,matchId:latest.matchId});
     };
-    return {attribute,row,value,bonus,button};
+    return {attribute,row,value,resourceValue,button};
   });
 
   let latest:Progression|undefined;
@@ -78,12 +87,11 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       defense:baseDefense+invested.defense*attributeUpgrades.defense.bonus};
     const hp = view?.gameplay?.vitality?.hp ?? maxHp;
     const stamina = Math.floor(player.stamina ?? staminaMax);
-    for (const {attribute,value,bonus,button} of rows) {
+    for (const {attribute,value,resourceValue,button} of rows) {
       const max = values[attribute];
       const current = attribute==='hp' ? `${hp}/${max}` : attribute==='stamina' ? `${stamina}/${max}` : String(max);
-      const upgrade = attributeUpgrades[attribute].bonus;
-      value.textContent = available ? `${current} → ${max+upgrade}` : current;
-      bonus.textContent = `+${invested[attribute]*upgrade} por evolução`;
+      value.textContent = String(baseAttribute+invested[attribute]);
+      resourceValue.textContent = current;
       button.disabled = !available || requested===revision || view?.phase!=='negotiation' ||
         !!player.knockedOut || !!player.carrying || !view?.gameplay;
     }
@@ -201,6 +209,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       launch.hidden = xpPanel.hidden = true;
       sparks.replaceChildren();
       element('attribute-list').replaceChildren();
+      element('attribute-resources').replaceChildren();
     },
   };
 

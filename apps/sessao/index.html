@@ -487,7 +487,16 @@
           <form method="dialog"><button class="hud-button hud-button--secondary">Fechar</button></form>
         </header>
         <p id="attributes-available" role="status"></p>
-        <div id="attribute-list"></div>
+        <div class="attribute-columns">
+          <section class="attribute-panel" aria-labelledby="attribute-list-title">
+            <h3 id="attribute-list-title">Atributos</h3>
+            <div id="attribute-list"></div>
+          </section>
+          <section class="attribute-panel" aria-labelledby="attribute-resources-title">
+            <h3 id="attribute-resources-title">Recursos</h3>
+            <div id="attribute-resources"></div>
+          </section>
+        </div>
       </dialog>
       <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr com o tênis equipado</p>
     </section>
