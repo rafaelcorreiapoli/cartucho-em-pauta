@@ -61,7 +61,7 @@ for (const portrait of new Set(Object.values(objects).map(item=>item.portrait)))
 }
 
 // These portraits use the extended WebP header for their transparent canvas.
-for (const kind of ['coffee','forensicKit','firstAidKit','baton','wiretap','spyCamera','bugDetector','vip','cabinetLock'] as const) {
+for (const kind of ['coffee','forensicKit','firstAidKit','baton','wiretap','spyCamera','bugDetector','vip','cabinetLock','lockKit','proLockKit','decoder','masterDecoder'] as const) {
   test(`the ${kind} portrait has a 256 × 256 canvas and alpha`,async()=>{
     const portrait = objects[kind].portrait;
     const asset = Bun.file(new URL('../public/assets/'+portrait,import.meta.url));
@@ -73,3 +73,8 @@ for (const kind of ['coffee','forensicKit','firstAidKit','baton','wiretap','spyC
     expect(header.getUint8(7)+(header.getUint16(8,true)<<8)).toBe(255);
   });
 }
+
+test('every item has a distinct inventory portrait',()=>{
+  const portraits = Object.values(objects).map(item=>item.portrait);
+  expect(new Set(portraits).size).toBe(portraits.length);
+});
