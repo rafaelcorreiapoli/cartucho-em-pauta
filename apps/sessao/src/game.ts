@@ -550,7 +550,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             view.items.add([backdrop,icon]);
           });
         }
-        view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-39).setVisible(!!exposed.length);
+        view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-44).setVisible(!!exposed.length);
         const title = titles.get(id);
         office.setVisible(running || !!title).setPosition(x,labelY+6)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
