@@ -6,6 +6,8 @@ import { needsFieldToken, type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
+import { createSurveillancePanel } from './surveillance-panel';
+import type { PhotoScene } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { showNewResults } from './results';
 import { setCharacterPortrait } from './character-art';
@@ -199,9 +201,13 @@ async function connect(join: () => Promise<Room>) {
     let fieldToken = 0;
     const sendGameplay = (action:GameplayAction) =>
       joined.send('gameplay',needsFieldToken(action.kind) ? {...action,token:++fieldToken} : action);
+    const surveillance = createSurveillancePanel(action=>joined.send('spy',action));
+    joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
+    joined.onDrop(()=>surveillance.render(undefined));
     const npcPanel = createParliamentarianPanel(action=>joined.send('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
-    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo));
+    const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
+      option=>joined.send('spy',option));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -209,6 +215,7 @@ async function connect(join: () => Promise<Room>) {
     },activity => joined.send('room-activity',activity),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { joined.send('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='spy') { joined.send('spy',action.option); return; }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
@@ -251,6 +258,7 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       gameplay.render(view);
+      surveillance.render(view.gameplay?.surveillance);
       market.render(view);
       npcPanel.update(view);
       const disguise = view.gameplay?.modulator?.active ?? false;
@@ -330,6 +338,7 @@ async function connect(join: () => Promise<Room>) {
       panel.destroy();
       hud.destroy();
       progression.destroy();
+      surveillance.destroy();
       gameplay.destroy();
       market.destroy();
       npcPanel.destroy();

@@ -480,8 +480,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.npc ? `${player.nick} · NPC` : player.nick)
-          .setColor(latest.knockedOut ? '#ffbf9f' : '#fff7df');
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick)
+          .setColor(player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df');
         const exposed = latest.exposed ?? [];
         const itemsKey = exposed.map(item=>item.kind).join(',');
         if (view.itemsKey!==itemsKey) {

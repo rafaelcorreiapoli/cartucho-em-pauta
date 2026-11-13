@@ -8,7 +8,7 @@ import { npcs, type DialogueCondition } from '../src/npcs';
 import { canReachObject, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
-import { inPhotoFrame, type Decoration, type Photo, type PhotoPerson } from '../src/photography';
+import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
 import { stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
@@ -20,6 +20,9 @@ import { VoiceEquipment } from './VoiceEquipment';
 import { binocularBonus, equippedWeapon, equipment, isGear, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
+
+import { Surveillance } from "./Surveillance";
+import { cameraSees, isSpyProduct, spyProducts, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
@@ -33,6 +36,7 @@ const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
+  private surveillance = new Surveillance();
   private roomSamples = new Map<string,{room:string; at:number}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
@@ -55,6 +59,7 @@ export class Gameplay {
 
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.items.clear();
+    this.surveillance.reset();
     this.roomSamples.clear();
     this.privateOffices.reset(players,officeRandom);
     this.syncOfficeDoors(players,now);
@@ -231,6 +236,7 @@ export class Gameplay {
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
+    this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world.now);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring);
@@ -284,6 +290,7 @@ export class Gameplay {
   }
 
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
+    this.surveillance.leave(player.id,permanent);
     this.privateOffices.channels.delete(player.id);
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
@@ -357,6 +364,73 @@ export class Gameplay {
       requests,
       ...this.phone.view(id,world.players),
       locations:nearbyLocations,
+    };
+  }
+
+  private spyAccess(world:GameplayWorld) {
+    return {
+      ground:()=>this.groundItems(world.now),
+      inventory:(id:string)=>this.inventory(id).map(({data})=>data),
+      consume:(id:string,serial:number)=>{
+        const item = this.inventory(id).find(({data})=>data.id===serial);
+        if (!item) return false;
+        this.remove(item);
+        return true;
+      },
+      restore:(id:string,kind:SpyDevice)=>{
+        if (!this.available(id)) return false;
+        this.create(kind,{holder:id});
+        return true;
+      },
+      feedback:(id:string,message:string)=>world.feedback?.(id,message),
+      event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string)=>
+        publishGameplay(world,player,kind,{place:site,witnesses:[]}),
+    };
+  }
+
+  spyView(player:Player,world:GameplayWorld) {
+    return this.surveillance.view(player,world.now,this.spyAccess(world),true);
+  }
+
+  spyVolume(listener:Player,talker:Player) { return this.surveillance.volume(listener,talker); }
+  spySound(id:string,now:number) { this.surveillance.sound(id,now); }
+
+  spyAction(player:Player,raw:unknown,world:GameplayWorld) {
+    if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
+    if (raw.kind==='close' || raw.kind==='cancel') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
+    if (player.knockedOut || player.carried || player.carrying || this.hasOfficeChannel(player.id)) return;
+    if (raw.kind!=='capture') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
+    const device = this.surveillance.channel(player.id,'spyCamera');
+    const frame = this.spyFrame(player,world);
+    if (!device || !frame) return;
+    const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
+      Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
+    const result = this.album.capture(player.id,world.now,id=>({
+      ...frame,people:frame.people.filter(inBounds),ground:frame.ground.filter(inBounds),
+      decorations:frame.decorations.filter(inBounds),id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
+      location:device.room,selfie:false,source:{kind:'surveillance',channel:device.name},transfers:[],
+    }));
+    if (typeof result==='string') return result;
+    publishGameplay(world,player,'photo',{photo:result,witnesses:[]});
+    return 'Foto guardada no álbum.';
+  }
+
+  spyFrame(player:Player,world:GameplayWorld):PhotoScene|undefined {
+    const device = this.surveillance.channel(player.id,'spyCamera');
+    if (!device || player.knockedOut || player.carried) return;
+    const barriers = player.barriers?.filter(([x,y,w,h])=>
+      Math.hypot(x+w/2-device.site.x,y+h/2-device.site.y)<=spyRules.range+Math.hypot(w,h)/2);
+    const camera = this.surveillance.origin(device,barriers);
+    const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
+    const visible = (point:Motion)=>cameraSees(camera,point);
+    return {center,camera,
+      people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
+        id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
+        direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
+        exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),
+      })),
+      ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
+      decorations:[...this.installations.values()].filter(visible).map(item=>({...item})),
     };
   }
 
@@ -662,7 +736,7 @@ export class Gameplay {
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
       const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood) return 'Produto indisponível.';
+      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind)) return 'Produto indisponível.';
       if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
@@ -670,7 +744,7 @@ export class Gameplay {
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
+      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
       const data = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {

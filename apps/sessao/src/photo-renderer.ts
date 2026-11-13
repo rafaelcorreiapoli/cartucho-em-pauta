@@ -34,13 +34,18 @@ export class PhotoRenderer {
     ctx.fillStyle = '#101d19';
     ctx.fillRect(0,0,width,height);
     ctx.drawImage(this.map,-left,-top);
+    if (scene.camera) {
+      ctx.fillStyle = '#334e42';
+      for (const [x,y,w,h] of scene.camera.barriers ?? []) ctx.fillRect(x-left,y-top,w,h);
+    }
     this.fog.width = Math.ceil(width/4);
     this.fog.height = Math.ceil(height/4);
     const mask = this.fog.getContext('2d')!;
     mask.fillStyle = '#081710a8';
-    for (let y=0;y<this.fog.height;y++) {
+    for (let y=0;!scene.camera && y<this.fog.height;y++) {
       for (let x=0;x<this.fog.width;x++) {
-        if (!localPerception(scene.center,{x:left+x*4+2,y:top+y*4+2}).visible) mask.fillRect(x,y,1,1);
+        const point = {x:left+x*4+2,y:top+y*4+2};
+        if (!localPerception(scene.center,point).visible) mask.fillRect(x,y,1,1);
       }
     }
     ctx.drawImage(this.fog,0,0,width,height);

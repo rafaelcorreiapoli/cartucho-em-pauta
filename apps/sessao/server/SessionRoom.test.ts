@@ -1,3 +1,4 @@
+import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
 import { expect, test } from 'bun:test';
@@ -243,10 +244,12 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const views = new Map<string,PlenaryView>();
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
+    const spyFrames = new Map<string,PhotoScene>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
+      peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
       peer.onMessage('gear-purchased',(item:{id:number;kind:string})=>purchases.set(peer.sessionId,item));
       for (const message of ['players','photo-state','gameplay-feedback','item-obtained']) peer.onMessage(message,()=>{});
     }
@@ -284,6 +287,24 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const purchase = purchases.get(carrier.sessionId);
     expect(purchase).toEqual(gameplay()?.inventory.find(item=>item.kind==='baton'));
     expect(purchases.has(passenger.sessionId)).toBe(false);
+    carrier.send('gameplay',{kind:'shop-buy',target:'spyCamera',token:gameplay()?.dialogue?.token});
+    await wait(()=>gameplay()?.inventory.some(item=>item.kind==='spyCamera')===true);
+    const camera = gameplay()!.inventory.find(item=>item.kind==='spyCamera')!;
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:240,y:250});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:245,y:252});
+    carrier.send('spy',{kind:'install',site:'coffee',item:camera.id});
+    await wait(()=>gameplay()?.surveillance?.progress!==undefined);
+    await Bun.sleep(5100);
+    await wait(()=>gameplay()?.surveillance?.channels.length===1);
+    const channel = gameplay()!.surveillance!.channels[0].id;
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
+    passenger.send('spy',{kind:'open',channel});
+    carrier.send('spy',{kind:'open',channel});
+    await wait(()=>spyFrames.get(carrier.sessionId)?.people.some(person=>person.id===passenger.sessionId)===true);
+    expect(spyFrames.has(passenger.sessionId)).toBe(false);
+    expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
+    carrier.send('spy',{kind:'close'});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     carrier.send('gameplay',{kind:'equip',item:purchase?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
     for (let token=1;token<=4;token++) {
@@ -323,4 +344,4 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);
   }
-},15_000);
+},25_000);

@@ -41,7 +41,10 @@ export class RoomVoice {
       this.sendUntil = 0;
       for (const id of this.peers.keys()) this.removePeer(id);
     });
-    room.onMessage('voice-range', (levels:[string,number][]) => this.setRange(new Map(levels)));
+    room.onMessage('voice-range', (levels:[string,number,boolean?][]) => {
+      this.remoteOnly = new Set(levels.filter(([, ,local])=>local===false).map(([id])=>id));
+      this.setRange(new Map(levels.map(([id,level])=>[id,level])));
+    });
     room.onMessage('voice-roster', (ids: string[]) => this.syncPeers(ids));
     room.onMessage('voice-signal', ({from,signal}: {from:string; signal:VoiceSignal}) => {
       const peer = this.peers.get(from);
@@ -91,6 +94,7 @@ export class RoomVoice {
   }
 
   setRange(range?: Map<string,number>) {
+    if (!range?.size) this.remoteOnly.clear();
     this.range = range;
     for (const [id,peer] of this.peers) this.updateGain(id,peer);
   }
@@ -224,6 +228,9 @@ export class RoomVoice {
     return {source,analyser,buffer:new Float32Array(analyser.fftSize),lastSound:-Infinity};
   }
 
+  private remoteOnly = new Set<string>();
+  private activitySent = 0;
+
   private measure() {
     const now = performance.now();
     const speaking = new Set<string>();
@@ -235,7 +242,11 @@ export class RoomVoice {
       if (now-meter.lastSound<260) speaking.add(id);
     };
     if (!this.muted) sample(this.room.sessionId,this.localMeter);
-    for (const [id,peer] of this.peers) if (this.volume(id)>0) sample(id,peer.meter);
+    if (speaking.has(this.room.sessionId) && now-this.activitySent>=250) {
+      this.activitySent = now;
+      this.room.send('voice-activity');
+    }
+    for (const [id,peer] of this.peers) if (!this.remoteOnly.has(id) && this.volume(id)>0) sample(id,peer.meter);
     this.onSpeaking(speaking);
   }
 }
