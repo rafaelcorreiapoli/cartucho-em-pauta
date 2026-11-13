@@ -1,5 +1,7 @@
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
+import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
+import {missionReward} from '../politics';
 import type {Player} from '../map';
 import {terminals} from '../gameplay';
 import {createHudModel} from './hud-model';
@@ -90,4 +92,48 @@ test('the central countdown follows the authoritative last 30 seconds before vot
   match.advance(deadline);
   render(deadline);
   expect(hud.countdown.get()).toBeUndefined();
+});
+
+test('replayed pizza installation leaves the HUD unchanged until a valid Pizzada is completed',()=>{
+  const players = [player,...['bia','caio','dani'].map(id=>({...player,id,nick:id}))];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  match.start(player.id,players,0,()=>0);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const event = {actor:player.id,position:terminals.coffee.point,item:15,kind:'pizza'} as const;
+  const installation = {...event,type:'installed',at:1} as const;
+  const serve = (at:number)=>{
+    for (const [index,target] of ids.slice(1).entries()) {
+      economy.recordGameplay({...event,type:'slice',target,at:at+index,witnesses:[]});
+    }
+  };
+  economy.recordGameplay({...installation,witnesses:[]});
+  economy.recordOfficialScandal();
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  const hud = createHudModel();
+  const render = ()=>hud.render(match.view(player.id,ids,0));
+  render();
+  const previous = hud.agenda.get();
+  expect(previous?.active).toContainEqual(expect.objectContaining({kind:'pizzada',current:0}));
+  const xp = hud.profile.get()?.xp ?? 0;
+  let agendaUpdates = 0;
+  hud.agenda.subscribe(()=>agendaUpdates++);
+
+  economy.recordGameplay({...installation,witnesses:[]});
+  serve(2);
+  render();
+  expect(hud.agenda.get()).toBe(previous);
+  expect(hud.profile.get()?.xp).toBe(xp);
+  expect(agendaUpdates).toBe(0);
+
+  economy.recordGameplay({...installation,at:10,witnesses:[]});
+  serve(11);
+  render();
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('pizzada').xp);
+  expect(agendaUpdates).toBe(1);
 });
