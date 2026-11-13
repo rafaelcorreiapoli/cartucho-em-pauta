@@ -1,3 +1,4 @@
+import { Parliamentarians } from './Parliamentarians';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
 
@@ -382,13 +383,17 @@ test('concealment filters cash from observers and photos through reconnect and c
   game.robNpc(alice,npc,world);
   const cash = game.view(alice,world).inventory.find(item=>item.kind==='briefcase')!;
   expect(game.visibleItems(alice.id,world.now)).toContainEqual({id:cash.id,kind:'briefcase'});
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(true);
   game.act(alice,{kind:'use',item:underwear.id},world);
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(false);
+  expect(game.hasVisibleCash(alice.id,world.now,alice.id)).toBe(true);
   expect(game.act(alice,{kind:'use',item:underwear.id},world)).toBe('Objeto indisponível.');
   expect(game.visibleItems(alice.id,world.now)).toEqual([{id:gift.id,kind:'gift'}]);
   expect(game.visibleItems(alice.id,world.now,alice.id)).toHaveLength(2);
   expect(game.physicalCash()).toBe(12);
   game.act(alice,{kind:'drop',item:cash.id},world);
   expect(game.view(alice,world).ground.some(item=>item.id===cash.id)).toBe(true);
+  expect(game.hasVisibleCash(alice.id,world.now,alice.id)).toBe(false);
   game.robNpc(alice,npc,world);
   expect(game.visibleItems(alice.id,world.now)).toHaveLength(1);
   Object.assign(alice,{x:240,y:250});
@@ -402,6 +407,7 @@ test('concealment filters cash from observers and photos through reconnect and c
   world.now = 45_000;
   game.tick(world,false);
   expect(game.view(alice,world).concealmentSeconds).toBeUndefined();
+  expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(true);
   expect(game.visibleItems(alice.id,world.now)).toHaveLength(2);
   expect(events.filter(event=>event.type.startsWith('concealment')).map(event=>event.witnesses)).toEqual([[],[]]);
 });
@@ -453,12 +459,22 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(events.filter(event=>event.type.startsWith('xray')).map(event=>event.witnesses)).toEqual([[],[],[],[]]);
 });
 
-test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
-  const {alice,bob,watcher,game,world,events} = setup();
+test('an NPC raises its quote only after witnessing a weapon hit',()=>{
+  const {alice,bob,game,world,events} = setup();
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
   Object.assign(bob,{x:alice.x+9,y:alice.y});
-  watcher.npc = true;
-  Object.assign(watcher,{x:alice.x-14,y:alice.y});
+  const parliamentarians = new Parliamentarians();
+  parliamentarians.reset(2,world.now);
+  const [witness,unaware] = parliamentarians.players;
+  Object.assign(witness,{x:alice.x-14,y:alice.y});
+  Object.assign(unaware,{x:720,y:240});
+  world.players = [alice,bob,witness,unaware];
+  world.publish = event=>{
+    events.push(event);
+    parliamentarians.witnessAggression(event);
+  };
+  const quote = (npc:Player) => parliamentarians.signature(npc.id,alice.id);
+  const before = parliamentarians.players.map(quote);
   world.spend = ()=>true;
   game.act(alice,{kind:'talk',target:'vendor'},world);
   game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
@@ -472,10 +488,13 @@ test('an NPC witnesses a weapon hit only with an unobstructed view',()=>{
     game.tick(world,true);
     return events.filter(event=>event.type==='hit').at(-1);
   };
-  expect(strike(100)?.witnesses).toEqual([watcher.id]);
-  world.vision = id=>id===watcher.id ? 10 : 100;
-  expect(strike(2000)?.witnesses).toEqual([]);
+  world.vision = id=>id===witness.id ? 10 : 100;
+  expect(strike(100)?.witnesses).toEqual([]);
+  expect(parliamentarians.players.map(quote)).toEqual(before);
   world.vision = ()=>100;
-  Object.assign(watcher,{x:720,y:240});
+  expect(strike(2000)?.witnesses).toEqual([witness.id]);
+  expect(quote(witness)).toBeGreaterThan(before[0]);
+  expect(quote(unaware)).toBe(before[1]);
+  Object.assign(witness,{x:720,y:240});
   expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });

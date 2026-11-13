@@ -2,15 +2,18 @@ import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/a
 
 const files = {
   music:'corredores-de-brasilia.mp3',
+  ballotMusic:'plenario-em-ebulicao.m4a',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
+  eat:'comer.wav', drink:'beber.wav',
   swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',
   foot1:'passo-1.wav', foot2:'passo-2.wav', foot3:'passo-3.wav', foot4:'passo-4.wav',
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
-export type Cue = Exclude<Sample,'music' | `foot${number}`>;
+type Score = 'music'|'ballotMusic';
+export type Cue = Exclude<Sample,Score | `foot${number}`>;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
 export class GameAudio {
@@ -18,7 +21,9 @@ export class GameAudio {
   private context?: AudioContext;
   private musicGain?: GainNode;
   private effectsGain?: GainNode;
-  private music?: AudioBufferSourceNode;
+  private score:Score = 'music';
+  private music?: {score:Score;source:AudioBufferSourceNode;gain:GainNode;started:number};
+  private fading = new Set<AudioBufferSourceNode>();
   private buffers = new Map<Sample,AudioBuffer>();
   private loading?:Promise<void>;
   private playing = false;
@@ -68,28 +73,55 @@ export class GameAudio {
         const response = await fetch(`${import.meta.env.BASE_URL}assets/audio/${files[key]}`);
         if (!response.ok) return;
         this.buffers.set(key,await context.decodeAudioData(await response.arrayBuffer()));
-        if (key==='music') this.startMusic();
+        if (key==='music' || key==='ballotMusic') this.startMusic();
       } catch {}
     })).then(() => {});
     this.startMusic();
   }
 
+  setBallotMusic(voting:boolean) {
+    const score = voting ? 'ballotMusic' : 'music';
+    if (this.score===score) return;
+    this.score = score;
+    this.startMusic();
+  }
+
   leave() {
     this.playing = false;
-    this.music?.stop();
-    this.music?.disconnect();
-    this.music = undefined;
+    this.stopMusic(0);
+    for (const source of this.fading) source.stop();
+    this.score = 'music';
     this.setSpeaking(false);
   }
 
+  private stopMusic(fade:number) {
+    const track = this.music;
+    if (!track || !this.context) return;
+    this.music = undefined;
+    const now = this.context.currentTime;
+    track.gain.gain.cancelScheduledValues(now);
+    track.gain.gain.setValueAtTime(Math.min(1,(now-track.started)/.7),now);
+    track.gain.gain.linearRampToValueAtTime(0,now+fade);
+    this.fading.add(track.source);
+    track.source.stop(now+fade);
+  }
+
   private startMusic() {
-    const buffer = this.buffers.get('music');
-    if (!this.playing || this.music || !buffer || !this.context || !this.musicGain) return;
-    this.music = this.context.createBufferSource();
-    this.music.buffer = buffer;
-    this.music.loop = true;
-    this.music.connect(this.musicGain);
-    this.music.start();
+    const score = this.buffers.has(this.score) ? this.score : 'music';
+    const buffer = this.buffers.get(score);
+    if (!this.playing || this.music?.score===score || !buffer || !this.context || !this.musicGain) return;
+    const now = this.context.currentTime;
+    this.stopMusic(.7);
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    gain.gain.setValueAtTime(0,now);
+    gain.gain.linearRampToValueAtTime(1,now+.7);
+    source.connect(gain).connect(this.musicGain);
+    source.onended = () => { this.fading.delete(source); source.disconnect(); gain.disconnect(); };
+    this.music = {score,source,gain,started:now};
+    source.start(now);
   }
 
   cue(name:Cue) { this.play(name,.62,0,1); }

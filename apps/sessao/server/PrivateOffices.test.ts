@@ -28,9 +28,9 @@ function setup(count=2) {
     return game.act(player,{kind,place,item},world);
   }
   function tick(ms:number,exploring=true) { world.now += ms; game.tick(world,exploring); }
-  function openShop(player:Player) {
-    Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y-11});
-    game.act(player,{kind:'talk',target:'vendor'},world);
+  function openShop(player:Player, furniture=false) {
+    Object.assign(player,furniture ? npcs.furnitureVendor.interaction : {x:npcs.vendor.x,y:npcs.vendor.y-11});
+    game.act(player,{kind:'talk',target:furniture ? 'furnitureVendor' : 'vendor'},world);
     game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
     return game.view(player,world).dialogue?.token;
   }
@@ -172,12 +172,15 @@ test('shop purchases furnish the correct office slots even when the inventory is
   for (let i=0;i<INVENTORY_SLOTS;i++) buy(owner,'lockpick');
   let charged = 0;
   world.spend = (_id,price)=>{ charged += price; return true; };
+  expect(game.act(owner,{kind:'shop-buy',target:'officeTv',token:openShop(owner)},world)).toBe('Este produto não é vendido aqui.');
+  expect(findRoute(home.spawn,npcs.furnitureVendor.interaction).at(-1)).toEqual(npcs.furnitureVendor.interaction);
+  expect(game.act(owner,{kind:'shop-buy',target:'lockpick',token:openShop(owner,true)},world)).toBe('Este produto não é vendido aqui.');
   const products = ['officeTv','officeRug','officeChair'] as const;
   for (const target of products) {
-    const purchase = {kind:'shop-buy',target,token:openShop(owner)} as const;
+    const purchase = {kind:'shop-buy',target,token:openShop(owner,true)} as const;
     expect(game.act(owner,purchase,world)).toBe('Compra instalada no seu gabinete.');
     expect(game.act(owner,purchase,world)).toBe('Abra o catálogo do vendedor.');
-    expect(game.act(owner,{...purchase,token:openShop(owner)},world)).toBe('Você já tem este móvel instalado.');
+    expect(game.act(owner,{...purchase,token:openShop(owner,true)},world)).toBe('Você já tem este móvel instalado.');
   }
   expect(charged).toBe(7);
   expect(game.view(owner,world).inventory.map(item=>item.kind)).toEqual(Array(INVENTORY_SLOTS).fill('lockpick'));
@@ -197,7 +200,7 @@ test('shop purchases furnish the correct office slots even when the inventory is
 test('decoration persists and a plenary call cancels breach without spending the tool',()=>{
   const {players:[owner,visitor],game,world,act,tick,buy,openShop,events} = setup();
   const [home] = privateOffices;
-  game.act(owner,{kind:'shop-buy',target:'officeTv',token:openShop(owner)},world);
+  game.act(owner,{kind:'shop-buy',target:'officeTv',token:openShop(owner,true)},world);
   const tv = events.find(event=>event.type==='installed')!.item!;
   const tool = buy(visitor,'lockpick');
   Object.assign(owner,decorPoint(home,'officeTv'));

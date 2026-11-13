@@ -20,7 +20,7 @@ import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
+import { gearConflict, binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -193,6 +193,15 @@ export class Gameplay {
       (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
   }
 
+  installedPizza(id:string) {
+    const pizza = this.installations.get('pizza');
+    if (!pizza?.slices) return;
+    const served = this.servings.get(pizza.id) ?? new Set<string>();
+    return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
+  }
+
+  hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
+
   officeStock(id:string) {
     const office = this.privateOffices.ownedBy(id);
     return office ? decorSlots.filter(isOfficeFurniture).filter(kind=>!this.installations.has(`office:${office.id}:${kind}`)) : [];
@@ -248,9 +257,10 @@ export class Gameplay {
     if (stack) {
       stack.data.quantity = itemQuantity(stack.data)+itemQuantity(item.data);
       this.remove(item);
-    } else {
-      this.move(item,{holder:id});
+      return stack.data;
     }
+    this.move(item,{holder:id});
+    return item.data;
   }
 
   private move(item:Item, place:Place) {
@@ -280,6 +290,11 @@ export class Gameplay {
     const items = this.exposed.get(id) ?? new Set<number>();
     items.add(item);
     this.exposed.set(id,items);
+  }
+
+  hasVisibleCash(id:string,now:number,observer:string) {
+    if (observer!==id && (this.concealedUntil.get(id) ?? 0)>now) return false;
+    return this.inventory(id).some(({data})=>!!cashAmount(data));
   }
 
   visibleItems(id:string,now=Infinity,observer?:string) {
@@ -334,7 +349,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'photo'|'project'|'place'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -625,7 +640,7 @@ export class Gameplay {
 
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
-    const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
+    const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
@@ -989,23 +1004,28 @@ export class Gameplay {
   private buyProduct(player:Player, requested:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
-    return this.dialogues.purchase(player,token,npc=>{
+    return this.dialogues.purchase(player,token,(npc,direct)=>{
       const product = marketProduct(npcs[npc].catalog,requested);
       if (!product) {
-        return marketProduct('equipment',requested) || marketProduct('food',requested)
+        return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price} = product;
+      const autoEquip = direct && isGear(kind) && !gearConflict(kind,this.equipped(id).map(({data})=>data));
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
-      } else if (!this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
+      } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
       if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
-      if (canStackItem(kind)) this.addToInventory(this.items.get(data.id)!,id);
-      this.event(world,player,'purchased',data);
+      const inventoryItem = canStackItem(kind) ? this.addToInventory(this.items.get(data.id)!,id).id : data.id;
+      if (autoEquip) {
+        this.changeGear(player,data.id,true,world);
+        confirmation = 'Compra equipada.';
+      }
+      this.event(world,player,'purchased',data,undefined,{inventoryItem});
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
         confirmation = 'Compra instalada no seu gabinete.';
@@ -1028,15 +1048,18 @@ export class Gameplay {
     }
   }
 
-  private changeGear(player:Player, itemId:number|undefined, equip:boolean, world:GameplayWorld) {
+  private changeGear(player:Player, itemId:number|undefined, equip:boolean, world:GameplayWorld, replacement?:number) {
     const {id} = player;
     const item = itemId===undefined ? undefined : this.items.get(itemId);
     if (!item || !isGear(item.data.kind)) return 'Equipamento indisponível.';
     if (equip) {
       if (!('holder' in item.place) || item.place.holder!==id) return 'O equipamento não está com você.';
-      const slot = equipment[item.data.kind].slot;
-      if (this.equipped(id).some(({data})=>isGear(data.kind) && equipment[data.kind].slot===slot)) return 'Este espaço já está ocupado.';
+      const conflict = gearConflict(item.data.kind,this.equipped(id).map(({data})=>data));
+      if (replacement!==undefined && replacement!==conflict?.id) return 'O equipamento neste espaço mudou.';
+      if (conflict && replacement===undefined) return equipment[item.data.kind].slot===equipment[conflict.kind as Gear].slot
+        ? 'Este espaço já está ocupado.' : 'Os dois espaços de acessórios estão ocupados.';
       this.move(item,{equipped:id});
+      if (conflict) this.changeGear(player,conflict.id,false,world);
       if (item.data.kind==='runningShoes') player.canSprint = true;
       this.event(world,player,'equipped',item.data);
       return 'Equipado.';
@@ -1082,8 +1105,8 @@ export class Gameplay {
     if (action.kind==='treat') return this.treat(player,world);
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';
     if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
-    if (action.kind==='talk') {
-      const error = this.dialogues.open(player,action.target);
+    if (action.kind==='talk' || action.kind==='open-shop') {
+      const error = this.dialogues.open(player,action.target,action.kind==='open-shop');
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
       return error;
     }
@@ -1108,6 +1131,7 @@ export class Gameplay {
     }
     if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
+    if (action.kind==='replace-gear' && action.token!==undefined) return this.changeGear(player,action.item,true,world,action.token);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
     if (action.kind==='toggle-megaphone') {
       if (this.megaphoneSpeaker()===id) {

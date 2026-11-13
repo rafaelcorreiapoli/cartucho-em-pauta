@@ -79,12 +79,18 @@
     <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
       <div id="world">
         <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
-        <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
+        <span id="connection-latency" title="Latência de ida e volta ao gameserver" hidden></span>
         <div id="wallet-effects" role="status">
           <template id="wallet-gain">
             <div class="wallet-gain"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong></strong></div>
           </template>
         </div>
+        <div id="electoral-notice-mount"></div>
+        <div id="megaphone-status"></div>
+        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
+        <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
+      </div>
+      <div id="context-hud">
         <section id="stations" aria-label="Ações próximas" hidden>
           <div class="station-actions">
             <div class="station-grid">
@@ -100,18 +106,15 @@
               <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
             </div>
             <div id="office-progress-mount"></div>
-            <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
+            <div class="context-nearby">
+              <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
+              <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
+            </div>
             <div id="station-shortcuts"></div>
             <div id="field-actions"></div>
-            <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden></div>
           </div>
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
-        <aside id="electoral-notice" class="hud-strip" role="status" hidden></aside>
-        <div id="megaphone-status"></div>
-        <div id="agenda-dock"></div>
-        <div id="hud-notices" popover="manual" role="status" aria-label="Eventos da sessão"></div>
-        <aside id="object-request" class="hud-panel" aria-label="Pedidos de jogadores" hidden></aside>
       </div>
       <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
         <div id="room-setup">
@@ -145,179 +148,80 @@
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
-          <div class="personal-resources">
-            <span><button class="resource-help profile-help" type="button" aria-label="Dinheiro na carteira" data-help="Este é o seu saldo atual. Você pode usar esse dinheiro para negociar ou investir na sua campanha."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg></button><strong id="hud-wallet"></strong></span>
-            <span><button class="resource-help profile-help" type="button" aria-label="Popularidade" data-help="Sua popularidade é uma nota de 0 a 100 que influencia sua força na disputa eleitoral."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button><strong id="hud-popularity"></strong></span>
+          <div class="character-dock">
+            <section id="profile-dock" aria-label="Seu personagem">
+              <div class="profile-portrait">
+                <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
+                <div id="profile-xp-reward" role="status"></div>
+              </div>
+              <div class="deck-identity">
+                <div class="profile-name-row">
+                  <strong id="hud-nick"></strong>
+                  <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
+                  <span id="profile-level-mount"></span>
+                </div>
+                <div class="profile-subtitle">
+                  <small id="hud-office">Parlamentar</small>
+                  <small id="own-office" hidden></small>
+                </div>
+                <div id="profile-resources"></div>
+              </div>
+              <div id="profile-vitals"></div>
+            </section>
+            <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
           </div>
           <div id="congress-dock" class="hud-module"></div>
-          <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-            <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small>Renovação em</small><strong id="election-timer"></strong></span></summary>
-            <div class="hud-panel politics-content">
-              <div class="electoral-metrics">
-                <div><span><button class="resource-help profile-help" type="button" aria-label="Investimento na campanha" data-help="Total que você já gastou na campanha deste ciclo."><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span><strong id="election-wallet"></strong></div>
+          <div class="election-and-incidents">
+            <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
+              <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
+              <div class="hud-panel politics-content">
+                <div id="election-cycle"></div>
+                <section aria-label="Pesquisa eleitoral">
+                  <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
+                  <div id="election-polls"></div>
+                </section>
+                <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
               </div>
-              <details id="election-result" hidden>
-                <summary id="election-result-title">Última renovação</summary>
-                <p id="election-result-detail"></p>
-              </details>
-              <section aria-label="Pesquisa eleitoral">
-                <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
-                <div id="election-polls"></div>
-              </section>
-              <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
-            </div>
-          </details>
+            </details>
+            <div id="active-fire-mount"></div>
+          </div>
         </header>
+        <div id="agenda-dock"></div>
         <footer id="command-deck" aria-label="Painel de partida">
-          <section id="profile-dock" aria-label="Seu personagem">
-            <div class="profile-portrait">
-              <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
-              <div id="profile-vitals"></div>
-              <div id="profile-xp-reward" role="status"></div>
-            </div>
-            <div class="deck-identity">
-              <div class="profile-name-row">
-                <strong id="hud-nick"></strong>
-                <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
-                <span id="profile-level-mount"></span>
-              </div>
-              <small id="hud-office" hidden>Ex-parlamentar</small>
-              <small id="own-office" hidden></small>
-            </div>
-          </section>
           <section id="legislative-dock" aria-label="Situação legislativa">
-            <div id="project-outcome-brief" role="status" hidden>
-              <div><strong id="brief-verdict"></strong><span id="brief-project"></span></div>
-              <div class="brief-scores">
-                <span title="Votos a favor"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><strong id="brief-yes"></strong></span>
-                <span title="Votos contra"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><strong id="brief-no"></strong></span>
-                <span title="Variação de estabilidade"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="brief-stability"></strong></span>
-                <span title="Variação do orçamento"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="brief-budget"></strong></span>
-              </div>
-            </div>
-            <p id="project-session-result" hidden></p>
+            <div id="project-outcome-brief" role="status" hidden></div>
             <div id="proposal">
-              <div class="deck-project-heading">
-                <div class="bill-heading">
-                  <div class="deck-project-meta"><span id="bill-round"></span><span>Fase <strong id="phase"></strong></span></div>
-                  <h2 id="bill"></h2>
-                </div>
-                <div class="clock-chip"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg><span><small id="clock-label"></small><strong id="clock"></strong></span></div>
-              </div>
-              <p id="active-fire" class="hud-feedback" aria-live="off" hidden></p>
+              <div id="project-heading" class="deck-project-heading"></div>
               <div class="deck-project-controls">
-                <div id="impact" aria-label="Impacto de cada decisão">
-                  <div class="impact-card">
-                    <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg>Se aprovar</h3>
-                    <div class="impact-values">
-                      <span title="Estabilidade"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="yes-stability"></strong><span class="sr-only"> estabilidade</span></span>
-                      <span title="Orçamento"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="yes-budget"></strong><span class="sr-only"> orçamento</span></span>
-                    </div>
-                  </div>
-                  <div class="impact-card">
-                    <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg>Se rejeitar</h3>
-                    <div class="impact-values">
-                      <span title="Estabilidade"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-shield"/></svg><strong id="no-stability"></strong><span class="sr-only"> estabilidade</span></span>
-                      <span title="Orçamento"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="no-budget"></strong><span class="sr-only"> orçamento</span></span>
-                    </div>
-                  </div>
-                </div>
-                <div id="ballot" hidden>
-                  <div class="ballot-progress">
-                    <p id="quorum"></p><p id="vote-state" role="status" hidden></p>
-                    <progress id="vote-progress" aria-label="Participação na votação" max="12" value="0"></progress>
-                  </div>
-                  <div class="station-grid">
-                    <button class="hud-button" data-vote="yes" aria-pressed="false" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Aprovar</span></button>
-                    <button class="hud-button hud-button--secondary" data-vote="no" aria-pressed="false" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Rejeitar</span></button>
-                  </div>
-                </div>
+                <div id="impact" aria-label="Impacto de cada decisão" hidden></div>
+                <div id="ballot-host" hidden></div>
               </div>
             </div>
             <div class="deck-project-links">
               <details id="project-details" name="game-panels">
                 <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Detalhes</span></summary>
-                <div class="hud-panel deck-popover">
-                  <h2 id="project-details-title">Projeto atual</h2>
-                  <p id="bill-description"></p>
-                  <p id="intent-summary" aria-label="Intenções de voto" hidden></p>
-                  <div id="intent-controls" class="flex gap-2" aria-label="Declarar intenção de voto" hidden>
-                    <button type="button" class="hud-button hud-button--secondary" data-intent="yes">Pretendo aprovar</button>
-                    <button type="button" class="hud-button hud-button--secondary" data-intent="no">Pretendo rejeitar</button>
-                    <button type="button" class="hud-button hud-button--secondary" data-intent="clear">Retirar</button>
-                  </div>
-                  <p class="hud-feedback" id="bill-objection" hidden></p>
-                  <p class="hud-feedback" id="hearing-result" role="status" hidden></p>
-                  <p class="hud-feedback" id="clue" role="status" hidden></p>
-                </div>
+                <div id="project-details-content" class="hud-panel deck-popover"></div>
               </details>
-              <details id="vote-history" class="hud-module" name="game-panels" hidden>
-                <summary><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><strong>Histórico</strong><span id="vote-history-count" hidden></span></summary>
-                <section id="last-vote" class="vote-result" aria-label="Resultado">
-                  <header>
-                    <button type="button" id="vote-prev" aria-label="Votação anterior">‹</button>
-                    <span class="vote-result-title" aria-live="polite"><strong id="outcome-summary"></strong><span id="outcome-bill"></span></span>
-                    <button type="button" id="vote-next" aria-label="Próxima votação">›</button>
-                  </header>
-                  <div id="vote-pages" role="group"></div>
-                  <div class="vote-result-body">
-                    <div class="vote-scoreboard">
-                      <div class="vote-team vote-team-yes">
-                        <span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg> A favor</span>
-                        <strong id="outcome-yes"></strong>
-                      </div>
-                      <span class="vote-versus" aria-hidden="true">×</span>
-                      <div class="vote-team vote-team-no">
-                        <span><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg> Contra</span>
-                        <strong id="outcome-no"></strong>
-                      </div>
-                    </div>
-                    <p id="outcome-threshold"></p>
-                    <p id="outcome" hidden></p>
-                  </div>
-                </section>
-                <div id="outcome-announcement" class="sr-only" role="status"></div>
-              </details>
+              <details id="vote-history" class="hud-module" name="game-panels" hidden></details>
             </div>
           </section>
           <section class="deck-tools" aria-label="Itens e ferramentas">
             <div id="item-slots" role="group" aria-label="Itens carregados" hidden></div>
             <div class="deck-tool-row">
+              <div id="congress-apps"></div>
               <div id="gameplay-tools" hidden>
+                <button id="open-bag" type="button" hidden>Mochila</button>
                 <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (G)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (I)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
-                <button id="open-mail" class="hud-button hud-button--secondary" type="button" aria-label="Correio Interno" title="Correio Interno (U)" aria-keyshortcuts="U"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg></button>
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
               <div id="social-docks">
-                <details id="trade-dock" class="social-module" name="game-panels" hidden>
-                  <summary class="social-trigger" title="Negociação"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><span class="sr-only">Negociação</span></summary>
+                <details id="institutional-dock" class="social-module" name="game-panels" hidden>
+                  <summary class="social-trigger" title="Ações institucionais"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="sr-only">Ações institucionais</span></summary>
                   <div class="politics-content social-panel">
-                    <header class="social-header"><div><h2>Negociação</h2><p class="trade-wallet"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong id="trade-balance"></strong><small>Na carteira</small></p></div><button class="hud-icon-button hud-help" type="button" aria-label="Como negociar" data-help="Combine pela voz e transfira dinheiro para alguém próximo. Nenhum pagamento prende o voto. Campanhas acontecem na Imprensa; para convocar uma afastamento, vá ao Painel com 55 de popularidade.">?</button></header>
+                    <header class="social-header"><h2>Ações institucionais</h2></header>
                     <div id="politics-actions">
-                      <form id="trade">
-                        <div class="social-empty" id="trade-empty" hidden>
-                          <svg class="hud-glyph" aria-hidden="true"><use href="#icon-map"/></svg>
-                          <strong>Ninguém por perto</strong>
-                          <p>Aproxime-se de outro jogador para negociar.</p>
-                        </div>
-                        <div id="trade-recipients" hidden>
-                          <h3>Para quem?</h3>
-                          <div class="choice-grid" id="trade-contact" role="group" aria-label="Destinatário da transferência"></div>
-                        </div>
-                        <div id="trade-controls" hidden>
-                          <div class="transfer-setting">
-                            <span id="trade-value-label">Valor</span>
-                            <div class="game-stepper" id="trade-amount" role="group" aria-labelledby="trade-value-label"></div>
-                          </div>
-                          <div class="transfer-setting">
-                            <span id="trade-privacy-label">Registro</span>
-                            <div class="choice-grid" id="trade-private" role="group" aria-labelledby="trade-privacy-label"></div>
-                          </div>
-                          <button class="hud-button" id="transfer" type="submit">Transferir</button>
-                        </div>
-                      </form>
                       <form id="cabinet-form" hidden>
                         <div class="section-label">Destino da verba</div>
                         <div class="choice-grid" id="grant-split" role="group" aria-label="Destino da verba"></div>
@@ -396,34 +300,30 @@
           <span id="voice-status" role="status"></span>
         </aside>
       </div>
-      <dialog id="internal-mail" class="hud-panel" aria-labelledby="internal-mail-title"></dialog>
+      <div id="phone-mail" class="phone-app-content"></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
       <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title">
         <header><h2 id="result-title">Resultados</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar resultados"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <div id="result-content"></div>
         <form method="dialog"><button class="hud-button">Continuar</button></form>
       </dialog>
+      <dialog id="session-finale" aria-labelledby="session-finale-title"></dialog>
       <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title"></dialog>
       <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <div id="market-body"></div>
       </dialog>
       <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item">
-        <h2 id="equip-purchase-title">Equipar agora?</h2>
+        <h2 id="equip-purchase-title">Substituir equipamento?</h2>
         <p id="equip-purchase-item"></p>
         <div class="equip-purchase-actions">
           <button type="button" class="hud-button" id="equip-purchase-yes">Sim</button>
           <button type="button" class="hud-button hud-button--secondary" id="equip-purchase-no" autofocus>Não</button>
         </div>
       </dialog>
-      <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title">
-        <header><h2 id="action-shortcuts-title">Atalhos de teclado</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form></header>
-        <p>Use os números para agir. Use ← e → para mudar de página.</p>
-        <div class="shortcut-list"></div>
-        <nav class="shortcut-pages" aria-label="Páginas de ações" hidden></nav>
-      </dialog>
+      <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title"></dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
-        <header><h2 id="gameplay-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="0" hidden>✕ <kbd>0</kbd></button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
@@ -433,10 +333,7 @@
         <div class="spy-console"><div id="spy-channels"></div><section id="spy-monitor"></section></div>
       </dialog>
       <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title"></dialog>
-      <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title">
-        <header><h2 id="parliamentarian-title"></h2><form method="dialog"><button class="hud-button hud-button--secondary">Encerrar</button></form></header>
-        <div class="parliamentarian-options"></div>
-      </dialog>
+      <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title"></dialog>
       <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title"></dialog>
       <p id="movement-hint" class="hud-strip">WASD, setas ou toque para andar · Shift para correr com o tênis equipado</p>
     </section>

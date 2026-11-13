@@ -1,31 +1,41 @@
+import { PhonePix } from './ui/phone-pix';
+import type { PoliticsAction } from './politics';
+import { PhoneCamera } from './ui/phone-camera';
+import { PhoneSnake } from './ui/phone-snake';
+import { PhoneCalls } from './ui/phone-call';
+import { PhoneApps, type PhoneApp } from './ui/phone-apps';
+import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
+import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
-import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
 import { isGear } from './equipment';
-import { createPhoneSnake, snakeDirection } from './phone-snake';
+import { paintSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
-import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
+import { button, contactFace, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
-import type { DirectoryContact } from './politics';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
-const apps = {
-  'Telefone':'app-call',
-  'Joguinhos':'app-games',
-  'Câmera':'app-camera',
-  'Álbum':'app-photos',
-} as const;
-type App = keyof typeof apps;
 type InteractionArea = (player:Motion) => boolean;
+
+const bagIcons = {bag:Backpack,food:Coffee,gear:Shirt,grid:Grid2X2,drop:Download};
+
+function BagIcon({name}:{name:keyof typeof bagIcons}) {
+  return <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">
+    {bagIcons[name].map(([tag,attrs],index)=>{
+      const Tag = tag as 'path'|'rect'|'line'|'circle';
+      return <Tag key={index} {...attrs}/>;
+    })}
+  </svg>;
+}
 
 function itemArt(kind:ObjectKind) {
   if (!isGear(kind) && itemSymbols[kind]) {
@@ -44,10 +54,24 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const navigation = element('phone-apps');
+  const navigationRoot = createRoot(navigation);
+  const callHost = document.createElement('div');
+  callHost.className = 'phone-app-content';
+  const callRoot = createRoot(callHost);
+  const cameraHost = document.createElement('div');
+  cameraHost.className = 'phone-app-content';
+  const cameraRoot = createRoot(cameraHost);
+  const albumHost = document.createElement('div');
+  albumHost.className = 'phone-app-content';
+  const albumRoot = createRoot(albumHost);
+  const pixHost = document.createElement('div');
+  pixHost.className = 'phone-app-content';
+  const pixRoot = createRoot(pixHost);
+  const mailHost = element('phone-mail');
   const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
@@ -59,6 +83,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const equipmentRoot = createRoot(equipmentHost);
   const objectsHost = document.createElement('div');
   const objectsRoot = createRoot(objectsHost);
+  const bagTitleIcon = createIcon(Backpack, {class:'hud-glyph bag-title-icon','aria-hidden':'true'});
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
@@ -67,13 +92,23 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let nearbyKey = '';
   let inventoryKey = '';
   let inventoryItems:WorldItem[] = [];
+  let hotbar:readonly (number|undefined)[] = emptyHotbar();
+  const purchases = new Set<number>();
+  let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
-  let app:App = 'Telefone';
+  let app:PhoneApp|undefined;
   let decorationId:number | undefined;
   let equipmentOpen = false;
   let stashOpen = false;
-  const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
+  let bagOpen = false;
+  const bagFilters = ['Todos','Equipamentos','Consumíveis'] as const;
+  let bagFilter:typeof bagFilters[number] = 'Todos';
+  const snakeHost = document.createElement('div');
+  snakeHost.className = 'phone-app-content';
+  const snakeRoot = createRoot(snakeHost);
+  let snakeBoard:HTMLCanvasElement|null = null;
+  const setSnakeBoard = (board:HTMLCanvasElement|null) => { snakeBoard = board; };
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
   let renderKey = '';
@@ -85,26 +120,58 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const doc = item.document;
     const cash = cashAmount(item);
     const food = isFood(item.kind) ? foods[item.kind] : undefined;
+    const isBag = bagOpen && chooseQuantity;
+    const controls = isBag ? [...actions].sort((first,second)=>{
+      const rank = (action:ObjectAction) => action.label==='Equipar' ? 0 : action.label==='Largar no chão' ? 1 : 2;
+      return rank(first)-rank(second);
+    }) : actions;
     return <article className="object-card" key={item.id}>
-      <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
-      <details><summary>Inspecionar</summary><p>{doc?.description ?? definition.description}</p>
-        {doc && <>
-          <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
-          <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
-          {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+      <div className={isBag ? "bag-item-info" : "object-card-content"}>
+        <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
+        {bagOpen && chooseQuantity && <>
+          <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
+          <p className="bag-description">{doc?.description ?? definition.description}</p>
         </>}
-        {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
-        {!!cash && <p>{money(cash)}</p>}
-      </details>
-      {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
-        <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
-          disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
-        <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
-        <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
-          disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
-      </div>}
-      {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
-        aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+        <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
+          {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
+          {doc && <>
+            <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
+            <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
+            {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
+          </>}
+          {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
+          {!!cash && <p>{money(cash)}</p>}
+        </details>
+        {isBag && !!previous?.gameplay?.contacts.length && <label className="bag-recipient">Jogador
+          <select value={target.value} onChange={event=>{target.value = event.currentTarget.value; renderKey = ''; render();}}>
+            <option value="">Escolha…</option>
+            {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+          </select>
+        </label>}
+        {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
+          <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
+            disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
+          <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
+          <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
+            disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
+        </div>}
+      </div>
+      <div className={isBag ? "bag-item-actions" : "object-card-content"}>
+        {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
+          disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
+          <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd>⇧1–6</kbd>
+        </button>}
+        {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+          <span><BagIcon name="grid"/>Adicionar à hotbar</span>
+          {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
+            disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
+            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
+          {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
+            onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
+        </div>}
+        {controls.map(({label,run,key,disabled})=><button type="button" key={label} className="hud-button hud-button--secondary"
+          aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+      </div>
     </article>;
   }
   function changeQuantity(item:WorldItem,delta:number) {
@@ -112,21 +179,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
-  type ObjectAction = {label:string;run:()=>void;key?:string};
+  type ObjectAction = {label:string;run:()=>void;key?:string;disabled?:boolean};
 
-  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false) {
+  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
     selection = item;
     quantity = 1;
     decorationId = decoration;
     equipmentOpen = equipment;
     stashOpen = stash;
+    bagOpen = bag;
+    if (bag) bagFilter = 'Todos';
+    if (!bag) assigningSlot = undefined;
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
     renderKey = '';
-    element('gameplay-title').textContent = stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
-    navigation.hidden = object || equipment || stash;
-    dialog.dataset.mode = equipment || stash ? 'equipment' : object ? 'item' : 'phone';
+    element('gameplay-title').textContent = bag ? 'Inventário' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    if (bag) element('gameplay-title').prepend(bagTitleIcon);
+    navigation.hidden = true;
+    dialog.dataset.mode = bag ? 'bag' : equipment || stash ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -137,38 +208,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     open();
   }
 
-  const appButtons = (Object.keys(apps) as App[]).map(title => {
-    const tile = button(title,() => {
-      if (app==='Joguinhos' && title!=='Joguinhos') send({kind:'game-stop'});
-      photos.closePresentation();
-      app = title;
-      photos.resetSelection();
-      render();
-    });
-    tile.className = 'phone-app';
-    tile.dataset.app = apps[title];
-    const art = node('span');
-    art.className = 'phone-app-icon';
-    art.append(glyph(apps[title]));
-    tile.prepend(art);
-    navigation.append(tile);
-    return {tile,title};
-  });
-
-  function phoneContacts(contacts:DirectoryContact[]) {
-    if (!contacts.length) return node('p','Ninguém mais na sala.');
-    const grid = node('div');
-    grid.className = 'phone-contacts';
-    for (const person of contacts) {
-      const tile = button('',()=>send({kind:'call',target:person.id}));
-      tile.className = 'phone-contact';
-      tile.setAttribute('aria-label',`Ligar para ${person.name}`);
-      const dial = glyph('handset');
-      dial.classList.add('phone-contact-dial');
-      tile.append(contactFace(person),node('strong',person.name),dial);
-      grid.append(tile);
+  let navigationMounted = false;
+  function selectApp(next?:PhoneApp) {
+    if (app==='Joguinhos' && next!=='Joguinhos') {
+      send({kind:'game-stop'});
+      snakeRoot.render(null);
     }
-    return grid;
+    photos.closePresentation();
+    if (next==='Correio' && app!=='Correio') resetMail();
+    app = next;
+    photos.resetSelection();
+    render();
   }
 
   function render() {
@@ -178,10 +228,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (!dialog.open || !state || !view) return;
     const stash = stashOpen ? state.officeStash : undefined;
     if (stashOpen && !stash) { dialog.close(); return; }
-    const phone = !selection && decorationId===undefined && !equipmentOpen && !stash;
+    const phone = !selection && decorationId===undefined && !equipmentOpen && !stash && !bagOpen;
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
+    if (bagOpen && selection && !item) selection = undefined;
     if ((selection && !item) || (decorationId!==undefined && !decoration)) {
       dialog.close();
       return;
@@ -195,23 +246,93 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       target.replaceChildren(new Option('Escolha…',''),...contacts.map(person=>new Option(person.name,person.id)));
       if (contacts.some(person=>person.id===selected)) target.value = selected;
     }
-    element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
-    for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
+    element('gameplay-target-label').hidden = bagOpen || selection?.source!=='inventory' || !contacts.length;
+    navigation.hidden = !phone || !!app;
+    const back = element<HTMLButtonElement>('phone-back');
+    back.hidden = !phone || !app;
+    back.onclick = ()=>selectApp();
+    element('gameplay-close').hidden = phone && !!app;
+    if (phone && !navigationMounted) {
+      navigationMounted = true;
+      navigationRoot.render(<PhoneApps select={selectApp}/>);
+    }
     const phase = view.phase;
-    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
+      app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory] :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
-      state.game?.status;
-    if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,app,phase,visible]);
+      [state.game?.status,state.game?.score];
+    if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
-    photos.stopPreview();
+    if (!phone || app!=='Câmera') cameraRoot.render(null);
     const cards:HTMLElement[] = [];
     if (stash) {
       flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
+      cards.push(objectsHost);
+    }
+    function renderBag(detail?:ReturnType<typeof objectCard>) {
+      const inventory = state!.inventory;
+      const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
+        (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
+      return <div className="bag-layout">
+        <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
+          {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
+            onClick={()=>{bagFilter = filter;selection = undefined;render();}}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
+        </div>
+        <div className="bag-storage">
+          <div className="congress-bag">
+            {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+              const entry = filtered[index];
+              return entry ? <button key={entry.id} type="button" className="item-tile" title={itemName(entry)}
+                aria-label={itemName(entry)} aria-pressed={selection?.id===entry.id}
+                disabled={assigningSlot!==undefined && !canPinToHotbar(entry)}
+                onClick={()=>{
+                  if (assigningSlot!==undefined) {
+                    hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
+                    dialog.close();
+                  } else {
+                    selection = {id:entry.id,source:'inventory'};
+                    quantity = 1;
+                    render();
+                  }
+                }}>
+                <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
+                {itemQuantity(entry)>1 && <span className="slot-count">×{itemQuantity(entry)}</span>}
+              </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
+            })}
+          </div>
+          <p className="bag-capacity"><BagIcon name="bag"/>{inventory.length} / {INVENTORY_SLOTS} slots</p>
+        </div>
+        <div className="bag-detail">{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
+        <footer className="bag-preview">
+          <strong>Hotbar <span>(atalhos rápidos)</span></strong>
+          <div className="bag-preview-slots">
+            {hotbar.map((id,index)=>{
+              const pinned = inventory.find(entry=>entry.id===id);
+              return <button type="button" key={index} className="item-tile"
+                disabled={!item || !canPinToHotbar(item)} aria-pressed={!!item && item.id===id}
+                aria-label={`Vincular ao slot ${index+1}`} aria-keyshortcuts={item && canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
+                onClick={()=>{
+                  if (!item) return;
+                  hotbar = id===item.id ? hotbar.map((entry,slot)=>slot===index ? undefined : entry) : assignHotbarSlot(hotbar,index,item.id);
+                  highlightSlot();
+                  renderKey = '';
+                  render();
+                }}>
+                <kbd className="slot-key">{index+1}</kbd>
+                {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
+              </button>;
+            })}
+          </div>
+        </footer>
+      </div>;
+    }
+    if (bagOpen && !item) {
+      flushSync(()=>objectsRoot.render(renderBag()));
       cards.push(objectsHost);
     }
     if (equipmentOpen) {
@@ -253,13 +374,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
-        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
+        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip',undefined,bagOpen ? '7' : undefined);
+        else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
         if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
-        if ('exposable' in definition) {
-          const exposed = state.exposed.includes(item.id);
-          act(exposed ? 'Guardar na mochila' : 'Expor acima do personagem',exposed ? 'conceal' : 'expose');
-        }
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : 'Instalar ou substituir';
@@ -269,7 +387,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           act('Oferecer','offer');
           if (item.document) act('Pedir assinatura','sign-request');
         }
-        act('Largar','drop');
+        act('Largar no chão','drop',undefined,bagOpen ? '8' : undefined);
         if ('destructible' in definition) act('Destruir','destroy');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
@@ -279,7 +397,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
-      flushSync(()=>objectsRoot.render(objectCard(item,actions,selection?.source==='inventory')));
+      const detail = objectCard(item,actions,selection?.source==='inventory');
+      flushSync(()=>objectsRoot.render(bagOpen ? renderBag(detail) : detail));
       cards.push(objectsHost);
     }
     if (decoration) {
@@ -300,55 +419,41 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       cards.push(card);
     }
     if (phone) {
-      cards.push(node('h3',app));
+      element('gameplay-title').textContent = app ?? 'Celular';
       if (app==='Telefone') {
-        const call = state.call;
-        if (call) {
-          const caller = node('div');
-          caller.className = 'phone-caller';
-          const person = directory.find(person=>person.id===call.peer.id) ?? call.peer;
-          const status = call.state==='incoming' ? 'Chamada recebida' : call.state==='outgoing' ? 'Chamando…' : 'Em ligação';
-          caller.append(contactFace(person),node('strong',person.name),node('span',status));
-          cards.push(caller);
-          if (call.state==='incoming') {
-            const answer = button('Atender',()=>send({kind:'answer'}));
-            answer.classList.add('phone-answer');
-            answer.prepend(glyph('handset'));
-            cards.push(answer);
-          }
-          const hangup = button(call.state==='incoming' ? 'Recusar' : 'Encerrar',()=>send({kind:'hangup'}));
-          hangup.classList.add('phone-hangup');
-          hangup.prepend(glyph('cross'));
-          cards.push(hangup);
-        } else if (phase==='negotiation') cards.push(phoneContacts(directory.filter(person=>person.id!==ownId)));
-        else cards.push(node('p','Ligações ficam disponíveis durante a articulação.'));
+        flushSync(()=>callRoot.render(<PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
+          available={phase==='negotiation'} send={send}/>));
+        cards.push(callHost);
       }
       if (app==='Joguinhos') {
-        if (phase!=='negotiation') cards.push(node('p','O jogo está disponível durante a articulação.'));
-        else if (!state.game) {
-          const game = button('Snake',()=>send({kind:'game-start'}));
-          game.className = 'snake-launch';
-          game.prepend(glyph('snake'));
-          cards.push(game);
-        } else {
-          cards.push(snake.element);
-          if (state.game.status==='won' || state.game.status==='lost') {
-            cards.push(button('Jogar de novo',()=>send({kind:'game-start'})));
-          }
-          cards.push(button('Voltar aos joguinhos',()=>send({kind:'game-stop'})));
-        }
+        flushSync(()=>snakeRoot.render(<PhoneSnake game={state.game} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>));
+        if (state.game && snakeBoard) paintSnake(snakeBoard,state.game);
+        cards.push(snakeHost);
       }
-      if (app==='Câmera') photos.renderCamera(cards,phase,openPersonalAlbum);
-      if (app==='Álbum') photos.renderAlbum(cards,contacts,directory,
-        state.locations.includes('press') && phase==='negotiation');
+      if (app==='Câmera') {
+        flushSync(()=>cameraRoot.render(<PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count} available={phase==='negotiation'}
+          preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>));
+        cards.push(cameraHost);
+      }
+      if (app==='Correio') cards.push(mailHost);
+      if (app==='Pix' && view.politics) {
+        flushSync(()=>pixRoot.render(<PhonePix ownId={ownId} politics={view.politics!} send={sendPolitics}/>));
+        cards.push(pixHost);
+      }
+      if (app==='Álbum') {
+        flushSync(()=>albumRoot.render(photos.renderAlbum(contacts,directory,
+          state.locations.includes('press') && phase==='negotiation')));
+        cards.push(albumHost);
+      }
     }
+    body.hidden = phone && !app;
     body.replaceChildren(...(cards.length ? cards : [node('p',phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.')]));
     if (focused) body.querySelector<HTMLButtonElement>('button')?.focus();
   }
 
   function itemButton(kind:ObjectKind, name:string, verb:string, action:()=>void) {
     const tile = button('',action);
-    tile.className = 'item-tile';
+    tile.className = 'item-tile context-item';
     tile.dataset.kind = kind;
     tile.title = `${verb} · ${name}`;
     tile.setAttribute('aria-label',`${verb} ${name}`);
@@ -360,25 +465,35 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function renderSlots(inventory:WorldItem[]) {
     const key = JSON.stringify(inventory);
-    if (key===inventoryKey) return;
+    if (key===inventoryKey && !purchases.size) return;
     inventoryKey = key;
     inventoryItems = inventory;
+    hotbar = reconcileHotbar(hotbar,inventory);
+    for (const item of inventory) {
+      if (purchases.delete(item.id) && consumableAction(item)) hotbar = pinPurchasedConsumable(hotbar,item.id);
+    }
     highlightSlot();
   }
 
   function highlightSlot() {
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
-      const item = inventoryItems[index];
+      const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
       const shortcut = index+1;
-      const badge = <kbd className="slot-key" aria-hidden="true">⇧{shortcut}</kbd>;
-      if (!item) return <span className="item-tile item-tile-empty" key={index} aria-hidden="true">{badge}</span>;
+      const badge = <kbd className="slot-key" aria-hidden="true">{shortcut}</kbd>;
+      if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
+        aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
+        onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
+        {badge}<span className="slot-plus" aria-hidden="true">+</span>
+      </button>;
       const name = itemName(item);
+      const use = consumableAction(item);
+      const label = use ? `${use.label} · ${name}` : `Abrir ${name}`;
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
-        aria-label={'Abrir '+name} title={`Abrir · ${name} (Shift+${shortcut})`} aria-haspopup="dialog"
+        aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
-        onClick={()=>open({id:item.id,source:'inventory'})}>
+        onClick={()=>use ? send(use.action) : open({id:item.id,source:'inventory'})}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
-        <span className="item-caption">{name}</span>{badge}
+        {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </button>;
     }));
   }
@@ -400,7 +515,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       event.preventDefault();
       return;
     }
-    if (slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
+    if (dialog.open && bagOpen && event.shiftKey && /^Digit[1-6]$/.test(event.code) &&
+        !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      const buttons = objectsHost.querySelectorAll<HTMLButtonElement>('.bag-preview-slots button');
+      event.preventDefault();
+      buttons[Number(event.code.at(-1))-1]?.click();
+      return;
+    }
+    if (dialog.open || slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
     const slot = slots.children[Number(event.code.at(-1))-1];
     if (!(slot instanceof HTMLButtonElement)) return;
@@ -422,6 +544,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   function setNearbyExpanded(expanded:boolean) {
     nearbyItems.hidden = !expanded;
     nearbyButton.setAttribute('aria-expanded',String(expanded));
+    if (expanded) nearbyItems.scrollTop = 0;
   }
 
   function pickUp(area:InteractionArea, action:()=>void) {
@@ -431,11 +554,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
-  phoneButton.onclick = () => open();
+  phoneButton.onclick = () => { app = undefined; open(); };
+  element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
-    photos.stopPreview();
+    cameraRoot.render(null);
+    renderKey = '';
     selection = undefined;
+    assigningSlot = undefined;
     highlightSlot();
     if (previous?.gameplay?.game) send({kind:'game-stop'});
     photos.closePresentation();
@@ -511,7 +637,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') pendingPickup = undefined;
+      if (view.phase!=='negotiation') { pendingPickup = undefined; setNearbyExpanded(false); }
+      if (document.querySelector('dialog:modal')) setNearbyExpanded(false);
       tools.hidden = !view.gameplay;
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
@@ -544,6 +671,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       }
       render();
     },
+    purchasedConsumable(id:number) { purchases.add(id); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);
@@ -567,7 +695,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       dialog.close();
       tools.hidden = element('object-request').hidden = true;
       delete element('object-request').dataset.request;
-      navigation.replaceChildren();
+      navigationRoot.unmount();
+      callRoot.unmount();
+      cameraRoot.unmount();
+      albumRoot.unmount();
+      pixRoot.unmount();
+      snakeRoot.unmount();
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       equipmentRoot.unmount();

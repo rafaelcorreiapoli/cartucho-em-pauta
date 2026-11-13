@@ -1,0 +1,89 @@
+#session-finale {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  background: #06120e;
+  color: #fff4df;
+}
+.session-finale {
+  --finale-accent: #ffe08e;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-items: center;
+  min-height: 100%;
+  background: radial-gradient(ellipse at center, #08120dd4, #08120d50 65%, #050b08dd);
+}
+.session-finale[data-outcome="saved"] {
+  background: radial-gradient(ellipse, #071b13e6 12%, #071b1355 75%), url('/assets/congress-saved.webp') center/cover;
+}
+.session-finale[data-outcome="destroyed"] {
+  --finale-accent: #ff9b6e;
+  background: radial-gradient(ellipse, #210b08ed 12%, #210b0855 75%), url('/assets/congress-destroyed.webp') center/cover;
+}
+.finale-content {
+  position: relative;
+  width: min(74rem, 100%);
+  text-align: center;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 5vh, 4rem) 1rem;
+  animation: finale-reveal .65s cubic-bezier(.15,.65,.28,1) both;
+}
+.finale-content h2 {
+  margin: 0;
+  color: var(--finale-accent);
+  font: 900 clamp(2.4rem, 7vw, 6rem)/.98 var(--party-display);
+  text-wrap: balance;
+  text-shadow: 0 .09em .4em #000, 0 0 .65em color-mix(in srgb,var(--finale-accent),transparent 65%);
+}
+.finale-reason { margin: 1rem 0; font-size: clamp(1rem, 2vw, 1.25rem); }
+.finale-teams { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; margin-block: 2rem; }
+.finale-team {
+  flex: 1 1 min(21rem, 100%);
+  max-width: 37rem;
+  padding: 1rem;
+  border: 1px solid #fff4df45;
+  border-radius: 1rem;
+  background: #0c1111ba;
+}
+.finale-team h3 { margin: 0 0 .8rem; font: 800 1.25rem var(--party-display); }
+.finale-team:first-child h3 { color: var(--finale-accent); }
+.finale-team ul { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin: 0; padding: 0; list-style: none; }
+.finale-team li { display: grid; justify-items: center; align-content: start; gap: .25rem; width: 6rem; overflow-wrap: anywhere; }
+.finale-team .portrait { display: block; --portrait-size: 4.5rem; border: 1px solid #fff4df70; border-radius: .65rem; }
+.finale-team small { color: #ded5c6; }
+.finale-particles { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; }
+.finale-particles i {
+  position: absolute;
+  left: var(--particle-x);
+  top: 0;
+  width: .55rem;
+  height: .9rem;
+  background: #ffdc80;
+  animation: finale-confetti var(--particle-duration) var(--particle-delay) linear 3 both;
+}
+.finale-particles i:nth-child(3n) { background: #69dca5; }
+.finale-particles i:nth-child(3n + 1) { background: #fff0d2; }
+[data-outcome="destroyed"] .finale-particles i {
+  top: auto;
+  bottom: 0;
+  width: .35rem;
+  height: .35rem;
+  border-radius: 50%;
+  background: #ff954a;
+  box-shadow: 0 0 .7rem .2rem #ff481c;
+  animation-name: finale-embers;
+}
+@keyframes finale-reveal { from { opacity: 0; transform: translateY(1.4rem) scale(.96); } }
+@keyframes finale-confetti { from { transform: translateY(-10vh) rotate(0); } to { transform: translate(8vw,110vh) rotate(420deg); } }
+@keyframes finale-embers { from { opacity: 0; transform: translateY(3vh); } 25% { opacity: .9; } to { opacity: 0; transform: translate(-10vw,-95vh); } }
+@media (prefers-reduced-motion: reduce) {
+  .finale-content { animation: none; }
+  .finale-particles { display: none; }
+}

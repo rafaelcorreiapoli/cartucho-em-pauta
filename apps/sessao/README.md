@@ -102,12 +102,37 @@ Para testar em duas abas no mesmo computador, use localhost e fones de ouvido. P
 No diretório `apps/sessao`, publique o servidor e gere o cliente com o endpoint HTTPS do Fly:
 
 ```sh
-flyctl deploy --remote-only --ha=false
+flyctl deploy --remote-only --ha=false --env SESSAO_PREVIEW_SOLO=1
 VITE_GAME_SERVER=https://cartuchao-sessao-poc.fly.dev bun run build
 netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist --alias presidente-sessao-poc
 ```
 
-O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
+O deploy do Netlify é uma prévia. A variável `SESSAO_PREVIEW_SOLO=1` habilita partidas com um humano nessa prévia. Deixe a variável desativada em ambientes que exigem seis humanos. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
+
+## Teste da loja no Chrome
+
+Com `SESSAO_LOCAL_SOLO=1 bun dev/market-smoke-server.ts`, o jogador de teste começa no Apoio Técnico.
+Sirva o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2605 bun run dev --port 5212`.
+Abra a página no Playwright CLI com `dev/private-call-chrome.json` e execute
+`run-code --filename=dev/market-smoke.js`.
+
+## Teste do histórico de votações no Chrome
+
+Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
+Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
+`dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
+O teste usa os resultados publicados pelo gameserver e clica nas setas reais do HUD.
+
+## Métricas do gameserver
+
+O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use
+`sum by (__name__) (increase({__name__=~"congresso_.+_total",app="cartuchao-sessao-poc"}[1h]))`
+para acompanhar inícios, encerramentos, reconexões e divergências na última hora.
+Para monitorar divergências de saldo, a expressão é
+`sum(increase(congresso_economy_discrepancies_total{app="cartuchao-sessao-poc"}[15m])) > 0`.
+O log `economy-discrepancy` identifica a sala para investigação. Os contadores
+reiniciam com o processo e a coleta depende de a máquina estar ativa.
 
 ## Teste local de filtro de voz
 
@@ -229,5 +254,6 @@ playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
 ```
 
 O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
-no receptor. Ele verifica redução relativa de graves, presença de sinal com
-Megafone e Modulador ativos e ausência de picos próximos ao clipping.
+no receptor. Compara a relação entre graves e médios com e sem Megafone,
+repetindo a comparação com o Modulador ativo. Também verifica presença de
+sinal, picos abaixo do clipping e uma captura e uma trilha por cliente.

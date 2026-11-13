@@ -192,7 +192,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
   #session:has(#social-docks details[open]) #election-dock:not([open]) { visibility:hidden; }
 }
 
-.map-fog { position:absolute; z-index:1; inset:0; pointer-events:none; }
 .hud-symbols { position:absolute; width:0; height:0; pointer-events:none; }
 .hud-glyph { width:1.1em; height:1.1em; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

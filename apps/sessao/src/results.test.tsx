@@ -1,16 +1,50 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ElectionResult} from './results';
+import {SessionResult} from './results';
+import {PlenaryMatch} from '../server/PlenaryMatch';
+import {NEGOTIATION_MS,BALLOT_MS} from './plenary';
+import type {Player} from './map';
 
-test('the result shows a single renewal, vote shares and the mandate lost',()=>{
-  const html = renderToStaticMarkup(<ElectionResult result={{cycle:1,salary:3,eliminated:'b',offices:[
-    {id:'a',name:'Alice',office:'deputy',race:'deputy',character:0,percentage:65},
-    {id:'b',name:'Bia',office:'deputy',race:'deputy',character:1,percentage:35},
-  ]}}/>);
-  expect(html).toContain('Renovação de Mandato 1');
-  expect(html).toContain('Alice');
-  expect(html).toContain('65%');
-  expect(html).toContain('Bia<small>Mandato perdido');
-  expect(html).toContain('35%');
-  expect(html).not.toMatch(/Presidente|Senador|Deputado/);
+test('a player outside the plenary receives the final result in the modal content',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,x:140,y:146};
+  const match = new PlenaryMatch(1);
+  match.start(player.id,[player],0,()=>0);
+  const deadline = 30*60_000;
+  for (let now=0;now<=deadline;now+=Math.min(NEGOTIATION_MS,BALLOT_MS)) match.advance(now);
+  const view = match.view(player.id,[player.id],deadline);
+  expect(view.phase).toBe('finished');
+  const markup = renderToStaticMarkup(<SessionResult {...view}/>);
+  expect(markup).toContain(view.reason!);
+  expect(markup).not.toContain('Infiltração:');
+});
+
+test.each(['Parlamentar','Infiltrado',undefined] as const)('finale reveals the full cast only after finish (%s)',winner=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:String(character),nick,character,direction:0,moving:false,x:140,y:146,
+  }));
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  match.start(ids[0],players,0,()=>0);
+  expect(match.view(ids[1],ids,0).finalRoster).toBeUndefined();
+  // A departure may finish the match, and the original cast must still be shown.
+  if (winner==='Parlamentar') match.leave(ids[0],1);
+  else if (winner===undefined) match.leave(ids[2],1);
+  else { Reflect.set(match,'stability',0); match.advance(1_200_000); }
+  const view = match.view(ids[1],ids,2);
+  expect(view.phase).toBe('finished');
+  expect(view.winner).toBe(winner);
+  expect(view.finalRoster).toEqual([
+    {id:'0',name:'Rafa',character:0,role:'Infiltrado'},
+    {id:'1',name:'Bia',character:1,role:'Parlamentar'},
+    {id:'2',name:'Caio',character:2,role:'Parlamentar'},
+  ]);
+  const html = renderToStaticMarkup(<SessionResult {...view}/>);
+  expect(html).toContain(winner==='Parlamentar' ? 'O Congresso foi salvo!' : winner==='Infiltrado' ? 'O Congresso foi destruído!' : 'Sessão encerrada');
+  for (const {nick} of players) expect(html).toContain(nick);
+  if (winner) {
+    const winners = html.slice(html.indexOf('aria-label="Vencedores"'),html.indexOf('aria-label="Derrotados"'));
+    expect(winners).toContain(winner==='Infiltrado' ? 'Rafa' : 'Bia');
+    expect(winners).not.toContain(winner==='Infiltrado' ? 'Bia' : 'Rafa');
+    expect(html).toContain('finale-particles');
+  } else expect(html).toContain('aria-label="Participantes"');
 });

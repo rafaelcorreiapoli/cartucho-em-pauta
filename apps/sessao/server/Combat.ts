@@ -6,7 +6,7 @@ import { canReachDownedPlayer } from '../src/interactions';
 import { recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
-type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
+type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
 
@@ -19,12 +19,14 @@ export class Combat {
     for (const player of players) {
       player.knockedOut = undefined;
       player.hit = undefined;
+      player.recoveryProtected = undefined;
       player.swing = undefined;
     }
   }
 
   leave(player:Combatant) {
     this.vitality.delete(player.id);
+    player.recoveryProtected = undefined;
     player.knockedOut = undefined;
     player.hit = undefined;
     player.swing = undefined;
@@ -47,6 +49,7 @@ export class Combat {
   private recover(player:Combatant, state:Vitality, now:number) {
     state.hp = Math.ceil(this.max(player)*recoveryRules.healthFraction);
     state.protectedUntil = now+recoveryRules.protectionMs;
+    player.recoveryProtected = true;
     state.recoverAt = 0;
     player.knockedOut = undefined;
   }
@@ -60,6 +63,7 @@ export class Combat {
     for (const player of players) {
       if (player.hit!==undefined && player.hit<=now) player.hit = undefined;
       const state = this.vitality.get(player.id);
+      if (player.recoveryProtected && (state?.protectedUntil ?? 0)<=now) player.recoveryProtected = undefined;
       if (state?.recoverAt && (!exploring || state.recoverAt<=now)) {
         this.recover(player,state,now);
         callbacks.recovered?.(player);
@@ -93,7 +97,7 @@ export class Combat {
     const stamina = attacker.stamina ?? attacker.staminaMax ?? MAX_STAMINA;
     if (!canSwingWeapon(stamina,weapon)) return 'Stamina insuficiente para atacar.';
     attacker.stamina = stamina-weapons[weapon].staminaCost;
-    state.attackAt = now+weapons[weapon].cooldown;
+    state.attackAt = now+weapons[weapon].swingMs;
     state.pending = true;
     attacker.swing = {weapon,startedAt:now,angle:Combat.facingAngles[attacker.direction ?? 0]};
   }

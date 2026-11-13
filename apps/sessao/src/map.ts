@@ -7,7 +7,7 @@ import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
 export const WIDTH = 1136;
 export const HEIGHT = 759;
 export const SPEED = 88;
-export const NAMES = ['Lula', 'Bolsonaro', 'Trump', 'Tiririca', 'José Sarney', 'Jean Wyllys', 'Sergio Moro', 'Nestor Cerveró'] as const;
+export const NAMES = ['Lula', 'Bolsonaro', 'Clodovil', 'Tiririca', 'Eduardo Cunha', 'Alexandre Frota', 'Sergio Moro', 'Inês Brasil'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
@@ -75,6 +75,10 @@ export const furnishings = [
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
 ] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
+function npcFootprint(npc:(typeof mapNpcs)[keyof typeof mapNpcs]):Rect {
+  const {x,y} = npc;
+  return npc===npcs.snackVendor ? [x-7,y-9,14,10] : [x-5,y-5,10,5];
+}
 const obstacles = [
   ...walls,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{
@@ -82,14 +86,14 @@ const obstacles = [
     const {width,footOffset} = officeFixtures[kind];
     return [x-width/2,y-footOffset-5,width,5];
   })),
-  ...Object.values(mapNpcs).map(({x,y}):Rect => [x-5,y-5,10,5]),
+  ...Object.values(mapNpcs).map(npc=>npcFootprint(npc)),
   ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
   ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
     [x,y+height-footprint,width,footprint]),
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; pocketing?:boolean; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 
@@ -167,6 +171,10 @@ export function worldVisible(a:Motion,b:Motion,radius=VISION_RADIUS) {
   return Math.hypot(a.x-b.x,a.y-b.y)<radius && !obstacleBetween(a,b);
 }
 
+export function characterVisible(a:Motion,b:Motion,radius=VISION_RADIUS) {
+  return Math.hypot(a.x-b.x,a.y-b.y)<radius && !wallBetween(a,b);
+}
+
 export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
   const distance = Math.hypot(a.x-b.x,a.y-b.y);
   if (distance>=Math.max(vision,HEARING_RADIUS)) return {visible:false,volume:0};
@@ -193,7 +201,7 @@ export const rooms = [
   {name:'Comissões', bounds:[602,270,212,122], color:0x637b69},
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
-  {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:npcs.furnitureVendor.label, bounds:[326,403,266,127], color:0x7c8a7e},
   {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];

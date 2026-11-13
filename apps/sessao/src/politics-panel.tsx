@@ -69,34 +69,26 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
   };
 }
 
-export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
-  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
-}
-
 export function canBuyEvidence(offer:Pick<Offer,'from'|'price'>, contacts:ReadonlySet<string>, wallet:number, paymentsLeft:number) {
   return contacts.has(offer.from) && wallet>=offer.price && paymentsLeft>0;
 }
 
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
   const dock = el<HTMLDetailsElement>('politics-dock');
-  const trade = el<HTMLDetailsElement>('trade-dock');
-  const target = picker('trade-contact',updateControls);
+  const institutional = el<HTMLDetailsElement>('institutional-dock');
   const recipient = picker('evidence-contact',updateControls,'Ninguém próximo');
-  const amount = stepper('trade-amount',1,1,money);
   const dossier = picker('evidence',() => { describeSelected(); updateControls(); });
   const price = stepper('evidence-price',0,0,value => value ? money(value) : 'Grátis');
   const nominee = picker('hearing-target',updateControls);
   const split = picker('grant-split',updateControls);
-  const privacy = picker('trade-private',updateControls);
   split.update(splits.map(value => ({value:String(value),label:value ? `Desviar ${money(value)}` : 'Aplicar tudo'})),true);
-  privacy.update([{value:'public',label:'Pública'},{value:'private',label:'Clandestina'}],true);
   let visiblePlayers:Player[] = [];
   let view:PlenaryView | undefined;
   let own:Player | undefined;
   let recordsKey = '';
   let offersKey = '';
   dock.open = false;
-  trade.open = false;
+  institutional.open = false;
   el<HTMLDetailsElement>('ledger').open = false;
   const recordsRoot = createRoot(el('public-records'));
   const offersRoot = createRoot(el('offer-list'));
@@ -116,17 +108,10 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
     el('hearing-form').hidden = !exploring || !at('panel') || !politics.canCallHearing;
     el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
-    el('trade-controls').hidden = !target.value;
-    el<HTMLButtonElement>('transfer').disabled = !target.value || politics.wallet<1 || politics.paymentsLeft===0;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
     el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
   }
 
-  el<HTMLFormElement>('trade').onsubmit = event => {
-    event.preventDefault();
-    const action = manualTransfer(target.value,amount.value,privacy.value==='private',view?.politics?.wallet ?? 0,view?.politics?.paymentsLeft ?? 0);
-    if (action) send(action);
-  };
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {
     event.preventDefault();
     const diverted = Number(split.value) as Split;
@@ -158,9 +143,6 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       const player = visiblePlayers.find(player => player.id===contact.id);
       return player ? [{value:contact.id,label:contact.name,portrait:player.character}] : [];
     });
-    target.update(choices);
-    el('trade-empty').hidden = choices.length>0;
-    el('trade-recipients').hidden = choices.length===0;
     recipient.update(choices);
   }
 
@@ -169,18 +151,15 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       view = next;
       const p = view.politics;
       dock.hidden = !p;
-      trade.hidden = !p || (view.phase!=='negotiation' && view.phase!=='ballot');
+      institutional.hidden = !p || view.phase!=='negotiation';
       if (!p) return;
       const active = view.phase==='negotiation' || view.phase==='ballot';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
       el('politics-actions').hidden = el('evidence-tools').hidden = !active;
-      el('trade-balance').textContent = money(p.wallet);
       updateContacts();
       nominee.update(p.directory.filter(contact => contact.id!==id && contact.eligible)
         .map(({id,name,popularity}) => ({value:id,label:`${name} · ${popularity} pop.`})));
       dossier.update(p.evidence.map(record => ({value:String(record.id),label:`Documento ${record.id} · Rodada ${record.round+1}`})),true);
-      amount.limit(p.wallet);
-      el<HTMLButtonElement>('transfer').textContent = p.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido nesta rodada';
       el('evidence-form').hidden = p.evidence.length===0;
       el('empty-evidence').hidden = p.evidence.length>0;
       describeSelected();
@@ -209,7 +188,7 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       updateControls();
     },
     destroy() {
-      for (const control of [target,recipient,amount,dossier,price,nominee,split,privacy]) control.destroy();
+      for (const control of [recipient,dossier,price,nominee,split]) control.destroy();
       recordsRoot.unmount();
       offersRoot.unmount();
     },

@@ -1,7 +1,8 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MissionRow} from './hud';
-import {targetedAgendas,type Mission} from '../politics';
+import {stabilityRules} from '../plenary';
+import {MissionRow, ParliamentMetrics} from './hud';
+import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -26,4 +27,58 @@ test('an opposition mission shows progress across successive ballots',()=>{
   expect(markup).toContain('Vote contra dois projetos rejeitados');
   expect(markup).toContain('1 / 2');
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});
+
+test('the parliament HUD uses the configured threshold and explains the budget penalty',()=>{
+  const atTarget = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target} budget={32}/>);
+  const below = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target-1} budget={32}/>);
+  expect(atTarget).toContain('data-tone="stability"');
+  expect(below).toContain('data-tone="danger"');
+  expect(atTarget).toContain(`meta da sessão é ${stabilityRules.target}`);
+  expect(atTarget).toContain(`custa ${stabilityRules.deficitRate} pontos`);
+});
+
+
+test('the VIP inspection identifies the visitor as the subject of the photo',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'fiscalVip',current:0,target:1}}/>);
+  expect(markup).toContain('Fotografe um visitante na área VIP de outro parlamentar.');
+});
+
+test('the phone photo objective names both eligible rooms',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'celularFoto',current:0,target:1}}/>);
+  expect(markup).toContain('Antecâmara ou nas Comissões');
+});
+
+test('publishing a qualifying selfie changes the Agenda row to completed',()=>{
+  const mission:Mission = {id:4,kind:'publicouSelfie',current:1,target:1};
+  const markup = renderToStaticMarkup(<MissionRow mission={mission} done/>);
+  expect(markup).toContain('Publique uma selfie sua com pelo menos dois colegas.');
+  expect(markup).toContain('data-done="true"');
+});
+
+test('a scandal objective identifies the two kinds of proof the player can publish',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:5,kind:'escandalo',current:0,target:1}}/>);
+  expect(markup).toContain('Divulgue uma prova de desvio ou pagamento clandestino');
+});
+
+test('the pizza mission shows the shared table as a way to complete it',()=>{
+  const mission:Mission = {id:6,kind:'pizza',current:0,target:1};
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('pegue uma fatia no Cafezinho');
+});
+
+test('the signature objective identifies the same-document requirement and shows distinct signer progress',()=>{
+  const mission:Mission = {id:7,kind:'assinaturas',current:1,target:2};
+  const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(active).toContain('duas assinaturas no mesmo documento');
+  expect(active).toContain('1 / 2');
+  expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
+});
+
+test('timed mission labels and progress display the same duration in seconds',()=>{
+  for (const kind of Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]) {
+    const target = agendaDurationMs[kind];
+    const html = renderToStaticMarkup(<MissionRow mission={{id:8,kind,current:1500,target}}/>);
+    expect(html).toContain(`${target/1000} segundos`);
+    expect(html).toContain(`1 / ${target/1000} s`);
+  }
 });

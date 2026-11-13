@@ -4,7 +4,7 @@ import {stations} from '../src/plenary';
 import type {Player} from '../src/map';
 import type {GameplayWorld} from './gameplay-world';
 
-test('mail requires presence and payment and rejects a duplicate without charging twice',()=>{
+test('mail allows remote publication with payment and rejects a duplicate without charging twice',()=>{
   const mail = new InternalMail();
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
   let wallet = 3;
@@ -15,8 +15,6 @@ test('mail requires presence and payment and rejects a duplicate without chargin
       return true;
     }};
   const message = {subject:'Aviso',body:'Reunião na biblioteca'};
-  expect(mail.publish(player,message,world)).toContain('Aproxime-se');
-  Object.assign(player,stations.audit);
   expect(mail.publish(player,{...message,subject:' '},world)).toBeDefined();
   expect(wallet).toBe(3);
   expect(mail.publish(player,message,world)).toBeUndefined();

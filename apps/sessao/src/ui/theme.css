@@ -63,9 +63,7 @@
   .react-parliament { gap:4px; }
 }
 .react-broadcast { position:absolute; top:12px; left:clamp(12px,2vw,24px); z-index:3; pointer-events:none; padding:7px 10px; border:1px solid var(--color-hud-border); font-size:12px; }
-#internal-mail { width:min(540px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); overflow:auto; }
-#internal-mail header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-#internal-mail input, #internal-mail textarea { display:block; width:100%; box-sizing:border-box; padding:.65rem; border:1px solid var(--color-hud-border); border-radius:var(--radius-hud); background:var(--color-hud-track); color:var(--color-hud-ink); }
+#phone-mail input, #phone-mail textarea { display:block; width:100%; box-sizing:border-box; padding:.65rem; border:1px solid var(--color-hud-border); border-radius:var(--radius-hud); background:var(--color-hud-track); color:var(--color-hud-ink); }
 .mail-entry { padding:12px; border:1px solid var(--color-hud-border); border-radius:var(--radius-hud); background:var(--color-hud-surface); overflow-wrap:anywhere; }
 .mail-entry h3, .mail-entry p { margin:0; }
 .mail-entry small { color:var(--color-hud-muted); }

@@ -1,3 +1,5 @@
+import { gameplayMetrics } from './gameplay-metrics';
+import { isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
 import { megaphone } from '../src/equipment';
 import { Parliamentarians } from './Parliamentarians';
@@ -6,14 +8,14 @@ import { npcRules } from '../src/parliamentarians';
 import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
-import { canUseGameplayAction, readGameplayAction } from '../src/gameplay';
+import { consumableAction, canUseGameplayAction, readGameplayAction } from '../src/gameplay';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
 import { readElectionAction } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
-import { isolationRoom, localPerception, worldVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
+import { isolationRoom, localPerception, characterVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
 import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, STEP_MS, type ControlState, type MovementInput } from '../src/movement';
 
 import { readPoliticsAction } from '../src/politics';
@@ -31,8 +33,15 @@ function countFromStart(request:unknown,lobbyCount:number) {
 export class SessionRoom extends Room {
   maxClients = MAX_PLAYERS;
   maxMessagesPerSecond = 100;
+  autoBatchMessages = true;
   private players = new Map<string, ControlState>();
   private movementQueue = new Map<string, MovementInput[]>();
+
+  private resetMovement(state:ControlState) {
+    this.movementQueue.get(state.player.id)?.splice(0);
+    state.route = [];
+    state.revision = (state.revision ?? 0)+1;
+  }
 
   private lobbyNpcCount:number = npcRules.count;
   private gameplay = new Gameplay();
@@ -60,14 +69,21 @@ export class SessionRoom extends Room {
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
+        if (event.type==='used' && isFood(event.kind)) {
+          const drink = event.kind==='coffee' || event.kind==='energyDrink';
+          this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
+        }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
           this.clients.getById(event.actor)?.send('gear-purchased',{id:event.item,kind:event.kind});
+        } else if (event.type==='purchased' && event.item!==undefined && event.kind &&
+          consumableAction({id:event.item,kind:event.kind})) {
+          this.clients.getById(event.actor)?.send('consumable-purchased',event.inventoryItem ?? event.item);
         }
       },
     };
   }
 
-  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
+  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || process.env.SESSAO_PREVIEW_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
   private parliamentarians = new Parliamentarians();
   private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
@@ -78,7 +94,9 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
-    this.match.logEconomy(this.gameplay.physicalCash(),this.roomId);
+    const summary = this.match.economySummary(this.gameplay.physicalCash());
+    console.info(JSON.stringify({event:'economy-totals',roomId:this.roomId,...summary}));
+    gameplayMetrics.finish(this.roomId,summary.discrepancy);
     this.npcTalk.reset();
     this.parliamentarians.reset(0,now);
     const players = [...this.players.values()].map(state=>state.player);
@@ -166,18 +184,20 @@ export class SessionRoom extends Room {
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
-          id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex));
+          id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),
+          id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
+          id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
           Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
-          state.route = [];
-          this.movementQueue.get(id)?.splice(0);
+          this.resetMovement(state);
           player.speed = characterStats[player.character].speed;
           player.stamina = MAX_STAMINA;
           player.sprinting = undefined;
         }
         this.matchObjectsActive = true;
+        gameplayMetrics.increment('matches_started');
         void this.lock();
       }
     });
@@ -211,7 +231,8 @@ export class SessionRoom extends Room {
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw)) return;
-      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) {
+      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+          player.knockedOut || player.carrying || player.carried) {
         client.send('mail-result','Publicação indisponível nesta fase.');
         return;
       }
@@ -248,7 +269,10 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
-      if (result) client.send('room-activity-result',result);
+      if (result) {
+        client.send('room-activity-result',result);
+        if (result.activity==='coffee') client.send('food-consumed','drink');
+      }
     });
     this.onMessage('voice-activity',client=>{
       if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.clock.currentTime);
@@ -278,8 +302,7 @@ export class SessionRoom extends Room {
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
-        if (state) state.route = [];
-        this.movementQueue.get(client.sessionId)?.splice(0);
+        if (state) this.resetMovement(state);
       }
     });
     this.onMessage('npc-deal',(client,raw:unknown)=>{
@@ -302,7 +325,10 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
-      this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
+      const transferred = this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
+      if (action.kind==='transfer' && transferred) {
+        this.clients.getById(action.to)?.send('pix-received',{from:player.nick,amount:action.amount});
+      }
       this.resetFinishedMatch(now);
     });
     this.onMessage('election', (client, raw:unknown) => {
@@ -328,7 +354,7 @@ export class SessionRoom extends Room {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
       const queue = this.movementQueue.get(client.sessionId);
-      if (!input || !state || !queue || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
+      if (!input || !state || !queue || input.revision!==state.revision || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
     });
@@ -340,7 +366,14 @@ export class SessionRoom extends Room {
         player.character = character;
       }
     });
-    this.setSimulationInterval(() => {
+    let previousActiveTick:number|undefined;
+    let sendPlayerSnapshot = true;
+    let projectedPhase = this.match.phase;
+    this.setFixedTimestep(() => {
+      const startedAt = performance.now();
+      const active = this.match.running && this.clients.length>0;
+      const gap = active && previousActiveTick!==undefined ? startedAt-previousActiveTick : undefined;
+      previousActiveTick = active ? startedAt : undefined;
       for (const [id,state] of this.players) {
         const input = this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);
@@ -374,10 +407,9 @@ export class SessionRoom extends Room {
         const wasIsolated = state.isolated;
         state.isolated = isolated;
         state.plenary = plenary;
-        state.route = [];
+        this.resetMovement(state);
         state.player.moving = false;
         state.player.sprinting = undefined;
-        this.movementQueue.get(id)?.splice(0);
         if (isolated) {
           this.npcTalk.leave(id);
           this.gameplay.stopMegaphone(id,world);
@@ -393,14 +425,23 @@ export class SessionRoom extends Room {
       }
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
+      const projectWorld = sendPlayerSnapshot || projectedPhase!==this.match.phase;
+      projectedPhase = this.match.phase;
       const sendSpyFrame = now>=this.spyFrameAt && this.match.phase==='negotiation';
       if (sendSpyFrame) this.spyFrameAt = now+100;
       for (const client of this.clients) {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
+        if (!projectWorld) {
+          client.send('control',state);
+          continue;
+        }
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
-        if (this.match.running) view.complaints = this.match.complaintView(id);
+        if (this.match.running) {
+          view.complaints = this.match.complaintView(id);
+          if (this.match.canFileComplaint(state.player,now)) view.complaints.atDesk = true;
+        }
         view.lobbyNpcCount = this.lobbyNpcCount;
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running ? this.gameplay.photoRevision : -1;
@@ -429,12 +470,14 @@ export class SessionRoom extends Room {
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
           const visible = state.plenary ? world.players.filter(inPlenary) :
-            world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
-          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
+            world.players.filter(player=>player===state.player || characterVisible(state.player,player,vision));
+          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,now,id) ? true : undefined,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }
-    },STEP_MS);
+      sendPlayerSnapshot = !sendPlayerSnapshot;
+      if (active) gameplayMetrics.observeSimulation(gap,performance.now()-startedAt);
+    },1000/STEP_MS);
   }
 
   onJoin(client: Client, options?:{nick?:unknown}) {
@@ -458,10 +501,9 @@ export class SessionRoom extends Room {
     this.npcTalk.leave(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),false);
-    this.movementQueue.get(client.sessionId)?.splice(0);
     const state = this.players.get(client.sessionId);
     if (state) {
-      state.route = [];
+      this.resetMovement(state);
       state.player.moving = false;
     }
     this.match.setPlayerConnected(client.sessionId,false);
@@ -469,6 +511,7 @@ export class SessionRoom extends Room {
   }
 
   onReconnect(client:Client) {
+    gameplayMetrics.increment('reconnects');
     this.match.setPlayerConnected(client.sessionId,true);
     this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);

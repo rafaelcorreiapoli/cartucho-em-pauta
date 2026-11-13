@@ -503,7 +503,6 @@ button.equipped-gear-tile { cursor: pointer; }
   #command-deck .slot-key { display: none; }
 }
 
-#command-deck #legislative-dock:has(#project-outcome-brief:not([hidden])) #project-session-result { display: none; }
 #gameplay-dialog[data-mode="equipment"] { width: min(350px,calc(100vw - 2rem)); }
 .equipment-list {
   display: grid;
@@ -574,7 +573,7 @@ button.equipped-gear-tile { cursor: pointer; }
   grid-template-rows: repeat(3,clamp(7rem,22dvh,10.2rem));
   gap: clamp(.35rem,1.25dvh,.7rem);
 }
-.market-product, .market-product-empty {
+.market-product-button, .market-product-empty {
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -589,7 +588,7 @@ button.equipped-gear-tile { cursor: pointer; }
   height: 100%;
   padding: 0;
   border: 1px solid #7b8f677a;
-  border-radius: inherit;
+  border-radius: .6rem;
   background: radial-gradient(ellipse at 50% 39%,#3d5840,#20382a 73%,#162d23);
   color: #f9e9c8;
   text-align: left;
@@ -619,22 +618,6 @@ img.market-art {
 }
 .market-product-price { color: var(--party-gold); font-variant-numeric: tabular-nums; }
 .market-product-button .action-key { position: absolute; inset: .35rem .35rem auto auto; }
-.market-product-details {
-  position: absolute;
-  inset: auto .3rem calc(2.6rem + .3rem) .3rem;
-  display: grid;
-  gap: .2rem;
-  padding: .35rem .5rem;
-  border-radius: .35rem;
-  background: #10241ff5;
-  color: #f9e9c8;
-  font: 550 .76rem/1.25 system-ui,sans-serif;
-  pointer-events: none;
-  visibility: hidden;
-}
-.market-product-details small { color: var(--party-mint); font-size: .9em; }
-.market-product:hover .market-product-details,
-.market-product:has(button:focus-visible) .market-product-details { visibility: visible; transition: visibility 0s .35s; }
 .market-paging {
   display: grid;
   grid-template-columns: 1.75rem minmax(2rem,max-content) 1.75rem;
@@ -828,3 +811,5 @@ img.market-art {
   opacity: .55;
   cursor: default;
 }
+
+#command-deck #ballot-host:not([hidden]) { display: contents; }

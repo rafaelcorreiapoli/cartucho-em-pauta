@@ -1,6 +1,8 @@
+import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
+import { mountAppLauncher } from './ui/app-launcher';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
@@ -27,13 +29,15 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
-import { NAMES, type Player } from './map';
+import { inPlenary, NAMES, type Player } from './map';
 import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
+import './session-finale.css';
 import './rts-hud.css';
+import './ui/congress-overlay.css';
 
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
@@ -168,6 +172,7 @@ function showLobby(message: string) {
   roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
+  document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
   landing.hidden = false;
   status.textContent = message;
@@ -188,6 +193,7 @@ async function connect(join: () => Promise<Room>) {
     code.value = joined.roomId;
     landing.hidden = true;
     session.dataset.phase = 'lobby';
+    delete session.dataset.inPlenary;
     session.hidden = false;
     setup.hidden = false;
     const voiceDock = document.querySelector<HTMLElement>('#voice-dock')!;
@@ -200,6 +206,28 @@ async function connect(join: () => Promise<Room>) {
     closeDetails();
     const hudListeners = new AbortController();
     bindActionShortcuts(session,hudListeners.signal);
+    const latency = document.querySelector<HTMLElement>('#connection-latency')!;
+    let latencyGeneration = 0;
+    const measureLatency = () => {
+      const generation = latencyGeneration;
+      joined.ping(ms=>{
+        if (hudListeners.signal.aborted || generation!==latencyGeneration) return;
+        const label = `${Math.round(ms)} ms`;
+        if (latency.textContent!==label) latency.textContent = label;
+        latency.hidden = false;
+      });
+    };
+    measureLatency();
+    const pingTimer = window.setInterval(measureLatency,3000);
+    hudListeners.signal.addEventListener('abort',()=>{
+      clearInterval(pingTimer);
+      latency.hidden = true;
+    },{once:true});
+    joined.onDrop(()=>{
+      latencyGeneration++;
+      latency.hidden = true;
+    });
+    joined.onReconnect(measureLatency);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
         !session.querySelector('details[name="game-panels"][open]')) return;
@@ -208,7 +236,7 @@ async function connect(join: () => Promise<Room>) {
     },{signal:hudListeners.signal});
     for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
-    document.querySelector<HTMLElement>('#trade-dock')!.hidden = true;
+    document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
@@ -220,7 +248,11 @@ async function connect(join: () => Promise<Room>) {
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      option=>sendCommand('spy',option));
+      option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
+        ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
+          [{kind:'document' as const,id:item.id,label:item.document.title}]),
+        ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
+      ]));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -238,18 +270,6 @@ async function connect(join: () => Promise<Room>) {
         projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}));
         return;
       }
-      if (action.kind==='complaint-desk') {
-        mail.open(false,mailPhotos.map(({photo})=>({kind:'photo',id:photo.id,label:'Fotografia #'+photo.id})),true);
-        return;
-      }
-      if (action.kind==='compose-mail') {
-        mail.open(true,[
-          ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
-            [{kind:'document' as const,id:item.id,label:item.document.title}]),
-          ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
-        ]);
-        return;
-      }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
@@ -264,10 +284,15 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
+    joined.onMessage('consumable-purchased',gameplay.purchasedConsumable);
+    joined.onMessage('food-consumed',(cue:unknown)=>{
+      if (cue==='eat' || cue==='drink') audio.cue(cue);
+    });
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
     });
+    joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
     joined.onMessage('gameplay-feedback',(message:string)=>{
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
@@ -278,11 +303,10 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
+    const appLauncher = mountAppLauncher();
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
-    const mailButton = document.querySelector<HTMLButtonElement>('#open-mail')!;
-    mailButton.onclick = () => mail.open();
     joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
@@ -333,6 +357,7 @@ async function connect(join: () => Promise<Room>) {
       }
       suppressXpEffect = false;
       progression.render(view);
+      appLauncher.render();
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
@@ -350,6 +375,7 @@ async function connect(join: () => Promise<Room>) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished') audio.cue('end');
       phase = view.phase;
+      audio.setBallotMusic(phase==='ballot' || phase==='hearing');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
@@ -369,6 +395,8 @@ async function connect(join: () => Promise<Room>) {
       hud.notify('Corregedoria',text,critical);
     });
     joined.onMessage('control',(snapshot: ControlState) => {
+      const inside = String(inPlenary(snapshot.player) && !snapshot.isolated);
+      if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);
       game?.reconcile(snapshot);
@@ -403,9 +431,9 @@ async function connect(join: () => Promise<Room>) {
       election.destroy();
       political.destroy();
       hud.destroy();
+      appLauncher.destroy();
       reactHud.destroy();      results.destroy();
       projectPicker.destroy();
-      mailButton.onclick = null;
       mail.destroy();
       progression.destroy();
       surveillance.destroy();

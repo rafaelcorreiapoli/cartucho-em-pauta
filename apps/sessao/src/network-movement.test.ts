@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
-import { PredictedMovement } from './network-movement';
+import { PlayerHistory, PredictedMovement } from './network-movement';
 import { applyInput, readInput, restMovement, type ControlState, type MovementInput } from './movement';
 
 test('prediction starts immediately and replays only the inputs the server has not processed', () => {
@@ -109,4 +109,73 @@ test('a restored movement controller resumes above the live room acknowledgement
   client.input({motion:{x:1,y:0}});
   expect(sent[0]?.seq).toBe(71);
   expect(client.state?.player.x).toBeGreaterThan(player.x);
+});
+
+test('prediction keeps the queue bounded and never replays old input after a same-phase teleport',()=>{
+  const sent:MovementInput[] = [];
+  const client = new PredictedMovement(input=>sent.push(input));
+  const player = {id:'p',nick:'P',character:0,x:140,y:146,moving:false,direction:0};
+  client.reconcile({player,route:[],ack:0,revision:1});
+  for (let i=0;i<20;i++) client.input({motion:{x:1,y:0}});
+  expect(sent).toHaveLength(8);
+  expect(sent.every(input=>readInput(input)?.revision===1)).toBe(true);
+  const spawn = {...player,y:190};
+  client.reconcile({player:spawn,route:[],ack:0,revision:2});
+  expect(client.state?.player).toEqual(spawn);
+  expect(client.input({motion:{x:1,y:0}})).toBe(true);
+  expect(sent.at(-1)).toMatchObject({seq:9,revision:2});
+});
+
+test('bursty confirmations and a stalled connection do not rewind predicted movement',()=>{
+  const server:ControlState = {
+    player:{id:'p',nick:'P',character:0,x:140,y:146,moving:false,direction:0,speed:12},
+    route:[],ack:0,revision:1,
+  };
+  const wire:MovementInput[] = [];
+  const client = new PredictedMovement(input=>wire.push(input));
+  client.reconcile(server);
+  let furthest = server.player.x;
+  for (let tick=0;tick<45;tick++) {
+    if (tick<32) client.input({motion:{x:1,y:0}});
+    // Model a transport stall, followed by several queued packets arriving together.
+    if (tick>=12 && wire.length) applyInput(server,readInput(wire.shift())!);
+    else restMovement(server.player);
+    if (tick%4===0 || tick===44) client.reconcile(server);
+    const x = client.state!.player.x;
+    expect(x+1e-6).toBeGreaterThanOrEqual(furthest);
+    furthest = x;
+    expect(wire.length).toBeLessThanOrEqual(8);
+  }
+  expect(wire).toHaveLength(0);
+  expect(client.state!.player.x).toBeCloseTo(server.player.x);
+  expect(server.player.x).toBeGreaterThan(150);
+});
+
+test('a long route across the Congress remains walkable after compressing straight segments',()=>{
+  const start = {x:830.5,y:599};
+  const destination = {x:140,y:146};
+  const state:ControlState = {
+    player:{id:'p',nick:'P',character:0,direction:0,moving:false,...start},route:[],ack:0,
+  };
+  applyInput(state,{seq:1,destination});
+  expect(state.route.length).toBeGreaterThan(0);
+  expect(state.route.length).toBeLessThan(20);
+  for (let seq=2;state.route.length && seq<=400;seq++) applyInput(state,{seq});
+  expect(state.player.x).toBeCloseTo(destination.x);
+  expect(state.player.y).toBeCloseTo(destination.y);
+});
+
+test('a walking NPC interpolates through a late snapshot and stops when snapshots run out',()=>{
+  const history = new PlayerHistory();
+  const player = {id:'npc-parliamentarian-1',nick:'Eduardo Cunha',npc:true as const,character:4,x:100,y:146,moving:true,direction:1};
+  history.add([player],0);
+  history.add([{...player,x:110}],100);
+  expect(history.sample(260,player.id)?.x).toBe(106);
+  history.add([{...player,x:120}],280);
+  expect([280,300,320,350,400,450].map(now=>history.sample(now,player.id)!.x))
+    .toEqual([108,110,110+10*20/180,110+10*50/180,110+10*100/180,110+10*150/180]);
+  expect(history.sample(450,player.id)?.moving).toBe(true);
+  expect(history.sample(500,player.id)).toMatchObject({x:120,moving:false,npc:true});
+  history.add([],510);
+  expect(history.sample(710,player.id)).toBeUndefined();
 });

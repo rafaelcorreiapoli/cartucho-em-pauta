@@ -8,13 +8,13 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, NEGOTIATION_MS, stations } from '../src/plenary';
-import { canStand, localPerception, worldVisible, type Player } from '../src/map';
+import { BALLOT_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
-const ids = ['lula','bolsonaro','trump'];
-const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','Trump'][character],character,x:140+36*character,y:146,direction:0,moving:false}));
+const ids = ['lula','bolsonaro','clodovil'];
+const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','Clodovil'][character],character,x:140+36*character,y:146,direction:0,moving:false}));
 const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
@@ -71,7 +71,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
     }
   }
   match.advance(ELECTION_RULES.matchDuration);
-  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Trump'});
+  expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Clodovil'});
 });
 
 test('nearby voices can carry past a wall without revealing the speaker', () => {
@@ -106,7 +106,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11}});
   expect(view(honest).politics?.evidence).toEqual([]);
   match.politics(host,{kind:'transfer',to:honest.id,amount:2,clandestine:true},people,4);
-  match.politics(host,{kind:'transfer',to:traitor.id,amount:2,clandestine:false},people,5); // Beyond trade distance.
+  match.politics(host,{kind:'transfer',to:traitor.id,amount:0,clandestine:false},people,5); // Invalid amount.
   match.politics(host,{kind:'transfer',to:honest.id,amount:100,clandestine:false},people,6);
   expect(view(host).politics?.wallet).toBe(9);
   expect(view(honest).politics?.wallet).toBe(10);
@@ -248,7 +248,7 @@ test('validated filings schedule distinct successive ballots, with the standard 
   match.start(host.id,people,0,()=>.9);
   const world = match.gameplayWorld(people,10,()=>false);
   const file = (project:number)=>world.publish({
-    type:'filed',actor:host.id,kind:'document',project,position:stations.amendment,at:10,witnesses:[],
+    type:'filed',actor:host.id,kind:'document',item:project+1,project,position:stations.amendment,at:10,witnesses:[],
   });
   file(2);
   file(2);
@@ -263,6 +263,11 @@ test('validated filings schedule distinct successive ballots, with the standard 
   expect(view(NEGOTIATION_MS+BALLOT_MS).vote).toBeUndefined();
   match.advance(NEGOTIATION_MS+BALLOT_MS*2);
   expect(view(NEGOTIATION_MS+BALLOT_MS*2).outcomes.map(result=>result.project)).toEqual([2,0]);
+  const replayAt = NEGOTIATION_MS+BALLOT_MS*2+1;
+  match.gameplayWorld(people,replayAt,()=>false).publish({
+    type:'filed',actor:host.id,kind:'document',item:1,project:0,position:stations.amendment,at:replayAt,witnesses:[],
+  });
+  expect(view(replayAt).queuedProjects).toEqual([]);
   match.advance(NEGOTIATION_MS*2+BALLOT_MS*2);
   expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
 });
@@ -350,8 +355,8 @@ test('a closed office door hides players from authoritative world visibility',()
   const x = left+width/2;
   const inside = {x,y:top-12};
   const outside = {x,y:top+height+12};
-  expect(worldVisible(outside,inside)).toBe(true);
-  expect(worldVisible({...outside,barriers:[office.door]},inside)).toBe(false);
+  expect(characterVisible(outside,inside)).toBe(true);
+  expect(characterVisible({...outside,barriers:[office.door]},inside)).toBe(false);
 });
 
 test('only a victim or direct witness can report an infraction, once, at the desk',()=>{
@@ -561,4 +566,46 @@ test('a station rejects a nearby player blocked by a barrier or carrying someone
   expect(match.roomActivity({...nearby,barriers:[[x+3,y-2,2,4]]},'coffee',1)).toBeUndefined();
   expect(match.roomActivity({...nearby,carrying:true},'coffee',2)).toBeUndefined();
   expect(match.roomActivity(nearby,'coffee',3)?.activity).toBe('coffee');
+});
+
+test('an approved project with a fractional deficit applies the same rounded penalty shown by the client',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,[host],0,()=>0)).toBe(true);
+  expect(match.view(host.id,[host.id],0).stability).toBe(stabilityRules.initial);
+  Reflect.set(match,'budget',24.7);
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const outcome = match.view(host.id,[host.id],0).outcome!;
+  expect(outcome.passed).toBe(true);
+  expect(outcome.deficit).toBeCloseTo(3.3);
+  expect(deficitStabilityLoss(outcome.deficit)).toBe(7);
+  expect(outcome.applied.stability).toBe(Math.floor(22*24.7/28)-7);
+});
+
+test('the last ballot does not redraw a voting mission from an already credited vote',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  Reflect.set(match,'round',2);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votacao','apoio','cafe','passeio','selfieSolo','leitura']);
+  match.refreshAgendaEligibility();
+  const missions = ()=>match.view(host.id,ids,0).politics!.missions;
+  expect(missions().active.map(m=>m.kind)).toContain('votacao');
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'no',NEGOTIATION_MS+1);
+  expect(missions().completed.map(m=>m.kind)).toEqual(['votacao']);
+  expect(missions().active.map(m=>m.kind)).toContain('apoio');
+  expect(missions().active.map(m=>m.kind)).not.toContain('votacao');
+  match.vote(host.id,'yes',NEGOTIATION_MS+2);
+  expect(missions().completed.map(m=>m.kind)).toEqual(['votacao','apoio']);
+  expect(missions().active.map(m=>m.kind)).not.toContain('apoio');
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votacao','apoio','cafe']);
+  match.refreshAgendaEligibility();
+  expect(missions().active.map(m=>m.kind)).toContain('votacao');
+  expect(missions().active.map(m=>m.kind)).toContain('apoio');
 });

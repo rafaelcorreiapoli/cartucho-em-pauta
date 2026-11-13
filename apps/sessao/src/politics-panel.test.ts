@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {createRoomCommandSender,readRoomCommandToken} from './room-commands';
-import {canBuyEvidence,manualTransfer} from './politics-panel';
+import {canBuyEvidence} from './politics-panel';
+import {manualTransfer} from './politics';
 
 test('informal loans and repayments are manual payments selected by the player',()=>{
   expect(manualTransfer('borrower',3,true)).toEqual({kind:'transfer',to:'borrower',amount:3,clandestine:true});

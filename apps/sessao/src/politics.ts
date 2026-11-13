@@ -22,6 +22,8 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:10_000} as const;
+
 export const agendas = {
   ...targetedAgendas,
   protocolo:'Protocole um documento válido',
@@ -39,19 +41,19 @@ export const agendas = {
   equipamento:'Compre um binóculo no Apoio Técnico',
   presente:'Entregue um presente a um colega',
   visitaArquivo:'Visite o Arquivo',
-  pizza:'Coma uma pizza',
+  pizza:'Coma uma pizza ou pegue uma fatia no Cafezinho',
   lagosta:'Coma uma lagosta',
   comprarLagosta:'Compre uma lagosta',
   bombom:'Coma uma caixa de bombom',
-  jogar:'Jogue no celular por 30 segundos',
-  jogarOculto:'Jogue 30 segundos no celular sem ser visto',
+  jogar:`Jogue no celular por ${agendaDurationMs.jogar/1000} segundos`,
+  jogarOculto:`Jogue ${agendaDurationMs.jogarOculto/1000} segundos no celular sem ser visto`,
   selfieSolo:'Tire uma selfie',
   retratoGabinete:'Instale seu retrato no gabinete',
   poltrona:'Compre uma poltrona',
   ostentacao:'Gaste R$ 50 mil em móveis',
   visitaGabinete:'Visite o gabinete de um colega',
   passeio:'Visite três ambientes do Congresso',
-  pausaCafe:'Passe 10 segundos no Cafezinho',
+  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho`,
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
@@ -69,7 +71,7 @@ export const agendas = {
   autorretrato:'Tire uma selfie ao lado do seu retrato.',
   reforma:'Substitua o retrato de outro parlamentar pelo seu.',
   reserva:'Reserve uma cadeira no Cafezinho com uma placa VIP.',
-  fiscalVip:'Fotografe alguém na área VIP de outro parlamentar.',
+  fiscalVip:'Fotografe um visitante na área VIP de outro parlamentar.',
   mandaVip:'Substitua a placa VIP de outro parlamentar pela sua.',
   fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',
   pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
@@ -106,7 +108,7 @@ const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
 };
 export const missionReward = (kind:Agenda):MissionReward =>
   rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
-export const timedAgendas = new Set<Agenda>(['jogar','jogarOculto','pausaCafe']);
+export const timedAgendas = new Set<Agenda>(Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]);
 export type Mission = {id:number; kind:Agenda; current:number; target:number; person?:Contact};
 export const missionTitle = ({kind,target,person}:Mission) => person ? `${kind==='dinheiroAlvo' ? 'Transfira '+money(AGENDA_TRANSFER_MIN)+' para' : agendas[kind]} ${person.name}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];
@@ -120,12 +122,12 @@ export type PoliticsView = {
   wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantUsed:boolean;
   campaigned:boolean; suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
-  contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean})[]; paymentsLeft:number;
+  contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean; pixAvailable?:boolean})[]; paymentsLeft:number;
 };
 export type PoliticsAction =
   | {kind:'grant'; diverted:Split}
   | {kind:'campaign'}
-  | {kind:'transfer'; to:string; amount:number; clandestine:boolean}
+  | {kind:'transfer'; to:string; amount:number; clandestine?:boolean}
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
   | {kind:'accept' | 'cancel'; offer:number}
@@ -142,9 +144,8 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
       break;
     case 'campaign': return {kind:'campaign'};
     case 'transfer':
-      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount) &&
-          'clandestine' in data && typeof data.clandestine==='boolean') {
-        return {kind:'transfer',to:data.to,amount:data.amount as number,clandestine:data.clandestine};
+      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount)) {
+        return {kind:'transfer',to:data.to,amount:data.amount as number};
       }
       break;
     case 'share':
@@ -161,4 +162,8 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
     case 'hearing':
       if ('target' in data && typeof data.target==='string') return {kind:'hearing',target:data.target};
   }
+}
+
+export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
+  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
 }

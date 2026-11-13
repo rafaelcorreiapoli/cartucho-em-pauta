@@ -2,13 +2,18 @@ import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foods, isFood } from './food';
-import { isGear } from './equipment';
-import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
+import { gearConflict, isGear } from './equipment';
+import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { npcs, type NpcId } from './npcs';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
+
+function marketVendorPortrait(npc:NpcId) {
+  const vendor = npcs[npc];
+  return 'portrait' in vendor ? vendor.portrait : vendor.sprite;
+}
 
 export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
@@ -23,17 +28,20 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     markShortcut(yes,'1');
     markShortcut(no,'2');
   }
+  let replacement:number|undefined;
   let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
   yes.onclick = () => {
     const item = purchase?.id;
+    const token = replacement;
     prompt.close();
-    if (item!==undefined) send({kind:'equip',item});
+    if (item!==undefined && token!==undefined) send({kind:'replace-gear',item,token});
   };
   no.onclick = () => prompt.close();
-  const dismissPurchase = () => { purchase = undefined; };
+  const dismissPurchase = () => { purchase = undefined; replacement = undefined; };
   prompt.addEventListener('close',dismissPurchase);
   const pageSize = 9;
   let page = 0;
+  let selected = 0;
   let token:number|undefined;
   let currentVendor:NpcId|undefined;
   let dismissed = false;
@@ -46,6 +54,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   dialog.addEventListener('cancel',close);
   dialog.addEventListener('submit',close);
   function onPageKey(event:KeyboardEvent) {
+    if (!event.defaultPrevented && event.key==='Enter' && !event.repeat && !event.altKey &&
+        !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      const purchaseButton = body.querySelector<HTMLButtonElement>('.market-buy');
+      if (purchaseButton) {
+        event.preventDefault();
+        purchaseButton.click();
+        return;
+      }
+    }
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
         (event.key!=='ArrowLeft' && event.key!=='ArrowRight')) return;
     const arrow = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
@@ -65,49 +82,70 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     const goTo = (next:number) => {
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
+      selected = 0;
       renderCatalog(npc,token,wallet,inventory,equipped,furnishings);
     };
+    const stock = visible.map(kind=>{
+      const item = objects[kind];
+      const price = marketProduct(catalog,kind)!.price;
+      const furniture = isOfficeFurniture(kind);
+      const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
+      const stack = inventory.some(entry=>entry.kind===kind) && canStackItem(kind);
+      const needsSpace = !isGear(kind) || !!gearConflict(kind,equipped);
+      const noSpace = needsSpace && !furniture && !stack && inventory.length>=INVENTORY_SLOTS;
+      const status = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : noSpace ? 'Inventário cheio' :
+        wallet<price ? 'Saldo insuficiente' : undefined;
+      return {kind,item,price,status,hasItem};
+    });
+    const product = stock[selected];
+    const food = product && isFood(product.kind) ? foods[product.kind] : undefined;
+    const vendor = npcs[npc];
     flushSync(()=>root.render(<>
-      <div className="market-toolbar"><p className="market-wallet tabular-nums">
-        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}
-      </p></div>
-      <div className="market-products">
-        {visible.map((kind,index)=>{
-          const food = isFood(kind) ? foods[kind] : undefined;
-          const price = marketProduct(catalog,kind)!.price;
-          const item = objects[kind];
-          const furniture = isOfficeFurniture(kind);
-          const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
-          const noSpace = !furniture && inventory.length>=INVENTORY_SLOTS;
-          const disabled = hasItem || wallet<price || noSpace;
-          const priceLabel = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : money(price);
-          const detail = 'market-description-'+kind;
-          return <article className="market-product" key={kind}>
-            <button type="button" className="market-product-button" disabled={disabled} aria-describedby={detail}
-              aria-label={hasItem ? item.name+' · '+priceLabel : 'Comprar '+item.name+' · '+priceLabel}
-              aria-keyshortcuts={disabled ? undefined : String(index+1)}
-              onClick={()=>send({kind:'shop-buy',target:kind,token})}>
-              <img className="market-art" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
-              <span className="market-product-caption"><strong>{item.name}</strong><span className="market-product-price">{priceLabel}</span></span>
-              {!disabled && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
-            </button>
-            <span id={detail} className="market-product-details">{item.description}
-              {food && <small>{food.category} · {describeFood(food.effect)}</small>}
-              {!hasItem && (noSpace || wallet<price) && <small>{noSpace ? 'Inventário cheio' : 'Saldo insuficiente'}</small>}
-            </span>
-          </article>;
-        })}
-        {Array.from({length:pageSize-visible.length},(_,index)=><div className="market-product-empty" aria-hidden="true" key={index}/>)}
+      <div className="market-toolbar">
+        <div className="market-vendor">
+          <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
+          <div><h2 id="market-catalog-title">{vendor.label}</h2><strong>{vendor.name}</strong><p>{vendor.catalog==='equipment' ? 'Equipamentos, espionagem e utilidades parlamentares.' :
+            vendor.catalog==='furniture' ? 'Móveis instalados no seu gabinete.' : 'Lanches e bebidas.'}</p></div>
+        </div>
+        <p className="market-wallet tabular-nums"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}</p>
+      </div>
+      <div className="market-catalog-label"><span><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Comprar</span></div>
+      <div className="market-catalog-layout">
+        <div className="market-products" aria-label="Produtos">
+          {stock.map(({kind,item,price,hasItem,status},index)=><button type="button" className="market-product-button item-tile"
+            key={kind} aria-pressed={selected===index} aria-label={item.name+' · '+money(price)} aria-keyshortcuts={String(index+1)}
+            onClick={()=>{selected = index;renderCatalog(npc,token,wallet,inventory,equipped,furnishings);}}>
+            <img className="market-art" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
+            <span className="market-product-caption"><strong>{item.name}</strong><span className="market-product-price">{hasItem ? status : money(price)}</span></span>
+            <kbd className="action-key" aria-hidden="true">{index+1}</kbd>
+          </button>)}
+          {Array.from({length:pageSize-stock.length},(_,index)=><div className="market-product-empty item-tile" aria-hidden="true" key={index}>+</div>)}
+        </div>
+        {product && <section className="market-detail" aria-label="Produto selecionado">
+          <div className="market-detail-content">
+            <img className="market-detail-art" src={import.meta.env.BASE_URL+'assets/'+product.item.portrait} alt="" draggable={false}/>
+            <h3>{product.item.name}</h3>
+            <span className="bag-item-type">{food ? 'Consumível' : isGear(product.kind) ? 'Equipamento' : isOfficeFurniture(product.kind) ? 'Mobília' : 'Utilidade'}</span>
+            <p className="market-detail-price"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(product.price)}</p>
+            <p className="market-detail-description">{product.item.description}</p>
+            {food && <p className="market-detail-effects"><strong>Efeitos</strong>{describeFood(food.effect)}</p>}
+          </div>
+          <button type="button" className="hud-button market-buy" disabled={!!product.status} aria-keyshortcuts="Enter"
+            onClick={()=>send({kind:'shop-buy',target:product.kind,token})}>
+            <span><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>{product.status ?? 'Comprar'}</span>
+            <kbd className="action-key" aria-hidden="true">Enter</kbd>
+          </button>
+        </section>}
       </div>
       <nav className="market-paging" aria-label="Páginas do catálogo">
         <button type="button" className="market-page-arrow" aria-label="Página anterior" aria-keyshortcuts="ArrowLeft"
-          hidden={pageCount===1} disabled={page===0} onClick={()=>goTo(page-1)}>‹</button>
+          disabled={page===0} onClick={()=>goTo(page-1)}>‹</button>
         <div className="market-page-dots">
           {Array.from({length:pageCount},(_,index)=><button type="button" className="market-page-dot" key={index}
             aria-label={'Página '+(index+1)} aria-current={index===page ? 'page' : undefined} onClick={()=>goTo(index)}/>)}
         </div>
         <button type="button" className="market-page-arrow" aria-label="Próxima página" aria-keyshortcuts="ArrowRight"
-          hidden={pageCount===1} disabled={page===pageCount-1} onClick={()=>goTo(page+1)}>›</button>
+          disabled={page===pageCount-1} onClick={()=>goTo(page+1)}>›</button>
       </nav>
     </>));
     if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
@@ -118,12 +156,16 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   return {
     render(view:PlenaryView) {
       const inventory = view.gameplay?.inventory ?? [];
+      const equipped = view.gameplay?.equipped ?? [];
+      if (purchase && equipped.some(item=>item.id===purchase?.id)) purchase = undefined;
+      const conflict = purchase && isGear(purchase.kind) ? gearConflict(purchase.kind,equipped) : undefined;
       if (view.phase!=='negotiation' || view.gameplay?.vitality?.recovery ||
-        (prompt.open && !inventory.some(item=>item.id===purchase?.id))) {
+        (prompt.open && (replacement!==conflict?.id || !inventory.some(item=>item.id===purchase?.id)))) {
         purchase = undefined;
         if (prompt.open) prompt.close();
-      } else if (!prompt.open && purchase && inventory.some(item=>item.id===purchase?.id)) {
-        purchasedName.textContent = objects[purchase.kind].name;
+      } else if (!prompt.open && conflict && purchase && inventory.some(item=>item.id===purchase?.id)) {
+        replacement = conflict.id;
+        purchasedName.textContent = `${objects[conflict.kind].name} → ${objects[purchase.kind].name}`;
         prompt.showModal();
       }
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
@@ -132,6 +174,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         currentVendor = undefined;
         dismissed = false;
         page = 0;
+        selected = 0;
         if (last) root.render(null);
         last = '';
         if (dialog.open) dialog.close();
@@ -141,11 +184,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         if (state.token===token || state.shop) return;
         dismissed = false;
         page = 0;
+        selected = 0;
       }
       const wallet = view.politics?.wallet ?? 0;
-      const equipped = view.gameplay?.equipped ?? [];
       const furnishings = view.gameplay?.officeFurnishings ?? [];
-      if (currentVendor!==state.npc) page = 0;
+      if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
       const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.options,wallet,inventory,equipped,furnishings]);
       if (key===last) return;
@@ -153,6 +196,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       token = state.token;
       const npc = npcs[state.npc];
       dialog.classList.toggle('market-catalog',state.shop);
+      dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
       heading.textContent = state.shop ? npc.label : npc.name;
       if (!dialog.open) dialog.showModal();
       if (!state.shop) {

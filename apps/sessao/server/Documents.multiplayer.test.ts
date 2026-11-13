@@ -44,7 +44,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const feedback = new Map<string,string>();
     const controls = new Map<string,ControlState>();
     const reports = new Map<string,ForensicReport[]>();
+    const pixNotices = new Map<string,{from:string;amount:number}>();
     for (const peer of rooms) {
+      peer.onMessage('pix-received',(notice:{from:string;amount:number})=>pixNotices.set(peer.sessionId,notice));
+      peer.onMessage('audit-result',()=>{});
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('mail-state',(mail:InternalNotice[])=>inboxes.set(peer.sessionId,mail));
       peer.onMessage('mail-reports',(mail:ForensicReport[])=>reports.set(peer.sessionId,mail));
@@ -89,7 +92,6 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     bia.send('gameplay',{action:{kind:'accept',item:request.id},token:890});
     await wait(()=>state(alice)?.inventory.find(item=>item.document?.signatures.some(signer=>signer.id===bia.sessionId)));
     await wait(()=>views.get(alice.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='assinaturaAlvo'));
-    move(alice,stations.audit);
     alice.send('mail-publish',{token:930,subject:'Original assinado',body:'Segue o original',attachment:{kind:'document',id:original.id}});
     const authenticPublication = await wait(()=>inboxes.get(bia.sessionId)?.find(entry=>entry.subject==='Original assinado'));
     move(alice,reprography);
@@ -101,7 +103,6 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(alice,stations.secretary);
     alice.send('gameplay',{action:{kind:'verify-document',item:original.id,place:'secretary'},token:1020});
     await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
-    move(alice,stations.audit);
     // Advance the rate-limit boundary without waiting through a full game phase.
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(alice.sessionId);
     alice.send('mail-publish',{token:1070,subject:'Proposta assinada',body:'Segue documento',attachment:{kind:'document',id:original.id}});
@@ -128,10 +129,18 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(report.authentic).toBe(false);
     expect(reports.get(alice.sessionId)).toEqual([]);
     await wait(()=>state(bia)?.inventory.some(item=>item.kind==='forensicKit')===false);
-    move(caio,{x:npcs.vendor.x,y:npcs.vendor.y+21});
+    move(caio,stations.secretary);
     caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false,token:1320});
-    await wait(()=>views.get(bia.sessionId)?.politics?.ledger.find(entry=>
-      entry.kind==='public-transfer' && entry.from===caio.sessionId && entry.to===bia.sessionId && entry.amount===4));
+    const pix = await wait(()=>views.get(bia.sessionId)?.politics?.evidence.find(entry=>
+      entry.kind==='clandestine-transfer' && entry.from===caio.sessionId && entry.to===bia.sessionId && entry.amount===4));
+    expect([...pixNotices]).toEqual([[bia.sessionId,{from:'Caio',amount:4}]]);
+    const alicePolitics = () => views.get(alice.sessionId)?.politics;
+    expect(alicePolitics()?.evidence.some(entry=>entry.id===pix.id)).toBe(false);
+    expect(alicePolitics()?.ledger.some(entry=>entry.id===pix.id)).toBe(false);
+    move(alice,stations.audit);
+    alice.send('plenary-action',{action:'audit',token:1330});
+    await wait(()=>alicePolitics()?.evidence.find(entry=>entry.id===pix.id));
+    expect(alicePolitics()?.ledger.some(entry=>entry.id===pix.id)).toBe(false);
     const nextShop = await wait(()=>{
       const current = state(bia)?.dialogue;
       return current?.shop && current.token!==shop.token ? current : undefined;
@@ -143,12 +152,18 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const originalReport = await wait(()=>reports.get(bia.sessionId)?.find(entry=>entry.notice===authenticPublication.id));
     expect(originalReport.authentic).toBe(true);
     expect(reports.get(alice.sessionId)).toEqual([]);
-    move(bia,stations.audit);
     bia.send('mail-publish',{token:1470,subject:'Contraexposição',body:'Laudo anexo',attachment:{kind:'report',id:report.notice}});
     const rebuttal = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Contraexposição'));
     expect(rebuttal.attachment).toEqual({kind:'report',report});
 
+    const caioAgenda = Reflect.get(economy,'accounts').get(caio.sessionId).agenda;
+    Reflect.set(caioAgenda,'missions',[]);
+    Reflect.set(caioAgenda,'missionDeck',['publicouSelfie','cafe','passeio']);
+    match.refreshAgendaEligibility();
+    await wait(()=>views.get(caio.sessionId)?.politics?.missions.active.find(mission=>mission.kind==='publicouSelfie'));
     move(caio,stations.audit);
+    move(alice,stations.audit);
+    move(bia,stations.audit);
     caio.send('gameplay',{action:{kind:'selfie'},token:1520});
     const photo = await wait(()=>photos.get(caio.sessionId)?.album[0]?.photo);
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(bia.sessionId);
@@ -157,6 +172,14 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     caio.send('mail-publish',{token:1570,subject:'Selfie na Corregedoria',body:'Segue a foto',attachment:{kind:'photo',id:photo.id}});
     const photoNotice = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Selfie na Corregedoria'));
     expect(photoNotice.attachment).toEqual({kind:'photo',photo});
+    const completedSelfie = await wait(()=>views.get(caio.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='publicouSelfie'));
+    Reflect.set(caioAgenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    Reflect.set(caioAgenda,'missions',[]);
+    match.refreshAgendaEligibility();
+    await wait(()=>views.get(caio.sessionId)?.politics?.missions.active.find(mission=>mission.kind==='publicouSelfie'));
+    Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
+    caio.send('mail-publish',{token:1590,subject:'Mesma foto',body:'Publicada novamente',attachment:{kind:'photo',id:photo.id}});
+    await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Mesma foto'));
 
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
     caio.send('mail-publish',{token:2,subject:'Reenvio',body:'Não deve publicar'});
@@ -164,6 +187,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const forwarded = await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.forwardedFrom===publication.id));
     expect(forwarded.attachment).toEqual(publication.attachment);
     expect(forwarded.author).toBe('Caio');
+    expect(views.get(caio.sessionId)?.politics?.missions.completed.filter(mission=>mission.kind==='publicouSelfie')).toEqual([completedSelfie]);
     expect(inboxes.get(alice.sessionId)?.some(entry=>entry.subject==='Reenvio')).toBe(false);
     expect(JSON.stringify(forwarded)).not.toContain('authentic');
     move(alice,stations.amendment);
@@ -216,6 +240,11 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
 
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
+    // A new command token does not make an already filed item available again.
+    move(alice,stations.amendment);
+    alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2120});
+    await wait(()=>feedback.get(alice.sessionId)==='O objeto não está com você.');
+    expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     const fire = Reflect.get(match,'fire');
     Reflect.set(fire,'clock',fireRules.firstAfter/2);
     const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;

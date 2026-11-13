@@ -1,0 +1,866 @@
+/* The match HUD overlays the world; its empty areas keep accepting map input. */
+#session:not([data-phase="lobby"]) {
+  display: block;
+  --hud-edge: clamp(12px, 2vw, 32px);
+  --profile-width: clamp(262.5px, 23.25vw, 367.5px);
+  --hot-slot: clamp(32px,3.6vw,62px);
+  --hot-gap: 5px;
+}
+#session:not([data-phase="lobby"]) #world { position: absolute; inset: 0; }
+#command-strip, #command-deck {
+  position: absolute;
+  inset-inline: 0;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+#command-strip > *, #command-deck > section > * { pointer-events: auto; }
+#command-strip {
+  top: 0;
+  align-items: start;
+  padding: 14px var(--hud-edge) 30px;
+  background: linear-gradient(#070f0beb, #080f0b00);
+}
+#command-strip #congress-dock { border: 0; padding: 0; background: none; }
+.congress-meter { width: clamp(210px, 28vw, 420px); }
+.congress-meter-label {
+  color: var(--color-hud-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.congress-meter-track {
+  padding: 3px 9px 3px 4px;
+  border: 1px solid #7cc69891;
+  border-radius: 999px;
+  background: #07120de0;
+}
+.congress-meter-track .react-meter { height: 9px; flex: 1; }
+.congress-meter-track .react-meter span { background: linear-gradient(90deg,#41ad7c,var(--meter-tone)); }
+.congress-meter-track strong { color: var(--color-hud-budget); font-size: 19px; line-height: 1; }
+.congress-budget { color: var(--color-hud-muted); font-size: 12px; }
+.congress-budget strong { color: var(--color-hud-budget); }
+#command-deck {
+  bottom: 0;
+  min-height: var(--deck-height);
+  align-items: end;
+  background: linear-gradient(0deg,#080f0bf2,#080f0b00);
+}
+#command-deck > section + section { border-left: 0; }
+#command-strip #profile-dock .portrait { border-radius: 12px; }
+#profile-dock .deck-identity { flex: 0 1 210px; }
+.vital-row {
+  display: grid;
+  grid-template-columns: 1.3rem minmax(32px,1fr) 4.4em;
+  align-items: center;
+  gap: .35rem;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.vital-row > span { color: var(--meter-tone); font-weight: 800; }
+.vital-row > small { text-align: right; }
+.vital-row .react-meter { height: 5px; }
+#match #agenda-dock {
+  z-index: 4;
+  inset: auto auto var(--hud-edge) var(--hud-edge);
+  width: var(--profile-width);
+}
+:is(#agenda-dock .react-agenda, .incident-panel) {
+  position: relative;
+  padding: 5px 10px 5px 17px;
+  border: 0;
+  color: #f5f7ef;
+  background: radial-gradient(ellipse at 12% 10%, #23473a55, transparent 65%),
+    linear-gradient(90deg,#09140fdb,transparent);
+  box-shadow: none;
+  text-shadow: 0 1px 3px #000;
+  font-size: 14px;
+}
+:is(#agenda-dock .react-agenda, .incident-panel)::before {
+  content: "";
+  position: absolute;
+  inset: 5px auto 4px 0;
+  width: 2px;
+  background: linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent);
+  filter: drop-shadow(0 0 4px #60e1af9c);
+}
+#agenda-dock .react-agenda h2 { font-size: 15px; }
+#agenda-dock .agenda-icon {
+  width: 19px;
+  height: 19px;
+  color: #eef9ee;
+  filter: drop-shadow(0 0 5px #72e5bfb8);
+}
+#agenda-dock .react-missions { gap: 9px; }
+#agenda-dock .react-missions strong { font-weight: 500; }
+#agenda-dock .react-mission-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-color: #709986b0;
+  box-shadow: inset 0 0 4px #6ed4aa24;
+}
+#agenda-dock [data-done="true"] .react-mission-check {
+  border-color: #77caa2;
+  filter: drop-shadow(0 0 3px #62e4a976);
+}
+#world #hud-notices { inset: 88px var(--hud-edge) auto auto; }
+
+#command-deck #gameplay-tools { display: none; }
+#congress-apps { position: relative; color: var(--color-hud-ink); }
+.congress-app-toggle, .congress-app-panel button {
+  color: inherit;
+  cursor: pointer;
+}
+.congress-app-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #78977c;
+  border-radius: 10px;
+  background: linear-gradient(#1e3829,#102018);
+}
+.congress-app-toggle .hud-glyph { width: 21px; height: 21px; color: var(--color-hud-budget); }
+.congress-app-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(330px, calc(100vw - 32px));
+  border: 1px solid #6d9476;
+  background: linear-gradient(155deg,#192e23,#0e1d16 72%);
+  box-shadow: 0 12px 32px #0008;
+}
+.congress-app-panel header button { background: none; border: 0; }
+.congress-app {
+  border: 1px solid var(--color-hud-border);
+  background: #23413469;
+}
+.congress-app:hover, .congress-app-toggle[aria-expanded="true"] {
+  border-color: var(--color-hud-budget);
+  background: #2b4a37;
+}
+.congress-app .hud-glyph { flex: none; color: var(--color-hud-budget); }
+.congress-app kbd { font-size: 10px; color: var(--color-hud-muted); }
+#agenda-dock .react-missions > li { column-gap: 12px; }
+#agenda-dock .react-mission-check { margin-inline: 1px 2px; }
+#agenda-dock .react-agenda header { column-gap: 12px; }
+
+#command-strip #congress-dock { grid-column: 2; }
+#command-strip .election-and-incidents { grid-column: 3; grid-row: 1; justify-self: end; min-width: 0; }
+.election-and-incidents > :not(:empty) + :not(:empty) { margin-top: 8px; }
+#command-strip #profile-dock {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 12px 15px;
+  width: var(--profile-width);
+  box-sizing: border-box;
+  position: static;
+  padding: 13px 16px 14px;
+  border: 1px solid #78b68b70;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 6% 0%,#29554152,transparent 62%), linear-gradient(120deg,#081710ef,#101e17d6);
+  box-shadow: inset 0 0 18px #76c8990d;
+}
+#command-strip #profile-dock .portrait {
+  --portrait-size: clamp(68px, 6.1vw, 98px);
+  border-color: #6da382;
+  border-radius: 16px;
+  background-color: #274b39;
+}
+#profile-dock .deck-identity { gap: 3px; align-self: stretch; }
+#profile-dock #hud-nick { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#profile-level-mount { flex: none; }
+#profile-dock .profile-subtitle { display: flex; gap: 4px; color: #d5c790; }
+#command-strip #hud-office { color: inherit; }
+#own-office:not([hidden])::before { content: "· "; }
+#profile-dock .react-level {
+  display: block;
+  padding: 3px 9px;
+  border: 1px solid #608e73;
+  border-radius: 9px;
+  color: #f2d89c;
+}
+.profile-resource-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 6px 0 5px;
+  border-bottom: 1px solid #42695480;
+  font-size: clamp(10px,.95vw,13px);
+}
+.profile-resource-row span { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.profile-resource-row span + span { border-left: 1px solid #42695480; padding-left: 6px; }
+.profile-resource-row strong, .profile-resource-row .hud-glyph { color: #f2d89c; }
+#profile-vitals { grid-column: 1 / -1; }
+#profile-dock .vital-row { grid-template-columns: 22px minmax(0,1fr) 6em; gap: 9px; }
+#profile-dock .vital-row > svg { width: 17px; height: 17px; fill: var(--meter-tone); }
+#profile-dock .vital-row[data-tone="health"] > svg { fill: #e8c87c; }
+#profile-dock .vital-row .react-meter { height: 10px; border-radius: 999px; background: #213930a0; }
+#profile-dock .vital-row .react-meter span {
+  border-radius: inherit;
+  background: linear-gradient(180deg,color-mix(in srgb,var(--meter-tone),white 20%),var(--meter-tone) 44%,color-mix(in srgb,var(--meter-tone),black 24%));
+}
+#profile-dock .vital-row > small { font-size: 11px; text-align: center; }
+@media (min-width: 641px) {
+  #command-deck { grid-template-columns: var(--profile-width) minmax(0,1fr) minmax(245px,1fr); }
+}
+@media (max-width: 640px) {
+  #command-strip #congress-dock { grid-column: 2; }
+  #command-strip .election-and-incidents { grid-column: 1 / -1; grid-row: 3; }
+  #session:not([data-phase="lobby"]) { --profile-width: min(262.5px, 39vw); }
+}
+
+#command-deck .deck-tools {
+  display: grid;
+  grid-template-columns: repeat(4,var(--hot-slot));
+  grid-template-rows: repeat(2,var(--hot-slot));
+  justify-self: end;
+  gap: var(--hot-gap);
+  padding: 0;
+}
+#command-deck #item-slots:not([hidden]), #command-deck .deck-tool-row { display: contents; }
+#command-deck #item-slots > :nth-child(4) { grid-column: 1; grid-row: 2; }
+#command-deck .deck-tools > :not([hidden]) { pointer-events: none; }
+#command-deck :is(#item-slots,.deck-tool-row) button { pointer-events: auto; }
+#command-deck #item-slots .item-tile,
+.congress-app-toggle {
+  width: var(--hot-slot);
+  height: var(--hot-slot);
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border: 1px solid #779c7c9e;
+  border-radius: 24%;
+  background: linear-gradient(150deg,#1b3026af,#091712a6);
+  box-shadow: inset 0 0 5px #83ae8729,0 2px 6px #0006;
+}
+#command-deck #item-slots button.item-tile:not(.item-tile-empty) { border-color: #dcc584; }
+#command-deck #item-slots .item-tile-empty { color: #6d997db8; }
+#command-deck #item-slots .slot-key {
+  inset: 4px auto auto 5px;
+  color: #e0dab5;
+  font-size: 11px;
+}
+.slot-plus { font-size: clamp(17px,2.2vw,28px); font-weight: 400; line-height: 1; }
+.slot-count { position: absolute; right: 5px; bottom: 4px; color: #f2d68d; }
+#congress-apps {
+  display: grid;
+  grid-area: 1 / 4 / 3 / 5;
+  grid-template-rows: subgrid;
+}
+#congress-apps > [aria-label="Aplicativos"] { grid-row: 1; }
+#congress-apps > [aria-label="Mochila"] { grid-row: 2; }
+.congress-app-toggle { border-radius: 28%; }
+.congress-app-toggle .hud-glyph { width: 49%; height: 49%; color: #e9dfb5; }
+.congress-app-toggle svg[fill="currentColor"] { fill: currentColor; stroke: none; }
+.congress-app-panel {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  width: max-content;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.congress-app-panel .congress-app { position: relative; padding: 0; }
+.congress-app-label {
+  position: absolute;
+  right: calc(100% + 8px);
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #0b1812e8;
+  white-space: nowrap;
+}
+.congress-app-badge { position: absolute; top: 2px; right: 4px; color: #f2d68d; }
+@media (prefers-reduced-motion: no-preference) {
+  .congress-app { animation: congress-app-enter 200ms ease-out both; animation-delay: calc(var(--app-index) * 24ms); }
+}
+@keyframes congress-app-enter {
+  from { transform: translateY(12px) scale(.92); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+#command-deck #social-docks .social-trigger,
+#command-deck :is(#open-action-shortcuts,#voice-toggle,#room-settings > summary) { display: none; }
+#command-deck #voice-host { position: absolute; right: 0; bottom: var(--hot-slot); padding: 0; border: 0; }
+#command-deck #voice-host :is(#voice-dock,#room-settings) { pointer-events: auto; }
+.congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.congress-bag .item-tile { min-height: 78px; }
+#command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
+#command-deck #voice-dock > :is(#open-action-shortcuts,#voice-toggle),
+#command-deck #voice-dock #room-settings > summary { display: none; }
+
+#session #open-action-shortcuts { display: none; }
+
+#command-deck #legislative-dock { grid-column: 2; overflow: visible; }
+#command-deck #last-vote { pointer-events: auto; z-index: 5; }
+#command-deck .deck-tools { grid-column: 3; }
+#session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
+#session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }
+.incident-panel {
+  anchor-name: --active-incidents;
+  width: min(270px, 38vw);
+  margin-inline-start: auto;
+  pointer-events: none;
+}
+.incident-panel h2, .incident-fire p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.incident-panel h2 { margin-bottom: 9px; font-size: 14px; }
+.incident-fire {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 4px 7px;
+}
+.incident-fire strong, .incident-fire small { display: block; }
+.incident-fire small { color: var(--color-hud-muted); }
+.incident-flame { width: 19px; height: 19px; color: var(--color-hud-muted); }
+.incident-time { color: #f2d89c; font-variant-numeric: tabular-nums; }
+.incident-fire p { grid-column: 1/-1; color: #ffb1a2; font-size: 11px; }
+@media (max-width: 640px) {
+  #command-deck #legislative-dock { grid-column: 1 / -1; }
+  #command-deck .deck-tools { grid-column: 2; }
+}
+
+#surveillance-dialog {
+  inset: 110px var(--hud-edge, 24px) auto auto;
+  margin: 0;
+  width: min(470px,calc(100vw - 32px));
+  max-height: calc(100dvh - 126px);
+  overflow: auto;
+  border: 1px solid #709579;
+  border-radius: 18px;
+  background: linear-gradient(150deg,#172f23,#0b1812);
+}
+#surveillance-dialog::backdrop { background: #030a0733; }
+#surveillance-dialog .spy-console { grid-template-columns: 1fr; }
+#surveillance-dialog :is(#spy-channels,#spy-monitor) { padding: .5rem 0; background: none; }
+.spy-tabs { margin-bottom: 10px; border-bottom: 1px solid #56776080; }
+.spy-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  padding: 8px 10px;
+  color: #bacab9;
+  background: transparent;
+  cursor: pointer;
+}
+.spy-tabs button[aria-pressed="true"] { color: #f4deb1; background: #253e31; box-shadow: inset 0 -2px #e2c583; }
+.spy-tabs small { font-variant-numeric: tabular-nums; }
+#surveillance-dialog .spy-channel { border-radius: 10px; background: #172d22; }
+#surveillance-dialog .spy-channel[aria-pressed="true"] { background: #285344; }
+.spy-play {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #c5cba0;
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+#context-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+#context-hud #stations {
+  position: absolute;
+  --context-side: max(var(--profile-width), calc(4 * var(--hot-slot) + 3 * var(--hot-gap)));
+  inset: auto calc(var(--context-side) + var(--hud-edge) + 8px) max(var(--hud-edge),env(safe-area-inset-bottom));
+  padding: 0;
+  background: none;
+  animation: none;
+}
+@media (max-width: 960px) {
+  #context-hud #stations {
+    inset-inline: var(--hud-edge);
+    bottom: calc(max(var(--hud-edge),env(safe-area-inset-bottom)) + 2 * var(--hot-slot) + var(--hot-gap) + 8px);
+  }
+}
+#stations .station-actions { align-items: flex-end; gap: 7px; }
+#stations [data-context-overflow="expanded"] { order: -2; }
+#stations .context-overflow-break { order: -1; flex-basis: 100%; height: 0; margin-bottom: -7px; }
+#stations #office-progress-mount { position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; }
+#stations #interview-hint { position: absolute; top: 100%; inset-inline: 0; }
+#stations #field-actions { display: contents; }
+#stations [data-context-hidden="true"],
+#stations [data-context-overflow="true"] { display: none !important; }
+#stations .hud-button, #stations .context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  max-width: min(270px, 88vw);
+  padding: 6px 10px;
+  border: 1px solid #779c7c9e;
+  border-radius: 10px;
+  background: linear-gradient(150deg,#213a2ee8,#0b1c15d6);
+  color: #f0e6cc;
+  box-shadow: inset 0 0 5px #83ae8729,0 2px 8px #0006;
+  font: 650 13px/1.2 system-ui,sans-serif;
+}
+#stations .hud-button:hover, #stations .hud-button[aria-expanded="true"], #stations .context-item:hover {
+  border-color: #e9cc85;
+  box-shadow: inset 0 0 9px #e5c67b29,0 0 10px #e5c67b30;
+}
+#stations .hud-button:disabled { opacity: .45; }
+#stations .hud-button .hud-glyph { width: 17px; height: 17px; color: #e9d49a; }
+#stations .station-key {
+  position: absolute;
+  inset: 3px 4px auto auto;
+  min-width: 17px;
+  min-height: 17px;
+  padding: 0 3px;
+  border: 1px solid #ac9458;
+  border-radius: 5px;
+  background: #0a1811;
+  color: #eddaaa;
+  font: 700 10px/1 system-ui,sans-serif;
+}
+#stations .hud-button:has(.station-key) { padding-right: 29px; }
+.context-nearby { position: relative; }
+#stations #nearby-items {
+  --context-tile: clamp(86px, 8vw, 112px);
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  grid-template-columns: repeat(3,var(--context-tile));
+  justify-content: center;
+  gap: 7px;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: min(38dvh, 290px);
+  margin: 0;
+  padding: 3px;
+  overflow: auto;
+}
+#stations #nearby-items[hidden] { display: none; }
+#stations #nearby-items .context-item {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  align-items: center;
+  width: var(--context-tile);
+  height: var(--context-tile);
+  box-sizing: border-box;
+  padding: 12px 5px 6px;
+  gap: 3px;
+  text-align: center;
+}
+#stations #nearby-items .context-item:only-child { grid-column: 2; }
+#stations #nearby-items .item-caption {
+  position: static;
+  padding: 0;
+  background: none;
+  font: 650 11px/1.15 system-ui,sans-serif;
+  overflow-wrap: anywhere;
+}
+#stations #nearby-items .item-portrait { width: 48px; height: 48px; object-fit: contain; }
+#stations .context-nearby:has(#nearby-objects[hidden]) { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  #stations .hud-button, #stations .context-item { transition: border-color 130ms, box-shadow 130ms; }
+  #stations #nearby-items:not([hidden]) { animation: congress-app-enter 130ms ease-out; }
+}
+#stations .hud-button:has(.station-key:not(:empty)) { padding-top: 6px; }
+#stations .hud-button { min-width: 0; height: 36px; white-space: normal; }
+
+#command-strip {
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: clamp(8px,1.5vw,22px);
+}
+.congress-meter {
+  width: clamp(240px,32vw,560px);
+  gap: 5px;
+}
+.congress-emblem {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+  color: #f6e9c0;
+  filter: drop-shadow(0 0 6px #90bf962f);
+}
+.congress-emblem::before, .congress-emblem::after {
+  content: "";
+  width: 24%;
+  height: 1px;
+  background: linear-gradient(90deg,transparent,#e0cf9d);
+}
+.congress-emblem::after { scale: -1 1; }
+.congress-emblem svg { width: clamp(66px,6vw,100px); }
+.congress-meter-label, .congress-budget {
+  justify-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: help;
+}
+.congress-meter-label { font-size: clamp(10px,1vw,16px); letter-spacing: .18em; }
+.congress-meter-track {
+  position: relative;
+  gap: 9px;
+  padding: 5px 10px 5px 6px;
+  border-color: #81bb9b;
+  box-shadow: inset 0 0 0 2px #4777614d,0 0 10px #89b38e1a;
+}
+.congress-meter-track .react-meter {
+  height: clamp(14px,1.65vw,26px);
+  border: 1px solid #456452;
+  border-radius: 999px;
+  background: #060f0c;
+}
+.congress-meter-track .react-meter span {
+  background: linear-gradient(180deg,#e9ffde44,transparent 45%,#062f2544),
+    linear-gradient(90deg,#4fd5a2,#6bb681 65%,#d7c56d);
+}
+.congress-meter-track [data-tone="danger"] span {
+  background: linear-gradient(90deg,#b35348,var(--color-hud-danger));
+}
+.congress-meter-track strong { min-width: 2ch; font-size: clamp(20px,1.9vw,32px); }
+.congress-laurel {
+  position: absolute;
+  right: calc(100% + 8px);
+  bottom: -1px;
+  width: clamp(15px,2vw,29px);
+  color: #b89a54;
+  opacity: .72;
+  pointer-events: none;
+}
+.congress-laurel-right { right: auto; left: calc(100% + 8px); scale: -1 1; }
+.congress-budget { gap: 12px; margin-top: 5px; font-size: clamp(12px,1.15vw,18px); }
+.congress-budget strong { font-size: 1.12em; }
+
+#command-strip #election-dock > summary {
+  gap: 11px;
+  min-height: 44px;
+  padding: 0 0 0 13px;
+  border: 1px solid transparent;
+  border-bottom-color: #617c66;
+  border-radius: 999px;
+  background: linear-gradient(180deg,transparent,#11241a80);
+}
+#command-strip #election-dock > summary:hover,
+#command-strip #election-dock[open] > summary { background: #13251cca; }
+#command-strip #election-dock > summary > .hud-glyph { width: 21px; height: 21px; color: #e4be6a; }
+#command-strip .election-summary { display: grid; align-items: start; gap: 4px; }
+#command-strip #current-office { color: #f6f3e9; font-weight: 750; }
+#command-strip #election-position { color: #edca7c; }
+#command-strip .election-clock {
+  justify-content: center;
+  min-width: 67px;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid #617c66;
+  border-radius: 999px;
+  background: #0b1712;
+}
+#command-strip #election-timer { color: #f8f5e8; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  #command-strip { grid-template-columns: minmax(0,1fr) auto; }
+  #command-strip #congress-dock { grid-column: 1; }
+  #command-strip .election-and-incidents { grid-column: 2; }
+  .congress-meter { width: min(100%,320px); }
+  .congress-laurel { display: none; }
+}
+#world #hud-notices { inset-block-start: max(88px, calc(58px + env(safe-area-inset-top))); }
+
+#equipped-gear:not([hidden]) {
+  --gear-size: clamp(42px,4.3vw,65px);
+  z-index: 4;
+}
+.gear-slot {
+  position: relative;
+  width: var(--gear-size);
+  height: var(--gear-size);
+  box-sizing: border-box;
+  border: 1px solid #709479;
+  border-radius: 24%;
+  background: linear-gradient(150deg,#192e25b8,#071511ba);
+  box-shadow: inset 0 0 6px #89ba9c28;
+}
+.gear-slot-empty { display: grid; height: 100%; place-items: center; color: #3c5549; }
+.gear-slot-empty[hidden] { display: none; }
+.gear-slot-empty .hud-glyph { width: 42%; height: 42%; }
+.gear-slot .equipped-gear-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 5px 6px 12px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+.gear-slot:has(.equipped-gear-tile[data-active="true"]) { border-color: #84edca; }
+.gear-slot .equipped-gear-footer { position: absolute; inset: auto 4px 3px 4px; }
+.gear-slot .equipped-gear-key { font-size: 8px; }
+.gear-slot .equipped-gear-timer { font-size: 8px; }
+.character-dock {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  gap: 6px;
+}
+#command-strip .character-dock { pointer-events: none; }
+.character-dock > :is(#profile-dock,#equipped-gear) { zoom: .8; }
+.character-dock button { pointer-events: auto; }
+.character-dock #equipped-gear:not([hidden]) { position: static; }
+@media (max-width: 760px) {
+  #command-strip .character-dock { grid-row: 2; }
+}
+
+.bag-hotbar { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 4px; margin: 8px 0; }
+.bag-hotbar > span, .bag-hotbar > button:last-child:nth-child(8) { grid-column: 1/-1; }
+.bag-hotbar > .hud-button { min-width: 0; min-height: 28px; margin: 0; padding: 4px 2px; }
+.bag-hotbar > .hud-button[aria-pressed="true"] { border-color: #e9c77c; background: #3a3c25; }
+
+#gameplay-dialog[data-mode="bag"] {
+  width: min(780px,calc(100vw - 28px));
+  height: min(640px,calc(100dvh - 28px));
+  padding: clamp(14px,2vw,24px);
+  overflow: hidden;
+}
+#gameplay-dialog[data-mode="bag"][open] { display: grid; grid-template-rows: auto minmax(0,1fr); gap: 14px; }
+#gameplay-dialog[data-mode="bag"] #gameplay-target-label { display: none; }
+#gameplay-dialog[data-mode="bag"] h2 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 27px; }
+#gameplay-dialog[data-mode="bag"] .bag-title-icon { width: 30px; height: 30px; color: #efd38c; }
+#gameplay-dialog[data-mode="bag"] #gameplay-body { display: grid; min-height: 0; margin: 0; align-items: stretch; }
+#gameplay-dialog[data-mode="bag"] #gameplay-body > div { min-width: 0; min-height: 0; }
+.bag-layout {
+  display: grid;
+  height: 100%;
+  grid-template-columns: minmax(0,1.35fr) minmax(0,1fr);
+  grid-template-rows: auto minmax(0,1fr) auto;
+  gap: 14px 20px;
+}
+.bag-filters { grid-column: 1/-1; border-bottom: 1px solid #4c6e597d; }
+.bag-filters button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px clamp(6px,1.3vw,16px);
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: #cad5c6;
+  font: inherit;
+  cursor: pointer;
+}
+.bag-filters button[aria-pressed="true"] { background: #294335; color: #f0d69b; box-shadow: inset 0 -2px #e9c77c; }
+.bag-storage { min-height: 0; overflow: auto; padding: 3px; }
+.bag-layout .congress-bag { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.bag-layout .item-tile {
+  min-height: 0;
+  color: #91a58d;
+  border: 1px solid #6d92747d;
+  border-radius: 12px;
+  background: linear-gradient(155deg,#223a2d86,#0f231adc);
+}
+.bag-layout .item-tile img { width: 69%; height: 69%; object-fit: contain; }
+.bag-layout .item-tile[aria-pressed="true"] { border-color: #f2ce78; box-shadow: inset 0 0 0 1px #e9c77c,0 0 9px #d9b66146; }
+.bag-layout button:disabled { opacity: .45; cursor: default; }
+.bag-capacity { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; color: #b7c6af; }
+.bag-detail { min-width: 0; min-height: 0; border-left: 1px solid #4c6e597d; padding-left: 16px; }
+.bag-detail > p,
+.bag-detail .object-card {
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid #4c6e5999;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at top right,#29433885,#12241c);
+}
+.bag-detail > p { display: grid; place-items: center; text-align: center; color: #bac9b8; }
+.bag-detail .object-card { display: grid; grid-template-rows: minmax(0,1fr) min(47%,178px); gap: 8px; }
+.bag-item-info,.bag-item-actions { min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.bag-detail .object-card h3 { display: grid; justify-items: start; gap: 4px; font-size: 19px; }
+.bag-detail .object-card h3 img { width: 68px; height: 68px; object-fit: contain; }
+.bag-item-type { padding: 2px 7px; border-radius: 999px; background: #485940; font-size: 11px; }
+.bag-description { margin: 7px 0; color: #e0e6d7; }
+.bag-item-actions > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 35px;
+  margin: 0 0 5px;
+  padding: 5px 9px;
+  text-align: left;
+  border-radius: 8px;
+}
+.bag-item-actions > button span { display: flex; align-items: center; gap: 8px; }
+.bag-item-actions > button :is(svg,kbd) { flex: none; }
+.bag-item-actions .bag-pin:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
+.bag-recipient { display: grid; gap: 4px; margin-bottom: 6px; }
+.bag-preview { grid-column: 1/-1; padding-top: 10px; border-top: 1px solid #9f8b5280; }
+.bag-preview strong span { font-weight: 400; color: #b7c6af; }
+.bag-preview-slots { display: grid; grid-template-columns: repeat(6,minmax(0,54px)); gap: 7px; margin-top: 7px; }
+#gameplay-dialog[data-mode="bag"] .bag-preview-slots .slot-key { inset: 4px auto auto 5px; }
+@media (max-width: 520px) {
+  .bag-layout { grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); column-gap: 8px; }
+  .bag-detail { padding-left: 7px; }
+  .bag-detail .object-card { padding: 8px; }
+  .bag-filters button { gap: 4px; font-size: .75rem; }
+}
+
+:is(#gameplay-dialog[data-mode="bag"],#market-dialog.market-catalog) {
+  border: 1px solid #6e9077;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 14% 0%,#1b3026,#102019 65%,#0c1914);
+  box-shadow: 0 20px 70px #0007, inset 0 1px #a0c2a31c;
+}
+#market-dialog.market-catalog {
+  width: min(1000px,calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: clamp(12px,2vw,23px);
+}
+#market-dialog.market-catalog h2 { font-size: clamp(22px,3vw,32px); }
+#market-dialog.market-catalog > header { position: absolute; inset: 12px 14px auto auto; z-index: 1; }
+#market-dialog.market-catalog #market-title { display: none; }
+.market-catalog #market-body { margin-top: 8px; }
+.market-catalog .market-toolbar { justify-content: space-between; padding-right: 40px; }
+.market-vendor { display: flex; align-items: center; min-width: 0; gap: 12px; }
+.market-vendor img { width: clamp(48px,9dvh,78px); aspect-ratio: 1; object-fit: contain; border: 1px solid #bb9f66; border-radius: 13px; background: #294336; }
+.market-vendor strong { font-size: 1rem; }
+.market-vendor p { color: #c8d1bc; font-size: .83rem; }
+.market-catalog .market-wallet { font-size: clamp(.85rem,2vw,1.2rem); }
+.market-catalog-label { display: flex; align-items: center; gap: 12px; margin: 8px 0; color: #f0d69b; font-weight: 750; }
+.market-catalog-label::before,.market-catalog-label::after { content: ''; flex: 1; border-top: 1px solid #a993536b; }
+.market-catalog-label span { display: flex; align-items: center; gap: 7px; padding: 5px 18px; border: 1px solid #a9935380; border-radius: 9px; background: #294335; }
+.market-catalog-layout { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 12px; }
+.market-catalog .market-products { grid-template-rows: repeat(3,clamp(90px,17dvh,158px)); }
+.market-catalog :is(.market-product-button,.market-product-empty) {
+  aspect-ratio: auto;
+  border: 1px solid #6d92747d;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 35%,#304c37,#12271e 80%);
+}
+.market-catalog .market-product-button { place-items: stretch; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) 50px; }
+:is(.bag-layout .item-tile,.market-catalog .market-product-button)[aria-pressed="true"] {
+  border-color: #f2ce78;
+  box-shadow: inset 0 0 0 1px #e9c77c,0 0 9px #d9b66146;
+}
+.market-catalog img.market-art { width: 100%; padding: 2px; transform: scale(1.13); }
+.market-product-caption { z-index: 1; }
+.market-product-empty { color: #91a58d; }
+.market-detail {
+  display: grid;
+  grid-template-rows: minmax(0,1fr) auto;
+  min-height: 0;
+  padding: 13px;
+  border: 1px solid #4c6e5999;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at top right,#29433885,#12241c);
+}
+.market-detail-content { min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.market-detail-art { display: block; width: 100%; height: clamp(76px,18dvh,155px); object-fit: contain; }
+#market-dialog .market-detail h3 { margin: 4px 0; font: 760 clamp(16px,2vw,24px)/1.1 var(--party-display); }
+#market-dialog .market-detail p { margin: 8px 0; }
+.market-detail-price { display: flex; align-items: center; gap: 7px; color: var(--party-gold); font-weight: 750; }
+.market-detail-description,.market-detail-effects { border-top: 1px solid #6d92747d; padding-top: 8px; font-size: .84rem; }
+.market-detail-effects strong { display: block; margin-bottom: 3px; }
+.market-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.market-buy span { display: flex; align-items: center; gap: 7px; }
+.market-buy:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
+.market-catalog .market-product-button:hover:not([aria-pressed="true"]) { border-color: #8bab8a; }
+
+#connection-latency {
+  position: absolute;
+  top: 4px;
+  right: var(--hud-edge, 12px);
+  z-index: 2;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #07120dcc;
+  color: #d2dfd2;
+  font: 600 10px/1.3 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Keep the vote and institutional stability visible while the player is in the chamber. */
+#session[data-phase="ballot"][data-in-plenary="true"] :is(
+  .character-dock, #agenda-dock, .deck-tools, .election-and-incidents,
+  #context-hud, #connection-latency, #electoral-notice-mount
+) { display: none; }
+
+@media (max-width: 760px) {
+  #session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
+#command-deck #legislative-dock {
+  position: absolute;
+  inset: auto 0 0;
+  margin-inline: auto;
+  width: min(calc(100% - 2 * var(--hud-edge)), 960px);
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+    transition: translate 220ms ease, opacity 180ms ease, display 220ms allow-discrete;
+  }
+  #session :is(.character-dock, .election-and-incidents) { --hud-slide: 0 -24px; }
+  #session :is(#agenda-dock, .deck-tools, #context-hud, #legislative-dock) { --hud-slide: 0 24px; }
+
+  #session[data-phase="ballot"][data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
+  #session:not([data-in-plenary="true"]) #legislative-dock,
+  #session[data-phase="negotiation"] #legislative-dock {
+    translate: var(--hud-slide);
+    opacity: 0;
+    interactivity: inert;
+  }
+
+  @starting-style {
+    #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+      translate: var(--hud-slide);
+      opacity: 0;
+    }
+  }
+}
+
+#session:has(.election-and-incidents #active-fire) #world #hud-notices {
+  inset-block-start: anchor(--active-incidents bottom, 190px);
+  margin-block-start: 8px;
+}
+#session[data-phase="ballot"][data-in-plenary="true"] #world #hud-notices {
+  inset-block-start: 88px;
+  margin-block-start: 0;
+}
+
+
+#congress-dock .congress-meter { zoom: .8; }
+.plenary-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: max-content;
+  margin: 7px auto 0;
+  padding: 4px 9px;
+  border: 1px solid #8f794b;
+  border-radius: 999px;
+  background: #101e17eb;
+}
+.plenary-countdown strong { color: #f2d89c; font-variant-numeric: tabular-nums; min-width: 4ch; }
+#command-strip #congress-dock {
+  flex-direction: column;
+  gap: 0;
+}

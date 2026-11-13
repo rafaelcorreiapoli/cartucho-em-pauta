@@ -1,5 +1,6 @@
+import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
-import {stations} from '../src/plenary';
+import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
@@ -50,7 +51,11 @@ test('clients share movement and voice, then receive private roles and payments'
     });
     first.onMessage('players',() => {});
     const positions = new Map<string,Player>();
-    const track = (room:Room) => room.onMessage('control',(state:{player:Player})=>positions.set(room.sessionId,state.player));
+    const controls = new Map<string,ControlState>();
+    const track = (room:Room) => room.onMessage('control',(state:ControlState)=>{
+      controls.set(room.sessionId,state);
+      positions.set(room.sessionId,state.player);
+    });
     track(first);
     track(second);
     let seq = 0;
@@ -76,6 +81,18 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(end.y).toBeLessThan(start.y);
     expect(end.y).toBeGreaterThanOrEqual(132);
     expect(end.x).toBe(start.x);
+    const acknowledged = new Set<number>();
+    const firstBurstSeq = seq+1;
+    const visualSnapshotsBeforeBurst = observed.length;
+    first.onMessage('control',(state:ControlState)=>{
+      if (state.ack>=firstBurstSeq && state.ack<firstBurstSeq+MAX_QUEUED_INPUTS) acknowledged.add(state.ack);
+    });
+    for (let step=0;step<MAX_QUEUED_INPUTS;step++) {
+      first.send('input',{seq:++seq,motion:{x:0,y:0}});
+    }
+    await until(()=>controls.get(first.sessionId)?.ack===seq);
+    expect([...acknowledged]).toEqual(Array.from({length:MAX_QUEUED_INPUTS},(_,index)=>firstBurstSeq+index));
+    expect(observed.length-visualSnapshotsBeforeBurst).toBeLessThan(MAX_QUEUED_INPUTS);
     first.send('input',{seq:++seq,destination:{x:240,y:70}});
     for (let step=0;step<55;step++) {
       if (Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1) break;
@@ -160,11 +177,15 @@ test('clients share movement and voice, then receive private roles and payments'
     await Promise.all([second,third].map(async(peer,index)=>{
       const destination = {x:140+index*12,y:146};
       let sequence = 100;
-      peer.send('input',{seq:sequence,destination,sprint:true});
+      const revision = controls.get(peer.sessionId)?.revision;
+      peer.send('input',{seq:sequence-1,destination,sprint:true});
+      await Bun.sleep(60);
+      expect(controls.get(peer.sessionId)?.ack).toBeLessThan(sequence-1);
+      peer.send('input',{seq:sequence,revision,destination,sprint:true});
       for (let attempt=0;attempt<350;attempt++) {
         const player = positions.get(peer.sessionId)!;
         if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
-        peer.send('input',{seq:++sequence,sprint:true});
+        peer.send('input',{seq:++sequence,revision,sprint:true});
         await Bun.sleep(52);
       }
       throw new Error('Could not reach the transfer point from the assigned office');
@@ -174,7 +195,7 @@ test('clients share movement and voice, then receive private roles and payments'
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
       .reduce((sum,mission)=>sum+(missionReward(mission.kind).cash ?? 0),0);
-    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:true,token:1730};
+    const transfer = {kind:'transfer',to:third.sessionId,amount:2,clandestine:false,token:1730};
     second.send('politics',{...transfer,token:undefined});
     second.send('politics',transfer);
     second.send('politics',{...transfer,amount:1});
@@ -237,6 +258,51 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(soloView!).toMatchObject({solo:true,role:'Parlamentar',electorate:1,
       election:{personal:{office:'deputy'}}});
 
+    const metricsResponse = await fetch(endpoint+'/metrics');
+    expect(metricsResponse.headers.get('content-type')).toContain('version=0.0.4');
+    const metrics = await metricsResponse.text();
+    expect(metrics).toContain('congresso_matches_started_total 3\n');
+    expect(metrics).toMatch(/congresso_simulation_ticks_total [1-9]\d*\n/);
+    expect(metrics).not.toContain(solo.roomId);
+    await solo.leave();
+    const afterLeaving = await fetch(endpoint+'/metrics').then(response=>response.text());
+    expect(afterLeaving).toMatch(/congresso_matches_finished_total [1-9]/);
+
+    await Promise.all([second.leave(),third.leave()]);
+    const full = await new Client(endpoint).create('plenary',{nick:'Lotação 1'});
+    rooms.push(full);
+    const lobby = [full];
+    for (let index=1;index<MAX_PLAYERS;index++) {
+      const peer = await new Client(endpoint).joinById(full.roomId,{nick:`Lotação ${index+1}`});
+      rooms.push(peer);
+      lobby.push(peer);
+    }
+    const active = new Set<string>();
+    for (const peer of lobby) {
+      track(peer);
+      peer.onMessage('players',()=>{});
+      peer.onMessage('plenary',(view:PlenaryView)=>{
+        if (view.phase==='negotiation' && view.electorate===MAX_PLAYERS) active.add(peer.sessionId);
+      });
+    }
+    full.send('start-match',{npcs:0,token:1});
+    await until(()=>active.size===MAX_PLAYERS && lobby.every(peer=>controls.get(peer.sessionId)?.revision!==undefined));
+    const readMetrics = async ()=>fetch(endpoint+'/metrics').then(response=>response.text());
+    const ticks = (value:string)=>Number(value.match(/^congresso_simulation_ticks_total (\d+)$/m)?.[1]);
+    const beforeBurst = await readMetrics();
+    for (let input=1;input<=8;input++) {
+      for (const peer of lobby) {
+        peer.send('input',{seq:input,revision:controls.get(peer.sessionId)!.revision,motion:{x:0,y:input%2 ? 1 : -1}});
+      }
+      await Bun.sleep(40);
+    }
+    await until(()=>lobby.every(peer=>controls.get(peer.sessionId)?.ack===8));
+    const afterBurst = await readMetrics();
+    expect(afterBurst).toContain('congresso_matches_started_total 4\n');
+    expect(ticks(afterBurst)).toBeGreaterThan(ticks(beforeBurst));
+    expect(afterBurst).not.toContain(full.roomId);
+
+
   } finally {
     await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();
@@ -247,6 +313,7 @@ test('clients share movement and voice, then receive private roles and payments'
 test('transport is released on an actual socket reconnect and on plenary admission', async () => {
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
+  const {gameplayMetrics} = await import('./gameplay-metrics');
   const {SessionRoom} = await import('./SessionRoom');
   const {PlenaryMatch} = await import('./PlenaryMatch');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
@@ -273,6 +340,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     rooms.push(passenger);
     const snapshots = new Map<string,Player>();
     const views = new Map<string,PlenaryView>();
+    const foodCues = new Map<string,string[]>();
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
     const spyFrames = new Map<string,PhotoScene>();
@@ -282,6 +350,9 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
+      const cues:string[] = [];
+      foodCues.set(peer.sessionId,cues);
+      peer.onMessage('food-consumed',(cue:string)=>cues.push(cue));
       peer.onMessage('gear-purchased',(item:{id:number;kind:string})=>purchases.set(peer.sessionId,item));
       const notices:string[] = [];
       feedback.set(peer.sessionId,notices);
@@ -315,7 +386,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(routes.get(passenger.sessionId)).toEqual([]);
     expect(routes.get(carrier.sessionId)).toEqual([]);
     passenger.send('gameplay',{action:{kind:'answer'},token:1});
-    await wait(()=>routes.get(passenger.sessionId)?.some(([id,level])=>id===carrier.sessionId && level===1)===true);
+    await wait(()=>gearView()?.call?.state==='connected' &&
+      routes.get(passenger.sessionId)?.some(([id,level])=>id===carrier.sessionId && level===1)===true);
     expect(routes.get(carrier.sessionId)).toEqual([[passenger.sessionId,1,true,undefined]]);
     expect(gearView()?.call?.state).toBe('connected');
     passenger.send('gameplay',{action:{kind:'hangup'},token:2});
@@ -367,6 +439,15 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('room-activity',{activity:'coffee',token:3270});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
+    const gameplaySystem = Reflect.get(room,'gameplay');
+    const snack = gameplaySystem.create('coxinha',{holder:passenger.sessionId});
+    const beverage = gameplaySystem.create('energyDrink',{holder:passenger.sessionId});
+    passenger.send('gameplay',{action:{kind:'use',item:snack.id},token:3280});
+    passenger.send('gameplay',{action:{kind:'use',item:snack.id},token:3281});
+    passenger.send('gameplay',{action:{kind:'use',item:beverage.id},token:3282});
+    await wait(()=>foodCues.get(passenger.sessionId)?.length===3);
+    expect(foodCues.get(passenger.sessionId)).toEqual(['drink','eat','drink']);
+    expect(foodCues.get(carrier.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3320});
@@ -433,6 +514,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(gearBeforeReconnect?.find(item=>item.kind==='xray')?.charges).toBe(2);
     const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
     expect(agendaBeforeReconnect?.active).toHaveLength(3);
+    const reconnectCount = () => Number(gameplayMetrics.exposition().match(/^congresso_reconnects_total (\d+)$/m)?.[1]);
+    const beforeReconnect = reconnectCount();
     let reconnected = false;
     passenger.reconnection.minUptime = 0;
     passenger.onReconnect(()=>{reconnected = true;});
@@ -440,6 +523,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.connection.close(4010);
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
     await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
+    expect(reconnectCount()).toBe(beforeReconnect+1);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     expect(progression()).toEqual(progressionBeforeReconnect);
@@ -477,6 +561,7 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
+  const {gameplayMetrics} = await import('./gameplay-metrics');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
   await reservation.stop();
@@ -505,6 +590,14 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     host.send('start-match',{npcs:3,token:1});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    const observer = Reflect.get(room,'players').get(host.sessionId).player as Player;
+    const [walkingNpc] = Reflect.get(room,'parliamentarians').players as Player[];
+    Object.assign(observer,{x:30,y:197});
+    Object.assign(walkingNpc,{x:30,y:229,knockedOut:true});
+    await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===true);
+    Object.assign(observer,{x:30,y:146});
+    await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===false);
+    walkingNpc.knockedOut = undefined;
     Reflect.set(Reflect.get(room,'match'),'ends',room.clock.currentTime);
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===9));
     const expected = [...PLENARY_SEATS.slice(0,6),...PLENARY_SEATS.slice(-3)].map(({x,y})=>`${x},${y}`).sort();
@@ -512,6 +605,33 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
       const players = states.get(peer.sessionId)!;
       expect(players.filter(player=>player.npc)).toHaveLength(3);
       expect(players.map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
+    }
+
+    const count = ()=>Number(gameplayMetrics.exposition().match(/^congresso_economy_discrepancies_total (\d+)$/m)?.[1]);
+    const previous = count();
+    const alerts:unknown[] = [];
+    const error = console.error;
+    console.error = (...args)=>{
+      const [message] = args;
+      if (typeof message==='string' && message.startsWith('{"event":"economy-discrepancy"')) alerts.push(JSON.parse(message));
+      else error(...args);
+    };
+    try {
+      const match = Reflect.get(room,'match');
+      const economy = Reflect.get(match,'economy');
+      // Inject an untracked credit, then finish through actual socket departures.
+      Reflect.get(economy,'accounts').get(host.sessionId).wallet += 1;
+      const physical = Reflect.get(room,'gameplay').physicalCash();
+      expect(match.economySummary(physical).discrepancy).toBe(-1);
+      await Promise.all(rooms.slice(2).map(peer=>peer.leave()));
+      await wait(()=>phases.get(host.sessionId)==='finished');
+      expect(count()).toBe(previous+1);
+      expect(alerts).toEqual([{event:'economy-discrepancy',roomId:host.roomId,discrepancy:-1}]);
+      await Promise.all(rooms.slice(0,2).map(peer=>peer.leave()));
+      expect(count()).toBe(previous+1);
+      expect(alerts).toHaveLength(1);
+    } finally {
+      console.error = error;
     }
   } finally {
     await Promise.allSettled(rooms.map(peer=>peer.leave()));

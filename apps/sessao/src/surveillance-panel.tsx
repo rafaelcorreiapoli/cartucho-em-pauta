@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
 import type { PhotoScene } from './photography';
-import { monitoredChannel, type SpyView } from './surveillance';
+import { monitoredChannel, type SpyDevice, type SpyView } from './surveillance';
 
 export function createSurveillancePanel(send:(action:object)=>void) {
   const launch = document.querySelector<HTMLButtonElement>('#open-surveillance')!;
@@ -20,23 +20,33 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   let view:SpyView|undefined;
   let key = '';
   let page = 0;
+  let device:SpyDevice = 'spyCamera';
+  const pageSize = 4;
+  const devices = [{kind:'spyCamera',label:'Câmeras',icon:'camera'},{kind:'wiretap',label:'Escutas',icon:'mic'}] as const;
   let editing:number|undefined;
 
   function update() {
     if (!dialog.open) return;
-    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing]);
+    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing,device]);
     if (key===next) return;
     key = next;
-    const channels = view?.channels ?? [];
+    const allChannels = view?.channels ?? [];
+    const channels = allChannels.filter(channel=>channel.kind===device);
     const channel = monitoredChannel(view);
     const selected = channel?.kind==='spyCamera' ? channel : undefined;
     const audio = channel?.kind==='wiretap' ? channel : undefined;
-    const size = 4;
-    const last = Math.max(0,Math.ceil(channels.length/size)-1);
+    const last = Math.max(0,Math.ceil(channels.length/pageSize)-1);
     page = Math.min(page,last);
     channelsRoot.render(<>
-      {!channels.length && <p>Instale um grampo ou uma câmera do Apoio Técnico para abrir um canal.</p>}
-      {channels.slice(page*size,(page+1)*size).map((channel,index)=>{
+      <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
+        {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
+          onClick={()=>{device = tab.kind;page = 0;update();}}>
+          <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+tab.icon}/></svg>
+          {tab.label} <small>{allChannels.filter(channel=>channel.kind===tab.kind).length}</small>
+        </button>)}
+      </div>
+      {!channels.length && <p>{device==='spyCamera' ? 'Nenhuma câmera instalada.' : 'Nenhuma escuta instalada.'}</p>}
+      {channels.slice(page*pageSize,(page+1)*pageSize).map((channel,index)=>{
         const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
@@ -45,8 +55,9 @@ export function createSurveillancePanel(send:(action:object)=>void) {
             update();
           }}>
           <svg className="hud-glyph" aria-hidden="true"><use href={channel.kind==='wiretap' ? '#icon-mic' : '#icon-camera'}/></svg>
-          <span><strong>{channel.name}</strong><small>{channel.room} · {label}</small></span>
+          <span className="flex-1"><strong>{channel.name}</strong><small>{channel.room} · {label}</small></span>
           {!channel.removed && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
+          {!channel.removed && <span className="spy-play" aria-hidden="true">▶</span>}
         </button>;
       })}
       {last>0 && <div className="flex items-center gap-2">
@@ -91,6 +102,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
 
   launch.onclick = ()=>{
     if (dialog.open) return;
+    device = monitoredChannel(view)?.kind ?? (view?.channels.some(channel=>channel.kind==='spyCamera') ? 'spyCamera' : 'wiretap');
+    page = 0;
     dialog.showModal();
     update();
   };
@@ -102,7 +115,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   };
   dialog.onkeydown = event=>{
     if (event.target instanceof HTMLInputElement || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
-    if (event.key==='ArrowLeft' && page===0 || event.key==='ArrowRight' && (page+1)*4>=(view?.channels.length ?? 0)) return;
+    if (event.key==='ArrowLeft' && page===0 || event.key==='ArrowRight' && (page+1)*pageSize>=(view?.channels.filter(channel=>channel.kind===device).length ?? 0)) return;
     event.preventDefault();
     page += event.key==='ArrowLeft' ? -1 : 1;
     update();

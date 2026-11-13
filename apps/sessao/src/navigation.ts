@@ -59,7 +59,19 @@ export function findRoute(from:Motion,to:Motion, plenary=false):Motion[] {
   const points:Motion[] = [];
   search.setGrid(grid);
   search.findPath(start.x,start.y,end.x,end.y,path => {
-    if (path) points.push(...(path.length ? path.map(toWorld) : [toWorld(start)]));
+    if (!path) return;
+    if (!path.length) {
+      points.push(toWorld(start));
+      return;
+    }
+    // Only turns and endpoints are needed before testing line-of-sight shortcuts.
+    for (let index=0;index<path.length;index++) {
+      const current = path[index];
+      const previous = path[index-1];
+      const next = path[index+1];
+      if (!previous || !next || current.x-previous.x!==next.x-current.x ||
+          current.y-previous.y!==next.y-current.y) points.push(toWorld(current));
+    }
   });
   search.calculate();
   const last = points.at(-1);

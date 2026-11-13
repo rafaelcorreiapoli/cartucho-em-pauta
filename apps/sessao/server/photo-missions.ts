@@ -23,7 +23,7 @@ export const photoMissions = {
   presidenteFoto:{target:1,players:2,facts:capture((photo,actor)=>
     photo.selfie && people(photo,actor).some(person=>person.office==='president') ? fact(photo.id) : [])},
   celularFoto:{target:1,players:2,facts:capture((photo,actor)=>
-    people(photo,actor).some(person=>person.phone==='game' && ['Plenário','Comissões','Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
+    people(photo,actor).some(person=>person.phone==='game' && ['Comissões','Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
   reuniaoFoto:{target:1,players:3,facts:capture((photo,actor)=>{
     const guests = people(photo,actor);
     return guests.some(person=>privateRooms.has(roomAt(person)) &&
@@ -44,8 +44,8 @@ export const photoMissions = {
     event.type==='installed' && event.kind==='portrait' && event.replaced && !privateOffices.some(office=>office.id===event.place) ? fact(event.item!) : []},
   reserva:{target:1,players:1,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.place==='coffeeVip' ? fact(event.item!) : []},
-  fiscalVip:{target:1,players:2,facts:capture((photo,actor)=>
-    photo.decorations.some(item=>item.kind==='vip' && people(photo,actor).some(person=>
+  fiscalVip:{target:1,players:3,facts:capture((photo,actor)=>
+    photo.decorations.some(item=>item.kind==='vip' && item.owner.id!==actor && people(photo,actor).some(person=>
       person.id!==item.owner.id && Math.hypot(person.x-item.x,person.y-item.y)<=12)) ? fact(photo.id) : [])},
   mandaVip:{target:1,players:2,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.replaced ? fact(event.item!) : []},
