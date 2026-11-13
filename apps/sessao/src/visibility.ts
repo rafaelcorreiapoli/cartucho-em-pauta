@@ -1,0 +1,29 @@
+import {walls,type Motion,type Rect} from './map';
+
+export function wallVision(origin:Motion,radius:number) {
+  const nearby = [...walls,...(origin.barriers ?? [])].filter(([x,y,w,h])=>
+    x<=origin.x+radius && x+w>=origin.x-radius && y<=origin.y+radius && y+h>=origin.y-radius);
+  const angles = Array.from({length:48},(_,index)=>index*Math.PI/24-Math.PI);
+  for (const [x,y,w,h] of nearby) for (const [cx,cy] of [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]) {
+    const angle = Math.atan2(cy-origin.y,cx-origin.x);
+    for (const offset of [-.0001,0,.0001]) angles.push(Math.atan2(Math.sin(angle+offset),Math.cos(angle+offset)));
+  }
+  return angles.sort((a,b)=>a-b).map(angle=>{
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    const distance = nearby.reduce((end,wall)=>Math.min(end,rayEntry(origin,dx,dy,wall)),radius);
+    return {x:dx*distance,y:dy*distance};
+  });
+}
+
+function rayEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
+  const [nearX,farX] = slab(origin.x,dx,x,x+w);
+  const [nearY,farY] = slab(origin.y,dy,y,y+h);
+  const near = Math.max(nearX,nearY,0);
+  return near<=Math.min(farX,farY) ? near : Infinity;
+}
+
+function slab(origin:number,direction:number,min:number,max:number) {
+  if (Math.abs(direction)<1e-9) return origin>=min && origin<=max ? [-Infinity,Infinity] : [Infinity,-Infinity];
+  const a = (min-origin)/direction, b = (max-origin)/direction;
+  return [Math.min(a,b),Math.max(a,b)];
+}

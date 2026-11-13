@@ -1,3 +1,4 @@
+import {privateOffices} from '../src/private-offices';
 import {fireRules,fireSites} from '../src/fire';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
@@ -5,7 +6,7 @@ import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
 import { BALLOT_MS, NEGOTIATION_MS, stations } from '../src/plenary';
-import { canStand, localPerception, type Player } from '../src/map';
+import { canStand, localPerception, worldVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
@@ -328,4 +329,14 @@ test('another hearing is possible but the isolated player has immunity after ret
   match.advance(expiry);
   accuse(honest,expiry);
   expect(view(expiry).hearing?.target).toBe(honest.nick);
+});
+
+test('a closed office door hides players from authoritative world visibility',()=>{
+  const office = privateOffices[0];
+  const [left,top,width,height] = office.door;
+  const x = left+width/2;
+  const inside = {x,y:top-12};
+  const outside = {x,y:top+height+12};
+  expect(worldVisible(outside,inside)).toBe(true);
+  expect(worldVisible({...outside,barriers:[office.door]},inside)).toBe(false);
 });

@@ -1,3 +1,4 @@
+import {wallVision} from './visibility';
 import {fireSites} from './fire';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -31,7 +32,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   fog.className = 'map-fog';
   fog.hidden = true;
   fog.setAttribute('aria-hidden','true');
-  parent.append(fog);
+  const wallFog = fog.cloneNode() as HTMLDivElement;
+  wallFog.style.background = '#000a';
+  parent.append(fog,wallFog);
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -91,6 +94,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private textResolution = 3;
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
+    private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
     private flames?:Phaser.GameObjects.Text;
     private extinguishers:Phaser.GameObjects.Text[] = [];
     private marker!: Phaser.GameObjects.Ellipse;
@@ -598,6 +602,21 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const radius = this.drawnVisionRadius*cssZoom;
             fog.style.background = `radial-gradient(circle at ${screenX/density}px ${screenY/density}px, transparent ${radius*.86}px, #000a ${radius}px)`;
             fog.style.clipPath = '';
+            wallFog.hidden = inSession;
+            if (!inSession) {
+              const wallX = Math.round(x), wallY = Math.round(y), wallRadius = Math.round(this.drawnVisionRadius);
+              const barriers = JSON.stringify(ownPlayer?.barriers ?? []);
+              const cached = this.fogGeometry;
+              if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==wallRadius || cached.barriers!==barriers) {
+                this.fogGeometry = {x:wallX,y:wallY,radius:wallRadius,barriers,
+                  points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},wallRadius)};
+              }
+              const {points} = this.fogGeometry!;
+              const polygon = [...points,points[0]].map(point=>
+                `${(screenX/density+point.x*cssZoom).toFixed(1)}px ${(screenY/density+point.y*cssZoom).toFixed(1)}px`).join(', ');
+              fog.style.clipPath = `polygon(${polygon})`;
+              wallFog.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${polygon})`;
+            }
             if (inSession) {
               const [left,top,width,height] = PLENARY_BOUNDS;
               const x1 = (screenX+(left-x)*zoom)/density, x2 = x1+width*cssZoom;
@@ -670,7 +689,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
-      if (!running) fog.hidden = true;
+      if (!running) fog.hidden = wallFog.hidden = true;
     },
     setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
     destroy() {
@@ -678,6 +697,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       resizeObserver?.disconnect();
       game.destroy(true);
       fog.remove();
+      wallFog.remove();
     },
   };
 }
