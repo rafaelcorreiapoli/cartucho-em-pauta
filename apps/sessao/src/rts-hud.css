@@ -503,7 +503,6 @@ button.equipped-gear-tile { cursor: pointer; }
   #command-deck .slot-key { display: none; }
 }
 
-#command-deck #legislative-dock:has(#project-outcome-brief:not([hidden])) #project-session-result { display: none; }
 #gameplay-dialog[data-mode="equipment"] { width: min(350px,calc(100vw - 2rem)); }
 .equipment-list {
   display: grid;

@@ -19,6 +19,16 @@ export function ElectionResult({result}:{result:NonNullable<ElectionView['result
   </section>;
 }
 
+export function SessionResult({winner,reason,infiltratorName}:Pick<PlenaryView,'winner'|'reason'|'infiltratorName'>) {
+  const headline = winner==='Parlamentar' ? 'Os parlamentares venceram' :
+    winner==='Infiltrado' ? 'A infiltração venceu' : 'Sessão encerrada';
+  return <section>
+    <h3>{headline}</h3>
+    {reason && <p>{reason}</p>}
+    {infiltratorName && <p>Infiltração: <strong>{infiltratorName}</strong></p>}
+  </section>;
+}
+
 export function mountResults() {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const root = createRoot(document.querySelector('#result-content')!);
@@ -28,8 +38,12 @@ export function mountResults() {
       const electionChanged = election && election.cycle!==previous?.election?.result?.cycle;
       const project = view.outcome;
       const projectChanged = project && project.round!==previous?.outcome?.round;
-      if (electionChanged) {
-        flushSync(()=>root.render(<ElectionResult result={election}/>));
+      const finished = view.phase==='finished' && previous?.phase!=='finished';
+      if (finished || electionChanged) {
+        flushSync(()=>root.render(<>
+          {finished && <SessionResult {...view}/>}
+          {electionChanged && <ElectionResult result={election}/>}
+        </>));
         document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
         document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
         if (!dialog.open) dialog.showModal();

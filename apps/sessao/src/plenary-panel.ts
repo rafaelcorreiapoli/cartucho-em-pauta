@@ -81,12 +81,6 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
-      const sessionResult = element('project-session-result');
-      sessionResult.hidden = phase!=='finished';
-      sessionResult.textContent = phase==='finished' ?
-        [view.winner && (view.winner==='Parlamentar' ? 'Os parlamentares venceram.' : 'O infiltrado venceu.'),
-          view.reason, view.infiltratorName && `Infiltração: ${view.infiltratorName}.`].filter(Boolean).join(' ') :
-        '';
       if (running) heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       details.render(view);

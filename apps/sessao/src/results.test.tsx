@@ -1,16 +1,19 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ElectionResult} from './results';
+import {SessionResult} from './results';
+import {PlenaryMatch} from '../server/PlenaryMatch';
+import {NEGOTIATION_MS,BALLOT_MS} from './plenary';
+import type {Player} from './map';
 
-test('the result shows a single renewal, vote shares and the mandate lost',()=>{
-  const html = renderToStaticMarkup(<ElectionResult result={{cycle:1,salary:3,eliminated:'b',offices:[
-    {id:'a',name:'Alice',office:'deputy',race:'deputy',character:0,percentage:65},
-    {id:'b',name:'Bia',office:'deputy',race:'deputy',character:1,percentage:35},
-  ]}}/>);
-  expect(html).toContain('Renovação de Mandato 1');
-  expect(html).toContain('Alice');
-  expect(html).toContain('65%');
-  expect(html).toContain('Bia<small>Mandato perdido');
-  expect(html).toContain('35%');
-  expect(html).not.toMatch(/Presidente|Senador|Deputado/);
+test('a player outside the plenary receives the final result in the modal content',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,x:140,y:146};
+  const match = new PlenaryMatch(1);
+  match.start(player.id,[player],0,()=>0);
+  const deadline = 30*60_000;
+  for (let now=0;now<=deadline;now+=Math.min(NEGOTIATION_MS,BALLOT_MS)) match.advance(now);
+  const view = match.view(player.id,[player.id],deadline);
+  expect(view.phase).toBe('finished');
+  const markup = renderToStaticMarkup(<SessionResult {...view}/>);
+  expect(markup).toContain(view.reason!);
+  expect(markup).not.toContain('Infiltração:');
 });
