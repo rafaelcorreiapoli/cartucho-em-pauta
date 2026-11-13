@@ -30,10 +30,15 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
   const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || stability===0 ? 'destroyed' : 'ended';
   const headline = outcome==='saved' ? 'O Congresso foi salvo!' :
     outcome==='destroyed' ? 'O Congresso foi destruído!' : 'Sessão encerrada';
-  const teams = winner ? [
-    {name:'Vencedores',people:finalRoster.filter(person=>person.role===winner)},
-    {name:'Derrotados',people:finalRoster.filter(person=>person.role!==winner)},
-  ] : [{name:'Participantes',people:finalRoster}];
+  const factions = [
+    {role:'Parlamentar',name:'Parlamentares'},
+    {role:'Infiltrado',name:'Infiltrados'},
+  ] as const;
+  const teams = factions.map(({role,name})=>({
+    name,
+    people:finalRoster.filter(person=>person.role===role),
+    result:winner===role ? 'won' : winner || outcome==='destroyed' ? 'lost' : 'neutral',
+  })).sort((a,b)=>Number(b.result==='won')-Number(a.result==='won'));
 
   return <section className="session-finale" data-outcome={outcome}>
     {outcome!=='ended' && <div className="finale-particles" aria-hidden="true">
@@ -42,15 +47,16 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
     <div className="finale-content">
       <h2 id="session-finale-title">{headline}</h2>
       {reason && <p className="finale-reason">{reason}</p>}
+      {!winner && <p className="finale-no-winner">Sem vencedores</p>}
       <div className="finale-teams">
-        {teams.filter(team=>team.people.length).map(team=><section key={team.name} className="finale-team" aria-label={team.name}>
+        {teams.filter(team=>team.people.length).map(team=><section key={team.name} className="finale-team" aria-label={team.name} data-result={team.result}>
           <h3>{team.name}</h3>
+          {team.result!=='neutral' && <strong className="finale-verdict">{team.result==='won' ? 'Vitória' : 'Derrota'}</strong>}
           <ul>{team.people.map(person=><li key={person.id}>
             <span className="portrait" aria-hidden="true" style={{
               '--portrait-column':person.character%2,'--portrait-row':Math.floor(person.character/2),
             } as CSSProperties}/>
             <strong>{person.name}</strong>
-            <small>{person.role}</small>
           </li>)}</ul>
         </section>)}
       </div>
