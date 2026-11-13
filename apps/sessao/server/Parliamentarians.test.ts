@@ -5,7 +5,7 @@ import { Parliamentarians } from './Parliamentarians';
 import { ParliamentarianTalk } from './ParliamentarianTalk';
 import { PlenaryMatch } from './PlenaryMatch';
 import { npcRules } from '../src/parliamentarians';
-import { canStand, type Player } from '../src/map';
+import { NAMES, canStand, type Player } from '../src/map';
 import { BALLOT_MS, NEGOTIATION_MS } from '../src/plenary';
 import { terminals } from '../src/gameplay';
 import { privateOffices, officeRules } from '../src/private-offices';
@@ -174,4 +174,18 @@ test('agenda uses the same paid vote quote as the NPC negotiation',()=>{
   expect(members.cheapestPaidVote(buyer,0,project)).toBe(Math.min(...prices()));
   for (const npc of npcs) members.commit(npc.id,0,'yes',10,project);
   expect(members.cheapestPaidVote(buyer,0,project)).toBe(11);
+});
+
+test('initial NPC appearances are sampled without repeats and use the corresponding names',()=>{
+  const members = new Parliamentarians();
+  const occupied = new Set([0,1]);
+  members.reset(3,0,occupied,()=>0);
+  expect(members.players.map(({character})=>character)).toEqual([2,3,4]);
+  members.reset(3,0,occupied,()=>.99);
+  expect(members.players.map(({character,nick})=>({character,nick}))).toEqual(
+    [7,6,5].map(character=>({character,nick:NAMES[character]})),
+  );
+  expect(members.players[0].nick).toBe('Inês Brasil');
+  members.reset(3,0,new Set([0,1,2,3,4,5,6]),()=>0);
+  expect(members.players.map(({character})=>character)).toEqual([7,0,1]);
 });

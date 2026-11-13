@@ -6,9 +6,9 @@ import { bills, stations, type Vote } from '../src/plenary';
 
 const destinations = [stations.coffee,stations.archive,stations.secretary,stations.committees,stations.press,{x:140,y:146}];
 const profiles = [
-  {character:3,signature:0,price:2,conviction:1, preferences:['yes','no',undefined]},
-  {character:4,signature:2,price:2,conviction:2, preferences:['no',undefined,'yes']},
-  {character:7,signature:3,price:3,conviction:2, preferences:[undefined,'yes','no']},
+  {signature:0,price:2,conviction:1, preferences:['yes','no',undefined]},
+  {signature:2,price:2,conviction:2, preferences:['no',undefined,'yes']},
+  {signature:3,price:3,conviction:2, preferences:[undefined,'yes','no']},
 ] as const;
 type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number;
   promises:Map<number,{round:number;vote:Vote;amount:number;buyer?:string}>; trusted:Set<string>; aggressors:Set<string>};
@@ -18,12 +18,17 @@ export class Parliamentarians {
 
   get players() { return [...this.members.values()].map(member=>member.player); }
 
-  reset(count:number,now:number) {
+  reset(count:number,now:number,occupied:ReadonlySet<number> = new Set(),random = Math.random) {
     this.members.clear();
+    const roster = NAMES.map((_,index)=>index);
+    const available = roster.filter(character=>!occupied.has(character));
+    const reserved = roster.filter(character=>occupied.has(character));
     profiles.slice(0,count).forEach((profile,index)=>{
+      const pool = available.length ? available : reserved;
+      const [character] = pool.splice(Math.floor(random()*pool.length),1);
       const id = `npc-parliamentarian-${index+1}`;
       this.members.set(id,{profile,promises:new Map(),trusted:new Set(),aggressors:new Set(),route:[],next:now+index*500,player:{
-        ...destinations[index],id,nick:NAMES[profile.character],character:profile.character,npc:true,direction:0,moving:false,speed:npcRules.speed,
+        ...destinations[index],id,nick:NAMES[character],character,npc:true,direction:0,moving:false,speed:npcRules.speed,
       }});
     });
   }

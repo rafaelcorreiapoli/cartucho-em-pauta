@@ -179,7 +179,7 @@ export class SessionRoom extends Room {
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
         const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.lobbyNpcCount = count;
-        this.parliamentarians.reset(count,this.clock.currentTime);
+        this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
