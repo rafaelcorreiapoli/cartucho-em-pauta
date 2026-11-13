@@ -1,10 +1,11 @@
 import type Phaser from 'phaser';
 import { snackBar, treasurer, treasuryLayout } from './npcs';
-import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
+import { eastAnnex, officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
-export function drawMap(scene: Phaser.Scene) {
+export function drawMap(scene: Phaser.Scene,
+  officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void) {
   const graphics = scene.add.graphics();
   const fill = (color:number, x:number, y:number, width:number, height:number, alpha=1) => {
     graphics.fillStyle(color,alpha).fillRect(x,y,width,height);
@@ -76,7 +77,8 @@ export function drawMap(scene: Phaser.Scene) {
     for (const kind of ['safe','cabinet'] as const) {
       const {x,y} = office[kind];
       const {texture,width,height,footOffset} = officeFixtures[kind];
-      scene.add.image(x,y-footOffset,texture).setOrigin(.5,1).setDisplaySize(width,height).setDepth(y-footOffset);
+      const art = scene.add.image(x,y-footOffset,texture).setOrigin(.5,1).setDisplaySize(width,height).setDepth(y-footOffset);
+      officeFixture?.(art,office,kind);
     }
   }
   // The floor, rugs and walls never move. Draw their geometry once.

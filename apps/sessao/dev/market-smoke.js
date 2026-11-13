@@ -8,7 +8,9 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
-  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).waitFor();
+  const canvas = await page.locator('#map canvas').boundingBox();
+  await page.mouse.click(canvas.x+canvas.width/2,canvas.y+canvas.height/2-55);
   const dialog = page.locator('#market-dialog');
   const slots = dialog.locator('.market-products > *');
   const detail = dialog.getByRole('region',{name:'Produto selecionado'});

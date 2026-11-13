@@ -242,9 +242,10 @@ async function connect(join: () => Promise<Room>) {
     document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
     audio.enter();
-    game = createGame(map,joined.sessionId,input => joined.send('input',input),
-      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
     const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
+    game = createGame(map,joined.sessionId,input => joined.send('input',input),
+      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
+      sendGameplay,id=>gameplay.inspectDecoration(id),()=>gameplay.openStash());
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });

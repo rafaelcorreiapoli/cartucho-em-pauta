@@ -1,3 +1,4 @@
+import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
 import {fireSites} from './fire';
@@ -5,14 +6,14 @@ import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, pr
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
-import { mapNpcs } from './npcs';
+import { mapNpcs, type NpcId } from './npcs';
 import { binoculars, xray } from './equipment';
-import { canReachObject, cashAmount, objects, type GroundItem } from './gameplay';
+import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
-import { agendaProject, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
+import { agendaProject, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -42,7 +43,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, inspect:(id:number)=>void, openStash:()=>void) {
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -96,7 +97,20 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private renderedDecorations?:Decoration[];
     private installed = new Map<number,{marker:Phaser.GameObjects.Container; label?:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
     photoRenderer?:PhotoRenderer;
-    private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
+    private interactionTargets = new Map<Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,{
+      outline:Phaser.GameObjects.Image;
+      ready:()=>boolean;
+      run:()=>void;
+    }>();
+
+    private registerInteraction(art:Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,
+      ready:()=>boolean,run:()=>void,container?:Phaser.GameObjects.Container) {
+      const outline = createInteractionOutline(this,art);
+      if (container) container.addAt(outline,container.getIndex(art));
+      else outline.setDepth(art.depth-.01);
+      this.interactionTargets.set(art,{outline,ready,run});
+      art.once('destroy',()=>this.interactionTargets.delete(art));
+    }
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -159,7 +173,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       resizeObserver.observe(parent);
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
-      this.mapLabels = drawMap(this);
+      this.mapLabels = drawMap(this,(art,office,kind)=>{
+        const stash = ()=>kind==='cabinet' && plenaryView?.gameplay?.officeStash?.id===office.id;
+        const option = ()=>plenaryView?.gameplay?.officeOptions?.find(action=>action.place===office.id &&
+          (kind==='safe' ? ['office-cash','office-breach-safe','office-upgrade-safe'].includes(action.kind) :
+            ['office-breach-cabinet','office-upgrade-cabinet'].includes(action.kind)));
+        this.registerInteraction(art,()=>!!stash() || !!option(),()=>{
+          if (stash()) openStash();
+          else {
+            const action = option();
+            if (action) interact(action);
+          }
+        });
+      });
       this.fog = this.add.graphics().setDepth(3);
       this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
@@ -183,10 +209,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         fontFamily:'system-ui',fontSize:'7px',color:'#d6ffd0',backgroundColor:'#111e19',
         align:'center',padding:{x:4,y:2},resolution:3,
       }).setOrigin(.5,0).setDepth(HEIGHT+10);
-      for (const {x,y} of Object.values(stations)) {
-        this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
-          .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
-      }
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
         const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
@@ -194,15 +216,33 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
         }).setOrigin(.5,0).setDepth(1) : undefined;
+        if (id==='treasurer') {
+          const delivery = ()=>treasuryDeliveries(plenaryView?.gameplay?.inventory ?? [])[0]?.action;
+          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.locations.includes('treasury') && !!delivery(),()=>{
+            const action = delivery();
+            if (action) interact(action);
+          });
+        } else {
+          const target = id as NpcId;
+          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'open-shop',target}));
+        }
         return {sprite,label};
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
         keys.clear();
-    shiftKeys.clear();
+        shiftKeys.clear();
         manual = false;
         const {x,y} = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
+        const target = [...this.interactionTargets].filter(([art,{outline}])=>outline.visible && art.visible)
+          .sort(([a],[b])=>(b.parentContainer?.depth ?? b.depth)-(a.parentContainer?.depth ?? a.depth))
+          .find(([art])=>hitInteractionArt(art,x,y));
+        if (target) {
+          destination = undefined;
+          target[1].run();
+          return;
+        }
         if (x>=0 && x<WIDTH && y>=0 && y<HEIGHT) {
           destination = {x,y};
           nextStep = -Infinity;
@@ -253,6 +293,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const shadow = this.add.ellipse(0,2,15,5,0x09110e,.28);
         const marker = this.add.container(item.x,item.y,[shadow,icon]).setDepth(item.y-1);
         this.groundMarkers.set(item.id,marker);
+        this.registerInteraction(icon,()=>!!plenaryView?.gameplay?.nearby.some(entry=>entry.id===item.id),
+          ()=>interact({kind:'collect',item:item.id}),marker);
       }
     }
 
@@ -290,6 +332,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const mark = this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3}).setOrigin(.5).setVisible(!!item.marked);
         const marker = this.add.container(item.x,item.y,[frame,art,label,mark]).setDepth(item.y+1);
         this.installed.set(item.id,{marker,label,mark});
+        this.registerInteraction(art,()=>!!plenaryView?.gameplay?.interactive.some(entry=>entry.id===item.id),
+          ()=>inspect(item.id),marker);
       }
     }
 
@@ -433,9 +477,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
-      for (const marker of this.stationMarkers) {
-        const nearby = ownPlayer && canReachObject(ownPlayer,marker,{radius:STATION_RADIUS,handsFree:true});
-        marker.setVisible(negotiating && !!nearby);
+      for (const [art,{outline,ready}] of this.interactionTargets) {
+        outline.setVisible(negotiating && art.visible && ready());
       }
 
       for (const [id,view] of this.views) {

@@ -672,6 +672,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       render();
     },
     purchasedConsumable(id:number) { purchases.add(id); },
+    inspectDecoration(id:number) { open(undefined,id); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);
