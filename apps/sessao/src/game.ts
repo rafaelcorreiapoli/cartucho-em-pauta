@@ -192,7 +192,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
         const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
+        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.name,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
         }).setOrigin(.5,0).setDepth(1) : undefined;

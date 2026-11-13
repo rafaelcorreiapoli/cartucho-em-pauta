@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
-import { snackBar, treasurer } from './npcs';
+import { snackBar, treasurer, treasuryLayout } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
-import { roomActivities } from './room-activities';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
@@ -65,7 +64,7 @@ export function drawMap(scene: Phaser.Scene) {
   for (const [x,y,w] of [
     [177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[69,161,36],[218,161,44],
     [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[658,259,44],
-    [115,392,41],[400,392,46],reprographyEntrance,[snackX,snackY,snackWidth],
+    [115,392,41],[400,392,46],treasuryLayout.luxuryDoor,reprographyEntrance,[snackX,snackY,snackWidth],
   ]) {
     fill(0x9b8d6d,x,y+3,w,3);
   }
@@ -99,15 +98,11 @@ export function drawMap(scene: Phaser.Scene) {
   const tribune = scene.add.text(570,591,'TRIBUNA',{
     fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
   }).setOrigin(.5,0).setDepth(HEIGHT+20);
-  const budgetDesk = scene.add.text(roomActivities.cabinet.x,405,'MESA DE VERBAS',{
-    fontFamily:'system-ui',fontSize:'6px',fontStyle:'bold',color:'#fff4dc',
-    backgroundColor:'#263a31aa',resolution:3,padding:{x:4,y:2},
-  }).setOrigin(.5,0).setDepth(1);
   const doctor = scene.add.text(infirmary.doctor.x,infirmary.doctor.y+2,infirmary.doctor.name,{
     fontFamily:'system-ui',fontSize:'5px',fontStyle:'bold',color:'#eef6df',
     backgroundColor:'#203b33',padding:{x:2,y:1},resolution:3,
   }).setOrigin(.5,0).setDepth(1);
-  return [tribune,budgetDesk,doctor,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  return [tribune,doctor,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

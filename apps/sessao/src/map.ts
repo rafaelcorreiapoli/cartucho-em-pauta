@@ -2,7 +2,7 @@ import { reprography } from './room-activities';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
-import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
+import { mapNpcs, npcs, snackBar, treasurer, treasuryLayout } from './npcs';
 
 export const WIDTH = 1136;
 export const HEIGHT = 759;
@@ -18,6 +18,8 @@ export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].ma
 
 export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
 
+const [luxuryDoorX,luxuryDoorY,luxuryDoorWidth,luxuryDoorHeight] = treasuryLayout.luxuryDoor;
+
 export const walls: Rect[] = [
   [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,530-eastAnnex.opening[1]],
   [0,530,65,11], [194,530,90,11], [310,530,140,11], [510,530,128,11], [666,530,100,11], [895,530,65,11],
@@ -27,7 +29,8 @@ export const walls: Rect[] = [
   [480,114,65,11], [586,114,235,11], [864,114,86,11],
   [703,10,10,104], [703,161,10,98],
   [480,161,70,11], [591,161,194,11], [827,161,123,11],
-  [10,392,105,11], [156,392,244,11], [446,392,334,11], [infirmary.door[0],392,950-infirmary.door[0],11],
+  [10,392,105,11], [156,392,244,11], [446,luxuryDoorY,luxuryDoorX-446,luxuryDoorHeight],
+  [luxuryDoorX+luxuryDoorWidth,392,780-luxuryDoorX-luxuryDoorWidth,11], treasuryLayout.divider, [infirmary.door[0],392,950-infirmary.door[0],11],
   [814,270,10,133],
   [infirmary.door[0],403,6,infirmary.door[1]-403],
   [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
@@ -52,7 +55,7 @@ export const walls: Rect[] = [
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
-  [128,460],[354,430],[433,460],[713,460],[757,435],
+  [128,460],[493,438],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
   [treasurer.counter.x,treasurer.counter.y],
 ] as const;
@@ -203,7 +206,8 @@ export const rooms = [
   {name:'Comissões', bounds:[602,270,212,122], color:0x637b69},
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
-  {name:npcs.furnitureVendor.label, bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:treasurer.label,bounds:treasuryLayout.bounds,color:0x858c80},
+  {name:npcs.furnitureVendor.label, bounds:[treasuryLayout.divider[0]+treasuryLayout.divider[2],403,592-treasuryLayout.divider[0]-treasuryLayout.divider[2],127], color:0x7c8a7e},
   {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];
