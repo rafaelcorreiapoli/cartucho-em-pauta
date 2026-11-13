@@ -863,11 +863,18 @@
   justify-content: center;
   gap: 6px;
   width: max-content;
-  margin: 7px auto 0;
+  margin: 18px auto 0;
   padding: 4px 9px;
-  border: 1px solid #8f794b;
+  border: 1px solid #e8bd59;
   border-radius: 999px;
   background: #101e17eb;
+  box-shadow: 0 0 12px #f9c75168, inset 0 0 7px #ffd66528;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .plenary-countdown { animation: countdown-glow 1.35s ease-in-out infinite alternate; }
+}
+@keyframes countdown-glow {
+  to { box-shadow: 0 0 20px #ffcf69b3, inset 0 0 10px #ffd66552; }
 }
 .plenary-countdown strong { color: #f2d89c; font-variant-numeric: tabular-nums; min-width: 4ch; }
 #command-strip #congress-dock {

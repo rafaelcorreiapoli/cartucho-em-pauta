@@ -535,7 +535,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
-      snapshots.get(passenger.sessionId)?.x===386 && snapshots.get(passenger.sessionId)?.y===655);
+      snapshots.get(passenger.sessionId)?.x===PLENARY_SEATS[1].x &&
+      snapshots.get(passenger.sessionId)?.y===PLENARY_SEATS[1].y);
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
