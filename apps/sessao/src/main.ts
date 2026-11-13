@@ -231,7 +231,8 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('pickup');
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (market.isOpen()) hud.notify('Loja',message);
+      if (message.startsWith('Raio X · ')) hud.notify('Raio X',message.slice('Raio X · '.length));
+      else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);

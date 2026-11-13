@@ -244,9 +244,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         if ('use' in definition) {
-          const label = item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
+          const label = item.kind==='mensalUnderwear' ? 'Usar' : item.kind==='coffee' || item.kind==='energyDrink' ? 'Beber' : 'Comer';
           const use = act(label,'use');
-          if (isFood(item.kind)) markShortcut(use,'1');
+          markShortcut(use,'1');
         }
         if ('exposable' in definition) {
           const exposed = state.exposed.includes(item.id);

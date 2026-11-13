@@ -1,4 +1,4 @@
-import { equippedWeapon } from './equipment';
+import { equippedWeapon, xray } from './equipment';
 import { doorDestination } from './interactions';
 import { aidRadius, infirmary } from './medical';
 import { npcs } from './npcs';
@@ -87,6 +87,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const gearStrip = element('equipped-gear');
   const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
   const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+  const concealmentTimer = node('span');
+  concealmentTimer.className = 'equipped-gear-tile';
+  concealmentTimer.setAttribute('role','listitem');
+  const concealmentLabel = node('span');
+  concealmentLabel.className = 'equipped-gear-timer';
+  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentLabel);
   function renderEquipped(state?:GameplayView) {
     const equipped = state?.equipped ?? [];
     for (const [id,{tile}] of gearTiles) {
@@ -111,15 +117,22 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         gearTiles.set(item.id,entry);
       }
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
-      const time = seconds ? `${secondsLabel.format(seconds)} s` : '';
-      const label = seconds ? `${name} · Recarga: ${time}` : name;
+      const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
+      const time = charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${charges} cargas` : name;
       if (entry.tile.title===label) continue;
       entry.timer.textContent = time;
-      entry.timer.hidden = !seconds;
+      entry.timer.hidden = !time;
       entry.tile.title = label;
       entry.tile.setAttribute('aria-label',label);
     }
-    gearStrip.hidden = equipped.length===0;
+    const remaining = state?.concealmentSeconds;
+    if (remaining) {
+      concealmentLabel.textContent = `${remaining} s`;
+      concealmentTimer.title = `Dinheiro oculto · ${remaining} s`;
+      if (!concealmentTimer.isConnected) gearStrip.append(concealmentTimer);
+    } else concealmentTimer.remove();
+    gearStrip.hidden = equipped.length===0 && !remaining;
   }
 
   let fieldKey = '';
@@ -170,6 +183,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (amount) actions.push({label:`Entregar ${money(amount)} ao tesoureiro`,icon:'wallet',
           action:{kind:'deliver',place:'treasury',item:item.id}});
       }
+      for (const target of state.xrayTargets ?? []) actions.push({
+        label:`Raio X · ${target.name}`,icon:'search',
+        action:target.safe ? {kind:'scan-xray',place:target.id} : {kind:'scan-xray',target:target.id},
+      });
+      if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
+        label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},
+      });
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});

@@ -262,7 +262,7 @@ export class SessionRoom extends Room {
       for (const player of players) {
         player.former = this.match.running ? this.match.former(player.id) : undefined;
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
-        player.exposed = this.match.running ? this.gameplay.visibleItems(player.id) : undefined;
+        player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,now) : undefined;
       }
       this.routeVoice(this.match.speaker(now));
       const ids = players.map(({id}) => id);
@@ -301,7 +301,7 @@ export class SessionRoom extends Room {
           const vision = this.gameplay.vision(id);
           const visible = plenary ? world.players.filter(inPlenary) :
             world.players.filter(player=>player===state.player || worldVisible(state.player,player,vision));
-          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,health:this.gameplay.healthFraction(player,now)})));
+          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }

@@ -17,7 +17,7 @@ import { Combat } from './Combat';
 import { Transport } from './Transport';
 import { aidRadius, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binocularBonus, equippedWeapon, equipment, isGear, type Gear } from '../src/equipment';
+import { binocularBonus, equippedWeapon, equipment, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -46,6 +46,7 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
+  private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
   private installations = new Map<string,Decoration>();
@@ -64,6 +65,7 @@ export class Gameplay {
     this.syncOfficeDoors(players,now);
     this.album.reset();
     this.exposed.clear();
+    this.concealedUntil.clear();
     this.installations.clear();
     this.servings.clear();
     this.clearedSites.clear();
@@ -141,15 +143,17 @@ export class Gameplay {
     this.exposed.set(id,items);
   }
 
-  visibleItems(id:string) {
+  visibleItems(id:string,now=Infinity,observer?:string) {
+    const concealed = observer!==id && (this.concealedUntil.get(id) ?? 0)>now;
     return [...this.exposed.get(id) ?? []].flatMap(itemId=>{
       const item = this.items.get(itemId);
-      return item && 'holder' in item.place && item.place.holder===id ? [{id:itemId,kind:item.data.kind}] : [];
+      return item && 'holder' in item.place && item.place.holder===id && !(concealed && cashAmount(item.data)) ? [{id:itemId,kind:item.data.kind}] : [];
     });
   }
 
   private create(kind:ObjectKind, place:Place) {
     const data:WorldItem = {id:++this.serial,kind};
+    if (kind==='xray') data.charges = xray.capacity;
     this.items.set(data.id,{data,place});
     return data;
   }
@@ -220,7 +224,7 @@ export class Gameplay {
         ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
       const last = findRoute({...mapEntrance,barriers},{x,y}).at(-1);
       if (last?.x!==x || last.y!==y) continue;
-      const kind = 'briefcase';
+      const kind = this.random()<.8 ? 'briefcase' : 'bundle';
       this.create(kind,this.groundPlace(kind,{x,y},now));
       console.info(JSON.stringify({event:'money-issued',source:'cash-spawn',amount:cashAmount(kind)}));
       return;
@@ -229,6 +233,12 @@ export class Gameplay {
 
   tick(world:GameplayWorld, exploring:boolean) {
     this.album.tick(world.now);
+    for (const [id,ends] of this.concealedUntil) {
+      if (ends>world.now) continue;
+      this.concealedUntil.delete(id);
+      const player = world.players.find(player=>player.id===id);
+      if (player) publishGameplay(world,player,'concealment-ended',{witnesses:[]});
+    }
     this.transfers = this.transfers.filter(event=>world.now-event.at<=2400);
     for (const item of this.items.values()) {
       if ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now) this.remove(item);
@@ -300,6 +310,7 @@ export class Gameplay {
     this.dialogues.close(player.id);
     this.stopModulator(player.id,world.now);
     if (!permanent) return;
+    this.concealedUntil.delete(player.id);
     this.combat.leave(player);
     for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data,player,world.now));
     for (const [id,request] of this.requests) {
@@ -345,6 +356,8 @@ export class Gameplay {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
+      xrayTargets:!world.plenary && this.wearing(id,'xray') ? this.xrayTargets(player,world).map(({owner:_owner,...target})=>target) : undefined,
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
       vitality:this.combat.view(player,world.now),
@@ -426,7 +439,7 @@ export class Gameplay {
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
         direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
-        exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),
+        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
       decorations:[...this.installations.values()].filter(visible).map(item=>({...item})),
@@ -438,7 +451,7 @@ export class Gameplay {
     const people:PhotoPerson[] = world.players.filter(person=>inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        pocketing:person.pocketing,exposed:this.visibleItems(person.id),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
@@ -752,13 +765,48 @@ export class Gameplay {
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
 
+  private xrayTargets(player:Player,world:GameplayWorld) {
+    const options:{id:string;name:string;owner:string;safe?:true}[] = world.players
+      .filter(target=>target.npc && world.present?.(target.id)!==false &&
+        canReachObject(player,target,{radius:xray.range,clearFloor:true}))
+      .map(({id,nick})=>({id,name:nick,owner:id}));
+    for (const office of this.privateOffices.offices.values()) {
+      if (!office.owner || office.owner===player.id || !this.privateOffices.isInside(player,office) ||
+          !canReachObject(player,office.layout.safe,{radius:xray.range,clearFloor:true})) continue;
+      options.push({id:office.layout.id,name:`Cofre do ${office.layout.name}`,owner:office.owner,safe:true});
+    }
+    return options;
+  }
+
+  private useXray(player:Player,action:GameplayAction,world:GameplayWorld) {
+    const item = this.wearing(player.id,'xray');
+    if (!item) return 'Equipe o Raio X.';
+    if (action.kind==='recharge-xray') {
+      if (!canReachObject(player,npcs.vendor)) return 'Recarregue no Apoio Técnico.';
+      if ((item.charges ?? 0)>=xray.capacity) return 'Raio X já está carregado.';
+      if (!world.spend?.(player.id,xray.rechargePrice)) return 'Saldo insuficiente.';
+      item.charges = xray.capacity;
+      this.event(world,player,'xray-recharged',item,undefined,{witnesses:[]});
+      return `Raio X recarregado · ${item.charges}/${xray.capacity}`;
+    }
+    if (!item.charges) return 'Raio X sem cargas. Recarregue no Apoio Técnico.';
+    const target = this.xrayTargets(player,world).find(target=>target.id===(action.place ?? action.target) &&
+      !!target.safe===(action.place!==undefined));
+    if (!target || !world.wallet) return 'Alvo fora de alcance ou sem visibilidade.';
+    const balance = world.wallet(target.owner);
+    item.charges--;
+    this.event(world,player,'xray-scanned',item,target.owner,{witnesses:[]});
+    const amount = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(balance*10_000);
+    return `Raio X · ${target.name} · ${amount} · ${item.charges}/${xray.capacity} cargas`;
+  }
+
   private buyProduct(player:Player, kind:unknown, token:number|undefined, world:GameplayWorld) {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,npc=>{
       const gear = isGear(kind);
       const officeGood = isOfficeGood(kind);
-      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind)) return 'Produto indisponível.';
+      if (!gear && !isFood(kind) && !officeGood && !isSpyProduct(kind) && kind!=='mensalUnderwear') return 'Produto indisponível.';
       if (npcs[npc].catalog!==(isFood(kind) ? 'food' : 'equipment')) return 'Este produto não é vendido aqui.';
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
@@ -766,8 +814,8 @@ export class Gameplay {
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!this.available(id)) return 'Inventário cheio.';
       if (gear && [...this.inventory(id),...this.equipped(id)].some(item=>item.data.kind===kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : foods[kind].price)) return 'Saldo insuficiente.';
-      const data = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
+      if (!world.spend?.(id,gear ? equipment[kind].price : officeGood ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price)) return 'Saldo insuficiente.';
+      const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       this.event(world,player,'purchased',data);
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
@@ -860,6 +908,7 @@ export class Gameplay {
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
+    if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
     if (action.kind==='toggle-modulator') {
@@ -982,6 +1031,13 @@ export class Gameplay {
       case 'use':
         if (cashAmount(data)) return 'Leve o dinheiro ao cofre do seu gabinete.';
         if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
+        if (data.kind==='mensalUnderwear') {
+          if ((this.concealedUntil.get(id) ?? 0)>world.now) return 'Você já está ocultando dinheiro.';
+          this.remove(item);
+          this.concealedUntil.set(id,world.now+concealment.duration);
+          this.event(world,player,'concealment-started',data,undefined,{witnesses:[]});
+          return `Dinheiro oculto por ${concealment.duration/1000} s.`;
+        }
         this.remove(item);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
         this.event(world,player,'used',data);

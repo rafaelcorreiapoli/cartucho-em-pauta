@@ -1,7 +1,7 @@
 import { isOfficeFurniture, isOfficeGood, officeGoodKinds, officeGoods, type OfficeFurniture } from './private-offices';
 import { markShortcut } from './action-shortcuts';
 import { describeFood, foodKinds, foods, isFood } from './food';
-import { equipment, gearKinds, isGear } from './equipment';
+import { concealment, equipment, gearKinds, isGear } from './equipment';
 import { INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { button, contactFace, glyph, itemPortrait, node } from './gameplay-ui';
 import { npcs, type NpcId } from './npcs';
@@ -65,13 +65,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     toolbar.append(funds);
     const products = node('div');
     products.className = 'market-products';
-    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds] : foodKinds;
+    const kinds = npcs[npc].catalog==='equipment' ? [...gearKinds,...officeGoodKinds,...spyKinds,'mensalUnderwear' as const] : foodKinds;
     const owned = [...inventory,...equipped];
     const full = inventory.length>=INVENTORY_SLOTS;
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     for (const [index,kind] of visible.entries()) {
       const food = isFood(kind) ? foods[kind] : undefined;
-      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : foods[kind].price;
+      const price = isGear(kind) ? equipment[kind].price : isOfficeGood(kind) ? officeGoods[kind].price : isSpyProduct(kind) ? spyProducts[kind].price : kind==='mensalUnderwear' ? concealment.price : foods[kind].price;
       const item = objects[kind];
       const card = node('article');
       card.className = 'market-product';

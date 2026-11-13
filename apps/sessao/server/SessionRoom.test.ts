@@ -245,13 +245,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
     const spyFrames = new Map<string,PhotoScene>();
+    const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
       peer.onMessage('gear-purchased',(item:{id:number;kind:string})=>purchases.set(peer.sessionId,item));
-      for (const message of ['players','photo-state','gameplay-feedback','item-obtained']) peer.onMessage(message,()=>{});
+      const notices:string[] = [];
+      feedback.set(peer.sessionId,notices);
+      peer.onMessage('gameplay-feedback',(message:string)=>notices.push(message));
+      for (const message of ['players','photo-state','item-obtained']) peer.onMessage(message,()=>{});
     }
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
@@ -305,6 +309,23 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
     carrier.send('spy',{kind:'close'});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
+    const passengerGameplay = ()=>views.get(passenger.sessionId)?.gameplay;
+    passenger.send('gameplay',{kind:'talk',target:'vendor'});
+    await wait(()=>!!passengerGameplay()?.dialogue);
+    passenger.send('gameplay',{kind:'dialogue-choice',target:'products',token:passengerGameplay()?.dialogue?.token});
+    await wait(()=>passengerGameplay()?.dialogue?.shop===true);
+    passenger.send('gameplay',{kind:'shop-buy',target:'xray',token:passengerGameplay()?.dialogue?.token});
+    await wait(()=>passengerGameplay()?.inventory.some(item=>item.kind==='xray')===true);
+    passenger.send('gameplay',{kind:'equip',item:passengerGameplay()?.inventory.find(item=>item.kind==='xray')?.id});
+    await wait(()=>passengerGameplay()?.equipped?.some(item=>item.kind==='xray')===true);
+    const safe = privateOffices.find(office=>office.id===gameplay()?.ownOffice)!;
+    Object.assign(positions.get(passenger.sessionId)!.player,safe.safe);
+    await wait(()=>passengerGameplay()?.xrayTargets?.some(target=>target.id===safe.id)===true);
+    for (let repeat=0;repeat<2;repeat++) passenger.send('gameplay',{kind:'scan-xray',place:safe.id,token:1});
+    await wait(()=>passengerGameplay()?.equipped?.find(item=>item.kind==='xray')?.charges===2);
+    expect(feedback.get(passenger.sessionId)?.filter(message=>message.startsWith('Raio X ·'))).toHaveLength(1);
+    expect(feedback.get(carrier.sessionId)?.some(message=>message.startsWith('Raio X ·'))).toBe(false);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     carrier.send('gameplay',{kind:'equip',item:purchase?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
