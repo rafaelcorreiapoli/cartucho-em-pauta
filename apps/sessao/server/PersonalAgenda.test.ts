@@ -308,3 +308,27 @@ test('decoration missions require enough money or an item already in the invento
   expect(economy.view(player.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='retrato')).toBe(true);
   expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
 });
+
+test('collective missions wait for enough available players while office visits remain eligible',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = ['a','b','c','d'];
+  economy.reset(ids.map(id=>({id,name:id})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  economy.suspend('d',1000);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','entrega','visitaGabinete','cafe','passeio']);
+  const draw = () => economy.updateAgendaEligibility(new Set(ids),3);
+  const active = () => economy.view('a',[],0,false,()=>true)!.missions.active;
+  draw();
+  expect(active().map(mission=>mission.kind)).toEqual(['visitaGabinete','cafe','passeio']);
+
+  economy.expireSuspensions(1000);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','entrega','visitaGabinete','cafe','passeio']);
+  draw();
+  const selfie = active().find(mission=>mission.kind==='selfie')!;
+  expect(selfie).toBeDefined();
+  economy.suspend('d',2000);
+  draw();
+  expect(active()).toContainEqual(selfie);
+});

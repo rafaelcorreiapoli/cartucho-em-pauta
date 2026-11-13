@@ -137,11 +137,14 @@ export class PersonalAgenda {
     this.fillMissions(metrics);
   }
 
-  private availableInMatch(kind:Agenda, remaining:number) {
+  private availableInMatch(kind:Agenda, remaining:number, drawing=false) {
     if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
-    const participants = kind==='assinaturas' ? this.playerCount+this.npcCount : this.playerCount;
+    // Isolation is temporary. Keep collective missions already in progress.
+    const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='jogarOculto';
+    const humans = usesAvailablePlayers ? this.availableTargets?.size ?? this.playerCount : this.playerCount;
+    const participants = humans+(kind==='assinaturas' ? this.npcCount : 0);
     if (players>participants) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       return !this.cannotVote && this.ballotsLeft>=remaining;
@@ -219,7 +222,7 @@ export class PersonalAgenda {
       const availableSpend = stock.reduce((sum,item)=>sum+officeGoods[item].price,0);
       if (Math.min(availableSpend,metrics.wallet)<furnitureSpendingTarget) return false;
     }
-    return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1) &&
+    return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,true) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
       (kind!=='campanha' || metrics.popularity<100) &&
       (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars'));
