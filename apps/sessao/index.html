@@ -150,7 +150,28 @@
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
-          <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
+          <div class="character-dock">
+            <section id="profile-dock" aria-label="Seu personagem">
+              <div class="profile-portrait">
+                <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
+                <div id="profile-xp-reward" role="status"></div>
+              </div>
+              <div class="deck-identity">
+                <div class="profile-name-row">
+                  <strong id="hud-nick"></strong>
+                  <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
+                  <span id="profile-level-mount"></span>
+                </div>
+                <div class="profile-subtitle">
+                  <small id="hud-office">Parlamentar</small>
+                  <small id="own-office" hidden></small>
+                </div>
+                <div id="profile-resources"></div>
+              </div>
+              <div id="profile-vitals"></div>
+            </section>
+            <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
+          </div>
           <div id="congress-dock" class="hud-module"></div>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
             <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
@@ -165,25 +186,6 @@
           </details>
         </header>
         <footer id="command-deck" aria-label="Painel de partida">
-          <section id="profile-dock" aria-label="Seu personagem">
-            <div class="profile-portrait">
-              <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
-              <div id="profile-xp-reward" role="status"></div>
-            </div>
-            <div class="deck-identity">
-              <div class="profile-name-row">
-                <strong id="hud-nick"></strong>
-                <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
-                <span id="profile-level-mount"></span>
-              </div>
-              <div class="profile-subtitle">
-                <small id="hud-office">Parlamentar</small>
-                <small id="own-office" hidden></small>
-              </div>
-              <div id="profile-resources"></div>
-            </div>
-            <div id="profile-vitals"></div>
-          </section>
           <section id="legislative-dock" aria-label="Situação legislativa">
             <div id="project-outcome-brief" role="status" hidden></div>
             <div id="proposal">

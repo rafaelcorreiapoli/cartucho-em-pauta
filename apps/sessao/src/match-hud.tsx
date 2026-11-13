@@ -290,18 +290,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   overflowBreak.setAttribute('aria-hidden','true');
   overflowBreak.hidden = true;
   stations.querySelector('.station-actions')!.append(overflowBreak,more);
-  const contextHud = element('context-hud');
-  const dock = element('command-deck');
-  const profile = element('profile-dock');
-  const tools = dock.querySelector<HTMLElement>('.deck-tools')!;
-  const measureClearance = () => {
-    const floor = Math.min(...[profile,tools].filter(panel=>panel.getClientRects().length)
-      .map(panel=>panel.getBoundingClientRect().top),window.innerHeight);
-    contextHud.style.setProperty('--context-clearance',`${Math.max(0,window.innerHeight-floor)}px`);
-  };
-  const clearanceObserver = new ResizeObserver(measureClearance);
-  for (const panel of [dock,profile,tools]) clearanceObserver.observe(panel);
-  window.addEventListener('resize',measureClearance);
   const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
   function refreshActionKeys() {
     let index = 0;
@@ -537,8 +525,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       shortcuts.replaceChildren();
       more.remove();
       overflowBreak.remove();
-      clearanceObserver.disconnect();
-      window.removeEventListener('resize',measureClearance);
       fieldRoot.unmount();
     },
   };

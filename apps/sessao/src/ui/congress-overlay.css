@@ -3,6 +3,8 @@
   display: block;
   --hud-edge: clamp(12px, 2vw, 32px);
   --profile-width: clamp(262.5px, 23.25vw, 367.5px);
+  --hot-slot: clamp(32px,3.6vw,62px);
+  --hot-gap: 5px;
 }
 #session:not([data-phase="lobby"]) #world { position: absolute; inset: 0; }
 #command-strip, #command-deck {
@@ -46,8 +48,7 @@
   background: linear-gradient(0deg,#080f0bf2,#080f0b00);
 }
 #command-deck > section + section { border-left: 0; }
-#command-deck #profile-dock { align-self: end; }
-#command-deck #profile-dock .portrait { border-radius: 12px; }
+#command-strip #profile-dock .portrait { border-radius: 12px; }
 #profile-dock .deck-identity { flex: 0 1 210px; }
 .vital-row {
   display: grid;
@@ -61,7 +62,7 @@
 .vital-row > small { text-align: right; }
 .vital-row .react-meter { height: 5px; }
 #world #agenda-dock {
-  inset: auto auto calc(var(--deck-height) + 12px) var(--hud-edge);
+  inset: auto auto var(--hud-edge) var(--hud-edge);
   width: var(--profile-width);
 }
 #agenda-dock .react-agenda {
@@ -147,20 +148,20 @@
 
 #command-strip #congress-dock { grid-column: 2; }
 #command-strip #election-dock { grid-column: 3; }
-#command-deck #profile-dock {
+#command-strip #profile-dock {
   display: grid;
   grid-template-columns: auto minmax(0,1fr);
   gap: 12px 15px;
   width: var(--profile-width);
   box-sizing: border-box;
-  margin-bottom: 12px;
+  position: static;
   padding: 13px 16px 14px;
   border: 1px solid #78b68b70;
   border-radius: 20px;
   background: radial-gradient(ellipse at 6% 0%,#29554152,transparent 62%), linear-gradient(120deg,#081710ef,#101e17d6);
   box-shadow: inset 0 0 18px #76c8990d;
 }
-#command-deck #profile-dock .portrait {
+#command-strip #profile-dock .portrait {
   --portrait-size: clamp(68px, 6.1vw, 98px);
   border-color: #6da382;
   border-radius: 16px;
@@ -168,7 +169,7 @@
 }
 #profile-dock .deck-identity { gap: 3px; align-self: stretch; }
 #profile-dock .profile-subtitle { display: flex; gap: 4px; color: #d5c790; }
-#command-deck #hud-office { color: inherit; }
+#command-strip #hud-office { color: inherit; }
 #own-office:not([hidden])::before { content: "· "; }
 #profile-dock .react-level {
   display: block;
@@ -201,7 +202,6 @@
 #profile-dock .vital-row > small { font-size: 11px; text-align: center; }
 @media (min-width: 641px) {
   #command-deck { grid-template-columns: var(--profile-width) minmax(0,1fr) minmax(245px,1fr); }
-  #world #agenda-dock { bottom: max(220px,calc(var(--deck-height) + 12px)); }
 }
 @media (max-width: 640px) {
   #command-strip #congress-dock { grid-column: 2; }
@@ -210,18 +210,17 @@
 }
 
 #command-deck .deck-tools {
-  --hot-slot: clamp(32px,3.6vw,62px);
-  flex-direction: row;
-  align-items: center;
-  justify-content: end;
-  gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(4,var(--hot-slot));
+  grid-template-rows: repeat(2,var(--hot-slot));
+  justify-self: end;
+  gap: var(--hot-gap);
+  padding: 0;
 }
-#command-deck #item-slots {
-  width: auto;
-  grid-template-columns: repeat(6,var(--hot-slot));
-  gap: 5px;
-  margin: 0;
-}
+#command-deck #item-slots:not([hidden]), #command-deck .deck-tool-row { display: contents; }
+#command-deck #item-slots > :nth-child(4) { grid-column: 1; grid-row: 2; }
+#command-deck .deck-tools > :not([hidden]) { pointer-events: none; }
+#command-deck :is(#item-slots,.deck-tool-row) button { pointer-events: auto; }
 #command-deck #item-slots .item-tile,
 .congress-app-toggle {
   width: var(--hot-slot);
@@ -242,7 +241,13 @@
 }
 .slot-plus { font-size: clamp(17px,2.2vw,28px); font-weight: 400; line-height: 1; }
 .slot-count { position: absolute; right: 5px; bottom: 4px; color: #f2d68d; }
-#congress-apps { display: flex; gap: 8px; }
+#congress-apps {
+  display: grid;
+  grid-area: 1 / 4 / 3 / 5;
+  grid-template-rows: subgrid;
+}
+#congress-apps > [aria-label="Aplicativos"] { grid-row: 1; }
+#congress-apps > [aria-label="Mochila"] { grid-row: 2; }
 .congress-app-toggle { border-radius: 28%; }
 .congress-app-toggle .hud-glyph { width: 49%; height: 49%; color: #e9dfb5; }
 .congress-app-toggle svg[fill="currentColor"] { fill: currentColor; stroke: none; }
@@ -279,8 +284,7 @@
 #command-deck #voice-host :is(#voice-dock,#room-settings) { pointer-events: auto; }
 .congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .congress-bag .item-tile { min-height: 78px; }
-#command-deck .deck-tools { align-self: end; padding-bottom: 18px; }
-#command-deck #item-slots, #command-deck .deck-tool-row { flex: none; }
+#command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
 #command-deck #voice-dock > :is(#open-action-shortcuts,#voice-toggle),
 #command-deck #voice-dock #room-settings > summary { display: none; }
 
@@ -354,10 +358,17 @@
 }
 #context-hud #stations {
   position: absolute;
-  inset: auto var(--hud-edge) calc(max(var(--context-clearance, 0px),env(safe-area-inset-bottom)) + 12px);
+  --context-side: max(var(--profile-width), calc(4 * var(--hot-slot) + 3 * var(--hot-gap)));
+  inset: auto calc(var(--context-side) + var(--hud-edge) + 8px) max(var(--hud-edge),env(safe-area-inset-bottom));
   padding: 0;
   background: none;
   animation: none;
+}
+@media (max-width: 960px) {
+  #context-hud #stations {
+    inset-inline: var(--hud-edge);
+    bottom: calc(max(var(--hud-edge),env(safe-area-inset-bottom)) + 2 * var(--hot-slot) + var(--hot-gap) + 8px);
+  }
 }
 #stations .station-actions { align-items: flex-end; gap: 7px; }
 #stations [data-context-overflow="expanded"] { order: -2; }
@@ -580,16 +591,19 @@
 .gear-slot .equipped-gear-footer { position: absolute; inset: auto 4px 3px 4px; }
 .gear-slot .equipped-gear-key { font-size: 8px; }
 .gear-slot .equipped-gear-timer { font-size: 8px; }
-#command-strip #equipped-gear:not([hidden]) {
-  position: relative;
+.character-dock {
+  display: grid;
   grid-column: 1;
   grid-row: 1;
-  inset: auto;
   justify-self: start;
-  pointer-events: none;
+  gap: 6px;
 }
+#command-strip .character-dock { pointer-events: none; }
+.character-dock > :is(#profile-dock,#equipped-gear) { zoom: .8; }
+.character-dock button { pointer-events: auto; }
+.character-dock #equipped-gear:not([hidden]) { position: static; }
 @media (max-width: 760px) {
-  #command-strip #equipped-gear:not([hidden]) { grid-row: 2; }
+  #command-strip .character-dock { grid-row: 2; }
 }
 
 .bag-hotbar { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 4px; margin: 8px 0; }
