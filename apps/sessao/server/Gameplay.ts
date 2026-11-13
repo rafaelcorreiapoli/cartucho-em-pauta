@@ -1007,7 +1007,7 @@ export class Gameplay {
     return this.dialogues.purchase(player,token,(npc,direct)=>{
       const product = marketProduct(npcs[npc].catalog,requested);
       if (!product) {
-        return marketProduct('equipment',requested) || marketProduct('food',requested)
+        return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price} = product;

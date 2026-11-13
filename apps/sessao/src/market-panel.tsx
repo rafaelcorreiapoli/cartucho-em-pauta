@@ -104,7 +104,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       <div className="market-toolbar">
         <div className="market-vendor">
           <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
-          <div><h2 id="market-catalog-title">{vendor.label}</h2><strong>{vendor.name}</strong><p>{npc==='vendor' ? 'Equipamentos, espionagem e utilidades parlamentares.' : 'Lanches e bebidas.'}</p></div>
+          <div><h2 id="market-catalog-title">{vendor.label}</h2><strong>{vendor.name}</strong><p>{vendor.catalog==='equipment' ? 'Equipamentos, espionagem e utilidades parlamentares.' :
+            vendor.catalog==='furniture' ? 'Móveis instalados no seu gabinete.' : 'Lanches e bebidas.'}</p></div>
         </div>
         <p className="market-wallet tabular-nums"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}</p>
       </div>

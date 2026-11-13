@@ -197,7 +197,7 @@ export const rooms = [
   {name:'Comissões', bounds:[602,270,212,122], color:0x637b69},
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
-  {name:'Hall das Bancadas', bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:npcs.furnitureVendor.label, bounds:[326,403,266,127], color:0x7c8a7e},
   {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];

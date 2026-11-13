@@ -260,7 +260,7 @@ test('the scandal pizza mission becomes eligible only after a public finding',()
 });
 
 test('furniture missions use the actual cabinet slots and prices at assignment',()=>{
-  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...npcs.furnitureVendor.interaction};
   const game = new Gameplay();
   game.reset(0,()=>0,[player],()=>0);
   const economy = new PoliticalEconomy();
@@ -276,8 +276,7 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
     return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
   };
   const buy = (target:string) => {
-    game.act(player,{kind:'talk',target:'vendor'},world);
-    game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
+    game.act(player,{kind:'open-shop',target:'furnitureVendor'},world);
     expect(game.act(player,{kind:'shop-buy',target,token:game.view(player,world).dialogue?.token},world)).toBe('Compra instalada no seu gabinete.');
   };
 

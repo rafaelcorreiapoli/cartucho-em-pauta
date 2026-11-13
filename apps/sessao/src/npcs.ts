@@ -8,6 +8,8 @@ export const snackBar = {
 
 export const npcs = {
   vendor:{name:'Doutor Gambiarra',sprite:'doutor-gambiarra.webp',portrait:'retrato-doutor-gambiarra.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
+  furnitureVendor:{name:'Roberto Justus',sprite:'roberto-justus.webp',portrait:'retrato-roberto-justus.webp',x:525,y:451,direction:0,
+    interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
@@ -37,6 +39,12 @@ export type DialogueOption = {
 };
 export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
+  furniture:{
+    start:{
+      text:'Excelência, seu gabinete merece um upgrade.',
+      options:[{id:'products',label:'Ver móveis',action:'shop'},{id:'leave',label:'Voltar depois',action:'close'}],
+    },
+  },
   snacks:{
     start:{
       text:'Oi, amiguinho! Tem café passado e lanche quentinho. O que vai ser?',

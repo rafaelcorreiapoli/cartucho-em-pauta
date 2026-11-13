@@ -112,9 +112,12 @@ test('shop listings resolve prices only for products in that shop',()=>{
   expect(marketProduct('food','coffee')).toEqual({kind:'coffee',price:.5});
   expect(marketProduct('equipment','firstAidKit')).toEqual({kind:'firstAidKit',price:1.5});
   expect(marketProduct('equipment','coffee')).toBeUndefined();
+  expect(marketKinds.furniture).toEqual(['officeTv','officeRug','officeChair']);
+  for (const kind of marketKinds.furniture) expect(marketProduct('equipment',kind)).toBeUndefined();
+  expect(marketProduct('furniture','lockpick')).toBeUndefined();
   expect(marketProduct('food','firstAidKit')).toBeUndefined();
   expect(marketProduct('equipment','constructor')).toBeUndefined();
-  for (const catalog of ['food','equipment'] as const) {
+  for (const catalog of ['food','equipment','furniture'] as const) {
     for (const kind of marketKinds[catalog]) {
       expect(objects[kind].portrait).toBeTruthy();
       expect(marketProduct(catalog,kind)?.price).toBeGreaterThan(0);
