@@ -167,7 +167,7 @@ test('a long route across the Congress remains walkable after compressing straig
 
 test('a walking NPC interpolates through a late snapshot and stops when snapshots run out',()=>{
   const history = new PlayerHistory();
-  const player = {id:'npc-parliamentarian-1',nick:'José Sarney',npc:true as const,character:4,x:100,y:146,moving:true,direction:1};
+  const player = {id:'npc-parliamentarian-1',nick:'Eduardo Cunha',npc:true as const,character:4,x:100,y:146,moving:true,direction:1};
   history.add([player],0);
   history.add([{...player,x:110}],100);
   expect(history.sample(260,player.id)?.x).toBe(106);

@@ -7,7 +7,7 @@ import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
 export const WIDTH = 1136;
 export const HEIGHT = 759;
 export const SPEED = 88;
-export const NAMES = ['Lula', 'Bolsonaro', 'Clodovil', 'Tiririca', 'José Sarney', 'Alexandre Frota', 'Sergio Moro', 'Inês Brasil'] as const;
+export const NAMES = ['Lula', 'Bolsonaro', 'Clodovil', 'Tiririca', 'Eduardo Cunha', 'Alexandre Frota', 'Sergio Moro', 'Inês Brasil'] as const;
 export type Rect = readonly [x: number, y: number, width: number, height: number];
 
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
