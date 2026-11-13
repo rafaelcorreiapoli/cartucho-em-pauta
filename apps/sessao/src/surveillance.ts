@@ -2,9 +2,9 @@ import { privateOffices } from './private-offices';
 import { obstacleBetween, type Motion } from './map';
 
 export const spyProducts = {
-  wiretap:{name:'Grampo',price:2,portrait:'retrato-modulador.webp',description:'Escuta remota ao redor de um esconderijo.'},
-  spyCamera:{name:'Câmera escondida',price:3,portrait:'retrato-fotografia.webp',description:'Vigilância remota em um esconderijo.'},
-  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-binoculo.webp',description:'Inspeciona esconderijos sem ser consumido.'},
+  wiretap:{name:'Grampo',price:2,portrait:'retrato-grampo.webp',description:'Escuta remota ao redor de um esconderijo.'},
+  spyCamera:{name:'Câmera escondida',price:3,portrait:'retrato-camera-escondida.webp',description:'Vigilância remota em um esconderijo.'},
+  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-detector-escutas.webp',description:'Inspeciona esconderijos sem ser consumido.'},
 } as const;
 export type SpyProduct = keyof typeof spyProducts;
 export type SpyDevice = Exclude<SpyProduct,'bugDetector'>;
