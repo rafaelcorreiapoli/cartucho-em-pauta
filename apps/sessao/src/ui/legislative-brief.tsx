@@ -3,9 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { agendaProject, bills, type PlenaryView } from '../plenary';
 import { describeEvidence } from '../politics';
 import { DialogDismiss } from './dialog-dismiss';
-import { ProjectImpact } from './project-impact';
 
-type BriefActivity = 'secretary' | 'support' | 'archive';
+type BriefActivity = 'secretary' | 'archive';
 
 function PublicRecords({politics}:Pick<PlenaryView,'politics'>) {
   const records = politics?.ledger ?? [];
@@ -16,7 +15,7 @@ function PublicRecords({politics}:Pick<PlenaryView,'politics'>) {
   )}</ol>;
 }
 
-const briefTitles = {secretary:'Pauta legislativa',support:'Impacto do projeto',archive:'Registro público'};
+const briefTitles = {secretary:'Pauta legislativa',archive:'Registro público'};
 
 export function LegislativeBrief({activity,view}:{activity:BriefActivity;view:PlenaryView}) {
   const project = agendaProject(view);
@@ -29,9 +28,7 @@ export function LegislativeBrief({activity,view}:{activity:BriefActivity;view:Pl
     {activity==='archive' ? <PublicRecords politics={view.politics}/> : <>
       <h3>{project.name}</h3>
       <p>{project.description}</p>
-      {activity==='support' ? <div className="flex flex-wrap gap-3">
-        <ProjectImpact yes={view.yes} no={view.no} idPrefix="brief-"/>
-      </div> : upcoming.length>0 && <>
+      {upcoming.length>0 && <>
         <h3>Próximos na pauta</h3>
         <ol>{upcoming.map(index=><li key={index}>{bills[index].name}</li>)}</ol>
       </>}

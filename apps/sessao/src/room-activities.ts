@@ -3,7 +3,6 @@ export const roomActivities = {
   secretary: {x:83,y:247, title:'Secretaria', label:'Ver pauta', icon:'document'},
   coffee: {x:240,y:250, title:'Cafezinho', label:'Tomar um cafezinho', icon:'coffee'},
   archive: {x:549,y:90, title:'Arquivo', label:'Abrir registro público', icon:'document'},
-  support: {x:631,y:243, title:'Apoio Técnico', label:'Revisar impacto', icon:'chart'},
   library: {x:424,y:364, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},
   committees: {x:790,y:363, title:'Comissões', label:'Consultar quórum', icon:'ballot'},
   credentials: {x:149,y:493, title:'Credenciamento', label:'Conferir credencial', icon:'check'},

@@ -20,9 +20,6 @@ test('the Secretary shows the authoritative agenda after filings and the default
   const agenda = renderToStaticMarkup(<LegislativeBrief activity="secretary" view={view()}/>);
   expect(agenda).toContain(bills[2].name);
   expect(agenda).toContain(`<ol><li>${bills[1].name}</li></ol>`);
-  const impact = renderToStaticMarkup(<LegislativeBrief activity="support" view={view()}/>);
-  expect(impact).toContain('id="brief-yes-stability"');
-  expect(impact).toContain(bills[2].name);
 });
 
 test('the Archive shows only the public ledger, even for a player who holds private evidence',()=>{

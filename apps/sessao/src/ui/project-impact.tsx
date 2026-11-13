@@ -10,7 +10,7 @@ function Icon({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
 }
 
-export function ProjectImpact({yes,no,idPrefix=""}:{yes:Impact;no:Impact;idPrefix?:string}) {
+export function ProjectImpact({yes,no}:{yes:Impact;no:Impact}) {
   const decisions = [
     {key:'yes',label:'Se aprovar',icon:'check',impact:yes},
     {key:'no',label:'Se rejeitar',icon:'cross',impact:no},
@@ -22,7 +22,7 @@ export function ProjectImpact({yes,no,idPrefix=""}:{yes:Impact;no:Impact;idPrefi
         const value = impact[metric.key];
         return <span title={metric.label} key={metric.key}>
           <Icon name={metric.icon}/>
-          <strong id={idPrefix+key+'-'+metric.key} data-effect={value>0 ? 'gain' : value<0 ? 'loss' : 'neutral'}>
+          <strong id={key+'-'+metric.key} data-effect={value>0 ? 'gain' : value<0 ? 'loss' : 'neutral'}>
             {value>0 ? '+'+value : value}
           </strong>
           <span className="sr-only"> {metric.label.toLowerCase()}</span>

@@ -613,7 +613,7 @@ test('the last ballot does not redraw a voting mission from an already credited 
 test('legislative brief activities require their respective stations and the negotiation phase',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,[host],0);
-  for (const key of ['secretary','support','archive'] as const) {
+  for (const key of ['secretary','archive'] as const) {
     expect(match.roomActivity(host,key,1)).toBeUndefined();
     expect(match.roomActivity(at(host,key),key,1)).toEqual({activity:key});
   }

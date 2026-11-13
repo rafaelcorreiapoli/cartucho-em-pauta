@@ -456,7 +456,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
-      if ((activity==='secretary' || activity==='support' || activity==='archive') && previous?.phase==='negotiation') {
+      if ((activity==='secretary' || activity==='archive') && previous?.phase==='negotiation') {
         legislativeBrief.open(activity,previous);
       }
       if (text) notify(info.title,text);
