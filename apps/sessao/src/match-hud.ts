@@ -92,7 +92,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   concealmentTimer.setAttribute('role','listitem');
   const concealmentLabel = node('span');
   concealmentLabel.className = 'equipped-gear-timer';
-  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentLabel);
+  const concealmentFooter = node('span');
+  concealmentFooter.className = 'equipped-gear-footer';
+  concealmentFooter.append(concealmentLabel);
+  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
   function useEquipped(kind:'scan-xray'|'attack') {
     const equipped = previous?.gameplay?.equipped;
     if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
@@ -115,25 +118,28 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         const shortcut = item.kind==='xray' ? 'X' : equippedWeapon([item]) ? 'Space' : undefined;
         const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : 'attack')) : node('span');
         tile.className = 'equipped-gear-tile';
+        const footer = node('span');
+        footer.className = 'equipped-gear-footer';
         if (shortcut) {
           tile.setAttribute('aria-keyshortcuts',shortcut);
           const badge = node('kbd',shortcut==='Space' ? 'Espaço' : shortcut);
           badge.className = 'equipped-gear-key';
           badge.setAttribute('aria-hidden','true');
-          tile.append(badge);
+          footer.append(badge);
         } else tile.setAttribute('role','listitem');
         tile.dataset.kind = item.kind;
         const timer = node('span');
         timer.className = 'equipped-gear-timer';
         timer.setAttribute('aria-hidden','true');
-        tile.append(itemPortrait(item.kind),timer);
+        footer.prepend(timer);
+        tile.append(itemPortrait(item.kind),footer);
         gearStrip.append(tile);
         entry = {tile,timer};
         gearTiles.set(item.id,entry);
       }
       const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const time = item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s\n${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const time = item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
       const label = seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : name;
       if (entry.tile.title===label) continue;
       entry.tile.dataset.active = String(item.kind==='xray' && !!state?.xrayVision);
