@@ -79,7 +79,6 @@
     <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
       <div id="world">
         <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
-        <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
         <div id="wallet-effects" role="status">
           <template id="wallet-gain">
             <div class="wallet-gain"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong></strong></div>
@@ -150,6 +149,7 @@
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
+          <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
           <div id="congress-dock" class="hud-module"></div>
           <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
             <summary class="hud-option"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="election-summary"><span id="current-office"></span><strong id="election-position"></strong></span><span class="election-clock"><small class="sr-only">Renovação em</small><strong id="election-timer"></strong></span></summary>

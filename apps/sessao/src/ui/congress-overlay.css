@@ -587,3 +587,14 @@
 .gear-slot .equipped-gear-footer { position: absolute; inset: auto 14px 2px 3px; }
 .gear-slot .equipped-gear-key { font-size: 8px; }
 .gear-slot .equipped-gear-timer { font-size: 8px; }
+#command-strip #equipped-gear:not([hidden]) {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  inset: auto;
+  justify-self: start;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  #command-strip #equipped-gear:not([hidden]) { grid-row: 2; }
+}
