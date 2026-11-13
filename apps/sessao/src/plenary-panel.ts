@@ -183,7 +183,7 @@ export function createPlenaryPanel(id:string, send:(type:string, data?:string|nu
         castVote==='yes' ? 'Seu voto: aprovar' : 'Seu voto: rejeitar') : '';
       for (const button of votes) {
         button.disabled = !view.mandate || !!view.politics?.suspended;
-        button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Cassar' : 'Aprovar' : hearing ? 'Não afastar' : 'Rejeitar';
+        button.querySelector('span')!.textContent = button.dataset.vote==='yes' ? hearing ? 'Afastar' : 'Aprovar' : hearing ? 'Não afastar' : 'Rejeitar';
         button.setAttribute('aria-pressed',String(castVote===button.dataset.vote as Vote));
       }
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
