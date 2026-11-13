@@ -40,23 +40,33 @@ function Meter({label,value,max,tone,target}:{label:string;value:number;max:numb
 }
 
 type Congress = {stability:number;budget:number};
+function Laurel({right=false}:{right?:boolean}) {
+  return <svg className={`congress-laurel${right ? ' congress-laurel-right' : ''}`} viewBox="0 0 30 68" aria-hidden="true">
+    <path d="M26 65C5 51 1 26 18 5" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+    <path fill="currentColor" d="M16 13Q15 6 24 2Q24 9 16 13ZM12 22Q11 15 19 11Q20 18 12 22ZM9 31Q9 24 16 20Q18 28 9 31ZM10 40Q10 32 17 29Q19 36 10 40ZM13 49Q13 41 20 38Q22 46 13 49ZM18 57Q17 50 24 47Q26 53 18 57ZM11 22Q3 19 5 12Q12 15 11 22ZM8 32Q0 28 1 21Q9 24 8 32ZM9 42Q1 40 1 32Q9 34 9 42ZM13 51Q5 51 3 43Q11 43 13 51ZM19 60Q11 61 7 53Q15 53 19 60Z"/>
+  </svg>;
+}
+
 function Parliament({state}:{state:ReturnType<typeof channel<Congress>>}) {
   const {stability,budget} = useSyncExternalStore(state.subscribe,state.get);
-  return <section className="congress-meter grid gap-1.5 text-center" aria-label="Parlamento">
-    <div className="congress-meter-label flex items-center justify-center gap-2">
-      <button type="button" className="resource-help" aria-label="Como funciona a estabilidade"
-        data-help="Projetos e decisões afetam a estabilidade. A meta da sessão é 45. A zero, o Parlamento entra em colapso."><Icon name="ballot"/></button>
-      <span>Estabilidade institucional</span>
+  return <section className="congress-meter grid text-center" aria-label="Parlamento">
+    <div className="congress-emblem" aria-hidden="true">
+      <svg viewBox="0 0 96 30">
+        <path fill="currentColor" d="M2 16h26v3h-2v8h4v2H0v-2h4v-8H2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM68 16h26v3h-2v8h4v2H66v-2h4v-8h-2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM47 1h2v9l13 4v3h-3v10h4v2H33v-2h4V17h-3v-3l13-4zm-6 16v10h3V17zm6 0v10h3V17zm6 0v10h3V17z"/>
+      </svg>
     </div>
-    <div className="congress-meter-track flex items-center gap-2">
+    <button type="button" className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      data-help="Projetos e decisões afetam a estabilidade. A meta da sessão é 45. A zero, o Parlamento entra em colapso.">Estabilidade institucional</button>
+    <div className="congress-meter-track flex items-center">
+      <Laurel/>
       <Meter label="Estabilidade institucional" value={stability} max={100} tone={stability<45 ? 'danger' : 'stability'} target={45}/>
       <strong className="tabular-nums">{stability}</strong>
+      <Laurel right/>
     </div>
-    <div className="congress-budget flex items-center justify-center gap-2">
-      <button type="button" className="resource-help" aria-label="Como funciona o orçamento público"
-        data-help="Paga projetos e verbas de gabinete. Cada ponto de déficit custa 2 pontos de estabilidade."><Icon name="wallet"/></button>
-      <span>Orçamento público</span><strong className="tabular-nums">{money(budget)}</strong>
-    </div>
+    <button type="button" className="congress-budget flex items-center justify-center"
+      data-help="Paga projetos e verbas de gabinete. Cada ponto de déficit custa 2 pontos de estabilidade.">
+      <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
+    </button>
   </section>;
 }
 

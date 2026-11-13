@@ -446,3 +446,104 @@
 }
 #stations .hud-button:has(.station-key:not(:empty)) { padding-top: 6px; }
 #stations .hud-button { min-width: 0; height: 36px; white-space: normal; }
+
+#command-strip {
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: clamp(8px,1.5vw,22px);
+}
+.congress-meter {
+  width: clamp(240px,32vw,560px);
+  gap: 5px;
+}
+.congress-emblem {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+  color: #f6e9c0;
+  filter: drop-shadow(0 0 6px #90bf962f);
+}
+.congress-emblem::before, .congress-emblem::after {
+  content: "";
+  width: 24%;
+  height: 1px;
+  background: linear-gradient(90deg,transparent,#e0cf9d);
+}
+.congress-emblem::after { scale: -1 1; }
+.congress-emblem svg { width: clamp(66px,6vw,100px); }
+.congress-meter-label, .congress-budget {
+  justify-self: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: help;
+}
+.congress-meter-label { font-size: clamp(10px,1vw,16px); letter-spacing: .18em; }
+.congress-meter-track {
+  position: relative;
+  gap: 9px;
+  padding: 5px 10px 5px 6px;
+  border-color: #81bb9b;
+  box-shadow: inset 0 0 0 2px #4777614d,0 0 10px #89b38e1a;
+}
+.congress-meter-track .react-meter {
+  height: clamp(14px,1.65vw,26px);
+  border: 1px solid #456452;
+  border-radius: 999px;
+  background: #060f0c;
+}
+.congress-meter-track .react-meter span {
+  background: linear-gradient(180deg,#e9ffde44,transparent 45%,#062f2544),
+    linear-gradient(90deg,#4fd5a2,#6bb681 65%,#d7c56d);
+}
+.congress-meter-track [data-tone="danger"] span {
+  background: linear-gradient(90deg,#b35348,var(--color-hud-danger));
+}
+.congress-meter-track strong { min-width: 2ch; font-size: clamp(20px,1.9vw,32px); }
+.congress-laurel {
+  position: absolute;
+  right: calc(100% + 8px);
+  bottom: -1px;
+  width: clamp(15px,2vw,29px);
+  color: #b89a54;
+  opacity: .72;
+  pointer-events: none;
+}
+.congress-laurel-right { right: auto; left: calc(100% + 8px); scale: -1 1; }
+.congress-budget { gap: 12px; margin-top: 5px; font-size: clamp(12px,1.15vw,18px); }
+.congress-budget strong { font-size: 1.12em; }
+
+#command-strip #election-dock > summary {
+  gap: 11px;
+  min-height: 44px;
+  padding: 0 0 0 13px;
+  border: 1px solid transparent;
+  border-bottom-color: #617c66;
+  border-radius: 999px;
+  background: linear-gradient(180deg,transparent,#11241a80);
+}
+#command-strip #election-dock > summary:hover,
+#command-strip #election-dock[open] > summary { background: #13251cca; }
+#command-strip #election-dock > summary > .hud-glyph { width: 21px; height: 21px; color: #e4be6a; }
+#command-strip .election-summary { display: grid; align-items: start; gap: 4px; }
+#command-strip #current-office { color: #f6f3e9; font-weight: 750; }
+#command-strip #election-position { color: #edca7c; }
+#command-strip .election-clock {
+  justify-content: center;
+  min-width: 67px;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid #617c66;
+  border-radius: 999px;
+  background: #0b1712;
+}
+#command-strip #election-timer { color: #f8f5e8; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  #command-strip { grid-template-columns: minmax(0,1fr) auto; }
+  #command-strip #congress-dock { grid-column: 1; }
+  #command-strip #election-dock { grid-column: 2; }
+  .congress-meter { width: min(100%,320px); }
+  .congress-laurel { display: none; }
+}
+#world #hud-notices { inset-block-start: max(88px, calc(58px + env(safe-area-inset-top))); }
+#world #active-fire { top: clamp(133px, 10vw, 175px); }
