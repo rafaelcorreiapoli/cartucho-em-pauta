@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { stations, STATION_RADIUS, type PlenaryView } from './plenary';
-import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type PoliticsAction, type Split } from './politics';
+import { CABINET_GRANT, CAMPAIGN_COST, money, splits, type Evidence, type Offer, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -71,6 +71,10 @@ function stepper(id:string, initial:number, minimum:number, format:(value:number
 
 export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity):PoliticsAction|undefined {
   if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet) return {kind:'transfer',to,amount,clandestine};
+}
+
+export function canBuyEvidence(offer:Pick<Offer,'from'|'price'>, contacts:ReadonlySet<string>, wallet:number, paymentsLeft:number) {
+  return contacts.has(offer.from) && wallet>=offer.price && paymentsLeft>0;
 }
 
 export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
@@ -187,14 +191,14 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       }
       const contacts = new Set(p.contacts.map(contact => contact.id));
       const offerList = [...p.incoming,...(p.outgoing ? [p.outgoing] : [])];
-      const key = offerList.map(offer => `${offer.id}:${contacts.has(offer.from) && p.wallet>=offer.price && p.paymentsLeft>0}`).join(',');
+      const key = offerList.map(offer => `${offer.id}:${canBuyEvidence(offer,contacts,p.wallet,p.paymentsLeft)}`).join(',');
       if (offersKey!==key) {
         offersKey = key;
         offersRoot.render(offerList.map(offer=>{
           const outgoing = offer.from===id;
           return <div className="offer" key={offer.id}>
             {outgoing ? `Oferta para ${name(offer.to)} · ${money(offer.price)}` : `${name(offer.from)} oferece um documento por ${money(offer.price)}`}
-            {!outgoing && <button className="hud-button" type="button" disabled={!contacts.has(offer.from) || p.wallet<offer.price || !p.paymentsLeft}
+            {!outgoing && <button className="hud-button" type="button" disabled={!canBuyEvidence(offer,contacts,p.wallet,p.paymentsLeft)}
               onClick={()=>send({kind:'accept',offer:offer.id})}>Comprar</button>}
             <button className="hud-button hud-button--secondary" type="button" onClick={()=>send({kind:'cancel',offer:offer.id})}>
               {outgoing ? 'Cancelar' : 'Recusar'}

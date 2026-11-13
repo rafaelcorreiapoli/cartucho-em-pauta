@@ -230,7 +230,7 @@ export class PoliticalEconomy {
     if (!seller?.known.has(evidence) || !recipient || recipient.known.has(evidence) ||
       this.published.has(evidence) || !Number.isSafeInteger(price) || price<0) return;
     if (price===0) {
-      recipient.known.add(evidence);
+      this.deliverEvidence(to,evidence);
       return;
     }
     this.cancelOutgoing(from);
@@ -249,8 +249,14 @@ export class PoliticalEconomy {
     if (!offer || offer.to!==buyer || this.published.has(offer.evidence) ||
       this.accounts.get(buyer)?.known.has(offer.evidence)) return;
     if (!this.transfer(buyer,offer.from,offer.price,true,round)) return;
-    this.accounts.get(buyer)?.known.add(offer.evidence);
-    this.offers.delete(id);
+    this.deliverEvidence(buyer,offer.evidence);
+  }
+
+  private deliverEvidence(recipient:string, evidence:number) {
+    this.accounts.get(recipient)?.known.add(evidence);
+    for (const [id,offer] of this.offers) {
+      if (offer.to===recipient && offer.evidence===evidence) this.offers.delete(id);
+    }
   }
 
   cancel(by:string, id:number) {

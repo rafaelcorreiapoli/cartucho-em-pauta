@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {createRoomCommandSender,readRoomCommandToken} from './room-commands';
-import {manualTransfer} from './politics-panel';
+import {canBuyEvidence,manualTransfer} from './politics-panel';
 
 test('informal loans and repayments are manual payments selected by the player',()=>{
   expect(manualTransfer('borrower',3,true)).toEqual({kind:'transfer',to:'borrower',amount:3,clandestine:true});
@@ -38,4 +38,13 @@ test('political, election and mail commands share a sequence on the room connect
   ]);
   expect(readRoomCommandToken({token:1})).toBe(1);
   for (const token of [undefined,0,-1,1.2,Infinity,'1']) expect(readRoomCommandToken({token})).toBeUndefined();
+});
+
+test('buying evidence requires proximity, sufficient balance and an available payment',()=>{
+  const offer = {from:'seller',price:2};
+  const nearby = new Set(['seller']);
+  expect(canBuyEvidence(offer,nearby,2,1)).toBe(true);
+  expect(canBuyEvidence(offer,nearby,1.9,1)).toBe(false);
+  expect(canBuyEvidence(offer,nearby,2,0)).toBe(false);
+  expect(canBuyEvidence(offer,new Set(),2,1)).toBe(false);
 });

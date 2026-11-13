@@ -119,7 +119,16 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   const offer = view(traitor).politics!.incoming[0];
   expect(view(host).politics?.incoming).toEqual([]);
   expect(view(traitor).politics?.evidence.some(record => record.id===proof.id)).toBe(false);
+  match.politics({...host,x:honest.x},{kind:'share',to:traitor.id,evidence:proof.id,price:3},[{...host,x:honest.x},honest,traitor],9);
+  const competing = view(traitor).politics!.incoming.find(entry=>entry.id!==offer.id)!;
+  expect(competing?.price).toBe(3);
+  const before = match.economySummary(0);
+  const paymentsLeft = view(traitor).politics!.paymentsLeft;
   match.politics(traitor,{kind:'accept',offer:offer.id},people,10);
+  expect(view(traitor).politics?.incoming).toEqual([]);
+  match.politics(traitor,{kind:'accept',offer:competing.id},[{...host,x:honest.x},honest,traitor],11);
+  expect(view(traitor).politics?.paymentsLeft).toBe(paymentsLeft-1);
+  expect(match.economySummary(0)).toMatchObject({humans:before.humans,reserve:before.reserve,transferred:before.transferred+2,discrepancy:0});
   match.politics(traitor,{kind:'accept',offer:offer.id},people,11);
   expect(view(honest).politics?.wallet).toBe(11);
   expect(view(traitor).politics?.wallet).toBe(7);
