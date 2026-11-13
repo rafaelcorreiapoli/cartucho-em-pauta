@@ -216,3 +216,18 @@ playwright-cli -s=sessao-call close
 O teste injeta um sinal sintético e mede o áudio recebido por WebRTC em dois
 clientes da mesma sala. A saída de áudio é silenciada pelo teste, que também
 substitui a captura de microfone antes de iniciar o VoIP.
+
+### Smoke test do filtro de Megafone no Chrome
+
+Com o Vite e a sessão Chrome silenciosa da seção anterior, prepare uma fala
+sintética no macOS com a voz Luciana instalada e execute:
+
+```sh
+say -v Luciana -r 155 -o /tmp/sessao-megaphone-speech.aiff "Atenção, parlamentares. A sessão começa em cinco minutos. O projeto será votado no plenário."
+ffmpeg -y -i /tmp/sessao-megaphone-speech.aiff -ac 1 -ar 24000 /tmp/sessao-megaphone-speech.wav
+playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
+```
+
+O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
+no receptor. Ele verifica redução relativa de graves, presença de sinal com
+Megafone e Modulador ativos e ausência de picos próximos ao clipping.
