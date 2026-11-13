@@ -1,22 +1,14 @@
 import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {fireRules,fireSites} from './fire';
+import {mountProjectImpact} from './ui/project-impact';
 import { mountBallot } from './ui/ballot';
 import type { createRoomCommandSender } from './room-commands';
 import type { Player } from './map';
-import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type Impact, type PlenaryView, type Vote } from './plenary';
+import { voteIntentSummary, agendaProject, MIN_PLAYERS, canReachStation, type Action, type PlenaryView, type Vote } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
 const actions = [...document.querySelectorAll<HTMLButtonElement>('[data-action]')];
-const signed = (value:number) => value>0 ? '+'+value : String(value);
-function showImpact(prefix:'yes' | 'no', effect:Impact) {
-  for (const key of ['stability','budget'] as const) {
-    const stat = element(`${prefix}-${key}`);
-    stat.textContent = signed(effect[key]);
-    stat.dataset.effect = effect[key]>0 ? 'gain' : effect[key]<0 ? 'loss' : 'neutral';
-  }
-}
-
 export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
@@ -54,6 +46,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
 
   }
 
+  const impact = mountProjectImpact(element('impact'));
   const history = mountVoteHistory(element<HTMLDetailsElement>('vote-history'));
 
   return {
@@ -127,10 +120,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       element('bill').textContent = title;
       element('project-details-title').textContent = title;
       element('bill-description').textContent = hearing ? '' : agendaProject(view).description;
-      element('impact').hidden = !!hearing;
-      showImpact('yes',view.yes);
-      showImpact('no',view.no);
-
+      impact.render(view.yes,view.no,running && !hearing);
       ballot.render(view);
       if (view.isolationSeconds) {
         element('clock-label').textContent = 'Isolamento';
@@ -150,7 +140,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (element('clue').textContent!==clue) element('clue').textContent = clue;
       updateActions();
     },
-    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); },
+    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); },
     players(players:Player[]) {
       own = players.find(player => player.id===id);
       updateActions();
