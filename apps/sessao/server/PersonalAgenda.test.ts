@@ -417,3 +417,25 @@ test('a dropped contact is replaced without changing their own agenda during the
   expect(view('a').active.find(mission=>mission.kind==='selfieAlvo')?.person?.id).toBe('c');
   expect(view('b')).toEqual(before);
 });
+
+test('a settled transfer can only advance each agenda once even after a new objective is drawn',()=>{
+  const agenda = new PersonalAgenda(metrics,2,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[
+    {id:100,kind:'recebido',current:0,target:2},
+    {id:101,kind:'pagamento',current:0,target:2},
+  ]);
+  agenda.recordPayment(metrics,'b',42);
+  agenda.recordPayment(metrics,'b',42);
+  agenda.recordTransfer(metrics,3,'c',43);
+  agenda.recordTransfer(metrics,3,'c',43);
+  expect(agenda.view(metrics).active).toEqual(expect.arrayContaining([
+    expect.objectContaining({kind:'recebido',current:1}),
+    expect.objectContaining({kind:'pagamento',current:1}),
+  ]));
+  agenda.recordPayment(metrics,'b',44);
+  agenda.recordTransfer(metrics,3,'c',45);
+  expect(agenda.view(metrics).completed.map(mission=>mission.kind)).toEqual(['recebido','pagamento']);
+  Reflect.set(agenda,'missions',[{id:102,kind:'recebido',current:0,target:1}]);
+  agenda.recordPayment(metrics,'b',42);
+  expect(agenda.view(metrics).active.find(mission=>mission.id===102)?.current).toBe(0);
+});

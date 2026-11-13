@@ -114,12 +114,18 @@ export class PersonalAgenda {
     this.fillMissions(metrics,true);
   }
 
-  recordPayment(metrics:AgendaMetrics, from:string) {
+  recordPayment(metrics:AgendaMetrics, from:string, transferId:number) {
+    const key = `payment:${transferId}`;
+    if (this.seenEvents.has(key)) return;
+    this.seenEvents.add(key);
     if (this.hasActive('articulacao')) this.missionPayers.add(from);
     this.progress(metrics,{recebido:1});
   }
 
-  recordTransfer(metrics:AgendaMetrics, amount:number,to?:string) {
+  recordTransfer(metrics:AgendaMetrics, amount:number,to:string,transferId:number) {
+    const key = `transfer:${transferId}`;
+    if (this.seenEvents.has(key)) return;
+    this.seenEvents.add(key);
     if (amount>=AGENDA_TRANSFER_MIN) this.progress(metrics,{pagamento:1,dinheiroAlvo:Number(this.missions.some(m=>m.kind==='dinheiroAlvo' && m.person?.id===to))});
   }
 
