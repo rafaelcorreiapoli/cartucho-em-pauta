@@ -61,7 +61,8 @@
 .vital-row > span { color: var(--meter-tone); font-weight: 800; }
 .vital-row > small { text-align: right; }
 .vital-row .react-meter { height: 5px; }
-#world #agenda-dock {
+#match #agenda-dock {
+  z-index: 4;
   inset: auto auto var(--hud-edge) var(--hud-edge);
   width: var(--profile-width);
 }
