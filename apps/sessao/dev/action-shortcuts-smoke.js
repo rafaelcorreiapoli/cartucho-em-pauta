@@ -9,6 +9,7 @@ async page => {
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
+  await page.getByRole('button',{name:'Aplicativos',exact:true}).click();
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await palette.waitFor();
