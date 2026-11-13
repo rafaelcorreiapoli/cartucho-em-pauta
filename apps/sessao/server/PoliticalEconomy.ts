@@ -12,7 +12,7 @@ type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number
 type Account = {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
   grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; owns?:(kind:ObjectKind)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean; selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
 
@@ -49,6 +49,7 @@ export class PoliticalEconomy {
     this.officialScandal = false;
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
+        canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
         npcHasCash:()=>[...this.npcIds].some(id=>this.wallet(id)>0),
         canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
         canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
@@ -89,7 +90,7 @@ export class PoliticalEconomy {
     const sample = this.accounts.values().next().value;
     if (!sample) return;
     this.npcIds.add(contact.id);
-    const {agenda,progression,canPay:_canPay,canAgendaAction:_canAgendaAction,...initial} = sample;
+    const {agenda,progression,canPay:_canPay,canAgendaAction:_canAgendaAction,canExposeScandal:_canExposeScandal,...initial} = sample;
     this.contacts.set(contact.id,contact);
     this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
       progression:new CharacterProgression(this.matchId)});
@@ -237,7 +238,7 @@ export class PoliticalEconomy {
       !account.known.has(record.id) && !this.published.has(record.id))
       .sort((a,b) => b.amount-a.amount || b.id-a.id)[0];
     if (!candidate) return 'Nenhum registro novo nesta auditoria.';
-    account.known.add(candidate.id);
+    this.deliverEvidence(id,candidate.id);
     account.audits++;
     return 'Documento encontrado. Confira seu dossiê.';
   }
@@ -270,7 +271,11 @@ export class PoliticalEconomy {
   }
 
   private deliverEvidence(recipient:string, evidence:number) {
-    this.accounts.get(recipient)?.known.add(evidence);
+    const account = this.accounts.get(recipient);
+    if (account) {
+      account.known.add(evidence);
+      account.agenda.progress(account);
+    }
     for (const [id,offer] of this.offers) {
       if (offer.to===recipient && offer.evidence===evidence) this.offers.delete(id);
     }
@@ -279,6 +284,17 @@ export class PoliticalEconomy {
   cancel(by:string, id:number) {
     const offer = this.offers.get(id);
     if (offer && (offer.from===by || offer.to===by)) this.offers.delete(id);
+  }
+
+  private countsAsScandal(id:string, record:Evidence) {
+    return record.kind!=='public-transfer' && record.from!==id && record.to!==id;
+  }
+
+  private hasUnpublishedScandal(id:string) {
+    return [...(this.accounts.get(id)?.known ?? [])].some(key=>{
+      const record = this.records.get(key);
+      return !!record && !this.published.has(key) && this.countsAsScandal(id,record);
+    });
   }
 
   publish(id:string, evidence:number) {
@@ -294,7 +310,10 @@ export class PoliticalEconomy {
     }
     if (id!==record.from && id!==record.to) {
       account.popularity = cap(account.popularity+10);
-      account.agenda.progress(account,{escandalo:1});
+      if (this.countsAsScandal(id,record)) account.agenda.progress(account,{escandalo:1});
+    }
+    for (const other of this.accounts.values()) {
+      if (other.known.has(evidence)) other.agenda.replaceUnavailableScandal(other);
     }
     return record;
   }

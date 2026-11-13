@@ -8,7 +8,7 @@ import { agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agen
 import { applyFacts, photoMissions } from './photo-missions';
 
 type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -252,6 +252,7 @@ export class PersonalAgenda {
     if (kind==='reforma' && !metrics.hasAgendaDecoration?.('portrait',true)) return false;
     if (kind==='mandaVip' && !metrics.hasAgendaDecoration?.('vip',true)) return false;
     if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;
+    if (kind==='escandalo' && !metrics.canExposeScandal?.()) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
     const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
     const canBuyFurniture = (item:OfficeFurniture) => stock.includes(item) && officeGoods[item].price<=metrics.wallet;
@@ -321,6 +322,12 @@ export class PersonalAgenda {
       this.reward(reward,completed);
       this.progress(metrics);
     }
+    this.fillMissions(metrics);
+  }
+
+  replaceUnavailableScandal(metrics:AgendaMetrics) {
+    if (metrics.canExposeScandal?.() || !this.hasActive('escandalo')) return;
+    this.missions = this.missions.filter(mission=>mission.kind!=='escandalo');
     this.fillMissions(metrics);
   }
 

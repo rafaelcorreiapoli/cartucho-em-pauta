@@ -550,3 +550,32 @@ test('the VIP inspection needs a photographer, a plate owner and a visitor',()=>
   agenda.updateEligibility(withVip,2,true,3,0,[{id:'b',name:'Bia'}],new Set(['a','b']));
   expect(agenda.view(withVip).active.map(mission=>mission.kind)).toEqual(['cafe','passeio','selfieSolo']);
 });
+
+test('scandal missions require known evidence against another player and retire when the proof is published',()=>{
+  const economy = new PoliticalEconomy();
+  const ids = ['a','b','c','d'];
+  economy.reset(ids.map(id=>({id,name:id})),()=>0);
+  const view = (id:string)=>economy.view(id,[],0,false,()=>true)!;
+  const active = (id:string)=>view(id).missions.active.some(mission=>mission.kind==='escandalo');
+  const accounts = Reflect.get(economy,'accounts');
+  for (const id of ids) {
+    const {agenda} = accounts.get(id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['escandalo','cafe','passeio']);
+  }
+  economy.updateAgendaEligibility(new Set(ids),3);
+  expect(economy.transfer('a','b',1,false,0)).toBe(true);
+  expect(economy.audit('c',0)).toContain('Nenhum');
+  expect(economy.transfer('a','b',1,true,0)).toBe(true);
+  expect(ids.some(active)).toBe(false);
+  expect(economy.audit('c',0)).toContain('encontrado');
+  expect(economy.audit('d',0)).toContain('encontrado');
+  expect(active('c')).toBe(true);
+  expect(active('d')).toBe(true);
+  const evidence = view('c').evidence[0].id;
+  expect(economy.publish('c',evidence)).toBeDefined();
+  expect(view('c').missions.completed.some(mission=>mission.kind==='escandalo')).toBe(true);
+  expect(active('d')).toBe(false);
+  expect(view('d').missions.completed.some(mission=>mission.kind==='escandalo')).toBe(false);
+  expect(economy.publish('d',evidence)).toBeUndefined();
+});

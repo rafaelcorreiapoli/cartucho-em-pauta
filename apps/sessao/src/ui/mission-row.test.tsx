@@ -55,3 +55,8 @@ test('publishing a qualifying selfie changes the Agenda row to completed',()=>{
   expect(markup).toContain('Publique uma selfie sua com pelo menos dois colegas.');
   expect(markup).toContain('data-done="true"');
 });
+
+test('a scandal objective identifies the two kinds of proof the player can publish',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:5,kind:'escandalo',current:0,target:1}}/>);
+  expect(markup).toContain('Divulgue uma prova de desvio ou pagamento clandestino');
+});
