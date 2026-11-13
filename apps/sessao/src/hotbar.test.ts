@@ -10,3 +10,8 @@ test('a hotbar reference stays in its chosen slot regardless of bag order',()=>{
   expect(reconcileHotbar(slots,[coffee])).toEqual(emptyHotbar());
   expect(assignHotbarSlot(slots,1,snack.id)).toEqual([undefined,4,undefined,undefined,undefined,undefined]);
 });
+
+test('equipment is excluded from hotbar assignments',()=>{
+  const slots = assignHotbarSlot(emptyHotbar(),0,5);
+  expect(reconcileHotbar(slots,[{id:5,kind:'megaphone'}])).toEqual(emptyHotbar());
+});

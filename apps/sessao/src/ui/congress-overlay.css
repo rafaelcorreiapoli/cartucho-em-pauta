@@ -598,3 +598,34 @@
 @media (max-width: 760px) {
   #command-strip #equipped-gear:not([hidden]) { grid-row: 2; }
 }
+
+#gameplay-dialog[data-mode="bag"] {
+  width: min(720px,calc(100vw - 32px));
+  border: 1px solid #779c7c;
+  border-radius: 19px;
+  background: linear-gradient(150deg,#172c23,#0b1913);
+}
+.bag-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.bag-filters { grid-column: 1/-1; border-bottom: 1px solid #4c6e59; }
+.bag-filters button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: #c9d3c1;
+  cursor: pointer;
+}
+.bag-filters button[aria-pressed="true"] { background: #294335; color: #f0d69b; box-shadow: inset 0 -2px #e9c77c; }
+.bag-layout .congress-bag .item-tile { min-height: 0; color: #809d87; }
+.bag-layout .item-tile img { width: 66%; height: 66%; object-fit: contain; }
+.bag-layout .item-tile[aria-pressed="true"] { border-color: #e9c77c; box-shadow: 0 0 9px #d9b66142; }
+.bag-layout button:disabled { opacity: .45; cursor: default; }
+.bag-capacity { margin-bottom: 0; color: #b7c6af; }
+.bag-detail { border-left: 1px solid #4c6e59; padding-left: 16px; }
+.bag-detail .object-card { border: 1px solid #4c6e59; border-radius: 12px; padding: 12px; }
+.bag-detail .object-card h3 { display: grid; justify-items: start; gap: 6px; }
+.bag-detail .object-card h3 img { width: 66px; height: 66px; object-fit: contain; }
+@media(max-width: 520px) {
+  .bag-layout { grid-template-columns: 1fr; }
+  .bag-detail { border-left: 0; padding-left: 0; }
+}

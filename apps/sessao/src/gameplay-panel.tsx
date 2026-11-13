@@ -1,4 +1,4 @@
-import {assignHotbarSlot, emptyHotbar, reconcileHotbar} from './hotbar';
+import {assignHotbarSlot, canPinToHotbar, emptyHotbar, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
@@ -77,6 +77,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let equipmentOpen = false;
   let stashOpen = false;
   let bagOpen = false;
+  const bagFilters = ['Todos','Equipamentos','Consumíveis'] as const;
+  let bagFilter:typeof bagFilters[number] = 'Todos';
   const snake = createPhoneSnake(direction=>send({kind:'game-turn',direction}));
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
@@ -110,13 +112,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       {chooseQuantity && <div className="flex flex-wrap gap-1" role="group" aria-label="Adicionar à hotbar">
         <span>Hotbar</span>
         {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
-          aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
+          disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
           onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
         {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
           onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
       </div>}
-      {actions.map(({label,run,key})=><button type="button" key={label} className="hud-button hud-button--secondary"
-        aria-keyshortcuts={key} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+      {actions.map(({label,run,key,disabled})=><button type="button" key={label} className="hud-button hud-button--secondary"
+        aria-keyshortcuts={key} disabled={disabled} onClick={run}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
     </article>;
   }
   function changeQuantity(item:WorldItem,delta:number) {
@@ -124,7 +126,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
-  type ObjectAction = {label:string;run:()=>void;key?:string};
+  type ObjectAction = {label:string;run:()=>void;key?:string;disabled?:boolean};
 
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
     selection = item;
@@ -133,14 +135,15 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     equipmentOpen = equipment;
     stashOpen = stash;
     bagOpen = bag;
+    if (bag) bagFilter = 'Todos';
     if (!bag) assigningSlot = undefined;
     const object = !!item || decoration!==undefined;
     highlightSlot();
     photos.clearRecipient();
     renderKey = '';
-    element('gameplay-title').textContent = bag ? 'Mochila' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
+    element('gameplay-title').textContent = bag ? 'Inventário' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
     navigation.hidden = object || equipment || stash || bag;
-    dialog.dataset.mode = equipment || stash || bag ? 'equipment' : object ? 'item' : 'phone';
+    dialog.dataset.mode = bag ? 'bag' : equipment || stash ? 'equipment' : object ? 'item' : 'phone';
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -196,6 +199,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const selected = selection;
     const item = selected && state[selected.source].find(item=>item.id===selected.id);
     const decoration = state.decorations.find(item=>item.id===decorationId);
+    if (bagOpen && selection && !item) selection = undefined;
     if ((selection && !item) || (decorationId!==undefined && !decoration)) {
       dialog.close();
       return;
@@ -212,13 +216,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = bagOpen ? state.inventory : stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       state.game?.status;
     if (phone && app==='Joguinhos' && state.game) snake.paint(state.game);
-    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,assigningSlot,app,phase,visible]);
+    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const focused = body.contains(document.activeElement);
@@ -228,20 +232,44 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
       cards.push(objectsHost);
     }
-    if (bagOpen) {
-      flushSync(()=>objectsRoot.render(<div className="congress-bag">
-        {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
-          const item = state.inventory[index];
-          return item ? <button key={item.id} type="button" className="item-tile" title={itemName(item)}
-            onClick={()=>{
-              if (assigningSlot===undefined) open({id:item.id,source:'inventory'});
-              else { hotbar = assignHotbarSlot(hotbar,assigningSlot,item.id); dialog.close(); }
-            }}>
-            <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait}/>
-            <span>{itemName(item)}</span>
-          </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={index}>+</span>;
-        })}
-      </div>));
+    function renderBag(detail?:ReturnType<typeof objectCard>) {
+      const inventory = state!.inventory;
+      const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
+        (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
+      return <div className="bag-layout">
+        <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
+          {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
+            onClick={()=>{bagFilter = filter;selection = undefined;render();}}>{filter}</button>)}
+        </div>
+        <div>
+          <div className="congress-bag">
+            {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+              const entry = filtered[index];
+              return entry ? <button key={entry.id} type="button" className="item-tile" title={itemName(entry)}
+                aria-label={itemName(entry)} aria-pressed={selection?.id===entry.id}
+                disabled={assigningSlot!==undefined && !canPinToHotbar(entry)}
+                onClick={()=>{
+                  if (assigningSlot!==undefined) {
+                    hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
+                    dialog.close();
+                  } else {
+                    selection = {id:entry.id,source:'inventory'};
+                    quantity = 1;
+                    render();
+                  }
+                }}>
+                <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
+                {itemQuantity(entry)>1 && <span className="slot-count">×{itemQuantity(entry)}</span>}
+              </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
+            })}
+          </div>
+          <p className="bag-capacity">{inventory.length} / {INVENTORY_SLOTS} slots</p>
+        </div>
+        <div className="bag-detail">{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
+      </div>;
+    }
+    if (bagOpen && !item) {
+      flushSync(()=>objectsRoot.render(renderBag()));
       cards.push(objectsHost);
     }
     if (equipmentOpen) {
@@ -283,7 +311,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
-        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
+        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip',undefined,bagOpen ? '7' : undefined);
+        else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
         if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
         if ('exposable' in definition) {
@@ -299,7 +328,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           act('Oferecer','offer');
           if (item.document) act('Pedir assinatura','sign-request');
         }
-        act('Largar','drop');
+        act('Largar no chão','drop',undefined,bagOpen ? '8' : undefined);
         if ('destructible' in definition) act('Destruir','destroy');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
@@ -309,7 +338,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
-      flushSync(()=>objectsRoot.render(objectCard(item,actions,selection?.source==='inventory')));
+      const detail = objectCard(item,actions,selection?.source==='inventory');
+      flushSync(()=>objectsRoot.render(bagOpen ? renderBag(detail) : detail));
       cards.push(objectsHost);
     }
     if (decoration) {
