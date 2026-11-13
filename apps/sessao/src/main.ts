@@ -232,20 +232,24 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       if (gameplay.photoState(photos)) audio.shutter();
     });
+    joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
+    joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
       audio.cue('pickup');
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (message==='Raio X ativado.') audio.cue('vote');
+      if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
+      else if (message==='Raio X ativado.') audio.cue('vote');
       else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
     const election = createElectionPanel(joined.sessionId,action => joined.send('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => joined.send('politics',action),() => map.focus({preventScroll:true}));
-    const reactHud = mountReactHud();    const results = mountResults();
+    const reactHud = mountReactHud();
+    const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(type,data) => {
       joined.send(type,data);
       if (type!=='bill-vote') map.focus({preventScroll:true});

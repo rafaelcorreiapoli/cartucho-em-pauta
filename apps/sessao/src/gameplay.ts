@@ -25,6 +25,7 @@ export const objects = {
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-documento.webp',description:'Uma reserva que os outros podem ignorar.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:'Amplia a visão por 10 s. Recarga automática de 30 s.'},
+  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:'Transmite sua voz para todo o Congresso por até 15 s.'},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:'Reduz em 35% o dano físico recebido.'},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
@@ -60,7 +61,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','buy','talk','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -71,13 +72,13 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','dialogue-choice','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
   return articulating || !articulationActions.has(action.kind);
 }
-const replaySensitiveActions = new Set<GameplayActionKind>([...officeActions,'attack','aid','carry','release','treat','toggle-modulator','scan-xray','recharge-xray','use-binoculars']);
+const replaySensitiveActions = new Set<GameplayActionKind>([...officeActions,'attack','aid','carry','release','treat','toggle-megaphone','toggle-modulator','scan-xray','recharge-xray','use-binoculars']);
 export const needsFieldToken = (kind:GameplayActionKind) => replaySensitiveActions.has(kind);
 
 export type ExposedItem = {id:number; kind:ObjectKind};
@@ -97,11 +98,12 @@ export type GameplayView = {
   binocularSeconds?:number;
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
   equipmentCooldowns?:Record<number,number>;
+  megaphoneSeconds?:number;
   modulator?:{active:boolean; battery:number; recharge:number};
   exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {
-  type:'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  type:'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   actor:string; target?:string; item?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; damage?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 

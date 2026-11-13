@@ -2,6 +2,7 @@ export const equipment = {
   xray:{slot:'scanner',price:5,symbol:'▣'},
   binoculars:{slot:'vision',price:2,symbol:'🔭'},
   voiceModulator:{slot:'voice',price:3,symbol:'🎙️'},
+  megaphone:{slot:'broadcast',price:4,symbol:'📣'},
   vest:{slot:'armor',price:3,symbol:'🛡️'},
   runningShoes:{slot:'feet',price:2,symbol:'👟'},
   baton:{slot:'weapon',weapon:'baton',price:2,symbol:'🏏'},
@@ -24,3 +25,5 @@ export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as c
 export const binoculars = {duration:10_000,cooldown:30_000,multiplier:1.65} as const;
 export const voiceBattery = 25_000;
 export const voiceRecharge = 45_000;
+
+export const megaphone = {duration:15_000,cooldown:45_000,volume:.85} as const;

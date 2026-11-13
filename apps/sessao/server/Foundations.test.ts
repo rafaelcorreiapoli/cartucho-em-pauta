@@ -500,3 +500,42 @@ test('upgraded stats change baton damage and recovery, and stamina requires equi
   expect(runner).toMatchObject({stamina:100});
   expect(game.view(bob,world).vitality).toMatchObject({hp:100,max:100});
 });
+
+test('megaphone reserves one channel, keeps the modulator active and releases on timeout or plenary',()=>{
+  const {alice,bob,game,world,buyGear} = setup();
+  const feedback:string[] = [];
+  world.feedback = (_,message)=>feedback.push(message);
+  const toggle = {kind:'toggle-megaphone'} as const;
+  expect(game.act(alice,toggle,world)).toContain('Equipe');
+  const buyAndEquip = (owner:Player,kind:'megaphone'|'voiceModulator') => {
+    expect(buyGear(owner,kind)).toBe('Compra guardada no inventário.');
+    const item = game.view(owner,world).inventory.find(item=>item.kind===kind)!;
+    expect(game.act(owner,{kind:'equip',item:item.id},world)).toBe('Equipado.');
+    return item.id;
+  };
+  const a = buyAndEquip(alice,'megaphone');
+  const b = buyAndEquip(bob,'megaphone');
+  buyAndEquip(alice,'voiceModulator');
+  game.act(alice,{kind:'toggle-modulator'},world);
+  expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
+  expect(game.megaphoneSpeaker()).toBe(alice.id);
+  expect(game.view(alice,world)).toMatchObject({megaphoneSeconds:15,modulator:{active:true}});
+  expect(game.act(bob,toggle,world)).toBe('Canal de Megafone ocupado.');
+  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBeUndefined();
+  world.now += 15_000;
+  game.tick(world,true);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+  expect(game.act(alice,toggle,world)).toBe('Megafone em recarga.');
+  expect(game.act(bob,toggle,world)).toBe('Megafone ativo.');
+  game.tick(world,false);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBe(45);
+  world.now += 45_000;
+  game.tick(world,true);
+  expect(feedback).toContain('Megafone pronto.');
+  expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
+  game.stopMegaphone(alice.id,world);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+});

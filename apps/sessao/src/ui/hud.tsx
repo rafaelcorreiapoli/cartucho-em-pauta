@@ -123,7 +123,15 @@ function Level({state}:{state:ReturnType<typeof channel<Profile|undefined>>}) {
   return profile && <strong className="react-level tabular-nums" aria-label={`Nível ${profile.level}`}>NV {profile.level}</strong>;
 }
 
+function Broadcast({state}:{state:ReturnType<typeof channel<boolean>>}) {
+  const active = useSyncExternalStore(state.subscribe,state.get);
+  return active && <div className="react-broadcast rounded-hud bg-hud-surface text-hud-ink" role="status">📣 Transmissão por Megafone</div>;
+}
+
 export function mountReactHud() {
+  const broadcast = channel(false);
+  const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
+  broadcastRoot.render(<Broadcast state={broadcast}/>);
   const congress = channel<Congress>({stability:48,budget:32});
   const agenda = channel<Agenda|undefined>(undefined);
   const profile = channel<Profile|undefined>(undefined);
@@ -138,6 +146,7 @@ export function mountReactHud() {
   agendaRoot.render(<AgendaPanel state={agenda}/>);
   let matchId:number|undefined;
   return {
+    broadcast: broadcast.update,
     player(player:Player) {
       const max = player.staminaMax ?? MAX_STAMINA;
       stamina.update({current:Math.floor(player.stamina ?? max),max});
@@ -159,6 +168,6 @@ export function mountReactHud() {
       agenda.update({active:missions.active,recent,announcement:fresh.length
         ? fresh.map(mission=>'Concluído: '+missionTitle(mission)).join('. ') : previous?.announcement ?? ''});
     },
-    destroy() { parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); },
+    destroy() { broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); },
   };
 }

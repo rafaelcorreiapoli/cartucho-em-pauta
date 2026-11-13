@@ -17,7 +17,7 @@ import { Combat } from './Combat';
 import { Transport } from './Transport';
 import { aidRadius, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { binoculars, equippedWeapon, equipment, isGear, concealment, xray, type Gear } from '../src/equipment';
+import { binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -59,6 +59,37 @@ export class Gameplay {
   private random = Math.random;
   private nextCashSpawn = Infinity;
 
+  private megaphoneBroadcast?: {owner:string;item:number;until:number};
+  private megaphoneRecharge = new Map<number,{owner:string;until:number}>();
+
+  megaphoneSpeaker() { return this.megaphoneBroadcast?.owner; }
+
+  stopMegaphone(id:string,world:GameplayWorld) {
+    const active = this.megaphoneBroadcast;
+    if (active?.owner!==id) return;
+    this.megaphoneBroadcast = undefined;
+    this.megaphoneRecharge.set(active.item,{owner:id,until:world.now+megaphone.cooldown});
+    const player = world.players.find(player=>player.id===id);
+    if (player) publishGameplay(world,player,'megaphone-ended',{item:active.item,kind:'megaphone',witnesses:[]});
+    world.feedback?.(id,'Megafone encerrado.');
+  }
+
+  private updateMegaphone(world:GameplayWorld,exploring:boolean) {
+    const active = this.megaphoneBroadcast;
+    if (active) {
+      const player = world.players.find(player=>player.id===active.owner);
+      if (!exploring || !player || player.knockedOut || player.carried || !world.voice(active.owner) ||
+          this.wearing(active.owner,'megaphone')?.id!==active.item || world.now>=active.until) {
+        this.stopMegaphone(active.owner,world);
+      }
+    }
+    for (const [item,recharge] of this.megaphoneRecharge) {
+      if (world.now<recharge.until) continue;
+      this.megaphoneRecharge.delete(item);
+      if (this.wearing(recharge.owner,'megaphone')?.id===item) world.feedback?.(recharge.owner,'Megafone pronto.');
+    }
+  }
+
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.items.clear();
     this.surveillance.reset();
@@ -80,6 +111,8 @@ export class Gameplay {
     this.combat.reset(players);
     this.transport.reset();
     this.modulator.reset();
+    this.megaphoneBroadcast = undefined;
+    this.megaphoneRecharge.clear();
     for (const player of players) {
       player.pocketing = undefined;
       player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
@@ -289,6 +322,7 @@ export class Gameplay {
       },
     });
     this.tickOfficeChannels(world,exploring);
+    this.updateMegaphone(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
       if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
@@ -365,6 +399,7 @@ export class Gameplay {
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
       const seconds = item.kind==='voiceModulator' ? modulator?.recharge :
+        item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
         item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
@@ -380,6 +415,7 @@ export class Gameplay {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       xrayVision:this.xrayVision(player,world),
@@ -890,6 +926,7 @@ export class Gameplay {
     if (!this.available(id)) return 'Inventário cheio.';
     this.move(item,{holder:id});
     if (item.data.kind==='binoculars') this.stopBinoculars(id);
+    if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
     if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
     this.event(world,player,'unequipped',item.data);
@@ -953,6 +990,19 @@ export class Gameplay {
     if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
     if (action.kind==='shop-buy') return this.buyProduct(player,action.target,action.token,world);
     if (action.kind==='equip' || action.kind==='unequip') return this.changeGear(player,action.item,action.kind==='equip',world);
+    if (action.kind==='toggle-megaphone') {
+      if (this.megaphoneSpeaker()===id) {
+        this.stopMegaphone(id,world);
+        return;
+      }
+      const item = this.wearing(id,'megaphone');
+      if (!item || !world.voice(id)) return 'Equipe o Megafone e ative a voz.';
+      if (this.megaphoneBroadcast) return 'Canal de Megafone ocupado.';
+      if ((this.megaphoneRecharge.get(item.id)?.until ?? 0)>world.now) return 'Megafone em recarga.';
+      this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration};
+      this.event(world,player,'megaphone-started',item,undefined,{witnesses:[]});
+      return 'Megafone ativo.';
+    }
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');
       if (!item || !world.voice(id)) return 'Equipe o modulador e ative a voz.';

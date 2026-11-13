@@ -265,6 +265,43 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     Reflect.set(room,'match',match);
     carrier.send('start-match');
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
+    const routes = new Map<string,[string,number,boolean?,boolean?][]>();
+    let broadcast = false;
+    for (const peer of rooms) {
+      peer.onMessage('voice-range',(levels:[string,number,boolean?,boolean?][])=>routes.set(peer.sessionId,levels));
+      peer.onMessage('voice-send',()=>{});
+      peer.onMessage('voice-roster',()=>{});
+      peer.onMessage('megaphone-active',(active:boolean)=>{if (peer===passenger) broadcast = active;});
+      peer.send('voice-join');
+    }
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:140,y:146});
+    const gearView = ()=>views.get(carrier.sessionId)?.gameplay;
+    await wait(()=>routes.has(passenger.sessionId));
+    expect(routes.get(passenger.sessionId)?.some(([id])=>id===carrier.sessionId)).toBe(false);
+    carrier.send('gameplay',{kind:'talk',target:'vendor'});
+    await wait(()=>!!gearView()?.dialogue);
+    carrier.send('gameplay',{kind:'dialogue-choice',target:'products',token:gearView()?.dialogue?.token});
+    await wait(()=>gearView()?.dialogue?.shop===true);
+    carrier.send('gameplay',{kind:'shop-buy',target:'megaphone',token:gearView()?.dialogue?.token});
+    await wait(()=>!!gearView()?.inventory.find(item=>item.kind==='megaphone'));
+    carrier.send('gameplay',{kind:'equip',item:gearView()?.inventory.find(item=>item.kind==='megaphone')?.id});
+    await wait(()=>!!gearView()?.equipped?.find(item=>item.kind==='megaphone'));
+    carrier.send('gameplay',{kind:'toggle-megaphone',token:1});
+    await wait(()=>broadcast && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
+    expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
+    await Bun.sleep(120);
+    expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
+    carrier.send('gameplay',{kind:'toggle-megaphone',token:2});
+    await wait(()=>!broadcast && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
+    carrier.send('voice-leave');
+    passenger.send('voice-leave');
+    carrier.send('gameplay',{kind:'dialogue-close'});
+    await wait(()=>!gearView()?.dialogue);
+    purchases.clear();
+    const carrierAccount = Reflect.get(Reflect.get(match,'economy'),'accounts').get(carrier.sessionId);
+    carrierAccount.wallet += 4;
     const progression = () => views.get(passenger.sessionId)?.politics?.progression;
     const economy = Reflect.get(match,'economy');
     const account = Reflect.get(economy,'accounts').get(passenger.sessionId);
@@ -331,13 +368,13 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     Object.assign(positions.get(passenger.sessionId)!.player,{x:640,y:197});
     carrier.send('gameplay',{kind:'equip',item:purchase?.id});
     await wait(()=>gameplay()?.equipped?.some(item=>item.kind==='baton')===true);
-    for (let token=1;token<=4;token++) {
+    for (let token=3;token<=6;token++) {
       carrier.send('gameplay',{kind:'attack',token});
-      if (token===1) await wait(()=>visible.some(player=>player.id===passenger.sessionId && player.health===.74 && player.hit!==undefined));
-      if (token<4) await Bun.sleep(1300);
+      if (token===3) await wait(()=>visible.some(player=>player.id===passenger.sessionId && player.health===.74 && player.hit!==undefined));
+      if (token<6) await Bun.sleep(1300);
     }
     await wait(()=>snapshots.get(passenger.sessionId)?.knockedOut===true);
-    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:5});
+    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:7});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     const progressionBeforeReconnect = progression();
     const agendaBeforeReconnect = views.get(passenger.sessionId)?.politics?.missions;
@@ -354,7 +391,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(progression()).toEqual(progressionBeforeReconnect);
     const passengerOffice = views.get(passenger.sessionId)?.gameplay?.ownOffice;
     expect(passengerOffice).toBeDefined();
-    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:6});
+    carrier.send('gameplay',{kind:'carry',target:passenger.sessionId,token:8});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&

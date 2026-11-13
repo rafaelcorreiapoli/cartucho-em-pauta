@@ -1,3 +1,4 @@
+import { megaphone } from '../src/equipment';
 import { Parliamentarians } from './Parliamentarians';
 import { ParliamentarianTalk } from './ParliamentarianTalk';
 import { npcRules } from '../src/parliamentarians';
@@ -76,11 +77,14 @@ export class SessionRoom extends Room {
   }
 
   private leaveVoice(id: string) {
+    this.gameplay.stopMegaphone(id,this.gameplayWorld());
     this.match.stopBroadcast(id,this.clock.currentTime);
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
   }
 
   private spyFrameAt = 0;
+
+  private lastMegaphone = new Map<string,boolean>();
 
   private routeVoice(speaker:string|undefined) {
     const participants = [...this.voice].flatMap(id=>{
@@ -88,17 +92,24 @@ export class SessionRoom extends Room {
       return player ? [player] : [];
     });
     const spatial = this.match.phase==='negotiation';
+    const broadcaster = spatial ? this.gameplay.megaphoneSpeaker() : undefined;
+    for (const client of this.clients) {
+      const active = !!broadcaster && client.sessionId!==broadcaster;
+      if ((this.lastMegaphone.get(client.sessionId) ?? false)===active) continue;
+      client.send('megaphone-active',active);
+      this.lastMegaphone.set(client.sessionId,active);
+    }
     const localVolume = (listener:Player, talker:Player) =>
       !spatial || talker.id===speaker || this.gameplay.callPeer(listener.id)===talker.id
         ? 1 : localPerception(listener,talker).volume;
-    const volume = (listener:Player,talker:Player)=>Math.max(localVolume(listener,talker),spatial ? this.gameplay.spyVolume(listener,talker) : 0);
+    const volume = (listener:Player,talker:Player)=>talker.id===broadcaster ? megaphone.volume : Math.max(localVolume(listener,talker),spatial ? this.gameplay.spyVolume(listener,talker) : 0);
     for (const player of participants) {
       const others = participants.filter(peer=>peer.id!==player.id);
       const client = this.clients.getById(player.id);
       if (!client) continue;
       client.send('voice-send',others.filter(peer=>volume(peer,player)>0).map(peer=>peer.id));
       if (spatial) {
-        const levels = others.map(peer=>[peer.id,volume(player,peer),localVolume(player,peer)>0] as const);
+        const levels = others.map(peer=>[peer.id,volume(player,peer),peer.id!==broadcaster && localVolume(player,peer)>0,peer.id===broadcaster || undefined] as const);
         client.send('voice-range',levels.filter(([,level])=>level>0));
       }
     }
@@ -348,12 +359,14 @@ export class SessionRoom extends Room {
   }
 
   onReconnect(client:Client) {
+    this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
   }
 
   onLeave(client: Client) {
     this.leaveVoice(client.sessionId);
+    this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
     this.npcTalk.leave(client.sessionId);

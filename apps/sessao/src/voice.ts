@@ -9,6 +9,7 @@ type Peer = {
   candidates: RTCIceCandidateInit[];
   meter?: Meter;
   playback?: GainNode;
+  megaphoneMix?: {dry:GainNode; wet:GainNode; active:boolean};
   outgoing: GainNode;
   destination: MediaStreamAudioDestinationNode;
 };
@@ -41,7 +42,8 @@ export class RoomVoice {
       this.sendUntil = 0;
       for (const id of this.peers.keys()) this.removePeer(id);
     });
-    room.onMessage('voice-range', (levels:[string,number,boolean?][]) => {
+    room.onMessage('voice-range', (levels:[string,number,boolean?,boolean?][]) => {
+      this.broadcastSources = new Set(levels.filter(([, , ,broadcast])=>broadcast).map(([id])=>id));
       this.remoteOnly = new Set(levels.filter(([, ,local])=>local===false).map(([id])=>id));
       this.setRange(new Map(levels.map(([id,level])=>[id,level])));
     });
@@ -94,7 +96,7 @@ export class RoomVoice {
   }
 
   setRange(range?: Map<string,number>) {
-    if (!range?.size) this.remoteOnly.clear();
+    if (!range?.size) { this.remoteOnly.clear(); this.broadcastSources.clear(); }
     this.range = range;
     for (const [id,peer] of this.peers) this.updateGain(id,peer);
   }
@@ -111,7 +113,14 @@ export class RoomVoice {
   }
 
   private updateGain(id:string, peer:Peer) {
-    peer.playback?.gain.setTargetAtTime(this.volume(id),this.audio!.currentTime,.025);
+    const now = this.audio!.currentTime;
+    peer.playback?.gain.setTargetAtTime(this.volume(id),now,.025);
+    const mix = peer.megaphoneMix;
+    const active = this.broadcastSources.has(id);
+    if (!mix || mix.active===active) return;
+    mix.active = active;
+    mix.dry.gain.setTargetAtTime(active ? 0 : 1,now,.012);
+    mix.wet.gain.setTargetAtTime(active ? 1 : 0,now,.012);
   }
 
   stop(notify = true) {
@@ -148,6 +157,8 @@ export class RoomVoice {
     for (const track of peer.destination.stream.getTracks()) track.stop();
     peer.connection.close();
     peer.playback?.disconnect();
+    peer.megaphoneMix?.dry.disconnect();
+    peer.megaphoneMix?.wet.disconnect();
     peer.meter?.source.disconnect();
     peer.meter?.analyser.disconnect();
     this.peers.delete(id);
@@ -176,7 +187,30 @@ export class RoomVoice {
       playback.gain.value = this.volume(id);
       peer.playback = playback;
       peer.meter = this.meter(stream);
-      peer.meter.source.connect(playback);
+      const source = peer.meter.source;
+      const dry = audio.createGain();
+      const wet = audio.createGain();
+      const active = this.broadcastSources.has(id);
+      dry.gain.value = active ? 0 : 1;
+      wet.gain.value = active ? 1 : 0;
+      peer.megaphoneMix = {dry,wet,active};
+      const highpass = audio.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.value = 430;
+      const lowpass = audio.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = 3100;
+      const presence = audio.createBiquadFilter();
+      presence.type = 'peaking';
+      presence.frequency.value = 1450;
+      presence.gain.value = 4;
+      const compressor = audio.createDynamicsCompressor();
+      compressor.threshold.value = -22;
+      compressor.ratio.value = 4;
+      const saturation = audio.createWaveShaper();
+      saturation.curve = Float32Array.from({length:257},(_,i)=>Math.tanh((i/128-1)*1.5)/1.5);
+      source.connect(dry).connect(playback);
+      source.connect(highpass).connect(lowpass).connect(presence).connect(saturation).connect(compressor).connect(wet).connect(playback);
       playback.connect(audio.destination);
     };
     if (this.room.sessionId < id) {
@@ -228,6 +262,7 @@ export class RoomVoice {
     return {source,analyser,buffer:new Float32Array(analyser.fftSize),lastSound:-Infinity};
   }
 
+  private broadcastSources = new Set<string>();
   private remoteOnly = new Set<string>();
   private activitySent = 0;
 

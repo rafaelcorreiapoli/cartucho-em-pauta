@@ -178,7 +178,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     element('gameplay-target-label').hidden = selection?.source!=='inventory' || !contacts.length;
     for (const {tile,title} of appButtons) tile.setAttribute('aria-pressed',String(app===title));
     const phase = view.phase;
-    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const visible = stash ? stash : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts.length,state.exposed,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
@@ -206,6 +206,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <strong>{itemName(gear)}</strong>
           {phase==='negotiation' && !state.vitality?.recovery && <>
             <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:'unequip',item:gear.id})}>Desequipar</button>
+            {gear.kind==='megaphone' &&
+              <button type="button" className="hud-button hud-button--secondary" disabled={!!state.equipmentCooldowns?.[gear.id]}
+                onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
+                  state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
             {gear.kind==='voiceModulator' && state.modulator &&
               <button type="button" className="hud-button hud-button--secondary" disabled={state.modulator.recharge>0}
                 onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? `Desligar · ${state.modulator.battery}s` :
