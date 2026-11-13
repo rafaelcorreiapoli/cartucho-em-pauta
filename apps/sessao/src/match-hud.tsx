@@ -2,6 +2,7 @@ import { createElement as createIcon, Hand, Footprints, Cpu } from 'lucide';
 import {fireOptions} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
+import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -34,6 +35,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let xpEffect:HTMLElement | undefined;
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
+  const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
@@ -454,11 +456,15 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
+      if ((activity==='secretary' || activity==='support') && previous?.phase==='negotiation') {
+        legislativeBrief.open(activity,previous);
+      }
       if (text) notify(info.title,text);
       if ('panel' in info) element<HTMLDetailsElement>(info.panel).open = true;
       if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
     },
     render(view:PlenaryView) {
+      if (view.phase!=='negotiation') legislativeBrief.close();
       roleBadge.hidden = view.role!=='Infiltrado';
       element('hud-office').textContent = view.mandate===false ? 'Ex-parlamentar' : 'Parlamentar';
       const politics = view.politics;
@@ -509,6 +515,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       renderEquipped();
       gearSlots.forEach(({slot})=>slot.remove());
       notices.destroy();
+      legislativeBrief.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
