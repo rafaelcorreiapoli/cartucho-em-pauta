@@ -85,11 +85,12 @@ test('nearby voices can carry past a wall without revealing the speaker', () => 
   for (const {x,y} of Object.values(stations)) expect(canStand(x,y)).toBe(true);
 });
 
-test('the new wings and all stations are reachable from the corridor', () => {
-  for (const {x,y} of [...Object.values(stations),{x:860,y:506},{x:449,y:504}]) {
+test.each([...Object.values(stations),{x:860,y:506},{x:449,y:504}])(
+  'the corridor reaches the station at $x, $y',
+  ({x,y})=>{
     expect(findRoute(host,{x,y}).at(-1)).toEqual({x,y});
-  }
-});
+  },
+);
 
 test('diversion, transfers, and evidence sales affect balances without binding votes', () => {
   const match = new PlenaryMatch(1);
