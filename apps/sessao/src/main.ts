@@ -214,7 +214,7 @@ async function connect(join: () => Promise<Room>) {
     closeDetails();
     const hudListeners = new AbortController();
     bindActionShortcuts(session,hudListeners.signal);
-    bindFloorPlan(session,hudListeners.signal);
+    const updateFloorPlan = bindFloorPlan(session,hudListeners.signal);
     const latency = document.querySelector<HTMLElement>('#connection-latency')!;
     let latencyGeneration = 0;
     const measureLatency = () => {
@@ -438,6 +438,7 @@ async function connect(join: () => Promise<Room>) {
       if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);
+      updateFloorPlan(snapshot.player);
       game?.reconcile(snapshot);
     });
     joined.onMessage('players',(players: Player[]) => {

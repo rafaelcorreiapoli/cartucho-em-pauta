@@ -15,8 +15,14 @@ async page => {
     await plan.getByText(room,{exact:true}).waitFor();
   }
   if (!await plan.locator('.floor-plan-wall').count() || await plan.getByText('Planta QA').count()) {
-    throw Error('A planta deve mostrar paredes e apenas informações estáticas.');
+    throw Error('A planta deve mostrar paredes sem identificar outros jogadores.');
   }
+  const marker = plan.getByRole('img',{name:'Sua posição'});
+  await marker.waitFor();
+  await marker.locator('.portrait[data-skin]').waitFor();
+  if (await plan.getByRole('img').count()!==1) throw Error('A planta deve mostrar apenas o seu marcador.');
+  const position = await marker.getAttribute('style');
+  if (!position?.includes('left:') || !position.includes('top:')) throw Error('Marcador sem coordenadas.');
   await page.keyboard.up('Tab');
   await plan.waitFor({state:'hidden'});
   await page.keyboard.down('Tab');
