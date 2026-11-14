@@ -12,6 +12,7 @@
 #session[data-phase="ballot"] #command-deck #project-heading,
 #session[data-phase="ballot"] #command-deck #project-details { display: none; }
 #session[data-phase="ballot"] #command-deck #proposal { display: block; }
+#session[data-phase="ballot"] .deck-project-controls { display: block; margin: 0; }
 #session[data-phase="ballot"] #command-deck .deck-project-links {
   position: absolute;
   inset: auto 12px 4px auto;
