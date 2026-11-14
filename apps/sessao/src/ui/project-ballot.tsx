@@ -14,11 +14,18 @@ function Glyph({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
 }
 
-function ProjectImpact({impact,approved}:{impact:Impact;approved:boolean}) {
+function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
+  const effect = value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
+  const sign = value>0 ? '+' : value<0 ? '−' : '';
+  const amount = currency ? `R$ ${Math.round(Math.abs(value)*10)} mil` : Math.abs(value);
+  return <b className="project-impact-value" data-effect={effect}>{sign}{amount}</b>;
+}
+
+export function ProjectImpact({impact,approved}:{impact:Impact;approved:boolean}) {
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><Glyph name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><Glyph name="shield"/>{impact.stability>0?'+':''}{impact.stability} Estabilidade</span>
-    <span><Glyph name="wallet"/>{impact.budget>0?'+':impact.budget<0?'−':''}R$ {Math.abs(impact.budget)*10} mil</span>
+    <span><Glyph name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
+    <span><Glyph name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
   </div>;
 }
 

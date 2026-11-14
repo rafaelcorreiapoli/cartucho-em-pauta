@@ -23,6 +23,7 @@
   color: #f6efdb;
   background: linear-gradient(146deg,#142c25 0%,#0d211d 55%,#0a1814 100%);
   border: 1px solid #b9a166;
+  border-block-start-color: #e4c689;
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -6px 40px #050f0bc9, inset 0 1px #f4dfad6e;
   font-size: clamp(12px,1.25vw,18px);
@@ -145,13 +146,13 @@
   border-width: 2px;
   border-radius: clamp(20px,2.6vw,42px);
   margin-bottom: clamp(8px,1.7vw,26px);
-  background: radial-gradient(ellipse at 70% 5%,#17373044,transparent 55%),linear-gradient(135deg,#102622,#0d211e 64%,#12221f);
+  background: radial-gradient(ellipse at 70% 5%,#17373044,transparent 55%),linear-gradient(135deg,#152923,#0b201d 64%,#142824);
 }
-.project-ballot-body { padding: .65em 1.2em .8em; gap: .9em; }
-.project-ballot-banner { grid-template-columns: 35fr 28fr 18fr 18fr; min-height: clamp(105px,19.5vh,185px); gap: .85em; }
+.project-ballot-body { padding: 1.12em 1.25em 1em; gap: 1em; }
+.project-ballot-banner { grid-template-columns: 35fr 28fr 18fr 18fr; border-color: #30493e; min-height: clamp(105px,19.5vh,185px); gap: .85em; }
 .project-ballot-art { position: relative; overflow: hidden; }
 .project-ballot-art img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: contain; }
-.project-ballot-art img[data-banner] { object-fit: cover; }
+.project-ballot-art img[data-banner] { object-fit: cover; mask-image: linear-gradient(to right,#000 86%,transparent); }
 .project-ballot-title h2 { font-size: clamp(18px,2.2vw,38px); }
 #proposal .project-ballot-title p { font-style: italic; font-weight: 450; }
 .project-ballot-timer { margin-inline: 1.4em; min-height: 2.35em; }
@@ -159,8 +160,12 @@
   grid-template-columns: 1fr .82fr 1fr;
   height: clamp(140px,25vh,238px);
   border-radius: 5em;
-  border-block-start: 2px solid #c5c9a4;
-  background: linear-gradient(100deg,#214d28,#20322b 42%,#272523 61%,#662820);
+  border: 2px solid transparent;
+  background:
+    radial-gradient(ellipse at 10% 0%,#5b963e4d,transparent 47%) padding-box,
+    radial-gradient(ellipse at 95% 0%,#b34b3d52,transparent 46%) padding-box,
+    linear-gradient(100deg,#143322,#1b2926 50%,#351f1e) padding-box,
+    linear-gradient(100deg,#7bc67f,#9ca48a 51%,#e5776b) border-box;
 }
 .project-ballot-group { background: transparent; align-items: stretch; min-height: 0; }
 .project-ballot-group ul { min-height: 0; overflow-y: auto; align-content: safe center; scrollbar-width: thin; }
@@ -173,7 +178,7 @@
   border-inline-end: 2px solid #8cc767;
   border-radius: 0 68% 68% 0 / 0 110% 110% 0;
 }
-.project-ballot-count strong { display: flex; align-items: center; justify-content: center; gap: .12em; color: #fbf4e3; }
+.project-ballot-count strong { display: flex; align-items: center; justify-content: center; gap: .12em; color: var(--accent); }
 .project-ballot-count strong i { font-style: normal; color: var(--accent); font-size: .7em; }
 .project-ballot-group[data-choice="no"] .project-ballot-count {
   background: linear-gradient(195deg,#b64737,#642c26 66%,#361c19);
@@ -207,8 +212,8 @@
   box-shadow: 0 5px 12px #07161066;
 }
 .project-ballot-summary strong { font-size: 1.25em; }
-.project-ballot-footer { margin-inline: 1.4em; padding: .7em 1em; gap: 1em; border-radius: 1.7em; }
-.project-vote-button { align-self: center; border-radius: .8em; min-height: 3em; font-size: 1.1em; }
+.project-ballot-footer { margin-inline: 1.4em; padding: .7em 1em; gap: 1.15em; border-radius: 1.7em; }
+.project-vote-button { align-self: center; border-radius: .8em; min-height: 3.2em; font-size: 1.1em; box-shadow: inset 0 1px #ffffff28; }
 .project-vote-button kbd { padding: .15em .35em; border-radius: .3em; background: #0716125c; }
 @media (max-width: 920px) {
   .project-ballot-group ul { padding-inline: .2em; }
@@ -222,3 +227,11 @@
   .project-ballot-footer, .project-ballot-timer { margin-inline: 0; }
 }
 #session[data-phase="ballot"] #command-deck #last-vote { inset-inline: auto 0; }
+
+.project-ballot-impact { gap: .36em; padding-inline: .95em .5em; }
+.project-ballot-impact strong { margin-block-end: .28em; }
+.project-ballot-impact span { flex-wrap: wrap; row-gap: 0; color: #e9e3d6; }
+.project-ballot-impact span svg { color: #a9bcae; }
+.project-impact-value { color: #e0d8c6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.project-impact-value[data-effect="gain"] { color: #a8e796; }
+.project-impact-value[data-effect="loss"] { color: #ff9a8b; }
