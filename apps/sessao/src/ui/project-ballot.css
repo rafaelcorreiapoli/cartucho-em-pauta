@@ -219,3 +219,4 @@
   .project-ballot-summary { margin-top: 0; }
   .project-ballot-footer, .project-ballot-timer { margin-inline: 0; }
 }
+#session[data-phase="ballot"] #command-deck #last-vote { inset-inline: auto 0; }
