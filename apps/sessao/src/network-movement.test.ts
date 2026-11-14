@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_SEATS } from './map';
+import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_DOORS, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { applyInput, readInput, restMovement, type ControlState, type MovementInput } from './movement';
@@ -38,6 +38,8 @@ test('all twelve seats are reachable, and plenary movement respects closed doors
   applyInput(state,{seq:1,motion:{x:1,y:-1},plenary:true});
   expect(inPlenary(state.player)).toBe(true);
   expect(state.player.y).toBeLessThan(748);
+  const [doorX,,doorWidth] = PLENARY_DOORS[1];
+  state.player.x = doorX+doorWidth/2;
   state.player.y = 548;
   applyInput(state,{seq:2,motion:{x:0,y:-1},plenary:true});
   expect(state.player.y).toBe(548);

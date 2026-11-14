@@ -10,7 +10,7 @@ import { MIN_PLAYERS, canReachStation, type Action, type PlenaryView } from './p
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const start = element<HTMLButtonElement>('start-match');
 const actions = [...document.querySelectorAll<HTMLButtonElement>('[data-action]')];
-export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>) {
+export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean) {
   let view: PlenaryView | undefined;
   let own: Player | undefined;
   function countPicker(id:string,initial:number) {
@@ -29,9 +29,10 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
   for (const button of npcButtons) button.onclick = ()=>command('lobby-npc-count',{count:Number(button.dataset.count)});
   const brief = mountVoteBrief(element('project-outcome-brief'));
-  start.onclick = () => command('start-match',{infiltrators:infiltrators()});
+  start.onclick = () => { if (assetsReady()) command('start-match',{infiltrators:infiltrators()}); };
   for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
-  const ballot = mountBallot(element('ballot-host'),vote=>command('bill-vote',{vote}));
+  const ballot = mountBallot(element('ballot-host'),vote=>command('bill-vote',{vote}),
+    candidate=>command('cassation-vote',{candidate}),id);
 
   const details = mountProjectDetails(element('project-details-content'),id,vote=>command('bill-intent',{vote}));
 
@@ -74,7 +75,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       }
       start.hidden = running || host!==id;
       const minimum = view.minimumPlayers ?? MIN_PLAYERS;
-      start.disabled = players<minimum;
+      start.disabled = !assetsReady() || players<minimum;
       const startLabel = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
       if (start.firstChild?.textContent?.trim()!==startLabel && start.firstChild) start.firstChild.textContent = startLabel+' ';
       element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
@@ -84,7 +85,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (running) heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       details.render(view);
-      impact.render(view.yes,view.no,running && !hearing);
+      impact.render(view.yes,view.no,running && !hearing && !view.cassation);
       ballot.render(view);
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;

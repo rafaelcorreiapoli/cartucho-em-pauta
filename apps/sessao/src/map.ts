@@ -2,7 +2,7 @@ import { reprography } from './room-activities';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor, infirmary } from './medical';
-import { mapNpcs, npcs, snackBar, treasurer } from './npcs';
+import { mapNpcs, npcs, snackBar, treasurer, treasuryLayout } from './npcs';
 
 export const WIDTH = 1136;
 export const HEIGHT = 759;
@@ -13,19 +13,27 @@ export type Rect = readonly [x: number, y: number, width: number, height: number
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
-export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[450,530,60,11],[638,530,28,11]];
-export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
+const plenaryDaisFootprint:Rect = [414,596,132,12];
+export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
+export const PLENARY_SEATS = [657,713].flatMap(row =>
+  [324,375,426,534,585,636].map((x,index)=>({x,y:row+[0,7,12,12,7,0][index]})),
+);
+
+export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
+
+const [luxuryDoorX,luxuryDoorY,luxuryDoorWidth,luxuryDoorHeight] = treasuryLayout.luxuryDoor;
 
 export const walls: Rect[] = [
   [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,530-eastAnnex.opening[1]],
-  [0,530,65,11], [194,530,90,11], [310,530,140,11], [510,530,128,11], [666,530,100,11], [895,530,65,11],
+  [0,530,65,11], [194,530,90,11], [310,530,PLENARY_DOORS[1][0]-310,11], [PLENARY_DOORS[1][0]+PLENARY_DOORS[1][2],530,638-PLENARY_DOORS[1][0]-PLENARY_DOORS[1][2],11], [666,530,100,11], [895,530,65,11],
   [258,541,10,218], [692,541,10,218], [268,749,424,10],
   [470,10,10,115], [470,161,10,98],
   [10,259,211,11], [261,259,397,11], [702,259,snackBar.door[0]-702,11], [897,259,53,11],
   [480,114,65,11], [586,114,235,11], [864,114,86,11],
   [703,10,10,104], [703,161,10,98],
   [480,161,70,11], [591,161,194,11], [827,161,123,11],
-  [10,392,105,11], [156,392,244,11], [446,392,334,11], [825,392,125,11],
+  [10,392,105,11], [156,392,244,11], [446,luxuryDoorY,luxuryDoorX-446,luxuryDoorHeight],
+  [luxuryDoorX+luxuryDoorWidth,392,780-luxuryDoorX-luxuryDoorWidth,11], treasuryLayout.divider, [infirmary.door[0],392,950-infirmary.door[0],11],
   [814,270,10,133],
   [infirmary.door[0],403,6,infirmary.door[1]-403],
   [infirmary.door[0],infirmary.door[1]+infirmary.door[3],6,530-infirmary.door[1]-infirmary.door[3]],
@@ -50,8 +58,7 @@ export const walls: Rect[] = [
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
-  [128,460],[354,430],[433,460],[713,460],[757,435],
-  [274,614],[274,677],[643,614],[643,677],
+  [128,460],[493,438],[713,460],[757,435],
   [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
@@ -60,7 +67,6 @@ export const furnishings = [
   {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
   {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},
   {frame:0, area:[197,33,86,29], footprint:10},
-  {frame:0, area:[414,570,132,38], footprint:12},
   {frame:1, area:[559,598,22,18], footprint:7},
   {frame:3, area:[279,554,30,40], footprint:9},
   {frame:3, area:[651,554,30,40], footprint:9},
@@ -81,6 +87,7 @@ function npcFootprint(npc:(typeof mapNpcs)[keyof typeof mapNpcs]):Rect {
 }
 const obstacles = [
   ...walls,
+  plenaryDaisFootprint,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{
     const {x,y} = office[kind];
     const {width,footOffset} = officeFixtures[kind];
@@ -189,7 +196,7 @@ export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
   {...isolationRoom,color:0x61716a},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
-  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
+  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x232824},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},
@@ -201,7 +208,8 @@ export const rooms = [
   {name:'Comissões', bounds:[602,270,212,122], color:0x637b69},
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
-  {name:npcs.furnitureVendor.label, bounds:[326,403,266,127], color:0x7c8a7e},
+  {name:treasurer.label,bounds:treasuryLayout.bounds,color:0x858c80},
+  {name:npcs.furnitureVendor.label, bounds:[treasuryLayout.divider[0]+treasuryLayout.divider[2],403,592-treasuryLayout.divider[0]-treasuryLayout.divider[2],127], color:0x7c8a7e},
   {name:reprography.title, bounds:[602,403,204,127], color:0x56736e},
   {name:infirmary.name,bounds:infirmary.bounds,color:0x8baea7},
 ] satisfies {name:string; bounds:Rect; color:number}[];

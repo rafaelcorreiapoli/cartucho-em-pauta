@@ -12,6 +12,7 @@ function render(page:number,total:number) {
 test('shortcut pages restart numeric shortcuts and disable navigation at the boundaries',()=>{
   const first = render(0,2);
   const last = render(1,2);
+  expect(first).toContain('<form method="dialog"><button type="submit" class="hud-icon-button" aria-label="Fechar atalhos">Esc</button></form>');
   for (const page of [first,last]) {
     expect(page).toContain('aria-keyshortcuts="1">Abrir inventário');
     expect(page).toContain('aria-keyshortcuts="2">Abrir celular');

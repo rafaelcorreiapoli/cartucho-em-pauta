@@ -82,8 +82,8 @@
   position: absolute;
   inset: 5px auto 4px 0;
   width: 2px;
-  background: linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent);
-  filter: drop-shadow(0 0 4px #60e1af9c);
+  background: var(--hud-edge-gradient, linear-gradient(transparent,#7ee7bb 23%,#4da986 76%,transparent));
+  filter: drop-shadow(0 0 4px var(--hud-edge-glow, #60e1af9c));
 }
 #agenda-dock .react-agenda h2 { font-size: 15px; }
 #agenda-dock .agenda-icon {
@@ -252,7 +252,8 @@
 }
 #congress-apps > [aria-label="Aplicativos"] { grid-row: 1; }
 #congress-apps > [aria-label="Mochila"] { grid-row: 2; }
-.congress-app-toggle { border-radius: 28%; }
+.congress-app-toggle { position: relative; border-radius: 28%; }
+#congress-apps > button .slot-key { inset: 4px auto auto 5px; font-size: 11px; }
 .congress-app-toggle .hud-glyph { width: 49%; height: 49%; color: #e9dfb5; }
 .congress-app-toggle svg[fill="currentColor"] { fill: currentColor; stroke: none; }
 .congress-app-panel {
@@ -283,14 +284,14 @@
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 #command-deck #social-docks .social-trigger,
-#command-deck :is(#open-action-shortcuts,#voice-toggle,#room-settings > summary) { display: none; }
+#command-deck :is(#open-action-shortcuts,#voice-toggle),
+#session #command-deck #open-settings { display: none; }
 #command-deck #voice-host { position: absolute; right: 0; bottom: var(--hot-slot); padding: 0; border: 0; }
-#command-deck #voice-host :is(#voice-dock,#room-settings) { pointer-events: auto; }
+#command-deck #voice-host #voice-dock { pointer-events: auto; }
 .congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .congress-bag .item-tile { min-height: 78px; }
 #command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
 #command-deck #voice-dock > :is(#open-action-shortcuts,#voice-toggle),
-#command-deck #voice-dock #room-settings > summary { display: none; }
 
 #session #open-action-shortcuts { display: none; }
 
@@ -305,13 +306,23 @@
   margin-inline-start: auto;
   pointer-events: none;
 }
-.incident-panel h2, .incident-fire p {
+.incident-panel {
+  --hud-edge-gradient: linear-gradient(transparent,#ff776b 23%,#e24640 76%,transparent);
+  --hud-edge-glow: #ff574b9c;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .incident-panel[data-paused="false"]::before { animation: incident-pulse 1.25s ease-in-out infinite alternate; }
+}
+@keyframes incident-pulse {
+  from { opacity: .4; }
+  to { opacity: 1; }
+}
+.incident-fire p {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
 }
-.incident-panel h2 { margin-bottom: 9px; font-size: 14px; }
 .incident-fire {
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
@@ -542,7 +553,10 @@
 .congress-budget { gap: 12px; margin-top: 5px; font-size: clamp(12px,1.15vw,18px); }
 .congress-budget strong { font-size: 1.12em; }
 
-#command-strip #election-dock > summary {
+#command-strip #election-dock > #open-election-polls {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
   gap: 11px;
   min-height: 44px;
   padding: 0 0 0 13px;
@@ -551,9 +565,9 @@
   border-radius: 999px;
   background: linear-gradient(180deg,transparent,#11241a80);
 }
-#command-strip #election-dock > summary:hover,
-#command-strip #election-dock[open] > summary { background: #13251cca; }
-#command-strip #election-dock > summary > .hud-glyph { width: 21px; height: 21px; color: #e4be6a; }
+#command-strip #election-dock > #open-election-polls:hover,
+#command-strip #election-dock > #open-election-polls[aria-expanded="true"] { background: #13251cca; }
+#command-strip #election-dock > #open-election-polls > .hud-glyph { width: 21px; height: 21px; color: #e4be6a; }
 #command-strip .election-summary { display: grid; align-items: start; gap: 4px; }
 #command-strip #current-office { color: #f6f3e9; font-weight: 750; }
 #command-strip #election-position { color: #edca7c; }
@@ -794,13 +808,13 @@
 }
 
 /* Keep the vote and institutional stability visible while the player is in the chamber. */
-#session[data-phase="ballot"][data-in-plenary="true"] :is(
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(
   .character-dock, #agenda-dock, .deck-tools, .election-and-incidents,
   #context-hud, #connection-latency, #electoral-notice-mount
 ) { display: none; }
 
 @media (max-width: 760px) {
-  #session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
     grid-column: 1 / -1;
     justify-self: center;
   }
@@ -820,7 +834,7 @@
   #session :is(.character-dock, .election-and-incidents) { --hud-slide: 0 -24px; }
   #session :is(#agenda-dock, .deck-tools, #context-hud, #legislative-dock) { --hud-slide: 0 24px; }
 
-  #session[data-phase="ballot"][data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
   #session:not([data-in-plenary="true"]) #legislative-dock,
   #session[data-phase="negotiation"] #legislative-dock {
     translate: var(--hud-slide);
@@ -840,7 +854,7 @@
   inset-block-start: anchor(--active-incidents bottom, 190px);
   margin-block-start: 8px;
 }
-#session[data-phase="ballot"][data-in-plenary="true"] #world #hud-notices {
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #world #hud-notices {
   inset-block-start: 88px;
   margin-block-start: 0;
 }
@@ -853,14 +867,90 @@
   justify-content: center;
   gap: 6px;
   width: max-content;
-  margin: 7px auto 0;
+  margin: 18px auto 0;
   padding: 4px 9px;
-  border: 1px solid #8f794b;
+  border: 1px solid #e8bd59;
   border-radius: 999px;
   background: #101e17eb;
+  box-shadow: 0 0 12px #f9c75168, inset 0 0 7px #ffd66528;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .plenary-countdown { animation: countdown-glow 1.35s ease-in-out infinite alternate; }
+}
+@keyframes countdown-glow {
+  to { box-shadow: 0 0 20px #ffcf69b3, inset 0 0 10px #ffd66552; }
 }
 .plenary-countdown strong { color: #f2d89c; font-variant-numeric: tabular-nums; min-width: 4ch; }
 #command-strip #congress-dock {
   flex-direction: column;
   gap: 0;
+}
+
+.congress-app-label kbd {
+  display: inline-block;
+  margin-inline-start: .4rem;
+  padding: .1rem .3rem;
+  border-radius: .25rem;
+  background: #284337;
+  color: var(--color-hud-budget);
+}
+#room-settings {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(27rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--color-hud-border);
+  border-radius: var(--radius-hud);
+  background: var(--color-hud-surface);
+  color: var(--color-hud-ink);
+}
+#room-settings::backdrop { background: #081510b8; }
+#room-settings header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+#room-settings h2 { margin: 0; }
+#room-settings > section + section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-hud-border); }
+
+#election-poll-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1.25rem;
+  background: var(--color-hud-surface);
+  color: var(--color-hud-ink);
+  border: 1px solid var(--color-hud-border);
+  border-radius: var(--radius-hud);
+}
+#election-poll-dialog::backdrop { background: #081510b8; }
+#election-poll-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+#election-poll-dialog h2 { margin: 0; }
+#election-polls ol { padding: 0; list-style: none; }
+
+.plenary-countdown[data-kind="cassation"] {
+  color: #ffb4a4;
+  border-color: #ed8275;
+  background: #2e1718ee;
+  box-shadow: 0 0 12px #ed746558;
+  animation-name: cassation-countdown-glow;
+}
+.plenary-countdown[data-kind="cassation"] strong { color: inherit; }
+@keyframes cassation-countdown-glow { to { box-shadow: 0 0 20px #ed7465a0; } }
+
+.cassation-ballot { width: 100%; display: grid; gap: .65rem; justify-items: start; }
+.cassation-ballot p { margin: 0; }
+.cassation-candidates { width: 100%; display: grid; grid-template-columns: repeat(auto-fit,minmax(82px,1fr)); gap: .42rem; }
+.cassation-candidates button { display: grid; place-items: center; position: relative; gap: .2rem; min-width: 0; padding: .35rem; }
+.cassation-candidates button > span:last-of-type { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cassation-candidates kbd { position: absolute; inset: .2rem .3rem auto auto; }
+.cassation-ballot button[aria-pressed="true"] { border-color: #f89a8b; background-color: #67362d; }
+#session[data-phase="hearing"]:has(.cassation-ballot) .deck-project-links { display: none; }
+
+#plenary-settings { display: none; }
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #plenary-settings {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  inset: var(--hud-edge) var(--hud-edge) auto auto;
+  pointer-events: auto;
 }

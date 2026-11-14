@@ -748,3 +748,49 @@ test('replayed installations cannot turn a pre-scandal pizza into a scandal pizz
   }
   expect(mission().completed).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
 });
+
+test('coffee delivery counts accepted cups for three distinct available human recipients',()=>{
+  const players:Player[] = ['a','b','c','d'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...terminals.coffee.point,
+  }));
+  const [host,bia,caio,dani] = players;
+  const ids = new Set(players.map(({id})=>id));
+  const game = new Gameplay();
+  const economy = new PoliticalEconomy();
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  const active = ()=>economy.view(host.id,[],0,false,()=>true)!.missions;
+  const draw = (disconnected = new Set<string>())=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['entrega','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(ids,3,()=>true,0,disconnected);
+  };
+  draw(new Set([dani.id]));
+  expect(active().active.some(({kind})=>kind==='entrega')).toBe(false);
+  draw();
+  const world:GameplayWorld = {players,now:0,voice:()=>false,office:()=>undefined,
+    earn:()=>{},publish:event=>economy.recordGameplay(event)};
+  function deliver(recipient:Player) {
+    world.now++;
+    expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+    const coffee = game.view(host,world).inventory.find(({kind})=>kind==='coffee')!;
+    expect(game.act(host,{kind:'offer',item:coffee.id,target:recipient.id},world)).toBe('Pedido enviado.');
+    const request = game.view(recipient,world).requests[0];
+    expect(game.act(recipient,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
+  }
+  deliver(bia);
+  deliver(bia);
+  expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(1);
+  deliver(caio);
+  expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(2);
+  deliver(dani);
+  expect(active().completed).toContainEqual(expect.objectContaining({kind:'entrega',current:3,target:3}));
+});
+
+test('solo players with NPCs are not offered human transfer or group photo missions',()=>{
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pagamento','fotografia','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,4,true,3,3,[],new Set(['a','npc1','npc2','npc3']));
+  expect(agenda.view(metrics).active.map(({kind})=>kind)).toEqual(['cafe','passeio','selfieSolo']);
+});

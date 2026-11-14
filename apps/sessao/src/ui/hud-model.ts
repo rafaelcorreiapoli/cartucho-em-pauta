@@ -36,7 +36,7 @@ export function createHudModel() {
   const broadcast = channel(false);
   const television = channel<{name:string;remaining:number}|undefined>(undefined);
   const congress = channel<Congress>({stability:stabilityRules.initial,budget:ELECTION_RULES.startingBudget});
-  const countdown = channel<number|undefined>(undefined);
+  const countdown = channel<{kind:'bill'|'cassation';seconds:number}|undefined>(undefined);
   const agenda = channel<Agenda|undefined>(undefined);
   const profile = channel<Profile|undefined>(undefined);
   const stamina = channel<Stamina>({current:MAX_STAMINA,max:MAX_STAMINA});
@@ -53,7 +53,9 @@ export function createHudModel() {
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;
       television.update(interview && {name:interview.name,remaining:interview.remaining});
       congress.update({stability:view.stability,budget:view.budget});
-      countdown.update(view.phase==='negotiation' && view.remaining>0 && view.remaining<=30 ? view.remaining : undefined);
+      countdown.update(view.phase!=='negotiation' ? undefined : view.cassationIn ?
+        {kind:'cassation',seconds:view.cassationIn} : view.remaining>0 && view.remaining<=30 ?
+          {kind:'bill',seconds:view.remaining} : undefined);
       const progress = view.phase==='lobby' ? undefined : view.politics?.progression;
       const previous = matchId===progress?.matchId ? agenda.get() : undefined;
       matchId = progress?.matchId;

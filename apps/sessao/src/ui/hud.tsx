@@ -34,7 +34,7 @@ function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudM
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   const remaining = useSyncExternalStore(state.subscribe,state.get);
   if (remaining===undefined) return null;
-  return <div className="plenary-countdown"><Icon name="clock"/>Votação começa em <strong>{remaining} s</strong></div>;
+  return <div className="plenary-countdown" data-kind={remaining.kind}><Icon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
 export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
@@ -143,14 +143,13 @@ function Broadcast({state}:{state:HudModel['broadcast']}) {
 }
 
 export function FireNotice({fire}:{fire:FireView}) {
-  return <aside id="active-fire" className="incident-panel" aria-labelledby="incidents-title">
-    <h2 id="incidents-title"><Icon name="alert"/>Incidentes ativos <span>(1)</span></h2>
+  return <aside id="active-fire" className="incident-panel" aria-labelledby="fire-title" data-paused={fire.paused}>
     <article className="incident-fire">
       <svg className="hud-glyph incident-flame" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 22a7 7 0 0 0 7-7c0-3-2-5-3-6 0 2-1 3-2 3 1-4-1-8-4-10 0 4-1 6-3 8a7 7 0 0 0 5 12Z"/>
         <path d="M12 22a3 3 0 0 0 3-3c0-2-2-3-3-5-1 2-3 3-3 5a3 3 0 0 0 3 3Z"/>
       </svg>
-      <div><strong>Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
+      <div><strong id="fire-title">Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
       {!fire.paused && <p><Icon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
     </article>

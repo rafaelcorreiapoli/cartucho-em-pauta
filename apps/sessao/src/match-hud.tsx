@@ -2,6 +2,7 @@ import { createElement as createIcon, Hand, Footprints, Cpu } from 'lucide';
 import {fireOptions} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
+import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -34,6 +35,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let xpEffect:HTMLElement | undefined;
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
+  const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
   const interviewHint = element('interview-hint');
@@ -59,7 +61,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const quickActions = ([
     {target:'grant',panel:'institutional-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
     {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
-    {target:'hearing-target',panel:'institutional-dock',label:'Convocar afastamento',station:'panel',icon:'ballot'},
+    {target:'call-cassation',label:'Convocar cassação',station:'panel',icon:'ballot'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
   ] as const).map(action => {
     const control = element<HTMLButtonElement>(action.target);
@@ -113,10 +115,20 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   concealmentFooter.className = 'equipped-gear-footer';
   concealmentFooter.append(concealmentLabel);
   concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
-  function useEquipped(kind:'scan-xray'|'attack'|'use-binoculars'|'toggle-megaphone') {
+  const equipmentControls = {
+    xray:{key:'X',action:'scan-xray'},
+    binoculars:{key:'B',action:'use-binoculars'},
+    megaphone:{key:'G',action:'toggle-megaphone'},
+    voiceModulator:{key:'U',action:'toggle-modulator'},
+  } as const;
+  const weaponControl = {key:'Space',action:'attack'} as const;
+  type EquipmentControl = typeof equipmentControls[keyof typeof equipmentControls] | typeof weaponControl;
+  function useEquipped(kind:EquipmentControl['action']) {
     const equipped = previous?.gameplay?.equipped;
-    if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
-    if (kind==='attack' ? !equippedWeapon(equipped) : !equipped?.some(item=>item.kind===(kind==='scan-xray' ? 'xray' : kind==='toggle-megaphone' ? 'megaphone' : 'binoculars'))) return false;
+    const voting = previous?.phase==='ballot' || !!previous?.cassation;
+    if ((previous?.phase!=='negotiation' && !(voting && (kind==='attack' || kind==='toggle-modulator'))) || !own || own.knockedOut || own.carrying || own.carried) return false;
+    if (kind==='attack' ? !equippedWeapon(equipped) :
+        !equipped?.some(item=>equipmentControls[item.kind as keyof typeof equipmentControls]?.action===kind)) return false;
     sendField({kind});
     return true;
   }
@@ -132,8 +144,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const name = objects[item.kind].name;
       let entry = gearTiles.get(item.id);
       if (!entry) {
-        const shortcut = item.kind==='xray' ? 'X' : item.kind==='binoculars' ? 'B' : item.kind==='megaphone' ? 'M' : equippedWeapon([item]) ? 'Space' : undefined;
-        const tile = shortcut ? hudButton('',()=>useEquipped(shortcut==='X' ? 'scan-xray' : shortcut==='B' ? 'use-binoculars' : shortcut==='M' ? 'toggle-megaphone' : 'attack')) : node('span');
+        const control:EquipmentControl|undefined = equippedWeapon([item]) ? weaponControl : equipmentControls[item.kind as keyof typeof equipmentControls];
+        const shortcut = control?.key;
+        const tile = control ? hudButton('',()=>useEquipped(control.action)) : node('span');
         tile.className = 'equipped-gear-tile';
         const footer = node('span');
         footer.className = 'equipped-gear-footer';
@@ -159,15 +172,17 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
       const active = item.kind==='binoculars' ? state?.binocularSeconds : item.kind==='megaphone' ? state?.megaphoneSeconds : undefined;
       const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const modulating = item.kind==='voiceModulator' && !!state?.modulator?.active;
       const weapon = equippedWeapon([item]);
       const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
-      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : label;
+      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
       if (entry.tile.title===tooltip) continue;
-      entry.tile.dataset.active = String(!!active || item.kind==='xray' && !!state?.xrayVision);
+      entry.tile.dataset.active = String(modulating || !!active || item.kind==='xray' && !!state?.xrayVision);
       entry.timer.textContent = time;
       entry.timer.hidden = !time;
       entry.tile.title = tooltip;
       entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
+      if (item.kind==='voiceModulator') entry.tile.setAttribute('aria-pressed',String(modulating));
       if (item.kind==='xray' || item.kind==='megaphone') {
         entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
       }
@@ -343,7 +358,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || hudConsumesKeys(event.target)) return;
-    const equipmentAction = event.code==='Space' ? 'attack' : event.code==='KeyX' ? 'scan-xray' : event.code==='KeyB' ? 'use-binoculars' : event.code==='KeyM' ? 'toggle-megaphone' : undefined;
+    const equipmentAction = event.code==='Space' ? weaponControl.action :
+      Object.values(equipmentControls).find(control=>event.code===`Key${control.key}`)?.action;
     if (equipmentAction) {
       if (useEquipped(equipmentAction)) event.preventDefault();
       return;
@@ -454,11 +470,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
+      if ((activity==='secretary' || activity==='archive') && previous?.phase==='negotiation') {
+        legislativeBrief.open(activity,previous);
+      }
       if (text) notify(info.title,text);
-      if ('panel' in info) element<HTMLDetailsElement>(info.panel).open = true;
-      if (activity==='archive') element<HTMLDetailsElement>('ledger').open = true;
     },
     render(view:PlenaryView) {
+      if (view.phase!=='negotiation') legislativeBrief.close();
       roleBadge.hidden = view.role!=='Infiltrado';
       element('hud-office').textContent = view.mandate===false ? 'Ex-parlamentar' : 'Parlamentar';
       const politics = view.politics;
@@ -474,12 +492,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
           notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Renovação de Mandato' : 'Campanha',notice.text);
         }
-        if (view.phase==='negotiation' && view.remaining<=30 && previous.remaining>30) {
-          notify('Convocação',`Sessão no Plenário em ${view.remaining} s.`);
+        if (view.phase==='negotiation' && !view.cassationIn && view.remaining<=30 && previous.remaining>30) {
+          notify('Votação de projeto',`Plenário em ${view.remaining} s.`);
         }
         if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {
-          notify(view.phase==='ballot' ? 'Plenário · votação aberta' : 'Votação aberta',
-            view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : view.hearing?.target ?? '',true);
+          notify(view.phase==='ballot' ? 'Projeto · votação aberta' : view.cassation ? 'Cassação · votação aberta' : 'Afastamento · votação aberta',
+            view.phase==='ballot' ? 'Portas fechadas até a apuração. Voz geral no Plenário.' : view.cassation ? 'Vote em quem você suspeita ser infiltrado.' : view.hearing?.target ?? '',true);
         }
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
         if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
@@ -509,6 +527,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       renderEquipped();
       gearSlots.forEach(({slot})=>slot.remove());
       notices.destroy();
+      legislativeBrief.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);

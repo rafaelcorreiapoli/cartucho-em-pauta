@@ -174,22 +174,24 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('gameplay',{action:{kind:'hangup'},token:1530});
     await until(() => !secondView?.gameplay?.call &&
       !secondRange.some(([peer,volume]) => peer===first.sessionId && volume===1));
-    await Promise.all([second,third].map(async(peer,index)=>{
-      const destination = {x:140+index*12,y:146};
-      let sequence = 100;
-      const revision = controls.get(peer.sessionId)?.revision;
-      peer.send('input',{seq:sequence-1,destination,sprint:true});
-      await Bun.sleep(60);
-      expect(controls.get(peer.sessionId)?.ack).toBeLessThan(sequence-1);
-      peer.send('input',{seq:sequence,revision,destination,sprint:true});
+    async function walkTo(peer:Room,destination:{x:number;y:number},checkStaleRevision=false) {
+      const control = controls.get(peer.sessionId)!;
+      let sequence = Math.max(100,control.ack+2);
+      if (checkStaleRevision) {
+        peer.send('input',{seq:sequence-1,destination,sprint:true});
+        await Bun.sleep(60);
+        expect(controls.get(peer.sessionId)?.ack).toBeLessThan(sequence-1);
+      }
+      peer.send('input',{seq:sequence,revision:control.revision,destination,sprint:true});
       for (let attempt=0;attempt<350;attempt++) {
         const player = positions.get(peer.sessionId)!;
         if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
-        peer.send('input',{seq:++sequence,revision,sprint:true});
+        peer.send('input',{seq:++sequence,revision:control.revision,sprint:true});
         await Bun.sleep(52);
       }
-      throw new Error('Could not reach the transfer point from the assigned office');
-    }));
+      throw new Error('Could not reach the requested station');
+    }
+    await Promise.all([second,third].map((peer,index)=>walkTo(peer,{x:140+index*12,y:146},true)));
     const sourceBefore = secondView!.politics!.wallet;
     const balanceBefore = thirdView!.politics!.wallet;
     const completedBefore = thirdView!.politics!.missions.completed.length;
@@ -206,6 +208,9 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
+    second.send('election',{kind:'invest',amount:1,token:1810});
+    await walkTo(second,stations.press);
+    expect(secondView!.election?.personal?.invested).toBe(0);
     second.send('election',{kind:'invest',amount:1,token:transfer.token});
     second.send('election',{kind:'invest',amount:2,token:1850});
     second.send('election',{kind:'invest',amount:2,token:1850});
@@ -240,6 +245,7 @@ test('clients share movement and voice, then receive private roles and payments'
     }
     // The current view can change independently of the room's command sequence.
     second.send('politics',transfer);
+    await walkTo(second,stations.press);
     second.send('election',{kind:'invest',amount:2,token:1870});
     await until(() => secondView?.election?.personal?.invested===2);
     expect(secondView!.politics?.wallet).toBe(6);
@@ -308,7 +314,7 @@ test('clients share movement and voice, then receive private roles and payments'
     server.kill();
     await server.exited;
   }
-},30_000);
+},65_000);
 
 test('transport is released on an actual socket reconnect and on plenary admission', async () => {
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
@@ -535,7 +541,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
-      snapshots.get(passenger.sessionId)?.x===386 && snapshots.get(passenger.sessionId)?.y===655);
+      snapshots.get(passenger.sessionId)?.x===PLENARY_SEATS[1].x &&
+      snapshots.get(passenger.sessionId)?.y===PLENARY_SEATS[1].y);
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();

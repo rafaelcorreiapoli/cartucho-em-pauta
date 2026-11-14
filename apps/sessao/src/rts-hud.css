@@ -144,7 +144,7 @@ button.equipped-gear-tile { cursor: pointer; }
   box-shadow: none;
   background: transparent;
 }
-#command-strip #election-dock > summary {
+#command-strip #election-dock > #open-election-polls {
   min-height: 28px;
   display: flex;
   align-items: center;
@@ -155,9 +155,9 @@ button.equipped-gear-tile { cursor: pointer; }
   color: var(--command-paper);
   white-space: nowrap;
 }
-#command-strip #election-dock > summary:hover,
-#command-strip #election-dock[open] > summary { background: #345143; }
-#command-strip #election-dock > summary > .hud-glyph { width: 15px; height: 15px; color: var(--party-gold); }
+#command-strip #election-dock > #open-election-polls:hover,
+#command-strip #election-dock > #open-election-polls[aria-expanded="true"] { background: #345143; }
+#command-strip #election-dock > #open-election-polls > .hud-glyph { width: 15px; height: 15px; color: var(--party-gold); }
 #command-strip .election-summary, #command-strip .election-clock { display: flex; align-items: center; gap: 6px; }
 #command-strip .election-clock { padding: 0 0 0 9px; border-left: 1px solid var(--command-divider); background: transparent; }
 #command-strip :is(#current-office,#election-position,#election-timer,.election-clock small) { font: 600 12px/1 system-ui, sans-serif; }
@@ -416,7 +416,6 @@ button.equipped-gear-tile { cursor: pointer; }
   border-radius: 6px;
   background: #203a30;
 }
-#command-deck #voice-dock .sound-settings-content { inset: auto 0 calc(100% + 8px) auto; }
 #command-deck #social-docks .politics-content { inset: auto 0 calc(100% + 8px) auto; }
 
 #world #stations {
@@ -490,7 +489,7 @@ button.equipped-gear-tile { cursor: pointer; }
   #command-strip { grid-template-columns: 1fr 1fr; gap: 2px; }
   #command-strip #congress-dock { justify-content: flex-end; }
   #command-strip #election-dock { grid-column: 1 / -1; justify-self: center; }
-  #command-strip #election-dock > summary { min-height: 19px; }
+  #command-strip #election-dock > #open-election-polls { min-height: 19px; }
   #command-strip .personal-resources { gap: 4px; }
   #command-strip #congress-dock .resource-grid { gap: 4px; }
   #command-strip #congress-dock .resource label { font-size: 10px; }
@@ -813,3 +812,32 @@ img.market-art {
 }
 
 #command-deck #ballot-host:not([hidden]) { display: contents; }
+
+#landing {
+  grid-template-columns: minmax(0,760px);
+  padding: 16px;
+}
+#landing, #asset-loading {
+  background: linear-gradient(90deg,#0c1715a6,#101b16df 46%,#0c1715a6),
+    url('/assets/sala-articulacao.webp') center / cover no-repeat #13241d;
+}
+#landing .lobby-card, #asset-loading .lobby-card {
+  width: 100%;
+  padding: 1.35rem;
+  background: linear-gradient(150deg,#24392ff5,#12231df7);
+  box-shadow: 0 24px 70px #050c0abf;
+}
+#landing form { max-width: 440px; margin-inline: auto; }
+.lobby-invite { display: flex; gap: .65rem; align-items: end; margin-block: .65rem; }
+.lobby-invite label { display: grid; gap: .25rem; flex: 1; min-width: 0; }
+.lobby-invite button { flex: none; }
+#asset-loading:not([hidden]) {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+#asset-loading .lobby-card { max-width: 440px; text-align: center; }
+#asset-loading progress { width: 100%; accent-color: var(--party-gold); }

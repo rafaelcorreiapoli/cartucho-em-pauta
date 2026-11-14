@@ -31,7 +31,7 @@ export const objects = {
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:'Uma reserva que os outros podem ignorar.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s.`},
-  voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Distorce sua voz até a bateria acabar.'},
+  voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
   baton:{name:'Porrete',portrait:'retrato-porrete.webp',description:'Golpeia um jogador próximo.'},
@@ -102,8 +102,8 @@ const articulationActions = new Set<GameplayActionKind>([
   'edit','call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
-export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
-  return articulating || !articulationActions.has(action.kind);
+export function canUseGameplayAction(action:GameplayAction, articulating:boolean, voting=false) {
+  return articulating || (voting && (action.kind==='attack' || action.kind==='toggle-modulator')) || !articulationActions.has(action.kind);
 }
 export type ExposedItem = {id:number; kind:ObjectKind};
 
@@ -124,7 +124,7 @@ export type GameplayView = {
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
   equipmentCooldowns?:Record<number,number>;
   megaphoneSeconds?:number;
-  modulator?:{active:boolean; battery:number; recharge:number};
+  modulator?:{active:boolean};
   exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
 };
 export type GameplayEvent = {

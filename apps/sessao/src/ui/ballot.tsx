@@ -1,6 +1,7 @@
 import type {CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
-import type {PlenaryView,Vote} from '../plenary';
+import {PhoneContactFace} from './phone-call';
+import type {CassationView,PlenaryView,Vote} from '../plenary';
 
 type BallotState = {
   hearing:boolean; eligible:boolean; mandate:boolean; voted:number;
@@ -29,11 +30,39 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
   </div>;
 }
 
-export function mountBallot(host:HTMLElement,cast:(vote:Vote)=>void) {
+export function CassationBallot({state,ownId,cast}:{
+  state:CassationView; ownId:string; cast:(candidate:string|null)=>void;
+}) {
+  return <section className="cassation-ballot" aria-label="Votação de cassação">
+    <p>{state.voted}/{state.electorate} votaram · {state.quorum} votos para cassar</p>
+    <div className="cassation-candidates">
+      {state.candidates.filter(person=>person.id!==ownId).map((person,index)=><button key={person.id}
+        type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
+        aria-keyshortcuts={index<9 ? String(index+1) : undefined} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
+        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd>{index+1}</kbd>}
+      </button>)}
+    </div>
+    <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
+      aria-keyshortcuts="0" aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto</button>
+    {!state.eligible && <p>Você pode acompanhar a votação.</p>}
+  </section>;
+}
+
+export function mountBallot(host:HTMLElement,cast:(vote:Vote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
   const root = createRoot(host);
   let key = '';
   return {
     render(view:PlenaryView) {
+      const cassation = view.cassation;
+      if (cassation) {
+        host.hidden = false;
+        const next = JSON.stringify(cassation);
+        if (next!==key) {
+          key = next;
+          root.render(<CassationBallot state={cassation} ownId={ownId} cast={castCassation}/>);
+        }
+        return;
+      }
       const hearing = view.hearing;
       const visible = view.phase==='ballot' || !!hearing;
       host.hidden = !visible;

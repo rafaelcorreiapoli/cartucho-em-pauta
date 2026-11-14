@@ -14,9 +14,11 @@ export const npcs = {
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
+export const treasuryLayout = {bounds:[326,403,132,127],divider:[458,403,10,127],luxuryDoor:[486,392,40,11]} as const;
+
 export const treasurer = {
-  name:'Marcos Valério', sprite:'marcos-valerio.webp', x:499, y:453, direction:0,
-  counter:{x:477,y:459}, interaction:{x:499,y:489}, label:'Tesouraria',
+  name:'Marcos Valério', sprite:'marcos-valerio.webp', x:403, y:446, direction:0,
+  counter:{x:380,y:456}, interaction:{x:403,y:486}, label:'Tesouraria',
 } as const;
 
 export const mapNpcs = {...npcs,treasurer};

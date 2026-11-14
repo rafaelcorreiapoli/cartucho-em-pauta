@@ -170,13 +170,12 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 .offer { margin:.35rem 0; padding:.4rem; border:1px solid var(--hud-line); border-radius:4px; }
 #evidence-tools { display:grid; gap:.45rem; }
 #politics-hint:empty { display:none; }
-#public-records { padding-left:1rem; }
 
 #election-dock, #electoral-notice {
   position:absolute; right:max(12px,env(safe-area-inset-right)); top:max(12px,env(safe-area-inset-top));
   z-index:3; padding:.3rem; font-size:.8rem;
 }
-#election-dock > summary { font-size:.78rem; gap:.6rem; }
+#election-dock > #open-election-polls { font-size:.78rem; gap:.6rem; }
 #election-timer { color:var(--hud-gold); font-variant-numeric:tabular-nums; }
 #election-dock .politics-content { bottom:auto; top:calc(100% + 6px); }
 #electoral-notice { top:66px; z-index:2; max-width:min(350px,calc(100% - 24px)); padding:.55rem .7rem; }
@@ -248,7 +247,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   .bill-heading { margin-top:.45rem; }
 }
 
-#election-actions { display:flex; align-items:center; gap:.5rem; margin-top:.75rem; width:100%; }
 #stations .hud-button:disabled { display:none; }
 #station-hint { color:#c6d1c4; }
 @media (min-width:741px) {
@@ -281,7 +279,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 #election-result summary { color:var(--hud-gold); }
 #voice-dock { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
 #voice-status:not(:empty) { flex-basis:100%; }
-.sound-settings-content { position:absolute; bottom:calc(100% + 6px); left:0; z-index:1; width:min(240px,calc(100vw - 24px)); padding:.65rem; }
 .sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
 .sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }
 .mute-option { display:flex; align-items:center; gap:.35rem; }

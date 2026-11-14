@@ -1,3 +1,4 @@
+import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
 import { mountInternalMail } from './ui/internal-mail';
@@ -62,6 +63,12 @@ const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
+const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
+const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
+const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status')!;
+const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
+const lobbyInvite = document.querySelector<HTMLInputElement>('#lobby-invite-url')!;
+const copyLobbyInvite = document.querySelector<HTMLButtonElement>('#lobby-copy-invite')!;
 const portraitPlayers:HTMLElement[] = [];
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
@@ -69,7 +76,6 @@ const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const create = document.querySelector<HTMLButtonElement>('#create')!;
-const invite = document.querySelector<HTMLButtonElement>('#invite')!;
 const leave = document.querySelector<HTMLButtonElement>('#leave')!;
 const characters = document.querySelector<HTMLElement>('#characters')!;
 const buttons = NAMES.map((name,index) => {
@@ -171,9 +177,11 @@ function showLobby(message: string) {
   room = undefined;
   roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
+  document.querySelector<HTMLDialogElement>('#room-settings')?.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
+  loadingScreen.hidden = true;
   landing.hidden = false;
   status.textContent = message;
 }
@@ -206,6 +214,7 @@ async function connect(join: () => Promise<Room>) {
     closeDetails();
     const hudListeners = new AbortController();
     bindActionShortcuts(session,hudListeners.signal);
+    bindFloorPlan(session,hudListeners.signal);
     const latency = document.querySelector<HTMLElement>('#connection-latency')!;
     let latencyGeneration = 0;
     const measureLatency = () => {
@@ -238,10 +247,37 @@ async function connect(join: () => Promise<Room>) {
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     roomLabel.textContent = `Sala ${joined.roomId}`;
-    audio.enter();
-    game = createGame(map,joined.sessionId,input => joined.send('input',input),
-      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan));
+    const inviteUrl = new URL(location.href);
+    inviteUrl.searchParams.set('sala',joined.roomId);
+    lobbyInvite.value = inviteUrl.href;
+    loadingProgress.value = 0;
+    loadingStatus.textContent = 'Carregando o Congresso…';
+    loadingBack.hidden = true;
+    loadingScreen.hidden = false;
+    let assetError = false;
+
+    const audioReady = audio.enter();
+    let assetsReady = false;
     const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
+    game = createGame(map,joined.sessionId,input => joined.send('input',input),
+      (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
+      sendGameplay,id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),progress=>{
+        if (room!==joined) return;
+        if (progress<0) {
+          assetError = true;
+          loadingStatus.textContent = 'Falha ao carregar o cenário. Volte e tente novamente.';
+          loadingBack.hidden = false;
+        } else if (!assetError) {
+          loadingProgress.value = progress*.95;
+          if (progress===1) void Promise.resolve(audioReady).then(()=>{
+            if (room!==joined) return;
+            assetsReady = true;
+            loadingProgress.value = 1;
+            loadingScreen.hidden = true;
+            if (previousView) panel.render(previousView);
+          });
+        }
+      });
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
@@ -314,8 +350,8 @@ async function connect(join: () => Promise<Room>) {
     const results = mountResults();
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
-      if (channel!=='bill-vote') map.focus({preventScroll:true});
-    });
+      if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
+    },()=>assetsReady);
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';
     let previousView:PlenaryView | undefined;
@@ -324,8 +360,11 @@ async function connect(join: () => Promise<Room>) {
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
-      if (view.phase==='negotiation' && view.remaining<=30 && (previousView?.remaining ?? 0)>30) audio.cue('summons');
-      if (view.vote && view.vote!==previousView?.vote) audio.cue('vote');
+      const cassationAnnounced = !!view.cassationIn && !previousView?.cassationIn;
+      const projectAnnounced = !view.cassationIn && view.remaining<=30 &&
+        ((previousView?.remaining ?? 0)>30 || !!previousView?.cassation);
+      if (view.phase==='negotiation' && (cassationAnnounced || projectAnnounced)) audio.cue('summons');
+      if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
       const pastIncome = previousView?.politics?.walletIncome ?? 0;
       const income = (view.politics?.walletIncome ?? 0)-pastIncome;
@@ -380,7 +419,7 @@ async function connect(join: () => Promise<Room>) {
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
       voiceToggle.setAttribute('aria-description',negotiating ? 'Voz por proximidade' :
-        phase==='ballot' ? 'Voz geral no Plenário' : 'Voz geral da sala');
+        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala');
       if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
@@ -476,17 +515,23 @@ lobby.onsubmit = event => {
 };
 leave.onclick = () => void room?.leave();
 document.querySelector<HTMLButtonElement>('#lobby-back')!.onclick = () => void room?.leave();
-invite.onclick = async () => {
+loadingBack.onclick = () => void room?.leave();
+for (const id of ['lobby-settings','plenary-settings']) {
+  document.getElementById(id)!.onclick = () => document.querySelector<HTMLDialogElement>('#room-settings')!.showModal();
+}
+lobbyInvite.onclick = () => lobbyInvite.select();
+async function copyInvite(button:HTMLButtonElement, label:string) {
   if (!room) return;
   const url = new URL(location.href);
   url.searchParams.set('sala',room.roomId);
   try {
     await navigator.clipboard.writeText(url.href);
-    invite.textContent = 'Link copiado';
-    setTimeout(() => { invite.textContent = 'Convidar'; },1500);
+    button.textContent = 'Link copiado';
+    setTimeout(() => { button.textContent = label; },1500);
   } catch {
     window.prompt('Link da sala',url.href);
   }
-};
+}
+copyLobbyInvite.onclick = () => void copyInvite(copyLobbyInvite,'Copiar link');
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());

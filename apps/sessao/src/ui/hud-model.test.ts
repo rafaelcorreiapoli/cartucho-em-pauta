@@ -87,9 +87,11 @@ test('the central countdown follows the authoritative last 30 seconds before vot
   render(deadline-31_000);
   expect(hud.countdown.get()).toBeUndefined();
   render(deadline-30_000);
-  expect(hud.countdown.get()).toBe(30);
+  expect(hud.countdown.get()).toEqual({kind:'bill',seconds:30});
   render(deadline-1000);
-  expect(hud.countdown.get()).toBe(1);
+  expect(hud.countdown.get()).toEqual({kind:'bill',seconds:1});
+  hud.render({...match.view(player.id,[player.id],deadline-1000),cassationIn:20});
+  expect(hud.countdown.get()).toEqual({kind:'cassation',seconds:20});
   match.advance(deadline);
   render(deadline);
   expect(hud.countdown.get()).toBeUndefined();

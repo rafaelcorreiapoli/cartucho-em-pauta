@@ -53,11 +53,18 @@
   background: #0c1111ba;
 }
 .finale-team h3 { margin: 0 0 .8rem; font: 800 1.25rem var(--party-display); }
-.finale-team:first-child h3 { color: var(--finale-accent); }
+.finale-team[data-result="won"] {
+  border-color: var(--finale-accent);
+  box-shadow: 0 0 1.7rem color-mix(in srgb,var(--finale-accent),transparent 60%),
+    inset 0 0 1.1rem color-mix(in srgb,var(--finale-accent),transparent 86%);
+}
+.finale-team[data-result="won"] :is(h3,.finale-verdict) { color: var(--finale-accent); }
+.finale-team[data-result="lost"] .finale-verdict { color: #ffb3a0; }
+.finale-verdict { display: block; margin: -.4rem 0 .85rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+.finale-no-winner { color: #eee0ce; font-weight: 700; }
 .finale-team ul { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin: 0; padding: 0; list-style: none; }
 .finale-team li { display: grid; justify-items: center; align-content: start; gap: .25rem; width: 6rem; overflow-wrap: anywhere; }
 .finale-team .portrait { display: block; --portrait-size: 4.5rem; border: 1px solid #fff4df70; border-radius: .65rem; }
-.finale-team small { color: #ded5c6; }
 .finale-particles { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; }
 .finale-particles i {
   position: absolute;

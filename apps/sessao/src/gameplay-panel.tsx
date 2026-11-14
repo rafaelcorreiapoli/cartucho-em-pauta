@@ -348,9 +348,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                 onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
                   state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
             {gear.kind==='voiceModulator' && state.modulator &&
-              <button type="button" className="hud-button hud-button--secondary" disabled={state.modulator.recharge>0}
-                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? `Desligar · ${state.modulator.battery}s` :
-                  state.modulator.recharge ? `Recarga · ${state.modulator.recharge}s` : 'Ligar modulador'}</button>}
+              <button type="button" className="hud-button hud-button--secondary"
+                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? 'Desligar modulador' : 'Ligar modulador'}</button>}
           </>}
         </li>)}
       </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>));
@@ -479,7 +478,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
       const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
       const shortcut = index+1;
-      const badge = <kbd className="slot-key" aria-hidden="true">{shortcut}</kbd>;
+      const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
         aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
         onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
@@ -554,6 +553,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
+  dialog.addEventListener('cancel',event=>{
+    if (dialog.dataset.mode!=='phone' || !app) return;
+    event.preventDefault();
+    selectApp();
+  });
   phoneButton.onclick = () => { app = undefined; open(); };
   element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
@@ -672,6 +676,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       render();
     },
     purchasedConsumable(id:number) { purchases.add(id); },
+    inspectDecoration(id:number) { open(undefined,id); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {
       const {captured,presented} = photos.update(next);

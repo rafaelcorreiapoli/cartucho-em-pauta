@@ -22,7 +22,24 @@ async page => {
   await palette.getByText(/^1 \/ /).waitFor();
   await page.keyboard.press('Escape');
   await palette.waitFor({state:'hidden'});
-  await page.keyboard.press('i');
+  if (await page.locator('#open-settings').isVisible()) throw Error('Botão avulso de configurações durante a partida');
+  const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
+  if (await launcher.getAttribute('aria-expanded')==='false') await launcher.click();
+  for (const [name,key] of [['Equipamentos','E'],['Personagem','P'],['Celular','C'],['Microfone','M'],['Configurações','K']]) {
+    const app = page.locator('#congress-app-panel').getByRole('button',{name,exact:true});
+    if (await app.getAttribute('aria-keyshortcuts')!==key) throw Error('Atalho ausente: '+name);
+  }
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('k');
+  const settings = page.getByRole('dialog',{name:'Configurações'});
+  await settings.waitFor();
+  await settings.getByRole('button',{name:'Fechar configurações'}).click();
+  await settings.waitFor({state:'hidden'});
+  await page.keyboard.press('k');
+  await settings.waitFor();
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
+  await page.keyboard.press('p');
   const attributes = page.getByRole('dialog',{name:/Atributos/i});
   await attributes.waitFor();
   await page.keyboard.press('F2');

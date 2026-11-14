@@ -42,9 +42,23 @@ test.each(['Parlamentar','Infiltrado',undefined] as const)('finale reveals the f
   expect(html).toContain(winner==='Parlamentar' ? 'O Congresso foi salvo!' : winner==='Infiltrado' ? 'O Congresso foi destruído!' : 'Sessão encerrada');
   for (const {nick} of players) expect(html).toContain(nick);
   if (winner) {
-    const winners = html.slice(html.indexOf('aria-label="Vencedores"'),html.indexOf('aria-label="Derrotados"'));
-    expect(winners).toContain(winner==='Infiltrado' ? 'Rafa' : 'Bia');
-    expect(winners).not.toContain(winner==='Infiltrado' ? 'Bia' : 'Rafa');
+    const winningTeam = winner==='Infiltrado' ? 'Infiltrados' : 'Parlamentares';
+    const losingTeam = winner==='Infiltrado' ? 'Parlamentares' : 'Infiltrados';
+    expect(html).toContain(`aria-label="${winningTeam}" data-result="won"`);
+    expect(html).toContain(`aria-label="${losingTeam}" data-result="lost"`);
+    expect(html).toContain('finale-verdict">Vitória');
+    expect(html).toContain('finale-verdict">Derrota');
     expect(html).toContain('finale-particles');
-  } else expect(html).toContain('aria-label="Participantes"');
+  } else {
+    expect(html).toContain('Sem vencedores');
+    expect(html).not.toContain('data-result="won"');
+  }
+});
+
+test('a solo collapse shows a parliamentary defeat without an infiltrator victory',()=>{
+  const markup = renderToStaticMarkup(<SessionResult stability={0}
+    finalRoster={[{id:'a',name:'Rafa',character:0,role:'Parlamentar'}]}/>);
+  expect(markup).toContain('aria-label="Parlamentares" data-result="lost"');
+  expect(markup).toContain('Sem vencedores');
+  expect(markup).not.toContain('data-result="won"');
 });

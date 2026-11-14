@@ -82,3 +82,13 @@ test('timed mission labels and progress display the same duration in seconds',()
     expect(html).toContain(`1 / ${target/1000} s`);
   }
 });
+
+test('coffee delivery shows distinct recipient progress and the completion check',()=>{
+  const mission = {id:9,kind:'entrega',current:2,target:3} as const;
+  const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(active).toContain('Entregue cafezinho a três jogadores diferentes.');
+  expect(active).toContain('2 / 3');
+  const done = renderToStaticMarkup(<MissionRow mission={{...mission,current:3}} done/>);
+  expect(done).toContain('data-done="true"');
+  expect(done).not.toContain('2 / 3');
+});

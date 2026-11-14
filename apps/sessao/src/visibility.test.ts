@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {shadowOutline,wallVision} from './visibility';
-import {canStand,obstacleBetween,wallBetween,characterVisible} from './map';
+import {canStand,obstacleBetween,wallBetween,characterVisible,roomAt} from './map';
 
 test('the light ends at the first wall edge and preserves unobstructed rays',()=>{
   const player = {x:140,y:146,barriers:[[153,135,3,25]] as const};
@@ -59,4 +59,31 @@ test('furniture blocks movement but does not hide a character on illuminated flo
   expect(south?.y).toBeGreaterThan(npc.y-observer.y);
   expect(characterVisible(observer,npc,40)).toBe(true);
   expect(characterVisible({...observer,barriers:[[24,210,12,3]]},npc,40)).toBe(false);
+});
+
+test('the reprography entrance opens south without leaking into the infirmary corner',()=>{
+  const observer = {x:800,y:390};
+  const straightThrough = {x:800,y:414};
+  const acrossCorner = {x:820,y:408};
+  expect(wallBetween(observer,straightThrough)).toBe(false);
+  expect(canStand(straightThrough.x,396)).toBe(true);
+  expect(wallBetween(observer,acrossCorner)).toBe(true);
+  expect(characterVisible(observer,acrossCorner,40)).toBe(false);
+});
+
+
+test('the Treasury and luxury shop have separate entrances and a continuous dividing wall',()=>{
+  expect(roomAt({x:403,y:486})).toBe('Tesouraria');
+  expect(roomAt({x:530,y:466})).toBe('Gabinete de Luxo');
+  expect(canStand(423,396)).toBe(true);
+  expect(canStand(506,396)).toBe(true);
+  expect(canStand(463,486)).toBe(false);
+  expect(wallBetween({x:450,y:486},{x:475,y:486})).toBe(true);
+});
+
+test('the lower luxury shop doorway is centered inside the room',()=>{
+  expect(roomAt({x:530,y:524})).toBe('Gabinete de Luxo');
+  expect(canStand(530,535)).toBe(true);
+  expect(canStand(455,535)).toBe(false);
+  expect(wallBetween({x:530,y:519},{x:530,y:548})).toBe(false);
 });

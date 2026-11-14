@@ -8,7 +8,7 @@ import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
+import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop } from '../src/installations';
@@ -278,7 +278,7 @@ export class Gameplay {
     this.signedProjects.delete(item.data.id);
     this.hide(item);
     this.items.delete(item.data.id);
-    if (item.data.kind==='voiceModulator') this.modulator.remove(item.data.id);
+    if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id);
     this.clearRequests(item.data.id);
   }
 
@@ -387,7 +387,7 @@ export class Gameplay {
     }
   }
 
-  tick(world:GameplayWorld, exploring:boolean) {
+  tick(world:GameplayWorld, exploring:boolean, voting=false) {
     for (const [id,operation] of this.forgery) {
       const player = world.players.find(person=>person.id===id);
       const item = this.inventory(id).find(({data})=>data.id===operation.item)?.data;
@@ -433,12 +433,12 @@ export class Gameplay {
     this.phone.tick(world,exploring);
     this.recordRoomVisits(world,exploring);
     this.transport.tick(world,exploring);
-    this.combat.tick(world.players,world.now,exploring,{
+    this.combat.tick(world.players,world.now,exploring || voting,{
       recovered:player=>{
         this.transport.detach(player,world);
         publishGameplay(world,player,'character-recovered');
       },
-      canHit:player=>world.present?.(player.id)!==false,
+      canHit:player=>world.present?.(player.id)!==false && (!voting || !player.npc && inPlenary(player)),
       armored:player=>!!this.wearing(player.id,'vest'),
       hit:(attacker,target,damage)=>{
         publishGameplay(world,attacker,'hit',{target:target.id,damage});
@@ -446,7 +446,7 @@ export class Gameplay {
         this.transport.detach(target,world);
         publishGameplay(world,attacker,'character-knocked-out',{target:target.id});
         this.dialogues.close(target.id);
-        this.stopModulator(target.id,world.now);
+        this.stopModulator(target.id);
         this.phone.leave(target,world);
       },
     });
@@ -455,13 +455,13 @@ export class Gameplay {
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
       if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
-      if (!exploring || player.knockedOut || !world.voice(player.id)) this.stopModulator(player.id,world.now);
+      if (player.knockedOut) this.stopModulator(player.id);
     }
   }
 
-  private stopModulator(id:string, now:number) {
+  private stopModulator(id:string) {
     const item = this.wearing(id,'voiceModulator');
-    if (item) this.modulator.deactivate(item.id,now);
+    if (item) this.modulator.deactivate(item.id);
   }
 
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
@@ -494,7 +494,7 @@ export class Gameplay {
     this.phone.leave(player,world);
     this.transport.detach(player,world);
     this.dialogues.close(player.id);
-    this.stopModulator(player.id,world.now);
+    this.stopModulator(player.id);
     if (!permanent) return;
     this.concealedUntil.delete(player.id);
     this.combat.leave(player);
@@ -525,11 +525,10 @@ export class Gameplay {
     const nearbyLocations = locations(player);
     const equipped = this.equipped(id).map(item=>item.data);
     const voiceGear = equipped.find(item=>item.kind==='voiceModulator');
-    const modulator = voiceGear && this.modulator.view(voiceGear.id,world.now);
+    const modulator = voiceGear && this.modulator.view(voiceGear.id);
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
-      const seconds = item.kind==='voiceModulator' ? modulator?.recharge :
-        item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
+      const seconds = item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
         item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
@@ -555,7 +554,8 @@ export class Gameplay {
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
-      decorations:[...this.installations.values()].filter(item=>localPerception(player,item,this.vision(player.id,world.now)).visible),
+      decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
+        localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
@@ -1069,7 +1069,7 @@ export class Gameplay {
     this.move(item,{holder:id});
     if (item.data.kind==='binoculars') this.stopBinoculars(id);
     if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
-    if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id,world.now);
+    if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id);
     if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
     this.event(world,player,'unequipped',item.data);
     return 'Guardado no inventário.';
@@ -1148,10 +1148,10 @@ export class Gameplay {
     }
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');
-      if (!item || !world.voice(id)) return 'Equipe o modulador e ative a voz.';
-      const before = this.modulator.view(item.id,world.now).active;
-      const message = this.modulator.toggle(item.id,world.now);
-      if (!before && this.modulator.view(item.id,world.now).active) this.event(world,player,'used',item);
+      if (!item) return 'Equipe o modulador de voz.';
+      const before = this.modulator.view(item.id).active;
+      const message = this.modulator.toggle(item.id);
+      if (!before && this.modulator.view(item.id).active) this.event(world,player,'used',item);
       return message;
     }
     if (action.kind==='aid') {

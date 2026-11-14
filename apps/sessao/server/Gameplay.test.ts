@@ -252,7 +252,7 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(bob,{kind:'buy',target:'portrait'},world);
   const [first] = game.view(alice,world).inventory;
   const [second] = game.view(bob,world).inventory;
-  Object.assign(alice,{x:465,y:414});
+  Object.assign(alice,{x:556,y:415});
   Object.assign(bob,alice,{id:'Bob',nick:'Bob'});
   game.act(alice,{kind:'install',place:'hall',item:first.id},world);
   expect(game.view(watcher,world).decorations.map(item=>item.kind)).toEqual(['pizza']);

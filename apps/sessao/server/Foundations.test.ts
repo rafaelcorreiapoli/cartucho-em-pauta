@@ -3,7 +3,7 @@ import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
-import { canStand, movementSpeed, roomAt, worldVisible, VISION_RADIUS, type Player } from '../src/map';
+import { canStand, movementSpeed, roomAt, worldVisible, PLENARY_DOORS, VISION_RADIUS, type Player } from '../src/map';
 import { infirmary, recoveryRules } from '../src/medical';
 import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
@@ -101,11 +101,15 @@ test('Palmirinha opens the shop from behind and across the counter',()=>{
   const behind = {x:vendor.x,y:vendor.y-12};
   expect(canStand(behind.x,behind.y)).toBe(true);
   expect(canStand(vendor.x,vendor.y-4)).toBe(false);
+  let previousToken: number | undefined;
   for (const point of [behind,vendor.interaction]) {
     Object.assign(alice,point);
     expect(game.view(alice,world).npcNearby).toContain('snackVendor');
     expect(game.act(alice,{kind:'open-shop',target:'snackVendor'},world)).toBeUndefined();
-    expect(game.view(alice,world).dialogue).toMatchObject({npc:'snackVendor',shop:true});
+    const dialogue = game.view(alice,world).dialogue;
+    expect(dialogue).toMatchObject({npc:'snackVendor',shop:true});
+    expect(dialogue!.token).not.toBe(previousToken);
+    previousToken = dialogue!.token;
     game.act(alice,{kind:'dialogue-close'},world);
   }
   Object.assign(alice,{x:vendor.x,y:vendor.y+37});
@@ -138,12 +142,10 @@ test('equipping changes custody, binocular range and voice battery without stack
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;
   game.act(alice,{kind:'equip',item:modulator.id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
-  expect(game.view(alice,world).modulator).toEqual({active:true,battery:25,recharge:0});
-  world.now += 25_000;
-  expect(game.view(alice,world).modulator).toEqual({active:false,battery:0,recharge:45});
-  expect(game.view(alice,world).equipmentCooldowns).toEqual({[modulator.id]:45});
-  expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
-  world.now += 45_000;
+  world.now += 70_000;
+  expect(game.view(alice,world).modulator).toEqual({active:true});
+  expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador desligado.');
+  expect(game.view(alice,world).modulator).toEqual({active:false});
   expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
   game.act(alice,{kind:'unequip',item:modulator.id},world);
   expect(game.view(alice,world).modulator).toBeUndefined();
@@ -345,7 +347,7 @@ test('dialogue eligibility is private and checked again when the player chooses'
   expect(game.view(alice,world).dialogue?.text).toContain('Presidência');
 });
 
-test('modulator recharge follows the item when another player collects and equips it', () => {
+test('modulator switches off when another player collects and equips it', () => {
   const {alice,bob,game,world,buyGear} = setup();
   buyGear(alice,'voiceModulator');
   const {id} = game.view(alice,world).inventory[0];
@@ -355,17 +357,18 @@ test('modulator recharge follows the item when another player collects and equip
   game.act(alice,{kind:'drop',item:id},world);
   game.act(bob,{kind:'collect',item:id},world);
   game.act(bob,{kind:'equip',item:id},world);
-  expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
-  world.now += 45_000;
+  expect(game.view(bob,world).modulator).toEqual({active:false});
   expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
 });
 
 test('doors, furniture and actors without a player session use the shared world rules', () => {
-  const alice = player('Alice',480,520);
+  const [left,,width] = PLENARY_DOORS[1];
+  const center = left+width/2;
+  const alice = player('Alice',center,520);
   const passage = {player:alice,route:[],ack:0};
   applyInput(passage,{seq:1,door:1});
   expect(alice.y).toBeGreaterThan(520);
-  const closed = {player:player('Bia',480,554),route:[],ack:0,plenary:true};
+  const closed = {player:player('Bia',center,554),route:[],ack:0,plenary:true};
   applyInput(closed,{seq:1,door:1,plenary:true});
   expect(closed.player.y).toBe(554);
   expect(worldVisible({x:675,y:201},{x:675,y:249},VISION_RADIUS+2)).toBe(false);
@@ -678,4 +681,17 @@ test('direct shop equips into free slots and swaps only the confirmed accessory'
   expect(view().inventory.map(item=>item.kind)).toEqual(['binoculars']);
   expect(view().equipped?.map(item=>item.kind)).toEqual(['vest','megaphone']);
   expect(balance.get(alice.id)).toBe(21);
+});
+
+test('plenary voting allows weapon hits against players in the chamber',()=>{
+  const {alice,bob,game,world,buyGear,events} = setup();
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  Object.assign(alice,{x:470,y:665,direction:1});
+  Object.assign(bob,{x:484,y:665});
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,false,true);
+  expect(events.filter(event=>event.type==='hit').map(event=>event.target)).toEqual([bob.id]);
+  expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
 });

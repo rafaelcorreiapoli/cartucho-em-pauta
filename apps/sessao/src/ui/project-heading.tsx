@@ -6,9 +6,9 @@ export function projectHeading(view:PlenaryView) {
   const queued = view.queuedProjects?.length ?? 0;
   const negotiating = view.phase==='negotiation';
   return {
-    title:hearing?.target ?? agendaProject(view).name,
-    round:hearing ? 'Votação de afastamento' : `Projeto ${view.round+1}${queued ? ` · +${queued} na pauta` : ''}`,
-    phase:negotiating ? 'Articulação' : hearing ? 'Afastamento' : 'Votação',
+    title:view.cassation ? 'Quem é o infiltrado?' : hearing?.target ?? agendaProject(view).name,
+    round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `Projeto ${view.round+1}${queued ? ` · +${queued} na pauta` : ''}`,
+    phase:negotiating ? 'Articulação' : view.cassation ? 'Cassação' : hearing ? 'Afastamento' : 'Votação',
     clockLabel:view.isolationSeconds ? 'Isolamento' : negotiating ? 'Votação em' : 'Tempo de voto',
     seconds:view.isolationSeconds || view.remaining,
   };

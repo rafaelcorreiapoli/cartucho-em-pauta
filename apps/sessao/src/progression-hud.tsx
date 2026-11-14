@@ -1,3 +1,4 @@
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { CSSProperties } from 'react';
@@ -68,7 +69,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     flushSync(()=>attributesRoot.render(<>
       <header><div><h2 id="attributes-title" className="sr-only">Atributos</h2>
         <p id="attributes-xp">Nível {level} · {xp} XP totais · {nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}</p>
-      </div><form method="dialog"><button className="hud-button hud-button--secondary">Fechar</button></form></header>
+      </div><DialogDismiss className="hud-button hud-button--secondary">Fechar</DialogDismiss></header>
       <p id="attributes-available" role="status">{pointLabel(available)} para distribuir</p>
       <div className="attribute-columns">
         <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
@@ -165,7 +166,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       }
       badge.hidden = !progress.available;
       badge.textContent = String(progress.available);
-      launch.title = progress.available ? `Atributos (I) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (I)';
+      launch.title = progress.available ? `Atributos (P) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (P)';
       launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
       if (!before) {
         pending = undefined;

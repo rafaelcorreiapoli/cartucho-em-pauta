@@ -1,5 +1,10 @@
 // Run against a local solo server using dev/private-call-chrome.json.
 async page => {
+  await page.addInitScript(()=>{
+    localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
+    navigator.mediaDevices.getUserMedia = async ()=>{ throw new DOMException('QA sem microfone','NotAllowedError'); };
+  });
+  await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Celular QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
@@ -8,6 +13,7 @@ async page => {
   const dialog = page.locator('#gameplay-dialog');
   await dialog.getByRole('button',{name:'Telefone',exact:true}).waitFor();
   if (await dialog.locator('#phone-apps').isHidden()) await page.keyboard.press('0');
+  if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');
   await page.keyboard.press('2');
   await dialog.getByRole('heading',{name:'Joguinhos',exact:true}).waitFor();
   await page.keyboard.press('5');
@@ -30,7 +36,8 @@ async page => {
   await page.keyboard.press('7');
   await dialog.getByRole('region',{name:'Bets'}).waitFor();
   await page.keyboard.press('5');
-  await dialog.getByText(/Saiu [1-6]/).waitFor();
+  if (await dialog.locator('.bets-reel').count()!==3) throw Error('Quantidade de rolos');
+  await dialog.getByText(/Trinca!|Sem trinca/).waitFor();
   await page.keyboard.press('0');
   await page.keyboard.press('3');
   const preview = dialog.getByRole('img',{name:'Enquadramento da câmera'});

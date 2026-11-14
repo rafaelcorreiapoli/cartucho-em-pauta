@@ -1,3 +1,4 @@
+import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
 import {fireSites} from './fire';
@@ -5,14 +6,14 @@ import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, pr
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
-import { mapNpcs } from './npcs';
+import { mapNpcs, type NpcId } from './npcs';
 import { binoculars, xray } from './equipment';
-import { canReachObject, cashAmount, objects, type GroundItem } from './gameplay';
+import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
-import { agendaProject, stations, STATION_RADIUS, type Phase, type PlenaryView, type Station } from './plenary';
+import { agendaProject, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -42,7 +43,8 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, inspect:(id:number)=>void, openStash:()=>void, loading:(progress:number)=>void) {
+  const campaignControl = document.querySelector<HTMLButtonElement>('#election-actions')!;
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -87,7 +89,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   class Plenary extends Phaser.Scene {
     private safeProgress!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
-    private officeSigns = new Map<string,Phaser.GameObjects.Text>();
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
@@ -97,7 +98,20 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private renderedDecorations?:Decoration[];
     private installed = new Map<number,{marker:Phaser.GameObjects.Container; label?:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
     photoRenderer?:PhotoRenderer;
-    private stationMarkers: Phaser.GameObjects.Ellipse[] = [];
+    private interactionTargets = new Map<Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,{
+      outline:Phaser.GameObjects.Image;
+      ready:()=>boolean;
+      run:()=>void;
+    }>();
+
+    private registerInteraction(art:Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,
+      ready:()=>boolean,run:()=>void,container?:Phaser.GameObjects.Container) {
+      const outline = createInteractionOutline(this,art);
+      if (container) container.addAt(outline,container.getIndex(art));
+      else outline.setDepth(art.depth-.01);
+      this.interactionTargets.set(art,{outline,ready,run});
+      art.once('destroy',()=>this.interactionTargets.delete(art));
+    }
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -115,7 +129,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
 
+    private assetsFailed = false;
+
     preload() {
+      this.load.on('progress',(value:number)=>loading(value*.99));
+      this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
+      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp'];
+      for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
+      for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
+
       this.load.image('cash-briefcase',import.meta.env.BASE_URL+'assets/maleta-social.png');
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
@@ -141,6 +163,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
+      if (this.assetsFailed) return;
       this.cameras.main.setVisible(!inLobby);
       for (let character=0;character<NAMES.length;character++) {
         const {sheet,frame} = characterArt(character);
@@ -160,7 +183,19 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       resizeObserver.observe(parent);
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
-      this.mapLabels = drawMap(this);
+      this.mapLabels = drawMap(this,(art,office,kind)=>{
+        const stash = ()=>kind==='cabinet' && plenaryView?.gameplay?.officeStash?.id===office.id;
+        const option = ()=>plenaryView?.gameplay?.officeOptions?.find(action=>action.place===office.id &&
+          (kind==='safe' ? ['office-cash','office-breach-safe','office-upgrade-safe'].includes(action.kind) :
+            ['office-breach-cabinet','office-upgrade-cabinet'].includes(action.kind)));
+        this.registerInteraction(art,()=>!!stash() || !!option(),()=>{
+          if (stash()) openStash();
+          else {
+            const action = option();
+            if (action) interact(action);
+          }
+        });
+      },desk=>this.registerInteraction(desk,()=>!campaignControl.disabled,()=>campaignControl.click()));
       this.fog = this.add.graphics().setDepth(3);
       this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
@@ -170,12 +205,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.officeDoors = this.add.graphics().setDepth(2);
       this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
-        const point = officeDoorPoint(office);
-        const sign = this.add.text(point.x,point.y-office.inside*15,'',{
-          fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#172b23',
-          align:'center',padding:{x:3,y:1},resolution:3,
-        }).setOrigin(.5).setDepth(2);
-        this.officeSigns.set(office.id,sign);
+        const [doorX,doorY,doorWidth,doorHeight] = office.door;
+        this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
+          fontFamily:'system-ui',fontSize:'3.2px',color:'#eee0ba',backgroundColor:'#152720',
+          align:'left',padding:{x:1.5,y:.5},resolution:4,
+        }).setOrigin(0,.5).setDepth(2);
       }
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
@@ -185,31 +219,46 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         fontFamily:'system-ui',fontSize:'7px',color:'#d6ffd0',backgroundColor:'#111e19',
         align:'center',padding:{x:4,y:2},resolution:3,
       }).setOrigin(.5,0).setDepth(HEIGHT+10);
-      for (const {x,y} of Object.values(stations)) {
-        this.stationMarkers.push(this.add.ellipse(x,y,34,16,stationColor,.16)
-          .setStrokeStyle(1,stationColor).setDepth(1).setVisible(false));
-      }
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
         const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
         sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.label,{
+        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.name,{
           fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
           padding:{x:3,y:1},resolution:3,
         }).setOrigin(.5,0).setDepth(1) : undefined;
+        if (id==='treasurer') {
+          const delivery = ()=>treasuryDeliveries(plenaryView?.gameplay?.inventory ?? [])[0]?.action;
+          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.locations.includes('treasury') && !!delivery(),()=>{
+            const action = delivery();
+            if (action) interact(action);
+          });
+        } else {
+          const target = id as NpcId;
+          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'open-shop',target}));
+        }
         return {sprite,label};
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
         parent.focus({preventScroll:true});
         keys.clear();
-    shiftKeys.clear();
+        shiftKeys.clear();
         manual = false;
         const {x,y} = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
+        const target = [...this.interactionTargets].filter(([art,{outline}])=>outline.visible && art.visible)
+          .sort(([a],[b])=>(b.parentContainer?.depth ?? b.depth)-(a.parentContainer?.depth ?? a.depth))
+          .find(([art])=>hitInteractionArt(art,x,y));
+        if (target) {
+          destination = undefined;
+          target[1].run();
+          return;
+        }
         if (x>=0 && x<WIDTH && y>=0 && y<HEIGHT) {
           destination = {x,y};
           nextStep = -Infinity;
         }
       });
+      loading(1);
     }
     localSprite() { return this.views.get(ownId)?.sprite; }
     playerHead() {
@@ -255,6 +304,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const shadow = this.add.ellipse(0,2,15,5,0x09110e,.28);
         const marker = this.add.container(item.x,item.y,[shadow,icon]).setDepth(item.y-1);
         this.groundMarkers.set(item.id,marker);
+        this.registerInteraction(icon,()=>!!plenaryView?.gameplay?.nearby.some(entry=>entry.id===item.id),
+          ()=>interact({kind:'collect',item:item.id}),marker);
       }
     }
 
@@ -277,7 +328,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (isOfficeFurniture(item.kind)) {
           const {width,height,anchor} = officeFurniture[item.kind];
           const art = this.add.image(0,0,`furniture-${item.kind}`).setDisplaySize(width,height).setOrigin(.5,anchor);
-          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : item.y);
+          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : 2.5);
           this.installed.set(item.id,{marker});
           continue;
         }
@@ -292,6 +343,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const mark = this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3}).setOrigin(.5).setVisible(!!item.marked);
         const marker = this.add.container(item.x,item.y,[frame,art,label,mark]).setDepth(item.y+1);
         this.installed.set(item.id,{marker,label,mark});
+        this.registerInteraction(art,()=>!!plenaryView?.gameplay?.interactive.some(entry=>entry.id===item.id),
+          ()=>inspect(item.id),marker);
       }
     }
 
@@ -334,7 +387,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
 
     update(time: number, delta: number) {
-      if (inLobby) return;
+      if (this.assetsFailed || inLobby) return;
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
@@ -375,7 +428,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.officeDoors.clear();
         for (const layout of privateOffices) {
           const office = officeViews?.find(entry=>entry.id===layout.id);
-          this.officeSigns.get(layout.id)?.setText(`${layout.name}\n${office?.owner ?? 'Desocupado'}`);
           const [x,y,w,h] = layout.door;
           const status = office?.door ?? 'open';
           if (status!=='open') {
@@ -436,9 +488,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
-      for (const marker of this.stationMarkers) {
-        const nearby = ownPlayer && canReachObject(ownPlayer,marker,{radius:STATION_RADIUS,handsFree:true});
-        marker.setVisible(negotiating && !!nearby);
+      for (const [art,{outline,ready}] of this.interactionTargets) {
+        outline.setVisible(negotiating && art.visible && ready());
       }
 
       for (const [id,view] of this.views) {
@@ -552,7 +603,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${player.nick}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${player.nick}` : player.nick);
+        const name = player.npc ? NAMES[character] ?? player.nick : player.nick;
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${name}` : name);
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);

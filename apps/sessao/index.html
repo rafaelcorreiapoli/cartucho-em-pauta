@@ -21,14 +21,8 @@
   </svg>
   <main>
     <section id="landing">
-      <div class="landing-title">
-        <p class="kicker">Cartuchão apresenta</p>
-        <h1>Infiltrados<br>no Congresso</h1>
-        <p>Três projetos em pauta. Um infiltrado no Congresso. Com quem você fecha o próximo voto?</p>
-      </div>
-      <div class="hud-panel entrance">
-        <p class="kicker">1 a 6 jogadores</p>
-        <h2 class="hud-title">Entre no Congresso</h2>
+      <div class="hud-panel entrance lobby-card">
+        <h1 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h1>
         <form id="lobby">
           <label class="nick-field">Seu nick <input id="nick" maxlength="20" autocomplete="nickname" placeholder="Como vão chamar você?" required></label>
           <button class="hud-button" id="create" type="button">Criar sala</button>
@@ -100,6 +94,7 @@
               <button class="hud-button hud-button--secondary" data-action="fraud" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar</span></button>
             </div>
             <div class="station-grid" id="station-election-actions" hidden>
+              <button class="hud-button hud-button--secondary" id="election-actions" data-station="press" type="button" aria-haspopup="dialog" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Investir na campanha</button>
               <button class="hud-button hud-button--secondary" id="advertise" data-station="press" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span>Propaganda<small>R$ 20 mil</small></span></button>
               <button class="hud-button hud-button--secondary" id="speech" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Discursar</span></button>
               <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
@@ -116,10 +111,15 @@
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
       </div>
-      <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
+      <section id="plenary" class="hud-panel lobby-card" aria-label="Sessão legislativa">
         <div id="room-setup">
           <h2 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h2>
           <p>Escolha seu personagem</p>
+          <div class="lobby-invite">
+            <label>Link da sala <input id="lobby-invite-url" readonly></label>
+            <button id="lobby-copy-invite" class="hud-button hud-button--secondary" type="button">Copiar link</button>
+            <button id="lobby-settings" class="hud-icon-button" type="button" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
+          </div>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
         <div class="lobby-options">
@@ -172,22 +172,17 @@
           </div>
           <div id="congress-dock" class="hud-module"></div>
           <div class="election-and-incidents">
-            <details id="election-dock" class="hud-strip hud-module" name="game-panels" hidden>
-              <summary class="hud-option" aria-label="Renovação de Mandato"></summary>
-              <div class="hud-panel politics-content">
-                <div id="election-cycle"></div>
-                <section aria-label="Pesquisa eleitoral">
-                  <div class="compact-heading"><h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg>Pesquisa eleitoral</h3><button class="hud-icon-button hud-help" type="button" aria-label="Como funciona a pesquisa" data-help="A pesquisa estima a classificação dos parlamentares com mandato. Popularidade e campanha ajudam na apuração. O último colocado perde o mandato quando há mais de três participantes.">?</button></div>
-                  <div id="election-polls"></div>
-                </section>
-                <button id="election-actions" class="hud-button hud-button--secondary" type="button" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>Minha campanha</button>
-              </div>
-            </details>
+            <div id="election-dock" class="hud-strip hud-module" hidden>
+              <button id="open-election-polls" class="hud-option" type="button" aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)"></button>
+            </div>
             <div id="active-fire-mount"></div>
           </div>
         </header>
         <div id="agenda-dock"></div>
         <footer id="command-deck" aria-label="Painel de partida">
+          <button id="plenary-settings" class="hud-icon-button" type="button" aria-label="Configurações" title="Configurações (K)">
+            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg>
+          </button>
           <section id="legislative-dock" aria-label="Situação legislativa">
             <div id="project-outcome-brief" role="status" hidden></div>
             <div id="proposal">
@@ -211,8 +206,8 @@
               <div id="congress-apps"></div>
               <div id="gameplay-tools" hidden>
                 <button id="open-bag" type="button" hidden>Mochila</button>
-                <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (G)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
-                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (I)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
+                <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (V)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
+                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (P)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
                 <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
                 <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
               </div>
@@ -228,8 +223,9 @@
                         <button class="hud-button" id="grant" type="submit">Aplicar verba de R$ 40 mil</button>
                       </form>
                       <button class="hud-button hud-button--secondary" id="campaign" type="button" hidden>Fazer campanha · R$ 20 mil</button>
+                      <button class="hud-button" id="call-cassation" type="button" hidden>Convocar cassação</button>
                       <form id="hearing-form" hidden>
-                        <div class="section-label">Convocar afastamento</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
+                        <div class="section-label">Afastamento temporário</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
                         <button class="hud-button" id="hearing-confirm" type="submit">Convocar votação</button>
                       </form>
                     </div>
@@ -260,10 +256,6 @@
                         </div>
                       </form>
                     </section>
-                    <details id="ledger">
-                      <summary>Registro público</summary>
-                      <ul id="public-records"></ul>
-                    </details>
                   </div>
                 </details>
               </div>
@@ -274,32 +266,44 @@
       </div>
       <div id="voice-lobby">
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
-          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
           <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
-          <details id="room-settings" name="game-panels">
-            <summary class="hud-option" title="Configurações" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></summary>
-            <div class="hud-panel sound-settings-content" id="room-settings-content">
-              <section aria-label="Sala">
-                <div id="room-bar">
-                  <span id="room-label" role="status"></span>
-                  <button id="invite" class="hud-button hud-button--secondary" type="button">Convidar</button>
-                  <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
-                </div>
-              </section>
-              <section aria-label="Som do jogo">
-                <h3>Som do jogo</h3>
-                <label for="music-volume">Música</label>
-                <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
-                <label for="effects-volume">Efeitos e passos</label>
-                <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
-                <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
-              </section>
-              <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
-            </div>
-          </details>
-          <span id="voice-status" role="status"></span>
+          <button class="hud-icon-button" hidden id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
         </aside>
       </div>
+      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title">
+        <header><h2 id="settings-title">Configurações</h2>
+          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar configurações">×</button></form>
+        </header>
+        <section aria-label="Sala">
+          <div id="room-bar">
+            <span id="room-label" role="status"></span>
+            <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
+          </div>
+        </section>
+        <section aria-label="Som do jogo">
+          <h3>Som do jogo</h3>
+          <label for="music-volume">Música</label>
+          <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
+          <label for="effects-volume">Efeitos e passos</label>
+          <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
+          <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
+        </section>
+        <section aria-label="Microfone">
+          <h3>Microfone</h3>
+          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
+          <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
+          <p id="voice-status" role="status"></p>
+        </section>
+      </dialog>
+      <div id="asset-loading" hidden>
+        <div class="hud-panel lobby-card">
+          <div class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></div>
+          <p id="asset-loading-status" role="status">Carregando o Congresso…</p>
+          <progress id="asset-loading-progress" max="1" value="0" aria-label="Progresso do carregamento"></progress>
+          <button id="asset-loading-back" class="hud-button hud-button--secondary" type="button" hidden>Voltar</button>
+        </div>
+      </div>
+      <div id="floor-plan" hidden></div>
       <div id="phone-mail" class="phone-app-content"></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
       <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title">
@@ -308,6 +312,16 @@
         <form method="dialog"><button class="hud-button">Continuar</button></form>
       </dialog>
       <dialog id="session-finale" aria-labelledby="session-finale-title"></dialog>
+      <dialog id="legislative-brief" class="hud-panel" aria-labelledby="legislative-brief-title"></dialog>
+      <dialog id="election-poll-dialog" class="hud-panel" aria-labelledby="election-poll-title">
+        <header><h2 id="election-poll-title">Pesquisa eleitoral</h2>
+          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar pesquisa eleitoral">×</button></form>
+        </header>
+        <div id="election-cycle"></div>
+        <section aria-label="Pesquisa eleitoral">
+          <div id="election-polls"></div>
+        </section>
+      </dialog>
       <dialog id="campaign-dialog" class="hud-panel" aria-labelledby="campaign-title"></dialog>
       <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
         <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
@@ -323,7 +337,7 @@
       </dialog>
       <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title"></dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
-        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="0" hidden>✕ <kbd>0</kbd></button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="Escape" hidden>✕</button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
