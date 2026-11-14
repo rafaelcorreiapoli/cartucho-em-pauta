@@ -32,11 +32,28 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export const bills = [
-  {name:'Auxílio Churrasco', description:'Cria um auxílio para financiar churrascos.', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8},fireSafety:false},
-  {name:'Wi-Fi na Praça', description:'Instala internet pública gratuita em praças.', yes:{stability:16,budget:-22}, no:{stability:-18,budget:6},fireSafety:false},
-  {name:'Teto do Cafezinho', description:'Limita os gastos com cafezinho e aumenta o intervalo entre incêndios.', yes:{stability:-12,budget:23}, no:{stability:12,budget:-19},fireSafety:true},
-] as const;
+type Bill = {
+  id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;
+  effect?:{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
+};
+
+export const bills:readonly Bill[] = [
+  {id:'auxilio-churrasco',banner:'banner-auxilio-churrasco.webp',name:'Auxílio Churrasco', description:'Cria um auxílio para financiar churrascos.', yes:{stability:22,budget:-28}, no:{stability:-14,budget:8}},
+  {id:'wifi-na-praca',name:'Wi-Fi na Praça', description:'Instala internet pública gratuita em praças.', yes:{stability:16,budget:-22}, no:{stability:-18,budget:6}},
+  {id:'teto-do-cafezinho',banner:'retrato-cafezinho.webp',name:'Teto do Cafezinho', description:'Limita os gastos com cafezinho e aumenta o intervalo entre incêndios.', yes:{stability:-12,budget:23}, no:{stability:12,budget:-19},effect:{kind:'fire-safety'}},
+  {id:'PROJ-N04',name:'Auxílio Home Office Presencial',banner:'gabinete-armario.webp',
+    description:'Quem veio ao Congresso recebe ajuda de custo por trabalhar de casa.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:1}},
+  {id:'PROJ-N10',name:'Programa Nacional de Extintores',banner:'retrato-kit-profissional.webp',
+    description:'Compra tempo entre incêndios até o fim da partida.',
+    yes:{stability:0,budget:-3},no:{stability:0,budget:0},effect:{kind:'fire-safety'}},
+  {id:'PROJ-N13',name:'PEC da Autopremiação',banner:'retrato-maleta.webp',
+    description:'O Congresso agradece ao Congresso pelos serviços prestados ao Congresso.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:2}},
+  {id:'PROJ-N17',name:'Mutirão de Regularização Patrimonial',banner:'gabinete-cofre.webp',
+    description:'Por 90 segundos, cada entrega à Tesouraria rende até 2 pontos extras de popularidade.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',duration:90_000,bonus:2}},
+];
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];
 

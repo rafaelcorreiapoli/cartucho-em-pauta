@@ -31,6 +31,7 @@ export class PlenaryMatch {
   private readonly agenda = new Set<number>();
   get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
+  private treasuryBonus?:{until:number;amount:number};
   private treasuryReputation = new Map<string,number>();
   private npcVotes = new Map<string,Vote>();
   private npcIds = new Set<string>();
@@ -176,6 +177,7 @@ export class PlenaryMatch {
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now);
+    this.treasuryBonus = undefined;
     this.complaints.reset();
     this.filedDocuments.clear();
     let campaignReady = false;
@@ -307,7 +309,8 @@ export class PlenaryMatch {
         const credited = this.treasuryReputation.get(id) ?? 0;
         const gain = Math.max(0,Math.min(rules.treasuryReputationCap-credited,Math.floor(amount)));
         this.treasuryReputation.set(id,credited+gain);
-        this.economy.changePopularity(id,gain);
+        const bonus = this.treasuryBonus && now<this.treasuryBonus.until ? this.treasuryBonus.amount : 0;
+        this.economy.changePopularity(id,gain+Math.min(gain,bonus));
         return true;
       },
       lootWallet:(id,fraction)=>this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
@@ -511,12 +514,21 @@ export class PlenaryMatch {
   }
 
   private impact(vote:Vote, misleading = false): Impact {
-    const impact = bills[this.projectIndex][vote];
+    const bill = bills[this.projectIndex];
+    const impact = bill[vote];
+    if (vote==='yes' && bill.effect?.kind==='allowance') {
+      return {...impact,budget:-this.allowancePerMandate(bill.effect.perMandate)*this.votingPlayers()};
+    }
     if (vote==='no') return {...impact,budget:Math.min(0,impact.budget)};
     return {
       stability:impact.stability-(this.amended ? 8 : 0),
       budget:Math.min(0,impact.budget+(this.amended ? 16 : 0)+(misleading ? 24 : 0)),
     };
+  }
+
+  private allowancePerMandate(requested:number) {
+    const electorate = this.votingPlayers();
+    return electorate ? Math.min(requested,Math.floor(Math.round(this.budget*10)/electorate)/10) : 0;
   }
 
   complaintView(id:string) {
@@ -541,7 +553,11 @@ export class PlenaryMatch {
 
   actOnFire(player:Player, action:FireAction, site:number, now:number) {
     if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site,action)) return;
-    if (action==='extinguish') return this.fire.extinguish(site) ? 'Incêndio apagado.' : undefined;
+    if (action==='extinguish') {
+      if (!this.fire.extinguish(site)) return;
+      this.publishActivity(player,'fire-extinguished',now);
+      return 'Incêndio apagado.';
+    }
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
   }
 
@@ -618,11 +634,17 @@ export class PlenaryMatch {
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
     const balance = this.budget+Math.min(0,impact.budget);
-    if (passed && bills[this.projectIndex].fireSafety) this.fire.increaseSafety();
+    const effect = passed ? bills[this.projectIndex].effect : undefined;
+    if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
+    if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
+    const payout = effect?.kind==='allowance' ? this.allowancePerMandate(effect.perMandate) : 0;
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
     this.budget = Math.max(0,Math.round(balance*10)/10);
-    this.cash.projects += previous.budget-this.budget;
+    if (payout) {
+      for (const id of this.electorate) if (this.canVote(id)) this.economy.earn(id,payout);
+      this.cash.salaries += previous.budget-this.budget;
+    } else this.cash.projects += previous.budget-this.budget;
     const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
     const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
     this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
@@ -649,6 +671,7 @@ export class PlenaryMatch {
 
   private finish(winner:Role | undefined, reason:string) {
     this.phase = 'finished';
+    this.treasuryBonus = undefined;
     this.cassationAt = undefined;
     this.cassationOpen = false;
     this.winner = winner;

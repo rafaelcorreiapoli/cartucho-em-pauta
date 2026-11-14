@@ -8,7 +8,7 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, CASSATION_NOTICE_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -482,7 +482,7 @@ test('failed mail payments and expired cash preserve the ledger across retries',
 test('the agenda counts queued ballots even at the end of the standard project rotation',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  Reflect.set(match,'round',2);
+  Reflect.set(match,'round',bills.length-1);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   const {agenda} = Reflect.get(economy,'accounts').get(host.id);
   const prepareDraw = () => {
@@ -586,7 +586,7 @@ test('an approved project with a fractional deficit applies the same rounded pen
 test('the last ballot does not redraw a voting mission from an already credited vote',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  Reflect.set(match,'round',2);
+  Reflect.set(match,'round',bills.length-1);
   const economy:PoliticalEconomy = Reflect.get(match,'economy');
   const {agenda} = Reflect.get(economy,'accounts').get(host.id);
   Reflect.set(agenda,'missions',[]);
@@ -657,4 +657,66 @@ test('project votes expose portraits and current choices without roles; abstenti
   const result = match.view(traitor.id,ids,NEGOTIATION_MS+BALLOT_MS);
   expect(result.outcome).toMatchObject({yes:1,no:0,passed:false});
   expect(result.billVoters).toBeUndefined();
+});
+
+test.each(['PROJ-N04','PROJ-N13'])('%s pays only on approval with a balanced public ledger',id=>{
+  const project = bills.findIndex(bill=>bill.id===id);
+  for (const approved of [false,true]) {
+    const match = new PlenaryMatch(1);
+    match.start(host.id,people,0,()=>.9);
+    const view = (now:number)=>match.view(host.id,ids,now);
+    const before = view(0);
+    match.gameplayWorld(people,1,()=>false).publish({
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    });
+    match.advance(NEGOTIATION_MS);
+    const cost = -view(NEGOTIATION_MS).yes.budget;
+    expect(cost).toBe(id==='PROJ-N04' ? 3 : 6);
+    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+    match.advance(NEGOTIATION_MS+BALLOT_MS);
+    const after = view(NEGOTIATION_MS+BALLOT_MS);
+    expect(after.outcome?.passed).toBe(approved);
+    expect(after.budget).toBe(before.budget-(approved ? cost : 0));
+    expect(after.politics!.wallet).toBe(before.politics!.wallet+(approved ? cost/3 : 0));
+    expect(match.economySummary(0).discrepancy).toBe(0);
+  }
+});
+
+test('treasury bonus applies to real deposits and expires at the published deadline',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N17');
+  match.gameplayWorld(people,1,()=>false).publish({
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+  });
+  match.advance(NEGOTIATION_MS);
+  for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+  const passedAt = NEGOTIATION_MS+BALLOT_MS;
+  match.advance(passedAt);
+  const popularity = (id:string,at:number)=>match.view(id,ids,at).politics!.popularity;
+  const before = popularity(host.id,passedAt);
+  match.gameplayWorld(people,passedAt+1,()=>false).deposit!(host.id,1);
+  expect(popularity(host.id,passedAt+1)).toBe(before+2);
+  const expired = passedAt+90_000;
+  const honestBefore = popularity(honest.id,expired);
+  match.gameplayWorld(people,expired,()=>false).deposit!(honest.id,1);
+  expect(popularity(honest.id,expired)).toBe(honestBefore+1);
+});
+
+test('the extintor bill delays the next ignition only when approved and funded',()=>{
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N10');
+  for (const approved of [true,false]) {
+    const match = new PlenaryMatch(1);
+    match.start(host.id,people,0,()=>.9);
+    match.gameplayWorld(people,1,()=>false).publish({
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    });
+    match.advance(NEGOTIATION_MS);
+    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+    const fire = Reflect.get(match,'fire');
+    const next = Reflect.get(fire,'next');
+    match.advance(NEGOTIATION_MS+BALLOT_MS);
+    expect(Reflect.get(fire,'next')).toBe(next+(approved ? fireRules.safetyDelay : 0));
+    expect(match.economySummary(0)).toMatchObject({projects:approved ? 3 : 0,discrepancy:0});
+  }
 });

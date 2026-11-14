@@ -1,5 +1,5 @@
 import {useState,type CSSProperties} from 'react';
-import {agendaProject,BALLOT_MS,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {agendaProject,bills,BALLOT_MS,type BillVote,type Impact,type PlenaryView} from '../plenary';
 import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
 
@@ -8,7 +8,7 @@ const choices = [
   {vote:'no',label:'NÃO',action:'Votar NÃO',key:'R',symbol:'×'},
   {vote:'abstain',label:'Abstenções',action:'Abster-se',key:'N',symbol:'○'},
 ] as const;
-const banners = ['banner-auxilio-churrasco.webp',null,'retrato-cafezinho.webp'];
+
 
 function Glyph({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
@@ -21,11 +21,12 @@ function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
   return <b className="project-impact-value" data-effect={effect}>{sign}{amount}</b>;
 }
 
-export function ProjectImpact({impact,approved}:{impact:Impact;approved:boolean}) {
+export function ProjectImpact({impact,approved,detail}:{impact:Impact;approved:boolean;detail?:string}) {
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><Glyph name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
     <span><Glyph name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
     <span><Glyph name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
+    {detail && <small>{detail}</small>}
   </div>;
 }
 
@@ -36,8 +37,8 @@ type Props = Pick<PlenaryView,'round'|'project'|'remaining'|'yes'|'no'|'billQuor
 export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
-  const index = project ?? round%banners.length;
-  const art = banners[index];
+  const index = project ?? round%bills.length;
+  const art = bill.banner;
   const groups = [
     {key:'yes',label:'SIM',badge:'✓'},
     {key:'pending',label:'Pendentes',badge:'?'},
@@ -58,7 +59,9 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
           {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <Glyph name="wifi"/>}
         </div>
         <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2><p>{bill.description}</p></div>
-        <ProjectImpact impact={yes} approved/>
+        <ProjectImpact impact={yes} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
+          bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
+          bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
         <ProjectImpact impact={no} approved={false}/>
       </header>
       <div className="project-ballot-timer">

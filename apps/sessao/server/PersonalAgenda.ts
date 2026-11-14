@@ -1,3 +1,6 @@
+import { internalMailRules } from '../src/internal-mail';
+import { firstAidKit } from '../src/medical';
+import { inPlenary } from '../src/map';
 import { shop } from '../src/installations';
 import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
@@ -14,6 +17,18 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
+  provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
+    (event.photo.ground.some(item=>item.kind==='document') || event.photo.people.some(person=>person.exposed?.some(item=>item.kind==='document'))),
+  cafeEstrategico:(event:GameplayEvent) => event.type==='used' && event.kind==='coffee' && event.place==='Cafezinho',
+  contasTesouraria:(event:GameplayEvent) => event.type==='delivered' && event.kind==='briefcase' && event.place==='treasury',
+  registroHistorico:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie && inPlenary(event.position),
+  jornalismo:(event:GameplayEvent) => event.type==='photo-published' && !!event.photo && event.place==='internal-mail',
+  apagarIncendio:(event:GameplayEvent) => event.type==='fire-extinguished',
+  primeirosSocorros:(event:GameplayEvent) => event.type==='used' && event.kind==='firstAidKit',
+  socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-parliamentarian-'),
+  fiscalCafe:(event:GameplayEvent) => event.type==='used' && event.kind==='coffee',
+  almocoPlenario:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza' && inPlenary(event.position),
   emenda:(event:GameplayEvent) => event.type==='amendment-filed',
   cafe:(event:GameplayEvent) => event.type==='coffee-drunk',
   leitura:(event:GameplayEvent) => event.type==='bill-studied',
@@ -46,15 +61,15 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  articulacao:3, escandalo:3, entrega:4, assinar:2,
+  socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
-const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe']);
+const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   equipamento:equipment.binoculars.price,
   comprarLagosta:foods.lobster.price,
@@ -64,7 +79,7 @@ const purchaseRequirements:Partial<Record<Agenda,number>> = {
 };
 
 const consumableRequirements = {
-  pizza:'pizza',pizzaAlvo:'pizza',fatias:'pizza',pizzada:'pizza',lagosta:'lobster',bombom:'chocolates',
+  cafeEstrategico:'coffee',fiscalCafe:'coffee',primeirosSocorros:'firstAidKit',almocoPlenario:'pizza',pizza:'pizza',pizzaAlvo:'pizza',fatias:'pizza',pizzada:'pizza',lagosta:'lobster',bombom:'chocolates',
 } as const satisfies Partial<Record<Agenda,ObjectKind>>;
 
 const decorationRequirements = {
@@ -72,7 +87,7 @@ const decorationRequirements = {
   reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
-const ownOfficeMissions = new Set<Agenda>(['embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['trabalhoRemoto','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -201,7 +216,7 @@ export class PersonalAgenda {
 
   acceptGameplayEvent(event:GameplayEvent) {
     const key = event.type==='photo-published' && event.photo
-      ? JSON.stringify([event.type,event.photo.id])
+      ? JSON.stringify([event.type,event.photo.id,event.place])
       : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
     if (this.seenEvents.has(key)) return false;
     this.seenEvents.add(key);
@@ -239,6 +254,12 @@ export class PersonalAgenda {
         const facts = this.factsByMission.get(mission.id);
         if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
       }
+      if (kind==='contribuinte' && event.type==='delivered' && event.place==='treasury') gains[kind] = event.amount ?? 0;
+      if (kind==='reservaCofre' && event.type==='money-pocketed') gains[kind] = event.amount ?? 0;
+      if (kind==='turismo' && event.type==='photo' && event.photo && event.photo.location!=='Corredor') {
+        gains[kind] = this.countFacts(mission,[{value:event.photo.location}]);
+      }
+      if (kind==='trabalhoRemoto' && event.type==='room-time' && event.target===event.actor) gains[kind] = event.duration ?? 0;
       if (kind==='passeio' && event.type==='room-entered' && event.place) {
         gains.passeio = this.countFacts(mission,[{value:event.place}]);
       }
@@ -270,7 +291,7 @@ export class PersonalAgenda {
     }
     if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
-    if (food && metrics.wallet<foods[food].price && !metrics.owns?.(food)) {
+    if (food && metrics.wallet<(food==='firstAidKit' ? firstAidKit.price : foods[food].price) && !metrics.owns?.(food)) {
       const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;
       if (kind==='pizza') {
         if (!pizza?.canTakeSlice) return false;
@@ -283,6 +304,8 @@ export class PersonalAgenda {
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
+    if (kind==='jornalismo' && metrics.wallet<internalMailRules.fee) return false;
+    if (kind==='cuecaDinheiro' && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
         metrics.wallet<shop.portrait && !metrics.owns?.('portrait')) return false;
