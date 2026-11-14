@@ -451,7 +451,7 @@ button.equipped-gear-tile { cursor: pointer; }
 #world #nearby-items .item-caption { font-size: 10px; }
 #world #nearby-items .station-key { min-width: 17px; min-height: 17px; font-size: 10px; }
 #world #hud-notices {
-  position: fixed;
+  position: absolute;
   inset: calc(var(--strip-height) + 10px) max(12px, env(safe-area-inset-right)) auto auto;
   transform: none;
   width: min(280px,35vw);

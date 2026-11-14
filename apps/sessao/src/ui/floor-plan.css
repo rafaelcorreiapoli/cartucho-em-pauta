@@ -37,3 +37,28 @@
   font: 700 clamp(5px, 1.35cqw, 16px)/1.05 system-ui, sans-serif;
 }
 .floor-plan-wall { background: #8cae99; }
+
+.floor-plan-marker {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -100%);
+  border: 2px solid #ff9382;
+  border-radius: 50%;
+  background: #9e2d29;
+  box-shadow: 0 2px 8px #090605b3;
+  pointer-events: none;
+}
+.floor-plan-marker::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #ff9382;
+}
+.floor-plan-marker .portrait {
+  display: block;
+  --portrait-size: clamp(22px, 4cqw, 42px);
+  border-radius: inherit;
+}

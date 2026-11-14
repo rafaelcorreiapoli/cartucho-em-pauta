@@ -11,7 +11,6 @@ export function mountNotices(host:HTMLElement) {
     root.render(notices.map(({id,title,text,critical})=><div className="hud-module hud-notice" data-critical={critical} key={id}>
       <strong>{title}</strong><span>{text}</span>
     </div>));
-    if (!notices.length) host.hidePopover();
   }
 
   function remove(id:number) {
@@ -32,12 +31,9 @@ export function mountNotices(host:HTMLElement) {
       const id = ++sequence;
       notices.push({id,title,text,critical,timer:window.setTimeout(()=>remove(id),critical ? 7000 : 4500)});
       render();
-      if (host.matches(':popover-open') && document.querySelector('dialog:modal')) host.hidePopover();
-      if (!host.matches(':popover-open')) host.showPopover();
     },
     destroy() {
       for (const notice of notices) clearTimeout(notice.timer);
-      host.hidePopover();
       root.unmount();
     },
   };
