@@ -118,7 +118,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const equipmentControls = {
     xray:{key:'X',action:'scan-xray'},
     binoculars:{key:'B',action:'use-binoculars'},
-    megaphone:{key:'G',action:'toggle-megaphone'},
+    megaphone:{key:'H',action:'toggle-megaphone'},
     voiceModulator:{key:'U',action:'toggle-modulator'},
   } as const;
   const weaponControl = {key:'Space',action:'attack'} as const;
