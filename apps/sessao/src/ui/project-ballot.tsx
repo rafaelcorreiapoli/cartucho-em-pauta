@@ -72,6 +72,7 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
       </div>
       <div className="project-ballot-summary">
         {choices.map(({vote:choice,label})=><span key={choice} data-choice={choice}>{label} <strong>{count(choice)}</strong></span>)}
+        <span data-choice="pending">Pendentes <strong>{count(undefined)}</strong></span>
         <span>Total <strong>{billVoters.length}</strong></span><span>{billQuorum} para aprovar</span>
       </div>
       <footer className="project-ballot-footer">
