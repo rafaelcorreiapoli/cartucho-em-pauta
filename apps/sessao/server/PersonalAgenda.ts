@@ -175,7 +175,9 @@ export class PersonalAgenda {
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
     // Isolation is temporary. Keep collective missions already in progress.
     const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='jogarOculto';
-    const humans = usesAvailablePlayers ? this.availableTargets?.size ?? this.playerCount : this.playerCount;
+    const humans = usesAvailablePlayers
+      ? this.availableTargets ? 1+this.targets.filter(person=>this.availableTargets?.has(person.id)).length : this.playerCount
+      : this.playerCount;
     if (kind==='assinaturas') {
       const available = this.availableTargets;
       const colleagues = drawing && available
@@ -257,7 +259,10 @@ export class PersonalAgenda {
       const requiredPayers = kind==='articulacao' ? missionTargets.articulacao! : 1;
       if (metrics.canReceivePayments?.(requiredPayers)===false) return false;
     }
-    if ((kind==='pagamento' || kind==='dinheiroAlvo') && metrics.canPay?.()===false) return false;
+    if (kind==='pagamento' || kind==='dinheiroAlvo') {
+      if (metrics.canPay?.()===false) return false;
+      if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
+    }
     if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
     if (kind==='votoNpc') {
       if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;
