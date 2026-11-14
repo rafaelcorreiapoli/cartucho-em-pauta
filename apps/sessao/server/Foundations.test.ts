@@ -142,12 +142,10 @@ test('equipping changes custody, binocular range and voice battery without stack
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;
   game.act(alice,{kind:'equip',item:modulator.id},world);
   game.act(alice,{kind:'toggle-modulator'},world);
-  expect(game.view(alice,world).modulator).toEqual({active:true,battery:25,recharge:0});
-  world.now += 25_000;
-  expect(game.view(alice,world).modulator).toEqual({active:false,battery:0,recharge:45});
-  expect(game.view(alice,world).equipmentCooldowns).toEqual({[modulator.id]:45});
-  expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
-  world.now += 45_000;
+  world.now += 70_000;
+  expect(game.view(alice,world).modulator).toEqual({active:true});
+  expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador desligado.');
+  expect(game.view(alice,world).modulator).toEqual({active:false});
   expect(game.act(alice,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
   game.act(alice,{kind:'unequip',item:modulator.id},world);
   expect(game.view(alice,world).modulator).toBeUndefined();
@@ -349,7 +347,7 @@ test('dialogue eligibility is private and checked again when the player chooses'
   expect(game.view(alice,world).dialogue?.text).toContain('Presidência');
 });
 
-test('modulator recharge follows the item when another player collects and equips it', () => {
+test('modulator switches off when another player collects and equips it', () => {
   const {alice,bob,game,world,buyGear} = setup();
   buyGear(alice,'voiceModulator');
   const {id} = game.view(alice,world).inventory[0];
@@ -359,8 +357,7 @@ test('modulator recharge follows the item when another player collects and equip
   game.act(alice,{kind:'drop',item:id},world);
   game.act(bob,{kind:'collect',item:id},world);
   game.act(bob,{kind:'equip',item:id},world);
-  expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador recarregando.');
-  world.now += 45_000;
+  expect(game.view(bob,world).modulator).toEqual({active:false});
   expect(game.act(bob,{kind:'toggle-modulator'},world)).toBe('Modulador ligado.');
 });
 
@@ -684,4 +681,17 @@ test('direct shop equips into free slots and swaps only the confirmed accessory'
   expect(view().inventory.map(item=>item.kind)).toEqual(['binoculars']);
   expect(view().equipped?.map(item=>item.kind)).toEqual(['vest','megaphone']);
   expect(balance.get(alice.id)).toBe(21);
+});
+
+test('plenary voting allows weapon hits against players in the chamber',()=>{
+  const {alice,bob,game,world,buyGear,events} = setup();
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  Object.assign(alice,{x:470,y:665,direction:1});
+  Object.assign(bob,{x:484,y:665});
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,false,true);
+  expect(events.filter(event=>event.type==='hit').map(event=>event.target)).toEqual([bob.id]);
+  expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
 });

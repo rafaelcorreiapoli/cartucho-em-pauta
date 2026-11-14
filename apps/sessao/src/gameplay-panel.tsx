@@ -348,9 +348,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                 onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
                   state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
             {gear.kind==='voiceModulator' && state.modulator &&
-              <button type="button" className="hud-button hud-button--secondary" disabled={state.modulator.recharge>0}
-                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? `Desligar · ${state.modulator.battery}s` :
-                  state.modulator.recharge ? `Recarga · ${state.modulator.recharge}s` : 'Ligar modulador'}</button>}
+              <button type="button" className="hud-button hud-button--secondary"
+                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? 'Desligar modulador' : 'Ligar modulador'}</button>}
           </>}
         </li>)}
       </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>));
@@ -554,6 +553,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
+  dialog.addEventListener('cancel',event=>{
+    if (dialog.dataset.mode!=='phone' || !app) return;
+    event.preventDefault();
+    selectApp();
+  });
   phoneButton.onclick = () => { app = undefined; open(); };
   element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);

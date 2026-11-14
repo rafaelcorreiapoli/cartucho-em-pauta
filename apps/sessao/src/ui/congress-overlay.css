@@ -808,13 +808,13 @@
 }
 
 /* Keep the vote and institutional stability visible while the player is in the chamber. */
-#session[data-phase="ballot"][data-in-plenary="true"] :is(
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(
   .character-dock, #agenda-dock, .deck-tools, .election-and-incidents,
   #context-hud, #connection-latency, #electoral-notice-mount
 ) { display: none; }
 
 @media (max-width: 760px) {
-  #session[data-phase="ballot"][data-in-plenary="true"] #congress-dock {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
     grid-column: 1 / -1;
     justify-self: center;
   }
@@ -834,7 +834,7 @@
   #session :is(.character-dock, .election-and-incidents) { --hud-slide: 0 -24px; }
   #session :is(#agenda-dock, .deck-tools, #context-hud, #legislative-dock) { --hud-slide: 0 24px; }
 
-  #session[data-phase="ballot"][data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
   #session:not([data-in-plenary="true"]) #legislative-dock,
   #session[data-phase="negotiation"] #legislative-dock {
     translate: var(--hud-slide);
@@ -854,7 +854,7 @@
   inset-block-start: anchor(--active-incidents bottom, 190px);
   margin-block-start: 8px;
 }
-#session[data-phase="ballot"][data-in-plenary="true"] #world #hud-notices {
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #world #hud-notices {
   inset-block-start: 88px;
   margin-block-start: 0;
 }
@@ -926,3 +926,31 @@
 #election-poll-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 #election-poll-dialog h2 { margin: 0; }
 #election-polls ol { padding: 0; list-style: none; }
+
+.plenary-countdown[data-kind="cassation"] {
+  color: #ffb4a4;
+  border-color: #ed8275;
+  background: #2e1718ee;
+  box-shadow: 0 0 12px #ed746558;
+  animation-name: cassation-countdown-glow;
+}
+.plenary-countdown[data-kind="cassation"] strong { color: inherit; }
+@keyframes cassation-countdown-glow { to { box-shadow: 0 0 20px #ed7465a0; } }
+
+.cassation-ballot { width: 100%; display: grid; gap: .65rem; justify-items: start; }
+.cassation-ballot p { margin: 0; }
+.cassation-candidates { width: 100%; display: grid; grid-template-columns: repeat(auto-fit,minmax(82px,1fr)); gap: .42rem; }
+.cassation-candidates button { display: grid; place-items: center; position: relative; gap: .2rem; min-width: 0; padding: .35rem; }
+.cassation-candidates button > span:last-of-type { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cassation-candidates kbd { position: absolute; inset: .2rem .3rem auto auto; }
+.cassation-ballot button[aria-pressed="true"] { border-color: #f89a8b; background-color: #67362d; }
+#session[data-phase="hearing"]:has(.cassation-ballot) .deck-project-links { display: none; }
+
+#plenary-settings { display: none; }
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #plenary-settings {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  inset: var(--hud-edge) var(--hud-edge) auto auto;
+  pointer-events: auto;
+}

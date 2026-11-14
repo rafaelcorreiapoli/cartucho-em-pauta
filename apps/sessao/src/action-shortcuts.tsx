@@ -127,13 +127,20 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
     }
     if (event.shiftKey || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase()==='i' ? 'p' : event.key.toLowerCase();
+    const cassation = /^[0-9]$/.test(key) ? root.querySelector<HTMLButtonElement>(`.cassation-ballot button[aria-keyshortcuts="${key}"]`) : null;
+    if (cassation && available(cassation)) {
+      event.preventDefault();
+      cassation.click();
+      map.focus({preventScroll:true});
+      return;
+    }
     const control = key==='y' || key==='r'
       ? root.querySelector<HTMLElement>(key==='y' ? '[data-vote="yes"]' : '[data-vote="no"]')
       : controls.find(([shortcut])=>shortcut===key)?.[1] ??
         (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
     if (!control) return;
     const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle' || control===settingsButton;
-    if (viaApp ? control.matches(':disabled,[hidden]') || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
+    if (viaApp ? control.matches(':disabled') || control.hidden && control!==settingsButton || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
     event.preventDefault();
     control.click();
     if (!modal()) map.focus({preventScroll:true});

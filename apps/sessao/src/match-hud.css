@@ -1174,3 +1174,19 @@ button.item-tile:active { transform: translateY(3px); }
 @keyframes candy-swap { from { transform: translate(0,0); } }
 @keyframes candy-burst { from { opacity: 1; transform: scale(.9); } to { opacity: 0; transform: scale(1.7); } }
 @keyframes reel-spin { to { transform: translateY(-324px); } }
+
+#gameplay-dialog[data-mode="phone"] #phone-back {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #202124;
+  color: #f4f5f7;
+}
+#gameplay-dialog[data-mode="phone"] #phone-back[hidden] { display: none; }
+.phone-pix { display: flex; flex-direction: column; min-height: 100%; gap: .85rem; }
+.phone-pix footer { display: grid; gap: .75rem; margin-top: auto; padding-block: .75rem .25rem; border-top: 1px solid #ffffff20; }
+.phone-pix footer .hud-button { min-height: 45px; border-radius: 12px; }

@@ -43,7 +43,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, inspect:(id:number)=>void, openStash:()=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, inspect:(id:number)=>void, openStash:()=>void, loading:(progress:number)=>void) {
   const campaignControl = document.querySelector<HTMLButtonElement>('#election-actions')!;
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
@@ -129,7 +129,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
 
+    private assetsFailed = false;
+
     preload() {
+      this.load.on('progress',(value:number)=>loading(value*.99));
+      this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
+      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp'];
+      for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
+      for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
+
       this.load.image('cash-briefcase',import.meta.env.BASE_URL+'assets/maleta-social.png');
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
@@ -155,6 +163,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
+      if (this.assetsFailed) return;
       this.cameras.main.setVisible(!inLobby);
       for (let character=0;character<NAMES.length;character++) {
         const {sheet,frame} = characterArt(character);
@@ -249,6 +258,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           nextStep = -Infinity;
         }
       });
+      loading(1);
     }
     localSprite() { return this.views.get(ownId)?.sprite; }
     playerHead() {
@@ -377,7 +387,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
 
     update(time: number, delta: number) {
-      if (inLobby) return;
+      if (this.assetsFailed || inLobby) return;
       if (local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;

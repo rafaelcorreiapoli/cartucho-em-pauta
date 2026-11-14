@@ -23,8 +23,6 @@ export const concealment = {duration:45_000,price:2} as const;
 export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as const;
 
 export const binoculars = {duration:10_000,cooldown:30_000,multiplier:1.65} as const;
-export const voiceBattery = 25_000;
-export const voiceRecharge = 45_000;
 
 export const megaphone = {duration:15_000,cooldown:45_000,volume:.85} as const;
 

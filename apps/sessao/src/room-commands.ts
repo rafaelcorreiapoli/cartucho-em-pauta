@@ -23,6 +23,7 @@ type RoomActions = {
   'plenary-action':{action:Action};
   'bill-intent':{vote:Vote|'clear'};
   'bill-vote':{vote:Vote};
+  'cassation-vote':{candidate:string|null};
 };
 
 export function createRoomCommandSender(send:(channel:keyof RoomActions,command:RoomActions[keyof RoomActions] & {token:number})=>void) {

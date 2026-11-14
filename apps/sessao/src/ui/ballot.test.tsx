@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Ballot} from './ballot';
+import {Ballot,CassationBallot} from './ballot';
 
 const state = {eligible:true,mandate:true,voted:2,electorate:5,quorum:3,cast:()=>{}};
 
@@ -16,4 +16,14 @@ test('the hearing ballot disables voting for a suspended player',()=>{
   expect(html).toContain('Você está afastado da votação.');
   expect(html).toContain('Não afastar');
   expect(html.match(/disabled=""/g)).toHaveLength(2);
+});
+
+test('cassation shows other candidates and the private skip selection',()=>{
+  const html = renderToStaticMarkup(<CassationBallot ownId="self" cast={()=>{}} state={{
+    candidates:[{id:'self',name:'Meu nick',character:0},{id:'other',name:'Outro nick',character:1}],
+    eligible:true,voted:1,electorate:2,quorum:2,choice:null,
+  }}/>);
+  expect(html).not.toContain('Meu nick');
+  expect(html).toContain('Outro nick');
+  expect(html).toContain('aria-keyshortcuts="0" aria-pressed="true">Pular voto');
 });

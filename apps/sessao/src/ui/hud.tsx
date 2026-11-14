@@ -34,7 +34,7 @@ function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudM
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   const remaining = useSyncExternalStore(state.subscribe,state.get);
   if (remaining===undefined) return null;
-  return <div className="plenary-countdown"><Icon name="clock"/>Votação começa em <strong>{remaining} s</strong></div>;
+  return <div className="plenary-countdown" data-kind={remaining.kind}><Icon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
 export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {

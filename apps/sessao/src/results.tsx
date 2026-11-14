@@ -76,18 +76,22 @@ export function mountResults() {
       const electionChanged = election && election.cycle!==previous?.election?.result?.cycle;
       const project = view.outcome;
       const projectChanged = project && project.round!==previous?.outcome?.round;
+      const cassation = previous?.cassation && !view.cassation && view.cassationResult;
       const finished = view.phase==='finished' && previous?.phase!=='finished';
       if (finished) {
         for (const overlay of document.querySelectorAll<HTMLDialogElement>('dialog:modal')) overlay.close();
         flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
         finale.showModal();
+      } else if (cassation) {
+        flushSync(()=>root.render(<section><h3>Resultado da cassação</h3><p>{cassation.text}</p></section>));
+        if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
         flushSync(()=>root.render(<ElectionResult result={election}/>));
         document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
         document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
         if (!dialog.open) dialog.showModal();
       }
-      return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged ? 'election' : undefined;
+      return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged || cassation ? 'election' : undefined;
     },
     destroy() { dialog.close(); finale.close(); root.unmount(); finaleRoot.unmount(); },
   };

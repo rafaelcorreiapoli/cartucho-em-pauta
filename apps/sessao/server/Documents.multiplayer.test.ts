@@ -258,6 +258,29 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2290});
     await wait(()=>feedback.get(firefighter.sessionId)==='Incêndio apagado.');
     await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
+
+    economy.changePopularity(alice.sessionId,40);
+    move(alice,stations.panel);
+    alice.send('politics',{kind:'call-cassation',token:2300});
+    await wait(()=>views.get(bia.sessionId)?.cassationIn===30);
+    Reflect.set(match,'cassationAt',room.clock.currentTime);
+    await wait(()=>views.get(bia.sessionId)?.cassation && controls.get(bia.sessionId)?.plenary);
+    const candidates = views.get(bia.sessionId)!.cassation!.candidates;
+    expect(candidates).toHaveLength(3);
+    expect(candidates.every(candidate=>!('role' in candidate))).toBe(true);
+    infiltrator.send('cassation-vote',{candidate:infiltrator.sessionId,token:2330});
+    await Bun.sleep(300);
+    expect(views.get(infiltrator.sessionId)?.cassation?.voted).toBe(0);
+    const voters = rooms.filter(peer=>peer!==infiltrator);
+    for (const peer of voters) peer.send('cassation-vote',{candidate:infiltrator.sessionId,token:2370});
+    await wait(()=>views.get(infiltrator.sessionId)?.cassation?.voted===2);
+    expect(views.get(infiltrator.sessionId)?.cassation?.choice).toBeUndefined();
+    expect(views.get(voters[0].sessionId)?.cassation?.choice).toBe(infiltrator.sessionId);
+    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(voters[0].sessionId)?.phase==='finished');
+    expect(views.get(voters[0].sessionId)?.winner).toBe('Parlamentar');
+    expect(views.get(voters[0].sessionId)?.cassationResult?.text).toContain('perdeu o mandato');
+
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);

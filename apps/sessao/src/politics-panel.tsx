@@ -99,7 +99,9 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
     el('campaign').hidden = !exploring || !at('press');
     el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
-    el('hearing-form').hidden = !exploring || !at('panel') || !politics.canCallHearing;
+    const canSummon = exploring && at('panel') && politics.canCallHearing;
+    el('hearing-form').hidden = !canSummon;
+    el('call-cassation').hidden = !canSummon;
     el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
     el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
@@ -116,6 +118,11 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   el<HTMLFormElement>('hearing-form').onsubmit = event => {
     event.preventDefault();
     if (nominee.value) send({kind:'hearing',target:nominee.value});
+  };
+  el<HTMLButtonElement>('call-cassation').onclick = () => {
+    send({kind:'call-cassation'});
+    institutional.open = false;
+    focusMap();
   };
   el<HTMLButtonElement>('campaign').onclick = () => send({kind:'campaign'});
   el<HTMLButtonElement>('share').onclick = () => {

@@ -297,7 +297,8 @@ export class SessionRoom extends Room {
       const action = readGameplayAction(raw.action);
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
-          !canUseGameplayAction(action,this.match.phase==='negotiation')) return;
+          (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
+          !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
       const text = this.gameplay.act(player,action,this.gameplayWorld());
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
@@ -343,6 +344,14 @@ export class SessionRoom extends Room {
         this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
       }
     });
+    this.onMessage('cassation-vote',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('candidate' in raw) ||
+          (raw.candidate!==null && typeof raw.candidate!=='string') || !this.consumeRoomCommand(client.sessionId,raw)) return;
+      const player = this.players.get(client.sessionId);
+      if (player?.plenary && inPlenary(player.player)) {
+        this.match.castCassation(client.sessionId,raw.candidate,this.clock.currentTime);
+      }
+    });
     this.onMessage('bill-vote',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
       const {vote} = raw;
@@ -385,10 +394,11 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state => state.player);
       const now = this.clock.currentTime;
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
+      const wasVoting = this.match.allowsPlenaryCombat;
       this.match.advance(now);
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
-      this.gameplay.tick(world,this.match.phase==='negotiation');
+      this.gameplay.tick(world,this.match.phase==='negotiation',wasVoting && this.match.allowsPlenaryCombat);
       const paused = this.npcTalk.tick(world,this.match.phase==='negotiation');
       this.parliamentarians.tick(now,STEP_MS/1000,paused,this.match.phase==='negotiation');
       if (this.match.phase==='ballot' && this.match.projectRound!==previousProject) {

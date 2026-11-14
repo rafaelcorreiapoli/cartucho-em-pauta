@@ -12,7 +12,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
+  BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
   type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
@@ -135,6 +135,11 @@ export class PlenaryMatch {
   private popularity = (id:string) => this.economy.popularity(id);
   private readonly filedDocuments = new Set<number>();
   private hearingTarget?: string;
+  private cassationAt?:number;
+  private cassationOpen = false;
+  private readonly cassationVotes = new Map<string,string|null>();
+  private readonly expelled = new Set<string>();
+  private cassationResult?:{text:string};
   private readonly hearingImmunity = new Map<string,number>();
   private hearingResult?: string;
   private interruptedTime = 0;
@@ -148,6 +153,8 @@ export class PlenaryMatch {
   private winner?: Role;
   private finalRoster:SessionParticipant[] = [];
   private reason?: string;
+
+  get allowsPlenaryCombat() { return this.phase==='ballot' || this.cassationOpen; }
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
@@ -180,6 +187,10 @@ export class PlenaryMatch {
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
     this.hearingImmunity.clear();
     this.hearingTarget = this.hearingResult = undefined;
+    this.cassationAt = this.cassationResult = undefined;
+    this.cassationOpen = false;
+    this.cassationVotes.clear();
+    this.expelled.clear();
     this.stability = stabilityRules.initial;
     this.budget = rules.startingBudget;
     this.round = 0;
@@ -215,6 +226,7 @@ export class PlenaryMatch {
     this.disconnected.delete(id);
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
+    this.cassationVotes.delete(id);
     this.voteIntents.delete(id);
     this.election.leave(id,now);
     this.refreshAgendaEligibility();
@@ -323,10 +335,10 @@ export class PlenaryMatch {
     return this.phase==='negotiation' && now<this.ends && this.electorate.has(id) && this.economy.allocate(id,request);
   }
 
-  isolated(id:string) { return this.running && this.economy.suspended(id); }
+  isolated(id:string) { return this.running && (this.expelled.has(id) || this.economy.suspended(id)); }
 
   canHandleObjects(id:string, now:number) {
-    return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+    return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
   }
 
   declareVote(id:string,vote:Vote|null,now:number) {
@@ -336,13 +348,51 @@ export class PlenaryMatch {
   }
 
   vote(id:string, vote:Vote, now:number) {
-    if ((this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    if (this.cassationOpen || (this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
     const previous = this.votes.get(id);
     this.votes.set(id,vote);
     if (this.phase!=='ballot') return;
     const firstSupport = vote==='yes' && !this.agendaYesVotes.has(id);
     if (firstSupport) this.agendaYesVotes.add(id);
     if (previous===undefined || firstSupport) this.economy.recordVote(id,previous===undefined,firstSupport);
+  }
+
+  private canVoteInCassation(id:string) {
+    return this.canVote(id) && !this.disconnected.has(id);
+  }
+
+  castCassation(id:string, candidate:string|null, now:number) {
+    if (!this.cassationOpen || now>=this.ends || !this.canVoteInCassation(id) ||
+        (candidate!==null && (candidate===id || !this.canVoteInCassation(candidate)))) return;
+    this.cassationVotes.set(id,candidate);
+  }
+
+  private resolveCassation(now:number) {
+    const electorate = [...this.electorate].filter(id=>this.canVoteInCassation(id));
+    const tally = new Map<string,number>();
+    for (const id of electorate) {
+      const target = this.cassationVotes.get(id);
+      if (target && electorate.includes(target)) tally.set(target,(tally.get(target) ?? 0)+1);
+    }
+    const majority = Math.floor(electorate.length/2)+1;
+    const result = [...tally].find(([,votes])=>votes>=majority);
+    this.cassationOpen = false;
+    this.cassationVotes.clear();
+    this.phase = 'negotiation';
+    this.ends = now+this.interruptedTime;
+    if (!result) {
+      this.cassationResult = {text:'Ninguém foi cassado. Nenhum suspeito recebeu a maioria dos votos.'};
+      return;
+    }
+    const [target,votes] = result;
+    this.expelled.add(target);
+    this.election.leave(target,now);
+    this.voteIntents.delete(target);
+    this.refreshAgendaEligibility();
+    this.cassationResult = {text:`${this.economy.name(target)} perdeu o mandato com ${votes} votos.`};
+    if (this.infiltrators.size && [...this.infiltrators].every(id=>!this.election.office(id))) {
+      this.finish('Parlamentar','Todos os infiltrados foram eliminados.');
+    }
   }
 
   private canVote(id:string) { return this.electorate.has(id) && !!this.election.office(id) && !this.economy.suspended(id); }
@@ -405,8 +455,14 @@ export class PlenaryMatch {
         if (published) this.election.scandal(published.from);
         break;
       }
+      case 'call-cassation':
+        if (!this.canVoteInCassation(id) || !this.economy.canCall(id) || this.cassationAt!==undefined ||
+            this.votingPlayers()<2 || !this.at(player,'panel')) break;
+        this.cassationAt = now+CASSATION_NOTICE_MS;
+        this.ends = Math.max(this.ends,this.cassationAt);
+        break;
       case 'hearing':
-        if (!this.canVote(id) || !this.economy.canCall(id) || !this.canVote(action.target) ||
+        if (this.cassationAt!==undefined || !this.canVote(id) || !this.economy.canCall(id) || !this.canVote(action.target) ||
             (this.hearingImmunity.get(action.target) ?? 0)>now || id===action.target || !this.at(player,'panel')) break;
         this.hearingTarget = action.target;
         this.interruptedTime = this.ends-now;
@@ -503,11 +559,24 @@ export class PlenaryMatch {
       this.finish(this.stability>0 ? 'Parlamentar' : 'Infiltrado','O tempo da sessão terminou.');
       return;
     }
-    if (this.phase==='negotiation' && now<this.ends) {
+    if (this.phase==='negotiation' && now<this.ends && this.cassationAt===undefined) {
       this.renew(now);
       if (!this.running) return;
     }
+    if (this.cassationAt!==undefined && now>=this.cassationAt) {
+      this.cassationAt = undefined;
+      this.cassationOpen = true;
+      this.interruptedTime = Math.max(0,this.ends-now);
+      this.ends = now+HEARING_MS;
+      this.economy.cancelOffers();
+      this.phase = 'hearing';
+      return;
+    }
     if (now<this.ends) return;
+    if (this.cassationOpen) {
+      this.resolveCassation(now);
+      return;
+    }
     if (this.phase==='hearing') {
       const target = this.hearingTarget!;
       const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
@@ -579,13 +648,22 @@ export class PlenaryMatch {
 
   private finish(winner:Role | undefined, reason:string) {
     this.phase = 'finished';
+    this.cassationAt = undefined;
+    this.cassationOpen = false;
     this.winner = winner;
     this.reason = reason;
   }
 
   view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
+    const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
+      this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
     return {
+      cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
+      cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
+        quorum:Math.floor(candidates.length/2)+1,voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
+        choice:this.cassationVotes.get(id)},
+      cassationResult:this.cassationResult,
       phase:this.phase,round:this.round,project:this.projectIndex,queuedProjects:[...this.agenda],remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
@@ -595,7 +673,7 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,

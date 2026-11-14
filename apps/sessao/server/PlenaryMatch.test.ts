@@ -8,7 +8,7 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, CASSATION_NOTICE_MS, NEGOTIATION_MS, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -619,4 +619,24 @@ test('legislative brief activities require their respective stations and the neg
   }
   match.advance(NEGOTIATION_MS);
   expect(match.roomActivity(at(host,'secretary'),'secretary',NEGOTIATION_MS+1)).toBeUndefined();
+});
+
+test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  match.politics(at(host,'press'),{kind:'campaign'},people,20);
+  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const open = 50+CASSATION_NOTICE_MS;
+  const view = (now:number)=>match.view(host.id,ids,now);
+  expect(view(50).cassationIn).toBe(30);
+  match.advance(open);
+  expect(view(open).cassation?.quorum).toBe(2);
+  expect(match.allowsPlenaryCombat).toBe(true);
+  match.castCassation(host.id,honest.id,open);
+  match.castCassation(honest.id,traitor.id,open);
+  match.castCassation(traitor.id,null,open);
+  expect(view(open).cassation?.voted).toBe(3);
+  match.advance(open+HEARING_MS);
+  expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:175,
+    cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });

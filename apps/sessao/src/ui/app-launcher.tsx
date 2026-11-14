@@ -70,7 +70,7 @@ export function mountAppLauncher() {
       const status:AppStatus = {};
       for (const {id,button} of controls) {
         const badge = id!=='voice-toggle' && id!=='open-settings' ? button.querySelector('span:not([hidden]):not(.sr-only)')?.textContent?.trim() : undefined;
-        status[id] = {hidden:button.hidden,badge};
+        status[id] = {hidden:id!=='open-settings' && button.hidden,badge};
       }
       const key = JSON.stringify(status);
       if (key===previous) return;

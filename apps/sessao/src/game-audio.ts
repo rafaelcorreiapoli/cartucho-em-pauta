@@ -77,6 +77,7 @@ export class GameAudio {
       } catch {}
     })).then(() => {});
     this.startMusic();
+    return this.loading;
   }
 
   setBallotMusic(voting:boolean) {

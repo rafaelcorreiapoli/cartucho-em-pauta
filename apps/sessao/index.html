@@ -21,14 +21,8 @@
   </svg>
   <main>
     <section id="landing">
-      <div class="landing-title">
-        <p class="kicker">Cartuchão apresenta</p>
-        <h1>Infiltrados<br>no Congresso</h1>
-        <p>Três projetos em pauta. Um infiltrado no Congresso. Com quem você fecha o próximo voto?</p>
-      </div>
-      <div class="hud-panel entrance">
-        <p class="kicker">1 a 6 jogadores</p>
-        <h2 class="hud-title">Entre no Congresso</h2>
+      <div class="hud-panel entrance lobby-card">
+        <h1 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h1>
         <form id="lobby">
           <label class="nick-field">Seu nick <input id="nick" maxlength="20" autocomplete="nickname" placeholder="Como vão chamar você?" required></label>
           <button class="hud-button" id="create" type="button">Criar sala</button>
@@ -117,10 +111,15 @@
           <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
       </div>
-      <section id="plenary" class="hud-panel" aria-label="Sessão legislativa">
+      <section id="plenary" class="hud-panel lobby-card" aria-label="Sessão legislativa">
         <div id="room-setup">
           <h2 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h2>
           <p>Escolha seu personagem</p>
+          <div class="lobby-invite">
+            <label>Link da sala <input id="lobby-invite-url" readonly></label>
+            <button id="lobby-copy-invite" class="hud-button hud-button--secondary" type="button">Copiar link</button>
+            <button id="lobby-settings" class="hud-icon-button" type="button" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
+          </div>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
         <div class="lobby-options">
@@ -181,6 +180,9 @@
         </header>
         <div id="agenda-dock"></div>
         <footer id="command-deck" aria-label="Painel de partida">
+          <button id="plenary-settings" class="hud-icon-button" type="button" aria-label="Configurações" title="Configurações (K)">
+            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg>
+          </button>
           <section id="legislative-dock" aria-label="Situação legislativa">
             <div id="project-outcome-brief" role="status" hidden></div>
             <div id="proposal">
@@ -221,8 +223,9 @@
                         <button class="hud-button" id="grant" type="submit">Aplicar verba de R$ 40 mil</button>
                       </form>
                       <button class="hud-button hud-button--secondary" id="campaign" type="button" hidden>Fazer campanha · R$ 20 mil</button>
+                      <button class="hud-button" id="call-cassation" type="button" hidden>Convocar cassação</button>
                       <form id="hearing-form" hidden>
-                        <div class="section-label">Convocar afastamento</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
+                        <div class="section-label">Afastamento temporário</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
                         <button class="hud-button" id="hearing-confirm" type="submit">Convocar votação</button>
                       </form>
                     </div>
@@ -263,10 +266,8 @@
       </div>
       <div id="voice-lobby">
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
-          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
           <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
-          <button class="hud-icon-button" id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
-          <span id="voice-status" role="status"></span>
+          <button class="hud-icon-button" hidden id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
         </aside>
       </div>
       <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title">
@@ -276,7 +277,6 @@
         <section aria-label="Sala">
           <div id="room-bar">
             <span id="room-label" role="status"></span>
-            <button id="invite" class="hud-button hud-button--secondary" type="button">Convidar</button>
             <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
           </div>
         </section>
@@ -288,8 +288,21 @@
           <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
           <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
         </section>
-        <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
+        <section aria-label="Microfone">
+          <h3>Microfone</h3>
+          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
+          <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
+          <p id="voice-status" role="status"></p>
+        </section>
       </dialog>
+      <div id="asset-loading" hidden>
+        <div class="hud-panel lobby-card">
+          <div class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></div>
+          <p id="asset-loading-status" role="status">Carregando o Congresso…</p>
+          <progress id="asset-loading-progress" max="1" value="0" aria-label="Progresso do carregamento"></progress>
+          <button id="asset-loading-back" class="hud-button hud-button--secondary" type="button" hidden>Voltar</button>
+        </div>
+      </div>
       <div id="floor-plan" hidden></div>
       <div id="phone-mail" class="phone-app-content"></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
@@ -324,7 +337,7 @@
       </dialog>
       <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title"></dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
-        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="0" hidden>✕ <kbd>0</kbd></button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="Escape" hidden>✕</button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
         <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
