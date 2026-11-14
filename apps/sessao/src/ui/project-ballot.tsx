@@ -8,7 +8,7 @@ const choices = [
   {vote:'no',label:'NÃO',action:'Votar NÃO',key:'R',symbol:'×'},
   {vote:'abstain',label:'Abstenções',action:'Abster-se',key:'N',symbol:'○'},
 ] as const;
-const banners = ['retrato-picanha.webp',null,'retrato-cafezinho.webp'];
+const banners = ['banner-auxilio-churrasco.webp',null,'retrato-cafezinho.webp'];
 
 function Glyph({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
@@ -48,7 +48,7 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <header className="project-ballot-banner" data-project={index}>
         <div className="project-ballot-art" aria-hidden="true">
-          {art ? <img src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <Glyph name="wifi"/>}
+          {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <Glyph name="wifi"/>}
         </div>
         <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2><p>{bill.description}</p></div>
         <ProjectImpact impact={yes} approved/>
@@ -62,11 +62,11 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
       </div>
       <div className="project-ballot-score">
         {groups.map(({key,label,badge})=><section key={key} data-choice={key} aria-label={label} className="project-ballot-group">
-          <div className="project-ballot-count"><span>{label}</span><strong>{count(key==='pending'?undefined:key)}</strong></div>
+          <div className="project-ballot-count"><span>{label}</span><strong>{key!=='pending' && <i aria-hidden="true">{badge}</i>}{count(key==='pending'?undefined:key)}</strong></div>
           <ul>{billVoters.filter(person=>key==='pending' ? !person.vote || person.vote==='abstain' : person.vote===key).map(person=>
             <li key={person.id} data-vote-state={person.vote ?? 'pending'} title={person.name}>
-              <PhoneContactFace person={person}/><span title={person.name}>{person.name}</span>
-              <b aria-label={person.vote==='abstain'?'Abstenção':label}>{person.vote==='abstain'?'○':badge}</b>
+              <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
+              <b aria-label={person.vote==='abstain'?'Abstenção':label}>{person.vote==='abstain'?'○':key==='pending'?badge:label}</b>
             </li>)}</ul>
         </section>)}
       </div>
