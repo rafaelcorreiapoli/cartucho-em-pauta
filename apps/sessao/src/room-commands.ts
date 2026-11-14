@@ -3,7 +3,7 @@ import type { FireAction } from './fire';
 import type { RoomActivity } from './room-activities';
 import type { ElectionAction } from './elections';
 import type { PoliticsAction } from './politics';
-import type { Action, Vote } from './plenary';
+import type { Action, BillVote, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
 type RoomActions = {
@@ -22,7 +22,7 @@ type RoomActions = {
   'complaint-submit':{id:number;photo?:number};
   'plenary-action':{action:Action};
   'bill-intent':{vote:Vote|'clear'};
-  'bill-vote':{vote:Vote};
+  'bill-vote':{vote:BillVote};
   'cassation-vote':{candidate:string|null};
 };
 

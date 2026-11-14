@@ -640,3 +640,21 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:175,
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
+
+test('project votes expose portraits and current choices without roles; abstentions do not count as no',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'yes',NEGOTIATION_MS+1);
+  match.vote(honest.id,'abstain',NEGOTIATION_MS+2);
+  const view = match.view(traitor.id,ids,NEGOTIATION_MS+3);
+  expect(view.billVoters).toEqual([
+    {id:host.id,name:host.nick,character:host.character,vote:'yes'},
+    {id:honest.id,name:honest.nick,character:honest.character,vote:'abstain'},
+    {id:traitor.id,name:traitor.nick,character:traitor.character,vote:undefined},
+  ]);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const result = match.view(traitor.id,ids,NEGOTIATION_MS+BALLOT_MS);
+  expect(result.outcome).toMatchObject({yes:1,no:0,passed:false});
+  expect(result.billVoters).toBeUndefined();
+});

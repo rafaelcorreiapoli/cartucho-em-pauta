@@ -13,7 +13,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -126,7 +126,7 @@ export class PlenaryMatch {
   private budget:number = rules.startingBudget;
   private initialPlayers = 0;
   private electorate = new Set<string>();
-  private votes = new Map<string,Vote>();
+  private votes = new Map<string,BillVote>();
   private voteIntents = new Map<string,Vote>();
   private infiltrators = new Set<string>();
   private economy = new PoliticalEconomy();
@@ -347,8 +347,9 @@ export class PlenaryMatch {
     else this.voteIntents.set(id,vote);
   }
 
-  vote(id:string, vote:Vote, now:number) {
+  vote(id:string, vote:BillVote, now:number) {
     if (this.cassationOpen || (this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    if (this.phase==='hearing' && vote==='abstain') return;
     const previous = this.votes.get(id);
     this.votes.set(id,vote);
     if (this.phase!=='ballot') return;
@@ -607,7 +608,7 @@ export class PlenaryMatch {
       return;
     }
     let yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-    let no = this.votes.size-yes;
+    let no = [...this.votes.values()].filter(vote => vote==='no').length;
     const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
     if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
       if (preference>0) yes++;
@@ -654,6 +655,11 @@ export class PlenaryMatch {
     this.reason = reason;
   }
 
+  private hearingVote(id:string) {
+    const vote = this.votes.get(id);
+    return vote==='abstain' ? undefined : vote;
+  }
+
   view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
@@ -667,6 +673,8 @@ export class PlenaryMatch {
       phase:this.phase,round:this.round,project:this.projectIndex,queuedProjects:[...this.agenda],remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
+      billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>
+        this.canVote(id) ? [{id,name,character,vote:this.votes.get(id)}] : []) : undefined,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
       amended:this.amended,canFraud:role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
@@ -678,7 +686,7 @@ export class PlenaryMatch {
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
+      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,

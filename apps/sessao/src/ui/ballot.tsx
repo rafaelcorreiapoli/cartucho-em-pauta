@@ -1,7 +1,8 @@
 import type {CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 import {PhoneContactFace} from './phone-call';
-import type {CassationView,PlenaryView,Vote} from '../plenary';
+import {ProjectBallot} from './project-ballot';
+import type {BillVote,CassationView,PlenaryView,Vote} from '../plenary';
 
 type BallotState = {
   hearing:boolean; eligible:boolean; mandate:boolean; voted:number;
@@ -48,11 +49,22 @@ export function CassationBallot({state,ownId,cast}:{
   </section>;
 }
 
-export function mountBallot(host:HTMLElement,cast:(vote:Vote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
+export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
   const root = createRoot(host);
   let key = '';
   return {
     render(view:PlenaryView) {
+      if (view.phase==='ballot') {
+        host.hidden = false;
+        const {round,project,remaining,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
+        const state = {round,project,remaining,yes,no,billQuorum,billVoters,vote,eligible:!!mandate && !politics?.suspended};
+        const next = JSON.stringify(state);
+        if (next!==key) {
+          key = next;
+          root.render(<ProjectBallot key={round} {...state} ownId={ownId} cast={cast}/>);
+        }
+        return;
+      }
       const cassation = view.cassation;
       if (cassation) {
         host.hidden = false;
@@ -64,13 +76,13 @@ export function mountBallot(host:HTMLElement,cast:(vote:Vote)=>void,castCassatio
         return;
       }
       const hearing = view.hearing;
-      const visible = view.phase==='ballot' || !!hearing;
+      const visible = !!hearing;
       host.hidden = !visible;
       const state:BallotState|null = visible ? {
         hearing:!!hearing, eligible:!!view.mandate && !view.politics?.suspended, mandate:!!view.mandate,
         voted:view.voted, electorate:view.electorate,
         quorum:hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum,
-        vote:hearing?.vote ?? view.vote,
+        vote:hearing?.vote,
       } : null;
       const next = JSON.stringify(state);
       if (next===key) return;

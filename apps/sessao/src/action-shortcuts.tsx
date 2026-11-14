@@ -134,8 +134,8 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
       map.focus({preventScroll:true});
       return;
     }
-    const control = key==='y' || key==='r'
-      ? root.querySelector<HTMLElement>(key==='y' ? '[data-vote="yes"]' : '[data-vote="no"]')
+    const control = key==='y' || key==='r' || key==='n' && root.querySelector('[data-vote="abstain"]')
+      ? root.querySelector<HTMLElement>(`[data-vote="${key==='y' ? 'yes' : key==='r' ? 'no' : 'abstain'}"]`)
       : controls.find(([shortcut])=>shortcut===key)?.[1] ??
         (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
     if (!control) return;

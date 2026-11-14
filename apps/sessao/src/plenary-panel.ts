@@ -52,14 +52,14 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   return {
     render(next:PlenaryView) {
 
-      if (next.phase!==view?.phase && (next.phase==='ballot' || next.phase==='hearing')) {
+      if (next.phase==='ballot' || next.phase!==view?.phase && next.phase==='hearing') {
         brief.clear();
       }
       const matchId = next.politics?.progression.matchId;
       const sameMatch = matchId===view?.politics?.progression.matchId;
       const historyChanged = !sameMatch || next.outcomes.length!==view?.outcomes.length;
       if (!sameMatch || !next.outcomes.length) brief.clear();
-      if (sameMatch && view && next.outcomes.length>view.outcomes.length && next.outcome && (next.phase==='negotiation' || next.phase==='finished' || next.phase==='ballot')) {
+      if (sameMatch && view && next.outcomes.length>view.outcomes.length && next.outcome && (next.phase==='negotiation' || next.phase==='finished')) {
         brief.render(next.outcome);
       }
       view = next;
@@ -82,10 +82,10 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
-      if (running) heading.render(view);
+      if (running && phase!=='ballot') heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       details.render(view);
-      impact.render(view.yes,view.no,running && !hearing && !view.cassation);
+      impact.render(view.yes,view.no,running && phase!=='ballot' && !hearing && !view.cassation);
       ballot.render(view);
       actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
       actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
