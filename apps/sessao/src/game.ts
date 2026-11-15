@@ -1,7 +1,8 @@
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
-import {fireSites} from './fire';
+import {fireOptions,fireSites,type FireAction} from './fire';
+import {createRoomFires} from './fire-effects';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
@@ -43,7 +44,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, inspect:(id:number)=>void, openStash:()=>void, loading:(progress:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:{kind:FireAction;site:number})=>void, inspect:(id:number)=>void, openStash:()=>void, loading:(progress:number)=>void) {
   const campaignControl = document.querySelector<HTMLButtonElement>('#election-actions')!;
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
@@ -123,8 +124,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private fogTexture!:Phaser.Textures.CanvasTexture;
     private fogInSession = false;
     private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
-    private flames?:Phaser.GameObjects.Text;
-    private extinguishers:Phaser.GameObjects.Text[] = [];
+    private roomFires!:ReturnType<typeof createRoomFires>;
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -202,6 +202,27 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
+      const hasExtinguisher = ()=>!!plenaryView?.gameplay?.inventory.some(item=>item.kind==='extinguisher');
+      for (const {extinguisher:{x,y,station}} of fireSites) {
+        const rack = this.add.image(x,y,'item-extinguisher').setDisplaySize(20,20).setOrigin(.5,.95).setDepth(y);
+        this.registerInteraction(rack,()=>{
+          const player = local.state?.player;
+          return !!player && !player.knockedOut && !player.carrying && !hasExtinguisher() &&
+            !!plenaryView?.gameplay?.locations.includes(station);
+        },()=>interact({kind:'supply',place:station}));
+      }
+      this.roomFires = createRoomFires(this);
+      const extinguishOption = (site:number)=>{
+        const player = local.state?.player;
+        if (!player || plenaryView?.fire?.site!==site) return;
+        return fireOptions(player,plenaryView.fire,undefined,hasExtinguisher());
+      };
+      this.roomFires.forEach(({flame},site)=>{
+        this.registerInteraction(flame,()=>!!extinguishOption(site),()=>{
+          const option = extinguishOption(site);
+          if (option) actOnFire(option);
+        });
+      });
       this.officeDoors = this.add.graphics().setDepth(2);
       this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
@@ -408,17 +429,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           restMovement(local.state.player);
         }
       }
-      if (!this.extinguishers.length) {
-        this.extinguishers = fireSites.map(({extinguisher:{x,y}})=>this.add.text(x,y,'🧯',{fontSize:'16px',resolution:3})
-          .setOrigin(.5,.8).setDepth(y));
-      }
-      const fire = plenaryView?.fire;
-      if (fire) {
-        const {x,y} = fireSites[fire.site];
-        this.flames ??= this.add.text(x,y,'🔥',{fontSize:'27px',resolution:3}).setOrigin(.5,.8);
-        this.flames.setPosition(x,y).setDepth(y+1).setVisible(!fire.paused)
-          .setScale(1+Math.sin(time/145)*.06);
-      } else this.flames?.setVisible(false);
       this.renderGroundItems();
       this.renderDecorations();
       const officeViews = plenaryView?.gameplay?.offices;
@@ -461,6 +471,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const gap = visionRadius-this.drawnVisionRadius;
       this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
         ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
+      const fire = plenaryView?.fire;
+      this.roomFires.forEach((effect,site)=>{
+        const active = negotiating && fire?.site===site && !fire.paused;
+        const visible = active && !!ownPlayer && localPerception(ownPlayer,fireSites[site],this.drawnVisionRadius).visible;
+        effect.update(time,active,visible,reducedMotion.matches);
+      });
       for (const {sprite,label} of this.npcViews) {
         const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
         sprite.setVisible(visible);

@@ -261,7 +261,7 @@ async function connect(join: () => Promise<Room>) {
     const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
-      sendGameplay,id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),progress=>{
+      sendGameplay,action=>sendCommand('fire-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),progress=>{
         if (room!==joined) return;
         if (progress<0) {
           assetError = true;

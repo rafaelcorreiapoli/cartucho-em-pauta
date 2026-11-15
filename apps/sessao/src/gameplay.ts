@@ -1,3 +1,4 @@
+import { fireSites } from './fire';
 import { firstAidKit } from './medical';
 import { money } from './politics';
 import { reprography } from './room-activities';
@@ -17,6 +18,7 @@ import { spyProducts, type SpyView } from "./surveillance";
 
 export const objects = {
   firstAidKit,
+  extinguisher:{name:'Extintor',portrait:'extintor.webp',description:'Leve até as chamas e interaja com o incêndio para apagá-lo.'},
   forensicKit:{name:'Kit de Perícia',portrait:'retrato-kit-pericia.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
   ...spyProducts,
@@ -150,6 +152,8 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
 }
 
 export const terminals = {
+  extinguisherCoffee:{point:fireSites[0].extinguisher,title:'Extintor',supply:'extinguisher'},
+  extinguisherLibrary:{point:fireSites[1].extinguisher,title:'Extintor',supply:'extinguisher'},
   reprography:{point:reprography,title:reprography.title},
   press:{point:stations.press,title:'Imprensa'},
   coffee:{point:stations.coffee,title:'Cafezinho',supply:'coffee'},

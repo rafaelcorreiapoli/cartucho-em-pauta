@@ -289,7 +289,8 @@ export class SessionRoom extends Room {
       if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
           !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='ignite' && raw.kind!=='extinguish')) return;
       if (!this.consumeRoomCommand(player.id,raw)) return;
-      const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime);
+      const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime,
+        raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'));
       if (result) client.send('gameplay-feedback',result);
     });
     this.onMessage('gameplay',(client, raw:unknown) => {

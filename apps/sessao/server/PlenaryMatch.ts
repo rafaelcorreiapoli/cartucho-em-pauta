@@ -551,10 +551,10 @@ export class PlenaryMatch {
     this.economy.recordOfficialScandal();
   }
 
-  actOnFire(player:Player, action:FireAction, site:number, now:number) {
-    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site,action)) return;
+  actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false) {
+    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site)) return;
     if (action==='extinguish') {
-      if (!this.fire.extinguish(site)) return;
+      if (!hasExtinguisher || !this.fire.extinguish(site)) return;
       this.publishActivity(player,'fire-extinguished',now);
       return 'Incêndio apagado.';
     }

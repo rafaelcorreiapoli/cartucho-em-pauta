@@ -288,7 +288,7 @@ test('only infiltrators can start a fire, and nearby parliamentarians can put it
   match.advance(now+fireRules.tick);
   expect(view(honest,now+fireRules.tick).stability).toBe(48-fireRules.damage);
   expect(match.actOnFire(honest,'extinguish',site,now+fireRules.tick)).toBeUndefined();
-  expect(match.actOnFire({...honest,...fireSites[site].extinguisher},'extinguish',site,now+fireRules.tick)).toBe('Incêndio apagado.');
+  expect(match.actOnFire({...honest,...fireSites[site]},'extinguish',site,now+fireRules.tick,true)).toBe('Incêndio apagado.');
   expect(view(honest,now+fireRules.tick).fire).toBeUndefined();
 });
 
