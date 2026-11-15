@@ -1,3 +1,4 @@
+import { discountedPrice } from '../src/market-catalog';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
 import type { GameplayWorld } from './gameplay-world';
@@ -48,7 +49,7 @@ export class InternalMail {
     const resolved = source ? source.attachment && {attachment:source.attachment,authentic:this.authenticity.get(source.id)} :
       reference===undefined ? undefined : resolve?.(reference);
     if (reference!==undefined && !resolved) return 'Anexo indisponível.';
-    if (!world.spend?.(player.id,internalMailRules.fee)) return 'Saldo insuficiente para publicar.';
+    if (!world.spend?.(player.id,world.policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee)) return 'Saldo insuficiente para publicar.';
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
@@ -56,6 +57,8 @@ export class InternalMail {
     if (expired) this.authenticity.delete(expired.id);
     this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
       ...this.notices].slice(0,internalMailRules.history);
+    if (!source && resolved) world.publish({type:'mail-published',actor:player.id,at:world.now,
+      position:player,item:id,place:resolved.attachment.kind,witnesses:[]});
     if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
       const {photo} = resolved.attachment;
       world.publish({type:'photo-published',actor:player.id,at:world.now,position:{x:player.x,y:player.y},

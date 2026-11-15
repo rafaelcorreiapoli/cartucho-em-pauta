@@ -4,7 +4,7 @@ import { marketProduct } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
-import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
+import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
@@ -106,7 +106,7 @@ export class Gameplay {
   }
 
   private readonly originalDocuments = new Map<number,NonNullable<WorldItem['document']>>();
-  private megaphoneBroadcast?: {owner:string;item:number;until:number};
+  private megaphoneBroadcast?: {owner:string;item:number;until:number;sampledAt:number};
   private megaphoneRecharge = new Map<number,{owner:string;until:number}>();
 
   megaphoneSpeaker() { return this.megaphoneBroadcast?.owner; }
@@ -128,6 +128,12 @@ export class Gameplay {
       if (!exploring || !player || player.knockedOut || player.carried || !world.voice(active.owner) ||
           this.wearing(active.owner,'megaphone')?.id!==active.item || world.now>=active.until) {
         this.stopMegaphone(active.owner,world);
+      } else {
+        const duration = Math.min(100,world.now-active.sampledAt);
+        active.sampledAt = world.now;
+        if (duration>0 && world.hasMission?.(player.id,'discursoMegafone')) {
+          publishGameplay(world,player,'megaphone-time',{duration,witnesses:[]});
+        }
       }
     }
     for (const [item,recharge] of this.megaphoneRecharge) {
@@ -204,6 +210,12 @@ export class Gameplay {
     const served = this.servings.get(pizza.id) ?? new Set<string>();
     return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
   }
+
+  ownsSpyCameras(id:string) { return this.surveillance.countInstalled(id,'spyCamera'); }
+
+  canInstallSpy(id:string,kind:SpyDevice) { return this.surveillance.canInstall(id,kind); }
+
+  hasLuxuryDecoration() { return [...this.installations.values()].some(item=>isOfficeFurniture(item.kind)); }
 
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
 
@@ -478,6 +490,18 @@ export class Gameplay {
       const previous = this.roomSamples.get(player.id);
       this.roomSamples.set(player.id,{room,at:world.now});
       if (!exploring || !previous || world.present?.(player.id)===false || player.knockedOut || player.carried) continue;
+      if (previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
+        publishGameplay(world,player,'room-left',{place:previous.room});
+      }
+      if (previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento' &&
+          (world.hasMission?.(player.id,'reuniaoGabinete') || world.hasMission?.(player.id,'reuniaoPublica'))) {
+        const inOffice = privateOffices.some(office=>office.name===room);
+        const peers = world.players.filter(other=>other.id!==player.id && !other.npc && !other.knockedOut &&
+          world.present?.(other.id)!==false && roomAt(other)===room).length;
+        const type = inOffice && peers>=1 ? 'office-meeting-time' : !inOffice && peers>=3 ? 'public-meeting-time' : undefined;
+        const duration = Math.min(100,world.now-previous.at);
+        if (type && duration>0) publishGameplay(world,player,type,{duration,place:room});
+      }
       if (previous.room!==room && room!=='Corredor') {
         const office = [...this.privateOffices.offices.values()].find(entry=>entry.layout.name===room &&
           world.players.some(other=>other.id===entry.owner));
@@ -599,8 +623,8 @@ export class Gameplay {
         return true;
       },
       feedback:(id:string,message:string)=>world.feedback?.(id,message),
-      event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string)=>
-        publishGameplay(world,player,kind,{place:site,witnesses:[]}),
+      event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string,device?:{kind:SpyDevice;id:number})=>
+        publishGameplay(world,player,kind,{place:site,kind:device?.kind,item:device?.id,witnesses:[]}),
     };
   }
 
@@ -1017,7 +1041,7 @@ export class Gameplay {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,(npc,direct)=>{
-      const product = marketProduct(npcs[npc].catalog,requested);
+      const product = marketProduct(npcs[npc].catalog,requested,world.policies,world.publicBudget);
       if (!product) {
         return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
@@ -1030,7 +1054,10 @@ export class Gameplay {
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
+      const basePrice = marketProduct(npcs[npc].catalog,kind)!.price;
+      const subsidy = Math.round((basePrice-price)*10)/10;
+      const paid = subsidy && world.spendSubsidized ? world.spendSubsidized(id,price,subsidy) : world.spend?.(id,price);
+      if (!paid) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       const inventoryItem = canStackItem(kind) ? this.addToInventory(this.items.get(data.id)!,id).id : data.id;
       if (autoEquip) {
@@ -1154,7 +1181,7 @@ export class Gameplay {
       if (!item || !world.voice(id)) return 'Equipe o Megafone e ative a voz.';
       if (this.megaphoneBroadcast) return 'Canal de Megafone ocupado.';
       if ((this.megaphoneRecharge.get(item.id)?.until ?? 0)>world.now) return 'Megafone em recarga.';
-      this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration};
+      this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration,sampledAt:world.now};
       this.event(world,player,'megaphone-started',item,undefined,{witnesses:[]});
       return 'Megafone ativo.';
     }
@@ -1301,7 +1328,9 @@ export class Gameplay {
         const consumed = this.takeUnits(item,1);
         this.remove(consumed);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
-        this.event(world,player,'used',consumed.data,undefined,{place:roomAt(player)});
+        const consumptionRoom = roomAt(player);
+        const ownOffice = this.privateOffices.ownedBy(id)?.name===consumptionRoom;
+        this.event(world,player,'used',consumed.data,ownOffice ? id : undefined,{place:consumptionRoom});
         return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
         if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';

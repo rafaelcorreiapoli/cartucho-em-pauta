@@ -17,6 +17,8 @@ export class ElectionCycle {
   private result?:Result;
   private previousPoll = new Map<string,number>();
   private nextPoll = 0;
+  private investmentWeight = 1;
+  setCampaignBonus(active:boolean) { this.investmentWeight = active ? 1.5 : 1; }
   private broadcast?:{id:string; until:number};
   private availableAt = 0;
   private notice?:ElectionView['notice'];
@@ -48,6 +50,7 @@ export class ElectionCycle {
 
   get eliminated() { return this.result?.eliminated; }
   office(id:string) { return this.people.get(id)?.office; }
+  timeUntilRenewal(now:number) { return this.cycle<=rules.cycles ? this.due-now : Infinity; }
   open(now:number) { return this.cycle>rules.cycles || now<this.due; }
   speaker(now:number) { return this.broadcast && now<this.broadcast.until ? this.broadcast.id : undefined; }
   private announce(text:string) { this.notice = {seq:++this.seq,text}; }
@@ -62,7 +65,9 @@ export class ElectionCycle {
 
   invest(id:string, amount:number, spend:(amount:number)=>boolean) {
     const person = this.people.get(id);
-    if (person && amount>0 && person.invested+amount<=rules.investmentCap && spend(amount)) person.invested += amount;
+    if (!person || amount<=0 || person.invested+amount>rules.investmentCap || !spend(amount)) return false;
+    person.invested += amount;
+    return true;
   }
 
   canCampaignAction(id:string,kind:'propaganda'|'discurso') {
@@ -131,7 +136,7 @@ export class ElectionCycle {
 
   private strength(person:Candidate, popularity:(id:string)=>number) {
     const support = [...this.people.values()].filter(other => other.support===person.id).length;
-    return Math.max(1,popularity(person.id)+5*Math.sqrt(person.invested)+
+    return Math.max(1,popularity(person.id)+5*this.investmentWeight*Math.sqrt(person.invested)+
       (person.advertised ? 5 : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
       Math.min(12,support*4)-person.scandal);
   }

@@ -1,3 +1,4 @@
+import type {BillPolicies} from './plenary';
 import { concealment, equipment } from './equipment';
 import { foods } from './food';
 import { documentRules } from './internal-mail';
@@ -24,8 +25,15 @@ export const marketKinds = {
   furniture:Object.keys(furniture) as (keyof typeof furniture)[],
 };
 
-export function marketProduct(catalog:Catalog|undefined,kind:unknown) {
+export const discountedPrice = (price:number) => Math.max(.1,Math.round(price*6)/10);
+
+export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:BillPolicies,publicBudget=Infinity) {
   if (!catalog || typeof kind!=='string' || !Object.hasOwn(catalogs[catalog],kind)) return;
   const products:Readonly<Record<string,{price:number}>> = catalogs[catalog];
-  return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods,price:products[kind].price};
+  const price = products[kind].price;
+  const subsidized = catalog==='food' && kind==='coffee' && policies?.coffee ||
+    catalog==='furniture' && policies?.furniture ||
+    catalog==='equipment' && (policies?.equipment && (Object.hasOwn(equipment,kind) || Object.hasOwn(spyProducts,kind)) ||
+      kind==='forensicKit' && policies?.mail);
+  return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods,price:subsidized && Math.round(publicBudget*10)>=Math.round((price-discountedPrice(price))*10) ? discountedPrice(price) : price};
 }

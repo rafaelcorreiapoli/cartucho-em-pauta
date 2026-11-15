@@ -419,6 +419,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
     }
     for (const {button,control,station} of quickActions) {
+      if (control.id==='call-cassation') button.querySelector('span')!.textContent = control.textContent;
       button.hidden = context!==station || control.disabled || !!control.closest('[hidden]') ||
         (control.id==='publish' && !element('evidence').dataset.value);
     }

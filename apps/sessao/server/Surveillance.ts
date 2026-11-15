@@ -7,9 +7,18 @@ type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:num
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>boolean;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
-  event?:(player:Player,kind:'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string)=>void};
+  event?:(player:Player,kind:'spy-viewed'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string,device?:{kind:SpyDevice;id:number})=>void};
 
 export class Surveillance {
+  countInstalled(id:string,kind:SpyDevice) {
+    return [...this.occupied.values()].filter(device=>device.owner===id && device.kind===kind).length;
+  }
+
+  canInstall(id:string,kind:SpyDevice) {
+    return this.countInstalled(id,kind)<spyRules.limit &&
+      hideouts.some(site=>(site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
+  }
+
   private devices = new Map<number,Device>();
   private occupied = new Map<string,Device>();
   private jobs = new Map<string,Job>();
@@ -101,6 +110,7 @@ export class Surveillance {
         this.listening.delete(id);
         this.muted.delete(id);
         selection.set(id,device.id);
+        access.event?.(player,'spy-viewed',device.site.id,device);
       }
       if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
       if (raw.kind==='mute' && this.listening.get(id)===device.id) {
@@ -183,7 +193,7 @@ export class Surveillance {
           active:false,removed:false,alerts:true,until:now,alertAt:now,installedAt:now};
         this.devices.set(channel,installed);
         this.occupied.set(job.site.id,installed);
-        access.event?.(player,'spy-installed',job.site.id);
+        access.event?.(player,'spy-installed',job.site.id,installed);
         access.feedback(id,'Dispositivo instalado.');
       } else {
         access.event?.(player,'spy-install-failed',job.site.id);
@@ -208,7 +218,7 @@ export class Surveillance {
       this.motion.delete(device.id);
       if (this.selected.get(device.owner)===device.id) this.selected.delete(device.owner);
       if (this.listening.get(device.owner)===device.id) this.listening.delete(device.owner);
-      access.event?.(player,'spy-removed',job.site.id);
+      access.event?.(player,'spy-removed',job.site.id,device);
       access.feedback(id,job.kind==='recover' ? 'Dispositivo recuperado.' : 'Dispositivo removido.');
       if (id!==device.owner) access.feedback(device.owner,'Dispositivo desconectado.');
     }

@@ -1,7 +1,7 @@
 import { marketKinds, marketProduct } from './market-catalog';
 import { canReachDownedPlayer } from './interactions';
 import {expect,test} from 'bun:test';
-import {agendaProject,canReachStation,stations,voteIntentSummary} from './plenary';
+import {agendaProject,bills,canReachStation,stations,voteIntentSummary} from './plenary';
 import {canVerifyDocumentAt,consumableAction,objects,readGameplayAction,treasuryDeliveries} from './gameplay';
 
 test('document verification is offered only at the two document counters',()=>{
@@ -16,7 +16,7 @@ test('document verification is offered only at the two document counters',()=>{
 test('the project panel and history resolve the actual ballot project instead of its sequence number',()=>{
   expect(agendaProject({round:0,project:2}).name).toBe('Teto do Cafezinho');
   expect(agendaProject({round:1,project:0}).name).toBe('Auxílio Churrasco');
-  expect(agendaProject({round:8}).name).toBe('Wi-Fi na Praça');
+  expect(agendaProject({round:bills.length+1}).name).toBe('Wi-Fi na Praça');
 });
 
 test('the project HUD labels announced intentions with the player and side',()=>{
@@ -129,4 +129,14 @@ test('lock tool descriptions report the same strength used by the breach rules',
   const tools = Object.values(objects).filter(item=>'attack' in item);
   expect(tools.map(tool=>tool.attack)).toEqual([1,2,3,4,5]);
   for (const tool of tools) expect(tool.description).toBe(`Arrombamento nível ${tool.attack}.`);
+});
+
+test('catalog prices reflect only the applicable public policies',()=>{
+  const policies = {coffee:1,furniture:1,equipment:1,mail:1};
+  expect(marketProduct('food','coffee',policies)?.price).toBe(.3);
+  expect(marketProduct('food','pizza',policies)).toEqual(marketProduct('food','pizza'));
+  expect(marketProduct('furniture','officeTv',policies)!.price).toBeLessThan(marketProduct('furniture','officeTv')!.price);
+  expect(marketProduct('equipment','binoculars',policies)!.price).toBeLessThan(marketProduct('equipment','binoculars')!.price);
+  expect(marketProduct('equipment','forensicKit',policies)!.price).toBeLessThan(marketProduct('equipment','forensicKit')!.price);
+  expect(marketProduct('equipment','firstAidKit',policies)).toEqual(marketProduct('equipment','firstAidKit'));
 });

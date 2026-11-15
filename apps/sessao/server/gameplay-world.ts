@@ -1,9 +1,13 @@
+import type {BillPolicies} from '../src/plenary';
 import type { Agenda, EvidenceKind } from '../src/politics';
 import type { Office } from '../src/elections';
 import type { GameplayEvent } from '../src/gameplay';
 import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
+  policies?:BillPolicies;
+  publicBudget?:number;
+  spendSubsidized?:(id:string,price:number,subsidy:number)=>boolean;
   vision?:(id:string)=>number;
   plenary?:boolean;
   hasMandate?:(id:string)=>boolean;

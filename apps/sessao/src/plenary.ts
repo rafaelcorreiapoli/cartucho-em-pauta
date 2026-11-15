@@ -32,9 +32,14 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
+export type BillPolicy = 'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
+export const hearingPolicyFee = 2;
+export const policyDuration = 120_000;
+export type BillPolicies = Partial<Record<BillPolicy,number>>;
+
 type Bill = {
   id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;
-  effect?:{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
+  effect?:{kind:'policy';policy:BillPolicy;detail:string}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
 };
 
 export const bills:readonly Bill[] = [
@@ -44,7 +49,7 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N04',name:'Auxílio Home Office Presencial',banner:'gabinete-armario.webp',
     description:'Quem veio ao Congresso recebe ajuda de custo por trabalhar de casa.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:1}},
-  {id:'PROJ-N10',name:'Programa Nacional de Extintores',banner:'retrato-kit-profissional.webp',
+  {id:'PROJ-N10',name:'Programa Nacional de Extintores',banner:'extintor.webp',
     description:'Compra tempo entre incêndios até o fim da partida.',
     yes:{stability:0,budget:-3},no:{stability:0,budget:0},effect:{kind:'fire-safety'}},
   {id:'PROJ-N13',name:'PEC da Autopremiação',banner:'retrato-maleta.webp',
@@ -53,6 +58,27 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N17',name:'Mutirão de Regularização Patrimonial',banner:'gabinete-cofre.webp',
     description:'Por 90 segundos, cada entrega à Tesouraria rende até 2 pontos extras de popularidade.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',duration:90_000,bonus:2}},
+  {id:'PROJ-N05',name:'Lei do Cafezinho Ininterrupto',banner:'retrato-cafezinho.webp',
+    description:'O cafezinho ganhou desconto por dois minutos.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:'Café com 40% de desconto na Lanchonete por 120 s, enquanto houver orçamento'}},
+  {id:'PROJ-N06',name:'PEC do Foro Ultra-Privilegiado',banner:'gabinete-cofre.webp',
+    description:'Por dois minutos, convocar afastamento ou cassação custa R$ 20 mil.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'hearing',detail:'Taxa de convocação de R$ 20 mil por 120 s'}},
+  {id:'PROJ-N07',name:'Minha Mansão, Minha Vida',banner:'gabinete-armario.webp',
+    description:'Verba para dar um trato nos gabinetes.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'furniture',detail:'Móveis com 40% de desconto por 120 s, enquanto houver orçamento'}},
+  {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-maleta.webp',
+    description:'Campanhas ganham um empurrão no cálculo da Renovação de Mandato.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Investimento pesa 50% a mais na campanha por 120 s'}},
+  {id:'PROJ-N12',name:'Dia Nacional do Nada',banner:'gabinete-armario.webp',
+    description:'Um pequeno prêmio por um dia de produção legislativa rigorosamente nula.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:.5}},
+  {id:'PROJ-N15',name:'Programa de Inclusão Digital Parlamentar',banner:'retrato-binoculo.webp',
+    description:'Apoio Técnico com desconto nos equipamentos.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'equipment',detail:'Equipamentos e grampos com 40% de desconto por 120 s, enquanto houver orçamento'}},
+  {id:'PROJ-N16',name:'Semana da Transparência',banner:'retrato-kit-pericia.webp',
+    description:'Os custos do Correio Interno e dos kits de perícia caem por dois minutos.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'mail',detail:'Comunicados e kits de perícia com 40% de desconto por 120 s'}},
 ];
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];
@@ -75,7 +101,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   complaints?:ComplaintView; fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
-  yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
+  policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 
 export function voteIntentSummary(intents:readonly VoteIntent[] = []) {

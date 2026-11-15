@@ -2,21 +2,32 @@ import { internalMailRules } from '../src/internal-mail';
 import { firstAidKit } from '../src/medical';
 import { inPlenary } from '../src/map';
 import { shop } from '../src/installations';
+import { spyProducts } from '../src/surveillance';
 import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
-import type { GameplayEvent, ObjectKind } from '../src/gameplay';
+import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
 import { agendaDurationMs, agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaMetrics = Readonly<{wallet:number; popularity:number; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{wallet:number; popularity:number; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  heroiInesperado:(event:GameplayEvent) => event.type==='fire-extinguished' && (event.amount ?? 100)<30,
+  instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
+  instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
+  mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published',
+  retratacaoOficial:(event:GameplayEvent) => event.type==='mail-published' && event.place==='report',
+  fotoOstentacao:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.decorations.some(item=>isOfficeFurniture(item.kind)),
+  fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
+    person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),
+  pixVinte:(event:GameplayEvent) => event.type==='pix-sent' && event.amount===2,
+  campanhaUltimaHora:(event:GameplayEvent) => event.type==='campaign-investment' && (event.duration ?? Infinity)<=60_000,
   cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
   provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
     (event.photo.ground.some(item=>item.kind==='document') || event.photo.people.some(person=>person.exposed?.some(item=>item.kind==='document'))),
@@ -61,16 +72,17 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
+  investimentoPolitico:5,campanhaUltimaHora:1,pixVinte:2,
   equipamento:equipment.binoculars.price,
   comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
@@ -87,7 +99,7 @@ const decorationRequirements = {
   reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
-const ownOfficeMissions = new Set<Agenda>(['trabalhoRemoto','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -95,6 +107,7 @@ export class PersonalAgenda {
   private completed:Mission[] = [];
   private missionDeck:Agenda[];
   private nextMissionId = 0;
+  private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
   private missionPayers = new Set<string>();
   private missionCoffee = new Set<string>();
@@ -116,6 +129,7 @@ export class PersonalAgenda {
     this.progress(metrics,{votacao:Number(first),apoio:Number(firstSupport)});
   }
   private targets:readonly Contact[] = [];
+  private spyAvailability:AgendaMetrics['canInstallSpy'];
   private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
@@ -168,6 +182,7 @@ export class PersonalAgenda {
   updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
     this.targets = targets;
     this.hasOffice = metrics.hasOffice;
+    this.spyAvailability = metrics.canInstallSpy;
     this.availableTargets = availableTargets;
     this.npcCount = npcCount;
     this.playerCount = playerCount;
@@ -176,6 +191,7 @@ export class PersonalAgenda {
     this.missions = this.missions.filter(mission=>{
       if (this.availableInMatch(mission.kind,mission.target-mission.current) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
+      this.callSamples.delete(mission.id);
       return false;
     });
     this.fillMissions(metrics);
@@ -184,7 +200,12 @@ export class PersonalAgenda {
   private availableInMatch(kind:Agenda, remaining:number, metrics?:AgendaMetrics) {
     const drawing = metrics!==undefined;
     if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
+    if (kind==='visitaDoisGabinetes' && this.hasOffice && this.targets.filter(person=>this.hasOffice?.(person.id)).length<2) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
+    if (kind==='instalarGrampo' || kind==='instalarCamera') {
+      const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
+      if (this.spyAvailability?.(device)===false) return false;
+    }
     if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
@@ -205,7 +226,7 @@ export class PersonalAgenda {
       const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
       return !this.cannotVote && this.ballotsLeft-Number(consumed)>=remaining;
     }
-    return !this.cannotVote || !['protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
+    return !this.cannotVote || !['investimentoPolitico','campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
 
   private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
@@ -254,6 +275,41 @@ export class PersonalAgenda {
         const facts = this.factsByMission.get(mission.id);
         if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
       }
+      if (kind==='visitaDoisGabinetes' && event.type==='room-entered' && event.target && event.target!==event.actor ||
+          kind==='doisPix' && event.type==='pix-received' && event.target) {
+        gains[kind] = this.countFacts(mission,[{value:event.target!}]);
+      }
+      if (kind==='presencaPlenario' && event.place==='Plenário') {
+        if (event.type==='room-entered') this.countFacts(mission,[{value:'entrada'}]);
+        if (event.type==='room-left' && this.factsByMission.has(mission.id)) gains[kind] = 1;
+      }
+      if (kind==='tresSelfies' && event.type==='photo' && event.photo?.selfie &&
+          event.photo.location!=='Corredor' && event.photo.location!=='Sala de Isolamento' &&
+          !privateOffices.some(office=>office.name===event.photo!.location)) {
+        gains[kind] = this.countFacts(mission,[{value:event.photo.location}]);
+      }
+      if (kind==='reuniaoGabinete' && event.type==='office-meeting-time' ||
+          kind==='reuniaoPublica' && event.type==='public-meeting-time') gains[kind] = event.duration ?? 0;
+      if (kind==='duasCameras' && event.type==='spy-viewed' && event.kind==='spyCamera' && event.item!==undefined) {
+        gains[kind] = this.countFacts(mission,[{value:String(event.item)}]);
+      }
+      if (kind==='doisMoveis' && event.type==='installed' && event.kind && isOfficeFurniture(event.kind)) {
+        gains[kind] = this.countFacts(mission,[{value:event.kind}]);
+      }
+      if (kind==='bandejaGourmet' && event.type==='used' && event.target===event.actor &&
+          event.kind && Object.hasOwn(foods,event.kind)) gains[kind] = this.countFacts(mission,[{value:event.kind}]);
+      if (kind==='debateTelefonico' && event.type==='call-time' || kind==='discursoMegafone' && event.type==='megaphone-time') {
+        gains[kind] = event.duration ?? 0;
+      }
+      if (kind==='chamadasUrgentes' && event.type==='call-time' && event.target && event.item!==undefined) {
+        const call = `${event.item}:${event.target}`;
+        let samples = this.callSamples.get(mission.id);
+        if (!samples) this.callSamples.set(mission.id,samples=new Map());
+        const elapsed = (samples.get(call) ?? 0)+(event.duration ?? 0);
+        samples.set(call,elapsed);
+        if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
+      }
+      if (kind==='investimentoPolitico' && event.type==='campaign-investment') gains[kind] = event.amount ?? 0;
       if (kind==='contribuinte' && event.type==='delivered' && event.place==='treasury') gains[kind] = event.amount ?? 0;
       if (kind==='reservaCofre' && event.type==='money-pocketed') gains[kind] = event.amount ?? 0;
       if (kind==='turismo' && event.type==='photo' && event.photo && event.photo.location!=='Corredor') {
@@ -304,8 +360,18 @@ export class PersonalAgenda {
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
-    if (kind==='jornalismo' && metrics.wallet<internalMailRules.fee) return false;
+    if ((kind==='jornalismo' || kind==='mensagemComAnexo' || kind==='retratacaoOficial') &&
+        metrics.wallet<internalMailRules.fee) return false;
+    if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
+    if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
+    if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
+    if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if (kind==='cuecaDinheiro' && !metrics.owns?.('mensalUnderwear')) return false;
+    if (kind==='instalarGrampo' || kind==='instalarCamera') {
+      const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
+      if (!metrics.canInstallSpy?.(device) || metrics.wallet<spyProducts[device].price && !metrics.owns?.(device)) return false;
+    }
+    if (kind==='discursoMegafone' && metrics.wallet<equipment.megaphone.price && !metrics.owns?.('megaphone')) return false;
     if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
         metrics.wallet<shop.portrait && !metrics.owns?.('portrait')) return false;
@@ -320,6 +386,9 @@ export class PersonalAgenda {
     if (kind==='televisao' && !canInstallFurniture('officeTv')) return false;
     if (kind==='poltrona' && !canBuyFurniture('officeChair')) return false;
     if (kind==='gabinete' && !furnitureKinds.some(canInstallFurniture)) return false;
+    if (kind==='doisMoveis' && !furnitureKinds.some((item,index)=>canInstallFurniture(item) &&
+        furnitureKinds.slice(index+1).some(other=>canInstallFurniture(other) &&
+          (metrics.owns?.(item) ? 0 : officeGoods[item].price)+(metrics.owns?.(other) ? 0 : officeGoods[other].price)<=metrics.wallet))) return false;
     if (kind==='ostentacao') {
       let totals = [0];
       for (const item of stock) {
@@ -372,6 +441,7 @@ export class PersonalAgenda {
       mission.current = Math.min(current,mission.target);
       if (current>=mission.target) {
         this.factsByMission.delete(mission.id);
+        this.callSamples.delete(mission.id);
         completed.push({...mission});
         if (mission.person) this.visitedTargets.add(mission.kind+':'+mission.person.id);
         const earned = missionReward(mission.kind);
