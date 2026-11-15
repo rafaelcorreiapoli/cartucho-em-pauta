@@ -13,7 +13,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  type Action, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -31,6 +31,7 @@ export class PlenaryMatch {
   private readonly agenda = new Set<number>();
   get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
+  private treasuryBonus?:{until:number;amount:number};
   private treasuryReputation = new Map<string,number>();
   private npcVotes = new Map<string,Vote>();
   private npcIds = new Set<string>();
@@ -126,7 +127,7 @@ export class PlenaryMatch {
   private budget:number = rules.startingBudget;
   private initialPlayers = 0;
   private electorate = new Set<string>();
-  private votes = new Map<string,Vote>();
+  private votes = new Map<string,BillVote>();
   private voteIntents = new Map<string,Vote>();
   private infiltrators = new Set<string>();
   private economy = new PoliticalEconomy();
@@ -176,6 +177,7 @@ export class PlenaryMatch {
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now);
+    this.treasuryBonus = undefined;
     this.complaints.reset();
     this.filedDocuments.clear();
     let campaignReady = false;
@@ -307,7 +309,8 @@ export class PlenaryMatch {
         const credited = this.treasuryReputation.get(id) ?? 0;
         const gain = Math.max(0,Math.min(rules.treasuryReputationCap-credited,Math.floor(amount)));
         this.treasuryReputation.set(id,credited+gain);
-        this.economy.changePopularity(id,gain);
+        const bonus = this.treasuryBonus && now<this.treasuryBonus.until ? this.treasuryBonus.amount : 0;
+        this.economy.changePopularity(id,gain+Math.min(gain,bonus));
         return true;
       },
       lootWallet:(id,fraction)=>this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
@@ -347,8 +350,9 @@ export class PlenaryMatch {
     else this.voteIntents.set(id,vote);
   }
 
-  vote(id:string, vote:Vote, now:number) {
+  vote(id:string, vote:BillVote, now:number) {
     if (this.cassationOpen || (this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    if (this.phase==='hearing' && vote==='abstain') return;
     const previous = this.votes.get(id);
     this.votes.set(id,vote);
     if (this.phase!=='ballot') return;
@@ -510,12 +514,21 @@ export class PlenaryMatch {
   }
 
   private impact(vote:Vote, misleading = false): Impact {
-    const impact = bills[this.projectIndex][vote];
+    const bill = bills[this.projectIndex];
+    const impact = bill[vote];
+    if (vote==='yes' && bill.effect?.kind==='allowance') {
+      return {...impact,budget:-this.allowancePerMandate(bill.effect.perMandate)*this.votingPlayers()};
+    }
     if (vote==='no') return {...impact,budget:Math.min(0,impact.budget)};
     return {
       stability:impact.stability-(this.amended ? 8 : 0),
       budget:Math.min(0,impact.budget+(this.amended ? 16 : 0)+(misleading ? 24 : 0)),
     };
+  }
+
+  private allowancePerMandate(requested:number) {
+    const electorate = this.votingPlayers();
+    return electorate ? Math.min(requested,Math.floor(Math.round(this.budget*10)/electorate)/10) : 0;
   }
 
   complaintView(id:string) {
@@ -540,7 +553,11 @@ export class PlenaryMatch {
 
   actOnFire(player:Player, action:FireAction, site:number, now:number) {
     if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site,action)) return;
-    if (action==='extinguish') return this.fire.extinguish(site) ? 'Incêndio apagado.' : undefined;
+    if (action==='extinguish') {
+      if (!this.fire.extinguish(site)) return;
+      this.publishActivity(player,'fire-extinguished',now);
+      return 'Incêndio apagado.';
+    }
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
   }
 
@@ -607,7 +624,7 @@ export class PlenaryMatch {
       return;
     }
     let yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-    let no = this.votes.size-yes;
+    let no = [...this.votes.values()].filter(vote => vote==='no').length;
     const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
     if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
       if (preference>0) yes++;
@@ -617,11 +634,17 @@ export class PlenaryMatch {
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
     const balance = this.budget+Math.min(0,impact.budget);
-    if (passed && bills[this.projectIndex].fireSafety) this.fire.increaseSafety();
+    const effect = passed ? bills[this.projectIndex].effect : undefined;
+    if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
+    if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
+    const payout = effect?.kind==='allowance' ? this.allowancePerMandate(effect.perMandate) : 0;
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
     this.budget = Math.max(0,Math.round(balance*10)/10);
-    this.cash.projects += previous.budget-this.budget;
+    if (payout) {
+      for (const id of this.electorate) if (this.canVote(id)) this.economy.earn(id,payout);
+      this.cash.salaries += previous.budget-this.budget;
+    } else this.cash.projects += previous.budget-this.budget;
     const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
     const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
     this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
@@ -648,10 +671,16 @@ export class PlenaryMatch {
 
   private finish(winner:Role | undefined, reason:string) {
     this.phase = 'finished';
+    this.treasuryBonus = undefined;
     this.cassationAt = undefined;
     this.cassationOpen = false;
     this.winner = winner;
     this.reason = reason;
+  }
+
+  private hearingVote(id:string) {
+    const vote = this.votes.get(id);
+    return vote==='abstain' ? undefined : vote;
   }
 
   view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
@@ -667,6 +696,8 @@ export class PlenaryMatch {
       phase:this.phase,round:this.round,project:this.projectIndex,queuedProjects:[...this.agenda],remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
+      billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>
+        this.canVote(id) ? [{id,name,character,vote:this.votes.get(id)}] : []) : undefined,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
       amended:this.amended,canFraud:role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
@@ -678,7 +709,7 @@ export class PlenaryMatch {
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.votes.get(id)} : undefined,
+      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,

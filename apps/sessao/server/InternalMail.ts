@@ -59,7 +59,7 @@ export class InternalMail {
     if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
       const {photo} = resolved.attachment;
       world.publish({type:'photo-published',actor:player.id,at:world.now,position:{x:player.x,y:player.y},
-        item:photo.id,photo,witnesses:[]});
+        item:photo.id,photo,place:'internal-mail',witnesses:[]});
     }
   }
 }

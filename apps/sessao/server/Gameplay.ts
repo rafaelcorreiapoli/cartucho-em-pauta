@@ -349,7 +349,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -475,9 +475,12 @@ export class Gameplay {
           world.players.some(other=>other.id===entry.owner));
         const carryingBriefcase = office?.owner===player.id && this.inventory(player.id).some(item=>item.data.kind==='briefcase');
         publishGameplay(world,player,'room-entered',{place:room,target:office?.owner,kind:carryingBriefcase ? 'briefcase' : undefined});
-      } else if (previous.room===room && room==='Cafezinho' && world.hasMission?.(player.id,'pausaCafe')) {
+      } else if (previous.room===room) {
+        const ownOffice = this.privateOffices.ownedBy(player.id)?.name===room;
+        const recording = room==='Cafezinho' && world.hasMission?.(player.id,'pausaCafe') ||
+          ownOffice && world.hasMission?.(player.id,'trabalhoRemoto');
         const duration = Math.min(100,world.now-previous.at);
-        if (duration>0) publishGameplay(world,player,'room-time',{place:room,duration});
+        if (recording && duration>0) publishGameplay(world,player,'room-time',{place:room,duration,target:ownOffice ? player.id : undefined});
       }
     }
   }
@@ -936,7 +939,7 @@ export class Gameplay {
       this.remove(item);
       if (target==='safe') {
         world.earn(id,cashAmount(item.data)!);
-        this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id});
+        this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id,amount:cashAmount(item.data)});
         world.feedback?.(id,'Dinheiro embolsado.');
       } else {
         if (target==='door') office.doorUntil = world.now+officeRules.breachMs;
@@ -1268,7 +1271,7 @@ export class Gameplay {
         const amount = cashAmount(data);
         if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
         this.remove(item);
-        this.event(world,player,'delivered',data,undefined,{place});
+        this.event(world,player,'delivered',data,undefined,{place,amount});
         return `${money(amount)} entregues à Tesouraria.`;
       }
       case 'use':
@@ -1278,7 +1281,7 @@ export class Gameplay {
           if ((this.concealedUntil.get(id) ?? 0)>world.now) return 'Você já está ocultando dinheiro.';
           this.remove(item);
           this.concealedUntil.set(id,world.now+concealment.duration);
-          this.event(world,player,'concealment-started',data,undefined,{witnesses:[]});
+          this.event(world,player,'concealment-started',data,undefined,{witnesses:[],amount:Number(this.hasVisibleCash(id,world.now,id))});
           return `Dinheiro oculto por ${concealment.duration/1000} s.`;
         }
         if (data.kind==='firstAidKit') {
@@ -1288,7 +1291,7 @@ export class Gameplay {
         const consumed = this.takeUnits(item,1);
         this.remove(consumed);
         if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
-        this.event(world,player,'used',consumed.data);
+        this.event(world,player,'used',consumed.data,undefined,{place:roomAt(player)});
         return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
         if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';

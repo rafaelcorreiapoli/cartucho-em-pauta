@@ -4,7 +4,7 @@ import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
-import type { Vote } from '../src/plenary';
+import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
 
 type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number}>;
@@ -324,7 +324,7 @@ export class PoliticalEconomy {
     if (account) account.agenda.recordVote(account,first,firstSupport);
   }
 
-  billResult(votes:Map<string,Vote>, passed:boolean, popular:boolean) {
+  billResult(votes:Map<string,BillVote>, passed:boolean, popular:boolean) {
     for (const [id,vote] of votes) {
       const account = this.accounts.get(id);
       if (!account) continue;

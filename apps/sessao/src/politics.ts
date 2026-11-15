@@ -22,7 +22,7 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:10_000} as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -90,11 +90,29 @@ export const agendas = {
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
+  trabalhoRemoto:'Passe 30 segundos no seu gabinete',
+  cafeEstrategico:'Beba um café no Cafezinho',
+  contasTesouraria:'Entregue uma maleta à Tesouraria',
+  contribuinte:'Contribua com R$ 50 mil à Tesouraria',
+  registroHistorico:'Tire uma selfie no Plenário',
+  jornalismo:'Publique uma foto pelo Correio Interno',
+  apagarIncendio:'Apague um incêndio com o extintor',
+  primeirosSocorros:'Recupere PV com um Kit Médico',
+  socorro:'Socorra um jogador nocauteado',
+  fiscalCafe:'Beba três cafés',
+  almocoPlenario:'Coma uma pizza no Plenário',
+  cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
+  reservaCofre:'Embolse R$ 50 mil no seu cofre',
+  turismo:'Tire fotos em três salas diferentes',
+  provaDocumental:'Fotografe um documento físico visível',
 } as const;
 export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
+  trabalhoRemoto:25,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
+  cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
+  jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
   selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
   visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,

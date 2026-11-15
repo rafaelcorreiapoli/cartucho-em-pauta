@@ -28,7 +28,11 @@ test('two different signers must sign the same document after assignment',()=>{
     id,nick:id,moving:false,direction:0,character:index,
   }));
   const [owner,b,c] = players;
-  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>.09);
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  const ownerAgenda = Reflect.get(economy,'accounts').get(owner.id).agenda;
+  Reflect.set(ownerAgenda,'missions',[]);
+  Reflect.set(ownerAgenda,'missionDeck',['assinaturas','cafe','passeio']);
+  economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
   const view = (id:string) => economy.view(id,[],0,false,()=>true)!;
   expect(view(owner.id).missions.active.some(mission=>mission.kind==='assinaturas')).toBe(true);
 
@@ -793,4 +797,54 @@ test('solo players with NPCs are not offered human transfer or group photo missi
   Reflect.set(agenda,'missionDeck',['pagamento','fotografia','cafe','passeio','selfieSolo']);
   agenda.updateEligibility(metrics,4,true,3,3,[],new Set(['a','npc1','npc2','npc3']));
   expect(agenda.view(metrics).active.map(({kind})=>kind)).toEqual(['cafe','passeio','selfieSolo']);
+});
+
+const missionPhoto = {
+  id:12,author:{id:'a',name:'A'},at:1,location:'Arquivo',selfie:true,
+  center:{x:480,y:650},people:[],ground:[],decorations:[],transfers:[],
+};
+
+test.each([
+  ['registroHistorico',event('photo',{photo:missionPhoto,position:{x:480,y:650}}),event('photo',{photo:missionPhoto,at:2})],
+  ['jornalismo',event('photo-published',{photo:missionPhoto,place:'internal-mail'}),event('photo-published',{photo:missionPhoto})],
+  ['provaDocumental',event('photo',{photo:{...missionPhoto,ground:[{id:1,kind:'document',x:480,y:650}]}}),event('photo',{photo:missionPhoto,at:2})],
+  ['cafeEstrategico',event('used',{kind:'coffee',place:'Cafezinho'}),event('used',{kind:'coffee',place:'Arquivo'})],
+  ['contasTesouraria',event('delivered',{kind:'briefcase',place:'treasury'}),event('delivered',{kind:'briefcase',place:'press'})],
+  ['contribuinte',event('delivered',{amount:5,place:'treasury'}),event('delivered',{amount:5,place:'press'})],
+  ['trabalhoRemoto',event('room-time',{duration:30_000,target:'a'}),event('room-time',{duration:30_000,target:'b'})],
+  ['apagarIncendio',event('fire-extinguished'),event('room-entered',{place:'Cafezinho'})],
+  ['primeirosSocorros',event('used',{kind:'firstAidKit'}),event('collected',{kind:'firstAidKit'})],
+  ['socorro',event('aided',{target:'b'}),event('aided',{target:'npc-parliamentarian-1'})],
+  ['almocoPlenario',event('used',{kind:'pizza',position:{x:480,y:650}}),event('used',{kind:'pizza',at:2})],
+  ['reservaCofre',event('money-pocketed',{amount:5}),event('collected',{kind:'briefcase'})],
+  ['cuecaDinheiro',event('concealment-started',{amount:1}),event('concealment-started',{amount:0,at:2})],
+] as const)('%s starts at zero and rewards only a valid new event', (kind,valid,invalid)=>{
+  const totals:number[] = [];
+  const options = {...metrics,owns:()=>true};
+  const agenda = new PersonalAgenda(options,2,()=>0,reward=>totals.push(reward.xp));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',[kind,'passeio','credencial']);
+  agenda.updateEligibility(options,2,true,3,0,[{id:'b',name:'B'}]);
+  expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
+  for (const entry of [invalid,valid,valid]) {
+    if (agenda.acceptGameplayEvent(entry)) agenda.applyGameplayEvent(options,entry,false);
+  }
+  expect(agenda.view(options).completed.filter(mission=>mission.kind===kind)).toHaveLength(1);
+  expect(totals).toHaveLength(1);
+  const before = agenda.view(options);
+  agenda.updateEligibility(options,2,true,3,0,[{id:'b',name:'B'}]);
+  expect(agenda.view(options).completed).toEqual(before.completed);
+});
+
+test('photo tourism counts distinct locations after assignment',()=>{
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  recordAgendaEvent(agenda,event('photo',{photo:missionPhoto}));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['turismo','cafe','credencial']);
+  agenda.updateEligibility(metrics,1,true,3);
+  for (const [index,location] of ['Arquivo','Arquivo','Biblioteca','Cafezinho'].entries()) {
+    recordAgendaEvent(agenda,event('photo',{at:index+2,photo:{...missionPhoto,id:index+20,location,selfie:false}}));
+    if (index<3) expect(agenda.view(metrics).active.find(mission=>mission.kind==='turismo')?.current).toBe(index===2 ? 2 : 1);
+  }
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'turismo',current:3}));
 });

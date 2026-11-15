@@ -355,7 +355,7 @@ export class SessionRoom extends Room {
     this.onMessage('bill-vote',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
       const {vote} = raw;
-      if ((vote==='yes' || vote==='no') && this.consumeRoomCommand(client.sessionId,raw)) {
+      if ((vote==='yes' || vote==='no' || vote==='abstain') && this.consumeRoomCommand(client.sessionId,raw)) {
         this.match.vote(client.sessionId,vote,this.clock.currentTime);
       }
     });

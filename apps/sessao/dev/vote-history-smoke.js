@@ -45,7 +45,7 @@ async page => {
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
-  await page.locator('.plenary-countdown').getByText('Votação começa em').waitFor();
+  await page.locator('.plenary-countdown').getByText('Votação de projeto').waitFor();
   await page.waitForFunction(()=>!document.querySelector('.character-dock').getAnimations().length);
 
   for (const [width,height] of [[1280,720],[1024,600],[800,600]]) await measureHud(width,height);
@@ -57,8 +57,15 @@ async page => {
   await page.locator('.plenary-countdown').waitFor({state:'hidden'});
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   await page.locator('[data-vote="yes"]').waitFor();
+  const sheet = page.getByRole('region',{name:'Votação de projeto'});
+  await sheet.getByRole('heading',{name:'Auxílio Churrasco'}).waitFor();
+  await sheet.getByRole('button',{name:'Recolher votação'}).click();
+  await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
+  await sheet.getByRole('button',{name:'Expandir votação'}).click();
   await page.keyboard.press('y');
-  await page.locator('#vote-state').getByText('Seu voto: aprovar').waitFor();
+  await sheet.locator('[data-vote-state="yes"]').getByText('Histórico QA').waitFor();
+  await page.keyboard.press('n');
+  await sheet.locator('[data-vote-state="abstain"]').getByText('Histórico QA').waitFor();
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});

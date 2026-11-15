@@ -16,7 +16,7 @@ test('document verification is offered only at the two document counters',()=>{
 test('the project panel and history resolve the actual ballot project instead of its sequence number',()=>{
   expect(agendaProject({round:0,project:2}).name).toBe('Teto do Cafezinho');
   expect(agendaProject({round:1,project:0}).name).toBe('Auxílio Churrasco');
-  expect(agendaProject({round:4}).name).toBe('Wi-Fi na Praça');
+  expect(agendaProject({round:8}).name).toBe('Wi-Fi na Praça');
 });
 
 test('the project HUD labels announced intentions with the player and side',()=>{

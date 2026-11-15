@@ -13,7 +13,7 @@ import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
-import { agendaProject, stations, type Phase, type PlenaryView, type Station } from './plenary';
+import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -134,7 +134,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     preload() {
       this.load.on('progress',(value:number)=>loading(value*.99));
       this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
-      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp'];
+      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp',...bills.flatMap(bill=>bill.banner ? [bill.banner] : [])];
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
 

@@ -150,7 +150,7 @@ export class GameAudio {
   shutter() { this.play('vote',.58,0,1.85); }
   stationClick() { this.play('vote',.75,0,1.35); }
   footstep(level:number,pan:number) {
-    this.play(footsteps[this.footIndex++ % footsteps.length],level,pan,.94+Math.random()*.12);
+    this.play(footsteps[this.footIndex++ % footsteps.length],level*.5,pan,.94+Math.random()*.12);
   }
 
   combat(name:CombatCue,level:number,pan:number) {
