@@ -462,7 +462,7 @@ export class Gameplay {
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
-    this.phone.tick(world,exploring);
+    this.phone.tick(world,exploring,player=>this.privateOffices.ownedBy(player.id)?.name===roomAt(player));
     this.recordRoomVisits(world,exploring);
     this.transport.tick(world,exploring);
     this.combat.tick(world.players,world.now,exploring || voting,{

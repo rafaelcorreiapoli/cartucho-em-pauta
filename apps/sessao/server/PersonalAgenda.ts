@@ -102,7 +102,7 @@ const decorationRequirements = {
   reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
-const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
 
 export class PersonalAgenda {
@@ -325,7 +325,8 @@ export class PersonalAgenda {
       if (kind==='passeio' && event.type==='room-entered' && event.place) {
         gains.passeio = this.countFacts(mission,[{value:event.place}]);
       }
-      if ((event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length)) ||
+      if ((event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length ||
+          kind==='produtividade' && event.place==='own-office')) ||
           (event.type==='room-time' && event.place==='Cafezinho' && kind==='pausaCafe')) gains[kind] = event.duration ?? 0;
     }
     if (event.kind==='coffee') {

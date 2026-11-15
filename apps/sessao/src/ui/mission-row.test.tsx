@@ -118,3 +118,9 @@ test('counter-surveillance missions describe discovery and removal separately', 
   expect(discovery).toContain('Detector de Escutas');
   expect(removal).toContain('Remova um dispositivo clandestino descoberto');
 });
+
+test('the office phone mission shows time remaining as seconds', () => {
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'produtividade',current:5000,target:30_000}}/>);
+  expect(markup).toContain('no seu gabinete');
+  expect(markup).toContain('5 / 30 s');
+});

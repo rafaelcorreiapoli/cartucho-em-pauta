@@ -16,7 +16,7 @@ export class PhoneSession {
     this.games.clear();
   }
 
-  tick(world:PhoneWorld, exploring:boolean) {
+  tick(world:PhoneWorld, exploring:boolean, inOwnOffice?:(player:Player)=>boolean) {
     for (const call of new Set(this.calls.values())) {
       if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
         this.endCall(call,world);
@@ -47,8 +47,8 @@ export class PhoneSession {
         worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
       for (const witness of witnesses) game.witnesses.add(witness);
       if (game.snake.status==='playing' && duration>0 &&
-          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto'))) {
-        publishGameplay(world,player,'game-played',{duration,witnesses});
+          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto') || world.hasMission?.(id,'produtividade'))) {
+        publishGameplay(world,player,'game-played',{duration,witnesses,place:inOwnOffice?.(player) ? 'own-office' : undefined});
       }
       if (world.now-game.start>=60_000) game.snake.status = 'lost';
       else stepSnake(game.snake,world.now);
