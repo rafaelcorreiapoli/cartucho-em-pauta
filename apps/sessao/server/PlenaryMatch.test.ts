@@ -1,3 +1,5 @@
+import { stationRecharge } from '../src/station-recharge';
+import { StationCooldowns } from './StationCooldowns';
 import { InternalMail } from './InternalMail';
 import {Gameplay} from './Gameplay';
 import {terminals} from '../src/gameplay';
@@ -228,9 +230,30 @@ test('room activities require proximity, and a cafezinho completes its mission',
   expect(match.roomActivity(cafe,'coffee',2)?.text).toContain('Cafezinho tomado');
   expect(missions().completed.map(mission => mission.kind)).toEqual(['cafe']);
   expect(missions().active).toHaveLength(3);
-  match.roomActivity(cafe,'coffee',3);
+  expect(match.roomActivity(cafe,'coffee',3)?.unavailable).toBe(true);
   expect(missions().completed).toHaveLength(1);
   expect(missions().active.some(mission => mission.kind==='cafe')).toBe(false);
+});
+
+test('the coffee machine shares its recharge between players and both coffee actions',()=>{
+  const cooldowns = new StationCooldowns();
+  const match = new PlenaryMatch(1,cooldowns);
+  const game = new Gameplay(cooldowns);
+  const cafe = at(host,'coffee');
+  const visitor = at(people[1],'coffee');
+  const players = [cafe,visitor];
+  match.start(host.id,players,0);
+  const world = (now:number) => match.gameplayWorld(players,now,()=>false);
+  const supply = {kind:'supply',place:'coffee'} as const;
+  const {duration,feedback} = stationRecharge.coffee;
+
+  expect(match.roomActivity(cafe,'coffee',1)?.unavailable).toBeUndefined();
+  expect(game.act(visitor,supply,world(1))).toBe(feedback);
+  expect(game.view(visitor,world(2)).stationCooldowns).toEqual({coffee:duration-1});
+  expect(game.view(visitor,world(1+duration)).stationCooldowns).toEqual({});
+  expect(game.act(visitor,supply,world(1+duration))).toBe('Objeto guardado no inventário.');
+  expect(match.roomActivity(cafe,'coffee',1+duration)).toMatchObject({unavailable:true,text:feedback});
+  expect(match.roomActivity(cafe,'coffee',1+2*duration)?.text).toContain('Cafezinho tomado');
 });
 
 test('the Corregedoria returns feedback for each audit, even without new records', () => {

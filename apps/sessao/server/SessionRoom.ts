@@ -9,6 +9,7 @@ import { readAttributeRequest } from '../src/progression';
 import { characterStats } from '../src/character-stats';
 import { emptyPhotoAccess } from '../src/photography';
 import { consumableAction, canUseGameplayAction, readGameplayAction, type InteractionCue } from '../src/gameplay';
+import { StationCooldowns } from './StationCooldowns';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
@@ -44,7 +45,8 @@ export class SessionRoom extends Room {
   }
 
   private lobbyNpcCount:number = npcRules.count;
-  private gameplay = new Gameplay();
+  private readonly stationCooldowns = new StationCooldowns();
+  private gameplay = new Gameplay(this.stationCooldowns);
   private lastRoomCommandToken = new Map<string,number>();
   private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
@@ -88,7 +90,7 @@ export class SessionRoom extends Room {
     };
   }
 
-  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || process.env.SESSAO_PREVIEW_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined);
+  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || process.env.SESSAO_PREVIEW_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined,this.stationCooldowns);
   private parliamentarians = new Parliamentarians();
   private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
@@ -276,7 +278,7 @@ export class SessionRoom extends Room {
       const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
       if (result) {
         client.send('room-activity-result',result);
-        if (result.activity==='coffee') client.send('food-consumed','drink');
+        if (result.activity==='coffee' && !result.unavailable) client.send('food-consumed','drink');
       }
     });
     this.onMessage('voice-activity',client=>{
