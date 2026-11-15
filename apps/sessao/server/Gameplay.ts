@@ -304,10 +304,13 @@ export class Gameplay {
 
   visibleItems(id:string,now=Infinity,observer?:string) {
     const concealed = observer!==id && (this.concealedUntil.get(id) ?? 0)>now;
-    return [...this.exposed.get(id) ?? []].flatMap(itemId=>{
+    const visible = [...this.exposed.get(id) ?? []].flatMap(itemId=>{
       const item = this.items.get(itemId);
       return item && 'holder' in item.place && item.place.holder===id && !(concealed && cashAmount(item.data)) ? [{id:itemId,kind:item.data.kind}] : [];
     });
+    const extinguisher = this.inventory(id).find(({data})=>data.kind==='extinguisher');
+    if (extinguisher) visible.push({id:extinguisher.data.id,kind:'extinguisher'});
+    return visible;
   }
 
   private create(kind:ObjectKind, place:Place) {

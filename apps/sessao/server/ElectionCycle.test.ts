@@ -83,7 +83,7 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   world.deposit!('1',1);
   match.advance(fireRules.firstAfter);
   const site = view('2',fireRules.firstAfter).fire!.site;
-  expect(match.actOnFire({...humans[2],...fireSites[site].extinguisher},'extinguish',site,fireRules.firstAfter)).toBe('Incêndio apagado.');
+  expect(match.actOnFire({...humans[2],...fireSites[site]},'extinguish',site,fireRules.firstAfter,true)).toBe('Incêndio apagado.');
   match.advance(NEGOTIATION_MS);
   match.vote('2','yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
