@@ -1,8 +1,9 @@
-import { ELECTION_RULES as rules, officeKeys, type Assignment, type ElectionView, type Elected, type Office } from '../src/elections';
+import { ELECTION_RULES as rules, officeKeys, type Assignment, type CampaignAdvertisement, type ElectionView, type Elected, type Office } from '../src/elections';
 import type { Contact } from '../src/politics';
 
 type Candidate = Contact & {
   character:number;
+  campaignNumber:number;
   office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean;
   interviewed:boolean; support?:string; scandal:number;
   noise:number; tie:number;
@@ -36,7 +37,7 @@ export class ElectionCycle {
     this.previousPoll.clear();
     this.nextPoll = now;
     for (const contact of contacts) {
-      this.people.set(contact.id,{...contact,character:contact.character ?? 0,office:'deputy',race:'deputy',invested:0,
+      this.people.set(contact.id,{...contact,character:contact.character ?? 0,campaignNumber:100+this.people.size,office:'deputy',race:'deputy',invested:0,
         advertised:false,spoke:false,interviewed:false,scandal:0,noise:this.noise(),tie:random()});
     }
   }
@@ -70,12 +71,12 @@ export class ElectionCycle {
     return !!person && !(kind==='propaganda' ? person.advertised : person.spoke);
   }
 
-  advertise(id:string, spend:(amount:number)=>boolean) {
+  advertise(id:string, spend:(amount:number)=>boolean):CampaignAdvertisement | undefined {
     const person = this.people.get(id);
     if (person && !person.advertised && spend(rules.advertisementCost)) {
       person.advertised = true;
       this.announce(`${person.name} colocou propaganda no ar.`);
-      return true;
+      return {name:person.name,character:person.character,number:person.campaignNumber};
     }
   }
 

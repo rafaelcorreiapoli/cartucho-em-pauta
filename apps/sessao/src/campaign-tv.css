@@ -1,0 +1,73 @@
+.campaign-tv {
+  position: absolute;
+  top: clamp(80px, 18dvh, 170px);
+  left: 50%;
+  width: min(440px, 86vw, 68dvh);
+  transform: translateX(-50%);
+  z-index: 8;
+  pointer-events: none;
+  container-type: inline-size;
+  filter: drop-shadow(0 12px 24px #0009);
+}
+.campaign-tv > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.campaign-tv-screen {
+  position: absolute;
+  inset: 11% 24% 14% 7.5%;
+  display: grid;
+  justify-items: center;
+  align-items: end;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border-radius: 10% / 9%;
+  background: radial-gradient(ellipse at 50% 20%, #58938c, #173b43 77%);
+  box-shadow: inset 0 0 18px #000;
+}
+.campaign-tv-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(transparent 0 2px, #0002 2px 3px);
+}
+.campaign-tv-screen .portrait {
+  --portrait-size: 39cqw;
+  align-self: start;
+}
+.campaign-tv-caption {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2cqw;
+  width: 100%;
+  padding: 2cqw 4cqw 3cqw;
+  border-top: 2px solid #e9bd64;
+  background: #152424;
+  color: #fff3d8;
+  font-size: 4cqw;
+  font-weight: 750;
+  line-height: 1.15;
+}
+.campaign-tv-caption > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.campaign-tv-caption > strong {
+  border-left: 1px solid #c09d5c;
+  padding-left: 2cqw;
+  color: #ffd77e;
+  font-size: 1.2em;
+  font-variant-numeric: tabular-nums;
+}
+.campaign-tv-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}

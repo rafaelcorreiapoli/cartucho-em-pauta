@@ -486,9 +486,13 @@ export class PlenaryMatch {
       case 'invest':
         if (this.at(player,'press')) this.election.invest(id,action.amount,spend);
         break;
-      case 'advertise':
-        if (this.at(player,'press') && this.election.advertise(id,spend)) this.publishActivity(player,'advertisement-aired',now);
-        break;
+      case 'advertise': {
+        if (!this.at(player,'press')) return;
+        const advertisement = this.election.advertise(id,spend);
+        if (!advertisement) return;
+        this.publishActivity(player,'advertisement-aired',now);
+        return {...advertisement,character:player.character};
+      }
       case 'speech':
         if (this.at(player,'panel') && this.election.speech(id)) {
           this.publishActivity(player,'speech-given',now);

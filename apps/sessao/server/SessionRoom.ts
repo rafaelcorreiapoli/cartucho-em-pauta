@@ -335,7 +335,9 @@ export class SessionRoom extends Room {
     this.onMessage('election', (client, raw:unknown) => {
       const action = readElectionAction(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (action && player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying) this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
+      const advertisement = this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      if (advertisement) this.broadcast('campaign-advertisement',advertisement);
     });
     this.onMessage('bill-intent',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
