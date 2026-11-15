@@ -22,7 +22,7 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000} as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -109,6 +109,7 @@ export const agendas = {
   reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
   tresSelfies:'Tire selfies em três salas públicas diferentes',
   heroiInesperado:'Apague um incêndio com Estabilidade abaixo de 30',
+  escutaAtiva:'Monitore um grampo por 15 segundos',
   instalarGrampo:'Instale um grampo em um esconderijo',
   duasCameras:'Consulte duas câmeras escondidas próprias',
   instalarCamera:'Instale uma câmera escondida',
@@ -134,7 +135,7 @@ export type MissionReward = {xp:number; cash?:number; popularity?:number};
 const xpOnly:Partial<Record<Agenda,number>> = {
   trabalhoRemoto:25,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
-  instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
+  escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,

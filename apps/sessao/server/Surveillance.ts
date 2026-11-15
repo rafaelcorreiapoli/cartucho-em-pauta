@@ -7,6 +7,7 @@ type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:num
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>boolean;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
+  monitor?:(player:Player,duration:number)=>void;
   event?:(player:Player,kind:'spy-viewed'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string,device?:{kind:SpyDevice;id:number})=>void};
 
 export class Surveillance {
@@ -30,10 +31,11 @@ export class Surveillance {
   private motion = new Map<number,string>();
   private serial = 0;
   private sampleAt = 0;
+  private lastTick?:number;
 
   reset() {
     this.devices.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
-    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0;
+    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
   }
 
   leave(id:string, permanent=false) {
@@ -141,6 +143,8 @@ export class Surveillance {
 
   tick(players:Player[],now:number,access:Access,exploring:boolean,present:(id:string)=>boolean) {
     const barriers = players[0]?.barriers;
+    const elapsed = Math.min(100,now-(this.lastTick ?? now));
+    this.lastTick = now;
     if (!exploring) { this.jobs.clear(); this.selected.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
@@ -150,6 +154,11 @@ export class Surveillance {
       if (now<job.ends) continue;
       this.jobs.delete(id);
       this.finish(player,job,now,access);
+    }
+    if (elapsed>0) for (const player of players) {
+      if (present(player.id) && !player.knockedOut && !this.muted.has(player.id) && this.channel(player.id,'wiretap')) {
+        access.monitor?.(player,elapsed);
+      }
     }
     if (now<this.sampleAt) return;
     this.sampleAt = now+spyRules.sample;

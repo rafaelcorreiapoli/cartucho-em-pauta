@@ -32,7 +32,7 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
+export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
 export const hearingPolicyFee = 2;
 export const policyDuration = 120_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
@@ -58,6 +58,9 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N17',name:'Mutirão de Regularização Patrimonial',banner:'gabinete-cofre.webp',
     description:'Por 90 segundos, cada entrega à Tesouraria rende até 2 pontos extras de popularidade.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',duration:90_000,bonus:2}},
+  {id:'PROJ-N03',name:'Bolsa Churrasco',banner:'retrato-picanha.webp',
+    description:'Uma rodada de churrasco para recompor as forças parlamentares.',
+    yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:'Parlamentares ativos recuperam 2 PV por segundo durante 120 s, se houver verba'}},
   {id:'PROJ-N05',name:'Lei do Cafezinho Ininterrupto',banner:'retrato-cafezinho.webp',
     description:'O cafezinho ganhou desconto por dois minutos.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:'Café com 40% de desconto na Lanchonete por 120 s, enquanto houver orçamento'}},

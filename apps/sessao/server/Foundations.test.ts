@@ -695,3 +695,23 @@ test('plenary voting allows weapon hits against players in the chamber',()=>{
   expect(events.filter(event=>event.type==='hit').map(event=>event.target)).toEqual([bob.id]);
   expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
 });
+
+test('Bolsa Churrasco restores HP once per second while the policy is active',()=>{
+  const {alice,bob,game,world,buyGear} = setup();
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  world.hasMandate = id=>id===bob.id;
+  world.policies = {recovery:120_000};
+  world.now = 1000;
+  game.tick(world,true);
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(76);
+  world.policies = {};
+  world.now += 1000;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(76);
+});

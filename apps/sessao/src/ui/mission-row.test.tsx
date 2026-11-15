@@ -99,3 +99,9 @@ test('campaign investment and phone call missions show the units players need',(
   expect(investment).toContain('R$ 20 mil / R$ 50 mil');
   expect(phone).toContain('12 / 20 s');
 });
+
+test('the surveillance mission renders sampled progress without exposing any channel',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'escutaAtiva',current:8250,target:15_000}}/>);
+  expect(markup).toContain('8 / 15 s');
+  expect(markup).toContain('Monitore um grampo por 15 segundos');
+});

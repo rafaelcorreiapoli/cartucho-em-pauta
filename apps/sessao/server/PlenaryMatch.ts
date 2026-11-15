@@ -669,7 +669,7 @@ export class PlenaryMatch {
     const effect = passed ? bills[this.projectIndex].effect : undefined;
     if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
     if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
-    if (effect?.kind==='policy') this.policies.set(effect.policy,now+policyDuration);
+    if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+policyDuration);
     const payout = effect?.kind==='allowance' ? this.allowancePerMandate(effect.perMandate) : 0;
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};

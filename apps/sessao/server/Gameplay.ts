@@ -43,6 +43,7 @@ export class Gameplay {
   constructor(private readonly stationCooldowns = new StationCooldowns()) {}
 
   private surveillance = new Surveillance();
+  private lastPolicyHeal = 0;
   private roomSamples = new Map<string,{room:string; at:number}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
@@ -148,6 +149,7 @@ export class Gameplay {
     this.items.clear();
     this.surveillance.reset();
     this.roomSamples.clear();
+    this.lastPolicyHeal = now;
     this.privateOffices.reset(players,officeRandom);
     this.syncOfficeDoors(players,now);
     this.album.reset();
@@ -210,6 +212,8 @@ export class Gameplay {
     const served = this.servings.get(pizza.id) ?? new Set<string>();
     return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
   }
+
+  ownsWiretap(id:string) { return this.surveillance.countInstalled(id,'wiretap')>0; }
 
   ownsSpyCameras(id:string) { return this.surveillance.countInstalled(id,'spyCamera'); }
 
@@ -408,6 +412,14 @@ export class Gameplay {
   }
 
   tick(world:GameplayWorld, exploring:boolean, voting=false) {
+    if (world.policies?.recovery && world.now>=this.lastPolicyHeal+1000) {
+      this.lastPolicyHeal = world.now;
+      for (const player of world.players) {
+        if (!player.npc && !player.knockedOut && world.present?.(player.id)!==false && world.hasMandate?.(player.id)) {
+          this.combat.heal(player,2);
+        }
+      }
+    }
     for (const [id,operation] of this.forgery) {
       const player = world.players.find(person=>person.id===id);
       const item = this.inventory(id).find(({data})=>data.id===operation.item)?.data;
@@ -623,6 +635,11 @@ export class Gameplay {
         return true;
       },
       feedback:(id:string,message:string)=>world.feedback?.(id,message),
+      monitor:(player:Player,duration:number)=>{
+        if (world.voice(player.id) && world.hasMission?.(player.id,'escutaAtiva')) {
+          publishGameplay(world,player,'wiretap-time',{duration,witnesses:[]});
+        }
+      },
       event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string,device?:{kind:SpyDevice;id:number})=>
         publishGameplay(world,player,kind,{place:site,kind:device?.kind,item:device?.id,witnesses:[]}),
     };

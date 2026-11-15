@@ -744,7 +744,7 @@ test('the extintor bill delays the next ignition only when approved and funded',
   }
 });
 
-test.each(['coffee','hearing','furniture','campaign','equipment','mail'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
+test.each(['recovery','coffee','hearing','furniture','campaign','equipment','mail'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
   const project = bills.findIndex(bill=>bill.effect?.kind==='policy' && bill.effect.policy===policy);
   for (const approved of [false,true]) {
     const match = new PlenaryMatch(1);
