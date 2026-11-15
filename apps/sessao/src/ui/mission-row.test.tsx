@@ -111,3 +111,10 @@ test('commission mission shows three signatures and keeps the document requireme
   expect(markup).toContain('três assinaturas no mesmo documento');
   expect(markup).toContain('2 / 3');
 });
+
+test('counter-surveillance missions describe discovery and removal separately', () => {
+  const discovery = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'varredura',current:0,target:1}}/>);
+  const removal = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'limpeza',current:1,target:1}}/>);
+  expect(discovery).toContain('Detector de Escutas');
+  expect(removal).toContain('Remova um dispositivo clandestino descoberto');
+});

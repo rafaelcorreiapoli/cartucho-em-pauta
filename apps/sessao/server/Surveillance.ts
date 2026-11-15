@@ -213,8 +213,10 @@ export class Surveillance {
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
+        if (known.get(job.site.id)!==device.id && device.owner!==id) {
+          access.event?.(player,'spy-discovered',job.site.id,device);
+        }
         known.set(job.site.id,device.id);
-        access.event?.(player,'spy-discovered',job.site.id);
       }
       access.feedback(id,device ? device.kind==='wiretap' ? 'Grampo encontrado.' : 'Câmera escondida encontrada.' : 'Nenhum dispositivo encontrado.');
     } else if (device && device.id===job.target && this.known(id,device)) {
@@ -227,7 +229,7 @@ export class Surveillance {
       this.motion.delete(device.id);
       if (this.selected.get(device.owner)===device.id) this.selected.delete(device.owner);
       if (this.listening.get(device.owner)===device.id) this.listening.delete(device.owner);
-      access.event?.(player,'spy-removed',job.site.id,device);
+      access.event?.(player,'spy-removed',job.site.id,id!==device.owner ? device : undefined);
       access.feedback(id,job.kind==='recover' ? 'Dispositivo recuperado.' : 'Dispositivo removido.');
       if (id!==device.owner) access.feedback(device.owner,'Dispositivo desconectado.');
     }

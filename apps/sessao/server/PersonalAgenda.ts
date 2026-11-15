@@ -18,6 +18,8 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
+  limpeza:(event:GameplayEvent) => event.type==='spy-removed' && event.item!==undefined,
   flagraGabinete:(event:GameplayEvent) => event.type==='photo' && event.place==='foreign-office-subject',
   heroiInesperado:(event:GameplayEvent) => event.type==='fire-extinguished' && (event.amount ?? 100)<30,
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
@@ -370,6 +372,8 @@ export class PersonalAgenda {
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if (kind==='flagraGabinete' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
+    if ((kind==='varredura' || kind==='limpeza') && (!this.targets.length ||
+        !metrics.owns?.('bugDetector') && metrics.wallet<spyProducts.bugDetector.price)) return false;
     if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if (kind==='cuecaDinheiro' && !metrics.owns?.('mensalUnderwear')) return false;

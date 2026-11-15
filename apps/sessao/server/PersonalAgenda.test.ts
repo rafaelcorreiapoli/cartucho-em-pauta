@@ -867,6 +867,8 @@ test('calls need ten seconds on each of two distinct lines after the mission sta
 test.each([
   ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b'}),event('called',{target:'b'})],
+  ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
+  ['limpeza',event('spy-removed',{item:3}),event('spy-removed')],
   ['escutaAtiva',event('wiretap-time',{duration:15_000}),event('wiretap-time',{duration:0,at:2})],
   ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
   ['investimentoPolitico',event('campaign-investment',{amount:5}),event('advertisement-aired')],
