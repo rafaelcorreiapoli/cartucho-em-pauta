@@ -12,6 +12,6 @@ export const roomActivities = {
 } as const satisfies Record<string, {x:number; y:number; title:string; label:string; icon:string}>;
 
 export type RoomActivity = keyof typeof roomActivities;
-export type RoomActivityResult = {activity:RoomActivity; text?:string};
+export type RoomActivityResult = {activity:RoomActivity; text?:string; unavailable?:true};
 
 export const reprography = {x:748,y:495,title:'Sala de Reprografia'} as const;

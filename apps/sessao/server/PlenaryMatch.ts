@@ -1,3 +1,5 @@
+import { StationCooldowns } from './StationCooldowns';
+import { stationRecharge } from '../src/station-recharge';
 import type {SessionParticipant} from '../src/plenary';
 import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
@@ -120,7 +122,7 @@ export class PlenaryMatch {
     }
   }
 
-  constructor(private readonly minimumPlayers = MIN_PLAYERS) {}
+  constructor(private readonly minimumPlayers = MIN_PLAYERS, private readonly stationCooldowns = new StationCooldowns()) {}
 
   private ends = 0;
   private stability:number = stabilityRules.initial;
@@ -177,6 +179,7 @@ export class PlenaryMatch {
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now);
+    this.stationCooldowns.reset();
     this.treasuryBonus = undefined;
     this.complaints.reset();
     this.filedDocuments.clear();
@@ -278,6 +281,7 @@ export class PlenaryMatch {
     switch (activity) {
       case 'cabinet': return {activity,text:`O orçamento público está em ${money(this.budget)}.`};
       case 'coffee':
+        if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
         this.publishActivity(player,'coffee-drunk',now);
         return {activity,text:'Cafezinho tomado. De volta à articulação!'};
       case 'library':
