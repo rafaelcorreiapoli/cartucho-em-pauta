@@ -1,4 +1,5 @@
 import { fireSites } from './fire';
+import type { RechargeStation } from './station-recharge';
 import { firstAidKit } from './medical';
 import { money } from './politics';
 import { reprography } from './room-activities';
@@ -124,6 +125,7 @@ export type GameplayView = {
   concealmentSeconds?:number;
   binocularSeconds?:number;
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
+  stationCooldowns?:Partial<Record<RechargeStation,number>>;
   equipmentCooldowns?:Record<number,number>;
   megaphoneSeconds?:number;
   modulator?:{active:boolean};

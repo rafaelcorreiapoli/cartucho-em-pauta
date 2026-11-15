@@ -1,3 +1,5 @@
+import { StationCooldowns } from './StationCooldowns';
+import { stationRecharge } from '../src/station-recharge';
 import { marketProduct } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
@@ -38,6 +40,8 @@ const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
+  constructor(private readonly stationCooldowns = new StationCooldowns()) {}
+
   private surveillance = new Surveillance();
   private roomSamples = new Map<string,{room:string; at:number}>();
   private privateOffices = new PrivateOffices();
@@ -134,6 +138,7 @@ export class Gameplay {
   }
 
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
+    this.stationCooldowns.reset();
     this.items.clear();
     this.surveillance.reset();
     this.roomSamples.clear();
@@ -550,6 +555,7 @@ export class Gameplay {
       exposed:[...this.exposed.get(id) ?? []],
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
+      stationCooldowns:this.stationCooldowns.view(world.now),
       forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
@@ -1200,6 +1206,7 @@ export class Gameplay {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
       if (!(terminal.supply==='document' && action.target?.startsWith('project-')) && this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
+      if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
         const project = action.target?.startsWith('project-') ? Number(action.target.slice(8)) : undefined;

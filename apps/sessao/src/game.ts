@@ -1,3 +1,4 @@
+import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
@@ -20,7 +21,7 @@ import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
-import { HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number };
 // Grip coordinates in the original 128 px frames, ordered front, profile, back.
@@ -36,6 +37,21 @@ const briefcaseGrip = {
   'Sergio Moro': [[[85,106],[87,99],[85,106],[82,92]],[[55,105],[85,90],[55,105],[84,89]],[[43,106],[40,100],[43,106],[43,94]]],
   'Inês Brasil': [[[94,100],[98,95],[94,100],[92,89]],[[65,100],[89,79],[65,100],[89,79]],[[38,101],[32,94],[38,101],[32,94]]],
 } satisfies Record<(typeof NAMES)[number],readonly [WalkGrips,WalkGrips,WalkGrips]>;
+
+const rechargeFixtures = (Object.keys(stationRecharge) as RechargeStation[]).flatMap(station=>{
+  const {texture,duration} = stationRecharge[station];
+  const fixture = furnishings.find(item=>'texture' in item && item.texture===texture);
+  if (!fixture) return [];
+  const [left,top,width,height] = fixture.area;
+  return [{station,duration,point:{x:left+width/2,y:top+height},top}];
+});
+
+function drawProgressBar(graphics:Phaser.GameObjects.Graphics, centerX:number, y:number, fraction:number) {
+  const x = centerX-15;
+  graphics.fillStyle(0x211a10,.95).fillRoundedRect(x,y,30,5,2);
+  graphics.lineStyle(.75,0xffdb83).strokeRoundedRect(x,y,30,5,2);
+  graphics.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*fraction,2);
+}
 
 const stationColor = 0x79ebdf;
 const directions = new Map(Object.entries({
@@ -53,6 +69,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let negotiating = false;
   let plenaryView:PlenaryView | undefined;
+  let plenaryViewReceivedAt = 0;
   let running = false;
   let resizeObserver:ResizeObserver | undefined;
   let titles = new Map<string,Office>();
@@ -88,7 +105,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   window.addEventListener('blur',stop,options);
 
   class Plenary extends Phaser.Scene {
-    private safeProgress!: Phaser.GameObjects.Graphics;
+    private mapProgress!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
@@ -224,7 +241,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         });
       });
       this.officeDoors = this.add.graphics().setDepth(2);
-      this.safeProgress = this.add.graphics().setDepth(HEIGHT+31);
+      this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
         const [doorX,doorY,doorWidth,doorHeight] = office.door;
         this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
@@ -448,26 +465,32 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
         }
       }
-      this.safeProgress.clear();
+      this.mapProgress.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
       if (!negotiating || channel?.kind!=='office-cash') this.safeFraction = 0;
       if (negotiating && channel?.kind==='office-cash') {
         const safe = privateOffices.find(office=>office.id===channel.officeId)?.safe;
         if (safe) {
           const {height,footOffset} = officeFixtures.safe;
-          const x = safe.x-15;
           const y = safe.y-footOffset-height-8;
           const fraction = Phaser.Math.Clamp(channel.elapsed/channel.duration,0,1);
           this.safeFraction = reducedMotion.matches || fraction<this.safeFraction ? fraction :
             Phaser.Math.Linear(this.safeFraction,fraction,1-Math.exp(-delta/45));
-          this.safeProgress.fillStyle(0x211a10,.95).fillRoundedRect(x,y,30,5,2);
-          this.safeProgress.lineStyle(.75,0xffdb83).strokeRoundedRect(x,y,30,5,2);
-          this.safeProgress.fillStyle(0xffcf4b).fillRect(x+1.5,y+1.5,27*this.safeFraction,2);
+          drawProgressBar(this.mapProgress,safe.x,y,this.safeFraction);
         }
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1);
+      const cooldowns = plenaryView?.gameplay?.stationCooldowns;
+      if (negotiating && ownPlayer && cooldowns) {
+        for (const {station,duration,point,top} of rechargeFixtures) {
+          const remaining = (cooldowns[station] ?? 0)-(now-plenaryViewReceivedAt);
+          if (remaining>0 && localPerception(ownPlayer,point,visionRadius).visible) {
+            drawProgressBar(this.mapProgress,point.x,top-8,Phaser.Math.Clamp(1-remaining/duration,0,1));
+          }
+        }
+      }
       const gap = visionRadius-this.drawnVisionRadius;
       this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
         ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
@@ -776,7 +799,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     clearPrivateVision() { plenaryView = undefined; },
-    setPlenaryView(view:PlenaryView) { plenaryView = view; },
+    setPlenaryView(view:PlenaryView) {
+      plenaryView = view;
+      plenaryViewReceivedAt = performance.now();
+    },
     reconcile(snapshot: ControlState) {
       const before = local.state;
       const reset = before?.revision!==snapshot.revision || !!before?.plenary!==!!snapshot.plenary ||
