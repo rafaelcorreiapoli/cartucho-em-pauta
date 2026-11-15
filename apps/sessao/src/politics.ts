@@ -104,6 +104,8 @@ export const agendas = {
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
   reservaCofre:'Embolse R$ 50 mil no seu cofre',
   turismo:'Tire fotos em três salas diferentes',
+  comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
+  flagraGabinete:'Fotografe alguém em um gabinete alheio',
   presencaPlenario:'Entre e saia do Plenário durante a articulação',
   reuniaoGabinete:'Passe 15 segundos no mesmo gabinete que outro jogador',
   reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
@@ -121,7 +123,7 @@ export const agendas = {
   visitaDoisGabinetes:'Visite gabinetes de dois colegas diferentes',
   pixVinte:'Envie um Pix de R$ 20 mil',
   doisPix:'Receba Pix de dois jogadores distintos',
-  debateTelefonico:'Fale por 20 segundos ao telefone durante a articulação',
+  debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
   chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
   discursoMegafone:'Use o Megafone por 10 segundos',
   investimentoPolitico:'Invista R$ 50 mil em campanha',
@@ -134,7 +136,7 @@ export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
   trabalhoRemoto:25,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
-  presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
+  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
   escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,

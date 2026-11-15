@@ -893,3 +893,17 @@ test.each([
   expect(agenda.view(options).completed.filter(mission=>mission.kind===kind)).toHaveLength(1);
   expect(rewards).toHaveLength(1);
 });
+
+test('three signatures must all come from distinct signers on a single document',()=>{
+  const agenda = new PersonalAgenda(metrics,4,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['comissaoImprovisada','passeio','cafe']);
+  agenda.updateEligibility(metrics,4,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
+  agenda.recordSignature(metrics,1,'b');
+  agenda.recordSignature(metrics,1,'b');
+  agenda.recordSignature(metrics,1,'c');
+  agenda.recordSignature(metrics,2,'d');
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='comissaoImprovisada')?.current).toBe(2);
+  agenda.recordSignature(metrics,1,'d');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'comissaoImprovisada',current:3}));
+});

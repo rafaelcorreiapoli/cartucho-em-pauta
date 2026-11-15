@@ -710,7 +710,10 @@ export class Gameplay {
         stillAt(event.from,event.point) && stillAt(event.to,event.destination)).map(({from,to,item,kind})=>({from,to,item,kind})),
     }));
     if (typeof result==='string') return result;
-    this.event(world,player,'photo',undefined,undefined,{photo:result,witnesses:[...ids].filter(id=>id!==player.id)});
+    const foreignOfficeSubject = result.people.some(person=>person.id!==player.id && world.players.some(other=>other.id===person.id && !other.npc) &&
+      [...this.privateOffices.offices.values()].some(office=>office.owner && office.owner!==person.id && office.layout.name===roomAt(person)));
+    this.event(world,player,'photo',undefined,undefined,{photo:result,
+      place:foreignOfficeSubject ? 'foreign-office-subject' : undefined,witnesses:[...ids].filter(id=>id!==player.id)});
     return 'Foto guardada no álbum.';
   }
 

@@ -18,6 +18,7 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  flagraGabinete:(event:GameplayEvent) => event.type==='photo' && event.place==='foreign-office-subject',
   heroiInesperado:(event:GameplayEvent) => event.type==='fire-extinguished' && (event.amount ?? 100)<30,
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
   instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
@@ -72,11 +73,11 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -173,10 +174,12 @@ export class PersonalAgenda {
   }
 
   recordSignature(metrics:AgendaMetrics, document:number, signer:string) {
-    const mission = this.missions.find(mission=>mission.kind==='assinaturas');
+    const documentMissions = this.missions.filter(mission=>mission.kind==='assinaturas' || mission.kind==='comissaoImprovisada');
     const targeted = this.missions.some(m=>m.kind==='assinaturaAlvo' && m.person?.id===signer);
-    if (mission || targeted) this.progress(metrics,{assinaturaAlvo:Number(targeted),
-      assinaturas:mission ? this.countFacts(mission,[{value:signer,group:String(document)}]) : 0});
+    if (!documentMissions.length && !targeted) return;
+    const gains:Partial<Record<Agenda,number>> = {assinaturaAlvo:Number(targeted)};
+    for (const mission of documentMissions) gains[mission.kind] = this.countFacts(mission,[{value:signer,group:String(document)}]);
+    this.progress(metrics,gains);
   }
 
   updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
@@ -214,12 +217,12 @@ export class PersonalAgenda {
     const humans = usesAvailablePlayers
       ? this.availableTargets ? 1+this.targets.filter(person=>this.availableTargets?.has(person.id)).length : this.playerCount
       : this.playerCount;
-    if (kind==='assinaturas') {
+    if (kind==='assinaturas' || kind==='comissaoImprovisada') {
       const available = this.availableTargets;
       const colleagues = drawing && available
         ? this.targets.filter(person=>available.has(person.id)).length
         : Math.max(0,this.playerCount-1);
-      const needed = signatureTarget-colleagues;
+      const needed = (missionTargets[kind] ?? signatureTarget)-colleagues;
       if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
     } else if (players>humans) return false;
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
@@ -271,7 +274,7 @@ export class PersonalAgenda {
         const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
         gains[kind] = this.countFacts(mission,rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event));
       }
-      if (kind==='assinaturas' && event.type==='edited' && event.item!==undefined) {
+      if ((kind==='assinaturas' || kind==='comissaoImprovisada') && event.type==='edited' && event.item!==undefined) {
         const facts = this.factsByMission.get(mission.id);
         if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
       }
@@ -365,6 +368,7 @@ export class PersonalAgenda {
         metrics.wallet<internalMailRules.fee) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
+    if (kind==='flagraGabinete' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
     if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;

@@ -105,3 +105,9 @@ test('the surveillance mission renders sampled progress without exposing any cha
   expect(markup).toContain('8 / 15 s');
   expect(markup).toContain('Monitore um grampo por 15 segundos');
 });
+
+test('commission mission shows three signatures and keeps the document requirement',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'comissaoImprovisada',current:2,target:3}}/>);
+  expect(markup).toContain('três assinaturas no mesmo documento');
+  expect(markup).toContain('2 / 3');
+});
