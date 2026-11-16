@@ -1,3 +1,4 @@
+import {mountRewardEffects} from './ui/reward-effects';
 import {contextActionKeys} from './ui/context-action-keys';
 import {mountStationShortcuts} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
@@ -33,10 +34,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
-  const walletEffects = element('wallet-effects');
-  const walletGain = element<HTMLTemplateElement>('wallet-gain');
-  let incomeEffect:HTMLElement | undefined;
-  let xpEffect:HTMLElement | undefined;
+  const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
   const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
@@ -286,39 +284,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   return {
     notify,
-    showIncome(amount:number, head:{x:number;y:number} | undefined) {
-      const total = amount+Number(incomeEffect?.dataset.amount ?? 0);
-      incomeEffect?.remove();
-      const effect = walletGain.content.firstElementChild!.cloneNode(true) as HTMLElement;
-      effect.dataset.amount = String(total);
-      if (head) {
-        effect.style.left = `${head.x}px`;
-        effect.style.top = `${head.y}px`;
-      }
-      effect.querySelector('strong')!.textContent = `+${money(total)}`;
-      effect.addEventListener('animationend',() => {
-        effect.remove();
-        if (incomeEffect===effect) incomeEffect = undefined;
-      },{once:true});
-      incomeEffect = effect;
-      walletEffects.append(effect);
-    },
-    showXp(amount:number, head:{x:number;y:number} | undefined) {
-      if (!head) return;
-      xpEffect?.remove();
-      const effect = document.createElement('strong');
-      effect.className = 'wallet-gain xp-gain';
-      effect.setAttribute('aria-hidden','true');
-      effect.textContent = `+${amount} XP`;
-      effect.style.left = `${head.x}px`;
-      effect.style.top = `${head.y}px`;
-      effect.addEventListener('animationend',()=>{
-        effect.remove();
-        if (xpEffect===effect) xpEffect = undefined;
-      },{once:true});
-      xpEffect = effect;
-      walletEffects.append(effect);
-    },
+    showReward:rewards.show,
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
       if ((activity==='secretary' || activity==='archive') && previous?.phase==='negotiation') {
@@ -373,8 +339,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       legislativeBrief.destroy();
       legislative.destroy();
       electoral.destroy();
-      incomeEffect?.remove();
-      xpEffect?.remove();
+      rewards.destroy();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',onContextClick);
       for (const button of actionButtons()) {
