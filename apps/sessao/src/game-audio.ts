@@ -2,7 +2,8 @@ import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/a
 
 const files = {
   music:'corredores-de-brasilia.mp3',
-  ballotMusic:'plenario-em-ebulicao.m4a',
+  ballotMusic:'contagem-do-plenario.m4a',
+  hearingMusic:'plenario-em-ebulicao.m4a',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
@@ -13,7 +14,7 @@ const files = {
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
-type Score = 'music'|'ballotMusic';
+type Score = 'music'|'ballotMusic'|'hearingMusic';
 export type Cue = Exclude<Sample,Score | `foot${number}`>;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
@@ -75,15 +76,14 @@ export class GameAudio {
         const response = await fetch(`${import.meta.env.BASE_URL}assets/audio/${files[key]}`);
         if (!response.ok) return;
         this.buffers.set(key,await context.decodeAudioData(await response.arrayBuffer()));
-        if (key==='music' || key==='ballotMusic') this.startMusic();
+        if (key==='music' || key==='ballotMusic' || key==='hearingMusic') this.startMusic();
       } catch {}
     })).then(() => {});
     this.startMusic();
     return this.loading;
   }
 
-  setBallotMusic(voting:boolean) {
-    const score = voting ? 'ballotMusic' : 'music';
+  setScore(score:Score) {
     if (this.score===score) return;
     this.score = score;
     this.startMusic();
@@ -162,7 +162,7 @@ export class GameAudio {
   footstep(level:number,pan:number) {
     const offset = 1 + Math.floor(Math.random() * (footsteps.length - 1));
     this.lastFootIndex = (this.lastFootIndex + offset) % footsteps.length;
-    this.play(footsteps[this.lastFootIndex],level*.24,pan,.97+Math.random()*.06);
+    this.play(footsteps[this.lastFootIndex],level,pan,.97+Math.random()*.06);
   }
 
   combat(name:CombatCue,level:number,pan:number) {

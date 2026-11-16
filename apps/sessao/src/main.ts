@@ -64,6 +64,18 @@ const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
+const ballotCountdown = document.querySelector<HTMLDialogElement>('#ballot-countdown')!;
+const ballotCountdownMessage = document.querySelector<HTMLElement>('#ballot-countdown-message')!;
+ballotCountdown.oncancel = event => event.preventDefault();
+function showBallotCountdown(seconds?:number) {
+  if (seconds===undefined) {
+    ballotCountdown.close();
+    return;
+  }
+  const message = `Votação começando em ${seconds}…`;
+  if (ballotCountdownMessage.textContent!==message) ballotCountdownMessage.textContent = message;
+  if (!ballotCountdown.open) ballotCountdown.showModal();
+}
 const create = document.querySelector<HTMLButtonElement>('#create')!;
 const characters = document.querySelector<HTMLElement>('#characters')!;
 const buttons = NAMES.map((name,index) => {
@@ -139,6 +151,7 @@ async function toggleVoice() {
 }
 
 function showLobby(message: string) {
+  showBallotCountdown();
   audio.leave();
   voice?.stop(false);
   voice = undefined;
@@ -165,7 +178,9 @@ async function connect(join: () => Promise<Room>) {
   try {
     const joined = await join();
     room = joined;
-    const sendCommand = createRoomCommandSender((channel,command)=>joined.send(channel,command));
+    const sendCommand = createRoomCommandSender((channel,command)=>{
+      if (!ballotCountdown.open) joined.send(channel,command);
+    });
     roomCommand = sendCommand;
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
@@ -283,7 +298,7 @@ async function connect(join: () => Promise<Room>) {
       else sendGameplay(action);
       map.focus({preventScroll:true});
     });
-    const progression = createProgressionHud(request=>joined.send('allocate-attribute',request),cue=>audio.progression(cue));
+    const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
@@ -340,6 +355,7 @@ async function connect(join: () => Promise<Room>) {
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      showBallotCountdown(view.ballotCountdown);
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
@@ -398,7 +414,7 @@ async function connect(join: () => Promise<Room>) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished') audio.cue('end');
       phase = view.phase;
-      audio.setBallotMusic(phase==='ballot' || phase==='hearing');
+      audio.setScore(phase==='ballot' ? 'ballotMusic' : phase==='hearing' ? 'hearingMusic' : 'music');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';

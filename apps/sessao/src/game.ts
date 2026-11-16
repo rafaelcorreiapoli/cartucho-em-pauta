@@ -86,7 +86,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     shiftKeys.clear();
   };
   document.addEventListener('keydown', event => {
-    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
+    if (plenaryView?.ballotCountdown!==undefined || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
       (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
     if (key==='shift') shiftKeys.add(event.code);
@@ -269,6 +269,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
+        if (plenaryView?.ballotCountdown!==undefined) return;
         parent.focus({preventScroll:true});
         keys.clear();
         shiftKeys.clear();
@@ -417,7 +418,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
     update(time: number, delta: number) {
       if (this.assetsFailed || inLobby) return;
-      if (local.state && time>=nextStep) {
+      if (plenaryView?.ballotCountdown===undefined && local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
         if (destination) {
@@ -590,7 +591,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const attack = pose && profile ? attackArt(character,row,progress,profile.impactMs/profile.swingMs) : undefined;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
-          const level = own ? .46 : Math.max(0,1-distance/75)*.32;
+          const level = own ? .22 : Math.max(0,1-distance/75)*.08;
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
           view.nextStep = time+290/(player.sprinting ? sprintMultiplier : 1);
         } else if (!moving) view.nextStep = 0;
@@ -791,6 +792,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) {
+      if (view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined) {
+        stop();
+        manual = false;
+        destination = undefined;
+      }
       plenaryView = view;
       plenaryViewReceivedAt = performance.now();
     },

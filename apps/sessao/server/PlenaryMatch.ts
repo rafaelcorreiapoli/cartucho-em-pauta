@@ -380,6 +380,12 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
   }
 
+  ballotCountdown(now:number) {
+    if (this.phase!=='negotiation' || this.ends-now>5000 ||
+      this.ends>=this.started+rules.matchDuration || (this.cassationAt ?? Infinity)<=this.ends) return;
+    return Math.max(1,Math.ceil((this.ends-now)/1000));
+  }
+
   declareVote(id:string,vote:Vote|null,now:number) {
     if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id)) return;
     if (vote===null) this.voteIntents.delete(id);
@@ -738,6 +744,7 @@ export class PlenaryMatch {
         quorum:Math.floor(candidates.length/2)+1,voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
         choice:this.cassationVotes.get(id)},
       cassationResult:this.cassationResult,
+      ballotCountdown:this.ballotCountdown(now),
       phase:this.phase,round:this.round,project:this.projectIndex,queuedProjects:[...this.agenda],remaining:this.running ? Math.max(0,Math.ceil((this.ends-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
