@@ -1,4 +1,5 @@
 import {fireRules,fireSites,type FireView} from '../fire';
+import {powerPanels} from '../power';
 import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
@@ -156,6 +157,22 @@ export function FireNotice({fire}:{fire:FireView}) {
   </aside>;
 }
 
+function PowerNotice({state}:{state:HudModel['outage']}) {
+  const outage = useSyncExternalStore(state.subscribe,state.get);
+  if (!outage) return null;
+  const status = outage.paused ? 'Reparo pausado' : outage.seconds ? `Restabelecendo energia · ${outage.seconds} s` :
+    outage.operating!==undefined ? 'Aguardando o outro painel. Permaneça no alcance.' : 'Dois jogadores devem operar os painéis juntos.';
+  return <aside id="active-outage" className="incident-panel" aria-labelledby="outage-title" data-paused={outage.paused}>
+    <article className="incident-fire">
+      <Icon name="alert"/>
+      <div><strong id="outage-title">Pane elétrica</strong>
+        {powerPanels.map(({name},index)=><small key={name}>{index===0 ? 'A' : 'B'} · {name} · {outage.occupied[index] ? 'Em uso' : 'Livre'}</small>)}
+      </div>
+      <p>{status}</p>
+    </article>
+  </aside>;
+}
+
 function ActiveFire({state}:{state:HudModel['fire']}) {
   const fire = useSyncExternalStore(state.subscribe,state.get);
   return fire && <FireNotice fire={fire}/>;
@@ -179,6 +196,8 @@ export function mountReactHud() {
   televisionRoot.render(<LiveTelevision state={model.television}/>);
   const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
   fireRoot.render(<ActiveFire state={model.fire}/>);
+  const outageRoot = createRoot(document.getElementById('active-outage-mount')!);
+  outageRoot.render(<PowerNotice state={model.outage}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
   broadcastRoot.render(<Broadcast state={broadcast}/>);
   const vitalsRoot = createRoot(document.getElementById('profile-vitals')!);
@@ -195,6 +214,6 @@ export function mountReactHud() {
     broadcast: broadcast.update,
     player: model.player,
     render: model.render,
-    destroy() { televisionRoot.unmount(); fireRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
+    destroy() { televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
   };
 }

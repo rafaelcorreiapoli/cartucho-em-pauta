@@ -47,7 +47,7 @@ export class SessionRoom extends Room {
 
   private lobbyNpcCount:number = npcRules.count;
   private readonly stationCooldowns = new StationCooldowns();
-  private gameplay = new Gameplay(this.stationCooldowns);
+  private gameplay = new Gameplay(this.stationCooldowns,()=>this.match.powerOut);
   private lastRoomCommandToken = new Map<string,number>();
   private readonly internalMail = new InternalMail();
   private matchObjectsActive = false;
@@ -316,6 +316,15 @@ export class SessionRoom extends Room {
         if (camera) this.securityFeeds.set(player.id,camera);
       }
     });
+    this.onMessage('power-action',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || !raw || typeof raw!=='object' || !('panel' in raw) ||
+        (raw.panel!==0 && raw.panel!==1) || !('kind' in raw) ||
+        (raw.kind!=='sabotage' && raw.kind!=='repair' && raw.kind!=='cancel') ||
+        !this.consumeRoomCommand(player.id,raw)) return;
+      const result = this.match.actOnPower(player,{kind:raw.kind,panel:raw.panel},this.clock.currentTime);
+      if (result) client.send('gameplay-feedback',result);
+    });
     this.onMessage('fire-action',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
@@ -475,6 +484,7 @@ export class SessionRoom extends Room {
         } else if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
         else if (wasIsolated) Object.assign(state.player,isolationRoom.exit,{direction:2});
       }
+      this.match.advancePower(now,id=>this.clients.getById(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {
         player.former = this.match.running ? this.match.former(player.id) : undefined;
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
@@ -533,8 +543,9 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
-          const visible = state.plenary ? world.players.filter(inPlenary) :
-            world.players.filter(player=>player===state.player || characterVisible(state.player,player,vision));
+          const visible = world.players.filter(player=>player===state.player ||
+            (!state.plenary || inPlenary(player)) &&
+            (state.plenary && !this.match.powerOut || characterVisible(state.player,player,vision)));
           client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,now,id) ? true : undefined,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
