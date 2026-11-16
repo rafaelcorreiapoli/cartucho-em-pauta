@@ -272,7 +272,8 @@ async function connect(join: () => Promise<Room>) {
     },political,action=>sendCommand('plenary-action',{action}),{
       send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
-    const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
+    const reactHud = mountReactHud();
+    const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
@@ -311,7 +312,6 @@ async function connect(join: () => Promise<Room>) {
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action));
-    const reactHud = mountReactHud();
     let appStatus:HudAppStatus = {};
     const appCommands:Record<HudApp,()=>void> = {
       bag:gameplay.openBag,equipment:gameplay.openEquipment,phone:gameplay.openPhone,
@@ -444,10 +444,11 @@ async function connect(join: () => Promise<Room>) {
       political.destroy();
       hud.destroy();
       appLauncher.destroy();
-      reactHud.destroy();      results.destroy();
+      progression.destroy();
+      reactHud.destroy();
+      results.destroy();
       projectPicker.destroy();
       mail.destroy();
-      progression.destroy();
       surveillance.destroy();
       security.destroy();
       gameplay.destroy();

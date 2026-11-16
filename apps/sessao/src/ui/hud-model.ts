@@ -41,12 +41,19 @@ export function createHudModel() {
   const countdown = channel<{kind:'bill'|'cassation';seconds:number}|undefined>(undefined);
   const agenda = channel<Agenda|undefined>(undefined);
   const profile = channel<Profile|undefined>(undefined);
+  const character = channel<Pick<Player,'nick'|'character'>|undefined>(undefined);
+  const mandate = channel<{former:boolean;infiltrator:boolean;office?:string}>({former:false,infiltrator:false});
+  const profileReward = channel('');
   const stamina = channel<Stamina>({current:MAX_STAMINA,max:MAX_STAMINA});
   const resources = channel<PersonalResources|undefined>(undefined);
   let matchId:number|undefined;
   return {
-    fire,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,
-    player(player:Pick<Player,'stamina'|'staminaMax'>) {
+    fire,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,character,mandate,profileReward,
+    player(player:Pick<Player,'stamina'|'staminaMax'|'nick'|'character'>) {
+      const identity = character.get();
+      if (identity?.nick!==player.nick || identity?.character!==player.character) {
+        character.update({nick:player.nick,character:player.character});
+      }
       const max = player.staminaMax ?? MAX_STAMINA;
       stamina.update({current:Math.floor(player.stamina ?? max),max});
     },
@@ -62,6 +69,7 @@ export function createHudModel() {
       const progress = view.phase==='lobby' ? undefined : view.politics?.progression;
       const previous = matchId===progress?.matchId ? agenda.get() : undefined;
       matchId = progress?.matchId;
+      mandate.update({former:view.mandate===false,infiltrator:view.role==='Infiltrado',office:view.gameplay?.ownOffice});
       resources.update(progress && view.politics ? {wallet:view.politics.wallet,popularity:view.politics.popularity} : undefined);
       profile.update(progress && {hp:view.gameplay?.vitality?.hp,maxHp:view.gameplay?.vitality?.max,
         xp:progress.xp,start:progress.levelStart,next:progress.nextLevelXp,level:progress.level});

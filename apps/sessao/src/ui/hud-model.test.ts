@@ -25,7 +25,7 @@ test('movement snapshots only notify stamina consumers when the displayed value 
   expect(snapshot).toEqual({current:89,max:110});
   expect(updates).toEqual(['stamina']);
   unsubscribe();
-  hud.player({stamina:90,staminaMax:110});
+  hud.player({...player,stamina:90,staminaMax:110});
   expect(updates).toEqual(['stamina']);
 });
 

@@ -18,7 +18,6 @@ import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
 import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
-import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { money, type PoliticsAction } from './politics';
@@ -34,7 +33,6 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
-  const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
@@ -55,7 +53,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const fieldActions = element('field-actions');
   const progressRoot = createRoot(element('office-progress-mount'));
   let progressKey = '';
-  const officeBadge = element('own-office');
   const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
   function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
@@ -113,9 +110,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
     if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
-    const ownOffice = state?.ownOffice;
-    officeBadge.hidden = !ownOffice;
-    if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
@@ -334,8 +328,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     render(view:PlenaryView) {
       if (view.phase!=='negotiation') legislativeBrief.close();
-      roleBadge.hidden = view.role!=='Infiltrado';
-      element('hud-office').textContent = view.mandate===false ? 'Ex-parlamentar' : 'Parlamentar';
       const politics = view.politics;
 
       if (previous) {
@@ -373,11 +365,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     players(players:Player[]) {
       roster = players;
       own = players.find(player => player.id===id);
-      if (own) {
-        const nick = element('hud-nick');
-        if (nick.textContent!==own.nick) nick.textContent = own.nick;
-        setCharacterPortrait(element('hud-portrait'),own.character);
-      }
       actions();
     },
     destroy() {
@@ -396,7 +383,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
-      officeBadge.hidden = true;
       progressRoot.unmount();
       shortcuts.destroy();
       more.remove();

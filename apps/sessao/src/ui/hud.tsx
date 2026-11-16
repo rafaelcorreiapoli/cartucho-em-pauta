@@ -1,3 +1,4 @@
+import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
 import { stabilityRules } from '../plenary';
@@ -102,8 +103,8 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
 }
 
 function Vitals({profile,stamina}:{profile:HudModel['profile']; stamina:HudModel['stamina']}) {
-  const stats = useSyncExternalStore(profile.subscribe,profile.get);
-  const energy = useSyncExternalStore(stamina.subscribe,stamina.get);
+  const stats = useSyncExternalStore(profile.subscribe,profile.get,profile.get);
+  const energy = useSyncExternalStore(stamina.subscribe,stamina.get,stamina.get);
   if (!stats) return null;
   const earned = stats.xp-stats.start;
   const goal = stats.next===undefined ? 0 : stats.next-stats.start;
@@ -125,7 +126,7 @@ function Vitals({profile,stamina}:{profile:HudModel['profile']; stamina:HudModel
 }
 
 function ProfileResources({state}:{state:HudModel['resources']}) {
-  const resources = useSyncExternalStore(state.subscribe,state.get);
+  const resources = useSyncExternalStore(state.subscribe,state.get,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
     <span title="Popularidade"><Icon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
@@ -134,8 +135,38 @@ function ProfileResources({state}:{state:HudModel['resources']}) {
 }
 
 function Level({state}:{state:HudModel['profile']}) {
-  const profile = useSyncExternalStore(state.subscribe,state.get);
+  const profile = useSyncExternalStore(state.subscribe,state.get,state.get);
   return profile && <strong className="react-level tabular-nums" aria-label={`Nível ${profile.level}`}>NV {profile.level}</strong>;
+}
+
+export function CharacterProfile({model}:{model:HudModel}) {
+  const person = useSyncExternalStore(model.character.subscribe,model.character.get,model.character.get);
+  const {former,infiltrator,office} = useSyncExternalStore(model.mandate.subscribe,model.mandate.get,model.mandate.get);
+  return <>
+    <div className="profile-portrait">
+      {person ? <CharacterPortrait id="hud-portrait" character={person.character}/> : null}
+      <ProfileReward state={model.profileReward}/>
+    </div>
+    <div className="deck-identity">
+      <div className="profile-name-row">
+        <strong id="hud-nick">{person?.nick}</strong>
+        {infiltrator ? <button id="profile-role" className="resource-help profile-help" type="button" aria-label="Infiltrado"
+          data-help="Infiltrado. Derrube a estabilidade."><Icon name="bug"/></button> : null}
+        <span id="profile-level-mount"><Level state={model.profile}/></span>
+      </div>
+      <div className="profile-subtitle">
+        <small id="hud-office">{former ? 'Ex-parlamentar' : 'Parlamentar'}</small>
+        {office ? <small id="own-office">Gabinete {office.padStart(2,'0')}</small> : null}
+      </div>
+      <div id="profile-resources"><ProfileResources state={model.resources}/></div>
+    </div>
+    <div id="profile-vitals"><Vitals profile={model.profile} stamina={model.stamina}/></div>
+  </>;
+}
+
+function ProfileReward({state}:{state:HudModel['profileReward']}) {
+  const reward = useSyncExternalStore(state.subscribe,state.get,state.get);
+  return <div id="profile-xp-reward" role="status">{reward}</div>;
 }
 
 function Broadcast({state}:{state:HudModel['broadcast']}) {
@@ -191,7 +222,7 @@ function LiveTelevision({state}:{state:HudModel['television']}) {
 
 export function mountReactHud() {
   const model = createHudModel();
-  const {broadcast,congress,agenda,profile,stamina,resources} = model;
+  const {broadcast,congress,agenda} = model;
   const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
   televisionRoot.render(<LiveTelevision state={model.television}/>);
   const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
@@ -200,12 +231,8 @@ export function mountReactHud() {
   outageRoot.render(<PowerNotice state={model.outage}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);
   broadcastRoot.render(<Broadcast state={broadcast}/>);
-  const vitalsRoot = createRoot(document.getElementById('profile-vitals')!);
-  const resourcesRoot = createRoot(document.getElementById('profile-resources')!);
-  resourcesRoot.render(<ProfileResources state={resources}/>);
-  const levelRoot = createRoot(document.getElementById('profile-level-mount')!);
-  vitalsRoot.render(<Vitals profile={profile} stamina={stamina}/>);
-  levelRoot.render(<Level state={profile}/>);
+  const profileRoot = createRoot(document.getElementById('profile-dock')!);
+  profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
   parliamentRoot.render(<Parliament state={congress} countdown={model.countdown}/>);
@@ -213,7 +240,8 @@ export function mountReactHud() {
   return {
     broadcast: broadcast.update,
     player: model.player,
+    profileReward:model.profileReward.update,
     render: model.render,
-    destroy() { televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); vitalsRoot.unmount(); levelRoot.unmount(); resourcesRoot.unmount(); },
+    destroy() { televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
   };
 }
