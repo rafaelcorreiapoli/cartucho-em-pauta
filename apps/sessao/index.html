@@ -89,12 +89,7 @@
       <div id="context-hud">
         <section id="stations" aria-label="Ações próximas" hidden>
           <div class="station-actions">
-            <div class="station-grid">
-              <button class="hud-button hud-button--secondary" data-action="amendment" data-station="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Propor emenda</span></button>
-              <button class="hud-button hud-button--secondary" data-action="audit" data-station="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar</span></button>
-              <button class="hud-button hud-button--secondary" data-action="panel" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Corrigir</span></button>
-              <button class="hud-button hud-button--secondary" data-action="fraud" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar</span></button>
-            </div>
+            <div id="legislative-station-actions" class="station-grid"></div>
             <div class="station-grid" id="station-election-actions" hidden>
               <button class="hud-button hud-button--secondary" id="advertise" data-station="press" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span>Veicular propaganda<small>R$ 20 mil · 1 por ciclo</small></span></button>
               <button class="hud-button hud-button--secondary" id="speech" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Discursar</span></button>

@@ -41,11 +41,13 @@ test('fraud shows different figures until a player audits and reports it', () =>
   const view = (player:Player) => match.view(player.id,ids,0);
   expect(view(host).role).toBe('Parlamentar');
   expect(view(host).infiltratorName).toBeUndefined();
-  expect(view(traitor).role).toBe('Infiltrado');
+  expect(view(traitor)).toMatchObject({role:'Infiltrado',canFraud:true});
+  expect(view(honest).canFraud).toBe(false);
   match.act(at(honest,'panel'),'fraud',1);
   match.act(traitor,'fraud',2);
   expect(view(host).yes.budget).toBe(-28);
   match.act(at(traitor,'panel'),'fraud',3);
+  expect(view(traitor).canFraud).toBe(false);
   expect(view(host).yes.budget).toBe(-4);
   expect(view(traitor).yes.budget).toBe(-28);
   const finding = match.act(at(honest,'audit'),'audit',4);

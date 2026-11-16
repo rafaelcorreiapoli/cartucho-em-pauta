@@ -5,6 +5,7 @@ import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
+import { mountLegislativeStationActions } from './ui/legislative-station-actions';
 import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
@@ -20,7 +21,7 @@ import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { money, type PoliticsAction } from './politics';
-import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
@@ -30,7 +31,8 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  sendLegislative:(action:Action)=>void) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
@@ -297,6 +299,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
       </button>)));
   }
+  const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
   const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const more = hudButton('Mais ações',()=>{
@@ -434,7 +437,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hideInterview = String(context!=='tv');
     if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
-    const hasAction = [...stationActions,grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
+    const hasLegislativeAction = legislative.render(view,context);
+    const hasAction = hasLegislativeAction || [...stationActions,grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
       .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
@@ -537,6 +541,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       gearSlots.forEach(({slot})=>slot.remove());
       notices.destroy();
       legislativeBrief.destroy();
+      legislative.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);

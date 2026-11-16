@@ -269,7 +269,7 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
-    },political);
+    },political,action=>sendCommand('plenary-action',{action}));
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
@@ -428,7 +428,6 @@ async function connect(join: () => Promise<Room>) {
       game?.reconcile(snapshot);
     });
     joined.onMessage('players',(players: Player[]) => {
-      panel.players(players);
       political.players(players);
       election.players(players);
       hud.players(players);
