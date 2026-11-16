@@ -131,7 +131,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.interactionTargets.set(art,{outline,ready,run});
       art.once('destroy',()=>this.interactionTargets.delete(art));
     }
-    private portraitFrames: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
+    private installationMarkers: {point:Motion; kind:'portrait'|'vip'; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -249,32 +249,34 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (option) actOnFire(option);
         });
       });
-      const frameKey = 'empty-portrait-frame';
-      if (!this.textures.exists(frameKey)) {
-        const texture = this.textures.createCanvas(frameKey,20,20)!;
+      for (const kind of ['portrait','vip'] as const) {
+        const key = `installation-marker-${kind}`;
+        if (this.textures.exists(key)) continue;
+        const texture = this.textures.createCanvas(key,24,20)!;
         const ctx = texture.context;
         ctx.fillStyle = '#cb9853';
-        ctx.fillRect(0,0,20,20);
-        ctx.fillStyle = '#543b24';
-        ctx.fillRect(1,1,18,18);
+        ctx.fillRect(0,0,24,20);
+        ctx.fillStyle = kind==='vip' ? '#142820' : '#543b24';
+        ctx.fillRect(1,1,22,18);
         ctx.fillStyle = '#ffe3a8';
-        ctx.fillRect(6,9,8,2);
-        ctx.fillRect(9,6,2,8);
+        ctx.font = 'bold 10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(kind==='vip' ? 'VIP' : '+',12,10);
         texture.refresh();
       }
-      for (const [place,site] of Object.entries(installationSites)) {
-        if (site.kind!=='portrait') continue;
-        const {point} = site;
-        const art = this.add.image(point.x,point.y,frameKey).setDepth(point.y+1).setVisible(false);
-        this.portraitFrames.push({point,art});
+      for (const [place,{point,kind}] of Object.entries(installationSites)) {
+        if (kind==='pizza') continue;
+        const art = this.add.image(point.x,point.y,`installation-marker-${kind}`).setDepth(point.y+1).setVisible(false);
+        this.installationMarkers.push({point,kind,art});
         const install = () => {
           const gameplay = plenaryView?.gameplay;
           if (!gameplay?.installable.includes(place)) return;
-          return gameplay.inventory.find(item=>item.kind==='portrait');
+          return gameplay.inventory.find(item=>item.kind===kind);
         };
         this.registerInteraction(art,()=>!!install(),()=>{
-          const portrait = install();
-          if (portrait) interact({kind:'install',item:portrait.id,place});
+          const item = install();
+          if (item) interact({kind:'install',item:item.id,place});
         });
       }
       this.officeDoors = this.add.graphics().setDepth(2);
@@ -568,9 +570,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
-      for (const {point,art} of this.portraitFrames) {
+      for (const {point,kind,art} of this.installationMarkers) {
         art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible &&
-          !decorations.some(item=>item.kind==='portrait' && item.x===point.x && item.y===point.y));
+          !decorations.some(item=>item.kind===kind && item.x===point.x && item.y===point.y));
       }
       for (const [art,{outline,ready}] of this.interactionTargets) {
         outline.setVisible(negotiating && art.visible && ready());

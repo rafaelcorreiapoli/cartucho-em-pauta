@@ -8,6 +8,7 @@ import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
 import { canStand, type Player } from '../src/map';
+import { photoMissions } from './photo-missions';
 import { installationSites } from '../src/installations';
 
 function setup() {
@@ -267,24 +268,25 @@ test('installations validate location, keep one occupant and serve each diner on
   expect(game.view(alice,world).interactive).toEqual([]);
 });
 
-test('public portrait frames are reachable and show the installer’s character to other players', () => {
-  const {alice,bob,game,world} = setup();
+test('public portrait and VIP sites are reachable and show the installer to other players', () => {
+  const {alice,bob,game,world,events} = setup();
   world.spend = ()=>true;
   alice.character = 4;
   for (const [place,site] of Object.entries(installationSites)) {
-    if (site.kind!=='portrait') continue;
+    if (site.kind==='pizza') continue;
     Object.assign(alice,terminals.credentials.point);
-    expect(game.act(alice,{kind:'buy',target:'portrait'},world)).toBe('Compra guardada no inventário.');
-    const [portrait] = game.view(alice,world).inventory;
-    expect(game.act(alice,{kind:'install',place,item:portrait.id},world)).toBe('Aproxime-se do local.');
-    const approach = {x:site.point.x,y:site.point.y+12};
+    expect(game.act(alice,{kind:'buy',target:site.kind},world)).toBe('Compra guardada no inventário.');
+    const [item] = game.view(alice,world).inventory;
+    expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
+    const approach = {x:site.point.x,y:site.point.y+10};
     expect(canStand(approach.x,approach.y)).toBe(true);
     Object.assign(alice,approach);
     Object.assign(bob,approach);
     expect(game.view(alice,world).installable).toContain(place);
-    expect(game.act(alice,{kind:'install',place,item:portrait.id},world)).toBe('Objeto instalado.');
+    expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+    if (site.kind==='vip') expect(photoMissions.reserva.facts(events.at(-1)!)).toHaveLength(1);
     expect(game.view(bob,world).decorations).toContainEqual(expect.objectContaining({
-      ...site.point, id:portrait.id,kind:'portrait',character:4,owner:{id:alice.id,name:alice.nick},
+      ...site.point, id:item.id,kind:site.kind,character:4,owner:{id:alice.id,name:alice.nick},
     }));
   }
 });
