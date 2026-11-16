@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {Fire} from './Fire';
 import {fireRules,fireSites} from '../src/fire';
-import {canStand} from '../src/map';
+import type {Player} from '../src/map';
 
 test('fires apply stability losses only during articulation and extinguishing schedules the next fire',()=>{
   const fire = new Fire();
@@ -25,6 +25,25 @@ test('fires apply stability losses only during articulation and extinguishing sc
   expect(fire.view(true)).toBeDefined();
 });
 
-test('each fixed extinguisher is on walkable map floor',()=>{
-  for (const {extinguisher:{x,y}} of fireSites) expect(canStand(x,y)).toBe(true);
+test('moving interrupts installation and only completing it spends the device',()=>{
+  const fire = new Fire();
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...fireSites[0]};
+  let spent = 0;
+  const consume = ()=>{ spent++; return true; };
+  expect(fire.plant(player,0,1,0)).toBe(true);
+  expect(fire.plant({...player,id:'b'},0,2,0)).toBe(false);
+  expect(fire.updateInstallation({...player,moving:true},100,()=>true,consume)).toBe('Instalação interrompida.');
+  expect(spent).toBe(0);
+  expect(fire.plant(player,0,1,100)).toBe(true);
+  expect(fire.updateInstallation(player,3100,()=>true,consume)).toBe('Incendiário instalado.');
+  expect(spent).toBe(1);
+  expect(fire.plant(player,0,2,3100)).toBe(false);
+  fire.advance(fireRules.fuse-fireRules.smoke-1,true);
+  expect(fire.smoke).toBeUndefined();
+  expect(fire.disarm(0)).toBe(false);
+  fire.advance(fireRules.fuse-fireRules.smoke,true);
+  expect(fire.option({...player,id:'b'},false,false)).toMatchObject({kind:'disarm',site:0});
+  expect(fire.disarm(0)).toBe(true);
+  fire.advance(fireRules.fuse,true);
+  expect(fire.view(true)).toBeUndefined();
 });

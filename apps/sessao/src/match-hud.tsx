@@ -1,5 +1,5 @@
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
-import {fireOptions} from './fire';
+import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
@@ -23,7 +23,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:{kind:'ignite'|'extinguish';site:number}} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
+type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -211,13 +211,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const actions:{label:string; icon:string; action:FieldAction}[] = [];
     const state = view?.gameplay;
     if (state && player) {
-      const hasExtinguisher = state.inventory.some(item=>item.kind==='extinguisher');
       const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
       if (extinguisher && !player.knockedOut && !player.carrying) {
         actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'collect',item:extinguisher.id}});
       }
-      const option = fireOptions(player,view?.fire,view?.sabotageFireSite,hasExtinguisher);
-      if (option) actions.push({label:option.label,icon:'alert',action:{kind:'fire',option}});
       if (view?.ballotCountdown===undefined) {
         for (const panel of [0,1] as const) {
           const option = powerOption(player,panel,view?.outage,view?.canSabotagePower);
@@ -225,11 +222,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
+    const fire = view?.fireInteraction;
+    if (fire?.option) actions.push({label:fire.option.label,icon:'alert',action:{kind:'fire',option:fire.option}});
     const channel = state?.officeChannel;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
-    const meter = state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
+    const meter = fire?.progress!==undefined ? {value:fire.progress,max:1,label:'Instalando dispositivo',detail:'Instalando dispositivo'} :
+      state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
       detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : channel?.kind==='office-cash' ? {value:channel.elapsed,max:channel.duration,label:'Embolsando dinheiro'} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
       detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
       robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
@@ -443,7 +443,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
-    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 

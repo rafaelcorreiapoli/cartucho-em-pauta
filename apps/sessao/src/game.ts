@@ -2,8 +2,8 @@ import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
-import {fireOptions,fireSites,type FireAction} from './fire';
-import {createRoomFires} from './fire-effects';
+import {canActOnFire,fireSites,type FireCommand} from './fire';
+import {createRoomFires,createFuseSmoke} from './fire-effects';
 import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -61,7 +61,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:{kind:FireAction;site:number})=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -142,6 +142,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private fogInSession = false;
     private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
     private roomFires!:ReturnType<typeof createRoomFires>;
+    private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
@@ -235,12 +236,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
-      const hasExtinguisher = ()=>!!plenaryView?.gameplay?.inventory.some(item=>item.kind==='extinguisher');
       this.roomFires = createRoomFires(this);
+      this.fuseSmoke = createFuseSmoke(this);
       const extinguishOption = (site:number)=>{
         const player = local.state?.player;
-        if (!player || plenaryView?.fire?.site!==site) return;
-        return fireOptions(player,plenaryView.fire,undefined,hasExtinguisher());
+        const option = plenaryView?.fireInteraction?.option;
+        return option?.kind==='extinguish' && option.site===site && player && canActOnFire(player,site) ? option : undefined;
       };
       this.roomFires.forEach(({flame},site)=>{
         this.registerInteraction(flame,()=>!!extinguishOption(site),()=>{
@@ -506,6 +507,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
         ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
       const fire = plenaryView?.fire;
+      this.fuseSmoke(negotiating ? plenaryView?.fireInteraction?.smoke : undefined,reducedMotion.matches);
       this.roomFires.forEach((effect,site)=>{
         const active = negotiating && fire?.site===site && !fire.paused;
         const visible = active && !!ownPlayer && localPerception(ownPlayer,fireSites[site],this.drawnVisionRadius).visible;
@@ -605,7 +607,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const profile = swing && weapons[swing.weapon];
         const progress = profile && view.swingStarted!==undefined ? (time-view.swingStarted)/profile.swingMs : 1;
         const pose = swing && progress<1 && !latest.knockedOut ? weaponPose(swing,progress) : undefined;
-        const facing = pose?.facing ?? direction;
+        const handling = !moving && !latest.knockedOut && !latest.carried ? latest.handlingObject : undefined;
+        const facing = pose?.facing ?? handling ?? direction;
+        const reach = handling!==undefined && !reducedMotion.matches ? (1+Math.sin(time/95))*.5 : 0;
         const row = facing===3 ? 1 : facing;
         const attack = pose && profile ? attackArt(character,row,progress,profile.impactMs/profile.swingMs) : undefined;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
@@ -636,12 +640,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!downed) view.fallAt = undefined;
         const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt);
         const combatArt = downed ?? recoil ?? attack;
-        const spriteX = x+(pose?.lungeX ?? 0);
-        const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? 0);
+        const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
+        const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? -reach);
         const labelY = latest.carried ? y-51 : y+2;
         const opacity = latest.knockedOut && !latest.carried ? .68 :
           latest.recoveryProtected && (reducedMotion.matches || Math.floor(time/150)%2===0) ? .4 : 1;
-        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? 0))
+        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? reach*(handling===3 ? -.05 : .05)))
           .setAlpha(opacity);
         const spriteDepth = y+(latest.carried ? 1 : 0);
         if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);

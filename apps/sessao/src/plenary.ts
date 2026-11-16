@@ -1,6 +1,6 @@
 import { canInteract, type InteractionActor } from './interactions';
 import type {ComplaintView} from './complaints';
-import type {FireView} from './fire';
+import type {FireInteraction,FireView} from './fire';
 import type {PowerView} from './power';
 import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
@@ -103,7 +103,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
-  complaints?:ComplaintView; fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
+  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 
