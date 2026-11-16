@@ -606,8 +606,8 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 
 | ID | Item | Estado | Evidência | Observação | Complexidade |
 | --- | --- | --- | --- | --- | --- |
-| EXP-01 | Missões do anexo com mecânicas existentes | PARCIAL | PRs 25 e 26, PersonalAgenda.test.ts, Gameplay.test.ts, PhoneSession.test.ts, mission-row.test.tsx | 40 missões adicionadas. A missão de investimento direto foi retirada na atualização de campanha do PR 29. A cobertura das demais variantes do anexo ainda está em revisão. | Média |
-| EXP-02 | Projetos do anexo com efeitos jogáveis | IMPLEMENTADO | PR 25, PlenaryMatch.test.ts, Foundations.test.ts, gameplay.test.ts | Sete projetos aplicam efeitos no jogo. A PEC da Reeleição Infinita foi retirada no PR 29 junto com o investimento direto. Os demais exigem mecânicas que ainda não estão disponíveis na forma descrita pelo anexo. | — |
+| EXP-01 | Missões do anexo com mecânicas existentes | PARCIAL | PRs 25 e 26, PersonalAgenda.test.ts, Gameplay.test.ts, PhoneSession.test.ts, mission-row.test.tsx | Adicionados Plantão Parlamentar (N08), Privilégio Adquirido (N11), Amizade Institucional (N21), Investimento Político (N29) e Solenidade de Inauguração (N75). Corrigidos locais públicos (N07), transferência nominal de R$ 10 mil (N16) e Cafezinho durante a articulação (N80). O gameserver testa ações reais, interrupção, rejeição, duplicatas e XP. A interface testa requisitos, tempo e valores do estado autoritativo. | Média |
+| EXP-02 | Projetos do anexo com efeitos jogáveis | IMPLEMENTADO | PR 25, PlenaryMatch.test.ts, Foundations.test.ts, gameplay.test.ts | Doze projetos do anexo estão no catálogo. A PEC da Reeleição Infinita (N09) dobra o peso das propagandas pagas na pesquisa e na apuração por 120 s. Jogos de teste verificam aprovação, rejeição, expiração, saldo e apuração. Dia Nacional do Nada também tem teste de pagamento e o HUD renderiza banners e políticas a partir do estado do servidor. | — |
 | EXP-03 | Nada a Declarar (MIS-N54) | IMPLEMENTADO | Gameplay.test.ts, PersonalAgenda.test.ts, mission-row.test.tsx | O servidor conta até 15 segundos de deslocamento com dinheiro e com a Cueca do Mensalão ativa. Ficar parado, largar o dinheiro ou expirar o efeito interrompe o progresso. O HUD exibe o tempo confirmado pelo servidor. | — |
 | EXP-04 | Cerimonial Oficial (MIS-N73) | IMPLEMENTADO | PersonalAgenda.test.ts, photo-missions.ts, mission-row.test.tsx | O sorteio exige um retrato instalado. O teste de captura verifica selfie distante, foto comum próxima e selfie válida junto ao retrato de outro jogador. O HUD identifica o objetivo e a conclusão. | — |
 | EXP-05 | Visita de Cortesia (MIS-N24) | IMPLEMENTADO | PersonalAgenda.test.ts, Gameplay.ts, mission-row.test.tsx | Exige uma interação bem-sucedida dentro do gabinete indicado, como tirar uma foto. O teste integrado rejeita a simples entrada, uma ação inválida e uma foto no gabinete de outro jogador com o mesmo nick. O HUD exibe o alvo e um exemplo de ação. | — |
@@ -618,3 +618,16 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | EXP-10 | Segurança Parlamentar (MIS-N59) | IMPLEMENTADO | Gameplay.ts, PersonalAgenda.test.ts, mission-row.test.tsx | Cronometra dez segundos junto ao mesmo parlamentar elegível com Porrete equipado. Trocar de alvo, atacar ou desconectar zera a sequência. Teste usa compra, equipamento, combate e tick reais. O HUD mostra a condição e o tempo confirmado pelo servidor. | — |
 | EXP-11 | Plantão de Emergência (MIS-N66) | IMPLEMENTADO | PlenaryMatch.test.ts, mission-row.test.tsx | O gameserver exige extinguir um incêndio ativo a partir da sala afetada. O teste diferencia apagar de dentro e a partir do corredor, verifica exigência do extintor e rejeita extinguir novamente. O HUD explicita a necessidade de entrar na sala. | — |
 | EXP-12 | Reunião de Alto Nível (MIS-N71) | IMPLEMENTADO | Gameplay.ts, installations.ts, PersonalAgenda.test.ts, mission-row.test.tsx | Define a área VIP em torno de uma placa instalada. O gameserver mede quinze segundos contínuos junto do mesmo parlamentar na mesma área. O teste cobre sorteio sem placa, limite da área, retirada da placa, reinício e conclusão. O HUD mostra o local e o progresso. | — |
+
+
+### Dependências do anexo
+
+- MIS-N04, N13 e N14 dependem de uma região de banheiro no mapa.
+- MIS-N45 e N56 dependem de gravações de voz válidas com duração autoritativa. O monitoramento de grampo já cobre N55.
+- MIS-N53 depende de camuflagem de identidade como estado autoritativo. A Cueca do Mensalão oculta os objetos carregados.
+- MIS-N57 requer câmeras institucionais. As câmeras clandestinas próprias já atendem N58.
+- MIS-N62 já é coberta pelo mesmo ato autoritativo de extinguir o fogo de N61. A crise atual tem um único executor por extinção.
+- MIS-N63, N64 e N65 dependem das crises de pane elétrica e invasão.
+- PROJ-N01 depende de obrigações individuais de atividade. O custeio institucional atual é uma despesa coletiva.
+- PROJ-N02 depende do consumível Pinga e da sua distribuição. PROJ-N08 depende de quebra de sigilo bancário.
+- PROJ-N11 depende de pane elétrica. PROJ-N14 depende de portas públicas trancáveis. Portas de gabinetes particulares têm uma regra própria.
