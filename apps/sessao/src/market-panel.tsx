@@ -1,6 +1,6 @@
 import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
-import { markShortcut } from './action-shortcuts';
+import { EquipmentReplacement } from './ui/equipment-replacement';
 import { describeFood, foods, isFood } from './food';
 import { gearConflict, isGear } from './equipment';
 import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
@@ -21,22 +21,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const body = dialog.querySelector<HTMLElement>('#market-body')!;
   const root = createRoot(body);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
-  const purchasedName = prompt.querySelector('#equip-purchase-item')!;
-  const yes = prompt.querySelector<HTMLButtonElement>('#equip-purchase-yes')!;
-  const no = prompt.querySelector<HTMLButtonElement>('#equip-purchase-no')!;
-  if (!yes.hasAttribute('aria-keyshortcuts')) {
-    markShortcut(yes,'1');
-    markShortcut(no,'2');
-  }
+  const promptRoot = createRoot(prompt);
   let replacement:number|undefined;
   let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
-  yes.onclick = () => {
-    const item = purchase?.id;
-    const token = replacement;
-    prompt.close();
-    if (item!==undefined && token!==undefined) send({kind:'replace-gear',item,token});
-  };
-  no.onclick = () => prompt.close();
   const dismissPurchase = () => { purchase = undefined; replacement = undefined; };
   prompt.addEventListener('close',dismissPurchase);
   const pageSize = 9;
@@ -165,8 +152,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         if (prompt.open) prompt.close();
       } else if (!prompt.open && conflict && purchase && inventory.some(item=>item.id===purchase?.id)) {
         replacement = conflict.id;
-        purchasedName.textContent = `${objects[conflict.kind].name} → ${objects[purchase.kind].name}`;
+        const {id:item,kind} = purchase;
+        flushSync(()=>promptRoot.render(<EquipmentReplacement equipped={objects[conflict.kind].name} purchased={objects[kind].name}
+          confirm={()=>{
+            prompt.close();
+            send({kind:'replace-gear',item,token:conflict.id});
+          }}
+          cancel={()=>prompt.close()}/>));
         prompt.showModal();
+        prompt.querySelector<HTMLButtonElement>('#equip-purchase-no')?.focus();
       }
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
       if (!state) {
@@ -227,7 +221,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       prompt.removeEventListener('close',dismissPurchase);
       purchase = undefined;
       prompt.close();
-      yes.onclick = no.onclick = null;
+      promptRoot.unmount();
       dialog.removeEventListener('cancel',close);
       dialog.removeEventListener('submit',close);
       dialog.removeEventListener('keydown',onPageKey);
