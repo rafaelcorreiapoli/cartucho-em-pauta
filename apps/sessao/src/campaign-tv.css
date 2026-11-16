@@ -1,13 +1,19 @@
 .campaign-tv {
   position: absolute;
   top: clamp(80px, 18dvh, 170px);
-  left: 50%;
-  width: min(440px, 86vw, 68dvh);
-  transform: translateX(-50%);
+  --tv-edge: clamp(8px, 1.5vw, 20px);
   z-index: 8;
   pointer-events: none;
   container-type: inline-size;
   filter: drop-shadow(0 12px 24px #0009);
+}
+.campaign-tv[data-side="left"] {
+  left: var(--tv-edge);
+  width: min(360px, 43vw, 55dvh);
+}
+.campaign-tv[data-side="right"] {
+  right: var(--tv-edge);
+  width: min(280px, 35vw, 45dvh);
 }
 .campaign-tv > img {
   display: block;
@@ -48,7 +54,7 @@
   border-top: 2px solid #e9bd64;
   background: #152424;
   color: #fff3d8;
-  font-size: 4cqw;
+  font-size: max(10px, 4cqw);
   font-weight: 750;
   line-height: 1.15;
 }

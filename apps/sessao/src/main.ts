@@ -316,7 +316,7 @@ async function connect(join: () => Promise<Room>) {
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
-    const campaignTv = createCampaignTv(session);
+    const campaignTv = createCampaignTv(session,joined.sessionId);
     joined.onMessage('campaign-advertisement',(ad:CampaignAdvertisement & {advertiserId:string})=>{
       campaignTv.enqueue(ad);
       if (ad.advertiserId===joined.sessionId) {
