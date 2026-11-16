@@ -60,7 +60,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   const quickActions = ([
     {target:'grant',panel:'institutional-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
-    {target:'campaign',label:'Campanha · R$ 20 mil',station:'press',icon:'star'},
     {target:'call-cassation',label:'Convocar cassação',station:'panel',icon:'ballot'},
     {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
   ] as const).map(action => {

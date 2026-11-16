@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { canReachStation, type Station, type PlenaryView } from './plenary';
 import { hearingPolicyFee } from './plenary';
-import { CABINET_GRANT, CAMPAIGN_COST, money, splits, describeEvidence, type Offer, type PoliticsAction, type Split } from './politics';
+import { CABINET_GRANT, money, splits, describeEvidence, type Offer, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -98,8 +98,6 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     const exploring = view.phase==='negotiation';
     el('cabinet-form').hidden = !exploring || !at('cabinet') || !view.mandate || politics.grantUsed || politics.suspended;
     el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
-    el('campaign').hidden = !exploring || !at('press');
-    el<HTMLButtonElement>('campaign').disabled = politics.campaigned || politics.wallet<CAMPAIGN_COST;
     const canSummon = exploring && at('panel') && politics.canCallHearing;
     el('hearing-form').hidden = !canSummon;
     el('call-cassation').hidden = !canSummon;
@@ -132,7 +130,6 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     institutional.open = false;
     focusMap();
   };
-  el<HTMLButtonElement>('campaign').onclick = () => send({kind:'campaign'});
   el<HTMLButtonElement>('share').onclick = () => {
     if (recipient.value && dossier.value) {
       send({kind:'share',to:recipient.value,evidence:Number(dossier.value),price:price.value});
