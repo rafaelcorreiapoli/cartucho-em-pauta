@@ -25,11 +25,11 @@ test('zero has no sign or gain styling',()=>{
 
 test('the ballot displays the catalog banner, policy details and gameserver-funded allowance',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
-  for (const id of ['PROJ-N03','PROJ-N05','PROJ-N06','PROJ-N07','PROJ-N08','PROJ-N09','PROJ-N11','PROJ-N02','PROJ-N12','PROJ-N15','PROJ-N16']) {
+  expect(bills.filter(bill=>bill.id.startsWith('PROJ-N'))).toHaveLength(15);
+  for (const bill of bills.filter(entry=>entry.id.startsWith('PROJ-N'))) {
     const match = new PlenaryMatch(1);
     expect(match.start(player.id,[player],0,()=>0)).toBe(true);
-    const project = bills.findIndex(entry=>entry.id===id);
-    const bill = bills[project];
+    const project = bills.indexOf(bill);
     match.gameplayWorld([player],1,()=>false).publish({
       type:'filed',actor:player.id,item:1,project,position:stations.amendment,at:1,witnesses:[],
     });
@@ -42,9 +42,15 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     else if (bill.effect?.kind==='pinga-distribution') {
       expect(view.yes.budget).toBe(-pingaProgram.doseCost);
       expect(markup).toContain(pingaProgram.detail);
-    } else {
-      expect(view.yes.budget).toBe(-0.5);
+    } else if (bill.effect?.kind==='allowance') {
+      expect(view.yes.budget).toBe(-bill.effect.perMandate);
       expect(markup).toContain('Pagamento único por mandato');
+    } else if (bill.effect?.kind==='fire-safety') {
+      expect(view.yes.budget).toBe(-3);
+      expect(markup).toContain('Mais tempo entre incêndios até o fim da partida');
+    } else {
+      expect(bill.effect?.kind).toBe('treasury-reputation');
+      expect(markup).toContain('Até +2 popularidade por entrega · 90 s');
     }
   }
 });

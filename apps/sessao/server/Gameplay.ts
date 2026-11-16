@@ -714,9 +714,8 @@ export class Gameplay {
         return true;
       },
       restore:(id:string,kind:SpyDevice)=>{
-        if (!this.available(id)) return false;
-        this.create(kind,{holder:id});
-        return true;
+        if (!this.available(id)) return undefined;
+        return this.create(kind,{holder:id});
       },
       feedback:(id:string,message:string)=>world.feedback?.(id,message),
       monitor:(player:Player,duration:number)=>{

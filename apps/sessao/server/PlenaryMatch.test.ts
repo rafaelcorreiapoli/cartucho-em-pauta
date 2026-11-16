@@ -731,7 +731,7 @@ test.each(['PROJ-N04','PROJ-N12','PROJ-N13'])('%s pays only on approval with a b
   }
 });
 
-test('treasury bonus applies to real deposits and expires at the published deadline',()=>{
+test.each([true,false])('treasury deposits respect the vote and bonus deadline, approval=%s',approved=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N17');
@@ -739,13 +739,14 @@ test('treasury bonus applies to real deposits and expires at the published deadl
     type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
-  for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+  for (const voter of [host,honest]) match.vote(voter.id,approved ? 'yes' : 'no',NEGOTIATION_MS+1);
   const passedAt = NEGOTIATION_MS+BALLOT_MS;
   match.advance(passedAt);
+  expect(match.view(host.id,ids,passedAt).outcome?.passed).toBe(approved);
   const popularity = (id:string,at:number)=>match.view(id,ids,at).politics!.popularity;
   const before = popularity(host.id,passedAt);
   match.gameplayWorld(people,passedAt+1,()=>false).deposit!(host.id,1);
-  expect(popularity(host.id,passedAt+1)).toBe(before+2);
+  expect(popularity(host.id,passedAt+1)).toBe(before+(approved ? 2 : 1));
   const expired = passedAt+90_000;
   const honestBefore = popularity(honest.id,expired);
   match.gameplayWorld(people,expired,()=>false).deposit!(honest.id,1);

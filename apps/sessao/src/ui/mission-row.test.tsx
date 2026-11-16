@@ -369,7 +369,19 @@ test('cleanup requires a private discovery, works without the detector and expir
   match.refreshAgendaEligibility();
   game.spyAction(detective,{kind:'keep',site:'coffee'},at(firstDiscovery));
   game.spyAction(detective,{kind:'inspect',site:'coffee',item:detector.id},at(firstDiscovery));
-  const discovered = firstDiscovery+spyRules.inspect;
+  const rescanned = firstDiscovery+spyRules.inspect;
+  game.tick(at(rescanned),true);
+  expect(match.view(detective.id,ids,rescanned).politics!.progression.xp).toBe(xp);
+  game.spyAction(owner,{kind:'recover',site:'coffee'},at(rescanned));
+  const recovered = rescanned+spyRules.remove;
+  game.tick(at(recovered),true);
+  const recoveredCamera = game.view(owner,at(recovered)).inventory.find(item=>item.kind==='spyCamera')!;
+  expect(recoveredCamera.id).not.toBe(camera.id);
+  game.spyAction(owner,{kind:'install',site:'coffee',item:recoveredCamera.id},at(recovered));
+  const reinstalled = recovered+spyRules.install;
+  game.tick(at(reinstalled),true);
+  game.spyAction(detective,{kind:'inspect',site:'coffee',item:detector.id},at(reinstalled));
+  const discovered = reinstalled+spyRules.inspect;
   game.tick(at(discovered),true);
   expect(match.view(detective.id,ids,discovered).politics!.progression.xp).toBe(xp);
   const scan = missions(detective,discovered).active.find(mission=>mission.kind==='varredura')!;
@@ -401,6 +413,61 @@ test('cleanup requires a private discovery, works without the detector and expir
 
   expect(markup(peer,removed)).not.toContain(title);
   expect(missions(peer,removed).completed.some(mission=>mission.kind==='limpeza')).toBe(false);
+});
+
+test('Investigação Particular counts two physical cameras across reinstallation',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const ids = [player.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  account.ownsSpyCameras = ()=>game.ownsSpyCameras(player.id);
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const at = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  const view = (now:number)=>match.view(player.id,ids,now).politics!;
+  expect(view(0).missions.active.some(mission=>mission.kind==='duasCameras')).toBe(false);
+  Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(player,{kind:'open-shop',target:'vendor'},at(1));
+  for (let index=0;index<2;index++) {
+    const token = game.view(player,at(1)).dialogue?.token;
+    game.act(player,{kind:'shop-buy',target:'spyCamera',token},at(1));
+  }
+  const [first,second] = game.view(player,at(1)).inventory.filter(item=>item.kind==='spyCamera');
+  Object.assign(player,{x:254,y:252});
+  game.spyAction(player,{kind:'install',site:'coffee',item:first.id},at(10));
+  game.tick(at(10+spyRules.install),true);
+  const original = game.spyView(player,at(10+spyRules.install)).channels[0];
+  Object.assign(player,{x:933,y:244});
+  game.spyAction(player,{kind:'install',site:'press',item:second.id},at(5020));
+  game.tick(at(5020+spyRules.install),true);
+  const secondInstalledAt = 5020+spyRules.install;
+  const other = game.spyView(player,at(secondInstalledAt)).channels.find(channel=>channel.id!==original.id)!;
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const progress = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='duasCameras')!;
+  expect(progress(secondInstalledAt).current).toBe(0);
+  game.spyAction(player,{kind:'open',channel:original.id},at(secondInstalledAt+1));
+  expect(progress(secondInstalledAt+1).current).toBe(1);
+  Object.assign(player,{x:254,y:252});
+  game.spyAction(player,{kind:'recover',site:'coffee'},at(secondInstalledAt+10));
+  const recoveredAt = secondInstalledAt+10+spyRules.remove;
+  game.tick(at(recoveredAt),true);
+  const recovered = game.view(player,at(recoveredAt)).inventory.find(item=>item.kind==='spyCamera')!;
+  game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},at(recoveredAt));
+  const reinstalledAt = recoveredAt+spyRules.install;
+  game.tick(at(reinstalledAt),true);
+  const replacement = game.spyView(player,at(reinstalledAt)).channels.find(channel=>!channel.removed && channel.id!==other.id)!;
+  game.spyAction(player,{kind:'open',channel:replacement.id},at(reinstalledAt+1));
+  expect(renderToStaticMarkup(<MissionRow mission={progress(reinstalledAt+1)}/>)).toContain('1 / 2');
+  game.spyAction(player,{kind:'open',channel:other.id},at(reinstalledAt+2));
+  const completed = view(reinstalledAt+2).missions.completed.find(mission=>mission.kind==='duasCameras')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(reinstalledAt+2).progression.xp).toBe(30);
 });
 
 test('free coffee missions can be drawn and completed with an empty wallet',()=>{
