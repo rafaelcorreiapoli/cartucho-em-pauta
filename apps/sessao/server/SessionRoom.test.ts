@@ -194,6 +194,11 @@ test('clients share movement and voice, then receive private roles and payments'
     }
     await Promise.all([second,third].map((peer,index)=>walkTo(peer,{x:140+index*12,y:146},true)));
     const sourceBefore = secondView!.politics!.wallet;
+    const sourceIncomeBefore = secondView!.politics!.walletIncome;
+    const sourceWalletWithoutNewIncome = ()=> {
+      const politics = secondView?.politics;
+      return politics && politics.wallet-(politics.walletIncome-sourceIncomeBefore);
+    };
     const balanceBefore = thirdView!.politics!.wallet;
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
@@ -202,7 +207,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('politics',{...transfer,token:undefined});
     second.send('politics',transfer);
     second.send('politics',{...transfer,amount:1});
-    await until(() => secondView?.politics?.wallet===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
+    await until(() => sourceWalletWithoutNewIncome()===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
     expect(firstView!.politics?.wallet).toBe(8);
     expect(firstView!.politics?.evidence).toEqual([]);
     expect(firstView!.politics?.ledger).toEqual([]);
@@ -222,7 +227,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('election',{kind:'advertise',token:1850});
     second.send('election',{kind:'advertise',token:1850});
     second.send('politics',{...transfer,token:1850});
-    await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
+    await until(() => sourceWalletWithoutNewIncome()===sourceBefore-2-ELECTION_RULES.advertisementCost &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.advertised).toBe(true);
@@ -256,7 +261,8 @@ test('clients share movement and voice, then receive private roles and payments'
     await walkTo(second,stations.press);
     second.send('election',{kind:'advertise',token:1870});
     await until(() => secondView?.election?.personal?.advertised===true);
-    expect(secondView!.politics?.wallet).toBe(6);
+    const secondMatchWallet = secondView!.politics!;
+    expect(secondMatchWallet.wallet-secondMatchWallet.walletIncome).toBe(8-ELECTION_RULES.advertisementCost);
     expect(thirdView!.politics?.wallet).toBe(8);
 
 
