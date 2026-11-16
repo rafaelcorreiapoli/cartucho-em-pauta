@@ -12,7 +12,7 @@ async page => {
   await page.keyboard.press('c');
   const dialog = page.locator('#gameplay-dialog');
   await dialog.getByRole('button',{name:'Telefone',exact:true}).waitFor();
-  if (await dialog.locator('#phone-apps').isHidden()) await page.keyboard.press('0');
+  if (await dialog.locator('#phone-apps').isHidden()) await page.keyboard.press('Escape');
   if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');
   await page.keyboard.press('2');
   await dialog.getByRole('heading',{name:'Joguinhos',exact:true}).waitFor();
@@ -23,10 +23,15 @@ async page => {
   await dialog.getByText('Fim de jogo',{exact:true}).waitFor();
   await page.keyboard.press('5');
   await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
-  await page.keyboard.press('0');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('1');
   await dialog.getByRole('heading',{name:'Telefone',exact:true}).waitFor();
-  await page.keyboard.press('0');
+  await dialog.getByRole('button',{name:'Fechar aplicativo'}).click();
+  await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
+  await page.keyboard.press('1');
+  await dialog.getByRole('heading',{name:'Telefone',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await page.keyboard.press('2');
   await dialog.getByRole('button',{name:'Snake'}).waitFor();
   await page.keyboard.press('6');
@@ -38,7 +43,7 @@ async page => {
   await page.keyboard.press('5');
   if (await dialog.locator('.bets-reel').count()!==3) throw Error('Quantidade de rolos');
   await dialog.getByText(/Trinca!|Sem trinca/).waitFor();
-  await page.keyboard.press('0');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('3');
   const preview = dialog.getByRole('img',{name:'Enquadramento da câmera'});
   await preview.waitFor();
@@ -54,7 +59,7 @@ async page => {
   await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();
   await dialog.getByText('Original',{exact:true}).waitFor();
   if (await dialog.getByRole('img',{name:/^Selfie em/}).evaluate(canvas=>canvas.width)<600) throw Error('Low-resolution selfie canvas');
-  await page.keyboard.press('0');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('8');
   await dialog.getByRole('heading',{name:'Correio',exact:true}).waitFor();
   await dialog.getByRole('button',{name:'Novo comunicado'}).click();
@@ -68,10 +73,19 @@ async page => {
   await dialog.getByRole('button',{name:/^Publicar/}).click();
   await dialog.getByRole('heading',{name:'Selfie de teste'}).waitFor();
   await dialog.locator('#phone-mail canvas').waitFor();
-  await page.keyboard.press('0');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('9');
   const pix = dialog.getByRole('region',{name:'Transferência Pix'});
   await pix.getByText('Saldo disponível').waitFor();
   if (!await pix.getByRole('button',{name:'Transferir'}).isDisabled()) throw Error('Pix sem destinatário');
+  await page.keyboard.press('Escape');
+  await dialog.getByRole('button',{name:'Fechar',exact:true}).click();
+  await dialog.waitFor({state:'hidden'});
+  for (const [key,title] of [['o','Inventário'],['e','Equipamentos']]) {
+    await page.keyboard.press(key);
+    await dialog.getByRole('heading',{name:title,exact:true}).waitFor();
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({state:'hidden'});
+  }
 
 }

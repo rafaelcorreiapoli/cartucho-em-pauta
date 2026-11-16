@@ -1,6 +1,4 @@
-import { setCharacterPortrait } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
-import type { DirectoryContact } from './politics';
 
 export function node<K extends keyof HTMLElementTagNameMap>(tag:K,text = '') {
   const result = document.createElement(tag);
@@ -33,16 +31,4 @@ export function glyph(name:string) {
   use.setAttribute('href','#icon-'+name);
   icon.append(use);
   return icon;
-}
-
-export function contactFace(person:DirectoryContact) {
-  const face = node('span');
-  face.className = 'portrait phone-contact-face';
-  face.setAttribute('aria-hidden','true');
-  if (person.character!==undefined) setCharacterPortrait(face,person.character);
-  else {
-    face.classList.remove('portrait');
-    face.textContent = person.name.slice(0,1).toUpperCase();
-  }
-  return face;
 }

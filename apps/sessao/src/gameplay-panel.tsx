@@ -1,10 +1,11 @@
+import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
 import type { PoliticsAction } from './politics';
 import { PhoneCamera } from './ui/phone-camera';
 import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
-import { Backpack, Coffee, createElement as createIcon, Grid2X2, Shirt, Download } from 'lucide';
+import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -17,7 +18,7 @@ import { installationSites, shop } from './installations';
 import { decorationLabel, itemSymbols } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
-import { button, contactFace, itemPortrait, node } from './gameplay-ui';
+import { button, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
@@ -57,6 +58,7 @@ import type { SpyOption } from "./surveillance";
 export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
+  const headerRoot = createRoot(dialog.querySelector('header')!);
   const navigation = element('phone-apps');
   const navigationRoot = createRoot(navigation);
   const callHost = document.createElement('div');
@@ -83,7 +85,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const equipmentRoot = createRoot(equipmentHost);
   const objectsHost = document.createElement('div');
   const objectsRoot = createRoot(objectsHost);
-  const bagTitleIcon = createIcon(Backpack, {class:'hud-glyph bag-title-icon','aria-hidden':'true'});
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
@@ -181,6 +182,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   type ObjectAction = {label:string;run:()=>void;key?:string;disabled?:boolean};
 
+  function renderHeader() {
+    const mode = dialog.dataset.mode;
+    const title = mode==='phone' ? app ?? 'Celular' : mode==='bag' ? 'Inventário' :
+      stashOpen ? 'Armário particular' : mode==='equipment' ? 'Equipamentos' : 'Objeto';
+    flushSync(()=>headerRoot.render(<GameplayDialogHeader title={title} bag={mode==='bag'}
+      back={mode==='phone' && app ? ()=>selectApp() : undefined}/>));
+  }
+
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
     selection = item;
     quantity = 1;
@@ -194,10 +203,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     highlightSlot();
     photos.clearRecipient();
     renderKey = '';
-    element('gameplay-title').textContent = bag ? 'Inventário' : stash ? 'Armário particular' : equipment ? 'Equipamentos' : object ? 'Objeto' : 'Celular';
-    if (bag) element('gameplay-title').prepend(bagTitleIcon);
     navigation.hidden = true;
     dialog.dataset.mode = bag ? 'bag' : equipment || stash ? 'equipment' : object ? 'item' : 'phone';
+    renderHeader();
     if (!dialog.open) dialog.showModal();
     render();
   }
@@ -217,6 +225,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     photos.closePresentation();
     if (next==='Correio' && app!=='Correio') resetMail();
     app = next;
+    renderHeader();
     photos.resetSelection();
     render();
   }
@@ -248,10 +257,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     element('gameplay-target-label').hidden = bagOpen || selection?.source!=='inventory' || !contacts.length;
     navigation.hidden = !phone || !!app;
-    const back = element<HTMLButtonElement>('phone-back');
-    back.hidden = !phone || !app;
-    back.onclick = ()=>selectApp();
-    element('gameplay-close').hidden = phone && !!app;
     if (phone && !navigationMounted) {
       navigationMounted = true;
       navigationRoot.render(<PhoneApps select={selectApp}/>);
@@ -401,24 +406,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       cards.push(objectsHost);
     }
     if (decoration) {
-      const card = node('article');
-      card.className = 'object-card';
-      card.append(node('h3',decorationLabel(decoration)));
-      if (decoration.kind==='portrait') card.append(contactFace({...decoration.owner,character:decoration.character}));
-      if (decoration.marked) card.append(node('p','Retrato rabiscado'));
-      if (decoration.kind==='vip') card.append(node('p','Área reservada por '+decoration.owner.name));
-      const control = (label:string,kind:GameplayAction['kind'])=>button(label,()=>send({kind,item:decoration.id}));
-      if (phase==='negotiation' && !decoration.privateOffice) {
-        if (decoration.kind==='pizza') card.append(control('Pegar uma fatia','slice'));
-        else {
-          if (decoration.kind==='portrait' && !decoration.marked && decoration.owner.id!==ownId) card.append(control('Rabiscar','mark'));
-          card.append(control('Retirar','uninstall'));
-        }
-      }
-      cards.push(card);
+      flushSync(()=>objectsRoot.render(<DecorationCard decoration={decoration} ownId={ownId}
+        exploring={phase==='negotiation'} send={send}/>));
+      cards.push(objectsHost);
     }
     if (phone) {
-      element('gameplay-title').textContent = app ?? 'Celular';
       if (app==='Telefone') {
         flushSync(()=>callRoot.render(<PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
           available={phase==='negotiation'} send={send}/>));
@@ -700,6 +692,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       dialog.close();
       tools.hidden = element('object-request').hidden = true;
       delete element('object-request').dataset.request;
+      headerRoot.unmount();
       navigationRoot.unmount();
       callRoot.unmount();
       cameraRoot.unmount();
