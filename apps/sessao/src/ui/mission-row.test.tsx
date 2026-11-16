@@ -1,3 +1,5 @@
+import {installationSites} from '../installations';
+
 import {InternalMail} from '../../server/InternalMail';
 import {ELECTION_RULES} from '../elections';
 import {internalMailRules} from '../internal-mail';
@@ -682,4 +684,38 @@ test('the signature mission keeps the signed document visible after a signer lea
   const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
+});
+
+test('the VIP reservation mission uses a chair the player can actually reserve',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,
+    (id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  let now = 1;
+  for (const place of ['coffeeVip','lobbyVip','libraryVip','pressVip'] as const) {
+    Object.assign(player,npcs.credentialsVendor.interaction);
+    game.act(player,{kind:'open-shop',target:'credentialsVendor'},world(now));
+    const token = game.view(player,world(now)).dialogue?.token;
+    expect(game.act(player,{kind:'shop-buy',target:'vip',token},world(now))).toBe('Compra guardada no inventário.');
+    const item = game.view(player,world(now)).inventory.find(item=>item.kind==='vip')!;
+    Object.assign(player,installationSites[place].point);
+    expect(game.act(player,{kind:'install',place,item:item.id},world(++now))).toBe('Objeto instalado.');
+  }
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['reserva','privilegioAdquirido','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  expect(view(now).missions.active.map(({kind})=>kind)).toEqual(['cafe','passeio']);
+  const plaque = game.view(player,world(now)).interactive.find(({kind})=>kind==='vip')!;
+  expect(game.act(player,{kind:'uninstall',item:plaque.id},world(++now))).toBe('Objeto retirado.');
+  const active = view(now).missions.active.find(({kind})=>kind==='reserva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Reserve uma cadeira');
+  expect(game.act(player,{kind:'install',place:'pressVip',item:plaque.id},world(++now))).toBe('Objeto instalado.');
+  const completed = view(now).missions.completed.find(({kind})=>kind==='reserva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });

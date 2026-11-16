@@ -15,7 +15,7 @@ import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhon
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { installationSites, vipAreaRadius } from '../src/installations';
+import { installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
 import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -212,7 +212,9 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait'|'anyVip', replacement=false) {
+  hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false) {
+    if (kind==='vipSpace') return Object.entries(installationSites).some(([site,{kind}])=>
+      kind==='vip' && this.installations.get(site)?.owner.id!==id);
     if (kind==='anyPortrait' || kind==='anyVip') {
       return [...this.installations.values()].some(item=>item.kind===(kind==='anyPortrait' ? 'portrait' : 'vip'));
     }

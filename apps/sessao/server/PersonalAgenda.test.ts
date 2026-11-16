@@ -1158,7 +1158,7 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
   const [host,guest] = players;
   const game = new Gameplay();
-  const options = {...metrics,hasAgendaDecoration:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip')=>game.hasAgendaDecoration(host.id,kind)};
+  const options = {...metrics,hasAgendaDecoration:(kind:Parameters<Gameplay['hasAgendaDecoration']>[1])=>game.hasAgendaDecoration(host.id,kind)};
   const agenda = new PersonalAgenda(options,2,()=>0,()=>{});
   const draw = ()=>{
     Reflect.set(agenda,'missions',[]);
