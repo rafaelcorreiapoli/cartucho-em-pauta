@@ -24,11 +24,7 @@ export function mountProjectPicker() {
         }}>
           <div className="project-picker-list" role="radiogroup" aria-labelledby="project-picker-title">
             {bills.map((bill,index)=>index!==current && <label key={bill.id} className="project-picker-option">
-              <span className="project-picker-art" aria-hidden="true">
-                {bill.banner
-                  ? <img src={import.meta.env.BASE_URL+'assets/'+bill.banner} alt="" loading="lazy"/>
-                  : <svg className="hud-glyph"><use href="#icon-wifi"/></svg>}
-              </span>
+              <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/documento-legislativo.webp'} alt=""/>
               <span className="project-picker-copy">
                 <strong id={`project-picker-name-${index}`}>{bill.name}</strong>
                 <span id={`project-picker-description-${index}`}>{bill.description}</span>
