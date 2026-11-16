@@ -1,7 +1,7 @@
 import { discountedPrice } from '../src/market-catalog';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
-import type { GameplayWorld } from './gameplay-world';
+import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 export class InternalMail {
   private readonly cooldowns = new Map<string,number>();
@@ -57,12 +57,10 @@ export class InternalMail {
     if (expired) this.authenticity.delete(expired.id);
     this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
       ...this.notices].slice(0,internalMailRules.history);
-    if (!source && resolved) world.publish({type:'mail-published',actor:player.id,at:world.now,
-      position:player,item:id,place:resolved.attachment.kind,witnesses:[]});
+    if (!source && resolved) publishGameplay(world,player,'mail-published',{item:id,place:resolved.attachment.kind,witnesses:[]});
     if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
       const {photo} = resolved.attachment;
-      world.publish({type:'photo-published',actor:player.id,at:world.now,position:{x:player.x,y:player.y},
-        item:photo.id,photo,place:'internal-mail',witnesses:[]});
+      publishGameplay(world,player,'photo-published',{item:photo.id,photo,place:'internal-mail',witnesses:[]});
     }
   }
 }

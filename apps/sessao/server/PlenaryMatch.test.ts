@@ -828,3 +828,22 @@ test('Plantão de Emergência cannot be claimed after the fire has expired',()=>
   expect(view.fire).toBeUndefined();
   expect(view.politics!.missions.active).toContainEqual(expect.objectContaining({kind:'plantaoEmergencia',current:0}));
 });
+
+test('replaying a server-identified event does not apply progress twice',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['contribuinte','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const world = match.gameplayWorld(people,10,()=>false);
+  const deposit = {type:'delivered',actor:host.id,item:1,position:terminals.treasury.point,at:10,place:'treasury',amount:2,witnesses:[]} as const;
+  const settled = {...deposit,witnesses:[],eventId:world.nextEventId!()};
+  const active = ()=>match.view(host.id,ids,10).politics!.missions.active.find(mission=>mission.kind==='contribuinte')?.current;
+  world.publish(settled);
+  world.publish({...settled});
+  expect(active()).toBe(2);
+  world.publish({...settled,eventId:world.nextEventId!()});
+  expect(active()).toBe(4);
+});

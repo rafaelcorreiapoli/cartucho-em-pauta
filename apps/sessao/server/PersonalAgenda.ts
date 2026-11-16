@@ -253,7 +253,8 @@ export class PersonalAgenda {
   acceptGameplayEvent(event:GameplayEvent) {
     const key = event.type==='photo-published' && event.photo
       ? JSON.stringify([event.type,event.photo.id,event.place])
-      : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
+      : event.eventId!==undefined ? 'event:'+event.eventId
+        : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
     if (this.seenEvents.has(key)) return false;
     this.seenEvents.add(key);
     return true;

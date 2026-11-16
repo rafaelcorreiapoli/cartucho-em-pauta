@@ -9,7 +9,7 @@ import {canActOnFire,fireSites,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
-import type { GameplayWorld } from './gameplay-world';
+import { publishGameplay, type GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
@@ -144,6 +144,8 @@ export class PlenaryMatch {
   private election = new ElectionCycle();
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
+  private eventSequence = 0;
+  private readonly receivedEvents = new Set<number>();
   private readonly filedDocuments = new Set<number>();
   private hearingTarget?: string;
   private cassationAt?:number;
@@ -191,6 +193,7 @@ export class PlenaryMatch {
     this.policies.clear();
     this.treasuryBonus = undefined;
     this.complaints.reset();
+    this.receivedEvents.clear();
     this.filedDocuments.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
@@ -250,8 +253,28 @@ export class PlenaryMatch {
     else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
   }
 
-  private publishActivity(player:Player,type:GameplayEvent['type'],now:number) {
-    this.economy.recordGameplay({type,actor:player.id,at:now,position:{x:player.x,y:player.y},witnesses:[]});
+  private publishActivity(player:Player,type:GameplayEvent['type'],now:number,
+    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'>) {
+    publishGameplay({players:[],now,nextEventId:()=>++this.eventSequence,publish:event=>this.recordGameplay(event)},
+      player,type,{...details,witnesses:[]});
+  }
+
+  private recordGameplay(event:GameplayEvent) {
+    if (event.eventId!==undefined) {
+      if (this.receivedEvents.has(event.eventId)) return;
+      this.receivedEvents.add(event.eventId);
+    }
+    if (event.type==='filed' && event.item!==undefined) {
+      if (this.filedDocuments.has(event.item)) return;
+      this.filedDocuments.add(event.item);
+    }
+    if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
+      if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
+      this.agenda.add(event.project);
+      this.refreshAgendaEligibility();
+    }
+    this.complaints.record(event,this.started);
+    this.economy.recordGameplay(event);
   }
 
   act(player:Player, action:Action, now:number) {
@@ -339,19 +362,8 @@ export class PlenaryMatch {
       payNpc:(from,to,amount)=>this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
-      publish:event=>{
-        if (event.type==='filed' && event.item!==undefined) {
-          if (this.filedDocuments.has(event.item)) return;
-          this.filedDocuments.add(event.item);
-        }
-        if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
-          if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
-          this.agenda.add(event.project);
-          this.refreshAgendaEligibility();
-        }
-        this.complaints.record(event,this.started);
-        this.economy.recordGameplay(event);
-      },
+      nextEventId:()=>++this.eventSequence,
+      publish:event=>this.recordGameplay(event),
     };
   }
 
@@ -463,11 +475,9 @@ export class PlenaryMatch {
         break;
       case 'transfer':
         if (!this.canReceivePix(action.to) || !this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round)) return false;
-        this.economy.recordGameplay({type:'pix-sent',actor:id,target:action.to,amount:action.amount,
-          at:now,position:player,witnesses:[]});
+        this.publishActivity(player,'pix-sent',now,{target:action.to,amount:action.amount});
         const receiver = players.find(other=>other.id===action.to);
-        if (receiver) this.economy.recordGameplay({type:'pix-received',actor:receiver.id,target:id,amount:action.amount,
-          at:now,position:receiver,witnesses:[]});
+        if (receiver) this.publishActivity(receiver,'pix-received',now,{target:id,amount:action.amount});
         return true;
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
@@ -514,8 +524,7 @@ export class PlenaryMatch {
     switch (action.kind) {
       case 'invest':
         if (this.at(player,'press') && this.election.invest(id,action.amount,spend)) {
-          this.economy.recordGameplay({type:'campaign-investment',actor:id,amount:action.amount,
-            duration:this.election.timeUntilRenewal(now),at:now,position:player,witnesses:[]});
+          this.publishActivity(player,'campaign-investment',now,{amount:action.amount,duration:this.election.timeUntilRenewal(now)});
         }
         break;
       case 'advertise': {
@@ -592,8 +601,8 @@ export class PlenaryMatch {
     if (action==='extinguish') {
       if (!hasExtinguisher || !this.fire.extinguish(site)) return;
       const insideRoom = roomAt(player)===fireSites[site].name;
-      this.economy.recordGameplay({type:'fire-extinguished',actor:player.id,at:now,position:player,witnesses:[],
-        amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
+      this.publishActivity(player,'fire-extinguished',now,
+        {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
       return 'Incêndio apagado.';
     }
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';

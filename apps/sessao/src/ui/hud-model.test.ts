@@ -161,3 +161,27 @@ test('the HUD replaces a credited voting mission without offering it again on th
   expect(hud.agenda.get()?.active.map(mission=>mission.kind)).not.toContain('votacao');
   expect(hud.agenda.get()?.active.map(mission=>mission.kind)).toContain('apoio');
 });
+
+test('the HUD receives both campaign investments settled at the same server time',()=>{
+  const match = new PlenaryMatch(1);
+  const candidate = {...player,...terminals.press.point};
+  match.start(candidate.id,[candidate],0,()=>0);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(candidate.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const hud = createHudModel();
+  const render = ()=>hud.render(match.view(candidate.id,[candidate.id],10));
+  match.electionAction(candidate,{kind:'invest',amount:2},10,false);
+  render();
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:2}));
+  match.electionAction(candidate,{kind:'invest',amount:2},10,false);
+  render();
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:4}));
+  const xp = hud.profile.get()?.xp ?? 0;
+  match.electionAction(candidate,{kind:'invest',amount:1},10,false);
+  render();
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:5}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('investimentoPolitico').xp);
+});
