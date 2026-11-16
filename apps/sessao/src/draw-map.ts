@@ -99,10 +99,9 @@ export function drawMap(scene: Phaser.Scene,
 
   for (const [x,y] of desks) {
     if (x===securityRoom.terminal.x-22 && y===securityRoom.terminal.y-20) {
-      const desk = prop(1,x,y-3,45,23,y+20);
-      securityTerminal?.(desk);
-      prop(2,x+3,y-15,19,23,y+21);
-      prop(2,x+23,y-15,19,23,y+21);
+      const terminal = scene.add.image(x,y-14,'furniture-officeTv')
+        .setOrigin(0).setDisplaySize(45,34).setDepth(y+20);
+      securityTerminal?.(terminal);
       continue;
     }
     if (x!==treasurer.counter.x || y!==treasurer.counter.y) prop(2,x+13,y-17,19,23,y+1);
