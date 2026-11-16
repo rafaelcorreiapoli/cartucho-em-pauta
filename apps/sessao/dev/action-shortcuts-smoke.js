@@ -7,6 +7,11 @@ async page => {
   await page.goto(url);
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Atalhos QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  const settings = page.getByRole('dialog',{name:'Configurações'});
+  await page.locator('#lobby-settings').click();
+  await settings.getByRole('status').filter({hasText:/Sala /}).waitFor();
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   await page.getByRole('button',{name:'Aplicativos',exact:true}).click();
@@ -31,8 +36,18 @@ async page => {
   }
   await page.keyboard.press('Escape');
   await page.keyboard.press('k');
-  const settings = page.getByRole('dialog',{name:'Configurações'});
   await settings.waitFor();
+  const music = settings.getByRole('slider',{name:'Música'});
+  const effects = settings.getByRole('slider',{name:'Efeitos e passos'});
+  await music.press('Home');
+  await effects.press('End');
+  const readAudio = ()=>page.evaluate(()=>JSON.parse(localStorage.getItem('cartuchao.sessao.audio')));
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('cartuchao.sessao.audio')).sfxVolume===1);
+  const prefs = await readAudio();
+  if (!prefs.muted || prefs.musicVolume!==0) throw Error('Preferências de áudio não persistiram');
+  await settings.getByRole('button',{name:'Ativar voz'}).click();
+  await settings.getByText('Permita o microfone no navegador e tente novamente.').waitFor();
+  if (!await settings.getByRole('button',{name:'Ativar voz'}).isEnabled()) throw Error('Não foi possível tentar o microfone novamente');
   await settings.getByRole('button',{name:'Fechar configurações'}).click();
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('k');
@@ -49,4 +64,8 @@ async page => {
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
+  await page.keyboard.press('k');
+  await settings.getByRole('button',{name:'Sair',exact:true}).click();
+  await settings.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Criar sala'}).waitFor();
 }

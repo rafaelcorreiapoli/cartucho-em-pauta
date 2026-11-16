@@ -1,3 +1,4 @@
+import { mountRoomSettings } from './ui/room-settings';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
@@ -47,24 +48,8 @@ const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:
 const client = new Client(server);
 const audio = new GameAudio();
 installHudHelp(document.querySelector('main')!);
-const musicVolume = document.querySelector<HTMLInputElement>('#music-volume')!;
-const effectsVolume = document.querySelector<HTMLInputElement>('#effects-volume')!;
-const soundMute = document.querySelector<HTMLInputElement>('#sound-mute')!;
-const soundPrefs = audio.preferences;
-function syncSoundControls() {
-  const prefs = soundPrefs.getSnapshot();
-  musicVolume.value = String(Math.round(prefs.musicVolume*100));
-  effectsVolume.value = String(Math.round(prefs.sfxVolume*100));
-  soundMute.checked = prefs.muted;
-}
-musicVolume.oninput = () => soundPrefs.update({musicVolume:musicVolume.valueAsNumber/100});
-effectsVolume.oninput = () => soundPrefs.update({sfxVolume:effectsVolume.valueAsNumber/100});
-soundMute.onchange = () => soundPrefs.update({muted:soundMute.checked});
-soundPrefs.subscribe(syncSoundControls);
-syncSoundControls();
 const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
-const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
 const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
@@ -79,7 +64,6 @@ const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const create = document.querySelector<HTMLButtonElement>('#create')!;
-const leave = document.querySelector<HTMLButtonElement>('#leave')!;
 const characters = document.querySelector<HTMLElement>('#characters')!;
 const buttons = NAMES.map((name,index) => {
   const button = document.createElement('button');
@@ -105,16 +89,12 @@ const buttons = NAMES.map((name,index) => {
   characters.append(button);
   return button;
 });
-const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
-const voiceLabel = voiceToggle.querySelector('span')!;
-const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
-const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
 function applyVoiceEquipment(current:RoomVoice|undefined) {
   void current?.setDisguise(disguiseActive ? {pitch:-6,style:'radio'} : undefined)?.catch(()=>{
-    if (current===voice) voiceStatus.textContent = 'Não foi possível ativar o modulador.';
+    if (current===voice) settings.update({voiceMessage:'Não foi possível ativar o modulador.'});
   });
 }
 let matchRunning = false;
@@ -126,47 +106,36 @@ try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
 nickInput.oninput = () => nickInput.setCustomValidity('');
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
-function resetVoiceButtons() {
-  voiceToggle.disabled = false;
-  voiceToggle.dataset.voice = 'off';
-  voiceLabel.textContent = voiceToggle.title = 'Ativar voz';
-  voiceLeave.hidden = true;
-  voiceStatus.textContent = '';
-}
+const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#room-settings')!,audio.preferences,{
+  leave:()=>void room?.leave(),
+  toggleVoice:()=>void toggleVoice(),
+  leaveVoice:()=>{
+    voice?.stop();
+    settings.update({microphone:'off',voiceMessage:''});
+  },
+});
 
-voiceToggle.onclick = async () => {
+async function toggleVoice() {
   const current = voice;
   if (!current) return;
   if (current.active) {
     current.toggleMute();
-    voiceToggle.dataset.voice = current.muted ? 'muted' : 'live';
-    voiceLabel.textContent = voiceToggle.title = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
+    settings.update({microphone:current.muted ? 'muted' : 'live'});
     return;
   }
-  voiceToggle.disabled = true;
-  voiceStatus.textContent = 'Ativando microfone…';
+  settings.update({microphone:'starting',voiceMessage:'Ativando microfone…'});
   try {
     await current.start();
-    if (current !== voice || !current.active) return;
-    voiceToggle.dataset.voice = 'live';
-    voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
-    voiceStatus.textContent = '';
-    voiceLeave.hidden = false;
-    applyVoiceEquipment(current);
+    if (current !== voice) return;
+    settings.update({microphone:current.active ? 'live' : 'off',voiceMessage:''});
+    if (current.active) applyVoiceEquipment(current);
   } catch (error) {
     if (current !== voice) return;
-    voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
+    settings.update({microphone:'off',voiceMessage:!window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
       error instanceof DOMException && error.name === 'NotAllowedError' ?
-        'Permita o microfone no navegador e tente novamente.' : 'Não foi possível abrir o microfone.';
-  } finally {
-    if (current === voice) voiceToggle.disabled = false;
+        'Permita o microfone no navegador e tente novamente.' : 'Não foi possível abrir o microfone.'});
   }
-};
-
-voiceLeave.onclick = () => {
-  voice?.stop();
-  resetVoiceButtons();
-};
+}
 
 function showLobby(message: string) {
   audio.leave();
@@ -174,13 +143,13 @@ function showLobby(message: string) {
   voice = undefined;
   disguiseActive = false;
   matchRunning = false;
-  resetVoiceButtons();
+  settings.update({microphone:'off',voiceMessage:'',voiceDescription:undefined,roomLabel:''});
   game?.destroy();
   game = undefined;
   room = undefined;
   roomCommand = undefined;
   document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
-  document.querySelector<HTMLDialogElement>('#room-settings')?.close();
+  settings.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
@@ -249,7 +218,7 @@ async function connect(join: () => Promise<Room>) {
     for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
-    roomLabel.textContent = `Sala ${joined.roomId}`;
+    settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);
     lobbyInvite.value = inviteUrl.href;
@@ -415,7 +384,7 @@ async function connect(join: () => Promise<Room>) {
       game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
-      if (roomLabel.textContent!==label) roomLabel.textContent = label;
+      settings.update({roomLabel:label});
       if (phase===view.phase) {
         if (nextBallot) audio.cue('ballot');
         return;
@@ -428,8 +397,8 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      voiceToggle.setAttribute('aria-description',negotiating ? 'Voz por proximidade' :
-        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala');
+      settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
+        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
       if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
@@ -524,11 +493,10 @@ lobby.onsubmit = event => {
   const nick = nickname();
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
-leave.onclick = () => void room?.leave();
 document.querySelector<HTMLButtonElement>('#lobby-back')!.onclick = () => void room?.leave();
 loadingBack.onclick = () => void room?.leave();
 for (const id of ['lobby-settings','plenary-settings']) {
-  document.getElementById(id)!.onclick = () => document.querySelector<HTMLDialogElement>('#room-settings')!.showModal();
+  document.getElementById(id)!.onclick = settings.open;
 }
 lobbyInvite.onclick = () => lobbyInvite.select();
 async function copyInvite(button:HTMLButtonElement, label:string) {

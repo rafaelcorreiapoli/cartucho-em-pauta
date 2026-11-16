@@ -271,31 +271,7 @@
           <button class="hud-icon-button" hidden id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
         </aside>
       </div>
-      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title">
-        <header><h2 id="settings-title">Configurações</h2>
-          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar configurações">×</button></form>
-        </header>
-        <section aria-label="Sala">
-          <div id="room-bar">
-            <span id="room-label" role="status"></span>
-            <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
-          </div>
-        </section>
-        <section aria-label="Som do jogo">
-          <h3>Som do jogo</h3>
-          <label for="music-volume">Música</label>
-          <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
-          <label for="effects-volume">Efeitos e passos</label>
-          <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
-          <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
-        </section>
-        <section aria-label="Microfone">
-          <h3>Microfone</h3>
-          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
-          <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
-          <p id="voice-status" role="status"></p>
-        </section>
-      </dialog>
+      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title"></dialog>
       <div id="asset-loading" hidden>
         <div class="hud-panel lobby-card">
           <div class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></div>
