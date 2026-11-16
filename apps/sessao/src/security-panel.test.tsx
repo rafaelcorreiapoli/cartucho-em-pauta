@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SecurityDialogContent} from './security-panel';
+import {SecurityDialogContent} from './ui/security-dialog';
 import {securityCameras} from './security';
 
 test('the security dialog shows the selected camera and leaves the viewport mounted while it connects',()=>{
