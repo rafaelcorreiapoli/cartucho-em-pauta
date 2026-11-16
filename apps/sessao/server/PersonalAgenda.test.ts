@@ -862,7 +862,7 @@ test.each([
   const options = {...metrics,owns:()=>true};
   const agenda = new PersonalAgenda(options,2,()=>0,reward=>totals.push(reward.xp));
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',[kind,'passeio','cafe']);
+  Reflect.set(agenda,'missionDeck',[kind,'passeio','jogar']);
   agenda.updateEligibility(options,2,true,3,0,[{id:'b',name:'B'}]);
   expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
   for (const entry of [invalid,valid,valid]) {
