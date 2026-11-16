@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ProjectImpact} from './project-impact';
 import {ProjectBallot} from './project-ballot';
-import {bills,NEGOTIATION_MS,pingaProgram,stations} from '../plenary';
+import {bills,NEGOTIATION_MS,pingaProgram,policyDiscountPercent,policyDuration,recoveryPolicy,stations} from '../plenary';
 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
@@ -38,8 +38,16 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     const markup = renderToStaticMarkup(<ProjectBallot {...view} ownId={player.id} eligible cast={()=>{}}/>);
     expect(markup).toContain(bill.name);
     expect(markup).toContain(bill.banner!);
-    if (bill.effect?.kind==='policy') expect(markup).toContain(bill.effect.detail);
-    else if (bill.effect?.kind==='pinga-distribution') {
+    if (bill.effect?.kind==='policy') {
+      expect(markup).toContain(bill.effect.detail);
+      if (bill.effect.policy==='recovery') {
+        expect(markup).toContain(`${recoveryPolicy.hpPerTick} PV a cada ${recoveryPolicy.tickMs/1_000} s durante ${policyDuration/1_000} s`);
+      }
+      if (['coffee','furniture','equipment','mail'].includes(bill.effect.policy)) {
+        expect(markup).toContain(`${policyDiscountPercent}% de desconto`);
+        expect(markup).toContain(`por ${policyDuration/1_000} s`);
+      }
+    } else if (bill.effect?.kind==='pinga-distribution') {
       expect(view.yes.budget).toBe(-pingaProgram.doseCost);
       expect(markup).toContain(pingaProgram.detail);
     } else if (bill.effect?.kind==='allowance') {

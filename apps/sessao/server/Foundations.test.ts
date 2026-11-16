@@ -10,6 +10,7 @@ import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
 import { applyInput, restMovement, STEP_MS } from '../src/movement';
 import { foods } from '../src/food';
+import { policyDuration, recoveryPolicy } from '../src/plenary';
 
 function player(id:string, x:number, y:number, character=0):Player {
   return {id,nick:id,x,y,character,direction:0,moving:false};
@@ -707,13 +708,16 @@ test('Bolsa Churrasco restores HP once per second while the policy is active',()
   game.tick(world,true);
   expect(game.view(bob,world).vitality?.hp).toBe(74);
   world.hasMandate = id=>id===bob.id;
-  world.policies = {recovery:120_000};
-  world.now = 1000;
+  world.policies = {recovery:policyDuration};
+  world.now = recoveryPolicy.tickMs-1;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  world.now++;
   game.tick(world,true);
   game.tick(world,true);
-  expect(game.view(bob,world).vitality?.hp).toBe(76);
+  expect(game.view(bob,world).vitality?.hp).toBe(74+recoveryPolicy.hpPerTick);
   world.policies = {};
-  world.now += 1000;
+  world.now += recoveryPolicy.tickMs;
   game.tick(world,true);
-  expect(game.view(bob,world).vitality?.hp).toBe(76);
+  expect(game.view(bob,world).vitality?.hp).toBe(74+recoveryPolicy.hpPerTick);
 });

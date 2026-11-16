@@ -39,6 +39,9 @@ export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hea
 export const hearingPolicyFee = 2;
 export const bankAuditFee = 1;
 export const campaignPolicyMultiplier = 2;
+export const policyDiscountPercent = 40;
+export const recoveryPolicy = {hpPerTick:2,tickMs:1_000} as const;
+export const treasuryPolicy = {duration:90_000,bonus:2} as const;
 export const pingaProgram = {
   doseCost:.5,
   detail:'Uma dose por mandato ativo e conectado, se houver orçamento para toda a distribuição',
@@ -47,6 +50,7 @@ export const energySavings = {
   duration:ELECTION_RULES.interval, publicDutyDiscount:2, sabotageCooldown:powerRules.cooldownMs/3,
 } as const;
 export const policyDuration = 120_000;
+const policySeconds = policyDuration/1_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
 
 type Bill = {
@@ -68,36 +72,36 @@ export const bills:readonly Bill[] = [
     description:'O Congresso agradece ao Congresso pelos serviços prestados ao Congresso.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:2}},
   {id:'PROJ-N17',name:'Mutirão de Regularização Patrimonial',banner:'gabinete-cofre.webp',
-    description:'Por 90 segundos, cada entrega à Tesouraria rende até 2 pontos extras de popularidade.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',duration:90_000,bonus:2}},
+    description:`Por ${treasuryPolicy.duration/1_000} segundos, cada entrega à Tesouraria rende até ${treasuryPolicy.bonus} pontos extras de popularidade.`,
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',...treasuryPolicy}},
   {id:'PROJ-N03',name:'Bolsa Churrasco',banner:'retrato-picanha.webp',
     description:'Uma rodada de churrasco para recompor as forças parlamentares.',
-    yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:'Parlamentares ativos recuperam 2 PV por segundo durante 120 s, se houver verba'}},
+    yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:`Parlamentares ativos recuperam ${recoveryPolicy.hpPerTick} PV a cada ${recoveryPolicy.tickMs/1_000} s durante ${policySeconds} s, se houver verba`}},
   {id:'PROJ-N05',name:'Lei do Cafezinho Ininterrupto',banner:'retrato-cafezinho.webp',
-    description:'O cafezinho ganhou desconto por dois minutos.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:'Café com 40% de desconto na Lanchonete por 120 s, enquanto houver orçamento'}},
+    description:'O cafezinho ganhou desconto na Lanchonete.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:`Café com ${policyDiscountPercent}% de desconto na Lanchonete por ${policySeconds} s, enquanto houver orçamento`}},
   {id:'PROJ-N06',name:'PEC do Foro Ultra-Privilegiado',banner:'gabinete-cofre.webp',
-    description:'Por dois minutos, convocar afastamento ou cassação custa R$ 20 mil.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'hearing',detail:'Taxa de convocação de R$ 20 mil por 120 s'}},
+    description:`Convocar afastamento ou cassação custa ${money(hearingPolicyFee)} por ${policySeconds} s.`,
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'hearing',detail:`Taxa de convocação de ${money(hearingPolicyFee)} por ${policySeconds} s`}},
   {id:'PROJ-N07',name:'Minha Mansão, Minha Vida',banner:'gabinete-armario.webp',
     description:'Verba para dar um trato nos gabinetes.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'furniture',detail:'Móveis com 40% de desconto por 120 s, enquanto houver orçamento'}},
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'furniture',detail:`Móveis com ${policyDiscountPercent}% de desconto por ${policySeconds} s, enquanto houver orçamento`}},
   {id:'PROJ-N12',name:'Dia Nacional do Nada',banner:'gabinete-armario.webp',
     description:'Um pequeno prêmio por um dia de produção legislativa rigorosamente nula.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:.5}},
   {id:'PROJ-N15',name:'Programa de Inclusão Digital Parlamentar',banner:'retrato-binoculo.webp',
     description:'Apoio Técnico com desconto nos equipamentos.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'equipment',detail:'Equipamentos e grampos com 40% de desconto por 120 s, enquanto houver orçamento'}},
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'equipment',detail:`Equipamentos e grampos com ${policyDiscountPercent}% de desconto por ${policySeconds} s, enquanto houver orçamento`}},
   {id:'PROJ-N16',name:'Semana da Transparência',banner:'retrato-kit-pericia.webp',
-    description:'Os custos do Correio Interno e dos kits de perícia caem por dois minutos.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'mail',detail:'Comunicados e kits de perícia com 40% de desconto por 120 s'}},
+    description:'Os custos do Correio Interno e dos kits de perícia entram em promoção.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'mail',detail:`Comunicados e kits de perícia com ${policyDiscountPercent}% de desconto por ${policySeconds} s`}},
   {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-documento.webp',
-    description:'A propaganda paga ganha o dobro de peso na disputa durante a vigência da PEC.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Propagandas eleitorais valem o dobro na pesquisa e na apuração por 120 s'}},
+    description:`A propaganda paga passa a ter peso ${campaignPolicyMultiplier}× na disputa durante a vigência da PEC.`,
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:`Propagandas eleitorais têm peso ${campaignPolicyMultiplier}× na pesquisa e na apuração por ${policySeconds} s`}},
   {id:'PROJ-N08',name:'Lei da Transparência Seletiva',banner:'gabinete-cofre.webp',
     description:'A Corregedoria ganha uma taxa para consultar transferências sigilosas.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'bankAudit',
-      detail:`Investigar uma transferência sigilosa custa ${money(bankAuditFee)} por ${policyDuration/1000} s`}},
+      detail:`Investigar uma transferência sigilosa custa ${money(bankAuditFee)} por ${policySeconds} s`}},
   {id:'PROJ-N11',name:'Lei da Economia de Energia',banner:'banner-economia-energia.webp',
     description:'Corta a verba de manutenção da rede elétrica.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'energySavings',duration:energySavings.duration,

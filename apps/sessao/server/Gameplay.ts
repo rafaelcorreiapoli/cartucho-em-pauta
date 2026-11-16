@@ -16,7 +16,7 @@ import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VIS
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, shop, vipAreaRadius } from '../src/installations';
-import { bills, stations } from '../src/plenary';
+import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
@@ -444,11 +444,11 @@ export class Gameplay {
   }
 
   tick(world:GameplayWorld, exploring:boolean, voting=false) {
-    if (world.policies?.recovery && world.now>=this.lastPolicyHeal+1000) {
+    if (world.policies?.recovery && world.now>=this.lastPolicyHeal+recoveryPolicy.tickMs) {
       this.lastPolicyHeal = world.now;
       for (const player of world.players) {
         if (!player.npc && !player.knockedOut && world.present?.(player.id)!==false && world.hasMandate?.(player.id)) {
-          this.combat.heal(player,2);
+          this.combat.heal(player,recoveryPolicy.hpPerTick);
         }
       }
     }
