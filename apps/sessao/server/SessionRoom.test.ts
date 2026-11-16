@@ -332,8 +332,9 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
+    // Consented leaves cancel retries while the test server can still acknowledge them.
+    await Promise.allSettled(rooms.map(room=>room.leave()));
     server.kill();
-    await Promise.allSettled(rooms.map(room => room.leave(false)));
     await server.exited;
   }
 },65_000);
