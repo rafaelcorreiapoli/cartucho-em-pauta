@@ -1,3 +1,4 @@
+import {contextActionKeys} from './ui/context-action-keys';
 import {mountStationShortcuts} from './ui/station-shortcuts';
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import type {FireOption} from './fire';
@@ -292,30 +293,19 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.querySelector('.station-actions')!.append(overflowBreak,more);
   const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
   function refreshActionKeys() {
-    let index = 0;
-    let primaryCount = 0;
-    const expanded = more.getAttribute('aria-expanded')==='true';
     const buttons = actionButtons();
-    const nearbyOpen = nearbyToggle.getAttribute('aria-expanded')==='true';
-    for (const button of buttons) {
-      if (button===more || button.closest('#nearby-items')) continue;
-      if (button.closest(unavailable)) { delete button.dataset.contextOverflow; continue; }
-      primaryCount++;
-      button.dataset.contextOverflow = primaryCount>3 ? (expanded ? 'expanded' : 'true') : 'false';
-    }
-    more.hidden = primaryCount<=3;
-    overflowBreak.hidden = !expanded || more.hidden;
-    if (more.hidden) more.setAttribute('aria-expanded','false');
-    const ordered = [
-      ...buttons.filter(button=>button.dataset.contextOverflow==='false'),
-      more,
-      ...buttons.filter(button=>button.dataset.contextOverflow==='expanded'),
-      ...buttons.filter(button=>button!==more && button.dataset.contextOverflow!=='false' && button.dataset.contextOverflow!=='expanded'),
-    ];
-    for (const button of ordered) {
-      const available = !button.disabled && !button.closest(unavailable) && button.dataset.contextOverflow!=='true' &&
-        (!nearbyOpen || button===nearbyToggle || !!button.closest('#nearby-items'));
-      const key = available ? (++index<=9 ? String(index) : null) : null;
+    const model = contextActionKeys(buttons.map(button=>({
+      kind:button===more ? 'more' : button===nearbyToggle ? 'nearby' : button.closest('#nearby-items') ? 'item' : 'action',
+      visible:!button.closest(unavailable),enabled:!button.disabled,
+    })),more.getAttribute('aria-expanded')==='true',nearbyToggle.getAttribute('aria-expanded')==='true');
+    more.hidden = !model.hasMore;
+    overflowBreak.hidden = !model.showOverflow;
+    if (!model.hasMore) more.setAttribute('aria-expanded','false');
+    for (const [index,button] of buttons.entries()) {
+      const {placement,key:shortcut} = model.buttons[index];
+      if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
+      else delete button.dataset.contextOverflow;
+      const key = shortcut ?? null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -362,7 +352,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
     const key = event.key;
     const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
-    if (!button || button.disabled || button.closest(unavailable)) return;
+    if (!button || button.disabled || button.closest(unavailable) || button.dataset.contextOverflow==='true') return;
     event.preventDefault();
     button.click();
   }
