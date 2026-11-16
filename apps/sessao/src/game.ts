@@ -17,6 +17,7 @@ import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
+import { installationSites } from './installations';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -130,6 +131,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.interactionTargets.set(art,{outline,ready,run});
       art.once('destroy',()=>this.interactionTargets.delete(art));
     }
+    private installationMarkers: {point:Motion; kind:'portrait'|'vip'; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -247,6 +249,36 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (option) actOnFire(option);
         });
       });
+      for (const kind of ['portrait','vip'] as const) {
+        const key = `installation-marker-${kind}`;
+        if (this.textures.exists(key)) continue;
+        const texture = this.textures.createCanvas(key,24,20)!;
+        const ctx = texture.context;
+        ctx.fillStyle = '#cb9853';
+        ctx.fillRect(0,0,24,20);
+        ctx.fillStyle = kind==='vip' ? '#142820' : '#543b24';
+        ctx.fillRect(1,1,22,18);
+        ctx.fillStyle = '#ffe3a8';
+        ctx.font = 'bold 10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(kind==='vip' ? 'VIP' : '+',12,10);
+        texture.refresh();
+      }
+      for (const [place,{point,kind}] of Object.entries(installationSites)) {
+        if (kind==='pizza') continue;
+        const art = this.add.image(point.x,point.y,`installation-marker-${kind}`).setDepth(point.y+1).setVisible(false);
+        this.installationMarkers.push({point,kind,art});
+        const install = () => {
+          const gameplay = plenaryView?.gameplay;
+          if (!gameplay?.installable.includes(place)) return;
+          return gameplay.inventory.find(item=>item.kind===kind);
+        };
+        this.registerInteraction(art,()=>!!install(),()=>{
+          const item = install();
+          if (item) interact({kind:'install',item:item.id,place});
+        });
+      }
       this.officeDoors = this.add.graphics().setDepth(2);
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
@@ -379,8 +411,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           continue;
         }
         const art = item.kind==='portrait' ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
-          : itemSymbols[item.kind]
-            ? this.add.text(0,0,itemSymbols[item.kind]!,{fontSize:'16px',color:'#ffe08a',resolution:3}).setOrigin(.5)
+          : item.kind==='vip'
+            ? this.add.image(0,0,'installation-marker-vip').setTint(0xffdd92)
             : this.add.image(0,0,`item-${item.kind}`).setDisplaySize(26,26);
         const label = this.add.text(0,9,decorationLabel(item),{
           fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
@@ -538,6 +570,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
+      for (const {point,kind,art} of this.installationMarkers) {
+        art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible &&
+          !decorations.some(item=>item.kind===kind && item.x===point.x && item.y===point.y));
+      }
       for (const [art,{outline,ready}] of this.interactionTargets) {
         outline.setVisible(negotiating && art.visible && ready());
       }

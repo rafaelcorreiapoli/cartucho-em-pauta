@@ -7,7 +7,9 @@ import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
-import type { Player } from '../src/map';
+import { canStand, type Player } from '../src/map';
+import { photoMissions } from './photo-missions';
+import { installationSites } from '../src/installations';
 
 function setup() {
   const player = (id:string,x:number,y:number):Player => ({id,nick:id,x,y,moving:false,direction:0,character:0});
@@ -252,7 +254,7 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(bob,{kind:'buy',target:'portrait'},world);
   const [first] = game.view(alice,world).inventory;
   const [second] = game.view(bob,world).inventory;
-  Object.assign(alice,{x:556,y:415});
+  Object.assign(alice,installationSites.hall.point);
   Object.assign(bob,alice,{id:'Bob',nick:'Bob'});
   game.act(alice,{kind:'install',place:'hall',item:first.id},world);
   expect(game.view(watcher,world).decorations.map(item=>item.kind)).toEqual(['pizza']);
@@ -264,6 +266,29 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(alice,{kind:'uninstall',item:second.id},world);
   expect(game.view(alice,world).inventory[0].id).toBe(second.id);
   expect(game.view(alice,world).interactive).toEqual([]);
+});
+
+test('public portrait and VIP sites are reachable and show the installer to other players', () => {
+  const {alice,bob,game,world,events} = setup();
+  world.spend = ()=>true;
+  alice.character = 4;
+  for (const [place,site] of Object.entries(installationSites)) {
+    if (site.kind==='pizza') continue;
+    Object.assign(alice,terminals.credentials.point);
+    expect(game.act(alice,{kind:'buy',target:site.kind},world)).toBe('Compra guardada no inventário.');
+    const [item] = game.view(alice,world).inventory;
+    expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
+    const approach = {x:site.point.x,y:site.point.y+10};
+    expect(canStand(approach.x,approach.y)).toBe(true);
+    Object.assign(alice,approach);
+    Object.assign(bob,approach);
+    expect(game.view(alice,world).installable).toContain(place);
+    expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+    if (site.kind==='vip') expect(photoMissions.reserva.facts(events.at(-1)!)).toHaveLength(1);
+    expect(game.view(bob,world).decorations).toContainEqual(expect.objectContaining({
+      ...site.point, id:item.id,kind:site.kind,character:4,owner:{id:alice.id,name:alice.nick},
+    }));
+  }
 });
 
 test('surveillance shops, races, discoveries, reconnection, audio and photo evidence stay private', () => {
