@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { EquipmentReplacement } from './ui/equipment-replacement';
@@ -15,11 +17,19 @@ function marketVendorPortrait(npc:NpcId) {
   return 'portrait' in vendor ? vendor.portrait : vendor.sprite;
 }
 
+export function MarketDialogContent({title,children}:{title:string;children:ReactNode}) {
+  return <>
+    <header>
+      <h2 id="market-title">{title}</h2>
+      <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+    </header>
+    <div id="market-body">{children}</div>
+  </>;
+}
+
 export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
-  const heading = dialog.querySelector('h2')!;
-  const body = dialog.querySelector<HTMLElement>('#market-body')!;
-  const root = createRoot(body);
+  const root = createRoot(dialog);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
   const promptRoot = createRoot(prompt);
   let replacement:number|undefined;
@@ -43,7 +53,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   function onPageKey(event:KeyboardEvent) {
     if (!event.defaultPrevented && event.key==='Enter' && !event.repeat && !event.altKey &&
         !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      const purchaseButton = body.querySelector<HTMLButtonElement>('.market-buy');
+      const purchaseButton = dialog.querySelector<HTMLButtonElement>('#market-body .market-buy');
       if (purchaseButton) {
         event.preventDefault();
         purchaseButton.click();
@@ -52,7 +62,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     }
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
         (event.key!=='ArrowLeft' && event.key!=='ArrowRight')) return;
-    const arrow = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+    const arrow = dialog.querySelector<HTMLButtonElement>(`#market-body button[aria-keyshortcuts="${event.key}"]`);
     if (!arrow) return;
     event.preventDefault();
     if (!arrow.disabled) arrow.click();
@@ -87,7 +97,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     const product = stock[selected];
     const food = product && isFood(product.kind) ? foods[product.kind] : undefined;
     const vendor = npcs[npc];
-    flushSync(()=>root.render(<>
+    flushSync(()=>root.render(<MarketDialogContent title={vendor.label}>
       <div className="market-toolbar">
         <div className="market-vendor">
           <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
@@ -134,7 +144,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         <button type="button" className="market-page-arrow" aria-label="Próxima página" aria-keyshortcuts="ArrowRight"
           disabled={page===pageCount-1} onClick={()=>goTo(page+1)}>›</button>
       </nav>
-    </>));
+    </MarketDialogContent>));
     if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
       dialog.querySelector<HTMLButtonElement>('header button')?.focus({preventScroll:true});
     }
@@ -192,10 +202,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const npc = npcs[state.npc];
       dialog.classList.toggle('market-catalog',state.shop);
       dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
-      heading.textContent = state.shop ? npc.label : npc.name;
-      if (!dialog.open) dialog.showModal();
       if (!state.shop) {
-        flushSync(()=>root.render(<>
+        flushSync(()=>root.render(<MarketDialogContent title={npc.name}>
           <div className="market-line">
             <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>
             <p>{state.text}</p>
@@ -206,11 +214,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
               {option.label}<kbd className="action-key" aria-hidden="true">{index+1}</kbd>
             </button>)}
           </div>
-        </>));
-        body.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
+        </MarketDialogContent>));
+        if (!dialog.open) dialog.showModal();
+        dialog.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
       renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget);
+      if (!dialog.open) dialog.showModal();
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;

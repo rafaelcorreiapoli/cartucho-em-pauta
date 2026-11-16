@@ -1,3 +1,4 @@
+import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
 import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
@@ -64,18 +65,7 @@ const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
-const ballotCountdown = document.querySelector<HTMLDialogElement>('#ballot-countdown')!;
-const ballotCountdownMessage = document.querySelector<HTMLElement>('#ballot-countdown-message')!;
-ballotCountdown.oncancel = event => event.preventDefault();
-function showBallotCountdown(seconds?:number) {
-  if (seconds===undefined) {
-    ballotCountdown.close();
-    return;
-  }
-  const message = `Votação começando em ${seconds}…`;
-  if (ballotCountdownMessage.textContent!==message) ballotCountdownMessage.textContent = message;
-  if (!ballotCountdown.open) ballotCountdown.showModal();
-}
+const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
 const create = document.querySelector<HTMLButtonElement>('#create')!;
 const characters = document.querySelector<HTMLElement>('#characters')!;
 const buttons = NAMES.map((name,index) => {
@@ -151,7 +141,7 @@ async function toggleVoice() {
 }
 
 function showLobby(message: string) {
-  showBallotCountdown();
+  ballotCountdown.update();
   audio.leave();
   voice?.stop(false);
   voice = undefined;
@@ -355,7 +345,7 @@ async function connect(join: () => Promise<Room>) {
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
-      showBallotCountdown(view.ballotCountdown);
+      ballotCountdown.update(view.ballotCountdown);
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');

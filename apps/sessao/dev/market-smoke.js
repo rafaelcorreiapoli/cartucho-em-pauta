@@ -50,6 +50,10 @@ async page => {
   await page.locator('#equipped-gear').locator('[aria-label*="Modulador" i]').waitFor();
   await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
   await detail.waitFor();
+  await dialog.getByRole('button',{name:'Fechar',exact:true}).click();
+  await dialog.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await detail.waitFor();
   await page.keyboard.press('Escape');
   await dialog.waitFor({state:'hidden'});
 }
