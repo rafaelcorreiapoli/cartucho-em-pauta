@@ -93,10 +93,8 @@ test('coffee delivery shows distinct recipient progress and the completion check
   expect(done).not.toContain('2 / 3');
 });
 
-test('campaign investment and phone call missions show the units players need',()=>{
-  const investment = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'investimentoPolitico',current:2,target:5}}/>);
+test('phone call missions show time in seconds',()=>{
   const phone = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'debateTelefonico',current:12_500,target:20_000}}/>);
-  expect(investment).toContain('R$ 20 mil / R$ 50 mil');
   expect(phone).toContain('12 / 20 s');
 });
 

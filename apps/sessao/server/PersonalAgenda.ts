@@ -30,7 +30,7 @@ const activityMissions = {
   fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
     person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),
   pixVinte:(event:GameplayEvent) => event.type==='pix-sent' && event.amount===2,
-  campanhaUltimaHora:(event:GameplayEvent) => event.type==='campaign-investment' && (event.duration ?? Infinity)<=60_000,
+  campanhaUltimaHora:(event:GameplayEvent) => event.type==='advertisement-aired' && (event.duration ?? Infinity)<=60_000,
   cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
   provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
     (event.photo.ground.some(item=>item.kind==='document') || event.photo.people.some(person=>person.exposed?.some(item=>item.kind==='document'))),
@@ -79,13 +79,13 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
-  investimentoPolitico:5,campanhaUltimaHora:1,pixVinte:2,
+  campanhaUltimaHora:ELECTION_RULES.advertisementCost,pixVinte:2,
   equipamento:equipment.binoculars.price,
   comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
@@ -231,7 +231,7 @@ export class PersonalAgenda {
       const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
       return !this.cannotVote && this.ballotsLeft-Number(consumed)>=remaining;
     }
-    return !this.cannotVote || !['investimentoPolitico','campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
+    return !this.cannotVote || !['campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
 
   private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
@@ -315,7 +315,6 @@ export class PersonalAgenda {
         samples.set(call,elapsed);
         if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
       }
-      if (kind==='investimentoPolitico' && event.type==='campaign-investment') gains[kind] = event.amount ?? 0;
       if (kind==='contribuinte' && event.type==='delivered' && event.place==='treasury') gains[kind] = event.amount ?? 0;
       if (kind==='reservaCofre' && event.type==='money-pocketed') gains[kind] = event.amount ?? 0;
       if (kind==='turismo' && event.type==='photo' && event.photo && event.photo.location!=='Corredor') {
@@ -352,7 +351,8 @@ export class PersonalAgenda {
       if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;
       if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;
     }
-    if ((kind==='propaganda' || kind==='discurso' || kind==='emenda') && metrics.canAgendaAction?.(kind)===false) return false;
+    const action = kind==='campanhaUltimaHora' ? 'propaganda' : kind;
+    if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<(food==='firstAidKit' ? firstAidKit.price : foods[food].price) && !metrics.owns?.(food)) {
       const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;
