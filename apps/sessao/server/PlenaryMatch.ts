@@ -164,6 +164,8 @@ export class PlenaryMatch {
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
   private eventSequence = 0;
+  private eventSequenceAtStart = 0;
+  private matchGeneration = 0;
   private readonly receivedEvents = new Set<number>();
   private readonly filedDocuments = new Set<number>();
   private hearingTarget?: string;
@@ -213,6 +215,8 @@ export class PlenaryMatch {
     this.policies.clear();
     this.treasuryBonus = undefined;
     this.complaints.reset();
+    this.matchGeneration++;
+    this.eventSequenceAtStart = this.eventSequence;
     this.receivedEvents.clear();
     this.filedDocuments.clear();
     let campaignReady = false;
@@ -280,8 +284,9 @@ export class PlenaryMatch {
   }
 
   private recordGameplay(event:GameplayEvent):boolean {
+    if (event.at<this.started) return false;
     if (event.eventId!==undefined) {
-      if (this.receivedEvents.has(event.eventId)) return false;
+      if (event.eventId<=this.eventSequenceAtStart || this.receivedEvents.has(event.eventId)) return false;
       this.receivedEvents.add(event.eventId);
     }
     if (event.type==='filed' && event.item!==undefined) {
@@ -356,6 +361,7 @@ export class PlenaryMatch {
   }
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
+    const generation = this.matchGeneration;
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
@@ -386,7 +392,7 @@ export class PlenaryMatch {
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
       nextEventId:()=>++this.eventSequence,
-      publish:event=>this.recordGameplay(event),
+      publish:event=>generation===this.matchGeneration && this.recordGameplay(event),
     };
   }
 
