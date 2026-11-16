@@ -232,6 +232,8 @@ export class Gameplay {
     return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
   }
 
+  hasKnownForeignSpy(id:string) { return this.surveillance.hasKnownForeignDevice(id); }
+
   ownsWiretap(id:string) { return this.surveillance.countInstalled(id,'wiretap')>0; }
 
   ownsSpyCameras(id:string) { return this.surveillance.countInstalled(id,'spyCamera'); }

@@ -204,7 +204,7 @@ export class SessionRoom extends Room {
           id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount));
+          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;

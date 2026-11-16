@@ -287,6 +287,7 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
+    if (event.type==='spy-removed') this.refreshAgendaEligibility();
     return true;
   }
 

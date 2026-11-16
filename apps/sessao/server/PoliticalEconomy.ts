@@ -383,7 +383,7 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
     for (const [id,account] of this.accounts) {
       const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
         const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
@@ -391,7 +391,7 @@ export class PoliticalEconomy {
         return prices.length===needed && total<=account.wallet &&
           prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
       });
-      Object.assign(account,{canFightCrisis,hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,ownsSpyCameras:ownsSpyCameras && (()=>ownsSpyCameras(id)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{canFightCrisis,hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,ownsSpyCameras:ownsSpyCameras && (()=>ownsSpyCameras(id)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }

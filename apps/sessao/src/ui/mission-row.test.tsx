@@ -1,8 +1,12 @@
+import {Gameplay} from '../../server/Gameplay';
+import {npcs} from '../npcs';
+import {spyRules} from '../surveillance';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {stabilityRules} from '../plenary';
+import {stabilityRules,stations} from '../plenary';
+import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
 
@@ -296,4 +300,120 @@ test('electrical repair is a multiplayer mission and shows authoritative complet
   expect(pending).toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
   expect(pending).not.toContain('data-done="true"');
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>)).toContain('data-done="true"');
+});
+
+test('cleanup requires a private discovery, works without the detector and expires on removal',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,x:254,y:252,direction:0,moving:false,
+  }));
+  const [owner,detective,peer] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(owner.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const economy = Reflect.get(match,'economy');
+  const resetDeck = (id:string)=>{
+    const account = Reflect.get(economy,'accounts').get(id);
+    Object.assign(account,{
+      owns:(kind:Parameters<Gameplay['owns']>[1])=>game.owns(id,kind),
+      hasKnownForeignSpy:()=>game.hasKnownForeignSpy(id),
+    });
+    Reflect.set(account.agenda,'missions',[]);
+    Reflect.set(account.agenda,'missionDeck',['limpeza','cafe','passeio','selfieSolo']);
+  };
+  for (const {id} of players) resetDeck(id);
+  match.refreshAgendaEligibility();
+  const missions = (player:Player,now:number)=>match.view(player.id,ids,now).politics!.missions;
+  const markup = (player:Player,now:number)=>{
+    const {active,completed} = missions(player,now);
+    return renderToStaticMarkup(<ul>
+      {active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
+      {completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}
+    </ul>);
+  };
+  const buy = (player:Player,kind:'spyCamera'|'bugDetector')=>{
+    Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    const world = match.gameplayWorld(players,1,()=>false);
+    game.act(player,{kind:'open-shop',target:'vendor'},world);
+    const token = game.view(player,world).dialogue?.token;
+    game.act(player,{kind:'shop-buy',target:kind,token},world);
+    return game.view(player,world).inventory.find(item=>item.kind===kind)!;
+  };
+  const camera = buy(owner,'spyCamera');
+  const detector = buy(detective,'bugDetector');
+  Object.assign(owner,{x:240,y:250});
+  Object.assign(detective,{x:254,y:252});
+  const world = match.gameplayWorld(players,2,()=>false);
+  const at = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const title = 'Remova um dispositivo clandestino descoberto';
+  game.spyAction(owner,{kind:'install',site:'coffee',item:camera.id},world);
+  const installed = 2+spyRules.install;
+  game.tick(at(installed),true);
+  match.refreshAgendaEligibility();
+  for (const player of players) expect(markup(player,installed)).not.toContain(title);
+  game.spyAction(detective,{kind:'inspect',site:'coffee',item:detector.id},at(installed));
+  const discovered = installed+spyRules.inspect;
+  game.tick(at(discovered),true);
+  game.act(detective,{kind:'drop',item:detector.id},at(discovered));
+  expect(game.owns(detective.id,'bugDetector')).toBe(false);
+  expect(economy.spend(detective.id,match.view(detective.id,ids,discovered).politics!.wallet)).toBe(true);
+  resetDeck(detective.id);
+  match.refreshAgendaEligibility();
+  expect(markup(detective,discovered)).toContain(title);
+  expect(markup(peer,discovered)).not.toContain(title);
+  expect(markup(owner,discovered)).not.toContain(title);
+  Object.assign(peer,{x:254,y:252});
+  game.act(peer,{kind:'collect',item:detector.id},at(discovered));
+  expect(game.owns(peer.id,'bugDetector')).toBe(true);
+  game.spyAction(peer,{kind:'inspect',site:'coffee',item:detector.id},at(discovered));
+  const secondDiscovery = discovered+spyRules.inspect;
+  game.tick(at(secondDiscovery),true);
+  resetDeck(peer.id);
+  match.refreshAgendaEligibility();
+  expect(markup(peer,secondDiscovery)).toContain(title);
+  game.spyAction(detective,{kind:'remove',site:'coffee'},at(secondDiscovery));
+  const removed = secondDiscovery+spyRules.remove;
+  game.tick(at(removed),true);
+  const complete = missions(detective,removed).completed.find(mission=>mission.kind==='limpeza')!;
+  expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
+  expect(missions(detective,removed).active.some(mission=>mission.kind==='limpeza')).toBe(false);
+
+  expect(markup(peer,removed)).not.toContain(title);
+  expect(missions(peer,removed).completed.some(mission=>mission.kind==='limpeza')).toBe(false);
+});
+
+test('free coffee missions can be drawn and completed with an empty wallet',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const economy = Reflect.get(match,'economy');
+  const account = Reflect.get(economy,'accounts').get(player.id);
+  expect(economy.spend(player.id,account.wallet)).toBe(true);
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['cafeEstrategico','fiscalCafe','passeio','credencial','selfieSolo','visitaArquivo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const find = (now:number,kind:Mission['kind'],done=false)=>{
+    const mission = view(now).missions[done ? 'completed' : 'active'].find(mission=>mission.kind===kind)!;
+    return renderToStaticMarkup(<MissionRow mission={mission} done={done}/>);
+  };
+  expect(view(0).wallet).toBe(0);
+  expect(find(0,'cafeEstrategico')).toContain('Beba um café no Cafezinho');
+  expect(find(0,'fiscalCafe')).toContain('0 / 3');
+  for (let cup=0;cup<3;cup++) {
+    const now = 1+cup*stationRecharge.coffee.duration;
+    const world = match.gameplayWorld([player],now,()=>false);
+    expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+    const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
+    expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+    if (!cup) {
+      expect(find(now,'cafeEstrategico',true)).toContain('data-done="true"');
+      expect(find(now,'fiscalCafe')).toContain('1 / 3');
+    }
+  }
+  expect(find(1+2*stationRecharge.coffee.duration,'fiscalCafe',true)).toContain('data-done="true"');
+  expect(view(1+2*stationRecharge.coffee.duration).wallet).toBe(0);
 });

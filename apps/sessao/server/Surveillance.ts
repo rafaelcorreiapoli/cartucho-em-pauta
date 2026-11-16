@@ -53,6 +53,14 @@ export class Surveillance {
     return device.owner===id || this.discoveries.get(id)?.get(device.site.id)===device.id;
   }
 
+  hasKnownForeignDevice(id:string) {
+    for (const deviceId of this.discoveries.get(id)?.values() ?? []) {
+      const device = this.devices.get(deviceId);
+      if (device && !device.removed && device.owner!==id) return true;
+    }
+    return false;
+  }
+
   channel(id:string, kind:SpyDevice) {
     const device = this.devices.get((kind==='wiretap' ? this.listening : this.selected).get(id) ?? -1);
     return device?.owner===id && !device.removed && device.kind===kind ? device : undefined;
@@ -213,10 +221,9 @@ export class Surveillance {
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
-        if (known.get(job.site.id)!==device.id && device.owner!==id) {
-          access.event?.(player,'spy-discovered',job.site.id,device);
-        }
+        const firstDiscovery = known.get(job.site.id)!==device.id && device.owner!==id;
         known.set(job.site.id,device.id);
+        if (firstDiscovery) access.event?.(player,'spy-discovered',job.site.id,device);
       }
       access.feedback(id,device ? device.kind==='wiretap' ? 'Grampo encontrado.' : 'Câmera escondida encontrada.' : 'Nenhum dispositivo encontrado.');
     } else if (device && device.id===job.target && this.known(id,device)) {

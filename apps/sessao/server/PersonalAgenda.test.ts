@@ -916,7 +916,7 @@ test.each([
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
 ] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
   const rewards:number[] = [];
-  const options = {...metrics,owns:()=>true,hasOffice:()=>true,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const options = {...metrics,owns:()=>true,hasOffice:()=>true,hasForensicReport:()=>true,hasKnownForeignSpy:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);
