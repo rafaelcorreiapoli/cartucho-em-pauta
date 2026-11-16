@@ -12,6 +12,9 @@ export type Split = typeof splits[number];
 
 export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
+export const TARGET_TRANSFER_AMOUNT = 1;
+export const CAMPAIGN_SPENDING_TARGET = 5;
+export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
 export const SAVINGS_MISSION_AMOUNT = 10;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
@@ -20,12 +23,13 @@ export const targetedAgendas = {
   documentoAlvo:'Entregue um documento a',
   assinaturaAlvo:'Consiga uma assinatura de',
   pizzaAlvo:'Entregue uma pizza a',
-  dinheiroAlvo:'Faça uma transferência para',
+  dinheiroAlvo:`Transfira ${money(TARGET_TRANSFER_AMOUNT)} para`,
   visitaAlvo:'Visite o gabinete de',
   visitaCortesia:'Interaja dentro do gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
+export const archiveDutyRoom = 'Arquivo';
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,plantaoArquivo:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -55,8 +59,8 @@ export const agendas = {
   poltrona:'Compre uma poltrona',
   ostentacao:'Gaste R$ 50 mil em móveis',
   visitaGabinete:'Visite o gabinete de um colega',
-  passeio:'Visite três ambientes do Congresso',
-  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho`,
+  passeio:'Visite três salas públicas diferentes',
+  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
@@ -96,6 +100,10 @@ export const agendas = {
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
+  plantaoArquivo:`Fique ${agendaDurationMs.plantaoArquivo/1000} segundos seguidos no ${archiveDutyRoom}`,
+  solenidadeInauguracao:`Rabisque um Retrato Oficial de outro jogador instalado há até ${NEW_PORTRAIT_MS/1000} segundos`,
+  amizadeInstitucional:'Entregue um item a outro jogador e receba dele um item diferente',
+  privilegioAdquirido:'Instale uma Placa VIP',
   trabalhoRemoto:'Passe 30 segundos no seu gabinete',
   produtividade:'Jogue no celular por 30 segundos no seu gabinete',
   cafeEstrategico:'Beba um café no Cafezinho',
@@ -144,6 +152,7 @@ export const agendas = {
   debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
   chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
   discursoMegafone:'Use o Megafone por 10 segundos',
+  investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
   campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',
   bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
   provaDocumental:'Fotografe um documento físico visível',
@@ -152,10 +161,11 @@ export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
+  plantaoArquivo:25,privilegioAdquirido:25,amizadeInstitucional:35,solenidadeInauguracao:30,
   trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
   reuniaoVip:40,segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
-  poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,campanhaUltimaHora:30,bandejaGourmet:35,
+  poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,campanhaUltimaHora:30,investimentoPolitico:50,bandejaGourmet:35,
   nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
@@ -173,7 +183,7 @@ export const missionReward = (kind:Agenda):MissionReward =>
   rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
 export const timedAgendas = new Set<Agenda>(Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]);
 export type Mission = {id:number; kind:Agenda; current:number; target:number; person?:Contact};
-export const missionTitle = ({kind,target,person}:Mission) => person ? `${kind==='dinheiroAlvo' ? 'Transfira '+money(AGENDA_TRANSFER_MIN)+' para' : agendas[kind]} ${person.name}${kind==='visitaCortesia' ? ' (por exemplo, tire uma foto)' : ''}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
+export const missionTitle = ({kind,target,person}:Mission) => person ? `${agendas[kind]} ${person.name}${kind==='visitaCortesia' ? ' (por exemplo, tire uma foto)' : ''}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];
 export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversion';
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};

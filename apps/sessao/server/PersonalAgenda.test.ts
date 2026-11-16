@@ -147,7 +147,9 @@ test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','visitaCortes
       Object.assign(third,{x:800,y:490});
       world.now += 3_000;
       if (kind==='dinheiroAlvo') {
-        expect(economy.transfer(owner.id,recipient.id,3,true,0)).toBe(true);
+        expect(economy.transfer(owner.id,recipient.id,2,true,0)).toBe(true);
+        expect(missions().completed.some(mission=>mission.kind===kind)).toBe(false);
+        expect(economy.transfer(owner.id,recipient.id,1,true,0)).toBe(true);
         return;
       }
       if (kind==='visitaAlvo' || kind==='visitaCortesia') {
@@ -482,6 +484,8 @@ test('transfer missions wait until the payment quota renews even when the wallet
   expect(draw(0)).toEqual(['cafe','passeio','selfieSolo']);
   expect(draw(1)).toEqual(['pagamento','dinheiroAlvo','cafe']);
   expect(economy.transfer('a','b',3,false,1)).toBe(true);
+  expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['pagamento']);
+  expect(economy.transfer('a','b',1,false,1)).toBe(true);
   expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['pagamento','dinheiroAlvo']);
 });
 
@@ -1187,4 +1191,164 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   expect(current()).toBe(14900);
   tick(1);
   expect(agenda.view(options).completed).toContainEqual(expect.objectContaining({kind:'reuniaoVip',current:15_000}));
+});
+
+test('archive duty requires continuous time and restarts on disconnect',()=>{
+  const player:Player = {id:'a',nick:'A',x:511,y:65,moving:false,direction:0,character:0};
+  const xp:number[] = [];
+  const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>xp.push(reward.xp));
+  const game = new Gameplay();
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    hasMission:(_id,kind)=>agenda.hasActive(kind),publish:entry=>recordAgendaEvent(agenda,entry)};
+  const tick = (count:number)=>{
+    for (let i=0;i<count;i++) {
+      world.now += 100;
+      game.tick(world,true);
+    }
+  };
+  const progress = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='plantaoArquivo')?.current;
+  tick(310);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['plantaoArquivo','cafe','passeio','credencial']);
+  agenda.updateEligibility(metrics,1,true,3);
+  expect(progress()).toBe(0);
+  tick(11);
+  expect(progress()).toBe(1000);
+  player.y = 140;
+  tick(1);
+  expect(progress()).toBe(0);
+  player.y = 65;
+  tick(5);
+  expect(progress()).toBe(400);
+  game.leave(player,world,false);
+  expect(progress()).toBe(0);
+  tick(300);
+  expect(progress()).toBe(29_900);
+  tick(10);
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'plantaoArquivo',current:30_000}));
+  expect(xp).toEqual([25]);
+});
+
+test('the VIP mission requires an installed plaque rather than just buying it',()=>{
+  const player:Player = {id:'a',nick:'A',...terminals.credentials.point,moving:false,direction:0,character:0};
+  const rewards:number[] = [];
+  const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>rewards.push(reward.xp));
+  const draw = (options:typeof metrics)=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['privilegioAdquirido','cafe','passeio','credencial']);
+    agenda.updateEligibility(options,1,true,3);
+    return agenda.hasActive('privilegioAdquirido');
+  };
+  expect(draw({...metrics,wallet:0})).toBe(false);
+  expect(draw(metrics)).toBe(true);
+  const game = new Gameplay();
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,
+    spend:()=>true,earn:()=>{},publish:entry=>recordAgendaEvent(agenda,entry)};
+  expect(game.act(player,{kind:'buy',target:'vip'},world)).toContain('inventário');
+  const [plate] = game.view(player,world).inventory;
+  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Aproxime-se do local.');
+  expect(rewards).toEqual([]);
+  Object.assign(player,installationSites.coffeeVip.point);
+  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto indisponível.');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'privilegioAdquirido'}));
+  expect(rewards).toEqual([25]);
+});
+
+test('an exchange counts accepted different items with the same human and rewards each peer once',()=>{
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...terminals.credentials.point}));
+  const [owner,peer,other] = players;
+  const rewards:number[] = [];
+  const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>rewards.push(reward.xp));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['amizadeInstitucional','cafe','passeio','credencial']);
+  const contacts = players.slice(1).map(({id,nick:name})=>({id,name}));
+  agenda.updateEligibility(metrics,1,true,3);
+  expect(agenda.hasActive('amizadeInstitucional')).toBe(false);
+  Reflect.set(agenda,'missions',[]);
+  agenda.updateEligibility(metrics,3,true,3,0,contacts);
+  expect(agenda.hasActive('amizadeInstitucional')).toBe(true);
+  const game = new Gameplay();
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    hasMission:(id,kind)=>id===owner.id && agenda.hasActive(kind),
+    publish:entry=>{if (entry.actor===owner.id) recordAgendaEvent(agenda,entry);}};
+  const give = (from:Player,to:Player,kind:'gift'|'document',reply:'accept'|'decline'='accept')=>{
+    world.now++;
+    const item = game.view(from,world).inventory.find(item=>item.kind===kind)!;
+    expect(game.act(from,{kind:'offer',item:item.id,target:to.id},world)).toBe('Pedido enviado.');
+    const request = game.view(to,world).requests.at(-1)!.id;
+    expect(game.act(to,{kind:reply,item:request},world)).toBe(reply==='accept'?'Objeto recebido.':'Pedido recusado.');
+    expect(game.act(to,{kind:'accept',item:request},world)).toBe('Pedido indisponível.');
+  };
+  for (const player of [peer,other]) {
+    Object.assign(player,terminals.secretary.point);
+    game.act(player,{kind:'supply',place:'secretary',target:'queue'},world);
+    Object.assign(player,terminals.credentials.point);
+  }
+  game.act(owner,{kind:'supply',place:'credentials'},world);
+  give(owner,peer,'gift');
+  give(peer,owner,'gift');
+  give(other,owner,'document');
+  give(peer,owner,'document','decline');
+  expect(rewards).toEqual([]);
+  give(peer,owner,'document');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'amizadeInstitucional'}));
+  expect(rewards).toEqual([35]);
+  agenda.updateEligibility(metrics,2,true,3,0,[contacts[0]]);
+  expect(agenda.hasActive('amizadeInstitucional')).toBe(false);
+});
+
+test('Cafezinho counts only articulation and public tours exclude isolated and private areas',()=>{
+  const player:Player = {id:'a',nick:'A',x:240,y:210,moving:false,direction:0,character:0};
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pausaCafe','passeio','credencial']);
+  agenda.updateEligibility(metrics,1,true,3);
+  const game = new Gameplay();
+  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    hasMission:(_id,kind)=>agenda.hasActive(kind),publish:entry=>recordAgendaEvent(agenda,entry),plenary:true};
+  const current = (kind:'pausaCafe'|'passeio')=>agenda.view(metrics).active.find(mission=>mission.kind===kind)?.current;
+  game.tick(world,true);
+  world.now += 100;
+  game.tick(world,true);
+  expect(current('pausaCafe')).toBe(0);
+  world.plenary = false;
+  world.now += 100;
+  game.tick(world,true);
+  expect(current('pausaCafe')).toBe(100);
+  for (const place of [privateOffices[0].name,'Sala de Isolamento','Arquivo','Arquivo','Biblioteca','Cafezinho']) {
+    recordAgendaEvent(agenda,event('room-entered',{place,at:++world.now}));
+    if (place===privateOffices[0].name || place==='Sala de Isolamento') expect(current('passeio')).toBe(0);
+    if (place==='Arquivo') expect(current('passeio')).toBe(1);
+  }
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'passeio',current:3}));
+});
+
+test('Solenidade de Inauguração credits only a newly installed portrait marked by another player',()=>{
+  const players:Player[] = ['a','b'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...terminals.credentials.point}));
+  const [visitor,owner] = players;
+  const rewards:number[] = [];
+  const agenda = new PersonalAgenda(metrics,2,()=>0,reward=>rewards.push(reward.xp));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['solenidadeInauguracao','cafe','passeio','credencial']);
+  agenda.updateEligibility(metrics,2,true,3,0,[{id:owner.id,name:owner.nick}]);
+  expect(agenda.hasActive('solenidadeInauguracao')).toBe(true);
+  const game = new Gameplay();
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},spend:()=>true,
+    publish:entry=>{if (entry.actor===visitor.id) recordAgendaEvent(agenda,entry);}};
+  expect(game.act(owner,{kind:'buy',target:'portrait'},world)).toContain('inventário');
+  const [portrait] = game.view(owner,world).inventory;
+  for (const player of players) Object.assign(player,installationSites.hall.point);
+  const install = ()=>game.act(owner,{kind:'install',place:'hall',item:portrait.id},world);
+  expect(install()).toBe('Objeto instalado.');
+  expect(game.act(owner,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
+  world.now += 60_001;
+  expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
+  expect(rewards).toEqual([]);
+  expect(game.act(owner,{kind:'uninstall',item:portrait.id},world)).toBe('Objeto retirado.');
+  expect(install()).toBe('Objeto instalado.');
+  world.now++;
+  expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
+  expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
+  expect(rewards).toEqual([30]);
 });

@@ -32,8 +32,9 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing';
+export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
 export const hearingPolicyFee = 2;
+export const campaignPolicyMultiplier = 2;
 export const policyDuration = 120_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
 
@@ -79,6 +80,9 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N16',name:'Semana da Transparência',banner:'retrato-kit-pericia.webp',
     description:'Os custos do Correio Interno e dos kits de perícia caem por dois minutos.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'mail',detail:'Comunicados e kits de perícia com 40% de desconto por 120 s'}},
+  {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-documento.webp',
+    description:'A propaganda paga ganha o dobro de peso na disputa durante a vigência da PEC.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Propagandas eleitorais valem o dobro na pesquisa e na apuração por 120 s'}},
 ];
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];

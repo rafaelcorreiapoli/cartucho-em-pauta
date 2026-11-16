@@ -8,16 +8,18 @@ import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { agendaDurationMs, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { agendaDurationMs, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean}>;
+  remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
+  privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
   plantaoEmergencia:(event:GameplayEvent) => event.type==='fire-extinguished' && event.place==='inside-crisis-room',
   pautaPrioritaria:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' &&
     event.place==='articulation' && !!event.target && event.target!==event.actor,
@@ -82,11 +84,11 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -97,7 +99,7 @@ const purchaseRequirements:Partial<Record<Agenda,number>> = {
   comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
   pagamento:AGENDA_TRANSFER_MIN,
-  dinheiroAlvo:AGENDA_TRANSFER_MIN,
+  dinheiroAlvo:TARGET_TRANSFER_AMOUNT,
 };
 
 const consumableRequirements = {
@@ -106,7 +108,7 @@ const consumableRequirements = {
 
 const decorationRequirements = {
   retrato:'portrait',retratoGabinete:'portrait',reforma:'portrait',
-  reserva:'vip',mandaVip:'vip',
+  privilegioAdquirido:'vip',reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
 
 const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
@@ -181,7 +183,8 @@ export class PersonalAgenda {
     const key = `transfer:${transferId}`;
     if (this.seenEvents.has(key)) return;
     this.seenEvents.add(key);
-    if (amount>=AGENDA_TRANSFER_MIN) this.progress(metrics,{pagamento:1,dinheiroAlvo:Number(this.missions.some(m=>m.kind==='dinheiroAlvo' && m.person?.id===to))});
+    this.progress(metrics,{pagamento:Number(amount>=AGENDA_TRANSFER_MIN),dinheiroAlvo:Number(amount===TARGET_TRANSFER_AMOUNT &&
+      this.missions.some(m=>m.kind==='dinheiroAlvo' && m.person?.id===to))});
   }
 
   recordSignature(metrics:AgendaMetrics, document:number, signer:string) {
@@ -203,7 +206,8 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (this.availableInMatch(mission.kind,mission.target-mission.current) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
+      if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
+          (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       this.callSamples.delete(mission.id);
       return false;
@@ -222,6 +226,8 @@ export class PersonalAgenda {
     }
     if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc') && !this.npcCount) return false;
+    if (kind==='amizadeInstitucional' && !this.targets.some(person=>!this.visitedTargets.has(kind+':'+person.id) &&
+        (!drawing || this.targetAvailable(kind,person.id)))) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
     // Isolation is temporary. Keep collective missions already in progress.
     const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='visitaCortesia' && kind!=='jogarOculto';
@@ -344,13 +350,31 @@ export class PersonalAgenda {
         samples.set(call,elapsed);
         if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
       }
+      if (kind==='amizadeInstitucional' && event.target && event.kind && !cashAmount(event.kind) &&
+          this.targets.some(person=>person.id===event.target) && !this.visitedTargets.has(kind+':'+event.target) &&
+          (event.type==='transferred' || event.type==='item-received')) {
+        const sent = event.type==='transferred';
+        const opposite = this.factsByMission.get(mission.id)?.get(`${event.target}:${!sent}`);
+        if (opposite && [...opposite].some(item=>item!==event.kind)) {
+          this.visitedTargets.add(kind+':'+event.target);
+          gains[kind] = 1;
+        } else {
+          this.countFacts(mission,[{group:`${event.target}:${sent}`,value:event.kind}]);
+        }
+      }
+      if (kind==='investimentoPolitico' && event.type==='advertisement-aired') gains[kind] = event.amount ?? 0;
       if (kind==='contribuinte' && event.type==='delivered' && event.place==='treasury') gains[kind] = event.amount ?? 0;
       if (kind==='reservaCofre' && event.type==='money-pocketed') gains[kind] = event.amount ?? 0;
       if (kind==='turismo' && event.type==='photo' && event.photo && event.photo.location!=='Corredor') {
         gains[kind] = this.countFacts(mission,[{value:event.photo.location}]);
       }
       if (kind==='trabalhoRemoto' && event.type==='room-time' && event.target===event.actor) gains[kind] = event.duration ?? 0;
-      if (kind==='passeio' && event.type==='room-entered' && event.place) {
+      if (kind==='plantaoArquivo' && event.place===archiveDutyRoom) {
+        if (event.type==='room-left') mission.current = 0;
+        if (event.type==='room-time') gains[kind] = event.duration ?? 0;
+      }
+      if (kind==='passeio' && event.type==='room-entered' && event.place && !event.target &&
+          event.place!=='Sala de Isolamento' && !privateOffices.some(office=>office.name===event.place)) {
         gains.passeio = this.countFacts(mission,[{value:event.place}]);
       }
       if ((event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length ||
@@ -366,7 +390,13 @@ export class PersonalAgenda {
     this.progress(metrics,gains);
   }
 
+  private canMeetCampaignTarget(metrics:AgendaMetrics, remaining:number) {
+    return !this.cannotVote && (metrics.remainingAdvertisements?.() ?? 0)*ELECTION_RULES.advertisementCost>=remaining;
+  }
+
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
+        metrics.wallet<ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao') {
       const requiredPayers = kind==='articulacao' ? missionTargets.articulacao! : 1;
       if (metrics.canReceivePayments?.(requiredPayers)===false) return false;

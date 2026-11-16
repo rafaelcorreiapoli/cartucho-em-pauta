@@ -15,7 +15,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import { roomAt, type Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -81,7 +81,7 @@ export class PlenaryMatch {
   refreshAgendaEligibility() {
     const scheduled = this.agenda.size+Number(this.phase==='ballot');
     const ballotsLeft = Math.max(scheduled,bills.length-this.round%bills.length);
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected);
+    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -114,10 +114,14 @@ export class PlenaryMatch {
     return payments;
   }
 
+  private advertisementMultiplier(now:number) {
+    return (this.policies.get('campaign') ?? 0)>now ? campaignPolicyMultiplier : 1;
+  }
+
   private renew(now:number) {
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
-    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids));
+    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids),this.advertisementMultiplier(now));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
       this.votes.delete(eliminated);
@@ -522,7 +526,7 @@ export class PlenaryMatch {
         if (!this.at(player,'press')) return;
         const advertisement = this.election.advertise(id,spend);
         if (!advertisement) return;
-        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now)});
+        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now),amount:rules.advertisementCost});
         return {...advertisement,character:player.character};
       }
       case 'speech':
@@ -744,7 +748,7 @@ export class PlenaryMatch {
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
-      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
+      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,

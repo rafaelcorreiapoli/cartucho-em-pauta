@@ -391,7 +391,7 @@ export class PoliticalEconomy {
     }
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set()) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set(),remainingAdvertisements?:(id:string)=>number) {
     if (this.agendaRound!==round) for (const account of this.accounts.values()) account.agenda.resetBallot();
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
@@ -403,7 +403,7 @@ export class PoliticalEconomy {
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
-      Object.assign(account,{canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
+      Object.assign(account,{remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets,availableTargets);
     }

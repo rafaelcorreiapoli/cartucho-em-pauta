@@ -67,6 +67,11 @@ export class ElectionCycle {
     return !!person && (kind==='propaganda' ? this.cycle<=rules.cycles && !person.advertised : !person.spoke);
   }
 
+  remainingAdvertisements(id:string) {
+    const person = this.people.get(id);
+    return person ? Math.max(0,rules.cycles-this.cycle+1-Number(person.advertised)) : 0;
+  }
+
   advertise(id:string, spend:(amount:number)=>boolean):CampaignAdvertisement | undefined {
     const person = this.people.get(id);
     if (person && this.cycle<=rules.cycles && !person.advertised && spend(rules.advertisementCost)) {
@@ -125,26 +130,26 @@ export class ElectionCycle {
 
   canObject(id:string) { return !!this.office(id) && !this.objected; }
 
-  private strength(person:Candidate, popularity:(id:string)=>number) {
+  private strength(person:Candidate, popularity:(id:string)=>number,advertisementMultiplier:number) {
     const support = [...this.people.values()].filter(other => other.support===person.id).length;
     return Math.max(1,popularity(person.id)+
-      (person.advertised ? rules.advertisementStrength : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
+      (person.advertised ? rules.advertisementStrength*advertisementMultiplier : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
       Math.min(12,support*4)-person.scandal);
   }
 
-  private tallyScore(person:Candidate, popularity:(id:string)=>number) {
-    return this.strength(person,popularity)+person.noise;
+  private tallyScore(person:Candidate, popularity:(id:string)=>number,advertisementMultiplier:number) {
+    return this.strength(person,popularity,advertisementMultiplier)+person.noise;
   }
 
-  private rank(popularity:(id:string)=>number) {
-    const score = (person:Candidate) => this.tallyScore(person,popularity);
+  private rank(popularity:(id:string)=>number,advertisementMultiplier:number) {
+    const score = (person:Candidate) => this.tallyScore(person,popularity,advertisementMultiplier);
     return [...this.people.values()].sort((a,b) => score(b)-score(a) || a.tie-b.tie || a.id.localeCompare(b.id));
   }
 
-  private polls(popularity:(id:string)=>number) {
+  private polls(popularity:(id:string)=>number,advertisementMultiplier:number) {
     return officeKeys.flatMap(race => {
       const group = [...this.people.values()].filter(person => person.race===race);
-      const estimates = group.map(person => ({person,score:Math.max(1,this.strength(person,popularity)-person.noise)}));
+      const estimates = group.map(person => ({person,score:Math.max(1,this.strength(person,popularity,advertisementMultiplier)-person.noise)}));
       const sum = estimates.reduce((total,{score}) => total+score,0);
       return estimates.sort((a,b) => b.score-a.score || a.person.tie-b.person.tie).map(({person,score}) => {
         const estimate = Math.round(score/sum*100);
@@ -153,10 +158,10 @@ export class ElectionCycle {
     });
   }
 
-  advance(now:number,popularity:(id:string)=>number,settle:(ids:string[])=>Map<string,number>) {
+  advance(now:number,popularity:(id:string)=>number,settle:(ids:string[])=>Map<string,number>,advertisementMultiplier=1) {
     if (now>=this.due && this.cycle<=rules.cycles) {
-      const ranked = this.rank(popularity);
-      const scores = ranked.map(person=>Math.max(.01,this.tallyScore(person,popularity)));
+      const ranked = this.rank(popularity,advertisementMultiplier);
+      const scores = ranked.map(person=>Math.max(.01,this.tallyScore(person,popularity,advertisementMultiplier)));
       const total = scores.reduce((sum,score)=>sum+score,0);
       const eliminated = ranked.length>rules.minimumMandates ? ranked.at(-1) : undefined;
       if (eliminated) this.leave(eliminated.id,now);
@@ -178,7 +183,7 @@ export class ElectionCycle {
       this.nextPoll = now;
     }
     if (now>=this.nextPoll) {
-      this.previousPoll = new Map(this.polls(popularity).map(({id,estimate}) => [id,estimate]));
+      this.previousPoll = new Map(this.polls(popularity,advertisementMultiplier).map(({id,estimate}) => [id,estimate]));
       this.nextPoll = now+25_000;
     }
   }
@@ -188,12 +193,12 @@ export class ElectionCycle {
       .sort((a,b) => officeKeys.indexOf(a.office)-officeKeys.indexOf(b.office));
   }
 
-  view(id:string, now:number, popularity:(id:string)=>number, canCampaign:boolean, objection?:string):ElectionView {
+  view(id:string, now:number, popularity:(id:string)=>number, canCampaign:boolean, objection?:string,advertisementMultiplier=1):ElectionView {
     const person = this.people.get(id);
     const speaker = this.speaker(now);
     return {
       cycle:this.cycle,remaining:Math.max(0,Math.ceil(((this.cycle<=rules.cycles ? this.due : now)-now)/1000)),
-      mandate:!!person,offices:this.assignments(),polls:this.polls(popularity),
+      mandate:!!person,offices:this.assignments(),polls:this.polls(popularity,advertisementMultiplier),
       personal:person && {office:person.office,race:person.race,advertised:person.advertised,
         spoke:person.spoke,interviewed:person.interviewed,salary:rules.salary},
       result:this.result && {cycle:this.result.cycle,offices:this.result.offices,
