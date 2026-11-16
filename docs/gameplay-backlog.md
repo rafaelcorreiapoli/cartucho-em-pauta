@@ -618,7 +618,6 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | EXP-10 | Segurança Parlamentar (MIS-N59) | IMPLEMENTADO | Gameplay.ts, PersonalAgenda.test.ts, mission-row.test.tsx | Cronometra dez segundos junto ao mesmo parlamentar elegível com Porrete equipado. Trocar de alvo, atacar ou desconectar zera a sequência. Teste usa compra, equipamento, combate e tick reais. O HUD mostra a condição e o tempo confirmado pelo servidor. | — |
 | EXP-11 | Plantão de Emergência (MIS-N66) | IMPLEMENTADO | PlenaryMatch.test.ts, Power.multiplayer.test.ts, mission-row.test.tsx | O gameserver exige participar da resolução dentro da sala afetada. Incêndio exige extintor. Pane elétrica exige concluir a operação de um dos painéis. O HUD exibe as duas alternativas. | — |
 | EXP-12 | Reunião de Alto Nível (MIS-N71) | IMPLEMENTADO | Gameplay.ts, installations.ts, PersonalAgenda.test.ts, mission-row.test.tsx | Define a área VIP em torno de uma placa instalada. O gameserver mede quinze segundos contínuos junto do mesmo parlamentar na mesma área. O teste cobre sorteio sem placa, limite da área, retirada da placa, reinício e conclusão. O HUD mostra o local e o progresso. | — |
-
 | EXP-13 | Manutenção de Emergência (MIS-N63) | IMPLEMENTADO | Power.multiplayer.test.ts, mission-row.test.tsx | Sorteável em multiplayer. O reparo em dois painéis gera um evento privado por operador válido e concede 45 XP. Cancelar, sair de alcance ou apenas presenciar a pane não conclui a missão. | — |
 
 ### Dependências do anexo
