@@ -938,3 +938,51 @@ test('three signatures must all come from distinct signers on a single document'
   agenda.recordSignature(metrics,1,'d');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'comissaoImprovisada',current:3}));
 });
+
+test('cash missions require an accepted in-person handover and use the actual amount',()=>{
+  const players:Player[] = ['a','b'].map((id,index)=>({id,nick:id,character:index,direction:0,moving:false,x:140+index*8,y:146}));
+  const [sender,recipient] = players;
+  const economy = new PoliticalEconomy();
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  const accounts = Reflect.get(economy,'accounts');
+  const game = new Gameplay();
+  const world:GameplayWorld = {players,now:10,voice:()=>false,office:()=>undefined,earn:()=>{},
+    takeWallet:()=>2,publish:entry=>economy.recordGameplay(entry)};
+  accounts.get(sender.id).hasCashLot = (amount:number)=>game.hasCashLot(sender.id,amount);
+  const draw = (id:string,kind:'dinheiroPresencialVinte'|'caixaDois')=>{
+    const {agenda} = accounts.get(id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    return economy.hasMission(id,kind);
+  };
+  const completed = (id:string,kind:string)=>economy.view(id,[],0,false,()=>true)!.missions.completed
+    .some(mission=>mission.kind===kind);
+  const npc = {...recipient,id:'npc',npc:true as const};
+  expect(draw(sender.id,'dinheiroPresencialVinte')).toBe(false);
+  game.robNpc(sender,npc,world);
+  const exact = game.view(sender,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(draw(sender.id,'dinheiroPresencialVinte')).toBe(true);
+  expect(draw(recipient.id,'caixaDois')).toBe(true);
+  economy.recordGameplay(event('pix-received',{actor:recipient.id,target:sender.id,amount:2}));
+  expect(completed(recipient.id,'caixaDois')).toBe(false);
+
+  const offer = (item:number)=>{
+    expect(game.act(sender,{kind:'offer',target:recipient.id,item},world)).toBe('Pedido enviado.');
+    return game.view(recipient,world).requests[0].id;
+  };
+  world.takeWallet = ()=>3;
+  game.robNpc(sender,npc,world);
+  const larger = game.view(sender,world).inventory.find(item=>item.kind==='briefcase' && item.id!==exact.id)!;
+  expect(game.act(recipient,{kind:'accept',item:offer(larger.id)},world)).toBe('Objeto recebido.');
+  expect(completed(recipient.id,'caixaDois')).toBe(true);
+  expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(false);
+  const request = offer(exact.id);
+  recipient.x = 400;
+  expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('O portador ou objeto está fora de alcance.');
+  expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(false);
+  recipient.x = 148;
+  expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Objeto recebido.');
+  expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(true);
+  expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Pedido indisponível.');
+});

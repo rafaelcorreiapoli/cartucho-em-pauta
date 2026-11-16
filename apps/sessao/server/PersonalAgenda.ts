@@ -8,16 +8,18 @@ import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { agendaDurationMs, agendas, targetedAgendas, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { agendaDurationMs, agendas, targetedAgendas, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait',replacement?:boolean)=>boolean}>;
+  canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='cash-handed-over' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
+  caixaDois:(event:GameplayEvent) => event.type==='cash-received',
   varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
   limpeza:(event:GameplayEvent) => event.type==='spy-removed' && event.item!==undefined,
   flagraGabinete:(event:GameplayEvent) => event.type==='photo' && event.place==='foreign-office-subject',
@@ -75,7 +77,7 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
@@ -350,6 +352,7 @@ export class PersonalAgenda {
       if (metrics.canPay?.()===false) return false;
       if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
     }
+    if (kind==='dinheiroPresencialVinte' && !metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)) return false;
     if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
     if (kind==='votoNpc') {
       if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;

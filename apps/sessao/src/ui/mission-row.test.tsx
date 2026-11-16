@@ -142,3 +142,11 @@ test('Visita de Cortesia identifies the target and suggests an interaction',()=>
   expect(markup).toContain('Interaja dentro do gabinete de Bia');
   expect(markup).toContain('tire uma foto');
 });
+
+test('cash mission instructions distinguish handing over the exact amount from receiving cash',()=>{
+  const send = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'dinheiroPresencialVinte',current:0,target:1}}/>);
+  const receive = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'caixaDois',current:1,target:1}} done/>);
+  expect(send).toContain('Entregue R$ 20 mil em espécie');
+  expect(receive).toContain('Receba dinheiro em espécie');
+  expect(receive).toContain('data-done="true"');
+});

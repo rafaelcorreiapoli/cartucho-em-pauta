@@ -339,6 +339,10 @@ export class Gameplay {
 
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
 
+  hasCashLot(id:string,amount:number) {
+    return this.inventory(id).some(({data})=>cashAmount(data)===amount);
+  }
+
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
 
   signableDocuments(player:Player,npc:Player,world:GameplayWorld) {
@@ -1434,6 +1438,11 @@ export class Gameplay {
       this.addToInventory(transferred,player.id);
       if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
       this.event(world,owner,'transferred',transferred.data,player.id);
+      const amount = cashAmount(transferred.data);
+      if (amount && !owner.npc && !player.npc) {
+        this.event(world,owner,'cash-handed-over',transferred.data,player.id,{amount,witnesses:[]});
+        this.event(world,player,'cash-received',transferred.data,owner.id,{amount,witnesses:[]});
+      }
       return 'Objeto recebido.';
     }
     const doc = item.data.document;
