@@ -124,3 +124,9 @@ test('the office phone mission shows time remaining as seconds', () => {
   expect(markup).toContain('no seu gabinete');
   expect(markup).toContain('5 / 30 s');
 });
+
+test('concealed transport shows the authoritative progress in seconds', () => {
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'nadaADeclarar',current:9000,target:15_000}}/>);
+  expect(markup).toContain('Transporte dinheiro oculto');
+  expect(markup).toContain('9 / 15 s');
+});

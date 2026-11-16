@@ -601,3 +601,11 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 | D-16 | Agressões furtivas exigem percepção legítima | IMPLEMENTADO | Complaints.ts, Complaints.test.ts, SessionRoom.test.ts, PlenaryMatch.test.ts, internal-mail.test.tsx | Testemunhas fora de visão, ausentes ou nocauteadas não recebem ocorrência de agressão. A vítima pode denunciar. | — |
 | D-17 | O jogo deve permitir blefes | IMPLEMENTADO | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Missões privadas e documentos manipuláveis permitem blefe. | — |
 | D-18 | Satirizar através do gameplay | NÃO VERIFICÁVEL | PlenaryMatch.ts, PoliticalEconomy.ts, Gameplay.ts, SessionRoom.ts, InternalMail.ts; PR 8, 12, 14, 15 | Há sátira em projetos, objetos e interações; qualidade é avaliação editorial. | — |
+
+## Expansão de conteúdo
+
+| ID | Item | Estado | Evidência | Observação | Complexidade |
+| --- | --- | --- | --- | --- | --- |
+| EXP-01 | Missões do anexo com mecânicas existentes | PARCIAL | PR 25, PersonalAgenda.test.ts, Gameplay.test.ts, PhoneSession.test.ts, mission-row.test.tsx | 29 missões adicionadas. Visita com interação em um gabinete específico e selfie junto a retrato alheio ainda precisam de cobertura própria. | Média |
+| EXP-02 | Projetos do anexo com efeitos jogáveis | IMPLEMENTADO | PR 25, PlenaryMatch.test.ts, Foundations.test.ts, gameplay.test.ts | Oito projetos aplicam efeitos no jogo. Os demais exigem mecânicas que ainda não estão disponíveis na forma descrita pelo anexo. | — |
+| EXP-03 | Nada a Declarar (MIS-N54) | IMPLEMENTADO | Gameplay.test.ts, PersonalAgenda.test.ts, mission-row.test.tsx | O servidor conta até 15 segundos de deslocamento com dinheiro e com a Cueca do Mensalão ativa. Ficar parado, largar o dinheiro ou expirar o efeito interrompe o progresso. O HUD exibe o tempo confirmado pelo servidor. | — |
