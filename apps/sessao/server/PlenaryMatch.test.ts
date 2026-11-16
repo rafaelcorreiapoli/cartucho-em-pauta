@@ -1,3 +1,5 @@
+import {pinga} from '../src/food';
+import {restMovement,STEP_MS} from '../src/movement';
 import { stationRecharge } from '../src/station-recharge';
 import { StationCooldowns } from './StationCooldowns';
 import { InternalMail } from './InternalMail';
@@ -1063,7 +1065,12 @@ test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida:
   const dropped = game.view(bia,world).ground.find(item=>item.kind==='pinga');
   expect(dropped).toMatchObject({x:bia.x,y:bia.y});
   expect(game.act(rafa,{kind:'use',item:doses[0].id},world)).toBe('Objeto utilizado.');
-  expect(rafa.speedModifier).toEqual({factor:.8,remainingMs:8_000});
+  const {factor,durationMs} = pinga.effect.speed;
+  expect(rafa.speedModifier).toEqual({factor,remainingMs:durationMs});
+  for (let elapsed=STEP_MS;elapsed<durationMs;elapsed+=STEP_MS) restMovement(rafa);
+  expect(rafa.speedModifier).toEqual({factor,remainingMs:STEP_MS});
+  restMovement(rafa);
+  expect(rafa.speedModifier).toBeUndefined();
   expect(inventory(rafa,at+1)).not.toContainEqual(expect.objectContaining({kind:'pinga'}));
   match.setPlayerConnected(caio.id,true);
   expect(inventory(caio,at+1)).toHaveLength(0);
