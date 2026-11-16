@@ -20,7 +20,7 @@ import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { button, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, documentTemplates, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 
@@ -608,16 +608,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind}))));
           }
           const terminal = terminals[place as keyof typeof terminals];
-          if (!('supply' in terminal)) continue;
-          const take = (target?:string) => pickUp(player=>canReachObject(player,terminal.point),
-            ()=>send({kind:'supply',place,target}));
-          if (terminal.supply==='document') {
-            for (const [target,template] of Object.entries(documentTemplates)) {
-              tiles.push(itemButton('document',template.title,'Pegar',()=>take(target)));
-            }
-          } else {
-            tiles.push(itemButton(terminal.supply,objects[terminal.supply].name,'Pegar',()=>take()));
-          }
+          if (!('supply' in terminal) || terminal.supply==='document') continue;
+          tiles.push(itemButton(terminal.supply,objects[terminal.supply].name,'Pegar',()=>pickUp(
+            player=>canReachObject(player,terminal.point),
+            ()=>send({kind:'supply',place}),
+          )));
         }
         for (const item of state.filed) {
           tiles.push(itemButton(item.kind,itemName(item),'Consultar',()=>open({id:item.id,source:'filed'})));
