@@ -209,20 +209,20 @@ test('the camera freezes visible exposed objects and preserves permissions throu
   game.act(bob,{kind:'collect',item:briefcase.id},world);
   expect(game.visibleItems(bob.id)[0]?.id).toBe(briefcase.id);
   expect(game.act(alice,{kind:'expose',item:briefcase.id},world)).toBe('O objeto não está com você.');
-  Object.assign(bob,{...terminals.credentials.point});
-  game.act(bob,{kind:'supply',place:'credentials'},world);
-  const gift = game.view(bob,world).inventory.find(item=>item.kind==='gift')!;
+  Object.assign(bob,terminals.secretary.point);
+  game.act(bob,{kind:'supply',place:'secretary',target:'queue'},world);
+  const document = game.view(bob,world).inventory.find(item=>item.kind==='document')!;
   Object.assign(bob,{x:151,y:146});
-  expect(game.act(bob,{kind:'expose',item:gift.id},world)).toBe('Objeto exposto.');
-  expect(game.visibleItems(bob.id).map(item=>item.id)).toEqual([briefcase.id,gift.id]);
+  expect(game.act(bob,{kind:'expose',item:document.id},world)).toBe('Objeto exposto.');
+  expect(game.visibleItems(bob.id).map(item=>item.id)).toEqual([briefcase.id,document.id]);
   game.act(alice,{kind:'selfie'},world);
   game.act(alice,{kind:'selfie'},world);
   const [entry] = game.photoView(alice.id,world.now).album;
   const {photo} = entry;
   expect(game.photoView(alice.id,world.now).album).toHaveLength(1);
   expect(photo.people.map(person=>person.id)).toEqual([alice.id,bob.id]);
-  expect(photo.people[1].exposed).toEqual([{id:briefcase.id,kind:'briefcase'},{id:gift.id,kind:'gift'}]);
-  expect(game.act(bob,{kind:'conceal',item:gift.id},world)).toBe('Objeto guardado.');
+  expect(photo.people[1].exposed).toEqual([{id:briefcase.id,kind:'briefcase'},{id:document.id,kind:'document'}]);
+  expect(game.act(bob,{kind:'conceal',item:document.id},world)).toBe('Objeto guardado.');
   expect(game.visibleItems(bob.id).map(item=>item.id)).toEqual([briefcase.id]);
   game.act(bob,{kind:'drop',item:briefcase.id},world);
   expect(game.visibleItems(bob.id)).toEqual([]);
@@ -280,8 +280,8 @@ test('installations validate location, keep one occupant and serve each diner on
   expect(game.view(bob,world).interactive[0].slices).toBe(5);
   expect(events.filter(event=>event.type==='slice')).toHaveLength(1);
 
-  Object.assign(alice,terminals.credentials.point);
-  Object.assign(bob,terminals.credentials.point);
+  Object.assign(alice,npcs.credentialsVendor.interaction);
+  Object.assign(bob,npcs.credentialsVendor.interaction);
   buyCredentialGood(game,alice,'portrait',world);
   buyCredentialGood(game,bob,'portrait',world);
   const [first] = game.view(alice,world).inventory;
@@ -306,7 +306,7 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   alice.character = 4;
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
-    Object.assign(alice,terminals.credentials.point);
+    Object.assign(alice,npcs.credentialsVendor.interaction);
     expect(buyCredentialGood(game,alice,site.kind,world)).toBe('Compra guardada no inventário.');
     const [item] = game.view(alice,world).inventory;
     expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
@@ -489,10 +489,10 @@ test('concealment filters cash from observers and photos through reconnect and c
   world.spend = ()=>true;
   game.reset(0,()=>.5);
   const underwear = buyTechnical(game,alice,world,'mensalUnderwear');
-  Object.assign(alice,terminals.credentials.point);
-  game.act(alice,{kind:'supply',place:'credentials'},world);
-  const gift = game.view(alice,world).inventory.find(item=>item.kind==='gift')!;
-  game.act(alice,{kind:'expose',item:gift.id},world);
+  Object.assign(alice,terminals.secretary.point);
+  game.act(alice,{kind:'supply',place:'secretary',target:'queue'},world);
+  const document = game.view(alice,world).inventory.find(item=>item.kind==='document')!;
+  game.act(alice,{kind:'expose',item:document.id},world);
   const npc = {...bob,id:'npc',npc:true as const};
   world.takeWallet = ()=>12;
   game.robNpc(alice,npc,world);
@@ -503,7 +503,7 @@ test('concealment filters cash from observers and photos through reconnect and c
   expect(game.hasVisibleCash(alice.id,world.now,bob.id)).toBe(false);
   expect(game.hasVisibleCash(alice.id,world.now,alice.id)).toBe(true);
   expect(game.act(alice,{kind:'use',item:underwear.id},world)).toBe('Objeto indisponível.');
-  expect(game.visibleItems(alice.id,world.now)).toEqual([{id:gift.id,kind:'gift'}]);
+  expect(game.visibleItems(alice.id,world.now)).toEqual([{id:document.id,kind:'document'}]);
   expect(game.visibleItems(alice.id,world.now,alice.id)).toHaveLength(2);
   expect(game.physicalCash()).toBe(12);
   game.act(alice,{kind:'drop',item:cash.id},world);
@@ -515,7 +515,7 @@ test('concealment filters cash from observers and photos through reconnect and c
   Object.assign(bob,{x:250,y:250});
   game.act(bob,{kind:'photo'},world);
   expect(game.photoView(bob.id,world.now).album[0]?.photo.people.find(person=>person.id===alice.id)?.exposed)
-    .toEqual([{id:gift.id,kind:'gift'}]);
+    .toEqual([{id:document.id,kind:'document'}]);
   world.now = 40_000;
   game.leave(alice,world,false);
   expect(game.view(alice,world).concealmentSeconds).toBe(5);

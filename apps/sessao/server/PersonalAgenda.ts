@@ -20,8 +20,6 @@ const activityMissions = {
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
   privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
   plantaoEmergencia:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.place==='inside-crisis-room',
-  pautaPrioritaria:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' &&
-    event.place==='articulation' && !!event.target && event.target!==event.actor,
   fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
   patrimonioSuspeito:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='npc',
   dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='cash-handed-over' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
@@ -55,7 +53,6 @@ const activityMissions = {
   emenda:(event:GameplayEvent) => event.type==='amendment-filed',
   cafe:(event:GameplayEvent) => event.type==='coffee-drunk',
   leitura:(event:GameplayEvent) => event.type==='bill-studied',
-  credencial:(event:GameplayEvent) => event.type==='credential-checked',
   propaganda:(event:GameplayEvent) => event.type==='advertisement-aired',
   discurso:(event:GameplayEvent) => event.type==='speech-given',
   auditoria:(event:GameplayEvent) => event.type==='audit-performed',
@@ -67,7 +64,6 @@ const activityMissions = {
   assinar:(event:GameplayEvent) => event.type==='signed' && !!event.target && event.target!==event.actor,
   transporte:(event:GameplayEvent) => event.type==='room-entered' && event.kind==='briefcase' && event.target===event.actor,
   equipamento:(event:GameplayEvent) => event.type==='purchased' && event.kind==='binoculars',
-  presente:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' && !!event.target && event.target!==event.actor,
   visitaArquivo:(event:GameplayEvent) => event.type==='room-entered' && event.place==='Arquivo',
   pizza:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza',
   lagosta:(event:GameplayEvent) => event.type==='used' && event.kind==='lobster',
@@ -84,8 +80,8 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
-  recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
+  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  recebido:2, pagamento:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,vigilanciaInstitucional:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,

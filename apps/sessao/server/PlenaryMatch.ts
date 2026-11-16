@@ -344,12 +344,6 @@ export class PlenaryMatch {
         this.publishActivity(player,'bill-studied',now);
         return {activity,text:`Você estudou o projeto ${bill}.`};
       case 'quorum': return {activity,text:`Votos a favor necessários para aprovar ${bill}: ${this.billQuorum()}.`};
-      case 'credentials': {
-        this.publishActivity(player,'credential-checked',now);
-        const office = this.election.office(id);
-        return {activity,text:office ? `${this.economy.name(id)} · Parlamentar · Salário previsto de ${money(rules.salary)} por ciclo.` :
-          `${this.economy.name(id)} · Ex-parlamentar`};
-      }
       case 'benches': return {activity,text:`Parlamentares aptos a votar nesta rodada: ${this.votingPlayers()}.`};
       default: return {activity};
     }

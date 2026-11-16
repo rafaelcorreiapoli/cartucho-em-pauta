@@ -1554,8 +1554,7 @@ export class Gameplay {
       }
       this.addToInventory(transferred,player.id);
       if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
-      this.event(world,owner,'transferred',transferred.data,player.id,
-        !world.plenary && transferred.data.kind==='gift' ? {place:'articulation'} : undefined);
+      this.event(world,owner,'transferred',transferred.data,player.id);
       const amount = cashAmount(transferred.data);
       if (!amount && !owner.npc && !player.npc && world.hasMission?.(player.id,'amizadeInstitucional')) {
         this.event(world,player,'item-received',transferred.data,owner.id,{witnesses:[]});
