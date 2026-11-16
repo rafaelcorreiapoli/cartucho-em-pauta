@@ -1,4 +1,5 @@
 import { fireSites, type FireExtinguished } from '../src/fire';
+import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
 import { gameplayMetrics } from './gameplay-metrics';
 import { isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
@@ -102,6 +103,7 @@ export class SessionRoom extends Room {
   private resetFinishedMatch(now:number) {
     if (!this.matchObjectsActive || this.match.running) return;
     this.matchObjectsActive = false;
+    this.securityFeeds.clear();
     const summary = this.match.economySummary(this.gameplay.physicalCash());
     console.info(JSON.stringify({event:'economy-totals',roomId:this.roomId,...summary}));
     gameplayMetrics.finish(this.roomId,summary.discrepancy);
@@ -122,6 +124,12 @@ export class SessionRoom extends Room {
   }
 
   private spyFrameAt = 0;
+  private securityFeeds = new Map<string,SecurityCamera>();
+
+  private atSecurityTerminal(player:Player, now:number) {
+    return this.match.phase==='negotiation' && this.match.ballotCountdown(now)===undefined &&
+      this.match.canHandleObjects(player.id,now) && canUseSecurityTerminal(player);
+  }
 
   private lastMegaphone = new Map<string,boolean>();
 
@@ -292,6 +300,22 @@ export class SessionRoom extends Room {
           this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
       const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
       if (result) client.send('gameplay-feedback',result);
+    });
+    this.onMessage('security-camera',(client,raw:unknown)=>{
+      const player = this.players.get(client.sessionId)?.player;
+      if (!player || !raw || typeof raw!=='object' || !('kind' in raw) || !this.consumeRoomCommand(player.id,raw)) return;
+      if (raw.kind==='close') {
+        this.securityFeeds.delete(player.id);
+        return;
+      }
+      if (!this.atSecurityTerminal(player,this.clock.currentTime)) return;
+      if (raw.kind==='open' && !this.securityFeeds.has(player.id)) {
+        this.securityFeeds.set(player.id,securityCameras[0]);
+      } else if (raw.kind==='select' && 'camera' in raw && this.securityFeeds.has(player.id)) {
+        const cameraId = raw.camera;
+        const camera = securityCameras.find(({id})=>id===cameraId);
+        if (camera) this.securityFeeds.set(player.id,camera);
+      }
     });
     this.onMessage('fire-action',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
@@ -478,6 +502,8 @@ export class SessionRoom extends Room {
         const id = client.sessionId;
         const state = this.players.get(id);
         if (!state) continue;
+        const atTerminal = this.atSecurityTerminal(state.player,now);
+        if (!atTerminal) this.securityFeeds.delete(id);
         if (!projectWorld) {
           client.send('control',state);
           continue;
@@ -509,10 +535,15 @@ export class SessionRoom extends Room {
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);
         }
+        const securityCamera = this.securityFeeds.get(id);
+        if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityCamera?.id};
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
+        }
+        if (sendSpyFrame && securityCamera) {
+          client.send('security-frame',{camera:securityCamera.id,scene:this.gameplay.securityFrame(state.player,securityCamera,world)});
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);
@@ -543,6 +574,7 @@ export class SessionRoom extends Room {
   }
 
   async onDrop(client:Client) {
+    this.securityFeeds.delete(client.sessionId);
     if (!this.match.running) return;
     this.leaveVoice(client.sessionId);
     this.npcTalk.leave(client.sessionId);
@@ -566,6 +598,7 @@ export class SessionRoom extends Room {
   }
 
   onLeave(client: Client) {
+    this.securityFeeds.delete(client.sessionId);
     this.leaveVoice(client.sessionId);
     this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);

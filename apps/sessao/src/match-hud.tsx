@@ -22,7 +22,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'};
+type FieldAction = {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -248,6 +248,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
+    if (state?.security) actions.push({label:'Consultar câmeras',icon:'camera',action:{kind:'open-security'}});
     if (state?.locations.includes('secretary')) actions.push({label:'Solicitar documento',icon:'document',action:{kind:'request-document'}});
     if (state?.locations.includes('reprography')) {
       for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {

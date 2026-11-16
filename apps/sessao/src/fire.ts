@@ -1,5 +1,5 @@
 import {canInteract,type InteractionActor} from './interactions';
-import {furnishings,roomAt,rooms} from './map';
+import {furnishings,roomAt,rooms,securityRoom} from './map';
 import {privateOffices} from './private-offices';
 
 export const fireRules = {
@@ -39,7 +39,7 @@ const targets = [
   {x:673,y:204,object:'Estante'},
   {x:933,y:241,object:'Vaso'},
   {x:45,y:337,object:'Armário'},
-  {x:788,y:350,object:'Mesa'},
+  {...securityRoom.terminal,object:'Terminal'},
   {x:879.5,y:348,object:'Balcão'},
   {x:49,y:518,object:'Vaso'},
   {x:402,y:476,object:'Balcão'},

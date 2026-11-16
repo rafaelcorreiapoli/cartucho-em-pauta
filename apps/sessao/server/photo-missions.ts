@@ -1,6 +1,6 @@
 import type { GameplayEvent } from '../src/gameplay';
 import { privateOffices } from '../src/private-offices';
-import { roomAt } from '../src/map';
+import { securityRoom, roomAt } from '../src/map';
 import type { Photo } from '../src/photography';
 import type { Agenda } from '../src/politics';
 
@@ -23,7 +23,7 @@ export const photoMissions = {
   presidenteFoto:{target:1,players:2,facts:capture((photo,actor)=>
     photo.selfie && people(photo,actor).some(person=>person.office==='president') ? fact(photo.id) : [])},
   celularFoto:{target:1,players:2,facts:capture((photo,actor)=>
-    people(photo,actor).some(person=>person.phone==='game' && ['Comissões','Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
+    people(photo,actor).some(person=>person.phone==='game' && [securityRoom.name,'Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
   reuniaoFoto:{target:1,players:3,facts:capture((photo,actor)=>{
     const guests = people(photo,actor);
     return guests.some(person=>privateRooms.has(roomAt(person)) &&
