@@ -45,6 +45,9 @@ test('the panel projects valid targets and the enacted hearing fee',()=>{
   expect(institutionalActions(view(0),panel).hearing).toBeUndefined();
   economy.changePopularity(rafa.id,20);
   expect(institutionalActions(view(1),panel).hearing?.candidates.map(({id})=>id)).toEqual(ids.slice(1));
+  const withoutCassation = paint(institutionalActions({...view(1),canCallCassation:false},panel));
+  expect(withoutCassation).toContain('id="hearing-form"');
+  expect(withoutCassation).not.toContain('Convocar cassação');
   match.gameplayWorld(players,2,()=>false).publish({
     type:'filed',project:bills.findIndex(bill=>bill.id==='PROJ-N06'),
     actor:rafa.id,item:1,position:stations.amendment,at:2,witnesses:[],

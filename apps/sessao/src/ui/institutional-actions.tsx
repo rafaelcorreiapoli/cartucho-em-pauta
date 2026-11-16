@@ -9,13 +9,15 @@ export function institutionalActions(view?:PlenaryView,player?:Player) {
   const grant = canReachStation(player,'cabinet') && view.mandate && !politics.grantUsed && !politics.suspended
     ? {affordable:view.budget>=CABINET_GRANT} : undefined;
   const fee = view.policies?.hearing ? hearingPolicyFee : 0;
-  const hearing = canReachStation(player,'panel') && politics.canCallHearing ? {
-    fee,
-    affordable:politics.wallet>=fee,
+  const atPanel = canReachStation(player,'panel');
+  const summons = {fee,affordable:politics.wallet>=fee};
+  const cassation = atPanel && view.canCallCassation ? summons : undefined;
+  const hearing = atPanel && politics.canCallHearing ? {
+    ...summons,
     candidates:politics.directory.filter(contact=>contact.id!==player.id && contact.eligible)
       .map(({id,name,popularity})=>({id,name,popularity})),
   } : undefined;
-  return {grant,hearing};
+  return {grant,hearing,cassation};
 }
 
 export function cassationLabel(fee:number) {
@@ -25,7 +27,7 @@ export function cassationLabel(fee:number) {
 export function InstitutionalActions({model,send,close}:{close?:()=>void;model:ReturnType<typeof institutionalActions>;send:(action:PoliticsAction)=>void}) {
   const [diverted,setDiverted] = useState<Split>(0);
   const [target,setTarget] = useState('');
-  const {grant,hearing} = model;
+  const {grant,hearing,cassation} = model;
   const nominee = hearing?.candidates.find(candidate=>candidate.id===target);
   return <div id="politics-actions">
     <header className="social-header">
@@ -43,22 +45,20 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
       </div>
       <button className="hud-button" type="submit" disabled={!grant.affordable}>Aplicar verba de {money(CABINET_GRANT)}</button>
     </form>}
-    {hearing && <>
-      <button className="hud-button" type="button" disabled={!hearing.affordable}
-        onClick={()=>send({kind:'call-cassation'})}>{cassationLabel(hearing.fee)}</button>
-      <form id="hearing-form" onSubmit={event=>{
-        event.preventDefault();
-        if (nominee && hearing.affordable) send({kind:'hearing',target:nominee.id});
-      }}>
-        <div className="section-label">Afastamento temporário</div>
-        <div className="choice-grid" role="group" aria-label="Alvo do afastamento">
-          {hearing.candidates.map(candidate=><button key={candidate.id} type="button" className="hud-button hud-button--secondary game-choice"
-            aria-pressed={candidate===nominee} onClick={()=>setTarget(candidate.id)}>{candidate.name} · {candidate.popularity} pop.</button>)}
-        </div>
-        <button className="hud-button" type="submit" disabled={!nominee || !hearing.affordable}>
-          Convocar votação{hearing.fee ? ' · '+money(hearing.fee) : ''}
-        </button>
-      </form>
-    </>}
+    {cassation && <button className="hud-button" type="button" disabled={!cassation.affordable}
+      onClick={()=>send({kind:'call-cassation'})}>{cassationLabel(cassation.fee)}</button>}
+    {hearing && <form id="hearing-form" onSubmit={event=>{
+      event.preventDefault();
+      if (nominee && hearing.affordable) send({kind:'hearing',target:nominee.id});
+    }}>
+      <div className="section-label">Afastamento temporário</div>
+      <div className="choice-grid" role="group" aria-label="Alvo do afastamento">
+        {hearing.candidates.map(candidate=><button key={candidate.id} type="button" className="hud-button hud-button--secondary game-choice"
+          aria-pressed={candidate===nominee} onClick={()=>setTarget(candidate.id)}>{candidate.name} · {candidate.popularity} pop.</button>)}
+      </div>
+      <button className="hud-button" type="submit" disabled={!nominee || !hearing.affordable}>
+        Convocar votação{hearing.fee ? ' · '+money(hearing.fee) : ''}
+      </button>
+    </form>}
   </div>;
 }
