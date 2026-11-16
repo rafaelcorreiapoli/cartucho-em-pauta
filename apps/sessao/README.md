@@ -257,3 +257,5 @@ O teste usa WebRTC local com sinalização simulada e mede o áudio após o filt
 no receptor. Compara a relação entre graves e médios com e sem Megafone,
 repetindo a comparação com o Modulador ativo. Também verifica presença de
 sinal, picos abaixo do clipping e uma captura e uma trilha por cliente.
+
+Os efeitos de passos usam quatro recortes de [Footsteps Carpet, de LewisEmmott5](https://freesound.org/people/LewisEmmott5/sounds/732573/) (CC0), com volume ajustado para a caminhada.

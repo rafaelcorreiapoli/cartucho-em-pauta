@@ -318,12 +318,15 @@ async function connect(join: () => Promise<Room>) {
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
-      if (gameplay.photoState(photos)) audio.shutter();
+      if (gameplay.photoState(photos)) audio.cue('shutter');
     });
     joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('consumable-purchased',gameplay.purchasedConsumable);
+    joined.onMessage('interaction-cue',(cue:unknown)=>{
+      if (cue==='cash' || cue==='stamp' || cue==='lock') audio.cue(cue);
+    });
     joined.onMessage('food-consumed',(cue:unknown)=>{
       if (cue==='eat' || cue==='drink') audio.cue(cue);
     });

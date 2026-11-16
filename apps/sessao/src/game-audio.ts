@@ -7,8 +7,9 @@ const files = {
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
   eat:'comer.wav', drink:'beber.wav',
+  stamp:'carimbo.wav', lock:'fechadura.wav', shutter:'obturador.wav',
   swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',
-  foot1:'passo-1.wav', foot2:'passo-2.wav', foot3:'passo-3.wav', foot4:'passo-4.wav',
+  foot1:'passo-carpete-1.wav', foot2:'passo-carpete-2.wav', foot3:'passo-carpete-3.wav', foot4:'passo-carpete-4.wav',
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
@@ -28,7 +29,8 @@ export class GameAudio {
   private loading?:Promise<void>;
   private playing = false;
   private speaking = false;
-  private footIndex = 0;
+  private lastFootIndex = 0;
+  private lastCashCue = -Infinity;
 
   constructor() {
     this.preferences.subscribe(() => this.updateGain());
@@ -89,6 +91,7 @@ export class GameAudio {
 
   leave() {
     this.playing = false;
+    this.lastCashCue = -Infinity;
     this.stopMusic(0);
     for (const source of this.fading) source.stop();
     this.score = 'music';
@@ -125,7 +128,15 @@ export class GameAudio {
     source.start(now);
   }
 
-  cue(name:Cue) { this.play(name,.62,0,1); }
+  cue(name:Cue) {
+    if (name==='cash') {
+      // A treasury delivery can also pay a mission reward in the next snapshot.
+      const now = performance.now();
+      if (now-this.lastCashCue<200) return;
+      this.lastCashCue = now;
+    }
+    this.play(name,.62,0,1);
+  }
   progression(cue:'levelUp'|'attribute') {
     const {context,effectsGain} = this;
     if (!this.playing || !context || !effectsGain) return;
@@ -147,10 +158,11 @@ export class GameAudio {
     });
   }
 
-  shutter() { this.play('vote',.58,0,1.85); }
   stationClick() { this.play('vote',.75,0,1.35); }
   footstep(level:number,pan:number) {
-    this.play(footsteps[this.footIndex++ % footsteps.length],level*.5,pan,.94+Math.random()*.12);
+    const offset = 1 + Math.floor(Math.random() * (footsteps.length - 1));
+    this.lastFootIndex = (this.lastFootIndex + offset) % footsteps.length;
+    this.play(footsteps[this.lastFootIndex],level*.24,pan,.97+Math.random()*.06);
   }
 
   combat(name:CombatCue,level:number,pan:number) {
