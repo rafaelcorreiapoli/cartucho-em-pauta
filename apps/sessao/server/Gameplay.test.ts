@@ -306,6 +306,9 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   Object.assign(bob,{x:245,y:252});
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).toContain(bob.id);
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(alice.id);
+  expect(events.some(event=>event.type==='spy-viewed')).toBe(false);
+  game.confirmSpyFrame(alice,world);
+  game.confirmSpyFrame(alice,world);
   Object.assign(watcher,{x:230,y:246,moving:true});
   expect(game.spyFrame(alice,world)?.people).toContainEqual(expect.objectContaining({id:watcher.id,moving:true}));
   Object.assign(watcher,{x:254,y:252,moving:false});
@@ -336,6 +339,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(events.filter(event=>event.type==='spy-discovered' && event.actor===watcher.id)).toHaveLength(1);
   expect(game.spyView(watcher,world).channels).toEqual([]);
   expect(game.spyFrame(alice,world)).toBeDefined();
+  game.confirmSpyFrame(alice,world);
   Object.assign(alice,{x:240,y:250});
   game.spyAction(alice,{kind:'recover',site:'coffee'},world);
   world.now += 3000;
@@ -348,6 +352,8 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   const replacement = game.spyView(alice,world).channels.find(entry=>!entry.removed)!;
   expect(replacement.id).not.toBe(channel.id);
   game.spyAction(alice,{kind:'open',channel:replacement.id},world);
+  expect(game.spyFrame(alice,world)).toBeDefined();
+  game.confirmSpyFrame(alice,world);
   const cameraViews = events.filter(event=>event.type==='spy-viewed' && event.actor===alice.id);
   expect(cameraViews).toHaveLength(3);
   expect(cameraViews.map(event=>event.item)).toEqual([camera.id,camera.id,camera.id]);

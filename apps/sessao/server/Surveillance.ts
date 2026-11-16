@@ -27,6 +27,7 @@ export class Surveillance {
   private jobs = new Map<string,Job>();
   private discoveries = new Map<string,Map<string,number>>();
   private selected = new Map<string,number>();
+  private deliveredCameraFrames = new Set<string>();
   private listening = new Map<string,number>();
   private muted = new Set<string>();
   private lastSound = new Map<string,number>();
@@ -37,11 +38,11 @@ export class Surveillance {
 
   reset() {
     this.devices.clear(); this.recoveredHardware.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
-    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
+    this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
   }
 
   leave(id:string, permanent=false) {
-    this.jobs.delete(id); this.selected.delete(id); this.listening.delete(id); this.muted.delete(id); this.lastSound.delete(id);
+    this.jobs.delete(id); this.selected.delete(id); this.deliveredCameraFrames.delete(id); this.listening.delete(id); this.muted.delete(id); this.lastSound.delete(id);
     if (permanent) this.discoveries.delete(id);
   }
 
@@ -66,6 +67,14 @@ export class Surveillance {
   channel(id:string, kind:SpyDevice) {
     const device = this.devices.get((kind==='wiretap' ? this.listening : this.selected).get(id) ?? -1);
     return device?.owner===id && !device.removed && device.kind===kind ? device : undefined;
+  }
+
+  takeCameraFrameCredit(id:string) {
+    if (this.deliveredCameraFrames.has(id)) return;
+    const device = this.channel(id,'spyCamera');
+    if (!device) return;
+    this.deliveredCameraFrames.add(id);
+    return {item:device.hardware.id,place:device.site.id};
   }
 
   origin({site:{x,y}}:Device,barriers?:readonly Rect[]):Motion { return {x,y,barriers}; }
@@ -111,7 +120,7 @@ export class Surveillance {
   act(player:Player,raw:unknown,now:number,access:Access) {
     if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
     const id = player.id;
-    if (raw.kind==='close') { this.selected.delete(id); this.listening.delete(id); this.muted.delete(id); return; }
+    if (raw.kind==='close') { this.selected.delete(id); this.deliveredCameraFrames.delete(id); this.listening.delete(id); this.muted.delete(id); return; }
     if (raw.kind==='cancel') { this.jobs.delete(id); return; }
     if ('channel' in raw && typeof raw.channel==='number') {
       const device = this.devices.get(raw.channel);
@@ -119,10 +128,11 @@ export class Surveillance {
       const selection = device.kind==='wiretap' ? this.listening : this.selected;
       if (raw.kind==='open') {
         this.selected.delete(id);
+        this.deliveredCameraFrames.delete(id);
         this.listening.delete(id);
         this.muted.delete(id);
         selection.set(id,device.id);
-        access.event?.(player,'spy-viewed',device.site.id,{kind:device.kind,id:device.hardware.id});
+        if (device.kind==='wiretap') access.event?.(player,'spy-viewed',device.site.id,{kind:device.kind,id:device.hardware.id});
       }
       if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
       if (raw.kind==='mute' && this.listening.get(id)===device.id) {
@@ -155,7 +165,7 @@ export class Surveillance {
     const barriers = players[0]?.barriers;
     const elapsed = Math.min(100,now-(this.lastTick ?? now));
     this.lastTick = now;
-    if (!exploring) { this.jobs.clear(); this.selected.clear(); this.listening.clear(); this.muted.clear(); return; }
+    if (!exploring) { this.jobs.clear(); this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
       if (!player || !present(id) || !this.near(player,job.site) || player.x!==job.x || player.y!==job.y) {

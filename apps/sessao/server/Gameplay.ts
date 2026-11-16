@@ -762,6 +762,11 @@ export class Gameplay {
     return this.cameraScene(player,camera,world,cameraSees);
   }
 
+  confirmSpyFrame(player:Player,world:GameplayWorld) {
+    const credit = this.surveillance.takeCameraFrameCredit(player.id);
+    if (credit) publishGameplay(world,player,'spy-viewed',{...credit,kind:'spyCamera',witnesses:[]});
+  }
+
   securityFrame(player:Player, camera:SecurityCamera, world:GameplayWorld) {
     return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point));
   }

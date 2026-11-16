@@ -549,7 +549,10 @@ export class SessionRoom extends Room {
           view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
           if (sendSpyFrame) {
             const frame = this.gameplay.spyFrame(state.player,world);
-            if (frame) client.send('spy-frame',frame);
+            if (frame) {
+              client.send('spy-frame',frame);
+              this.gameplay.confirmSpyFrame(state.player,world);
+            }
           }
           view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);

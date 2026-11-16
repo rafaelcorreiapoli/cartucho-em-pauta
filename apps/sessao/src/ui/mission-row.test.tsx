@@ -452,6 +452,9 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   const progress = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='duasCameras')!;
   expect(progress(secondInstalledAt).current).toBe(0);
   game.spyAction(player,{kind:'open',channel:original.id},at(secondInstalledAt+1));
+  expect(progress(secondInstalledAt+1).current).toBe(0);
+  expect(game.spyFrame(player,at(secondInstalledAt+1))).toBeDefined();
+  game.confirmSpyFrame(player,at(secondInstalledAt+1));
   expect(progress(secondInstalledAt+1).current).toBe(1);
   Object.assign(player,{x:254,y:252});
   game.spyAction(player,{kind:'recover',site:'coffee'},at(secondInstalledAt+10));
@@ -463,8 +466,12 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   game.tick(at(reinstalledAt),true);
   const replacement = game.spyView(player,at(reinstalledAt)).channels.find(channel=>!channel.removed && channel.id!==other.id)!;
   game.spyAction(player,{kind:'open',channel:replacement.id},at(reinstalledAt+1));
+  expect(game.spyFrame(player,at(reinstalledAt+1))).toBeDefined();
+  game.confirmSpyFrame(player,at(reinstalledAt+1));
   expect(renderToStaticMarkup(<MissionRow mission={progress(reinstalledAt+1)}/>)).toContain('1 / 2');
   game.spyAction(player,{kind:'open',channel:other.id},at(reinstalledAt+2));
+  expect(game.spyFrame(player,at(reinstalledAt+2))).toBeDefined();
+  game.confirmSpyFrame(player,at(reinstalledAt+2));
   const completed = view(reinstalledAt+2).missions.completed.find(mission=>mission.kind==='duasCameras')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(reinstalledAt+2).progression.xp).toBe(30);
