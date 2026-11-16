@@ -42,6 +42,37 @@ function ElectionCycle({invested,result}:{invested?:number;result?:ElectionView[
   </>;
 }
 
+export function ElectionPolls({election,id}:{election:ElectionView; id:string}) {
+  const name = (candidateId:string)=>election.offices.find(person=>person.id===candidateId)?.name;
+  return <>
+    <header>
+      <h2 id="election-poll-title">Pesquisa eleitoral</h2>
+      <DialogDismiss label="Fechar pesquisa eleitoral">×</DialogDismiss>
+    </header>
+    <div id="election-cycle"><ElectionCycle invested={election.personal?.invested} result={election.result}/></div>
+    <section aria-label="Pesquisa eleitoral"><div id="election-polls">
+      <section><h4>Classificação projetada</h4><ol role="list">
+        {election.polls.map((candidate,index)=>{
+          const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
+          const portrait = {'--portrait-column':candidate.character%2,'--portrait-row':Math.floor(candidate.character/2)} as CSSProperties;
+          return <li key={candidate.id}><div className="poll-card">
+            <span className="poll-avatar"><span className="portrait" aria-hidden="true" style={portrait}/>
+              <span className="poll-rank" data-rank={index+1}>{index+1}º</span></span>
+            <div className="poll-details"><div className="poll-label">
+              <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
+              <strong data-effect={tone}>{candidate.estimate}%</strong>
+              {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{candidate.trend} pp</small>}
+            </div><div className="react-meter" data-tone="budget" role="progressbar" aria-label={'Intenção de voto de '+candidate.name}
+              aria-valuenow={candidate.estimate} aria-valuemin={0} aria-valuemax={100}>
+              <span style={{transform:`scaleX(${candidate.estimate/100})`}}/></div>
+            {candidate.supports && <small>Apoia {name(candidate.supports)}</small>}</div>
+          </div></li>;
+        })}
+      </ol></section>
+    </div></section>
+  </>;
+}
+
 export function createElectionPanel(id:string, send:(action:ElectionAction) => void, hasVoice:()=>boolean) {
   const dock = el('election-dock');
   const openPolls = el<HTMLButtonElement>('open-election-polls');
@@ -49,12 +80,10 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   const summaryRoot = createRoot(openPolls);
   openPolls.onclick = ()=>{ if (!polls.open) polls.showModal(); };
   let summaryKey = '';
-  const cycleRoot = createRoot(el('election-cycle'));
-  let cycleKey = '';
   let view:PlenaryView | undefined;
   let own:Player | undefined;
   let pollsKey = '';
-  const pollsRoot = createRoot(el('election-polls'));
+  const pollsRoot = createRoot(polls);
   let campaignKey = '';
   dock.hidden = true;
   const campaign = el<HTMLDialogElement>('campaign-dialog');
@@ -132,34 +161,11 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         summaryRoot.render(<ElectionSummary {...summary}/>);
       }
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
-      const nextCycleKey = JSON.stringify([personal?.invested,result]);
-      if (nextCycleKey!==cycleKey) {
-        cycleKey = nextCycleKey;
-        cycleRoot.render(<ElectionCycle invested={personal?.invested} result={result}/>);
-      }
       if (campaign.open) renderCampaign();
-      const nextPollsKey = JSON.stringify(election.polls);
+      const nextPollsKey = JSON.stringify([personal?.invested,result,election.polls,election.offices]);
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
-        const name = (id:string)=>election.offices.find(person=>person.id===id)?.name;
-        pollsRoot.render(<section><h4>Classificação projetada</h4><ol role="list">
-          {election.polls.map((candidate,index)=>{
-            const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
-            const portrait = {'--portrait-column':candidate.character%2,'--portrait-row':Math.floor(candidate.character/2)} as CSSProperties;
-            return <li key={candidate.id}><div className="poll-card">
-              <span className="poll-avatar"><span className="portrait" aria-hidden="true" style={portrait}/>
-                <span className="poll-rank" data-rank={index+1}>{index+1}º</span></span>
-              <div className="poll-details"><div className="poll-label">
-                <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
-                <strong data-effect={tone}>{candidate.estimate}%</strong>
-                {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{candidate.trend} pp</small>}
-              </div><div className="react-meter" data-tone="budget" role="progressbar" aria-label={'Intenção de voto de '+candidate.name}
-                aria-valuenow={candidate.estimate} aria-valuemin={0} aria-valuemax={100}>
-                <span style={{transform:`scaleX(${candidate.estimate/100})`}}/></div>
-              {candidate.supports && <small>Apoia {name(candidate.supports)}</small>}</div>
-            </div></li>;
-          })}
-        </ol></section>);
+        pollsRoot.render(<ElectionPolls election={election} id={id}/>);
       }
       controls();
     },
@@ -170,7 +176,6 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       campaignRoot.unmount();
       pollsRoot.unmount();
       summaryRoot.unmount();
-      cycleRoot.unmount();
       openCampaign.onclick = null;
       for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = null;
     },

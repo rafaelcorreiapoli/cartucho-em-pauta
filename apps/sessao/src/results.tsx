@@ -1,7 +1,7 @@
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
 
@@ -65,11 +65,22 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
   </section>;
 }
 
+export function ResultsContent({children}:{children:ReactNode}) {
+  return <>
+    <header>
+      <h2 id="result-title">Resultados</h2>
+      <DialogDismiss label="Fechar resultados"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+    </header>
+    <div id="result-content">{children}</div>
+    <DialogDismiss className="hud-button">Continuar</DialogDismiss>
+  </>;
+}
+
 export function mountResults() {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
   const finaleRoot = createRoot(finale);
-  const root = createRoot(document.querySelector('#result-content')!);
+  const root = createRoot(dialog);
   return {
     render(view:PlenaryView, previous:PlenaryView | undefined) {
       const election = view.election?.result;
@@ -83,10 +94,10 @@ export function mountResults() {
         flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
         finale.showModal();
       } else if (cassation) {
-        flushSync(()=>root.render(<section><h3>Resultado da cassação</h3><p>{cassation.text}</p></section>));
+        flushSync(()=>root.render(<ResultsContent><section><h3>Resultado da cassação</h3><p>{cassation.text}</p></section></ResultsContent>));
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
-        flushSync(()=>root.render(<ElectionResult result={election}/>));
+        flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));
         document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
         document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
         if (!dialog.open) dialog.showModal();

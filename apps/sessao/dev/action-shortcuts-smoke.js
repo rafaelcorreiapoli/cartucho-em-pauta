@@ -64,6 +64,11 @@ async page => {
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
+  await page.keyboard.press('l');
+  const polls = page.getByRole('dialog',{name:'Pesquisa eleitoral'});
+  await polls.getByRole('progressbar',{name:'Intenção de voto de Atalhos QA'}).waitFor();
+  await polls.getByRole('button',{name:'Fechar pesquisa eleitoral'}).click();
+  await polls.waitFor({state:'hidden'});
   await page.keyboard.press('k');
   await settings.getByRole('button',{name:'Sair',exact:true}).click();
   await settings.waitFor({state:'hidden'});
