@@ -1,3 +1,4 @@
+import {NearbyItems,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
 import type { PoliticsAction } from './politics';
@@ -16,10 +17,9 @@ import { isGear } from './equipment';
 import { paintSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
 import { installationSites, shop } from './installations';
-import { decorationLabel, itemSymbols } from './photo-renderer';
+import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
-import { button, itemPortrait, node } from './gameplay-ui';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
@@ -37,16 +37,6 @@ function BagIcon({name}:{name:keyof typeof bagIcons}) {
       return <Tag key={index} {...attrs}/>;
     })}
   </svg>;
-}
-
-function itemArt(kind:ObjectKind) {
-  if (!isGear(kind) && itemSymbols[kind]) {
-    const symbol = node('span',itemSymbols[kind]);
-    symbol.className = 'item-art-symbol';
-    symbol.setAttribute('aria-hidden','true');
-    return symbol;
-  }
-  return itemPortrait(kind);
 }
 
 function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
@@ -70,6 +60,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
+  const nearbyRoot = createRoot(nearbyItems);
   const nearbyButton = element<HTMLButtonElement>('nearby-objects');
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
@@ -396,18 +387,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (focused && !body.contains(previouslyFocused)) body.querySelector<HTMLButtonElement>('button')?.focus();
   }
 
-  function itemButton(kind:ObjectKind, name:string, verb:string, action:()=>void) {
-    const tile = button('',action);
-    tile.className = 'item-tile context-item';
-    tile.dataset.kind = kind;
-    tile.title = `${verb} · ${name}`;
-    tile.setAttribute('aria-label',`${verb} ${name}`);
-    const caption = node('span',name);
-    caption.className = 'item-caption';
-    tile.append(itemArt(kind),caption);
-    return tile;
-  }
-
   function renderSlots(inventory:WorldItem[]) {
     const key = JSON.stringify(inventory);
     if (key===inventoryKey && !purchases.size) return;
@@ -537,43 +516,45 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,photos.count] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
-      const tiles:HTMLButtonElement[] = [];
+      const tiles:NearbyItem[] = [];
+      const add = (key:string,kind:ObjectKind,name:string,verb:string,activate:()=>void) =>
+        tiles.push({key,kind,name,verb,activate});
       if (state) {
         for (const item of state.nearby) {
-          tiles.push(itemButton(item.kind,itemName(item),'Pegar',
-            ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id}))));
+          add('ground-'+item.id,item.kind,itemName(item),'Pegar',
+            ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id})));
         }
         const storage = state.locations.map(place=>terminals[place as keyof typeof terminals])
           .filter(terminal=>'storage' in terminal);
         for (const item of state.stored) {
-          tiles.push(itemButton(item.kind,itemName(item),'Recuperar',()=>pickUp(
+          add('stored-'+item.id,item.kind,itemName(item),'Recuperar',()=>pickUp(
             player=>storage.some(terminal=>canReachObject(player,terminal.point)),
             ()=>send({kind:'recover',item:item.id}),
-          )));
+          ));
         }
         if (state.locations.includes('press') && photos.count) {
-          tiles.push(itemButton('portrait','Álbum para a Imprensa','Abrir',openPersonalAlbum));
+          add('album','portrait','Álbum para a Imprensa','Abrir',openPersonalAlbum);
         }
         for (const decoration of state.interactive) {
-          tiles.push(itemButton(decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id)));
+          add('decoration-'+decoration.id,decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id));
         }
         for (const place of state.locations) {
           for (const kind of place==='credentials' ? ['portrait','vip'] as const : []) {
-            tiles.push(itemButton(kind,`${objects[kind].name} · ${money(shop[kind])}`,'Comprar',
-              ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind}))));
+            add('purchase-'+kind,kind,`${objects[kind].name} · ${money(shop[kind])}`,'Comprar',
+              ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind})));
           }
           const terminal = terminals[place as keyof typeof terminals];
           if (!('supply' in terminal) || terminal.supply==='document') continue;
-          tiles.push(itemButton(terminal.supply,objects[terminal.supply].name,'Pegar',()=>pickUp(
+          add('supply-'+place,terminal.supply,objects[terminal.supply].name,'Pegar',()=>pickUp(
             player=>canReachObject(player,terminal.point),
             ()=>send({kind:'supply',place}),
-          )));
+          ));
         }
         for (const item of state.filed) {
-          tiles.push(itemButton(item.kind,itemName(item),'Consultar',()=>open({id:item.id,source:'filed'})));
+          add('filed-'+item.id,item.kind,itemName(item),'Consultar',()=>open({id:item.id,source:'filed'}));
         }
       }
-      nearbyItems.replaceChildren(...tiles);
+      flushSync(()=>nearbyRoot.render(<NearbyItems items={tiles}/>));
       nearbyButton.hidden = !tiles.length;
       if (!tiles.length) setNearbyExpanded(false);
     },
@@ -645,7 +626,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
       requestRoot.unmount();
-      nearbyItems.replaceChildren();
+      nearbyRoot.unmount();
       setNearbyExpanded(false);
     },
   };
