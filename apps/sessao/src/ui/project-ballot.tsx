@@ -1,5 +1,5 @@
 import {useState,type CSSProperties} from 'react';
-import {agendaProject,bills,BALLOT_MS,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {agendaProject,bills,BALLOT_MS,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
 import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
 
@@ -61,7 +61,7 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
         <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2><p>{bill.description}</p></div>
         <ProjectImpact impact={yes} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
           bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
-          bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
+          bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
         <ProjectImpact impact={no} approved={false}/>
       </header>
       <div className="project-ballot-timer">

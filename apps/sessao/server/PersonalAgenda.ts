@@ -20,7 +20,7 @@ const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 const activityMissions = {
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
   privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
-  plantaoEmergencia:(event:GameplayEvent) => event.type==='fire-extinguished' && event.place==='inside-crisis-room',
+  plantaoEmergencia:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.place==='inside-crisis-room',
   pautaPrioritaria:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' &&
     event.place==='articulation' && !!event.target && event.target!==event.actor,
   fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
@@ -30,7 +30,7 @@ const activityMissions = {
   varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
   limpeza:(event:GameplayEvent) => event.type==='spy-removed' && event.item!==undefined,
   flagraGabinete:(event:GameplayEvent) => event.type==='photo' && event.place==='foreign-office-subject',
-  heroiInesperado:(event:GameplayEvent) => event.type==='fire-extinguished' && (event.amount ?? 100)<30,
+  heroiInesperado:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && (event.amount ?? 100)<30,
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
   instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
   mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published',
@@ -47,6 +47,7 @@ const activityMissions = {
   contasTesouraria:(event:GameplayEvent) => event.type==='delivered' && event.kind==='briefcase' && event.place==='treasury',
   registroHistorico:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie && inPlenary(event.position),
   jornalismo:(event:GameplayEvent) => event.type==='photo-published' && !!event.photo && event.place==='internal-mail',
+  manutencaoEmergencia:(event:GameplayEvent) => event.type==='power-repaired',
   apagarIncendio:(event:GameplayEvent) => event.type==='fire-extinguished',
   primeirosSocorros:(event:GameplayEvent) => event.type==='used' && event.kind==='firstAidKit',
   socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-parliamentarian-'),
@@ -84,7 +85,7 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {

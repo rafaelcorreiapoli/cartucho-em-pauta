@@ -1,4 +1,5 @@
 import { fireSites } from '../src/fire';
+import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
 import { marketProduct } from '../src/market-catalog';
@@ -42,7 +43,7 @@ const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
 export class Gameplay {
-  constructor(private readonly stationCooldowns = new StationCooldowns()) {}
+  constructor(private readonly stationCooldowns = new StationCooldowns(),private readonly powerOut = ()=>false) {}
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
@@ -250,7 +251,7 @@ export class Gameplay {
   }
 
   vision(id:string,now:number) {
-    return VISION_RADIUS*(this.binocularRemaining(id,now) ? binoculars.multiplier : 1);
+    return VISION_RADIUS*(this.binocularRemaining(id,now) ? binoculars.multiplier : 1)*(this.powerOut() ? powerRules.visionFactor : 1);
   }
 
   private stopBinoculars(id:string) {
@@ -833,7 +834,7 @@ export class Gameplay {
       served.add(player.id);
       placed.slices--;
       const host = world.players.find(person=>person.id===placed.owner.id);
-      this.consumeFood(player,foods.pizza.effect);
+      this.consumeFood(player,foodDefinition('pizza').effect);
       this.event(world,player,'used',data,placed.owner.id);
       if (host && host.id!==player.id) this.event(world,host,'slice',data,player.id);
       if (!placed.slices) {

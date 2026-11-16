@@ -245,7 +245,7 @@ async function connect(join: () => Promise<Room>) {
     const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
-      sendGameplay,action=>sendCommand('fire-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),security.open,progress=>{
+      sendGameplay,action=>sendCommand('fire-action',action),action=>sendCommand('power-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),security.open,progress=>{
         if (room!==joined) return;
         if (progress<0) {
           assetError = true;
@@ -282,6 +282,7 @@ async function connect(join: () => Promise<Room>) {
     },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='power') { sendCommand('power-action',action.option); return; }
       if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
       if (action.kind==='open-security') { security.open(); return; }
       if (action.kind==='spy') { sendCommand('spy',action.option); return; }

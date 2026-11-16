@@ -847,7 +847,7 @@
   }
 }
 
-#session:has(.election-and-incidents #active-fire) #world #hud-notices {
+#session:has(.election-and-incidents :is(#active-fire, #active-outage)) #world #hud-notices {
   inset-block-start: anchor(--active-incidents bottom, 190px);
   margin-block-start: 8px;
 }

@@ -9,7 +9,7 @@ import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
 import { applyInput, restMovement, STEP_MS } from '../src/movement';
-import { foods, type FoodKind } from '../src/food';
+import { foods } from '../src/food';
 
 function player(id:string, x:number, y:number, character=0):Player {
   return {id,nick:id,x,y,character,direction:0,moving:false};
@@ -426,7 +426,7 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
 });
 
 
-const consumableCases:[FoodKind,number,number][] = [
+const consumableCases:[keyof typeof foods,number,number][] = [
   ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40],
   ['coxinha',42,40], ['coffee',22,70], ['energyDrink',22,40], ['mortadellaRoll',47,50],
   ['lobster',100,40], ['picanha',92,40],

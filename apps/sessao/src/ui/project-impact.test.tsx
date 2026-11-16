@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ProjectImpact} from './project-impact';
 import {ProjectBallot} from './project-ballot';
-import {bills,NEGOTIATION_MS,stations} from '../plenary';
+import {bills,NEGOTIATION_MS,pingaProgram,stations} from '../plenary';
 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
@@ -25,7 +25,7 @@ test('zero has no sign or gain styling',()=>{
 
 test('the ballot displays the catalog banner, policy details and gameserver-funded allowance',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
-  for (const id of ['PROJ-N03','PROJ-N05','PROJ-N06','PROJ-N07','PROJ-N09','PROJ-N12','PROJ-N15','PROJ-N16']) {
+  for (const id of ['PROJ-N03','PROJ-N05','PROJ-N06','PROJ-N07','PROJ-N09','PROJ-N11','PROJ-N02','PROJ-N12','PROJ-N15','PROJ-N16']) {
     const match = new PlenaryMatch(1);
     expect(match.start(player.id,[player],0,()=>0)).toBe(true);
     const project = bills.findIndex(entry=>entry.id===id);
@@ -39,7 +39,10 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     expect(markup).toContain(bill.name);
     expect(markup).toContain(bill.banner!);
     if (bill.effect?.kind==='policy') expect(markup).toContain(bill.effect.detail);
-    else {
+    else if (bill.effect?.kind==='pinga-distribution') {
+      expect(view.yes.budget).toBe(-pingaProgram.doseCost);
+      expect(markup).toContain(pingaProgram.detail);
+    } else {
       expect(view.yes.budget).toBe(-0.5);
       expect(markup).toContain('Pagamento único por mandato');
     }

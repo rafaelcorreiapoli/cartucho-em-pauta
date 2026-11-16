@@ -2,15 +2,16 @@ import { stationRecharge } from '../src/station-recharge';
 import { StationCooldowns } from './StationCooldowns';
 import { InternalMail } from './InternalMail';
 import {Gameplay} from './Gameplay';
-import {terminals} from '../src/gameplay';
+import {INVENTORY_SLOTS,terminals} from '../src/gameplay';
 import {privateOffices} from '../src/private-offices';
 import {fireRules,fireSites} from '../src/fire';
+import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -969,4 +970,86 @@ test('a Pix mission keeps credit from a player who left while another unused sen
   expect(view().active).toContainEqual(active!);
   expect(pay(fourth,3)).toBe(true);
   expect(view().completed).toContainEqual(expect.objectContaining({id:active!.id,current:2}));
+});
+
+test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida: %s',scenario=>{
+  const players = people.map(person=>({...person}));
+  const [rafa,bia,caio] = players;
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  game.reset(0,()=>.9,players);
+  const inventory = (player:Player,now:number)=>game.view(player,match.gameplayWorld(players,now,()=>false)).inventory;
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N02');
+  match.gameplayWorld(players,1,()=>false).publish({
+    type:'filed',project,actor:rafa.id,item:1,position:stations.amendment,at:1,witnesses:[],
+  });
+  // A full backpack leaves the allocated dose on the map.
+  const create = Reflect.get(game,'create').bind(game);
+  for (let i=0;i<INVENTORY_SLOTS;i++) create('coffee',{holder:bia.id});
+  match.setPlayerConnected(caio.id,false);
+  if (scenario==='unfunded') {
+    Reflect.set(match,'budget',.5);
+    Reflect.get(match,'cash').projects += ELECTION_RULES.startingBudget-.5;
+  }
+  const before = match.view(rafa.id,ids,1).budget;
+  match.advance(NEGOTIATION_MS);
+  if (scenario!=='rejected') for (const player of [rafa,bia]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
+  const at = NEGOTIATION_MS+BALLOT_MS;
+  const deliver = (recipients:readonly string[])=>{
+    expect(recipients).toEqual([rafa.id,bia.id]);
+    for (const id of recipients) game.distributePinga(players.find(player=>player.id===id)!,at);
+  };
+  match.advance(at,deliver);
+  match.advance(at,deliver);
+  const result = match.view(rafa.id,ids,at);
+  expect(result.outcome?.passed).toBe(scenario!=='rejected');
+  expect(result.budget).toBe(before-(scenario==='approved' ? 1 : 0));
+  expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
+  const doses = inventory(rafa,at).filter(item=>item.kind==='pinga');
+  expect(doses).toHaveLength(scenario==='approved' ? 1 : 0);
+  if (scenario!=='approved') return;
+  expect(doses[0].quantity ?? 1).toBe(1);
+  expect(inventory(bia,at)).toHaveLength(INVENTORY_SLOTS);
+  const world = match.gameplayWorld(players,at+1,()=>false);
+  const dropped = game.view(bia,world).ground.find(item=>item.kind==='pinga');
+  expect(dropped).toMatchObject({x:bia.x,y:bia.y});
+  expect(game.act(rafa,{kind:'use',item:doses[0].id},world)).toBe('Objeto utilizado.');
+  expect(rafa.speedModifier).toEqual({factor:.8,remainingMs:8_000});
+  expect(inventory(rafa,at+1)).not.toContainEqual(expect.objectContaining({kind:'pinga'}));
+  match.setPlayerConnected(caio.id,true);
+  expect(inventory(caio,at+1)).toHaveLength(0);
+});
+
+test.each([true,false])('energy savings applies to actual maintenance and sabotage rules after approval=%s',approved=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N11');
+  match.gameplayWorld(people,1,()=>false).publish({
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+  });
+  match.advance(NEGOTIATION_MS);
+  if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+  const passedAt = NEGOTIATION_MS+BALLOT_MS;
+  match.advance(passedAt);
+  expect(match.view(host.id,ids,passedAt).policies?.energySavings).toBe(approved ? passedAt+energySavings.duration : undefined);
+
+  const players = [{...host,...powerPanels[0]},{...honest,...powerPanels[1]}];
+  const saboteur = {...traitor,...powerPanels[0]};
+  const now = passedAt+1;
+  expect(match.actOnPower(saboteur,{kind:'sabotage',panel:0},now)).toBe('Energia cortada.');
+  match.actOnPower(players[0],{kind:'repair',panel:0},now);
+  match.actOnPower(players[1],{kind:'repair',panel:1},now);
+  const restored = now+powerRules.repairMs;
+  match.advancePower(restored,id=>players.find(player=>player.id===id));
+  expect(match.view(traitor.id,ids,restored+energySavings.sabotageCooldown-1).canSabotagePower).toBeUndefined();
+  expect(match.view(traitor.id,ids,restored+energySavings.sabotageCooldown).canSabotagePower).toBe(approved ? true : undefined);
+
+  match.advance(ELECTION_RULES.interval);
+  expect(match.economySummary(0)).toMatchObject({
+    publicDuty:ELECTION_RULES.publicDuty-(approved ? energySavings.publicDutyDiscount : 0),discrepancy:0,
+  });
+  expect(match.view(host.id,ids,passedAt+energySavings.duration).policies?.energySavings).toBeUndefined();
+  match.leave(traitor.id,ELECTION_RULES.interval+1);
+  expect(match.view(host.id,ids,ELECTION_RULES.interval+1).policies?.energySavings).toBeUndefined();
 });

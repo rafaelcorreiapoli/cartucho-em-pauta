@@ -5,6 +5,8 @@ import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
+import {Power} from './Power';
+import {canOperatePanel,powerPanels,powerRules,type PowerAction,type PowerPanel} from '../src/power';
 import {canActOnFire,fireSites,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
@@ -15,7 +17,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  campaignPolicyMultiplier, pingaProgram, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, energySavings, pingaProgram, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import { roomAt, type Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -30,6 +32,8 @@ export class PlenaryMatch {
   private project?:number;
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
+  private power = new Power();
+  get powerOut() { return this.running && this.power.active; }
   private readonly agenda = new Set<number>();
   get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
@@ -64,7 +68,7 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  canFightCrisis() { return this.stability<30 && !!this.fire.view(true); }
+  canFightCrisis() { return this.stability<30 && (this.powerOut || !!this.fire.view(true)); }
 
   setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
     this.economy.setAgendaInventory(...inventory);
@@ -74,7 +78,10 @@ export class PlenaryMatch {
 
   setPlayerConnected(id:string,connected:boolean) {
     if (connected) this.disconnected.delete(id);
-    else this.disconnected.add(id);
+    else {
+      this.disconnected.add(id);
+      this.power.remove(id);
+    }
     if (this.running) this.refreshAgendaEligibility();
   }
 
@@ -93,11 +100,12 @@ export class PlenaryMatch {
     if (this.phase==='ballot' && this.npcIds.has(id) && !this.npcVotes.has(id)) this.npcVotes.set(id,vote);
   }
 
-  private settleBudget(ids:string[]) {
+  private settleBudget(ids:string[],now:number) {
     const planned = ids.length*rules.salary;
     const salaryShare = Math.floor(this.budget*rules.salaryShare*10)/10;
     const publicShare = this.budget-salaryShare;
-    const publicPaid = Math.min(rules.publicDuty,publicShare+Math.max(0,salaryShare-planned));
+    const publicDuty = rules.publicDuty-(this.energySavingsActive(now) ? energySavings.publicDutyDiscount : 0);
+    const publicPaid = Math.min(publicDuty,publicShare+Math.max(0,salaryShare-planned));
     const salaryFunds = Math.min(planned,this.budget-publicPaid);
     // Equal salaries rounded down to a thousand reais. The remainder stays in the budget.
     const paid = ids.length ? Math.floor(Math.round(salaryFunds*10)/ids.length)/10 : 0;
@@ -110,7 +118,7 @@ export class PlenaryMatch {
     this.cash.publicDuty += publicPaid;
     this.cash.salaries += paid*ids.length;
     this.treasuryReputation.clear();
-    this.stability = clamp(this.stability-Math.ceil(rules.publicDutyPenalty*(1-publicPaid/rules.publicDuty)));
+    this.stability = clamp(this.stability-Math.ceil(rules.publicDutyPenalty*(1-publicPaid/publicDuty)));
     return payments;
   }
 
@@ -121,7 +129,7 @@ export class PlenaryMatch {
   private renew(now:number) {
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
-    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids),this.advertisementMultiplier(now));
+    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids,now),this.advertisementMultiplier(now));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
       this.votes.delete(eliminated);
@@ -192,6 +200,7 @@ export class PlenaryMatch {
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now);
+    this.power = new Power();
     this.stationCooldowns.reset();
     this.policies.clear();
     this.treasuryBonus = undefined;
@@ -243,6 +252,7 @@ export class PlenaryMatch {
   }
 
   leave(id:string, now:number) {
+    this.power.remove(id);
     this.disconnected.delete(id);
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
@@ -601,6 +611,47 @@ export class PlenaryMatch {
     this.economy.recordOfficialScandal();
   }
 
+  private energySavingsActive(now:number) { return (this.policies.get('energySavings') ?? 0)>now; }
+
+  private powerCooldown(now:number) {
+    return this.energySavingsActive(now) ? energySavings.sabotageCooldown : powerRules.cooldownMs;
+  }
+
+  private canUsePower(now:number) {
+    return this.phase==='negotiation' && this.ballotCountdown(now)===undefined;
+  }
+
+  private canSabotagePower(id:string,now:number) {
+    return this.electorate.size-this.disconnected.size>=2 && this.infiltrators.has(id) &&
+      this.canUsePower(now) && this.canHandleObjects(id,now) && this.power.canSabotage(now,this.powerCooldown(now));
+  }
+
+  private canOperatePower(player:Player,panel:PowerPanel,now:number) {
+    return this.canUsePower(now) && this.canHandleObjects(player.id,now) &&
+      !this.disconnected.has(player.id) && !player.carried && canOperatePanel(player,panel);
+  }
+
+  actOnPower(player:Player,action:PowerAction,now:number) {
+    if (!this.canOperatePower(player,action.panel,now)) return;
+    if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
+    return this.power.act(player.id,action,now,this.powerCooldown(now));
+  }
+
+  advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
+    const repairedBy = this.power.advance(now,(id,panel)=>{
+      const player = playerAt(id);
+      return !!player && this.canOperatePower(player,panel,now);
+    });
+    if (!repairedBy) return;
+    for (const panel of [0,1] as const) {
+      const id = repairedBy[panel];
+      const player = id && playerAt(id);
+      if (player) this.publishActivity(player,'power-repaired',now,{
+        amount:this.stability,place:roomAt(player)===powerPanels[panel].name ? 'inside-crisis-room' : undefined,
+      });
+    }
+  }
+
   actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false) {
     if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site)) return;
     if (action==='extinguish') {
@@ -613,7 +664,7 @@ export class PlenaryMatch {
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
   }
 
-  private pingaRecipients() { return [...this.electorate].filter(id=>this.canVote(id)); }
+  private pingaRecipients() { return [...this.electorate].filter(id=>this.canVote(id) && !this.disconnected.has(id)); }
 
   private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
 
@@ -695,7 +746,7 @@ export class PlenaryMatch {
     if (servesPinga) servesPinga(this.pingaRecipients());
     if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
     if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
-    if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+policyDuration);
+    if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+(effect.duration ?? policyDuration));
     const payout = effect?.kind==='allowance' ? this.allowancePerMandate(effect.perMandate) : 0;
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
@@ -767,6 +818,8 @@ export class PlenaryMatch {
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
+      outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
+      canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,

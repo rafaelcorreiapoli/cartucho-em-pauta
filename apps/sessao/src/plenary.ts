@@ -1,6 +1,9 @@
 import { canInteract, type InteractionActor } from './interactions';
 import type {ComplaintView} from './complaints';
+import {powerRules} from './power';
+import {ELECTION_RULES} from './elections';
 import type {FireView} from './fire';
+import type {PowerView} from './power';
 import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
@@ -32,19 +35,22 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
+export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings';
 export const hearingPolicyFee = 2;
 export const campaignPolicyMultiplier = 2;
 export const pingaProgram = {
   doseCost:.5,
-  detail:'Uma dose por mandato ativo, se houver orçamento para toda a distribuição',
+  detail:'Uma dose por mandato ativo e conectado, se houver orçamento para toda a distribuição',
+} as const;
+export const energySavings = {
+  duration:ELECTION_RULES.interval, publicDutyDiscount:2, sabotageCooldown:powerRules.cooldownMs/3,
 } as const;
 export const policyDuration = 120_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
 
 type Bill = {
   id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;
-  effect?:{kind:'policy';policy:BillPolicy;detail:string}|{kind:'pinga-distribution'}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
+  effect?:{kind:'policy';policy:BillPolicy;detail:string;duration?:number}|{kind:'pinga-distribution'}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
 };
 
 export const bills:readonly Bill[] = [
@@ -87,6 +93,10 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-documento.webp',
     description:'A propaganda paga ganha o dobro de peso na disputa durante a vigência da PEC.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Propagandas eleitorais valem o dobro na pesquisa e na apuração por 120 s'}},
+  {id:'PROJ-N11',name:'Lei da Economia de Energia',banner:'retrato-binoculo.webp',
+    description:'Corta a verba de manutenção da rede elétrica.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'energySavings',duration:energySavings.duration,
+      detail:`Por ${energySavings.duration/1000} s, o custeio cai R$ ${energySavings.publicDutyDiscount*10} mil e o corte de energia recarrega em ${energySavings.sabotageCooldown/1000} s`}},
   {id:'PROJ-N02',name:'Minha Pinga, Minha Vida',banner:'retrato-pinga.webp',
     description:'Financia uma dose de cachaça para cada mandato ativo.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'pinga-distribution'}},
@@ -112,6 +122,7 @@ export type PlenaryView = {
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
+  outage?:PowerView; canSabotagePower?:boolean;
   complaints?:ComplaintView; fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };

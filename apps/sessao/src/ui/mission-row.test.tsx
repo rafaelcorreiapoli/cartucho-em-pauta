@@ -181,7 +181,7 @@ test('Segurança Parlamentar explains continuous proximity and renders server ti
 
 test('Plantão de Emergência tells players to enter the room and extinguish the fire',()=>{
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'plantaoEmergencia',current:0,target:1}}/>);
-  expect(markup).toContain('Entre na sala em chamas e apague o incêndio');
+  expect(markup).toContain('Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada');
 });
 
 test('Reunião de Alto Nível identifies the installed VIP plaque and shows the countdown progress',()=>{
@@ -276,4 +276,24 @@ test('the solo security mission displays distinct institutional cameras from the
   consult('coffee',3);
   const completed = missions().completed.find(mission=>mission.kind==='vigilanciaInstitucional')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+});
+
+test('electrical repair is a multiplayer mission and shows authoritative completion',()=>{
+  const draw = (players:Player[])=>{
+    const match = new PlenaryMatch(1);
+    const [player] = players;
+    expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+    const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    return match.view(player.id,players.map(({id})=>id),1).politics!.missions.active;
+  };
+  const rafa:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  expect(draw([rafa]).some(mission=>mission.kind==='manutencaoEmergencia')).toBe(false);
+  const mission = draw([rafa,{...rafa,id:'bia',nick:'Bia'}]).find(mission=>mission.kind==='manutencaoEmergencia')!;
+  const pending = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(pending).toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
+  expect(pending).not.toContain('data-done="true"');
+  expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>)).toContain('data-done="true"');
 });
