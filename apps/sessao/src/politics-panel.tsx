@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { canReachStation, type Station, type PlenaryView } from './plenary';
-import { hearingPolicyFee } from './plenary';
-import { CABINET_GRANT, money, splits, describeEvidence, type Offer, type PoliticsAction, type Split } from './politics';
+import {InstitutionalActions,institutionalActions} from './ui/institutional-actions';
+import { money, describeEvidence, type Offer, type PoliticsAction } from './politics';
 import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -80,9 +80,8 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   const recipient = picker('evidence-contact',updateControls,'Ninguém próximo');
   const dossier = picker('evidence',() => { describeSelected(); updateControls(); });
   const price = stepper('evidence-price',0,0,value => value ? money(value) : 'Grátis');
-  const nominee = picker('hearing-target',updateControls);
-  const split = picker('grant-split',updateControls);
-  split.update(splits.map(value => ({value:String(value),label:value ? `Desviar ${money(value)}` : 'Aplicar tudo'})),true);
+  const institutionalRoot = createRoot(el('institutional-actions'));
+  let institutionalKey = '';
   let visiblePlayers:Player[] = [];
   let view:PlenaryView | undefined;
   let own:Player | undefined;
@@ -96,40 +95,24 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     const politics = view?.politics;
     if (!politics || !view) return;
     const exploring = view.phase==='negotiation';
-    el('cabinet-form').hidden = !exploring || !at('cabinet') || !view.mandate || politics.grantUsed || politics.suspended;
-    el<HTMLButtonElement>('grant').disabled = view.budget<CABINET_GRANT;
-    const canSummon = exploring && at('panel') && politics.canCallHearing;
-    el('hearing-form').hidden = !canSummon;
-    el('call-cassation').hidden = !canSummon;
     el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
-    const fee = view.policies?.hearing ? hearingPolicyFee : 0;
-    const feeLabel = fee ? ' · '+money(fee) : '';
-    const hearing = el<HTMLButtonElement>('hearing-confirm');
-    const cassation = el<HTMLButtonElement>('call-cassation');
-    hearing.textContent = 'Convocar votação'+feeLabel;
-    hearing.disabled = !nominee.value || politics.wallet<fee;
-    cassation.textContent = 'Convocar cassação'+feeLabel;
-    cassation.disabled = politics.wallet<fee;
   }
 
-  el<HTMLFormElement>('cabinet-form').onsubmit = event => {
-    event.preventDefault();
-    const diverted = Number(split.value) as Split;
-    if (splits.includes(diverted)) {
-      send({kind:'grant',diverted});
-      focusMap();
-    }
-  };
-  el<HTMLFormElement>('hearing-form').onsubmit = event => {
-    event.preventDefault();
-    if (nominee.value) send({kind:'hearing',target:nominee.value});
-  };
-  el<HTMLButtonElement>('call-cassation').onclick = () => {
-    send({kind:'call-cassation'});
-    institutional.open = false;
-    focusMap();
-  };
+  function sendInstitutional(action:PoliticsAction) {
+    send(action);
+    if (action.kind==='call-cassation') institutional.open = false;
+    if (action.kind!=='hearing') focusMap();
+  }
+
+  function renderInstitutional() {
+    const model = institutionalActions(view,own);
+    const key = JSON.stringify(model);
+    if (key===institutionalKey) return;
+    institutionalKey = key;
+    institutionalRoot.render(<InstitutionalActions model={model} send={sendInstitutional}/>);
+  }
+
   el<HTMLButtonElement>('share').onclick = () => {
     if (recipient.value && dossier.value) {
       send({kind:'share',to:recipient.value,evidence:Number(dossier.value),price:price.value});
@@ -152,18 +135,22 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
   }
 
   return {
+    sendInstitutional,
+    openGrant() {
+      institutional.open = true;
+      el('institutional-actions').querySelector<HTMLElement>('.game-choice')?.focus();
+    },
     render(next:PlenaryView) {
       view = next;
       const p = view.politics;
       dock.hidden = !p;
       institutional.hidden = !p || view.phase!=='negotiation';
+      renderInstitutional();
       if (!p) return;
       const active = view.phase==='negotiation' || view.phase==='ballot';
       el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
-      el('politics-actions').hidden = el('evidence-tools').hidden = !active;
+      el('evidence-tools').hidden = !active;
       updateContacts();
-      nominee.update(p.directory.filter(contact => contact.id!==id && contact.eligible)
-        .map(({id,name,popularity}) => ({value:id,label:`${name} · ${popularity} pop.`})));
       dossier.update(p.evidence.map(record => ({value:String(record.id),label:`Documento ${record.id} · Rodada ${record.round+1}`})),true);
       el('evidence-form').hidden = p.evidence.length===0;
       el('empty-evidence').hidden = p.evidence.length>0;
@@ -188,13 +175,15 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       updateControls();
     },
     destroy() {
-      for (const control of [recipient,dossier,price,nominee,split]) control.destroy();
+      for (const control of [recipient,dossier,price]) control.destroy();
       offersRoot.unmount();
+      institutionalRoot.unmount();
     },
     players(players:Player[]) {
       visiblePlayers = players;
       updateContacts();
       own = players.find(player => player.id===id);
+      renderInstitutional();
       updateControls();
     },
   };

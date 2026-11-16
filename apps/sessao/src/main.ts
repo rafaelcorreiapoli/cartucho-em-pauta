@@ -275,6 +275,7 @@ async function connect(join: () => Promise<Room>) {
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
         ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
       ]));
+    const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -298,7 +299,7 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
-    });
+    },political);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
@@ -338,7 +339,6 @@ async function connect(join: () => Promise<Room>) {
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
-    const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
     let appStatus:HudAppStatus = {};
     const appCommands:Record<HudApp,()=>void> = {

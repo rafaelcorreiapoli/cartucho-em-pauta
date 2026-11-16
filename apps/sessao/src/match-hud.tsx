@@ -1,3 +1,4 @@
+import {cassationLabel,institutionalActions} from './ui/institutional-actions';
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
@@ -17,7 +18,7 @@ import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } f
 import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
-import { money } from './politics';
+import { money, type PoliticsAction } from './politics';
 import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -28,7 +29,7 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openGrant:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
@@ -59,22 +60,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return button;
   }
 
-  const quickActions = ([
-    {target:'grant',panel:'institutional-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
-    {target:'call-cassation',label:'Convocar cassação',station:'panel',icon:'ballot'},
-    {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
-  ] as const).map(action => {
-    const control = element<HTMLButtonElement>(action.target);
-    const button = addStationButton(action);
-    button.onclick = () => {
-      if ('panel' in action) {
-        element<HTMLDetailsElement>(action.panel).open = true;
-        const field = control.closest('form')?.querySelector<HTMLElement>('.game-choice');
-        field?.focus();
-      } else control.click();
-    };
-    return {button,control,station:action.station};
-  });
+  const grantAction = addStationButton({label:'Aplicar verba',station:'cabinet',icon:'wallet'});
+  grantAction.onclick = institutional.openGrant;
+  const cassationAction = addStationButton({label:'Convocar cassação',station:'panel',icon:'ballot'});
+  cassationAction.onclick = ()=>institutional.sendInstitutional({kind:'call-cassation'});
+  const publishAction = addStationButton({label:'Divulgar evidência',station:'press',icon:'document'});
+  const publishControl = element<HTMLButtonElement>('publish');
+  publishAction.onclick = ()=>{
+    element<HTMLDetailsElement>('politics-dock').open = true;
+    element('evidence-form').querySelector<HTMLElement>('.game-choice')?.focus();
+  };
   const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
     const activity = roomActivities[station];
     const button = addStationButton({...activity,station});
@@ -426,11 +421,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    for (const {button,control,station} of quickActions) {
-      if (control.id==='call-cassation') button.querySelector('span')!.textContent = control.textContent;
-      button.hidden = context!==station || control.disabled || !!control.closest('[hidden]') ||
-        (control.id==='publish' && !element('evidence').dataset.value);
-    }
+    const institution = context==='cabinet' || context==='panel' ? institutionalActions(view,player) : {};
+    grantAction.hidden = context!=='cabinet' || !institution.grant?.affordable;
+    cassationAction.hidden = context!=='panel' || !institution.hearing?.affordable;
+    if (institution.hearing) cassationAction.querySelector('span')!.textContent = cassationLabel(institution.hearing.fee);
+    publishAction.hidden = context!=='press' || publishControl.disabled || !!publishControl.closest('[hidden]') ||
+      !element('evidence').dataset.value;
     for (const {button,station} of activityButtons) button.hidden = context!==station;
     for (const button of stationActions) {
       const hidden = String(button.dataset.station!==context);
@@ -439,7 +435,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hideInterview = String(context!=='tv');
     if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
-    const hasAction = [...stationActions,...quickActions.map(({button})=>button),...activityButtons.map(({button})=>button)]
+    const hasAction = [...stationActions,grantAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
       .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
