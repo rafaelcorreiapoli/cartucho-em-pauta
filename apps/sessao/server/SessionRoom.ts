@@ -199,6 +199,7 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
@@ -271,7 +272,10 @@ export class SessionRoom extends Room {
         }
       });
       client.send('mail-result',error ?? null);
-      if (!error) this.broadcast('mail-state',this.internalMail.view());
+      if (!error) {
+        this.match.refreshAgendaEligibility();
+        this.broadcast('mail-state',this.internalMail.view());
+      }
     });
     this.onMessage('plenary-action', (client, raw:unknown) => {
       if (!raw || typeof raw!=='object' || !('action' in raw)) return;

@@ -381,6 +381,10 @@ export class PoliticalEconomy {
     }
   }
 
+  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean) {
+    for (const [id,account] of this.accounts) Object.assign(account,{canPublishMail:()=>canPublishMail(id)});
+  }
+
   setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
     for (const account of this.accounts.values()) Object.assign(account,{commerce});
   }

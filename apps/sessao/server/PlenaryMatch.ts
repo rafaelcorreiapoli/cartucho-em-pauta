@@ -70,6 +70,10 @@ export class PlenaryMatch {
 
   canFightCrisis() { return this.stability<30 && (this.powerOut || !!this.fire.view(true)); }
 
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number) {
+    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration);
+  }
+
   setAgendaCommerce(now:()=>number) {
     this.economy.setAgendaCommerce(()=>({policies:this.activePolicies(now()),publicBudget:this.budget}));
   }
@@ -291,7 +295,7 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    if (event.type==='spy-removed') this.refreshAgendaEligibility();
+    if (event.type==='spy-removed' || event.type==='advertisement-aired') this.refreshAgendaEligibility();
     return true;
   }
 

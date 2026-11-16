@@ -32,8 +32,10 @@ export class InternalMail {
 
   view() { return this.notices; }
 
+  nextPublicationAt(id:string) { return this.cooldowns.get(id) ?? 0; }
+
   publish(player:Player, raw:unknown, world:GameplayWorld,resolve?:(ref:unknown)=>{attachment:MailAttachment;authentic?:boolean}|undefined) {
-    if ((this.cooldowns.get(player.id) ?? 0)>world.now) return 'Aguarde para publicar outro comunicado.';
+    if (this.nextPublicationAt(player.id)>world.now) return 'Aguarde para publicar outro comunicado.';
     if (!raw || typeof raw!=='object' || !('subject' in raw) || !('body' in raw) ||
       typeof raw.subject!=='string' || typeof raw.body!=='string') return 'Preencha o assunto e a mensagem.';
     const subject = raw.subject.trim();

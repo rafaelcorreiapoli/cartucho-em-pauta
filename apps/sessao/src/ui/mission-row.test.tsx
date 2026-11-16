@@ -1,3 +1,6 @@
+import {InternalMail} from '../../server/InternalMail';
+import {ELECTION_RULES} from '../elections';
+import {internalMailRules} from '../internal-mail';
 import {Gameplay} from '../../server/Gameplay';
 import {npcs} from '../npcs';
 import {spyRules} from '../surveillance';
@@ -469,4 +472,56 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
   now += policyDuration;
   expect(draw(limited,'doisMoveis')).toBeUndefined();
+});
+
+test('the HUD replaces mail objectives if the next publication falls at the session deadline',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const match = new PlenaryMatch(1);
+  const mail = new InternalMail();
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','selfieSolo']);
+  const publish = (now:number)=>mail.publish(player,{subject:'Comunicado',body:'Sem anexo'},match.gameplayWorld([player],now,()=>false));
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!.missions;
+  const hud = (now:number)=>renderToStaticMarkup(<ul>{view(now).active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}</ul>);
+  expect(publish(1)).toBeUndefined();
+  match.refreshAgendaEligibility();
+  expect(hud(1)).toContain('Publique um comunicado com anexo');
+  expect(publish(2)).toContain('Aguarde');
+  const last = ELECTION_RULES.matchDuration-internalMailRules.cooldownMs;
+  expect(publish(last)).toBeUndefined();
+  expect(mail.nextPublicationAt(player.id)).toBe(ELECTION_RULES.matchDuration);
+  match.refreshAgendaEligibility();
+  expect(hud(last)).not.toContain('Publique um comunicado com anexo');
+  expect(view(last).active).toHaveLength(3);
+  expect(view(last).completed).toHaveLength(0);
+});
+
+test.each([true,false])('the final campaign slot is consumed once and only the last minute earns XP (%s)',isLastMinute=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  // Use a long articulation in the fixture so election renewal runs without project votes.
+  Reflect.set(match,'ends',ELECTION_RULES.matchDuration);
+  match.advance(ELECTION_RULES.interval);
+  match.advance(ELECTION_RULES.interval*2);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['campanhaUltimaHora','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const now = ELECTION_RULES.interval*ELECTION_RULES.cycles-60_000-Number(!isLastMinute);
+  const view = ()=>match.view(player.id,[player.id],now).politics!;
+  const before = view();
+  expect(before.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(true);
+  expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeDefined();
+  const after = view();
+  expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(false);
+  expect(after.missions.active).toHaveLength(3);
+  const completed = after.missions.completed.find(mission=>mission.kind==='campanhaUltimaHora');
+  expect(!!completed).toBe(isLastMinute);
+  expect(after.progression.xp-before.progression.xp).toBe(isLastMinute ? 30 : 0);
+  if (completed) expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });

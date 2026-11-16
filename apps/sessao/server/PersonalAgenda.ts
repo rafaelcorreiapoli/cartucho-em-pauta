@@ -10,7 +10,7 @@ import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
 import { agendaDurationMs, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
@@ -112,6 +112,13 @@ const decorationRequirements = {
 
 const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
+const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
+
+function canCompleteTimedMission(kind:Agenda,metrics:AgendaMetrics) {
+  if (mailMissions.has(kind)) return metrics.canPublishMail?.()!==false;
+  if (kind==='propaganda' || kind==='campanhaUltimaHora') return (metrics.remainingAdvertisements?.() ?? 1)>0;
+  return true;
+}
 
 export class PersonalAgenda {
   private missions:Mission[] = [];
@@ -211,6 +218,7 @@ export class PersonalAgenda {
         if (targets.filter(person=>!credited?.has(person.id)).length>=remaining) return true;
       } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
+          canCompleteTimedMission(mission.kind,metrics) &&
           (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       this.callSamples.delete(mission.id);
@@ -446,8 +454,8 @@ export class PersonalAgenda {
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
-    if ((kind==='jornalismo' || kind==='mensagemComAnexo' || kind==='retratacaoOficial') &&
-        metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
+    if (!canCompleteTimedMission(kind,metrics)) return false;
+    if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
