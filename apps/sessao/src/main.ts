@@ -15,7 +15,6 @@ import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
 import { type GameplayAction } from './gameplay';
-import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createSecurityPanel } from './security-panel';
@@ -23,7 +22,7 @@ import { createSurveillancePanel } from './surveillance-panel';
 import type { PhotoScene } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { mountResults } from './results';
-import { setCharacterPortrait } from './character-art';
+import { mountCharacterPicker } from './ui/character-picker';
 import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
@@ -37,7 +36,7 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
-import { inPlenary, NAMES, type Player } from './map';
+import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
@@ -60,7 +59,6 @@ const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status
 const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
 const lobbyInvite = document.querySelector<HTMLInputElement>('#lobby-invite-url')!;
 const copyLobbyInvite = document.querySelector<HTMLButtonElement>('#lobby-copy-invite')!;
-const portraitPlayers:HTMLElement[] = [];
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
@@ -68,31 +66,6 @@ const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
 const create = document.querySelector<HTMLButtonElement>('#create')!;
-const characters = document.querySelector<HTMLElement>('#characters')!;
-const buttons = NAMES.map((name,index) => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'hud-option character-option';
-  const portrait = document.createElement('span');
-  portrait.className = 'portrait';
-  setCharacterPortrait(portrait,index);
-  portrait.setAttribute('aria-hidden','true');
-  const caption = document.createElement('span');
-  caption.className = 'character-name';
-  caption.textContent = name;
-  const players = document.createElement('span');
-  players.className = 'character-players';
-  portraitPlayers.push(players);
-  button.append(portrait,players,caption);
-  const stats = characterStats[index];
-  button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
-  button.setAttribute('aria-pressed','false');
-  button.onclick = () => {
-    roomCommand?.('character',{character:index});
-  };
-  characters.append(button);
-  return button;
-});
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
@@ -103,7 +76,6 @@ function applyVoiceEquipment(current:RoomVoice|undefined) {
 }
 let matchRunning = false;
 let room: Room | undefined;
-let roomCommand:ReturnType<typeof createRoomCommandSender>|undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
 try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
@@ -157,7 +129,6 @@ function showLobby(message: string) {
   game?.destroy();
   game = undefined;
   room = undefined;
-  roomCommand = undefined;
   settings.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
@@ -177,7 +148,8 @@ async function connect(join: () => Promise<Room>) {
     const sendCommand = createRoomCommandSender((channel,command)=>{
       if (!ballotCountdown.open) joined.send(channel,command);
     });
-    roomCommand = sendCommand;
+    const characterPicker = mountCharacterPicker(document.querySelector<HTMLElement>('#characters')!,joined.sessionId,
+      character=>sendCommand('character',{character}));
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
     });
@@ -225,7 +197,6 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     settings.update({roomLabel:`Sala ${joined.roomId}`});
@@ -361,7 +332,6 @@ async function connect(join: () => Promise<Room>) {
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
     },()=>assetsReady,()=>void joined.leave());
     let phase: PlenaryView['phase'] = 'lobby';
-    let rosterKey = '';
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
@@ -463,27 +433,13 @@ async function connect(join: () => Promise<Room>) {
       election.players(players);
       hud.players(players);
       game?.update(players);
-      const self = players.find(player => player.id===joined.sessionId);
-      for (const [index,button] of buttons.entries()) {
-        const pressed = String(index===self?.character);
-        if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
-      }
-      if (matchRunning) return;
-      const key = JSON.stringify(players.map(({id,nick,character})=>[id,nick,character]));
-      if (rosterKey===key) return;
-      rosterKey = key;
-      for (const labels of portraitPlayers) labels.replaceChildren();
-      for (const player of players) {
-        const label = document.createElement('span');
-        label.textContent = player.nick;
-        label.title = player.nick;
-        portraitPlayers[player.character]?.append(label);
-      }
+      if (!matchRunning) characterPicker.render(players);
     });
     joined.onReconnect(() => { joined.send('mail-read'); suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
+      characterPicker.destroy();
       election.destroy();
       political.destroy();
       hud.destroy();

@@ -71,6 +71,7 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(() => seen.length===2);
     const start = findFirst()!;
     first.send('character',{character:2,token:1});
+    first.send('character',{character:1,token:1});
     for (let step=0;step<10;step++) {
       first.send('input',{seq:++seq,motion:{x:0,y:-1}});
       await Bun.sleep(50);
