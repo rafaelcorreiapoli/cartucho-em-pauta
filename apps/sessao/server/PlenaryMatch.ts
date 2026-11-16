@@ -5,9 +5,9 @@ import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
+import {canActOnFire,fireSites,type FireAction,type FireInteraction} from '../src/fire';
 import {Power} from './Power';
 import {canOperatePanel,powerPanels,powerRules,type PowerAction,type PowerPanel} from '../src/power';
-import {canActOnFire,fireSites,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
@@ -17,9 +17,9 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  campaignPolicyMultiplier, energySavings, pingaProgram, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditFee, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
-import { roomAt, type Player } from '../src/map';
+import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -199,7 +199,7 @@ export class PlenaryMatch {
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
-    this.fire.reset(now);
+    this.fire.reset(now,random);
     this.power = new Power();
     this.stationCooldowns.reset();
     this.policies.clear();
@@ -311,7 +311,8 @@ export class PlenaryMatch {
     if (action==='audit') {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
       this.publishActivity(player,'audit-performed',now);
-      const note = this.economy.audit(player.id,this.round,1);
+      const fee = (this.policies.get('bankAudit') ?? 0)>now ? bankAuditFee : 0;
+      const note = this.economy.audit(player.id,this.round,1,fee);
       if (note) this.auditNotes.set(player.id,note);
       const finding = this.reportedFraud ? 'O Painel já mostra os números corrigidos.' :
         this.fraud ? 'Fraude no projeto. Vá ao Painel para corrigir os números.' : 'Os números do projeto conferem.';
@@ -652,16 +653,55 @@ export class PlenaryMatch {
     }
   }
 
-  actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false) {
-    if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site)) return;
-    if (action==='extinguish') {
-      if (!hasExtinguisher || !this.fire.extinguish(site)) return;
-      const insideRoom = roomAt(player)===fireSites[site].name;
-      this.publishActivity(player,'fire-extinguished',now,
-        {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
-      return 'Incêndio apagado.';
+  private canUseFire(player:Player,now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.ballotCountdown(now)===undefined &&
+      (this.canHandleObjects(player.id,now) ||
+        this.electorate.has(player.id) && this.isolated(player.id) && roomAt(player)===isolationRoom.name);
+  }
+
+  fireInteraction(player:Player,now:number,vision:number,hasDevice:boolean,hasExtinguisher:boolean):FireInteraction|undefined {
+    if (this.phase!=='negotiation') return;
+    const site = this.fire.smoke;
+    const smoke = site!==undefined && localPerception(player,fireSites[site],vision).visible ? site : undefined;
+    const allowed = this.canUseFire(player,now);
+    const option = allowed ? this.fire.option(player,hasDevice,hasExtinguisher) : undefined;
+    const progress = allowed ? this.fire.progress(player.id,now) : undefined;
+    if (option || smoke!==undefined || progress!==undefined) return {option,smoke,progress};
+  }
+
+  fireHandlingDirection(player:Player) {
+    const site = this.fire.handlingSite(player.id);
+    if (site===undefined) return;
+    const {x,y} = fireSites[site];
+    const dx = x-player.x;
+    const dy = y-player.y;
+    return Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
+  }
+
+  updateFireInstallation(now:number,findPlayer:(id:string)=>Player|undefined,
+    owns:(actor:string,item:number)=>boolean,consume:(actor:string,item:number)=>boolean) {
+    const actor = this.fire.installer;
+    if (actor===undefined) return;
+    const player = findPlayer(actor);
+    const feedback = this.fire.updateInstallation(player && this.canUseFire(player,now) ? player : undefined,now,owns,consume);
+    if (feedback) return {actor,feedback};
+  }
+
+  actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false, device?:number) {
+    if (!this.canUseFire(player,now) || !canActOnFire(player,site)) return;
+    if (action==='plant') {
+      if (device!==undefined && this.fire.plant(player,site,device,now)) return 'Instalando dispositivo…';
+      return;
     }
-    if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
+    if (action==='disarm') {
+      if (this.fire.disarm(site)) return 'Dispositivo desarmado.';
+      return;
+    }
+    if (!hasExtinguisher || !this.fire.extinguish(site)) return;
+    const insideRoom = roomAt(player)===fireSites[site].name;
+    this.publishActivity(player,'fire-extinguished',now,
+      {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
+    return 'Incêndio apagado.';
   }
 
   private pingaRecipients() { return [...this.electorate].filter(id=>this.canVote(id) && !this.disconnected.has(id)); }
@@ -821,7 +861,6 @@ export class PlenaryMatch {
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
-      sabotageFireSite:role==='Infiltrado' && this.phase==='negotiation' && !this.isolated(id) ? this.fire.potentialSite : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.hearingVote(id)} : undefined,

@@ -2,7 +2,7 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { CABINET_GRANT, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+import { CABINET_GRANT, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
@@ -216,7 +216,7 @@ export class PoliticalEconomy {
     return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
   }
 
-  audit(id:string, round:number, limit=1) {
+  audit(id:string, round:number, limit=1, bankFee=0) {
     const account = this.accounts.get(id);
     if (!account) return;
     if (account.auditRound!==round) {
@@ -229,9 +229,14 @@ export class PoliticalEconomy {
       !account.known.has(record.id) && !this.published.has(record.id))
       .sort((a,b) => b.amount-a.amount || b.id-a.id)[0];
     if (!candidate) return 'Nenhum registro novo nesta auditoria.';
+    const charge = candidate.kind==='clandestine-transfer' ? bankFee : 0;
+    if (charge>0 && !this.spend(id,charge)) {
+      return `A consulta bancária custa ${money(bankFee)}. Saldo insuficiente.`;
+    }
     this.deliverEvidence(id,candidate.id);
     account.audits++;
-    return 'Documento encontrado. Confira seu dossiê.';
+    return charge>0 ? `Documento encontrado. Taxa da consulta bancária: ${money(charge)}.`
+      : 'Documento encontrado. Confira seu dossiê.';
   }
 
   share(from:string, to:string, evidence:number, price:number) {

@@ -1,9 +1,9 @@
 import { canInteract, type InteractionActor } from './interactions';
 import type {ComplaintView} from './complaints';
-import {powerRules} from './power';
+import {powerRules,type PowerView} from './power';
 import {ELECTION_RULES} from './elections';
-import type {FireView} from './fire';
-import type {PowerView} from './power';
+import {money} from './politics';
+import type {FireInteraction,FireView} from './fire';
 import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
@@ -35,8 +35,9 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings';
+export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
 export const hearingPolicyFee = 2;
+export const bankAuditFee = 1;
 export const campaignPolicyMultiplier = 2;
 export const pingaProgram = {
   doseCost:.5,
@@ -93,7 +94,11 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-documento.webp',
     description:'A propaganda paga ganha o dobro de peso na disputa durante a vigência da PEC.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Propagandas eleitorais valem o dobro na pesquisa e na apuração por 120 s'}},
-  {id:'PROJ-N11',name:'Lei da Economia de Energia',banner:'retrato-binoculo.webp',
+  {id:'PROJ-N08',name:'Lei da Transparência Seletiva',banner:'gabinete-cofre.webp',
+    description:'A Corregedoria ganha uma taxa para consultar transferências sigilosas.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'bankAudit',
+      detail:`Investigar uma transferência sigilosa custa ${money(bankAuditFee)} por ${policyDuration/1000} s`}},
+  {id:'PROJ-N11',name:'Lei da Economia de Energia',banner:'banner-economia-energia.webp',
     description:'Corta a verba de manutenção da rede elétrica.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'energySavings',duration:energySavings.duration,
       detail:`Por ${energySavings.duration/1000} s, o custeio cai R$ ${energySavings.publicDutyDiscount*10} mil e o corte de energia recarrega em ${energySavings.sabotageCooldown/1000} s`}},
@@ -123,7 +128,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
-  complaints?:ComplaintView; fire?:FireView; sabotageFireSite?:number; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
+  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 

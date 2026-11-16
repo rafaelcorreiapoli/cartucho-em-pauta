@@ -11,7 +11,7 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, policyDuration, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -308,24 +308,30 @@ test('validated filings schedule distinct successive ballots, with the standard 
   expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
 });
 
-test('only infiltrators can start a fire, and nearby parliamentarians can put it out',()=>{
+test('parliamentarians can install a device and the fire still requires an extinguisher',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  const now = fireRules.firstAfter/2;
-  match.advance(now);
-  const view = (player:Player, at=now) => match.view(player.id,ids,at);
-  const site = view(traitor).sabotageFireSite!;
-  expect(site).toBeDefined();
-  expect(view(honest).sabotageFireSite).toBeUndefined();
-  expect(match.actOnFire({...honest,...fireSites[site]},'ignite',site,now)).toBeUndefined();
-  expect(match.actOnFire(traitor,'ignite',site,now)).toBeUndefined();
-  expect(match.actOnFire({...traitor,...fireSites[site]},'ignite',site,now)).toBe('Incêndio provocado.');
-  expect(view(honest).fire?.site).toBe(site);
-  match.advance(now+fireRules.tick);
-  expect(view(honest,now+fireRules.tick).stability).toBe(48-fireRules.damage);
-  expect(match.actOnFire(honest,'extinguish',site,now+fireRules.tick)).toBeUndefined();
-  expect(match.actOnFire({...honest,...fireSites[site]},'extinguish',site,now+fireRules.tick,true)).toBe('Incêndio apagado.');
-  expect(view(honest,now+fireRules.tick).fire).toBeUndefined();
+  const site = 0;
+  const installer = {...honest,x:fireSites[site].x,y:fireSites[site].y+10};
+  expect(match.actOnFire(installer,'plant',site,0)).toBeUndefined();
+  expect(match.fireInteraction(installer,0,86,true,false)?.option?.kind).toBe('plant');
+  expect(match.actOnFire(installer,'plant',site,0,false,1)).toBe('Instalando dispositivo…');
+  expect(match.fireInteraction(installer,1000,86,true,false)?.progress).toBeCloseTo(1/3);
+  expect(match.fireInteraction(traitor,1000,86,false,false)).toBeUndefined();
+  match.advance(fireRules.install);
+  match.updateFireInstallation(fireRules.install,()=>installer,()=>true,()=>true);
+  const ignites = fireRules.install+fireRules.fuse;
+  match.advance(ignites-fireRules.smoke);
+  expect(match.fireInteraction(installer,ignites-fireRules.smoke,86,false,false)).toMatchObject({smoke:site,option:{kind:'disarm'}});
+  expect(match.fireInteraction(traitor,ignites-fireRules.smoke,86,false,false)).toBeUndefined();
+  match.advance(ignites);
+  expect(match.view(honest.id,ids,ignites).fire?.site).toBe(site);
+  const later = ignites+fireRules.tick;
+  match.advance(later);
+  expect(match.view(honest.id,ids,later).stability).toBe(48-fireRules.damage);
+  expect(match.actOnFire(installer,'extinguish',site,later)).toBeUndefined();
+  expect(match.actOnFire(installer,'extinguish',site,later,true)).toBe('Incêndio apagado.');
+  expect(match.view(honest.id,ids,later).fire).toBeUndefined();
 });
 
 test('an informal loan and a later manual repayment conserve both wallets',()=>{
@@ -798,29 +804,28 @@ test('a shop subsidy spends public funds and the purchase conserves money',()=>{
 });
 
 test('Plantão de Emergência credits extinguishing from inside the affected room only',()=>{
-  for (const fromInside of [false,true]) {
-    const match = new PlenaryMatch(1);
-    match.start(host.id,people,0,()=>.9);
-    const economy = Reflect.get(match,'economy') as PoliticalEconomy;
-    const {agenda} = Reflect.get(economy,'accounts').get(honest.id);
-    Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['plantaoEmergencia','cafe','passeio','selfieSolo']);
-    match.refreshAgendaEligibility();
-    const now = fireRules.firstAfter/2;
-    const site = 0;
-    const point = fireSites[site];
-    const player = {...honest,x:point.x,y:point.y+(fromInside ? 0 : fireRules.radius)};
-    const missions = ()=>match.view(honest.id,ids,now).politics!.missions;
-    expect(missions().active.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
-    expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
-    match.advance(now);
-    expect(match.actOnFire({...traitor,...point},'ignite',site,now)).toBe('Incêndio provocado.');
-    expect(match.actOnFire(player,'extinguish',site,now,false)).toBeUndefined();
-    expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(false);
-    expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
-    expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(fromInside);
-    expect(match.actOnFire(player,'extinguish',site,now+1,true)).toBeUndefined();
-  }
+  const match = new PlenaryMatch(1);
+  const site = fireSites.findIndex(point=>point.x===554 && point.y===519);
+  match.start(host.id,people,0,()=>(site+.5)/fireSites.length);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(honest.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['plantaoEmergencia','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const now = fireRules.firstAfter;
+  const point = fireSites[site];
+  const player = {...honest,...point};
+  const outside = {...player,y:point.y+fireRules.radius};
+  const missions = ()=>match.view(honest.id,ids,now).politics!.missions;
+  expect(missions().active.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
+  match.advance(now);
+  expect(match.actOnFire(outside,'extinguish',site,now,true)).toBeUndefined();
+  expect(match.actOnFire(player,'extinguish',site,now,false)).toBeUndefined();
+  expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(false);
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
+  expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
+  expect(match.actOnFire(player,'extinguish',site,now+1,true)).toBeUndefined();
 });
 
 test('Plantão de Emergência cannot be claimed after the fire has expired',()=>{
@@ -831,13 +836,13 @@ test('Plantão de Emergência cannot be claimed after the fire has expired',()=>
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['plantaoEmergencia','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
-  const now = fireRules.firstAfter/2;
-  const point = fireSites[0];
+  const now = fireRules.firstAfter;
+  const site = Math.floor(.9*fireSites.length);
+  const point = fireSites[site];
   match.advance(now);
-  expect(match.actOnFire({...traitor,...point},'ignite',0,now)).toBe('Incêndio provocado.');
   const expired = now+fireRules.duration;
   match.advance(expired);
-  expect(match.actOnFire({...honest,...point},'extinguish',0,expired,true)).toBeUndefined();
+  expect(match.actOnFire({...honest,...point},'extinguish',site,expired,true)).toBeUndefined();
   const view = match.view(honest.id,ids,expired);
   expect(view.fire).toBeUndefined();
   expect(view.politics!.missions.active).toContainEqual(expect.objectContaining({kind:'plantaoEmergencia',current:0}));
@@ -1052,4 +1057,39 @@ test.each([true,false])('energy savings applies to actual maintenance and sabota
   expect(match.view(host.id,ids,passedAt+energySavings.duration).policies?.energySavings).toBeUndefined();
   match.leave(traitor.id,ELECTION_RULES.interval+1);
   expect(match.view(host.id,ids,ELECTION_RULES.interval+1).policies?.energySavings).toBeUndefined();
+});
+
+test.each([true,false])('selective transparency only charges eligible private audit evidence, approval=%s',approved=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N08');
+  match.gameplayWorld(people,1,()=>false).publish({
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+  });
+  match.advance(NEGOTIATION_MS);
+  if (approved) for (const player of [host,honest]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
+  const resolution = NEGOTIATION_MS+BALLOT_MS;
+  match.advance(resolution);
+  const now = resolution+1;
+  const view = (at=now)=>match.view(traitor.id,ids,at);
+  const wallet = ()=>view().politics!.wallet;
+  const start = wallet();
+  const auditor = at(traitor,'audit');
+  expect(match.act(auditor,'audit',now)?.text).toContain('Nenhum registro');
+  expect(wallet()).toBe(start);
+  expect(match.politics(host,{kind:'transfer',to:honest.id,amount:1},people,now)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  expect(economy.spend(traitor.id,start)).toBe(true);
+  const audit = match.act(auditor,'audit',now);
+  expect(audit?.text).toContain(approved ? 'Saldo insuficiente' : 'Documento encontrado');
+  expect(view().politics!.evidence).toHaveLength(approved ? 0 : 1);
+  if (approved) {
+    expect(match.politics(honest,{kind:'transfer',to:traitor.id,amount:2},people,now+1)).toBe(true);
+    expect(match.act(auditor,'audit',now+1)?.text).toContain('Documento encontrado');
+    expect(wallet()).toBe(1);
+    expect(match.act(auditor,'audit',now+2)?.text).toContain('limite');
+    expect(wallet()).toBe(1);
+    expect(view(now+policyDuration).policies?.bankAudit).toBeUndefined();
+  }
+  expect(match.economySummary(0).discrepancy).toBe(0);
 });

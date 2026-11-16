@@ -142,3 +142,10 @@ test('catalog prices reflect only the applicable public policies',()=>{
   expect(marketProduct('equipment','forensicKit',policies)!.price).toBeLessThan(marketProduct('equipment','forensicKit')!.price);
   expect(marketProduct('equipment','firstAidKit',policies)).toEqual(marketProduct('equipment','firstAidKit'));
 });
+
+test('Pinga has a drink action and enters circulation through the bill, outside the snack shop',()=>{
+  expect(consumableAction({id:12,kind:'pinga'})).toMatchObject({label:'Beber',action:{kind:'use',item:12}});
+  expect(objects.pinga.portrait).toBe('retrato-pinga.webp');
+  expect(marketKinds.food).not.toContain('pinga');
+  expect(marketProduct('food','pinga')).toBeUndefined();
+});

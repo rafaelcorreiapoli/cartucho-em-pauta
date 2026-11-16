@@ -320,6 +320,8 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('pickup');
     });
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
+    joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
+      hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
     joined.onMessage('gameplay-feedback',(message:string)=>{
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
