@@ -96,6 +96,7 @@ export type Outcome = {round:number; project?:number; passed:boolean; yes:number
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
 export type PlenaryView = {
+  ballotCountdown?: number;
   phase:Phase; round:number; project?:number; queuedProjects?:number[]; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;

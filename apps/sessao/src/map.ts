@@ -13,11 +13,8 @@ export type Rect = readonly [x: number, y: number, width: number, height: number
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
-const plenaryDaisFootprint:Rect = [414,596,132,12];
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
-export const PLENARY_SEATS = [657,713].flatMap(row =>
-  [324,375,426,534,585,636].map((x,index)=>({x,y:row+[0,7,12,12,7,0][index]})),
-);
+export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
 
 export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
 
@@ -59,6 +56,7 @@ export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
   [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
   [128,460],[493,438],[713,460],[757,435],
+  [274,614],[274,677],[643,614],[643,677],
   [treasurer.counter.x,treasurer.counter.y],
 ] as const;
 export const furnishings = [
@@ -67,6 +65,7 @@ export const furnishings = [
   {texture:'infirmary-stretcher',area:[824,428,72,41],footprint:8},
   {texture:'infirmary-doctor',area:[infirmary.doctor.x-19,infirmary.doctor.y-38,38,38],footprint:5},
   {frame:0, area:[197,33,86,29], footprint:10},
+  {frame:0, area:[414,570,132,38], footprint:12},
   {frame:1, area:[559,598,22,18], footprint:7},
   {frame:3, area:[279,554,30,40], footprint:9},
   {frame:3, area:[651,554,30,40], footprint:9},
@@ -87,7 +86,6 @@ function npcFootprint(npc:(typeof mapNpcs)[keyof typeof mapNpcs]):Rect {
 }
 const obstacles = [
   ...walls,
-  plenaryDaisFootprint,
   ...privateOffices.flatMap(office=>(['safe','cabinet'] as const).map((kind):Rect=>{
     const {x,y} = office[kind];
     const {width,footOffset} = officeFixtures[kind];
@@ -196,7 +194,7 @@ export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
   {...isolationRoom,color:0x61716a},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
-  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x232824},
+  {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
   {name:'Cafezinho', bounds:[196,172,86,87], color:0xb09d80},
   {name:'Arquivo', bounds:[480,10,223,104], color:0x81897a},

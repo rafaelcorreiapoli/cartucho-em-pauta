@@ -20,6 +20,18 @@ const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','C
 const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
+test('project ballot countdown is published during the final five seconds of negotiation',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const countdown = (now:number) => match.view(host.id,ids,now).ballotCountdown;
+  expect(countdown(NEGOTIATION_MS-5001)).toBeUndefined();
+  expect(countdown(NEGOTIATION_MS-5000)).toBe(5);
+  expect(countdown(NEGOTIATION_MS-1)).toBe(1);
+  match.advance(NEGOTIATION_MS);
+  expect(match.phase).toBe('ballot');
+  expect(countdown(NEGOTIATION_MS)).toBeUndefined();
+});
+
 test('fraud shows different figures until a player audits and reports it', () => {
   const match = new PlenaryMatch(1);
   expect(match.start(honest.id,people,0)).toBe(false);

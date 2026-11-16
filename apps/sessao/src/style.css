@@ -300,3 +300,21 @@ progress.animated-progress::-moz-progress-bar { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   progress.animated-progress { transition: none; }
 }
+
+#ballot-countdown {
+  margin:auto;
+  max-width:calc(100vw - 2rem);
+  padding:clamp(1rem,4vw,2rem) clamp(1.25rem,6vw,3rem);
+  border:1px solid var(--hud-gold);
+  border-radius:8px;
+  background:#142322;
+  color:var(--hud-paper);
+  text-align:center;
+}
+#ballot-countdown::backdrop { background:rgb(7 16 15 / .66); }
+#ballot-countdown-message {
+  margin:0;
+  font-size:clamp(1.2rem,4vw,2rem);
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+}

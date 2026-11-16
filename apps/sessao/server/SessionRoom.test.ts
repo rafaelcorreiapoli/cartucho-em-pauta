@@ -561,10 +561,25 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(passengerOffice).toBeDefined();
     carrier.send('gameplay',{action:{kind:'carry',target:passenger.sessionId},token:4100});
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
+    const carrierControl = positions.get(carrier.sessionId)! as ControlState;
+    const oldRevision = carrierControl.revision;
+    Reflect.set(match,'ends',room.clock.currentTime+5000);
+    await wait(()=>views.get(carrier.sessionId)?.ballotCountdown===5 && carrierControl.revision!==oldRevision);
+    const {x,y} = carrierControl.player;
+    const ack = carrierControl.ack;
+    const intents = views.get(carrier.sessionId)?.voteIntents;
+    carrier.send('input',{seq:ack+1,revision:carrierControl.revision,motion:{x:1,y:0}});
+    carrier.send('bill-intent',{vote:'yes',token:4110});
+    await Bun.sleep(150);
+    expect(views.get(carrier.sessionId)?.ballotCountdown).toBeDefined();
+    expect(carrierControl.player).toMatchObject({x,y,moving:false});
+    expect(carrierControl.ack).toBe(ack);
+    expect(views.get(carrier.sessionId)?.voteIntents).toEqual(intents);
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
       snapshots.get(passenger.sessionId)?.x===PLENARY_SEATS[1].x &&
       snapshots.get(passenger.sessionId)?.y===PLENARY_SEATS[1].y);
+    expect(views.get(passenger.sessionId)?.ballotCountdown).toBeUndefined();
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
