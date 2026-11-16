@@ -841,8 +841,8 @@ test('replaying a server-identified event does not apply progress twice',()=>{
   const deposit = {type:'delivered',actor:host.id,item:1,position:terminals.treasury.point,at:10,place:'treasury',amount:2,witnesses:[]} as const;
   const settled = {...deposit,witnesses:[],eventId:world.nextEventId!()};
   const active = ()=>match.view(host.id,ids,10).politics!.missions.active.find(mission=>mission.kind==='contribuinte')?.current;
-  world.publish(settled);
-  world.publish({...settled});
+  expect(world.publish(settled)).toBe(true);
+  expect(world.publish({...settled})).toBe(false);
   expect(active()).toBe(2);
   world.publish({...settled,eventId:world.nextEventId!()});
   expect(active()).toBe(4);

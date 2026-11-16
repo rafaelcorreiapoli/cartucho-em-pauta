@@ -259,13 +259,13 @@ export class PlenaryMatch {
       player,type,{...details,witnesses:[]});
   }
 
-  private recordGameplay(event:GameplayEvent) {
+  private recordGameplay(event:GameplayEvent):boolean {
     if (event.eventId!==undefined) {
-      if (this.receivedEvents.has(event.eventId)) return;
+      if (this.receivedEvents.has(event.eventId)) return false;
       this.receivedEvents.add(event.eventId);
     }
     if (event.type==='filed' && event.item!==undefined) {
-      if (this.filedDocuments.has(event.item)) return;
+      if (this.filedDocuments.has(event.item)) return false;
       this.filedDocuments.add(event.item);
     }
     if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
@@ -275,6 +275,7 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
+    return true;
   }
 
   act(player:Player, action:Action, now:number) {
@@ -332,7 +333,7 @@ export class PlenaryMatch {
     }
   }
 
-  gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
+  gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,

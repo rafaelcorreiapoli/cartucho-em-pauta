@@ -2,7 +2,7 @@ import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
-import { terminals, type InteractionCue } from '../src/gameplay';
+import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
@@ -468,6 +468,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('gameplay',{action:delivery,token:3284});
     await wait(()=>interactionCues.get(passenger.sessionId)?.length===1);
     expect(interactionCues.get(passenger.sessionId)).toEqual(['cash']);
+    expect(interactionCues.get(carrier.sessionId)).toEqual([]);
+    // Replay a delivered event through the same publisher that sends browser audio cues.
+    const playback = Reflect.get(room,'gameplayWorld').call(room);
+    const cueEvent:GameplayEvent = {type:'delivered',actor:passenger.sessionId,item:999,place:'treasury',
+      position:terminals.treasury.point,at:playback.now,eventId:playback.nextEventId(),witnesses:[]};
+    playback.publish(cueEvent);
+    playback.publish({...cueEvent});
+    // The stamp is an ordering barrier on the same socket.
+    playback.publish({...cueEvent,type:'stamped',eventId:playback.nextEventId()});
+    await wait(()=>interactionCues.get(passenger.sessionId)?.includes('stamp')===true);
+    expect(interactionCues.get(passenger.sessionId)).toEqual(['cash','cash','stamp']);
     expect(interactionCues.get(carrier.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;

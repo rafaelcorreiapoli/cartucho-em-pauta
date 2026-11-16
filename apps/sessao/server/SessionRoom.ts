@@ -66,7 +66,7 @@ export class SessionRoom extends Room {
       vision:(id:string)=>this.gameplay.vision(id,world.now),
       present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
-        world.publish(event);
+        if (!world.publish(event)) return;
         this.parliamentarians.witnessAggression(event);
         let cue:InteractionCue | undefined;
         if (event.type==='delivered' && event.place==='treasury') cue = 'cash';
