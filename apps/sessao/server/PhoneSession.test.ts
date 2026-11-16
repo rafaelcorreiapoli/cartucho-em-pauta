@@ -40,6 +40,14 @@ test('only connected, present players in articulation receive bounded mission ti
   connected = false;
   world.now += 50;
   phone.tick(world,true);
-  phone.tick(world,false);
   expect(events.filter(event=>event.type==='call-time')).toHaveLength(2);
+  connected = true;
+  world.now += 50;
+  phone.tick(world,true);
+  expect(events.filter(event=>event.type==='call-time')).toHaveLength(2);
+  world.now += 50;
+  phone.tick(world,true);
+  expect(events.filter(event=>event.type==='call-time').slice(2).map(event=>event.duration)).toEqual([50,50]);
+  phone.tick(world,false);
+  expect(phone.callPeer(caller.id)).toBeUndefined();
 });

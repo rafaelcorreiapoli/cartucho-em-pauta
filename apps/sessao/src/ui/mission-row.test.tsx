@@ -1,3 +1,4 @@
+import {PhoneSession} from '../../server/PhoneSession';
 import {InternalMail} from '../../server/InternalMail';
 import {ELECTION_RULES} from '../elections';
 import {internalMailRules} from '../internal-mail';
@@ -682,4 +683,43 @@ test('the signature mission keeps the signed document visible after a signer lea
   const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
+});
+
+test('what the HUD counts as debate time pauses while either caller is knocked out',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [caller,receiver] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(caller.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(caller.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['debateTelefonico','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const phone = new PhoneSession();
+  let now = 0;
+  const world = ()=>match.gameplayWorld(players,now,()=>true);
+  const view = ()=>match.view(caller.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='debateTelefonico')!;
+  const tick = ()=>{ now+=100; phone.tick(world(),true); };
+  expect(phone.act(caller,{kind:'call',target:receiver.id},world())).toBe('Chamando…');
+  expect(phone.act(receiver,{kind:'answer'},world())).toBe('Ligação atendida.');
+  for (let i=0;i<199;i++) tick();
+  expect(active().current).toBe(19_900);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('19 / 20 s');
+
+  receiver.knockedOut = true;
+  tick();
+  tick();
+  expect(active().current).toBe(19_900);
+  expect(view().progression.xp).toBe(0);
+  receiver.knockedOut = undefined;
+  tick();
+  expect(active().current).toBe(19_900);
+  tick();
+  const completed = view().missions.completed.find(({kind})=>kind==='debateTelefonico')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
 });
