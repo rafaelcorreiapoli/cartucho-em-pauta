@@ -649,7 +649,7 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(bob)[0].quantity).toBe(4);
 });
 
-test('hands and feet are independent of the two accessory spaces',()=>{
+test('hands, torso and feet are independent of the two accessory spaces',()=>{
   const {alice,game,world,buyGear,balance} = setup();
   balance.set(alice.id,20);
   const equip = (kind:string) => {
@@ -658,8 +658,9 @@ test('hands and feet are independent of the two accessory spaces',()=>{
     return game.act(alice,{kind:'equip',item:item.id},world);
   };
   for (const kind of ['baton','runningShoes','binoculars','megaphone']) expect(equip(kind)).toBe('Equipado.');
-  expect(equip('vest')).toBe('Os dois espaços de acessórios estão ocupados.');
-  expect(game.view(alice,world).equipped).toHaveLength(4);
+  expect(equip('vest')).toBe('Equipado.');
+  expect(equip('voiceModulator')).toBe('Os dois espaços de acessórios estão ocupados.');
+  expect(game.view(alice,world).equipped).toHaveLength(5);
 });
 
 test('direct shop equips into free slots and swaps only the confirmed accessory',()=>{
@@ -672,15 +673,16 @@ test('direct shop equips into free slots and swaps only the confirmed accessory'
   const buy = (target:string)=>game.act(alice,{kind:'shop-buy',target,token:view().dialogue?.token},world);
   expect(buy('binoculars')).toBe('Compra equipada.');
   expect(buy('vest')).toBe('Compra equipada.');
+  expect(buy('voiceModulator')).toBe('Compra equipada.');
   expect(buy('megaphone')).toBe('Compra guardada no inventário.');
   const [binocular,vest] = view().equipped!;
   const [megaphone] = view().inventory;
-  expect(view().equipped?.map(item=>item.kind)).toEqual(['binoculars','vest']);
+  expect(view().equipped?.map(item=>item.kind)).toEqual(['binoculars','vest','voiceModulator']);
   expect(game.act(alice,{kind:'replace-gear',item:megaphone.id,token:vest.id},world)).toBe('O equipamento neste espaço mudou.');
   expect(game.act(alice,{kind:'replace-gear',item:megaphone.id,token:binocular.id},world)).toBe('Equipado.');
   expect(view().inventory.map(item=>item.kind)).toEqual(['binoculars']);
-  expect(view().equipped?.map(item=>item.kind)).toEqual(['vest','megaphone']);
-  expect(balance.get(alice.id)).toBe(21);
+  expect(view().equipped?.map(item=>item.kind)).toEqual(['vest','voiceModulator','megaphone']);
+  expect(balance.get(alice.id)).toBe(18);
 });
 
 test('plenary voting allows weapon hits against players in the chamber',()=>{

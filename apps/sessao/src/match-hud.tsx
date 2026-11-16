@@ -1,4 +1,4 @@
-import { createElement as createIcon, Hand, Footprints, Cpu } from 'lucide';
+import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import {fireOptions} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
@@ -87,6 +87,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const gearStrip = element('equipped-gear');
   const gearSlots = [
     {label:'Mãos',icon:Hand},
+    {label:'Tronco',icon:Shirt},
     {label:'Pés',icon:Footprints},
     {label:'Acessório 1',icon:Cpu},
     {label:'Acessório 2',icon:Cpu},
