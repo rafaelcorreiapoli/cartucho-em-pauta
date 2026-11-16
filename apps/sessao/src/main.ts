@@ -259,7 +259,6 @@ async function connect(join: () => Promise<Room>) {
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');
     });
-    joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('consumable-purchased',gameplay.purchasedConsumable);

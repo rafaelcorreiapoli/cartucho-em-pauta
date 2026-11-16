@@ -191,3 +191,20 @@ test('the HUD receives multiple deposits of the same cash lot in one server tick
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'contribuinte',current:5}));
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('contribuinte').xp);
 });
+
+test('the megaphone notice follows the phase and the anonymous snapshot flag',()=>{
+  const match = new PlenaryMatch(1);
+  const ids = [player.id];
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const hud = createHudModel();
+  const notify = (view:ReturnType<PlenaryMatch['view']>)=>hud.render({...view,megaphoneActive:true});
+  const updates:boolean[] = [];
+  hud.broadcast.subscribe(()=>updates.push(hud.broadcast.get()));
+  notify(match.view(player.id,ids,1));
+  notify(match.view(player.id,ids,2));
+  expect(updates).toEqual([true]);
+  match.advance(NEGOTIATION_MS);
+  notify(match.view(player.id,ids,NEGOTIATION_MS));
+  expect(updates).toEqual([true,false]);
+  expect(hud.broadcast.get()).toBe(false);
+});

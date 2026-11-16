@@ -401,12 +401,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('start-match',{npcs:0,token:1});
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
     const routes = new Map<string,[string,number,boolean?,boolean?][]>();
-    let broadcast = false;
     for (const peer of rooms) {
       peer.onMessage('voice-range',(levels:[string,number,boolean?,boolean?][])=>routes.set(peer.sessionId,levels));
       peer.onMessage('voice-send',()=>{});
       peer.onMessage('voice-roster',()=>{});
-      peer.onMessage('megaphone-active',(active:boolean)=>{if (peer===passenger) broadcast = active;});
       peer.send('voice-join');
     }
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
@@ -442,13 +440,14 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('gameplay',{action:{kind:'equip',item:gearView()?.inventory.find(item=>item.kind==='megaphone')?.id},token:2960});
     await wait(()=>!!gearView()?.equipped?.find(item=>item.kind==='megaphone'));
     carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:2980});
-    await wait(()=>broadcast && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
+    await wait(()=>views.get(passenger.sessionId)?.megaphoneActive===true && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
+    expect(views.get(carrier.sessionId)?.megaphoneActive).toBeUndefined();
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     await Bun.sleep(120);
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
     carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:3040});
-    await wait(()=>!broadcast && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
+    await wait(()=>views.get(passenger.sessionId)?.megaphoneActive===undefined && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
     carrier.send('voice-leave');
     passenger.send('voice-leave');
     carrier.send('gameplay',{action:{kind:'dialogue-close'},token:3080});
