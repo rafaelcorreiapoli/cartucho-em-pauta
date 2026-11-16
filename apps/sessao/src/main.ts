@@ -359,7 +359,7 @@ async function connect(join: () => Promise<Room>) {
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
-    },()=>assetsReady);
+    },()=>assetsReady,()=>void joined.leave());
     let phase: PlenaryView['phase'] = 'lobby';
     let rosterKey = '';
     let previousView:PlenaryView | undefined;
@@ -531,7 +531,6 @@ lobby.onsubmit = event => {
   const nick = nickname();
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
-document.querySelector<HTMLButtonElement>('#lobby-back')!.onclick = () => void room?.leave();
 loadingBack.onclick = () => void room?.leave();
 for (const id of ['lobby-settings','plenary-settings']) {
   document.getElementById(id)!.onclick = settings.open;

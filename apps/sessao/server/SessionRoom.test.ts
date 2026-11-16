@@ -693,14 +693,28 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     for (let i=2;i<=6;i++) rooms.push(await client.joinById(host.roomId,{nick:`Pessoa ${i}`}));
     const states = new Map<string,Player[]>();
     const phases = new Map<string,PlenaryView['phase']>();
+    const npcCounts = new Map<string,number|undefined>();
+    const roles = new Map<string,PlenaryView['role']>();
     for (const peer of rooms) {
       peer.onMessage('players',(players:Player[])=>states.set(peer.sessionId,players));
-      peer.onMessage('plenary',(view:PlenaryView)=>phases.set(peer.sessionId,view.phase));
+      peer.onMessage('plenary',(view:PlenaryView)=>{
+        phases.set(peer.sessionId,view.phase);
+        npcCounts.set(peer.sessionId,view.lobbyNpcCount);
+        roles.set(peer.sessionId,view.role);
+      });
       for (const key of ['control','mail-state','mail-reports','photo-state']) peer.onMessage(key,()=>{});
     }
-    host.send('start-match',{npcs:3,token:1});
-    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
+    host.send('lobby-npc-count',{count:3,token:1});
+    await wait(()=>rooms.every(peer=>npcCounts.get(peer.sessionId)===3));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    const guest = rooms[1];
+    guest.send('lobby-npc-count',{count:0,token:1});
+    const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
+    await wait(()=>commandTokens.get(guest.sessionId)===1);
+    expect(Reflect.get(room,'lobbyNpcCount')).toBe(3);
+    host.send('start-match',{infiltrators:2,token:2});
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
+    expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
     const observer = Reflect.get(room,'players').get(host.sessionId).player as Player;
     const [walkingNpc] = Reflect.get(room,'parliamentarians').players as Player[];
     Object.assign(observer,{x:30,y:197});
