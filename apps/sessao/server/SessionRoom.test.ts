@@ -61,10 +61,10 @@ test('clients share movement and voice, then receive private roles and payments'
     track(second);
     let seq = 0;
     const findFirst = () => seen.find(player => player.id===first.sessionId);
-    const until = async (ready: () => boolean) => {
-      for (let attempt=0;attempt<85;attempt++) {
+    const until = async (ready: () => boolean, pollMs=35) => {
+      for (let attempt=0;attempt<85*35/pollMs;attempt++) {
         if (ready()) return;
-        await Bun.sleep(35);
+        await Bun.sleep(pollMs);
       }
       throw new Error('Expected room update did not arrive');
     };
@@ -185,12 +185,19 @@ test('clients share movement and voice, then receive private roles and payments'
       }
       peer.send('input',{seq:sequence,revision:control.revision,destination,sprint:true});
       for (let attempt=0;attempt<350;attempt++) {
-        const player = positions.get(peer.sessionId)!;
-        if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
+        await until(()=> {
+          const latest = controls.get(peer.sessionId)!;
+          return latest.ack>=sequence || latest.revision!==control.revision;
+        },5);
+        const latest = controls.get(peer.sessionId)!;
+        const {x,y,knockedOut} = latest.player;
+        if (latest.revision===control.revision && Math.hypot(x-destination.x,y-destination.y)<2) return;
+        if (latest.revision!==control.revision || knockedOut || !latest.route.length) {
+          throw new Error(`Walk to ${destination.x},${destination.y} stopped at ${x},${y} (ack ${latest.ack}, revision ${control.revision} → ${latest.revision})`);
+        }
         peer.send('input',{seq:++sequence,revision:control.revision,sprint:true});
-        await Bun.sleep(52);
       }
-      throw new Error('Could not reach the requested station');
+      throw new Error(`Could not reach ${destination.x},${destination.y} in 350 acknowledged steps`);
     }
     await Promise.all([second,third].map((peer,index)=>walkTo(peer,{x:140+index*12,y:146},true)));
     const sourceBefore = secondView!.politics!.wallet;
@@ -324,8 +331,8 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
-    await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();
+    await Promise.allSettled(rooms.map(room => room.leave(false)));
     await server.exited;
   }
 },65_000);

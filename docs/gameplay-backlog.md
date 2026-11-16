@@ -34,7 +34,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 
 | ID | Funcionalidade | Estado | Evidência | Observação | Complexidade |
 |---|---|---|---|---|---|
-| MAP-01 | Mapa top-down, movimentação e colisões | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
+| MAP-01 | Mapa top-down, movimentação e colisões | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts, network-movement.test.ts; PR 8, 12, 13, 15 | Testes reproduzem rotas dos seis gabinetes até o corredor e a imprensa com todas as velocidades e confirmações atrasadas. O teste WebSocket percorre destinos usando confirmações do gameserver e identifica onde uma rota foi interrompida. | — |
 | MAP-02 | Fog of war respeitando paredes e geometria | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | A iluminação é recortada por paredes e portas fechadas. Testes verificam o recorte no cliente e a ocultação de atores no servidor. A visibilidade de personagens usa paredes e portas, como a luz. Teste de socket verifica NPC visível atrás de mobília e oculto atrás de parede. | — |
 | MAP-03 | Salas e regiões identificáveis | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |
 | MAP-04 | Portas e obstáculos interativos | IMPLEMENTADO | map.ts, draw-map.ts, navigation.ts, SessionRoom.test.ts; PR 8, 12, 13, 15 | — | — |

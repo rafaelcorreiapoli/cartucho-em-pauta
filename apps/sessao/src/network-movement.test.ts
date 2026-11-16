@@ -1,3 +1,6 @@
+import { characterStats } from './character-stats';
+import { stations } from './plenary';
+import { privateOffices } from './private-offices';
 import { expect, test } from 'bun:test';
 import { canStandInPlenary, inPlenary, isolationRoom, PLENARY_DOORS, PLENARY_SEATS } from './map';
 import { findRoute } from './navigation';
@@ -180,4 +183,30 @@ test('a walking NPC interpolates through a late snapshot and stops when snapshot
   expect(history.sample(500,player.id)).toMatchObject({x:120,moving:false,npc:true});
   history.add([],510);
   expect(history.sample(710,player.id)).toBeUndefined();
+});
+
+test.each(privateOffices)('predicted routes from $name converge on the authoritative station under delayed acknowledgments',office=>{
+  for (const {speed} of characterStats) {
+    const server:ControlState = {
+      player:{id:'p',nick:'P',character:0,speed,...office.spawn,direction:0,moving:false},
+      route:[],ack:0,revision:1,
+    };
+    const pending:MovementInput[] = [];
+    const client = new PredictedMovement(input=>pending.push(input));
+    client.reconcile(server);
+    const stops = [{x:140,y:146},stations.press];
+    for (const destination of stops) {
+      client.input({destination});
+      for (let step=0;step<350;step++) {
+        const input = pending.shift();
+        if (input) applyInput(server,readInput(input)!);
+        if (step%3===2) client.reconcile(server);
+        if (!server.route.length) break;
+        client.input({});
+      }
+      client.reconcile(server);
+      expect(server.player).toMatchObject(destination);
+      expect(client.state?.player).toMatchObject(destination);
+    }
+  }
 });
