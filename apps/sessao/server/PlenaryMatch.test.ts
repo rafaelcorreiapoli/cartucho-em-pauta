@@ -659,6 +659,26 @@ test('legislative brief activities require their respective stations and the neg
   expect(match.roomActivity(at(host,'secretary'),'secretary',NEGOTIATION_MS+1)).toBeUndefined();
 });
 
+test('cassation requires at least three eligible players to be called',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,17);
+  const call = () => match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const view = () => match.view(host.id,ids,50);
+
+  match.setPlayerConnected(honest.id,false);
+  expect(view().canCallCassation).toBe(false);
+  expect(view().politics?.canCallHearing).toBe(true);
+  call();
+  expect(view().cassationIn).toBeUndefined();
+
+  match.setPlayerConnected(honest.id,true);
+  expect(view().canCallCassation).toBe(true);
+  call();
+  expect(view().cassationIn).toBe(30);
+});
+
 test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
