@@ -55,7 +55,7 @@ export class Gameplay {
   private modulator = new VoiceEquipment();
   private serial = 0;
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
-  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>}>();
+  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
@@ -443,11 +443,6 @@ export class Gameplay {
       }
     }
     this.album.tick(world.now);
-    for (const [id,scan] of this.scanning) {
-      const player = world.players.find(player=>player.id===id);
-      if (!exploring || scan.ends<=world.now || !player || player.knockedOut || player.carried ||
-          this.wearing(id,'xray')?.id!==scan.item) this.scanning.delete(id);
-    }
     for (const [id,ends] of this.concealedUntil) {
       if (ends>world.now) continue;
       this.concealedUntil.delete(id);
@@ -464,6 +459,7 @@ export class Gameplay {
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
+    this.tickXray(world,exploring);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
@@ -1038,6 +1034,27 @@ export class Gameplay {
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
 
+  private tickXray(world:GameplayWorld, exploring:boolean) {
+    for (const [id,scan] of this.scanning) {
+      const player = world.players.find(player=>player.id===id);
+      if (!exploring || scan.ends<=world.now || !player || world.present?.(id)===false ||
+          player.knockedOut || player.carried || this.wearing(id,'xray')?.id!==scan.item) {
+        this.scanning.delete(id);
+        continue;
+      }
+      const safeMission = world.hasMission?.(id,'fiscalizacaoParalela');
+      const npcMission = world.hasMission?.(id,'patrimonioSuspeito');
+      if (!safeMission && !npcMission) continue;
+      for (const target of this.xrayVision(player,world)?.targets ?? []) {
+        const place = target.safe ? 'safe' : 'npc';
+        const key = place+':'+target.id;
+        if (!(target.safe ? safeMission : npcMission) || scan.reported.has(key)) continue;
+        scan.reported.add(key);
+        publishGameplay(world,player,'xray-target-revealed',{target:target.id,place,witnesses:[]});
+      }
+    }
+  }
+
   private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {
     const scan = this.scanning.get(player.id);
     if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
@@ -1077,7 +1094,7 @@ export class Gameplay {
     if (this.scanning.delete(player.id)) return 'Raio X desativado.';
     if (!item.charges) return 'Raio X sem cargas. Recarregue no Apoio Técnico.';
     item.charges--;
-    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map()});
+    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map(),reported:new Set()});
     this.event(world,player,'xray-scanned',item,undefined,{witnesses:[]});
     return 'Raio X ativado.';
   }

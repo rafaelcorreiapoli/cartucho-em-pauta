@@ -452,6 +452,8 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   let spent = 0;
   world.spend = (_id,amount)=>{ spent += amount; return true; };
   const scanner = buyTechnical(game,alice,world,'xray');
+  world.hasMission = (id,kind)=>id===alice.id && (kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito');
+  const revealed = ()=>events.filter(event=>event.type==='xray-target-revealed');
   const activate = () => game.act(alice,{kind:'scan-xray'},world);
   const vision = () => game.view(alice,world).xrayVision;
   expect(activate()).toBe('Equipe o Raio X.');
@@ -459,19 +461,33 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(activate()).toBe('Raio X ativado.');
   expect(scanner.charges).toBe(2);
   expect(vision()?.targets).toEqual([]);
+  game.tick(world,true);
+  expect(revealed()).toEqual([]);
   Object.assign(alice,{x:240,y:250,barriers:[[244,241,2,16]]});
   expect(vision()?.targets.some(target=>target.id===npc.id)).toBe(false);
   alice.barriers = undefined;
   expect(vision()?.targets).toContainEqual(expect.objectContaining({id:npc.id,balance:12}));
+  expect(revealed()).toEqual([]);
+  game.tick(world,true);
+  game.tick(world,true);
+  expect(revealed()).toEqual([expect.objectContaining({target:npc.id,place:'npc',witnesses:[]})]);
   npc.x++;
   expect(vision()?.targets).toContainEqual(expect.objectContaining({id:npc.id,x:251}));
   const office = privateOffices.find(office=>office.id===game.view(bob,world).ownOffice)!;
   Object.assign(alice,office.safe);
   balance = 30;
   expect(vision()?.targets).toContainEqual(expect.objectContaining({id:office.id,balance:30}));
+  game.tick(world,true);
+  expect(revealed()).toContainEqual(expect.objectContaining({target:office.id,place:'safe',witnesses:[]}));
   balance = 20;
   expect(vision()?.targets).toContainEqual(expect.objectContaining({id:office.id,balance:30}));
   expect(game.view(bob,world).xrayVision).toBeUndefined();
+  const ownOffice = privateOffices.find(office=>office.id===game.view(alice,world).ownOffice)!;
+  Object.assign(alice,ownOffice.safe);
+  game.tick(world,true);
+  expect(vision()?.targets.some(target=>target.id===ownOffice.id)).toBe(false);
+  expect(revealed().some(event=>event.target===ownOffice.id)).toBe(false);
+  Object.assign(alice,office.safe);
   world.now = 10_000;
   game.tick(world,true);
   expect(vision()).toBeUndefined();
@@ -486,7 +502,7 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   Object.assign(alice,npcs.vendor);
   expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('3/3');
   expect(spent).toBe(6);
-  expect(events.filter(event=>event.type.startsWith('xray')).map(event=>event.witnesses)).toEqual([[],[],[],[]]);
+  expect(events.filter(event=>event.type==='xray-scanned' || event.type==='xray-recharged').map(event=>event.witnesses)).toEqual([[],[],[],[]]);
 });
 
 test('an NPC raises its quote only after witnessing a weapon hit',()=>{

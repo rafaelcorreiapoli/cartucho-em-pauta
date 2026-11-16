@@ -150,3 +150,11 @@ test('cash mission instructions distinguish handing over the exact amount from r
   expect(receive).toContain('Receba dinheiro em espécie');
   expect(receive).toContain('data-done="true"');
 });
+
+test('Raio X missions identify which kind of balance to reveal',()=>{
+  const safe = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'fiscalizacaoParalela',current:0,target:1}}/>);
+  const npc = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'patrimonioSuspeito',current:1,target:1}} done/>);
+  expect(safe).toContain('cofre de outro parlamentar com o Raio X');
+  expect(npc).toContain('saldo de um parlamentar NPC com o Raio X');
+  expect(npc).toContain('data-done="true"');
+});

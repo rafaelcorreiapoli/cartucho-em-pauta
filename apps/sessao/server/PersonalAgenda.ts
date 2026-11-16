@@ -18,6 +18,8 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
+  patrimonioSuspeito:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='npc',
   dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='cash-handed-over' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
   caixaDois:(event:GameplayEvent) => event.type==='cash-received',
   varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
@@ -377,6 +379,9 @@ export class PersonalAgenda {
         metrics.wallet<internalMailRules.fee) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
+    if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
+    if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
+    if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
     if (kind==='flagraGabinete' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
     if ((kind==='varredura' || kind==='limpeza') && (!this.targets.length ||

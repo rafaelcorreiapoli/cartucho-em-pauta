@@ -899,6 +899,8 @@ test.each([
   ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
   ['limpeza',event('spy-removed',{item:3}),event('spy-removed')],
   ['escutaAtiva',event('wiretap-time',{duration:15_000}),event('wiretap-time',{duration:0,at:2})],
+  ['fiscalizacaoParalela',event('xray-target-revealed',{place:'safe'}),event('xray-target-revealed',{place:'npc'})],
+  ['patrimonioSuspeito',event('xray-target-revealed',{place:'npc'}),event('xray-scanned')],
   ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
   ['investimentoPolitico',event('campaign-investment',{amount:5}),event('advertisement-aired')],
   ['campanhaUltimaHora',event('campaign-investment',{duration:60_000}),event('campaign-investment',{duration:60_001,at:2})],
@@ -911,12 +913,12 @@ test.each([
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
 ] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
   const rewards:number[] = [];
-  const options = {...metrics,owns:()=>true,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const options = {...metrics,owns:()=>true,hasOffice:()=>true,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','credencial']);
-  agenda.updateEligibility(options,4,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
+  agenda.updateEligibility(options,4,true,3,1,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
   recordAgendaEvent(agenda,wrong);
   expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
   recordAgendaEvent(agenda,valid);
@@ -985,4 +987,22 @@ test('cash missions require an accepted in-person handover and use the actual am
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Objeto recebido.');
   expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(true);
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Pedido indisponível.');
+});
+
+test('Raio X missions require the equipment and the corresponding targets',()=>{
+  const contacts = [{id:'b',name:'Bia'}];
+  const draw = (owns:boolean,hasOffice:boolean,npcs:number)=>{
+    const options = {...metrics,owns:()=>owns,hasOffice:()=>hasOffice};
+    const agenda = new PersonalAgenda(options,2,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','patrimonioSuspeito','cafe','passeio','credencial']);
+    agenda.updateEligibility(options,2,true,3,npcs,contacts);
+    return agenda.view(options).active.map(mission=>mission.kind);
+  };
+  expect(draw(false,true,1)).not.toContain('fiscalizacaoParalela');
+  expect(draw(false,true,1)).not.toContain('patrimonioSuspeito');
+  expect(draw(true,true,0)).toContain('fiscalizacaoParalela');
+  expect(draw(true,true,0)).not.toContain('patrimonioSuspeito');
+  expect(draw(true,false,1)).not.toContain('fiscalizacaoParalela');
+  expect(draw(true,false,1)).toContain('patrimonioSuspeito');
 });
