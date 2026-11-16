@@ -65,9 +65,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const bodyRoot = createRoot(body);
   const mailHost = element('phone-mail');
 
-  const tools = element('gameplay-tools');
-  const equipmentButton = element<HTMLButtonElement>('open-equipment');
-  const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
   const slotsRoot = createRoot(slots);
   const requestBox = element('object-request');
@@ -507,9 +504,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     event.preventDefault();
     selectApp();
   });
-  phoneButton.onclick = () => { app = undefined; open(); };
-  element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
-  equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
     bodyRoot.render(null);
     mailHost.hidden = true;
@@ -523,6 +517,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   dialog.addEventListener('close',closed);
 
   return {
+    openPhone() { app = undefined; open(); },
+    openBag() { open(undefined,undefined,false,false,true); },
+    openEquipment() { open(undefined,undefined,true); },
     itemObtained(pickup:boolean) {
       if (!pickup || !pendingPickup) return;
       collectedArea = pendingPickup;
@@ -588,13 +585,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       previous = view;
       if (view.phase!=='negotiation') { pendingPickup = undefined; setNearbyExpanded(false); }
       if (document.querySelector('dialog:modal')) setNearbyExpanded(false);
-      tools.hidden = !view.gameplay;
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory);
-      phoneButton.dataset.call = call?.state ?? '';
-      phoneButton.lastChild!.textContent = call?.state==='connected' ? ` Ligação · ${call.peer.name}` :
-        call?.state==='incoming' ? ` Chamada · ${call.peer.name}` : ' Celular';
       if (call?.state==='connected' && old?.call?.state!=='connected' && dialog.dataset.mode==='phone' && app==='Telefone') dialog.close();
       if (call?.state==='incoming' && old?.call?.state!=='incoming' && !document.querySelector('dialog:modal')) {
         app = 'Telefone';
@@ -643,7 +636,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       document.removeEventListener('keydown',onSnakeKey);
       dialog.removeEventListener('close',closed);
       dialog.close();
-      tools.hidden = element('object-request').hidden = true;
+      element('object-request').hidden = true;
       delete element('object-request').dataset.request;
       headerRoot.unmount();
       navigationRoot.unmount();

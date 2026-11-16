@@ -107,7 +107,6 @@
 }
 #world #hud-notices { inset: 88px var(--hud-edge) auto auto; }
 
-#command-deck #gameplay-tools { display: none; }
 #congress-apps { position: relative; color: var(--color-hud-ink); }
 .congress-app-toggle, .congress-app-panel button {
   color: inherit;
@@ -285,7 +284,6 @@
 }
 #command-deck #social-docks .social-trigger,
 #command-deck :is(#open-action-shortcuts,#voice-toggle),
-#session #command-deck #open-settings { display: none; }
 #command-deck #voice-host { position: absolute; right: 0; bottom: var(--hot-slot); padding: 0; border: 0; }
 #command-deck #voice-host #voice-dock { pointer-events: auto; }
 .congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }

@@ -730,15 +730,6 @@
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }
 
-#gameplay-tools {
-  position: absolute;
-  right: var(--hud-edge);
-  bottom: calc(var(--hud-edge) + 58px);
-  display: flex;
-  gap: .5rem;
-  z-index: 3;
-}
-#gameplay-tools button { display: flex; align-items: center; gap: .35rem; }
 #object-request {
   position: absolute;
   right: var(--hud-edge);

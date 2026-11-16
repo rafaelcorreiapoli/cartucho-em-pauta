@@ -8,6 +8,7 @@ import { discountedPrice } from './market-catalog';
 import { internalMailRules } from './internal-mail';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
+import { hudAppStatus, launchHudApp, type HudApp, type HudAppStatus } from './hud-apps';
 import { mountAppLauncher } from './ui/app-launcher';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
@@ -119,14 +120,17 @@ const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#r
   },
 });
 
+let startingVoice:RoomVoice|undefined;
+
 async function toggleVoice() {
   const current = voice;
-  if (!current) return;
+  if (!current || startingVoice===current) return;
   if (current.active) {
     current.toggleMute();
     settings.update({microphone:current.muted ? 'muted' : 'live'});
     return;
   }
+  startingVoice = current;
   settings.update({microphone:'starting',voiceMessage:'Ativando microfone…'});
   try {
     await current.start();
@@ -138,6 +142,8 @@ async function toggleVoice() {
     settings.update({microphone:'off',voiceMessage:!window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
       error instanceof DOMException && error.name === 'NotAllowedError' ?
         'Permita o microfone no navegador e tente novamente.' : 'Não foi possível abrir o microfone.'});
+  } finally {
+    if (startingVoice===current) startingVoice = undefined;
   }
 }
 
@@ -191,7 +197,6 @@ async function connect(join: () => Promise<Room>) {
     };
     closeDetails();
     const hudListeners = new AbortController();
-    bindActionShortcuts(session,hudListeners.signal);
     const updateFloorPlan = bindFloorPlan(session,hudListeners.signal);
     const latency = document.querySelector<HTMLElement>('#connection-latency')!;
     let latencyGeneration = 0;
@@ -332,7 +337,15 @@ async function connect(join: () => Promise<Room>) {
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();
-    const appLauncher = mountAppLauncher();
+    let appStatus:HudAppStatus = {};
+    const appCommands:Record<HudApp,()=>void> = {
+      bag:gameplay.openBag,equipment:gameplay.openEquipment,phone:gameplay.openPhone,
+      attributes:progression.open,surveillance:surveillance.open,settings:settings.open,
+      microphone:()=>void toggleVoice(),
+    };
+    const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
+    const appLauncher = mountAppLauncher(launchApp);
+    bindActionShortcuts(session,hudListeners.signal,launchApp);
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -392,7 +405,8 @@ async function connect(join: () => Promise<Room>) {
       }
       suppressXpEffect = false;
       progression.render(view);
-      appLauncher.render();
+      appStatus = hudAppStatus(view,assetsReady);
+      appLauncher.render(appStatus);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);

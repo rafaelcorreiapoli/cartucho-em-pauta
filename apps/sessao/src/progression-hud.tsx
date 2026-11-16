@@ -14,8 +14,6 @@ const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matche
 
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void) {
   const reward = element('profile-xp-reward');
-  const launch = element<HTMLButtonElement>('open-attributes');
-  const badge = element('attribute-points-badge');
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
   const attributesRoot = createRoot(attributes);
@@ -142,18 +140,17 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     renderAttributes();
     attributes.showModal();
   }
-  launch.onclick = openAttributes;
   celebration.addEventListener('close',closeCelebration);
   document.addEventListener('close',closeOtherDialog,true);
 
   return {
+    open:openAttributes,
     render(next:PlenaryView) {
       view = next;
       const progress = next.politics?.progression;
       const before = latest?.matchId===progress?.matchId && !reconnecting ? latest : undefined;
       reconnecting = false;
       latest = progress;
-      launch.hidden = !progress || next.phase==='lobby' || next.phase==='finished';
       if (next.phase!=='negotiation') {
         if (celebration.open) celebration.close('later');
         if (attributes.open) attributes.close();
@@ -164,10 +161,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         clearTimeout(requestTimer);
         requested = undefined;
       }
-      badge.hidden = !progress.available;
-      badge.textContent = String(progress.available);
-      launch.title = progress.available ? `Atributos (P) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (P)';
-      launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
       if (!before) {
         pending = undefined;
         clearTimeout(revealTimer);
@@ -225,9 +218,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       attributes.close();
       attributesRoot.unmount();
       celebrationRoot.unmount();
-      launch.hidden = true;
       reward.textContent = '';
-      launch.onclick = null;
     },
   };
 

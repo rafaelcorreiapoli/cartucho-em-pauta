@@ -2,7 +2,12 @@ async page => {
   const url = page.url();
   await page.addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
-    navigator.mediaDevices.getUserMedia = async ()=>{ throw new DOMException('QA sem microfone','NotAllowedError'); };
+    window.micAttempts = 0;
+    navigator.mediaDevices.getUserMedia = async ()=>{
+      window.micAttempts++;
+      await new Promise(resolve=>setTimeout(resolve,150));
+      throw new DOMException('QA sem microfone','NotAllowedError');
+    };
   });
   await page.goto(url);
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Atalhos QA');
@@ -27,7 +32,18 @@ async page => {
   await palette.getByText(/^1 \/ /).waitFor();
   await page.keyboard.press('Escape');
   await palette.waitFor({state:'hidden'});
-  if (await page.locator('#open-settings').isVisible()) throw Error('Botão avulso de configurações durante a partida');
+  if (await page.locator('#open-settings, #open-phone, #open-bag, #open-attributes, #open-surveillance, #open-equipment').count()) {
+    throw Error('Comandos do HUD ainda dependem de botões duplicados');
+  }
+  const gameplay = page.locator('#gameplay-dialog');
+  await page.getByRole('button',{name:'Mochila',exact:true}).click();
+  await gameplay.getByRole('heading',{name:'Inventário',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await gameplay.waitFor({state:'hidden'});
+  await page.keyboard.press('c');
+  await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await gameplay.waitFor({state:'hidden'});
   const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
   if (await launcher.getAttribute('aria-expanded')==='false') await launcher.click();
   for (const [name,key] of [['Equipamentos','E'],['Personagem','P'],['Celular','C'],['Microfone','M'],['Configurações','K']]) {
@@ -35,8 +51,12 @@ async page => {
     if (await app.getAttribute('aria-keyshortcuts')!==key) throw Error('Atalho ausente: '+name);
   }
   await page.keyboard.press('Escape');
+  await page.keyboard.press('m');
+  await page.keyboard.press('m');
   await page.keyboard.press('k');
   await settings.waitFor();
+  await settings.getByText('Permita o microfone no navegador e tente novamente.').waitFor();
+  if (await page.evaluate(()=>window.micAttempts)!==1) throw Error('O atalho iniciou duas capturas simultâneas');
   const music = settings.getByRole('slider',{name:'Música'});
   const effects = settings.getByRole('slider',{name:'Efeitos e passos'});
   await music.press('Home');

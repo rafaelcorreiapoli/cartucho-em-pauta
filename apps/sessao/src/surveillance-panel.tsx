@@ -7,8 +7,6 @@ import type { PhotoScene } from './photography';
 import { monitoredChannel, type SpyDevice, type SpyView } from './surveillance';
 
 export function createSurveillancePanel(send:(action:object)=>void) {
-  const launch = document.querySelector<HTMLButtonElement>('#open-surveillance')!;
-  const badge = launch.querySelector('span')!;
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
   const root = createRoot(dialog);
   const viewport = node('div');
@@ -100,13 +98,13 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor}/>);
   }
 
-  launch.onclick = ()=>{
-    if (dialog.open) return;
+  function open() {
+    if (dialog.open || !view) return;
     device = monitoredChannel(view)?.kind ?? (view?.channels.some(channel=>channel.kind==='spyCamera') ? 'spyCamera' : 'wiretap');
     page = 0;
     flushSync(()=>update(true));
     dialog.showModal();
-  };
+  }
   dialog.onclose = ()=>{
     stopViewport();
     key = '';
@@ -122,13 +120,10 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   };
 
   return {
+    open,
     render(next?:SpyView) {
       if (next?.selected!==view?.selected) stopViewport();
       view = next;
-      launch.hidden = !view;
-      const active = view?.channels.filter(channel=>channel.active).length ?? 0;
-      badge.hidden = !active;
-      badge.textContent = String(active);
       if (!view && dialog.open) dialog.close();
       update();
     },
@@ -140,9 +135,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     destroy() {
       root.unmount();
       stopViewport();
-      launch.onclick = dialog.onclose = dialog.onkeydown = null;
+      dialog.onclose = dialog.onkeydown = null;
       dialog.close();
-      launch.hidden = true;
     },
   };
 }
