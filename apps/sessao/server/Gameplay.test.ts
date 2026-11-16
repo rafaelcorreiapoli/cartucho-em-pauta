@@ -9,7 +9,7 @@ import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
 import { canStand, type Player } from '../src/map';
 import { photoMissions } from './photo-missions';
-import { installationSites } from '../src/installations';
+import { decorationActions, installationSites } from '../src/installations';
 
 function buyCredentialGood(game:Gameplay,player:Player,kind:'portrait'|'vip',world:GameplayWorld) {
   game.act(player,{kind:'open-shop',target:'credentialsVendor'},world);
@@ -287,12 +287,18 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     expect(canStand(approach.x,approach.y)).toBe(true);
     Object.assign(alice,approach);
     Object.assign(bob,approach);
-    expect(game.view(alice,world).installable).toContain(place);
-    expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+    const [install] = decorationActions(alice.id,game.view(alice,world));
+    expect(install.action).toEqual({kind:'install',place,item:item.id});
+    expect(game.act(alice,install.action,world)).toBe('Objeto instalado.');
     if (site.kind==='vip') expect(photoMissions.reserva.facts(events.at(-1)!)).toHaveLength(1);
     expect(game.view(bob,world).decorations).toContainEqual(expect.objectContaining({
       ...site.point, id:item.id,kind:site.kind,character:4,owner:{id:alice.id,name:alice.nick},
     }));
+    const remove = decorationActions(bob.id,game.view(bob,world)).find(option=>option.action.kind==='uninstall')!;
+    expect(remove.action).toEqual({kind:'uninstall',item:item.id});
+    expect(game.act(bob,remove.action,world)).toBe('Objeto retirado.');
+    game.act(bob,{kind:'drop',item:item.id},world);
+    expect(decorationActions(alice.id,game.view(alice,world))).toEqual([]);
   }
 });
 

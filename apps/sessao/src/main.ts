@@ -231,7 +231,7 @@ async function connect(join: () => Promise<Room>) {
       game?.pulseStation(station);
       map.focus({preventScroll:true});
     },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
-      if (action.kind!=='attack') audio.stationClick();
+      if (action.kind!=='attack' && action.kind!=='install' && action.kind!=='uninstall') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='power') { sendCommand('power-action',action.option); return; }
       if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
@@ -264,7 +264,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('consumable-purchased',gameplay.purchasedConsumable);
     joined.onMessage('interaction-cue',(cue:unknown)=>{
-      if (cue==='cash' || cue==='stamp' || cue==='lock') audio.cue(cue);
+      if (cue==='cash' || cue==='stamp' || cue==='lock' || cue==='pickup') audio.cue(cue);
     });
     joined.onMessage('food-consumed',(cue:unknown)=>{
       if (cue==='eat' || cue==='drink') audio.cue(cue);
