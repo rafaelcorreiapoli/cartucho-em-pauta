@@ -64,7 +64,7 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     const infiltrator = rooms.find(peer=>view(peer)?.role==='Infiltrado')!;
     const [first,second] = rooms.filter(peer=>peer!==infiltrator);
     const [a,b] = powerPanels;
-    const nearA = {x:a.x-49,y:a.y};
+    const nearA = {x:a.x+49,y:a.y};
     expect(view(infiltrator)?.canSabotagePower).toBe(true);
     expect(view(first)?.canSabotagePower).toBeUndefined();
 
