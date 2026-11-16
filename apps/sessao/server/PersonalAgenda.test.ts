@@ -418,7 +418,7 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
     economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
     return economy.view(visitor.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
   };
-  const install = (player:Player, place:'hall'|'coffeeVip') => {
+  const install = (player:Player, place:'hall'|'technicalVip') => {
     const {kind,point} = installationSites[place];
     expect(buyCredentialGood(game,player,kind,world)).toContain('inventário');
     const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
@@ -444,28 +444,28 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(game.act(visitor,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(completedCeremonial()).toBe(true);
   expect(economy.spend(owner.id,6)).toBe(true);
-  install(colleague,'coffeeVip');
+  install(colleague,'technicalVip');
   expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
   expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
-  Object.assign(owner,installationSites.coffeeVip.point);
-  Object.assign(colleague,installationSites.coffeeVip.point);
+  Object.assign(owner,installationSites.technicalVip.point);
+  Object.assign(colleague,installationSites.technicalVip.point);
   world.now += 5_000;
   expect(game.act(owner,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
   const completedVip = () => economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='fiscalVip');
   expect(completedVip()).toBe(false);
-  Object.assign(visitor,installationSites.coffeeVip.point);
+  Object.assign(visitor,installationSites.technicalVip.point);
   world.now += 5_000;
   expect(game.act(owner,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
   expect(completedVip()).toBe(true);
   expect(economy.transfer(colleague.id,owner.id,1,false,0)).toBe(true);
   expect(draw(true)).toContain('mandaVip');
   expect(draw(true)).not.toContain('reforma');
-  Object.assign(owner,installationSites.coffeeVip.point);
+  Object.assign(owner,installationSites.technicalVip.point);
   const vip = game.view(owner,world).interactive.find(item=>item.kind==='vip')!;
   expect(game.act(owner,{kind:'uninstall',item:vip.id},world)).toBe('Objeto retirado.');
   expect(draw(true)).toContain('mandaVip');
-  expect(game.act(owner,{kind:'install',place:'coffeeVip',item:vip.id},world)).toBe('Objeto instalado.');
+  expect(game.act(owner,{kind:'install',place:'technicalVip',item:vip.id},world)).toBe('Objeto instalado.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='mandaVip')).toBe(true);
   expect(draw(true)).not.toContain('mandaVip');
 });
@@ -1173,9 +1173,9 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   expect(draw()).toBe(false);
   expect(buyCredentialGood(game,host,'vip',world)).toContain('inventário');
   const plate = game.view(host,world).inventory.find(item=>item.kind==='vip')!;
-  const point = installationSites.coffeeVip.point;
+  const point = installationSites.technicalVip.point;
   Object.assign(host,point);
-  expect(game.act(host,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
   expect(draw()).toBe(true);
   const current = ()=>agenda.view(options).active.find(mission=>mission.kind==='reuniaoVip')?.current;
   const tick = (count:number)=>{
@@ -1193,7 +1193,7 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   expect(game.act(host,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
   tick(1);
   expect(current()).toBe(0);
-  expect(game.act(host,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
   tick(150);
   expect(current()).toBe(14900);
   tick(1);
@@ -1253,11 +1253,11 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
     spend:()=>true,earn:()=>{},publish:entry=>recordAgendaEvent(agenda,entry)};
   expect(buyCredentialGood(game,player,'vip',world)).toContain('inventário');
   const [plate] = game.view(player,world).inventory;
-  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Aproxime-se do local.');
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Aproxime-se do local.');
   expect(rewards).toEqual([]);
-  Object.assign(player,installationSites.coffeeVip.point);
-  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
-  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto indisponível.');
+  Object.assign(player,installationSites.technicalVip.point);
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto indisponível.');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'privilegioAdquirido'}));
   expect(rewards).toEqual([25]);
   agenda.progress(metrics,{cafe:1});
@@ -1265,7 +1265,7 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
   expect(draw(metrics)).toBe(true);
   expect(game.act(player,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
   world.now++;
-  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
   expect(rewards).toEqual(beforeReinstall);
 });
 

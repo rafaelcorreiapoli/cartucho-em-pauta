@@ -10,7 +10,7 @@ export const npcs = {
   vendor:{name:'Doutor Gambiarra',sprite:'doutor-gambiarra.webp',portrait:'retrato-doutor-gambiarra.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   furnitureVendor:{name:'Roberto Justus',sprite:'roberto-justus.webp',portrait:'retrato-roberto-justus.webp',x:525,y:451,direction:0,
     interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
-  credentialsVendor:{name:'Dona Célia',sprite:'dona-celia.webp',portrait:'retrato-dona-celia.webp',x:149,y:451,direction:0,
+  credentialsVendor:{name:'Carmem Carimbo',sprite:'carmem-carimbo.webp',portrait:'retrato-carmem-carimbo.webp',x:160,y:473,direction:0,
     interaction:{x:149,y:493},dialogue:'credentials',label:'Credenciamento',catalog:'credentials'},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},

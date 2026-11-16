@@ -14,6 +14,7 @@ import { flushSync } from 'react-dom';
 import { equippedWeapon, xray } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
 import { infirmary } from './medical';
+import { decorationActions } from './installations';
 import { npcs } from './npcs';
 import { button as hudButton, glyph as hudGlyph, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
@@ -141,6 +142,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (player.carrying) {
         actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
       } else {
+        if (view?.phase==='negotiation' && view.ballotCountdown===undefined && !player.knockedOut && !player.carried) {
+          for (const option of decorationActions(id,state)) {
+            actions.push({...option,icon:option.action.kind==='uninstall' ? 'inventory' : 'map'});
+          }
+        }
         for (const target of state.npcNearby ?? []) {
           actions.push({label:`Abrir loja · ${npcs[target].name}`,icon:'inventory',action:{kind:'open-shop',target}});
         }

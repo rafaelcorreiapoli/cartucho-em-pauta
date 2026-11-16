@@ -75,6 +75,10 @@ export class SessionRoom extends Room {
         if (event.type==='delivered' && event.place==='treasury') cue = 'cash';
         else if (event.type==='stamped') cue = 'stamp';
         else if (event.type==='door-breached' || event.type==='cabinet-breached') cue = 'lock';
+        else if (event.kind==='portrait' || event.kind==='vip') {
+          if (event.type==='installed') cue = 'stamp';
+          if (event.type==='uninstalled') cue = 'pickup';
+        }
         if (cue) this.clients.getById(event.actor)?.send('interaction-cue',cue);
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
