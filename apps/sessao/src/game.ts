@@ -411,8 +411,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           continue;
         }
         const art = item.kind==='portrait' ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
-          : itemSymbols[item.kind]
-            ? this.add.text(0,0,itemSymbols[item.kind]!,{fontSize:'16px',color:'#ffe08a',resolution:3}).setOrigin(.5)
+          : item.kind==='vip'
+            ? this.add.image(0,0,'installation-marker-vip').setTint(0xffdd92)
             : this.add.image(0,0,`item-${item.kind}`).setDisplaySize(26,26);
         const label = this.add.text(0,9,decorationLabel(item),{
           fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
