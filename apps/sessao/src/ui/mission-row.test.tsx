@@ -393,7 +393,7 @@ test('free coffee missions can be drawn and completed with an empty wallet',()=>
   const account = Reflect.get(economy,'accounts').get(player.id);
   expect(economy.spend(player.id,account.wallet)).toBe(true);
   Reflect.set(account.agenda,'missions',[]);
-  Reflect.set(account.agenda,'missionDeck',['cafeEstrategico','fiscalCafe','passeio','credencial','selfieSolo','visitaArquivo']);
+  Reflect.set(account.agenda,'missionDeck',['cafeEstrategico','fiscalCafe','passeio']);
   match.refreshAgendaEligibility();
   const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
   const find = (now:number,kind:Mission['kind'],done=false)=>{
@@ -403,6 +403,7 @@ test('free coffee missions can be drawn and completed with an empty wallet',()=>
   expect(view(0).wallet).toBe(0);
   expect(find(0,'cafeEstrategico')).toContain('Beba um café no Cafezinho');
   expect(find(0,'fiscalCafe')).toContain('0 / 3');
+  Reflect.set(account.agenda,'missionDeck',['credencial','selfieSolo','visitaArquivo']);
   for (let cup=0;cup<3;cup++) {
     const now = 1+cup*stationRecharge.coffee.duration;
     const world = match.gameplayWorld([player],now,()=>false);
