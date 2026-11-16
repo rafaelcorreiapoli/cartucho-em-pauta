@@ -1,5 +1,4 @@
-import {canPublishEvidence} from './ui/dossier';
-import {cassationLabel,institutionalActions} from './ui/institutional-actions';
+import {mountStationShortcuts} from './ui/station-shortcuts';
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
@@ -44,39 +43,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const {notify} = notices;
   const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
-  const shortcuts = element('station-shortcuts');
-  function addStationButton(action:{station:Station; icon:string; label:string}) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'hud-button hud-button--secondary';
-    button.dataset.station = action.station;
-    button.hidden = true;
-    const label = document.createElement('span');
-    label.textContent = action.label;
-    const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    icon.classList.add('hud-glyph');
-    icon.setAttribute('aria-hidden','true');
-    const glyph = document.createElementNS(icon.namespaceURI,'use');
-    glyph.setAttribute('href','#icon-'+action.icon);
-    icon.append(glyph);
-    button.append(icon,label);
-    shortcuts.append(button);
-    return button;
-  }
-
-  const grantAction = addStationButton({label:'Aplicar verba',station:'cabinet',icon:'wallet'});
-  grantAction.onclick = institutional.openInstitutional;
-  const hearingAction = addStationButton({label:'Pedir afastamento',station:'panel',icon:'ballot'});
-  hearingAction.onclick = institutional.openInstitutional;
-  const cassationAction = addStationButton({label:'Convocar cassação',station:'panel',icon:'ballot'});
-  cassationAction.onclick = ()=>institutional.sendInstitutional({kind:'call-cassation'});
-  const publishAction = addStationButton({label:'Divulgar evidência',station:'press',icon:'document'});
-  publishAction.onclick = institutional.openDossier;
-  const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
-    const activity = roomActivities[station];
-    const button = addStationButton({...activity,station});
-    button.onclick = () => sendActivity(station);
-    return {button,station};
+  const shortcuts = mountStationShortcuts(element('station-shortcuts'),kind=>{
+    switch (kind) {
+      case 'grant':
+      case 'hearing': institutional.openInstitutional(); return;
+      case 'cassation': institutional.sendInstitutional({kind:'call-cassation'}); return;
+      case 'publish': institutional.openDossier(); return;
+      default: sendActivity(kind);
+    }
   });
   const fieldActions = element('field-actions');
   const progressRoot = createRoot(element('office-progress-mount'));
@@ -424,18 +398,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    const institution = context==='cabinet' || context==='panel' ? institutionalActions(view,player) : {};
-    grantAction.hidden = context!=='cabinet' || !institution.grant?.affordable;
-    hearingAction.hidden = context!=='panel' || !institution.hearing?.candidates.length;
-    cassationAction.hidden = context!=='panel' || !institution.hearing?.affordable;
-    if (institution.hearing) cassationAction.querySelector('span')!.textContent = cassationLabel(institution.hearing.fee);
-    publishAction.hidden = context!=='press' || !canPublishEvidence(view,player);
-    for (const {button,station} of activityButtons) button.hidden = context!==station;
     renderNearby(player,canInteract);
     const hasLegislativeAction = legislative.render(view,context);
     const hasElectionAction = electoral.render(view,context,election.hasVoice());
-    const hasAction = hasLegislativeAction || hasElectionAction || [grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
-      .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
+    const hasShortcut = shortcuts.render(view,player,context);
+    const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
     stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
@@ -550,7 +517,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       stations.hidden = true;
       officeBadge.hidden = true;
       progressRoot.unmount();
-      shortcuts.replaceChildren();
+      shortcuts.destroy();
       more.remove();
       overflowBreak.remove();
       fieldRoot.unmount();
