@@ -171,3 +171,10 @@ test('savings shows net progress in reais and Pauta Prioritária names the deadl
   expect(savings).toContain('R$ 75 mil / R$ 100 mil');
   expect(gift).toContain('Presente Institucional antes da votação');
 });
+
+test('Segurança Parlamentar explains continuous proximity and renders server time',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'segurancaParlamentar',current:6000,target:10_000}}/>);
+  expect(markup).toContain('mesmo parlamentar');
+  expect(markup).toContain('sem atacar');
+  expect(markup).toContain('6 / 10 s');
+});

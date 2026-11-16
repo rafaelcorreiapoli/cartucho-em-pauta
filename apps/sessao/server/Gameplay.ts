@@ -44,7 +44,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; concealedCash:boolean}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; concealedCash:boolean; securityPeer?:string}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -497,6 +497,12 @@ export class Gameplay {
     if (item) this.modulator.deactivate(item.id);
   }
 
+  private securityPeer(player:Player,world:GameplayWorld,previous?:string) {
+    const nearby = world.players.filter(other=>other.id!==player.id && !other.knockedOut && !other.carried &&
+      world.present?.(other.id)!==false && world.hasMandate?.(other.id)!==false && canReachObject(player,other));
+    return nearby.find(other=>other.id===previous)?.id ?? nearby[0]?.id;
+  }
+
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
     for (const player of world.players) {
       const room = roomAt(player);
@@ -504,7 +510,17 @@ export class Gameplay {
       const active = exploring && world.present?.(player.id)!==false && !player.knockedOut && !player.carried;
       const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
         (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
-      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,concealedCash});
+      const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
+        world.hasMission?.(player.id,'segurancaParlamentar') ? this.securityPeer(player,world,previous?.securityPeer) : undefined;
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,concealedCash,securityPeer});
+      if (previous?.securityPeer) {
+        if (previous.securityPeer!==securityPeer) {
+          publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+        } else {
+          const duration = Math.min(100,world.now-previous.at);
+          if (duration>0) publishGameplay(world,player,'security-watch-time',{target:securityPeer,duration,witnesses:[]});
+        }
+      }
       if (!active || !previous) continue;
       if (concealedCash && previous.concealedCash && (previous.x!==player.x || previous.y!==player.y)) {
         const duration = Math.min(100,world.now-previous.at);
@@ -542,6 +558,9 @@ export class Gameplay {
     this.scanning.delete(player.id);
     this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
+    if (this.roomSamples.get(player.id)?.securityPeer) {
+      publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+    }
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
     this.album.leave(player.id,permanent);
@@ -1266,7 +1285,13 @@ export class Gameplay {
     if (action.kind==='attack') {
       const weapon = equippedWeapon(this.equipped(id).map(item=>item.data));
       if (!weapon) return 'Equipe uma arma.';
-      return this.combat.attack(player,world.now,weapon);
+      const result = this.combat.attack(player,world.now,weapon);
+      const sample = this.roomSamples.get(id);
+      if (!result && sample?.securityPeer) {
+        sample.securityPeer = undefined;
+        publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+      }
+      return result;
     }
     if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
     if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {

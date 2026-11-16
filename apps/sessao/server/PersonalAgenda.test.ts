@@ -1096,3 +1096,50 @@ test('Pauta Prioritária uses the phase when the recipient accepts the gift',()=
   expect(accept(offer())).toBe('Objeto recebido.');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'pautaPrioritaria',current:1}));
 });
+
+test('Segurança Parlamentar requires an uninterrupted watch next to the same parliamentarian',()=>{
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11}));
+  const [guard,first,second] = players;
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['segurancaParlamentar','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,3,true,3,0,players.slice(1).map(({id,nick:name})=>({id,name})));
+  const game = new Gameplay();
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},spend:()=>true,
+    hasMission:(id,kind)=>id===guard.id && agenda.hasActive(kind),publish:event=>recordAgendaEvent(agenda,event)};
+  const progress = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='segurancaParlamentar')?.current;
+  const tick = (count:number)=>{
+    for (let i=0;i<count;i++) {
+      world.now += 100;
+      game.tick(world,true);
+    }
+  };
+  game.act(guard,{kind:'talk',target:'vendor'},world);
+  game.act(guard,{kind:'dialogue-choice',target:'products',token:game.view(guard,world).dialogue?.token},world);
+  game.act(guard,{kind:'shop-buy',target:'baton',token:game.view(guard,world).dialogue?.token},world);
+  const baton = game.view(guard,world).inventory.find(item=>item.kind==='baton')!;
+  Object.assign(guard,{x:140,y:146});
+  Object.assign(first,{x:148,y:146});
+  Object.assign(second,{x:400,y:400});
+  tick(5);
+  expect(progress()).toBe(0);
+  game.act(guard,{kind:'equip',item:baton.id},world);
+  tick(21);
+  expect(progress()).toBe(2000);
+  Object.assign(first,{x:400,y:400});
+  Object.assign(second,{x:148,y:146});
+  tick(1);
+  expect(progress()).toBe(0);
+  tick(20);
+  expect(progress()).toBe(2000);
+  expect(game.act(guard,{kind:'attack'},world)).toBeUndefined();
+  expect(progress()).toBe(0);
+  tick(25);
+  expect(progress()).toBeGreaterThan(0);
+  game.leave(guard,world,false);
+  expect(progress()).toBe(0);
+  tick(100);
+  expect(progress()).toBe(9900);
+  tick(1);
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'segurancaParlamentar',current:10_000}));
+});
