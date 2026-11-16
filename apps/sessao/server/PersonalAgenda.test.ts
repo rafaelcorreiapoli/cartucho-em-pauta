@@ -897,6 +897,18 @@ test('calls need ten seconds on each of two distinct lines after the mission sta
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'chamadasUrgentes',current:2}));
 });
 
+test('urgent calls are replaced if too few distinct contacts remain to finish',()=>{
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','credencial','passeio']);
+  const contacts = [{id:'b',name:'B'},{id:'c',name:'C'}];
+  agenda.updateEligibility(metrics,3,true,3,0,contacts);
+  expect(agenda.hasActive('chamadasUrgentes')).toBe(true);
+  agenda.updateEligibility(metrics,2,true,3,0,contacts.slice(0,1));
+  expect(agenda.hasActive('chamadasUrgentes')).toBe(false);
+  expect(agenda.view(metrics).active).toHaveLength(3);
+});
+
 test.each([
   ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b'}),event('called',{target:'b'})],
