@@ -7,6 +7,7 @@ import { PhoneCalls } from './ui/phone-call';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
+import type { ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
@@ -61,30 +62,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const headerRoot = createRoot(dialog.querySelector('header')!);
   const navigation = element('phone-apps');
   const navigationRoot = createRoot(navigation);
-  const callHost = document.createElement('div');
-  callHost.className = 'phone-app-content';
-  const callRoot = createRoot(callHost);
-  const cameraHost = document.createElement('div');
-  cameraHost.className = 'phone-app-content';
-  const cameraRoot = createRoot(cameraHost);
-  const albumHost = document.createElement('div');
-  albumHost.className = 'phone-app-content';
-  const albumRoot = createRoot(albumHost);
-  const pixHost = document.createElement('div');
-  pixHost.className = 'phone-app-content';
-  const pixRoot = createRoot(pixHost);
+  const bodyRoot = createRoot(body);
   const mailHost = element('phone-mail');
-  const target = element<HTMLSelectElement>('gameplay-target');
 
   const tools = element('gameplay-tools');
   const equipmentButton = element<HTMLButtonElement>('open-equipment');
   const phoneButton = element<HTMLButtonElement>('open-phone');
   const slots = element('item-slots');
   const slotsRoot = createRoot(slots);
-  const equipmentHost = document.createElement('div');
-  const equipmentRoot = createRoot(equipmentHost);
-  const objectsHost = document.createElement('div');
-  const objectsRoot = createRoot(objectsHost);
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
   const nearbyItems = element('nearby-items');
@@ -105,15 +90,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let bagOpen = false;
   const bagFilters = ['Todos','Equipamentos','Consumíveis'] as const;
   let bagFilter:typeof bagFilters[number] = 'Todos';
-  const snakeHost = document.createElement('div');
-  snakeHost.className = 'phone-app-content';
-  const snakeRoot = createRoot(snakeHost);
   let snakeBoard:HTMLCanvasElement|null = null;
   const setSnakeBoard = (board:HTMLCanvasElement|null) => { snakeBoard = board; };
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
   let renderKey = '';
-  let targetKey = '';
+  let recipient = '';
   let quantity = 1;
 
   function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false) {
@@ -143,8 +125,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
           {!!cash && <p>{money(cash)}</p>}
         </details>
-        {isBag && !!previous?.gameplay?.contacts.length && <label className="bag-recipient">Jogador
-          <select value={target.value} onChange={event=>{target.value = event.currentTarget.value; renderKey = ''; render();}}>
+        {chooseQuantity && !!previous?.gameplay?.contacts.length && <label className={isBag ? 'bag-recipient' : 'object-recipient'}>Jogador
+          <select value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
             <option value="">Escolha…</option>
             {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
           </select>
@@ -220,7 +202,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   function selectApp(next?:PhoneApp) {
     if (app==='Joguinhos' && next!=='Joguinhos') {
       send({kind:'game-stop'});
-      snakeRoot.render(null);
     }
     photos.closePresentation();
     if (next==='Correio' && app!=='Correio') resetMail();
@@ -248,14 +229,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
-    const key = JSON.stringify(contacts);
-    if (!phone && key!==targetKey) {
-      targetKey = key;
-      const selected = target.value;
-      target.replaceChildren(new Option('Escolha…',''),...contacts.map(person=>new Option(person.name,person.id)));
-      if (contacts.some(person=>person.id===selected)) target.value = selected;
-    }
-    element('gameplay-target-label').hidden = bagOpen || selection?.source!=='inventory' || !contacts.length;
+    if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
     if (phone && !navigationMounted) {
       navigationMounted = true;
@@ -269,15 +243,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       [state.game?.status,state.game?.score];
     if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
-    const nextKey = JSON.stringify([selection,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
+    const nextKey = JSON.stringify([selection,recipient,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
-    const focused = body.contains(document.activeElement);
-    if (!phone || app!=='Câmera') cameraRoot.render(null);
-    const cards:HTMLElement[] = [];
+    const previouslyFocused = document.activeElement;
+    const focused = body.contains(previouslyFocused);
+    let content:ReactNode;
     if (stash) {
-      flushSync(()=>objectsRoot.render(<OfficeStash stash={stash} inventory={state.inventory} send={send}/>));
-      cards.push(objectsHost);
+      content = <OfficeStash stash={stash} inventory={state.inventory} send={send}/>;
     }
     function renderBag(detail?:ReturnType<typeof objectCard>) {
       const inventory = state!.inventory;
@@ -337,12 +310,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       </div>;
     }
     if (bagOpen && !item) {
-      flushSync(()=>objectsRoot.render(renderBag()));
-      cards.push(objectsHost);
+      content = renderBag();
     }
     if (equipmentOpen) {
       const equipped = state.equipped ?? [];
-      flushSync(()=>equipmentRoot.render(equipped.length ? <ul className="equipment-list">
+      content = equipped.length ? <ul className="equipment-list">
         {equipped.map(gear=><li key={gear.id}>
           <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[gear.kind].portrait} alt="" draggable={false}/>
           <strong>{itemName(gear)}</strong>
@@ -357,8 +329,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                 onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? 'Desligar modulador' : 'Ligar modulador'}</button>}
           </>}
         </li>)}
-      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>));
-      cards.push(equipmentHost);
+      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>;
     }
 
     if (item) {
@@ -366,7 +337,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const act = (label:string,kind:GameplayAction['kind'],place?:string,key?:string) => {
         const transferQuantity = (kind==='offer' || kind==='drop') && itemQuantity(item)>1
           ? {quantity:selectedItemQuantity(item,quantity)} : {};
-        actions.push({label,key,run:()=>send({kind,item:item.id,target:target.value,place,...transferQuantity})});
+        actions.push({label,key,run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
@@ -402,44 +373,30 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
       }
       const detail = objectCard(item,actions,selection?.source==='inventory');
-      flushSync(()=>objectsRoot.render(bagOpen ? renderBag(detail) : detail));
-      cards.push(objectsHost);
+      content = bagOpen ? renderBag(detail) : detail;
     }
     if (decoration) {
-      flushSync(()=>objectsRoot.render(<DecorationCard decoration={decoration} ownId={ownId}
-        exploring={phase==='negotiation'} send={send}/>));
-      cards.push(objectsHost);
+      content = <DecorationCard decoration={decoration} ownId={ownId}
+        exploring={phase==='negotiation'} send={send}/>;
     }
-    if (phone) {
-      if (app==='Telefone') {
-        flushSync(()=>callRoot.render(<PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
-          available={phase==='negotiation'} send={send}/>));
-        cards.push(callHost);
-      }
-      if (app==='Joguinhos') {
-        flushSync(()=>snakeRoot.render(<PhoneSnake game={state.game} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>));
-        if (state.game && snakeBoard) paintSnake(snakeBoard,state.game);
-        cards.push(snakeHost);
-      }
-      if (app==='Câmera') {
-        flushSync(()=>cameraRoot.render(<PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count} available={phase==='negotiation'}
-          preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>));
-        cards.push(cameraHost);
-      }
-      if (app==='Correio') cards.push(mailHost);
-      if (app==='Pix' && view.politics) {
-        flushSync(()=>pixRoot.render(<PhonePix ownId={ownId} politics={view.politics!} send={sendPolitics}/>));
-        cards.push(pixHost);
-      }
-      if (app==='Álbum') {
-        flushSync(()=>albumRoot.render(photos.renderAlbum(contacts,directory,
-          state.locations.includes('press') && phase==='negotiation')));
-        cards.push(albumHost);
-      }
+    const showMail = phone && app==='Correio';
+    if (phone && app && !showMail) {
+      let application:ReactNode;
+      if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
+        available={phase==='negotiation'} send={send}/>;
+      if (app==='Joguinhos') application = <PhoneSnake game={state.game} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>;
+      if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
+        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>;
+      if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics}/>;
+      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
+      if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
-    body.hidden = phone && !app;
-    body.replaceChildren(...(cards.length ? cards : [node('p',phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.')]));
-    if (focused) body.querySelector<HTMLButtonElement>('button')?.focus();
+    mailHost.hidden = !showMail;
+    body.hidden = showMail || phone && !app;
+    flushSync(()=>bodyRoot.render(body.hidden ? null :
+      content ?? <p>{phone ? 'Nenhuma informação disponível.' : 'Nenhum objeto disponível.'}</p>));
+    if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
+    if (focused && !body.contains(previouslyFocused)) body.querySelector<HTMLButtonElement>('button')?.focus();
   }
 
   function itemButton(kind:ObjectKind, name:string, verb:string, action:()=>void) {
@@ -492,7 +449,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const onSlotKey = (event:KeyboardEvent) => {
     if (dialog.open && selection?.source==='inventory' && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
         !event.metaKey && !hudConsumesKeys(event.target) && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
-      const control = objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      const control = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
       if (control) {
         event.preventDefault();
         control.click();
@@ -502,13 +459,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (dialog.open && stashOpen && !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
         !event.metaKey && !hudConsumesKeys(event.target) && /^Digit[1-6]$/.test(event.code)) {
       const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
-      objectsHost.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
+      body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
       event.preventDefault();
       return;
     }
     if (dialog.open && bagOpen && event.shiftKey && /^Digit[1-6]$/.test(event.code) &&
         !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      const buttons = objectsHost.querySelectorAll<HTMLButtonElement>('.bag-preview-slots button');
+      const buttons = body.querySelectorAll<HTMLButtonElement>('.bag-preview-slots button');
       event.preventDefault();
       buttons[Number(event.code.at(-1))-1]?.click();
       return;
@@ -554,7 +511,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   element('open-bag').onclick = () => open(undefined,undefined,false,false,true);
   equipmentButton.onclick = () => open(undefined,undefined,true);
   const closed = () => {
-    cameraRoot.render(null);
+    bodyRoot.render(null);
+    mailHost.hidden = true;
     renderKey = '';
     selection = undefined;
     assigningSlot = undefined;
@@ -689,15 +647,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       delete element('object-request').dataset.request;
       headerRoot.unmount();
       navigationRoot.unmount();
-      callRoot.unmount();
-      cameraRoot.unmount();
-      albumRoot.unmount();
-      pixRoot.unmount();
-      snakeRoot.unmount();
+      bodyRoot.unmount();
+      mailHost.hidden = true;
       slots.hidden = nearbyButton.hidden = true;
       slotsRoot.unmount();
-      equipmentRoot.unmount();
-      objectsRoot.unmount();
       requestRoot.unmount();
       nearbyItems.replaceChildren();
       setNearbyExpanded(false);

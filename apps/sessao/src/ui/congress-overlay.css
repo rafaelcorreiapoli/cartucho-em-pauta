@@ -648,7 +648,6 @@
   overflow: hidden;
 }
 #gameplay-dialog[data-mode="bag"][open] { display: grid; grid-template-rows: auto minmax(0,1fr); gap: 14px; }
-#gameplay-dialog[data-mode="bag"] #gameplay-target-label { display: none; }
 #gameplay-dialog[data-mode="bag"] h2 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 27px; }
 #gameplay-dialog[data-mode="bag"] .bag-title-icon { width: 30px; height: 30px; color: #efd38c; }
 #gameplay-dialog[data-mode="bag"] #gameplay-body { display: grid; min-height: 0; margin: 0; align-items: stretch; }
