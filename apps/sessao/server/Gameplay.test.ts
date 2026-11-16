@@ -326,6 +326,14 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(game.hasKnownForeignSpy(watcher.id)).toBe(true);
   expect(game.hasKnownForeignSpy(bob.id)).toBe(false);
   expect(events).toContainEqual(expect.objectContaining({type:'spy-discovered',actor:watcher.id,item:channel.id,witnesses:[]}));
+  game.spyAction(watcher,{kind:'keep',site:'coffee'},world);
+  expect(game.hasKnownForeignSpy(watcher.id)).toBe(false);
+  game.leave(watcher,world,false);
+  game.spyAction(watcher,{kind:'inspect',site:'coffee',item:detector.id},world);
+  world.now += 3000;
+  game.tick(world,true);
+  expect(game.hasKnownForeignSpy(watcher.id)).toBe(true);
+  expect(events.filter(event=>event.type==='spy-discovered' && event.actor===watcher.id)).toHaveLength(1);
   expect(game.spyView(watcher,world).channels).toEqual([]);
   expect(game.spyFrame(alice,world)).toBeDefined();
   game.spyAction(watcher,{kind:'remove',site:'coffee'},world);
@@ -340,6 +348,11 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   world.now += 5000;
   game.tick(world,true);
   const audio = game.spyView(bob,world).channels[0];
+  game.spyAction(watcher,{kind:'inspect',site:'coffee',item:detector.id},world);
+  world.now += 3000;
+  game.tick(world,true);
+  expect(events.filter(event=>event.type==='spy-discovered' && event.actor===watcher.id).map(event=>event.item))
+    .toEqual([channel.id,audio.id]);
   game.spySound(watcher.id,world.now);
   world.now += 250;
   game.tick(world,true);

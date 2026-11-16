@@ -2,7 +2,7 @@ import { canReachObject, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player, type Rect } from '../src/map';
 import { cameraSees, hideouts, spyRules, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
 
-type Device = SpyChannel & {owner:string; site:Hideout; until:number; alertAt:number; installedAt:number};
+type Device = SpyChannel & {owner:string; discoveredBy:Set<string>; site:Hideout; until:number; alertAt:number; installedAt:number};
 type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:number; target?:number; x:number;y:number; ends:number};
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>boolean;
@@ -206,7 +206,7 @@ export class Surveillance {
           access.consume(id,item.id)) {
         const channel = ++this.serial;
         const name = `${item.kind==='wiretap' ? 'Grampo' : 'Câmera'} ${channel}`;
-        const installed:Device = {id:channel,kind:item.kind,name,room:job.site.room,site:job.site,owner:id,
+        const installed:Device = {id:channel,kind:item.kind,name,room:job.site.room,site:job.site,owner:id,discoveredBy:new Set(),
           active:false,removed:false,alerts:true,until:now,alertAt:now,installedAt:now};
         this.devices.set(channel,installed);
         this.occupied.set(job.site.id,installed);
@@ -221,9 +221,11 @@ export class Surveillance {
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
-        const firstDiscovery = known.get(job.site.id)!==device.id && device.owner!==id;
         known.set(job.site.id,device.id);
-        if (firstDiscovery) access.event?.(player,'spy-discovered',job.site.id,device);
+        if (device.owner!==id && !device.discoveredBy.has(id)) {
+          device.discoveredBy.add(id);
+          access.event?.(player,'spy-discovered',job.site.id,device);
+        }
       }
       access.feedback(id,device ? device.kind==='wiretap' ? 'Grampo encontrado.' : 'Câmera escondida encontrada.' : 'Nenhum dispositivo encontrado.');
     } else if (device && device.id===job.target && this.known(id,device)) {

@@ -316,14 +316,14 @@ test('cleanup requires a private discovery, works without the detector and expir
   const game = new Gameplay();
   game.reset(0,()=>.9,players);
   const economy = Reflect.get(match,'economy');
-  const resetDeck = (id:string)=>{
+  const resetDeck = (id:string,kind:'limpeza'|'varredura'='limpeza')=>{
     const account = Reflect.get(economy,'accounts').get(id);
     Object.assign(account,{
       owns:(kind:Parameters<Gameplay['owns']>[1])=>game.owns(id,kind),
       hasKnownForeignSpy:()=>game.hasKnownForeignSpy(id),
     });
     Reflect.set(account.agenda,'missions',[]);
-    Reflect.set(account.agenda,'missionDeck',['limpeza','cafe','passeio','selfieSolo']);
+    Reflect.set(account.agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
   };
   for (const {id} of players) resetDeck(id);
   match.refreshAgendaEligibility();
@@ -356,8 +356,25 @@ test('cleanup requires a private discovery, works without the detector and expir
   match.refreshAgendaEligibility();
   for (const player of players) expect(markup(player,installed)).not.toContain(title);
   game.spyAction(detective,{kind:'inspect',site:'coffee',item:detector.id},at(installed));
-  const discovered = installed+spyRules.inspect;
+  resetDeck(detective.id,'varredura');
+  match.refreshAgendaEligibility();
+  const firstDiscovery = installed+spyRules.inspect;
+  game.tick(at(firstDiscovery),true);
+  const first = missions(detective,firstDiscovery).completed.find(mission=>mission.kind==='varredura')!;
+  expect(renderToStaticMarkup(<MissionRow mission={first} done/>)).toContain('data-done="true"');
+  const xp = match.view(detective.id,ids,firstDiscovery).politics!.progression.xp;
+  resetDeck(detective.id,'varredura');
+  const detectiveAgenda = Reflect.get(economy,'accounts').get(detective.id).agenda;
+  Reflect.set(detectiveAgenda,'missionDeck',['varredura','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  game.spyAction(detective,{kind:'keep',site:'coffee'},at(firstDiscovery));
+  game.spyAction(detective,{kind:'inspect',site:'coffee',item:detector.id},at(firstDiscovery));
+  const discovered = firstDiscovery+spyRules.inspect;
   game.tick(at(discovered),true);
+  expect(match.view(detective.id,ids,discovered).politics!.progression.xp).toBe(xp);
+  const scan = missions(detective,discovered).active.find(mission=>mission.kind==='varredura')!;
+  expect(scan.current).toBe(0);
+  expect(renderToStaticMarkup(<MissionRow mission={scan}/>)).not.toContain('data-done="true"');
   game.act(detective,{kind:'drop',item:detector.id},at(discovered));
   expect(game.owns(detective.id,'bugDetector')).toBe(false);
   expect(economy.spend(detective.id,match.view(detective.id,ids,discovered).politics!.wallet)).toBe(true);
