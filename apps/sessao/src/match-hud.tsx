@@ -1,9 +1,8 @@
 import {contextActionKeys} from './ui/context-action-keys';
 import {mountStationShortcuts} from './ui/station-shortcuts';
-import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
+import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
 import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
-import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountElectionStationActions } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
@@ -12,11 +11,11 @@ import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { equippedWeapon, equipmentSlots, xray } from './equipment';
+import { equippedWeapon, xray } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
 import { infirmary } from './medical';
 import { npcs } from './npcs';
-import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
+import { button as hudButton, glyph as hudGlyph, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
 import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { setCharacterPortrait } from './character-art';
@@ -57,46 +56,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const progressRoot = createRoot(element('office-progress-mount'));
   let progressKey = '';
   const officeBadge = element('own-office');
-  const gearStrip = element('equipped-gear');
-  const gearSlots = [
-    {label:'Mãos',icon:Hand},
-    {label:'Tronco',icon:Shirt},
-    {label:'Pés',icon:Footprints},
-    {label:'Acessório 1',icon:Cpu},
-    {label:'Acessório 2',icon:Cpu},
-  ].map(({label,icon})=>{
-    const slot = node('div');
-    slot.className = 'gear-slot';
-    slot.setAttribute('role','listitem');
-    slot.title = label;
-    const empty = node('span');
-    empty.className = 'gear-slot-empty';
-    empty.setAttribute('aria-label',label+' · vazio');
-    empty.append(createIcon(icon,{class:'hud-glyph','aria-hidden':'true'}));
-    slot.append(empty);
-    gearStrip.append(slot);
-    return {slot,empty};
-  });
-  const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
-  const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
-  const concealmentTimer = node('span');
-  concealmentTimer.className = 'equipped-gear-tile';
-  concealmentTimer.setAttribute('role','listitem');
-  const concealmentLabel = node('span');
-  concealmentLabel.className = 'equipped-gear-timer';
-  const concealmentFooter = node('span');
-  concealmentFooter.className = 'equipped-gear-footer';
-  concealmentFooter.append(concealmentLabel);
-  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
-  const equipmentControls = {
-    xray:{key:'X',action:'scan-xray'},
-    binoculars:{key:'B',action:'use-binoculars'},
-    megaphone:{key:'H',action:'toggle-megaphone'},
-    voiceModulator:{key:'U',action:'toggle-modulator'},
-  } as const;
-  const weaponControl = {key:'Space',action:'attack'} as const;
-  type EquipmentControl = typeof equipmentControls[keyof typeof equipmentControls] | typeof weaponControl;
-  function useEquipped(kind:EquipmentControl['action']) {
+  const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
+  function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
     const voting = previous?.phase==='ballot' || !!previous?.cassation;
     if ((previous?.phase!=='negotiation' && !(voting && (kind==='attack' || kind==='toggle-modulator'))) || !own || own.knockedOut || own.carrying || own.carried) return false;
@@ -104,75 +65,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         !equipped?.some(item=>equipmentControls[item.kind as keyof typeof equipmentControls]?.action===kind)) return false;
     sendField({kind});
     return true;
-  }
-
-  function renderEquipped(state?:GameplayView) {
-    const equipped = state?.equipped ?? [];
-    for (const [id,{tile}] of gearTiles) {
-      if (equipped.some(item=>item.id===id)) continue;
-      tile.remove();
-      gearTiles.delete(id);
-    }
-    for (const item of equipped) {
-      const name = objects[item.kind].name;
-      let entry = gearTiles.get(item.id);
-      if (!entry) {
-        const control:EquipmentControl|undefined = equippedWeapon([item]) ? weaponControl : equipmentControls[item.kind as keyof typeof equipmentControls];
-        const shortcut = control?.key;
-        const tile = control ? hudButton('',()=>useEquipped(control.action)) : node('span');
-        tile.className = 'equipped-gear-tile';
-        const footer = node('span');
-        footer.className = 'equipped-gear-footer';
-        const hint = shortcut ?? (item.kind==='runningShoes' ? 'Shift' : undefined);
-        if (hint) {
-          tile.setAttribute('aria-keyshortcuts',hint);
-          const badge = node('kbd',hint==='Space' ? 'Espaço' : hint.toUpperCase());
-          badge.className = 'equipped-gear-key';
-          badge.setAttribute('aria-hidden','true');
-          footer.append(badge);
-        }
-        if (!shortcut) tile.setAttribute('role','listitem');
-        tile.dataset.kind = item.kind;
-        const timer = node('span');
-        timer.className = 'equipped-gear-timer';
-        timer.setAttribute('aria-hidden','true');
-        footer.prepend(timer);
-        tile.append(itemPortrait(item.kind),footer);
-        entry = {tile,timer};
-        gearTiles.set(item.id,entry);
-      }
-      const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
-      const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const active = item.kind==='binoculars' ? state?.binocularSeconds : item.kind==='megaphone' ? state?.megaphoneSeconds : undefined;
-      const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
-      const modulating = item.kind==='voiceModulator' && !!state?.modulator?.active;
-      const weapon = equippedWeapon([item]);
-      const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
-      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
-      if (entry.tile.title===tooltip) continue;
-      entry.tile.dataset.active = String(modulating || !!active || item.kind==='xray' && !!state?.xrayVision);
-      entry.timer.textContent = time;
-      entry.timer.hidden = !time;
-      entry.tile.title = tooltip;
-      entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
-      if (item.kind==='voiceModulator') entry.tile.setAttribute('aria-pressed',String(modulating));
-      if (item.kind==='xray' || item.kind==='megaphone') {
-        entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
-      }
-    }
-    equipmentSlots(equipped).forEach((item,index)=>{
-      const {slot,empty} = gearSlots[index];
-      const tile = item && gearTiles.get(item.id)?.tile;
-      empty.hidden = !!tile;
-      if (tile && tile.parentElement!==slot) slot.prepend(tile);
-    });
-    const remaining = state?.concealmentSeconds;
-    if (remaining) {
-      concealmentLabel.textContent = `${remaining} s`;
-      concealmentTimer.title = `Dinheiro oculto · ${remaining} s`;
-      if (!concealmentTimer.isConnected) gearStrip.append(concealmentTimer);
-    } else concealmentTimer.remove();
-    gearStrip.hidden = !state;
   }
 
   const fieldRoot = createRoot(fieldActions);
@@ -473,7 +365,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
 
       }
-      renderEquipped(view.gameplay);
+      gear.render(view.gameplay);
 
       previous = view;
       actions(view);
@@ -489,8 +381,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions();
     },
     destroy() {
-      renderEquipped();
-      gearSlots.forEach(({slot})=>slot.remove());
+      gear.destroy();
       notices.destroy();
       legislativeBrief.destroy();
       legislative.destroy();

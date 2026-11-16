@@ -1,0 +1,113 @@
+import {createRoot} from 'react-dom/client';
+import {Hand,Shirt,Footprints,Cpu} from 'lucide';
+import {equippedWeapon,equipmentSlots,xray} from '../equipment';
+import {objects,type GameplayView,type ObjectKind} from '../gameplay';
+import {weapons} from '../weapons';
+
+export const equipmentControls = {
+  xray:{key:'X',action:'scan-xray'},
+  binoculars:{key:'B',action:'use-binoculars'},
+  megaphone:{key:'H',action:'toggle-megaphone'},
+  voiceModulator:{key:'U',action:'toggle-modulator'},
+} as const;
+export const weaponControl = {key:'Space',action:'attack'} as const;
+type EquipmentControl = typeof equipmentControls[keyof typeof equipmentControls] | typeof weaponControl;
+export type EquipmentAction = EquipmentControl['action'];
+
+const slots = [
+  {label:'Mãos',icon:Hand},
+  {label:'Tronco',icon:Shirt},
+  {label:'Pés',icon:Footprints},
+  {label:'Acessório 1',icon:Cpu},
+  {label:'Acessório 2',icon:Cpu},
+] as const;
+const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
+
+export function equippedGearState(state?:GameplayView) {
+  if (!state) return;
+  return {
+    slots:equipmentSlots(state.equipped ?? []).map(item=>{
+      if (!item) return;
+      const weapon = equippedWeapon([item]);
+      const control = weapon ? weaponControl : equipmentControls[item.kind as keyof typeof equipmentControls];
+      const seconds = state.equipmentCooldowns?.[item.id] ?? 0;
+      const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
+      const activeSeconds = item.kind==='binoculars' ? state.binocularSeconds : item.kind==='megaphone' ? state.megaphoneSeconds : undefined;
+      const scan = item.kind==='xray' ? state.xrayVision : undefined;
+      const scanning = !!scan;
+      const modulating = item.kind==='voiceModulator' && !!state.modulator?.active;
+      const active = !!activeSeconds || scanning || modulating;
+      const time = activeSeconds ? `${activeSeconds} s` : scan ? `${scan.remaining}s · ${charges}` :
+        charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
+      const name = objects[item.kind].name;
+      const label = activeSeconds ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` :
+        charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
+      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` :
+        item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
+      const toggle = item.kind==='xray' || item.kind==='megaphone' || item.kind==='voiceModulator';
+      return {
+        kind:item.kind, control, active, time, tooltip, pressed:toggle ? active : undefined,
+        label:item.kind==='xray' ? `${scanning ? 'Desativar' : 'Ativar'} ${label}` : label,
+        hint:control?.key ?? (item.kind==='runningShoes' ? 'Shift' : undefined),
+      };
+    }),
+    concealment:state.concealmentSeconds,
+  };
+}
+
+function GearPortrait({kind}:{kind:ObjectKind}) {
+  return <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[kind].portrait} alt="" draggable={false}/>;
+}
+
+type GearState = NonNullable<ReturnType<typeof equippedGearState>>;
+
+function EquippedTile({item,activate}:{item:NonNullable<GearState['slots'][number]>;activate:(action:EquipmentAction)=>void}) {
+  const action = item.control?.action;
+  const Tile = action ? 'button' : 'span';
+  return <Tile className="equipped-gear-tile" type={action ? 'button' : undefined}
+    data-kind={item.kind} data-active={String(item.active)} title={item.tooltip} aria-label={item.label}
+    aria-pressed={item.pressed} aria-keyshortcuts={item.hint}
+    onClick={action ? ()=>activate(action) : undefined}>
+    <GearPortrait kind={item.kind}/>
+    <span className="equipped-gear-footer">
+      <span className="equipped-gear-timer" aria-hidden="true" hidden={!item.time}>{item.time}</span>
+      {item.hint ? <kbd className="equipped-gear-key" aria-hidden="true">{item.hint==='Space' ? 'Espaço' : item.hint.toUpperCase()}</kbd> : null}
+    </span>
+  </Tile>;
+}
+
+export function EquippedGear({state,activate}:{state:GearState;activate:(action:EquipmentAction)=>void}) {
+  return <>
+    {slots.map(({label,icon},index)=>{
+      const item = state.slots[index];
+      return <div key={label} className="gear-slot" role="listitem" title={label}>
+        {item ? <EquippedTile item={item} activate={activate}/> : <span className="gear-slot-empty" aria-label={label+' · vazio'}>
+          <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">{icon.map(([tag,attrs],i)=>{
+            const Tag = tag as 'path'|'rect'|'line'|'circle';
+            return <Tag key={i} {...attrs}/>;
+          })}</svg>
+        </span>}
+      </div>;
+    })}
+    {state.concealment ? <span className="equipped-gear-tile" role="listitem" title={`Dinheiro oculto · ${state.concealment} s`}>
+      <GearPortrait kind="mensalUnderwear"/>
+      <span className="equipped-gear-footer"><span className="equipped-gear-timer">{state.concealment} s</span></span>
+    </span> : null}
+  </>;
+}
+
+export function mountEquippedGear(element:HTMLElement,activate:(action:EquipmentAction)=>void) {
+  const root = createRoot(element);
+  let current: string|undefined;
+  return {
+    render(view?:GameplayView) {
+      const state = equippedGearState(view);
+      const key = JSON.stringify(state);
+      element.hidden = !state;
+      if (key===current) return;
+      current = key;
+      root.render(state ? <EquippedGear state={state} activate={activate}/> : null);
+    },
+    destroy:()=>{element.hidden = true; root.unmount();},
+  };
+}
