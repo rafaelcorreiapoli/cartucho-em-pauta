@@ -808,3 +808,23 @@ test('Plantão de Emergência credits extinguishing from inside the affected roo
     expect(match.actOnFire(player,'extinguish',site,now+1,true)).toBeUndefined();
   }
 });
+
+test('Plantão de Emergência cannot be claimed after the fire has expired',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(honest.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['plantaoEmergencia','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const now = fireRules.firstAfter/2;
+  const point = fireSites[0];
+  match.advance(now);
+  expect(match.actOnFire({...traitor,...point},'ignite',0,now)).toBe('Incêndio provocado.');
+  const expired = now+fireRules.duration;
+  match.advance(expired);
+  expect(match.actOnFire({...honest,...point},'extinguish',0,expired,true)).toBeUndefined();
+  const view = match.view(honest.id,ids,expired);
+  expect(view.fire).toBeUndefined();
+  expect(view.politics!.missions.active).toContainEqual(expect.objectContaining({kind:'plantaoEmergencia',current:0}));
+});
