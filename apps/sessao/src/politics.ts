@@ -119,6 +119,7 @@ export const agendas = {
   reuniaoGabinete:'Passe 15 segundos no mesmo gabinete que outro jogador',
   reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
   tresSelfies:'Tire selfies em três salas públicas diferentes',
+  plantaoEmergencia:'Entre na sala em chamas e apague o incêndio',
   heroiInesperado:'Apague um incêndio com Estabilidade abaixo de 30',
   varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
   limpeza:'Remova um dispositivo clandestino descoberto',
@@ -153,7 +154,7 @@ export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
   trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
-  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
+  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
   segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,

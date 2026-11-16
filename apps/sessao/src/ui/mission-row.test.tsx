@@ -178,3 +178,8 @@ test('Segurança Parlamentar explains continuous proximity and renders server ti
   expect(markup).toContain('sem atacar');
   expect(markup).toContain('6 / 10 s');
 });
+
+test('Plantão de Emergência tells players to enter the room and extinguish the fire',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'plantaoEmergencia',current:0,target:1}}/>);
+  expect(markup).toContain('Entre na sala em chamas e apague o incêndio');
+});

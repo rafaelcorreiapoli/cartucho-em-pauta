@@ -782,3 +782,29 @@ test('a shop subsidy spends public funds and the purchase conserves money',()=>{
   expect(world.spendSubsidized!(host.id,1,after.budget+1)).toBe(false);
   expect(match.view(host.id,ids,1).politics!.wallet).toBe(after.politics!.wallet);
 });
+
+test('Plantão de Emergência credits extinguishing from inside the affected room only',()=>{
+  for (const fromInside of [false,true]) {
+    const match = new PlenaryMatch(1);
+    match.start(host.id,people,0,()=>.9);
+    const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+    const {agenda} = Reflect.get(economy,'accounts').get(honest.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['plantaoEmergencia','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    const now = fireRules.firstAfter/2;
+    const site = 0;
+    const point = fireSites[site];
+    const player = {...honest,x:point.x,y:point.y+(fromInside ? 0 : fireRules.radius)};
+    const missions = ()=>match.view(honest.id,ids,now).politics!.missions;
+    expect(missions().active.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
+    expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
+    match.advance(now);
+    expect(match.actOnFire({...traitor,...point},'ignite',site,now)).toBe('Incêndio provocado.');
+    expect(match.actOnFire(player,'extinguish',site,now,false)).toBeUndefined();
+    expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(false);
+    expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
+    expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(fromInside);
+    expect(match.actOnFire(player,'extinguish',site,now+1,true)).toBeUndefined();
+  }
+});

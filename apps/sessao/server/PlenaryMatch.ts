@@ -5,7 +5,7 @@ import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
-import {canActOnFire,type FireAction} from '../src/fire';
+import {canActOnFire,fireSites,type FireAction} from '../src/fire';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
@@ -17,7 +17,7 @@ import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
   hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
-import type { Player } from '../src/map';
+import { roomAt, type Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -591,7 +591,9 @@ export class PlenaryMatch {
     if (this.phase!=='negotiation' || !this.canHandleObjects(player.id,now) || !canActOnFire(player,site)) return;
     if (action==='extinguish') {
       if (!hasExtinguisher || !this.fire.extinguish(site)) return;
-      this.economy.recordGameplay({type:'fire-extinguished',actor:player.id,at:now,position:player,witnesses:[],amount:this.stability});
+      const insideRoom = roomAt(player)===fireSites[site].name;
+      this.economy.recordGameplay({type:'fire-extinguished',actor:player.id,at:now,position:player,witnesses:[],
+        amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
       return 'Incêndio apagado.';
     }
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';

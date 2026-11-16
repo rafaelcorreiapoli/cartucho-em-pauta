@@ -18,6 +18,7 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  plantaoEmergencia:(event:GameplayEvent) => event.type==='fire-extinguished' && event.place==='inside-crisis-room',
   pautaPrioritaria:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' &&
     event.place==='articulation' && !!event.target && event.target!==event.actor,
   fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
