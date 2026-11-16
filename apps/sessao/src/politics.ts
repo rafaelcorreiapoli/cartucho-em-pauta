@@ -69,6 +69,7 @@ export const agendas = {
   publicouSelfie:'Publique uma selfie sua com pelo menos dois colegas.',
   retrato:'Instale seu retrato no Congresso.',
   autorretrato:'Tire uma selfie ao lado do seu retrato.',
+  cerimonialOficial:'Tire uma selfie perto de um Retrato Oficial instalado',
   reforma:'Substitua o retrato de outro parlamentar pelo seu.',
   reserva:'Reserve uma cadeira no Cafezinho com uma placa VIP.',
   fiscalVip:'Fotografe um visitante na área VIP de outro parlamentar.',
@@ -148,7 +149,7 @@ const xpOnly:Partial<Record<Agenda,number>> = {
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
   selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
   visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,
-  retrato:25,autorretrato:25,reforma:35,reserva:25,mandaVip:30,
+  retrato:25,autorretrato:25,cerimonialOficial:25,reforma:35,reserva:25,mandaVip:30,
 };
 const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
   embolso:{xp:40,cash:AGENDA_REWARD},

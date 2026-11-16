@@ -606,6 +606,7 @@ A evidência por área aponta para `apps/sessao/src` e `apps/sessao/server`. Arq
 
 | ID | Item | Estado | Evidência | Observação | Complexidade |
 | --- | --- | --- | --- | --- | --- |
-| EXP-01 | Missões do anexo com mecânicas existentes | PARCIAL | PR 25, PersonalAgenda.test.ts, Gameplay.test.ts, PhoneSession.test.ts, mission-row.test.tsx | 29 missões adicionadas. Visita com interação em um gabinete específico e selfie junto a retrato alheio ainda precisam de cobertura própria. | Média |
+| EXP-01 | Missões do anexo com mecânicas existentes | PARCIAL | PR 25, PersonalAgenda.test.ts, Gameplay.test.ts, PhoneSession.test.ts, mission-row.test.tsx | 30 missões adicionadas. Visita com interação em um gabinete específico ainda precisa de cobertura própria. | Média |
 | EXP-02 | Projetos do anexo com efeitos jogáveis | IMPLEMENTADO | PR 25, PlenaryMatch.test.ts, Foundations.test.ts, gameplay.test.ts | Oito projetos aplicam efeitos no jogo. Os demais exigem mecânicas que ainda não estão disponíveis na forma descrita pelo anexo. | — |
 | EXP-03 | Nada a Declarar (MIS-N54) | IMPLEMENTADO | Gameplay.test.ts, PersonalAgenda.test.ts, mission-row.test.tsx | O servidor conta até 15 segundos de deslocamento com dinheiro e com a Cueca do Mensalão ativa. Ficar parado, largar o dinheiro ou expirar o efeito interrompe o progresso. O HUD exibe o tempo confirmado pelo servidor. | — |
+| EXP-04 | Cerimonial Oficial (MIS-N73) | IMPLEMENTADO | PersonalAgenda.test.ts, photo-missions.ts, mission-row.test.tsx | O sorteio exige um retrato instalado. O teste de captura verifica selfie distante, foto comum próxima e selfie válida junto ao retrato de outro jogador. O HUD identifica o objetivo e a conclusão. | — |

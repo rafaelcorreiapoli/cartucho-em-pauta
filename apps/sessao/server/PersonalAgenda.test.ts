@@ -395,6 +395,13 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
     economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
     return economy.view(owner.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
   };
+  const visitorAgenda = Reflect.get(economy,'accounts').get(visitor.id).agenda;
+  const drawCeremonial = () => {
+    Reflect.set(visitorAgenda,'missions',[]);
+    Reflect.set(visitorAgenda,'missionDeck',['cerimonialOficial','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
+    return economy.view(visitor.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
+  };
   const install = (player:Player, place:'hall'|'coffeeVip') => {
     const {kind,point} = installationSites[place];
     expect(game.act(player,{kind:'buy',target:kind},world)).toContain('inventário');
@@ -406,7 +413,20 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(draw()).toContain('autorretrato');
   expect(draw()).not.toContain('fiscalVip');
   expect(draw(true)).toEqual(['cafe','passeio','selfieSolo']);
+  expect(drawCeremonial()).not.toContain('cerimonialOficial');
   install(owner,'hall');
+  expect(drawCeremonial()).toContain('cerimonialOficial');
+  const completedCeremonial = () => economy.view(visitor.id,[],0,false,()=>true)!.missions.completed
+    .some(mission=>mission.kind==='cerimonialOficial');
+  expect(game.act(visitor,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+  expect(completedCeremonial()).toBe(false);
+  Object.assign(visitor,installationSites.hall.point);
+  world.now += 2_000;
+  expect(game.act(visitor,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+  expect(completedCeremonial()).toBe(false);
+  world.now += 2_000;
+  expect(game.act(visitor,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
+  expect(completedCeremonial()).toBe(true);
   expect(economy.spend(owner.id,6)).toBe(true);
   install(colleague,'coffeeVip');
   expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);

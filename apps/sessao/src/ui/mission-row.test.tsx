@@ -130,3 +130,9 @@ test('concealed transport shows the authoritative progress in seconds', () => {
   expect(markup).toContain('Transporte dinheiro oculto');
   expect(markup).toContain('9 / 15 s');
 });
+
+test('Cerimonial Oficial names the installed portrait and marks completion',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'cerimonialOficial',current:1,target:1}} done/>);
+  expect(markup).toContain('Tire uma selfie perto de um Retrato Oficial instalado');
+  expect(markup).toContain('data-done="true"');
+});

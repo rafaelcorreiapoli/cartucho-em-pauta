@@ -8,8 +8,9 @@ type Fact = {value:string; group?:string};
 type Rule = {target:number; players:number; facts:(event:GameplayEvent)=>Fact[]};
 const fact = (value:string|number, group?:string):Fact[] => [{value:String(value),group}];
 const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.id!==actor);
-const ownPortrait = (photo:Photo,actor:string) => photo.decorations.some(item=>
-  item.kind==='portrait' && item.owner.id===actor && Math.hypot(item.x-photo.center.x,item.y-photo.center.y)<=28);
+const portraitNear = (photo:Photo,owner?:string) => photo.decorations.some(item=>
+  item.kind==='portrait' && (owner===undefined || item.owner.id===owner) &&
+  Math.hypot(item.x-photo.center.x,item.y-photo.center.y)<=28);
 const privateRooms = new Set(['Antecâmara',...privateOffices.map(office=>office.name)]);
 const capture = (test:(photo:Photo,actor:string)=>Fact[]) => (event:GameplayEvent) =>
   event.type==='photo' && event.photo ? test(event.photo,event.actor) : [];
@@ -39,7 +40,8 @@ export const photoMissions = {
     event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
       people(event.photo,event.actor).length>=2 ? fact(event.photo.id) : []},
   retrato:{target:1,players:1,facts:event=>event.type==='installed' && event.kind==='portrait' ? fact(event.item!) : []},
-  autorretrato:{target:1,players:1,facts:capture((photo,actor)=>photo.selfie && ownPortrait(photo,actor) ? fact(photo.id) : [])},
+  autorretrato:{target:1,players:1,facts:capture((photo,actor)=>photo.selfie && portraitNear(photo,actor) ? fact(photo.id) : [])},
+  cerimonialOficial:{target:1,players:1,facts:capture(photo=>photo.selfie && portraitNear(photo) ? fact(photo.id) : [])},
   reforma:{target:1,players:2,facts:event=>
     event.type==='installed' && event.kind==='portrait' && event.replaced && !privateOffices.some(office=>office.id===event.place) ? fact(event.item!) : []},
   reserva:{target:1,players:1,facts:event=>

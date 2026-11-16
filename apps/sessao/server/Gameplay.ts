@@ -196,7 +196,8 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:'portrait'|'vip', replacement=false) {
+  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait', replacement=false) {
+    if (kind==='anyPortrait') return [...this.installations.values()].some(item=>item.kind==='portrait');
     if (replacement) return Object.entries(installationSites).some(([site,definition])=>{
       if (definition.kind!==kind) return false;
       const installed = this.installations.get(site);
