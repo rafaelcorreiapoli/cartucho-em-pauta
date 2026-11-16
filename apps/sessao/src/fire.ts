@@ -10,8 +10,8 @@ export const fireRules = {
   radius:22,
 } as const;
 export const fireSites = [
-  {name:'Cafezinho',x:232,y:237,extinguisher:{x:271,y:241,station:'extinguisherCoffee'}},
-  {name:'Biblioteca',x:491,y:357,extinguisher:{x:453,y:358,station:'extinguisherLibrary'}},
+  {name:'Cafezinho',x:232,y:237,extinguisher:{x:271,y:241}},
+  {name:'Biblioteca',x:491,y:357,extinguisher:{x:453,y:358}},
 ] as const;
 
 export type FireAction = 'ignite'|'extinguish';

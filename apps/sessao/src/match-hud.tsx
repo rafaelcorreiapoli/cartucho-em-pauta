@@ -1,5 +1,5 @@
 import { createElement as createIcon, Hand, Footprints, Cpu } from 'lucide';
-import {fireOptions,fireSites} from './fire';
+import {fireOptions} from './fire';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountLegislativeBrief } from './ui/legislative-brief';
@@ -211,9 +211,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const state = view?.gameplay;
     if (state && player) {
       const hasExtinguisher = state.inventory.some(item=>item.kind==='extinguisher');
-      const rack = fireSites.find(({extinguisher})=>state.locations.includes(extinguisher.station));
-      if (rack && !hasExtinguisher && !player.knockedOut && !player.carrying) {
-        actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'supply',place:rack.extinguisher.station}});
+      const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
+      if (extinguisher && !player.knockedOut && !player.carrying) {
+        actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'collect',item:extinguisher.id}});
       }
       const option = fireOptions(player,view?.fire,view?.sabotageFireSite,hasExtinguisher);
       if (option) actions.push({label:option.label,icon:'alert',action:{kind:'fire',option}});
