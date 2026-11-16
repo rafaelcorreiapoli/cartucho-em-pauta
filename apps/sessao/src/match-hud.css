@@ -632,10 +632,6 @@
 .station-key:empty { display: none; }
 #stations .hud-button:has(.station-key:not(:empty)) { padding-top: 1.25rem; }
 
-.electoral-metrics strong {
-  color: var(--party-gold);
-  font: 850 1.25rem/1.15 var(--party-display);
-}
 .poll-label { align-items: baseline; }
 .poll-label span { flex: 1; overflow-wrap: anywhere; }
 .poll-label strong { font: 900 1.2rem/1 var(--party-display); white-space: nowrap; }
@@ -664,7 +660,7 @@
   .social-header h2, #election-dock .compact-heading h3 {
     font: 850 1.15rem/1.2 var(--party-display);
   }
-  .electoral-metrics div, #election-polls section { padding: .65rem .75rem; border-radius: 8px; }
+  #election-polls section { padding: .65rem .75rem; border-radius: 8px; }
   #election-polls section { margin: .55rem 0; background: #142522; }
   #election-polls h4 { margin: 0 0 .4rem; }
   #social-docks h3 { font-size: .95rem; }
@@ -700,7 +696,7 @@
 }
 .poll-details { min-width: 0; flex: 1; }
 
-#campaign-dialog, #result-dialog {
+#result-dialog {
   width: min(480px, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   padding: 1.2rem;
@@ -709,12 +705,8 @@
   background: #193329;
   color: var(--hud-paper);
 }
-#campaign-dialog::backdrop, #result-dialog::backdrop { background: #081510b8; }
-#campaign-dialog header, #campaign-title { display: flex; align-items: center; gap: .65rem; }
-#campaign-dialog header { justify-content: space-between; margin-bottom: 1rem; }
-#campaign-title { margin: 0; font: 850 1.35rem/1.15 var(--party-display); }
-#campaign-title .hud-glyph { color: var(--party-gold); }
-#campaign-dialog form {
+#result-dialog::backdrop { background: #081510b8; }
+#support-form {
   display: grid;
   gap: .55rem;
   margin-top: .65rem;
@@ -722,7 +714,7 @@
   border-radius: 8px;
   background: #142522;
 }
-#campaign-dialog label { display: grid; gap: .4rem; }
+#support-form label { display: grid; gap: .4rem; }
 
 #result-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 #result-title, #result-dialog h3, #result-dialog h4 { margin: 0 0 .55rem; font-family: var(--party-display); }

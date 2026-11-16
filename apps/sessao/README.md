@@ -156,10 +156,11 @@ e as demais vagas de deputado. Isso não depende de personagem, papel ou
 agenda. A cada cinco minutos o jogo apura a eleição sem parar a exploração
 ou a votação em curso. Mudanças de candidatura fecham 20 segundos antes.
 
-O eleitorado é fictício. Popularidade, campanha, propaganda, tribuna, TV,
-apoios públicos, escândalos divulgados e desgaste de reeleições compõem a
-força de cada candidato. O investimento tem teto de R$ 80 mil e retorno
-decrescente. A pesquisa mostra uma estimativa por disputa com margem
+O eleitorado é fictício. Popularidade, propaganda, tribuna, TV, apoios
+públicos e escândalos divulgados compõem a força de cada candidato. Na Sala
+de Imprensa, veicule propaganda por R$ 20 mil uma vez por ciclo para ganhar
++5 de força eleitoral até a renovação. Declare ou retire apoio na pesquisa
+eleitoral durante a articulação. A pesquisa mostra uma estimativa com margem
 limitada, e a tendência compara com a última amostra. No desempate vale
 o sorteio fixado para a partida. Nenhuma promessa é obrigatória.
 

@@ -1,6 +1,4 @@
-import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
-import { flushSync } from 'react-dom';
 import type { CSSProperties, FormEvent } from 'react';
 import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
 import type { Player } from './map';
@@ -25,21 +23,14 @@ export function ElectionSummary({rank,candidate,atRisk,remaining}:{
   </>;
 }
 
-function ElectionCycle({invested,result}:{invested?:number;result?:ElectionView['result']}) {
+function ElectionCycle({result}:{result?:ElectionView['result']}) {
   const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
-  return <>
-    <div className="electoral-metrics">
-      <div><span><button className="resource-help profile-help" type="button" aria-label="Investimento na campanha"
-        data-help="Total que você já gastou na campanha deste ciclo."><svg className="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span>
-        <strong id="election-wallet">{invested===undefined ? '—' : money(invested)}</strong></div>
-    </div>
-    {result && <details id="election-result" key={result.cycle}>
+  return result ? <details id="election-result" key={result.cycle}>
       <summary>Renovação {result.cycle}</summary>
       <p>{eliminated && `${eliminated} perdeu o mandato. `}
         {!!result.expectedSalary && `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).`}
       </p>
-    </details>}
-  </>;
+    </details> : null;
 }
 
 export function createElectionPanel(id:string, send:(action:ElectionAction) => void, hasVoice:()=>boolean) {
@@ -55,53 +46,44 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   let own:Player | undefined;
   let pollsKey = '';
   const pollsRoot = createRoot(el('election-polls'));
-  let campaignKey = '';
+  let supportKey = '';
   dock.hidden = true;
-  const campaign = el<HTMLDialogElement>('campaign-dialog');
-  const openCampaign = el<HTMLButtonElement>('election-actions');
-  const campaignRoot = createRoot(campaign);
-  openCampaign.onclick = () => { renderCampaign(); campaign.showModal(); };
-  function renderCampaign() {
+  const supportRoot = createRoot(el('election-support'));
+  function renderSupport() {
     const election = view?.election;
     const candidates = election?.offices.filter(candidate=>candidate.id!==id) ?? [];
-    const max = Math.min(view?.politics?.wallet ?? 0,ELECTION_RULES.investmentCap-(election?.personal?.invested ?? 0));
-    const key = JSON.stringify([max,candidates.map(({id,name})=>[id,name])]);
-    if (key===campaignKey) return;
-    campaignKey = key;
-    const submit = (kind:'invest'|'support',event:FormEvent<HTMLFormElement>)=>{
+    const eligible = !!election?.canCampaign && election.remaining>0 && candidates.length>0;
+    const current = election?.polls.find(candidate=>candidate.id===id)?.supports ?? '';
+    const key = JSON.stringify([eligible,current,candidates]);
+    if (key===supportKey) return;
+    supportKey = key;
+    const submit = (event:FormEvent<HTMLFormElement>)=>{
       event.preventDefault();
       const data = new FormData(event.currentTarget);
-      if (kind==='invest') send({kind,amount:Number(data.get('amount'))});
-      else send({kind,to:String(data.get('candidate') ?? '')});
+      send({kind:'support',to:String(data.get('candidate') ?? '')});
     };
-    flushSync(()=>campaignRoot.render(<>
-      <header><h2 id="campaign-title">Minha campanha</h2><DialogDismiss label="Fechar campanha">×</DialogDismiss></header>
-      <form id="invest-form" onSubmit={event=>submit('invest',event)}>
-        <label>Investir em campanha (R$ 10 mil por unidade)
-          <input id="investment" name="amount" type="number" defaultValue={1} min={1} max={max} step={1} required/>
-        </label>
-        <button id="invest" className="hud-button" disabled={max<1}>Investir</button>
-      </form>
-      <form id="support-form" onSubmit={event=>submit('support',event)}>
-        <label>Apoio público <select id="endorsement" name="candidate"><option value="">Sem apoio</option>
+    supportRoot.render(eligible ? (
+      <form id="support-form" onSubmit={submit}>
+        <label>Apoio público <select id="endorsement" name="candidate" key={current} defaultValue={current}><option value="">Sem apoio</option>
           {candidates.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
         </select></label>
         <button className="hud-button hud-button--secondary">Declarar ou retirar apoio</button>
       </form>
-    </>));
+    ) : null);
   }
   for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = () => send({kind});
 
   function controls() {
     const election = view?.election;
     const personal = election?.personal;
-    el('station-election-actions').hidden = !election?.canCampaign || !personal;
-    openCampaign.disabled = !election?.canCampaign || !personal || !own || !canReachStation(own,'press');
-    if (openCampaign.disabled && campaign.open) campaign.close();
+    el('station-election-actions').hidden = !election?.canCampaign || !election.remaining || !personal;
     el('interview-hint').hidden = true;
-    if (!election?.canCampaign || !personal) return;
+    if (!election?.canCampaign || !personal) {
+      el<HTMLButtonElement>('advertise').disabled = true;
+      return;
+    }
     const at = (key:keyof typeof stations) => !!own && canReachStation(own,key);
-    el<HTMLButtonElement>('advertise').disabled = !at('press') || personal.advertised ||
+    el<HTMLButtonElement>('advertise').disabled = !at('press') || !election.remaining || personal.advertised ||
       (view?.politics?.wallet ?? 0)<ELECTION_RULES.advertisementCost;
     el<HTMLButtonElement>('speech').disabled = !at('panel') || personal.spoke;
     el<HTMLButtonElement>('interview').disabled = !at('tv') || !election.canInterview || !hasVoice();
@@ -113,10 +95,11 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   return {
     render(next:PlenaryView) {
       view = next;
-      const election = view.election, personal = election?.personal;
+      const election = view.election;
       dock.hidden = !election;
       if (!election) {
         polls.close();
+        renderSupport();
         controls();
         return;
       }
@@ -132,12 +115,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         summaryRoot.render(<ElectionSummary {...summary}/>);
       }
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
-      const nextCycleKey = JSON.stringify([personal?.invested,result]);
+      const nextCycleKey = JSON.stringify(result) ?? '';
       if (nextCycleKey!==cycleKey) {
         cycleKey = nextCycleKey;
-        cycleRoot.render(<ElectionCycle invested={personal?.invested} result={result}/>);
+        cycleRoot.render(<ElectionCycle result={result}/>);
       }
-      if (campaign.open) renderCampaign();
+      renderSupport();
       const nextPollsKey = JSON.stringify(election.polls);
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
@@ -164,14 +147,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       controls();
     },
     destroy() {
-      campaign.close();
       polls.close();
       openPolls.onclick = null;
-      campaignRoot.unmount();
+      supportRoot.unmount();
       pollsRoot.unmount();
       summaryRoot.unmount();
       cycleRoot.unmount();
-      openCampaign.onclick = null;
       for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = null;
     },
     players(players:Player[]) {

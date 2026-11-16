@@ -32,6 +32,33 @@ test('one human loses their mandate, payroll excludes them, and the floor is pre
   expect(payroll.at(-1)).toEqual(['3','4','5','npc']);
 });
 
+test('advertising costs R$ 20 mil and adds five electoral strength until renewal',()=>{
+  const election = new ElectionCycle();
+  election.reset(people.slice(0,2),0,()=>.5);
+  const popularity = (id:string)=>id==='a' ? 10 : 12;
+  const lead = (now:number)=>election.view('a',now,popularity,true).polls[0];
+  let wallet = 1;
+  const spend = (amount:number)=>{
+    if (amount>wallet) return false;
+    wallet -= amount;
+    return true;
+  };
+
+  expect(lead(0)).toMatchObject({id:'b',estimate:55});
+  expect(election.advertise('a',spend)).toBeUndefined();
+  wallet = 4;
+  expect(election.advertise('a',spend)).toBeDefined();
+  expect(lead(1)).toMatchObject({id:'a',estimate:56});
+  expect(election.advertise('a',spend)).toBeUndefined();
+  expect(wallet).toBe(2);
+
+  election.advance(rules.interval,popularity,()=>new Map());
+  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:56});
+  expect(lead(rules.interval)).toMatchObject({id:'b',estimate:55});
+  expect(election.advertise('a',spend)).toBeDefined();
+  expect(wallet).toBe(0);
+});
+
 test('the production match requires six humans, including when NPCs are supplied',()=>{
   const match = new PlenaryMatch();
   const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));

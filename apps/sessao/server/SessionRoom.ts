@@ -346,7 +346,7 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const advertisement = this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
-      if (advertisement) this.broadcast('campaign-advertisement',advertisement);
+      if (advertisement) this.broadcast('campaign-advertisement',{...advertisement,advertiserId:player.id});
     });
     this.onMessage('bill-intent',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;

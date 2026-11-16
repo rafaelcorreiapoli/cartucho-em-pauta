@@ -32,7 +32,7 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
+export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing';
 export const hearingPolicyFee = 2;
 export const policyDuration = 120_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
@@ -70,9 +70,6 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N07',name:'Minha Mansão, Minha Vida',banner:'gabinete-armario.webp',
     description:'Verba para dar um trato nos gabinetes.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'furniture',detail:'Móveis com 40% de desconto por 120 s, enquanto houver orçamento'}},
-  {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-maleta.webp',
-    description:'Campanhas ganham um empurrão no cálculo da Renovação de Mandato.',
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Investimento pesa 50% a mais na campanha por 120 s'}},
   {id:'PROJ-N12',name:'Dia Nacional do Nada',banner:'gabinete-armario.webp',
     description:'Um pequeno prêmio por um dia de produção legislativa rigorosamente nula.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:.5}},

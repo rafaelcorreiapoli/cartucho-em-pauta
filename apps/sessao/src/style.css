@@ -264,10 +264,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   flex:none;
 }
 .hud-help-popover { position:fixed; z-index:20; padding:.55rem .7rem; width:max-content; max-width:min(290px,calc(100vw - 16px)); font-size:.8rem; line-height:1.45; pointer-events:none; }
-.electoral-metrics { margin-bottom:.65rem; }
-.electoral-metrics div { background:#142124; border:1px solid #9e927a66; padding:.3rem .45rem; border-radius:4px; }
-.electoral-metrics span { display:flex; align-items:center; gap:.28rem; font-size:.66rem; color:#cbd8ca; }
-.electoral-metrics strong { display:block; margin-top:.12rem; font-size:.84rem; }
 [data-office="president"] { color:#ffdb83; --bar-color:#ffdb83; }
 [data-office="senator"] { color:#a8d8ff; --bar-color:#a8d8ff; }
 [data-office="deputy"] { color:#a9efb5; --bar-color:#a9efb5; }
