@@ -136,3 +136,9 @@ test('Cerimonial Oficial names the installed portrait and marks completion',()=>
   expect(markup).toContain('Tire uma selfie perto de um Retrato Oficial instalado');
   expect(markup).toContain('data-done="true"');
 });
+
+test('Visita de Cortesia identifies the target and suggests an interaction',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'visitaCortesia',current:0,target:1,person:{id:'b',name:'Bia'}}}/>);
+  expect(markup).toContain('Interaja dentro do gabinete de Bia');
+  expect(markup).toContain('tire uma foto');
+});

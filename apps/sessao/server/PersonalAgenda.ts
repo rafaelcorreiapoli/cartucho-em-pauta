@@ -144,6 +144,7 @@ export class PersonalAgenda {
   }
 
   private targetAvailable(kind:Agenda,id:string) {
+    if (kind==='visitaCortesia') return this.hasOffice?.(id)===true;
     if (kind==='visitaAlvo') return this.hasOffice?.(id)!==false;
     return !this.availableTargets || this.availableTargets.has(id);
   }
@@ -215,7 +216,7 @@ export class PersonalAgenda {
     if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
     // Isolation is temporary. Keep collective missions already in progress.
-    const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='jogarOculto';
+    const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='visitaCortesia' && kind!=='jogarOculto';
     const humans = usesAvailablePlayers
       ? this.availableTargets ? 1+this.targets.filter(person=>this.availableTargets?.has(person.id)).length : this.playerCount
       : this.playerCount;
@@ -264,6 +265,7 @@ export class PersonalAgenda {
           this.rewardedTargetItems.add(event.item);
           gains[kind] = 1;
         }
+        if (kind==='visitaCortesia' && event.type==='office-guest-interaction' && event.target===target) gains[kind] = 1;
         if (kind==='visitaAlvo' && event.type==='room-entered' && event.target===target) gains[kind] = 1;
         if (kind==='selfieAlvo' && event.type==='photo' && event.photo?.selfie &&
             event.photo.people.some(person=>person.id===target)) gains[kind] = 1;

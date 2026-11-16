@@ -121,7 +121,7 @@ test('the phone only emits play time after input and uses observer visibility th
   expect(samples.at(-1)).toMatchObject({duration:50,witnesses:['b']});
 });
 
-test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo'] as const)(
+test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','visitaCortesia','selfieAlvo'] as const)(
   '%s completes only after the corresponding gameplay with the assigned person',
   kind=>{
     const economy = new PoliticalEconomy();
@@ -130,6 +130,9 @@ test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo']
     }));
     const [owner,target,other] = players;
     economy.reset(players.map(({id,nick:name,character})=>({id,name,character})),()=>0);
+    const game = new Gameplay();
+    game.reset(0,()=>.5,players,()=>.5);
+    economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
     const agenda = Reflect.get(economy,'accounts').get(owner.id).agenda as PersonalAgenda;
     Reflect.set(agenda,'missions',[]);
     Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio']);
@@ -137,10 +140,8 @@ test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo']
     const missions = () => economy.view(owner.id,[],0,false,()=>true)!.missions;
     expect(missions().active.find(mission=>mission.kind===kind)?.person?.id).toBe(target.id);
 
-    const game = new Gameplay();
-    game.reset(0,()=>.5,players,()=>.5);
     const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-      spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
+      hasMission:(id,kind)=>economy.hasMission(id,kind),spend:(id,amount)=>economy.spend(id,amount),publish:entry=>economy.recordGameplay(entry)};
     const interact = (recipient:Player) => {
       const third = recipient===target ? other : target;
       Object.assign(third,{x:800,y:490});
@@ -149,11 +150,17 @@ test.each(['documentoAlvo','pizzaAlvo','dinheiroAlvo','visitaAlvo','selfieAlvo']
         expect(economy.transfer(owner.id,recipient.id,3,true,0)).toBe(true);
         return;
       }
-      if (kind==='visitaAlvo') {
+      if (kind==='visitaAlvo' || kind==='visitaCortesia') {
         Object.assign(owner,{x:140,y:146});
         game.tick(world,true);
         Object.assign(owner,game.officeSpawn(recipient.id));
         game.tick(world,true);
+        if (kind==='visitaCortesia') {
+          expect(missions().completed.some(mission=>mission.kind===kind)).toBe(false);
+          expect(game.act(owner,{kind:'office-take',place:'invalid'},world)).toBe('Gabinete indisponível.');
+          expect(missions().completed.some(mission=>mission.kind===kind)).toBe(false);
+          expect(game.act(owner,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+        }
         return;
       }
       if (kind==='selfieAlvo') {

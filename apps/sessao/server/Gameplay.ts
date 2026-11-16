@@ -722,6 +722,10 @@ export class Gameplay {
       [...this.privateOffices.offices.values()].some(office=>office.owner && office.owner!==person.id && office.layout.name===roomAt(person)));
     this.event(world,player,'photo',undefined,undefined,{photo:result,
       place:foreignOfficeSubject ? 'foreign-office-subject' : undefined,witnesses:[...ids].filter(id=>id!==player.id)});
+    if (world.hasMission?.(player.id,'visitaCortesia')) {
+      const office = [...this.privateOffices.offices.values()].find(office=>this.privateOffices.isInside(player,office));
+      if (office) this.recordGuestInteraction(player,office,world);
+    }
     return 'Foto guardada no álbum.';
   }
 
@@ -890,7 +894,9 @@ export class Gameplay {
     const own = office.owner===player.id;
     if (kind==='office-open' || kind==='office-close' || kind==='office-lock' || kind==='office-unlock') {
       if ((kind==='office-close' || kind==='office-lock') && world.players.some(other=>blockedBy(office.layout.door,other.x,other.y))) return 'A passagem está ocupada.';
+      const previousDoor = office.door;
       const result = offices.doorAction(player,office,kind,now);
+      if (office.door!==previousDoor) this.recordGuestInteraction(player,office,world);
       this.syncOfficeDoors(world.players,now);
       return result;
     }
@@ -908,6 +914,7 @@ export class Gameplay {
         this.move(item,{storage:`office:${office.layout.id}`});
       }
       this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id});
+      this.recordGuestInteraction(player,office,world);
       return kind==='office-take' ? 'Objeto retirado do armário.' : 'Objeto guardado no armário.';
     }
     if (kind==='office-remove') {
@@ -956,6 +963,12 @@ export class Gameplay {
     if (kind==='office-cash') {
       player.pocketing = true;
       this.expose(player.id,item.data.id);
+    }
+  }
+
+  private recordGuestInteraction(player:Player, office:Parameters<PrivateOffices['isInside']>[1], world:GameplayWorld) {
+    if (office.owner && office.owner!==player.id && this.privateOffices.isInside(player,office)) {
+      publishGameplay(world,player,'office-guest-interaction',{target:office.owner,place:office.layout.id,witnesses:[]});
     }
   }
 
