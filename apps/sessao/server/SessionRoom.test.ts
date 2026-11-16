@@ -525,7 +525,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(gameplay()?.security?.camera).toBe('coffee');
     expect(securityFrames.has(passenger.sessionId)).toBe(false);
 
-    Object.assign(positions.get(carrier.sessionId)!.player,{x:986,y:309});
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:712,y:337});
     await wait(()=>gameplay()?.security===undefined);
     securityFrames.delete(carrier.sessionId);
     await Bun.sleep(150);

@@ -63,9 +63,6 @@ export function drawMap(scene: Phaser.Scene,
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
   }
-  const [securityX,securityY,securityW,securityH] = securityRoom.door;
-  fill(0x757f78,securityX,securityY,securityW,securityH);
-  fill(0x9b8d6d,securityX+3,securityY,3,securityH);
   for (const {x,y} of securityCameras) {
     fill(0x263a31,x-4,y-3,8,5);
     fill(0xbed9cb,x-2,y-2,4,3);

@@ -8,7 +8,7 @@ export const securityCameras = [
   {id:'coffee',label:'Cafezinho',x:217,y:204,area:[196,172,86,87]},
   {id:'press',label:'Sala de Imprensa',x:870,y:193,area:[713,172,237,87]},
   {id:'library',label:'Biblioteca',x:461,y:351,area:[326,270,266,122]},
-  {id:'committees',label:'Comissões',x:712,y:337,area:[602,270,212,122]},
+  {id:'protocol',label:'Protocolo',x:174,y:345,area:[10,270,306,122]},
   {id:'snacks',label:snackBar.name,x:922,y:304,area:snackBar.bounds},
 ] as const satisfies readonly (Motion & {id:string;label:string;area:Rect})[];
 
