@@ -168,7 +168,7 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 .economy-row, .offer { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
 .economy-row input[type="number"] { width:8rem; }
 .offer { margin:.35rem 0; padding:.4rem; border:1px solid var(--hud-line); border-radius:4px; }
-#evidence-tools { display:grid; gap:.45rem; }
+.evidence-tools { display:grid; gap:.45rem; }
 #politics-hint:empty { display:none; }
 
 #election-dock, #electoral-notice {

@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {createRoomCommandSender,readRoomCommandToken} from './room-commands';
-import {canBuyEvidence} from './politics-panel';
+import {canBuyEvidence} from './ui/dossier';
 import {manualTransfer} from './politics';
 
 test('informal loans and repayments are manual payments selected by the player',()=>{

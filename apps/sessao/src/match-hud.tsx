@@ -1,3 +1,4 @@
+import {canPublishEvidence} from './ui/dossier';
 import {cassationLabel,institutionalActions} from './ui/institutional-actions';
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import type {FireOption} from './fire';
@@ -29,7 +30,7 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openGrant:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openGrant:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
@@ -65,11 +66,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const cassationAction = addStationButton({label:'Convocar cassação',station:'panel',icon:'ballot'});
   cassationAction.onclick = ()=>institutional.sendInstitutional({kind:'call-cassation'});
   const publishAction = addStationButton({label:'Divulgar evidência',station:'press',icon:'document'});
-  const publishControl = element<HTMLButtonElement>('publish');
-  publishAction.onclick = ()=>{
-    element<HTMLDetailsElement>('politics-dock').open = true;
-    element('evidence-form').querySelector<HTMLElement>('.game-choice')?.focus();
-  };
+  publishAction.onclick = institutional.openDossier;
   const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
     const activity = roomActivities[station];
     const button = addStationButton({...activity,station});
@@ -425,8 +422,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     grantAction.hidden = context!=='cabinet' || !institution.grant?.affordable;
     cassationAction.hidden = context!=='panel' || !institution.hearing?.affordable;
     if (institution.hearing) cassationAction.querySelector('span')!.textContent = cassationLabel(institution.hearing.fee);
-    publishAction.hidden = context!=='press' || publishControl.disabled || !!publishControl.closest('[hidden]') ||
-      !element('evidence').dataset.value;
+    publishAction.hidden = context!=='press' || !canPublishEvidence(view,player);
     for (const {button,station} of activityButtons) button.hidden = context!==station;
     for (const button of stationActions) {
       const hidden = String(button.dataset.station!==context);

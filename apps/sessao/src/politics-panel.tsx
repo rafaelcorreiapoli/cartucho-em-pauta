@@ -1,103 +1,22 @@
-import { createRoot } from 'react-dom/client';
-import type { CSSProperties } from 'react';
-import { canReachStation, type Station, type PlenaryView } from './plenary';
+import {createRoot} from 'react-dom/client';
+import type {Player} from './map';
+import type {PoliticsAction} from './politics';
+import type {PlenaryView} from './plenary';
+import {Dossier,dossierModel} from './ui/dossier';
 import {InstitutionalActions,institutionalActions} from './ui/institutional-actions';
-import { money, describeEvidence, type Offer, type PoliticsAction } from './politics';
-import type { Player } from './map';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
-type Choice = {value:string; label:string; portrait?:number};
-
-function picker(id:string, changed:()=>void, empty='') {
-  const container = el(id);
-  const root = createRoot(container);
-  let key = '';
-  let choices:Choice[] = [];
-  const render = () => root.render(choices.length ? choices.map(choice=>{
-    const portrait = choice.portrait===undefined ? undefined : {
-      '--portrait-column':choice.portrait%2,'--portrait-row':Math.floor(choice.portrait/2),
-    } as CSSProperties;
-    return <button type="button" className="hud-button hud-button--secondary game-choice" key={choice.value}
-      value={choice.value} aria-pressed={container.dataset.value===choice.value} onClick={()=>{
-        container.dataset.value = choice.value;
-        render();
-        changed();
-      }}>
-      {portrait && <span className="portrait" style={portrait} aria-hidden="true"/>}{choice.label}
-    </button>;
-  }) : empty ? <p className="choice-empty">{empty}</p> : null);
-  container.dataset.value = '';
-  return {
-    get value() { return container.dataset.value ?? ''; },
-    update(nextChoices:Choice[],selectFirst=false) {
-      const next = JSON.stringify(nextChoices);
-      if (key===next) return;
-      key = next;
-      choices = nextChoices;
-      if (!choices.some(choice=>choice.value===this.value)) container.dataset.value = selectFirst ? choices[0]?.value ?? '' : '';
-      render();
-    },
-    destroy() { root.unmount(); },
-  };
-}
-
-function stepper(id:string, initial:number, minimum:number, format:(value:number)=>string) {
-  const container = el(id);
-  const root = createRoot(container);
-  let value = initial;
-  let maximum = Number.MAX_SAFE_INTEGER / 10;
-  function render() {
-    root.render(<>
-      <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir valor"
-        disabled={value<=minimum} onClick={()=>{value--;render();}}>−</button>
-      <output>{format(value)}</output>
-      <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar valor"
-        disabled={value>=maximum} onClick={()=>{value++;render();}}>+</button>
-    </>);
-  }
-  render();
-  return {
-    get value() { return value; },
-    limit(limit:number) {
-      const next = Math.max(minimum,Math.floor(limit));
-      if (maximum===next) return;
-      maximum = next;
-      value = Math.min(value,maximum);
-      render();
-    },
-    destroy() { root.unmount(); },
-  };
-}
-
-export function canBuyEvidence(offer:Pick<Offer,'from'|'price'>, contacts:ReadonlySet<string>, wallet:number, paymentsLeft:number) {
-  return contacts.has(offer.from) && wallet>=offer.price && paymentsLeft>0;
-}
-
-export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => void, focusMap:()=>void) {
+export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void,focusMap:()=>void) {
   const dock = el<HTMLDetailsElement>('politics-dock');
   const institutional = el<HTMLDetailsElement>('institutional-dock');
-  const recipient = picker('evidence-contact',updateControls,'Ninguém próximo');
-  const dossier = picker('evidence',() => { describeSelected(); updateControls(); });
-  const price = stepper('evidence-price',0,0,value => value ? money(value) : 'Grátis');
+  const dossierRoot = createRoot(el('dossier-content'));
   const institutionalRoot = createRoot(el('institutional-actions'));
+  let dossierKey = '';
   let institutionalKey = '';
-  let visiblePlayers:Player[] = [];
-  let view:PlenaryView | undefined;
-  let own:Player | undefined;
-  let offersKey = '';
-  dock.open = false;
-  institutional.open = false;
-  const offersRoot = createRoot(el('offer-list'));
-  const at = (key:Station) => !!own && canReachStation(own,key);
-  const name = (id:string) => view?.politics?.directory.find(contact => contact.id===id)?.name ?? 'Jogador';
-  function updateControls() {
-    const politics = view?.politics;
-    if (!politics || !view) return;
-    const exploring = view.phase==='negotiation';
-    el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
-    el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
-  }
+  let players:Player[] = [];
+  let view:PlenaryView|undefined;
+  dock.open = institutional.open = false;
 
   function sendInstitutional(action:PoliticsAction) {
     send(action);
@@ -105,33 +24,19 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     if (action.kind!=='hearing') focusMap();
   }
 
-  function renderInstitutional() {
-    const model = institutionalActions(view,own);
+  function renderPanels() {
+    const dossier = dossierModel(id,view,players);
+    const nextDossierKey = JSON.stringify(dossier) ?? '';
+    if (nextDossierKey!==dossierKey) {
+      dossierKey = nextDossierKey;
+      dossierRoot.render(dossier ? <Dossier model={dossier} send={send}/> : null);
+    }
+
+    const model = institutionalActions(view,players.find(player=>player.id===id));
     const key = JSON.stringify(model);
     if (key===institutionalKey) return;
     institutionalKey = key;
     institutionalRoot.render(<InstitutionalActions model={model} send={sendInstitutional}/>);
-  }
-
-  el<HTMLButtonElement>('share').onclick = () => {
-    if (recipient.value && dossier.value) {
-      send({kind:'share',to:recipient.value,evidence:Number(dossier.value),price:price.value});
-    }
-  };
-  el<HTMLButtonElement>('publish').onclick = () => {
-    if (dossier.value) send({kind:'publish',evidence:Number(dossier.value)});
-  };
-  el<HTMLFormElement>('evidence-form').onsubmit = event => event.preventDefault();
-  const describeSelected = () => {
-    const record = view?.politics?.evidence.find(record => record.id===Number(dossier.value));
-    el('evidence-detail').textContent = record ? describeEvidence(record,name) : '';
-  };
-  function updateContacts() {
-    const choices = (view?.politics?.contacts ?? []).flatMap(contact => {
-      const player = visiblePlayers.find(player => player.id===contact.id);
-      return player ? [{value:contact.id,label:contact.name,portrait:player.character}] : [];
-    });
-    recipient.update(choices);
   }
 
   return {
@@ -140,51 +45,24 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
       institutional.open = true;
       el('institutional-actions').querySelector<HTMLElement>('.game-choice')?.focus();
     },
+    openDossier() {
+      dock.open = true;
+      el('dossier-content').querySelector<HTMLElement>('button[aria-pressed="true"]')?.focus();
+    },
     render(next:PlenaryView) {
       view = next;
-      const p = view.politics;
-      dock.hidden = !p;
-      institutional.hidden = !p || view.phase!=='negotiation';
-      renderInstitutional();
-      if (!p) return;
-      const active = view.phase==='negotiation' || view.phase==='ballot';
-      el('personal-stats').textContent = p.incoming.length ? 'Nova oferta' : '';
-      el('evidence-tools').hidden = !active;
-      updateContacts();
-      dossier.update(p.evidence.map(record => ({value:String(record.id),label:`Documento ${record.id} · Rodada ${record.round+1}`})),true);
-      el('evidence-form').hidden = p.evidence.length===0;
-      el('empty-evidence').hidden = p.evidence.length>0;
-      describeSelected();
-      const contacts = new Set(p.contacts.map(contact => contact.id));
-      const offerList = [...p.incoming,...(p.outgoing ? [p.outgoing] : [])];
-      const key = offerList.map(offer => `${offer.id}:${canBuyEvidence(offer,contacts,p.wallet,p.paymentsLeft)}`).join(',');
-      if (offersKey!==key) {
-        offersKey = key;
-        offersRoot.render(offerList.map(offer=>{
-          const outgoing = offer.from===id;
-          return <div className="offer" key={offer.id}>
-            {outgoing ? `Oferta para ${name(offer.to)} · ${money(offer.price)}` : `${name(offer.from)} oferece um documento por ${money(offer.price)}`}
-            {!outgoing && <button className="hud-button" type="button" disabled={!canBuyEvidence(offer,contacts,p.wallet,p.paymentsLeft)}
-              onClick={()=>send({kind:'accept',offer:offer.id})}>Comprar</button>}
-            <button className="hud-button hud-button--secondary" type="button" onClick={()=>send({kind:'cancel',offer:offer.id})}>
-              {outgoing ? 'Cancelar' : 'Recusar'}
-            </button>
-          </div>;
-        }));
-      }
-      updateControls();
+      dock.hidden = !view.politics;
+      institutional.hidden = !view.politics || view.phase!=='negotiation';
+      el('personal-stats').textContent = view.politics?.incoming.length ? 'Nova oferta' : '';
+      renderPanels();
     },
     destroy() {
-      for (const control of [recipient,dossier,price]) control.destroy();
-      offersRoot.unmount();
+      dossierRoot.unmount();
       institutionalRoot.unmount();
     },
-    players(players:Player[]) {
-      visiblePlayers = players;
-      updateContacts();
-      own = players.find(player => player.id===id);
-      renderInstitutional();
-      updateControls();
+    players(next:Player[]) {
+      players = next;
+      renderPanels();
     },
   };
 }
