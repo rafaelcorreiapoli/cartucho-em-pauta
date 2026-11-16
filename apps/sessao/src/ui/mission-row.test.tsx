@@ -48,7 +48,7 @@ test('the VIP inspection identifies the visitor as the subject of the photo',()=
 
 test('the phone photo objective names both eligible rooms',()=>{
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'celularFoto',current:0,target:1}}/>);
-  expect(markup).toContain('Antecâmara ou nas Comissões');
+  expect(markup).toContain('Antecâmara ou na Sala de Segurança');
 });
 
 test('publishing a qualifying selfie changes the Agenda row to completed',()=>{

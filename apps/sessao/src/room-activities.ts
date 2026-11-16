@@ -6,9 +6,9 @@ export const roomActivities = {
   coffee: {x:240,y:250, title:'Cafezinho', label:'Tomar um cafezinho', icon:'coffee'},
   archive: {x:549,y:90, title:'Arquivo', label:'Abrir registro público', icon:'document'},
   library: {x:424,y:364, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},
-  committees: {x:790,y:363, title:'Comissões', label:'Consultar quórum', icon:'ballot'},
+  quorum: {x:481,y:364, title:'Biblioteca', label:'Consultar quórum', icon:'ballot'},
   credentials: {x:149,y:493, title:'Credenciamento', label:'Conferir credencial', icon:'check'},
-  benches: {x:676,y:359, title:'Bancadas', label:'Consultar bancadas', icon:'ballot'},
+  benches: {x:210,y:489, title:'Credenciamento', label:'Consultar bancadas', icon:'ballot'},
 } as const satisfies Record<string, {x:number; y:number; title:string; label:string; icon:string}>;
 
 export type RoomActivity = keyof typeof roomActivities;

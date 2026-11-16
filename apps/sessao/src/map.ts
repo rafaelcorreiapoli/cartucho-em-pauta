@@ -12,6 +12,11 @@ export type Rect = readonly [x: number, y: number, width: number, height: number
 
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
+export const securityRoom = {
+  name:'Sala de Segurança', bounds:[602,270,212,122] as Rect,
+  terminal:{x:788,y:350},
+};
+
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
 export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
@@ -54,10 +59,11 @@ export const walls: Rect[] = [
 ];
 export const desks = [
   [151,43],[284,43],[151,84],[284,84],[63,217],
-  [526,60],[786,59],[851,210],[105,334],[404,331],[766,330],
+  [526,60],[786,59],[851,210],[105,334],[404,331],
   [128,460],[493,438],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
   [treasurer.counter.x,treasurer.counter.y],
+  [securityRoom.terminal.x-22,securityRoom.terminal.y-20],
 ] as const;
 export const furnishings = [
   {texture:'technical-shelf',area:[653,174,40,30],footprint:5},
@@ -203,7 +209,7 @@ export const rooms = [
   {name:'Sala de Imprensa', bounds:[713,172,237,87], color:0xa58b66},
   {name:'Protocolo', bounds:[10,270,306,122], color:0x858c80},
   {name:'Biblioteca', bounds:[326,270,266,122], color:0x9b8161},
-  {name:'Comissões', bounds:[602,270,212,122], color:0x637b69},
+  {...securityRoom,color:0x587470},
   {name:snackBar.name,bounds:snackBar.bounds,color:0xb6a781},
   {name:'Credenciamento', bounds:[10,403,306,127], color:0x8c846d},
   {name:treasurer.label,bounds:treasuryLayout.bounds,color:0x858c80},

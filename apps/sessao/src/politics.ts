@@ -68,7 +68,7 @@ export const agendas = {
   flagra:'Peguei no flagra! Fotografe alguém com uma maleta exposta.',
   selfie:'Tire selfies com três parlamentares diferentes.',
   presidenteFoto:'Tire uma selfie com o presidente.',
-  celularFoto:'Fotografe alguém jogando no celular na Antecâmara ou nas Comissões.',
+  celularFoto:'Fotografe alguém jogando no celular na Antecâmara ou na Sala de Segurança.',
   reuniaoFoto:'Fotografe dois colegas no mesmo gabinete ou na Antecâmara.',
   dossieFoto:'Fotografe o mesmo parlamentar em três ambientes diferentes.',
   apresentarFoto:'Mostre a alguém uma fotografia com um objeto exposto.',

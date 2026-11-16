@@ -60,7 +60,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:{kind:FireAction;site:number})=>void, inspect:(id:number)=>void, openStash:()=>void, loading:(progress:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:{kind:FireAction;site:number})=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -211,7 +211,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (action) interact(action);
           }
         });
-      });
+      },art=>this.registerInteraction(art,()=>!!plenaryView?.gameplay?.security,openSecurity));
       this.fog = this.add.graphics().setDepth(3);
       this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
