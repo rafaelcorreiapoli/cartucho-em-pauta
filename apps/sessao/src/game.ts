@@ -18,6 +18,7 @@ import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitA
 import type { Assignment, Office } from './elections';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
+import { groundItemArt } from './map-props';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -376,7 +377,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         const symbol = itemSymbols[item.kind];
         const icon = symbol ? this.add.text(0,0,symbol,{fontSize:'15px',color:'#ffe08a',resolution:3}).setOrigin(.5,.8)
-          : this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,.8).setDisplaySize(20,20);
+          : this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,groundItemArt.anchor).setDisplaySize(groundItemArt.size,groundItemArt.size);
         const shadow = this.add.ellipse(0,2,15,5,0x09110e,.28);
         const marker = this.add.container(item.x,item.y,[shadow,icon]).setDepth(item.y-1);
         this.groundMarkers.set(item.id,marker);
