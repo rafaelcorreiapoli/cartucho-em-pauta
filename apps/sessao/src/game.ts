@@ -599,7 +599,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const attack = pose && profile ? attackArt(character,row,progress,profile.impactMs/profile.swingMs) : undefined;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
-          const level = own ? .46 : Math.max(0,1-distance/75)*.32;
+          const level = own ? .22 : Math.max(0,1-distance/75)*.08;
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
           view.nextStep = time+290/(player.sprinting ? sprintMultiplier : 1);
         } else if (!moving) view.nextStep = 0;

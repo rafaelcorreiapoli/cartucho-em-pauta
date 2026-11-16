@@ -162,7 +162,7 @@ export class GameAudio {
   footstep(level:number,pan:number) {
     const offset = 1 + Math.floor(Math.random() * (footsteps.length - 1));
     this.lastFootIndex = (this.lastFootIndex + offset) % footsteps.length;
-    this.play(footsteps[this.lastFootIndex],level*.24,pan,.97+Math.random()*.06);
+    this.play(footsteps[this.lastFootIndex],level,pan,.97+Math.random()*.06);
   }
 
   combat(name:CombatCue,level:number,pan:number) {
