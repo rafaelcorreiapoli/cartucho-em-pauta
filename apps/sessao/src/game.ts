@@ -220,14 +220,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.children.depthSort();
       this.photoRenderer.loadMap(this.children.getChildren());
       const hasExtinguisher = ()=>!!plenaryView?.gameplay?.inventory.some(item=>item.kind==='extinguisher');
-      for (const {extinguisher:{x,y,station}} of fireSites) {
-        const rack = this.add.image(x,y,'item-extinguisher').setDisplaySize(20,20).setOrigin(.5,.95).setDepth(y);
-        this.registerInteraction(rack,()=>{
-          const player = local.state?.player;
-          return !!player && !player.knockedOut && !player.carrying && !hasExtinguisher() &&
-            !!plenaryView?.gameplay?.locations.includes(station);
-        },()=>interact({kind:'supply',place:station}));
-      }
       this.roomFires = createRoomFires(this);
       const extinguishOption = (site:number)=>{
         const player = local.state?.player;
