@@ -679,6 +679,26 @@ test('cassation requires at least three eligible players to be called',()=>{
   expect(view().cassationIn).toBe(30);
 });
 
+test('cassation can be called at 40 popularity',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const call = () => match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const view = () => match.view(host.id,ids,50);
+
+  economy.changePopularity(host.id,-1);
+  expect(view().politics?.popularity).toBe(39);
+  expect(view().canCallCassation).toBe(false);
+  call();
+  expect(view().cassationIn).toBeUndefined();
+
+  economy.changePopularity(host.id,1);
+  expect(view().canCallCassation).toBe(true);
+  expect(view().politics?.canCallHearing).toBe(false);
+  call();
+  expect(view().cassationIn).toBe(30);
+});
+
 test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);

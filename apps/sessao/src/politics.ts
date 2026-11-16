@@ -2,6 +2,7 @@ import type { Progression } from './progression';
 
 export const CABINET_GRANT = 4;
 export const HEARING_POPULARITY = 55;
+export const CASSATION_POPULARITY = 40;
 export const HEARING_MS = 35_000;
 export const SUSPENSION_MS = 60_000;
 export const HEARING_IMMUNITY_MS = 120_000;

@@ -18,7 +18,7 @@ import {
   hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import type { Player } from '../src/map';
-import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -392,7 +392,7 @@ export class PlenaryMatch {
 
   private canCallCassation(id:string, now:number) {
     return this.phase==='negotiation' && now<this.ends && this.cassationAt===undefined &&
-      this.canVoteInCassation(id) && this.economy.canCall(id) && this.cassationElectorate().length>=3;
+      this.canVoteInCassation(id) && this.popularity(id)>=CASSATION_POPULARITY && this.cassationElectorate().length>=3;
   }
 
   private cassationElectorate() {
