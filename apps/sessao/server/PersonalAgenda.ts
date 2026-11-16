@@ -202,7 +202,7 @@ export class PersonalAgenda {
     this.progress(metrics,gains);
   }
 
-  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>) {
+  updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>,npcSigners?:ReadonlySet<string>) {
     this.targets = targets;
     this.hasOffice = metrics.hasOffice;
     this.spyAvailability = metrics.canInstallSpy;
@@ -218,6 +218,11 @@ export class PersonalAgenda {
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
           (mission.kind==='doisPix' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
+      } else if ((mission.kind==='assinaturas' || mission.kind==='comissaoImprovisada') && (npcSigners || !npcCount)) {
+        const possible = new Set([...targets.map(({id})=>id),...(npcSigners ?? [])]);
+        if (possible.size>=mission.target) return true;
+        const documents = this.factsByMission.get(mission.id);
+        if (documents && [...documents.values()].some(signed=>new Set([...possible,...signed]).size>=mission.target)) return true;
       } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
           canCompleteTimedMission(mission.kind,metrics) &&

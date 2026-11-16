@@ -642,3 +642,37 @@ test('office diplomacy keeps HUD progress after the visited owner leaves',()=>{
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view().progression.xp).toBe(35);
 });
+
+test('the signature mission keeps the signed document visible after a signer leaves',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio','Duda'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:83+character*3,y:247,
+  }));
+  const [author,first,second,third] = players;
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  game.reset(0,()=>.9,players);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['comissaoImprovisada','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(author.id,players.map(({id})=>id),now).politics!;
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(author,{kind:'supply',place:'secretary',target:'queue'},world);
+  const document = game.view(author,world).inventory.find(item=>item.kind==='document')!;
+  const sign = (signer:Player,now:number)=>{
+    const state = match.gameplayWorld(players.filter(player=>now<4 || player!==first),now,()=>false);
+    game.act(author,{kind:'sign-request',target:signer.id,item:document.id},state);
+    const request = game.view(signer,state).requests[0];
+    game.act(signer,{kind:'accept',item:request.id},state);
+  };
+  sign(first,2);
+  match.leave(first.id,3);
+  const mission = view(3).missions.active.find(mission=>mission.kind==='comissaoImprovisada')!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('1 / 3');
+  sign(second,4);
+  sign(third,5);
+  const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(5).progression.xp).toBe(65);
+});

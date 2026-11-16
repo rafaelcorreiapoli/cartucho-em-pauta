@@ -32,7 +32,7 @@ test('two different signers must sign the same document after assignment',()=>{
   economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
   const ownerAgenda = Reflect.get(economy,'accounts').get(owner.id).agenda;
   Reflect.set(ownerAgenda,'missions',[]);
-  Reflect.set(ownerAgenda,'missionDeck',['assinaturas','cafe','passeio']);
+  Reflect.set(ownerAgenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
   economy.updateAgendaEligibility(new Set(players.map(player=>player.id)),3);
   const view = (id:string) => economy.view(id,[],0,false,()=>true)!;
   expect(view(owner.id).missions.active.some(mission=>mission.kind==='assinaturas')).toBe(true);
@@ -50,6 +50,8 @@ test('two different signers must sign the same document after assignment',()=>{
   };
   sign(b);
   economy.recordGameplay(event('signed',{actor:c.id,target:owner.id,item:document.id+100}));
+  expect(view(owner.id).missions.active.find(mission=>mission.kind==='assinaturas')?.current).toBe(1);
+  economy.updateAgendaEligibility(new Set([owner.id,c.id]),3);
   expect(view(owner.id).missions.active.find(mission=>mission.kind==='assinaturas')?.current).toBe(1);
   sign(c);
   expect(view(owner.id)).toMatchObject({wallet:10,missions:{completed:[{kind:'assinaturas'}]}});
@@ -1442,4 +1444,19 @@ test.each([true,false])('office visits preserve credit only if another distinct 
     expect(active()).toBeUndefined();
     expect(agenda.view(state).active).toHaveLength(3);
   }
+});
+
+test('a signature objective replaces itself if its only remaining signers already signed',()=>{
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['comissaoImprovisada','cafe','passeio','selfieSolo']);
+  const humans = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
+  const npcs = new Set(['npc']);
+  agenda.updateEligibility(metrics,3,true,3,1,humans,undefined,npcs);
+  expect(agenda.hasActive('comissaoImprovisada')).toBe(true);
+  agenda.recordSignature(metrics,1,'b');
+  agenda.recordSignature(metrics,1,'npc');
+  agenda.updateEligibility(metrics,2,true,3,1,humans.slice(0,1),undefined,npcs);
+  expect(agenda.hasActive('comissaoImprovisada')).toBe(false);
+  expect(agenda.view(metrics).active).toHaveLength(3);
 });

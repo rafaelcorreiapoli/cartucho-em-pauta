@@ -418,7 +418,7 @@ export class PoliticalEconomy {
       if (!account) continue;
       Object.assign(account,{remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
-        ballotsLeft,this.npcIds.size,targets,availableTargets);
+        ballotsLeft,this.npcIds.size,targets,availableTargets,this.npcIds);
     }
   }
 
