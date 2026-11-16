@@ -10,7 +10,7 @@ body { margin:0; }
 button, input, select { font:inherit; }
 button.hud-button { min-height:40px; font-size:.85rem; }
 button[aria-pressed="true"]:not(#session *) { outline:2px solid var(--hud-gold); outline-offset:2px; }
-input:not([type="checkbox"],[type="range"]), select {
+input:not([type="checkbox"],[type="radio"],[type="range"]), select {
   min-height:40px; width:100%; padding:.45rem .6rem; color:inherit;
   border:1px solid var(--hud-line); border-radius:4px; background:#19292b;
 }
