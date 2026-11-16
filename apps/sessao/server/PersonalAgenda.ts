@@ -303,6 +303,7 @@ export class PersonalAgenda {
       }
       if (kind==='bandejaGourmet' && event.type==='used' && event.target===event.actor &&
           event.kind && Object.hasOwn(foods,event.kind)) gains[kind] = this.countFacts(mission,[{value:event.kind}]);
+      if (kind==='nadaADeclarar' && event.type==='concealed-cash-time') gains[kind] = event.duration ?? 0;
       if (kind==='escutaAtiva' && event.type==='wiretap-time') gains[kind] = event.duration ?? 0;
       if (kind==='debateTelefonico' && event.type==='call-time' || kind==='discursoMegafone' && event.type==='megaphone-time') {
         gains[kind] = event.duration ?? 0;
@@ -377,7 +378,7 @@ export class PersonalAgenda {
         !metrics.owns?.('bugDetector') && metrics.wallet<spyProducts.bugDetector.price)) return false;
     if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
-    if (kind==='cuecaDinheiro' && !metrics.owns?.('mensalUnderwear')) return false;
+    if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
       if (!metrics.canInstallSpy?.(device) || metrics.wallet<spyProducts[device].price && !metrics.owns?.(device)) return false;

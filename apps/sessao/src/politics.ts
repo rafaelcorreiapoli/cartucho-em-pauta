@@ -22,7 +22,7 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000} as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -102,6 +102,7 @@ export const agendas = {
   socorro:'Socorra um jogador nocauteado',
   fiscalCafe:'Beba três cafés',
   almocoPlenario:'Coma uma pizza no Plenário',
+  nadaADeclarar:`Transporte dinheiro oculto por ${agendaDurationMs.nadaADeclarar/1000} segundos`,
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
   reservaCofre:'Embolse R$ 50 mil no seu cofre',
   turismo:'Tire fotos em três salas diferentes',
@@ -142,7 +143,7 @@ const xpOnly:Partial<Record<Agenda,number>> = {
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
   varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
-  cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
+  nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
   selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,

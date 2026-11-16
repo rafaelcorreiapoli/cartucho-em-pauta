@@ -867,6 +867,7 @@ test('calls need ten seconds on each of two distinct lines after the mission sta
 test.each([
   ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b'}),event('called',{target:'b'})],
+  ['nadaADeclarar',event('concealed-cash-time',{duration:15_000}),event('concealment-started',{amount:1})],
   ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
   ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
   ['limpeza',event('spy-removed',{item:3}),event('spy-removed')],
@@ -883,7 +884,7 @@ test.each([
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
 ] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
   const rewards:number[] = [];
-  const options = {...metrics,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const options = {...metrics,owns:()=>true,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);

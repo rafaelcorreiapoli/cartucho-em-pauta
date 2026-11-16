@@ -414,6 +414,34 @@ test('concealment filters cash from observers and photos through reconnect and c
   expect(events.filter(event=>event.type.startsWith('concealment')).map(event=>event.witnesses)).toEqual([[],[]]);
 });
 
+test('concealed transport samples only movement with cash during the active effect',()=>{
+  const {alice,bob,game,world,events} = setup();
+  world.spend = ()=>true;
+  world.hasMission = (id,kind)=>id===alice.id && kind==='nadaADeclarar';
+  game.reset(0,()=>.5);
+  const underwear = buyTechnical(game,alice,world,'mensalUnderwear');
+  world.takeWallet = ()=>12;
+  game.robNpc(alice,{...bob,id:'npc',npc:true},world);
+  const cash = game.view(alice,world).inventory.find(item=>item.kind==='briefcase')!;
+  const samples = ()=>events.filter(event=>event.type==='concealed-cash-time');
+  const sample = (now:number,move:boolean)=>{
+    world.now = now;
+    if (move) alice.x++;
+    game.tick(world,true);
+  };
+  sample(100,true);
+  game.act(alice,{kind:'use',item:underwear.id},world);
+  sample(200,true);
+  sample(300,false);
+  expect(samples()).toEqual([]);
+  sample(400,true);
+  expect(samples()).toEqual([expect.objectContaining({duration:100,witnesses:[]})]);
+  game.act(alice,{kind:'drop',item:cash.id},world);
+  sample(500,true);
+  sample(46_000,true);
+  expect(samples()).toHaveLength(1);
+});
+
 test('Raio X spends one charge per window, follows visible targets and preserves snapshots',()=>{
   const {alice,bob,watcher,game,world,events} = setup();
   game.reset(0,()=>.5,world.players,()=>0);

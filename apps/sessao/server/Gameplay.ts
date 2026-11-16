@@ -44,7 +44,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; concealedCash:boolean}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -500,8 +500,15 @@ export class Gameplay {
     for (const player of world.players) {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
-      this.roomSamples.set(player.id,{room,at:world.now});
-      if (!exploring || !previous || world.present?.(player.id)===false || player.knockedOut || player.carried) continue;
+      const active = exploring && world.present?.(player.id)!==false && !player.knockedOut && !player.carried;
+      const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
+        (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,concealedCash});
+      if (!active || !previous) continue;
+      if (concealedCash && previous.concealedCash && (previous.x!==player.x || previous.y!==player.y)) {
+        const duration = Math.min(100,world.now-previous.at);
+        if (duration>0) publishGameplay(world,player,'concealed-cash-time',{duration,witnesses:[]});
+      }
       if (previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
         publishGameplay(world,player,'room-left',{place:previous.room});
       }
