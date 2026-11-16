@@ -69,6 +69,14 @@ async page => {
   await polls.getByRole('progressbar',{name:'Intenção de voto de Atalhos QA'}).waitFor();
   await polls.getByRole('button',{name:'Fechar pesquisa eleitoral'}).click();
   await polls.waitFor({state:'hidden'});
+  await page.keyboard.press('v');
+  const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});
+  await surveillance.getByRole('button',{name:'Câmeras 0'}).click();
+  await surveillance.getByText('Nenhuma câmera instalada.').waitFor();
+  await surveillance.getByRole('button',{name:'Escutas 0'}).click();
+  await surveillance.getByText('Nenhuma escuta instalada.').waitFor();
+  await surveillance.getByRole('button',{name:'Fechar vigilância'}).click();
+  await surveillance.waitFor({state:'hidden'});
   await page.keyboard.press('k');
   await settings.getByRole('button',{name:'Sair',exact:true}).click();
   await settings.waitFor({state:'hidden'});

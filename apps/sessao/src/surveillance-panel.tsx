@@ -1,3 +1,5 @@
+import { flushSync } from 'react-dom';
+import { SurveillanceDialogContent } from './ui/surveillance-dialog';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
@@ -8,10 +10,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   const launch = document.querySelector<HTMLButtonElement>('#open-surveillance')!;
   const badge = launch.querySelector('span')!;
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
-  const list = document.querySelector<HTMLElement>('#spy-channels')!;
-  const channelsRoot = createRoot(list);
-  const monitor = document.querySelector<HTMLElement>('#spy-monitor')!;
-  const monitorRoot = createRoot(monitor);
+  const root = createRoot(dialog);
   const viewport = node('div');
   viewport.className = 'spy-viewport';
   viewport.setAttribute('aria-label','Visão ao vivo da câmera');
@@ -25,8 +24,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   const devices = [{kind:'spyCamera',label:'Câmeras',icon:'camera'},{kind:'wiretap',label:'Escutas',icon:'mic'}] as const;
   let editing:number|undefined;
 
-  function update() {
-    if (!dialog.open) return;
+  function update(opening=false) {
+    if (!dialog.open && !opening) return;
     const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing,device]);
     if (key===next) return;
     key = next;
@@ -37,7 +36,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const audio = channel?.kind==='wiretap' ? channel : undefined;
     const last = Math.max(0,Math.ceil(channels.length/pageSize)-1);
     page = Math.min(page,last);
-    channelsRoot.render(<>
+    const channelList = <>
       <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
         {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
           onClick={()=>{device = tab.kind;page = 0;update();}}>
@@ -67,13 +66,13 @@ export function createSurveillancePanel(send:(action:object)=>void) {
         <button type="button" className="hud-button hud-button--secondary" disabled={page===last}
           aria-label="Próxima página" onClick={()=>{page++;update();}}>›</button>
       </div>}
-    </>);
+    </>;
     const closeEditor = () => { editing = undefined; update(); };
     const action = (label:string,key:string,run:()=>void) =>
       <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
         {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
       </button>;
-    monitorRoot.render(<>
+    const monitor = <>
       {selected && <><h3>{selected.name}</h3><div ref={host=>{ if (host && viewport.parentElement!==host) host.append(viewport); }}/></>}
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
@@ -97,15 +96,16 @@ export function createSurveillancePanel(send:(action:object)=>void) {
           <button>Salvar</button>
         </form>}
       </>}
-    </>);
+    </>;
+    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor}/>);
   }
 
   launch.onclick = ()=>{
     if (dialog.open) return;
     device = monitoredChannel(view)?.kind ?? (view?.channels.some(channel=>channel.kind==='spyCamera') ? 'spyCamera' : 'wiretap');
     page = 0;
+    flushSync(()=>update(true));
     dialog.showModal();
-    update();
   };
   dialog.onclose = ()=>{
     stopViewport();
@@ -138,8 +138,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       live.receive(frame);
     },
     destroy() {
-      channelsRoot.unmount();
-      monitorRoot.unmount();
+      root.unmount();
       stopViewport();
       launch.onclick = dialog.onclose = dialog.onkeydown = null;
       dialog.close();
