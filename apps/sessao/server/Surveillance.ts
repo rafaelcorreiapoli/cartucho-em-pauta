@@ -28,17 +28,16 @@ export class Surveillance {
   private discoveries = new Map<string,Map<string,number>>();
   private selected = new Map<string,number>();
   private deliveredCameraFrames = new Set<string>();
-  private listening = new Map<string,number>();
+  private listening = new Map<string,{channel:number;sampledAt:number}>();
   private muted = new Set<string>();
   private lastSound = new Map<string,number>();
   private motion = new Map<number,string>();
   private serial = 0;
   private sampleAt = 0;
-  private lastTick?:number;
 
   reset() {
     this.devices.clear(); this.recoveredHardware.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
-    this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
+    this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0;
   }
 
   leave(id:string, permanent=false) {
@@ -65,7 +64,8 @@ export class Surveillance {
   }
 
   channel(id:string, kind:SpyDevice) {
-    const device = this.devices.get((kind==='wiretap' ? this.listening : this.selected).get(id) ?? -1);
+    const channel = kind==='wiretap' ? this.listening.get(id)?.channel : this.selected.get(id);
+    const device = this.devices.get(channel ?? -1);
     return device?.owner===id && !device.removed && device.kind===kind ? device : undefined;
   }
 
@@ -113,7 +113,7 @@ export class Surveillance {
         });
       }
     }
-    return {channels,options,selected:this.selected.get(id),audio:this.listening.get(id),muted:this.muted.has(id),
+    return {channels,options,selected:this.selected.get(id),audio:this.listening.get(id)?.channel,muted:this.muted.has(id),
       progress:job ? Math.max(0,1-(job.ends-now)/spyRules[job.kind]) : undefined};
   }
 
@@ -125,18 +125,24 @@ export class Surveillance {
     if ('channel' in raw && typeof raw.channel==='number') {
       const device = this.devices.get(raw.channel);
       if (!device || device.owner!==id || device.removed) return;
-      const selection = device.kind==='wiretap' ? this.listening : this.selected;
       if (raw.kind==='open') {
         this.selected.delete(id);
         this.deliveredCameraFrames.delete(id);
         this.listening.delete(id);
         this.muted.delete(id);
-        selection.set(id,device.id);
-        if (device.kind==='wiretap') access.event?.(player,'spy-viewed',device.site.id,{kind:device.kind,id:device.hardware.id});
+        if (device.kind==='wiretap') {
+          this.listening.set(id,{channel:device.id,sampledAt:now});
+          access.event?.(player,'spy-viewed',device.site.id,{kind:device.kind,id:device.hardware.id});
+        } else this.selected.set(id,device.id);
       }
-      if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
-      if (raw.kind==='mute' && this.listening.get(id)===device.id) {
-        if (this.muted.has(id)) this.muted.delete(id); else this.muted.add(id);
+      const listener = this.listening.get(id);
+      if (raw.kind==='close-channel') {
+        if (listener?.channel===device.id) this.listening.delete(id);
+        if (this.selected.get(id)===device.id) this.selected.delete(id);
+      }
+      if (raw.kind==='mute' && listener?.channel===device.id) {
+        if (this.muted.delete(id)) listener.sampledAt = now;
+        else this.muted.add(id);
       }
       if (raw.kind==='alerts') device.alerts = !device.alerts;
       if (raw.kind==='rename' && 'name' in raw && typeof raw.name==='string') device.name = raw.name.trim().slice(0,32) || device.name;
@@ -163,8 +169,6 @@ export class Surveillance {
 
   tick(players:Player[],now:number,access:Access,exploring:boolean,present:(id:string)=>boolean) {
     const barriers = players[0]?.barriers;
-    const elapsed = Math.min(100,now-(this.lastTick ?? now));
-    this.lastTick = now;
     if (!exploring) { this.jobs.clear(); this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
@@ -175,8 +179,11 @@ export class Surveillance {
       this.jobs.delete(id);
       this.finish(player,job,now,access);
     }
-    if (elapsed>0) for (const player of players) {
-      if (present(player.id) && !player.knockedOut && !this.muted.has(player.id) && this.channel(player.id,'wiretap')) {
+    for (const [id,listener] of this.listening) {
+      const elapsed = Math.min(100,now-listener.sampledAt);
+      listener.sampledAt = now;
+      const player = players.find(player=>player.id===id);
+      if (elapsed>0 && player && present(id) && !player.knockedOut && !this.muted.has(id) && this.channel(id,'wiretap')) {
         access.monitor?.(player,elapsed);
       }
     }
@@ -255,7 +262,7 @@ export class Surveillance {
       this.occupied.delete(job.site.id);
       this.motion.delete(device.id);
       if (this.selected.get(device.owner)===device.id) this.selected.delete(device.owner);
-      if (this.listening.get(device.owner)===device.id) this.listening.delete(device.owner);
+      if (this.listening.get(device.owner)?.channel===device.id) this.listening.delete(device.owner);
       access.event?.(player,'spy-removed',job.site.id,id!==device.owner ? device : undefined);
       access.feedback(id,job.kind==='recover' ? 'Dispositivo recuperado.' : 'Dispositivo removido.');
       if (id!==device.owner) access.feedback(device.owner,'Dispositivo desconectado.');

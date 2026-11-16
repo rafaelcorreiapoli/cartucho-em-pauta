@@ -683,3 +683,53 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
 });
+
+test('Escuta Ativa credits only time after opening or unmuting a real wiretap',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const ids = [player.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  const {agenda} = account;
+  account.ownsWiretap = ()=>game.ownsWiretap(player.id);
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(player,{kind:'open-shop',target:'vendor'},world(1));
+  const token = game.view(player,world(1)).dialogue?.token;
+  expect(game.act(player,{kind:'shop-buy',target:'wiretap',token},world(1))).toBe('Compra guardada no inventário.');
+  const wiretap = game.view(player,world(1)).inventory.find(({kind})=>kind==='wiretap')!;
+  Object.assign(player,{x:254,y:252});
+  game.spyAction(player,{kind:'install',site:'coffee',item:wiretap.id},world(10));
+  let now = 10+spyRules.install;
+  game.tick(world(now),true);
+  const channel = game.spyView(player,world(now)).channels[0].id;
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(player.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
+  const tick = (elapsed:number)=>game.tick(world(now+=elapsed),true);
+  game.spyAction(player,{kind:'open',channel},world(now+99));
+  tick(100);
+  expect(active().current).toBe(1);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('0 / 15 s');
+
+  game.spyAction(player,{kind:'mute',channel},world(now));
+  tick(100);
+  expect(active().current).toBe(1);
+  game.spyAction(player,{kind:'mute',channel},world(now+99));
+  tick(100);
+  expect(active().current).toBe(2);
+
+  for (let i=0;i<149;i++) tick(100);
+  tick(97);
+  expect(active().current).toBe(14_999);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('14 / 15 s');
+  tick(1);
+  const completed = view().missions.completed.find(({kind})=>kind==='escutaAtiva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});
