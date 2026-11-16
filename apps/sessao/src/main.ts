@@ -269,7 +269,9 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
-    },political,action=>sendCommand('plenary-action',{action}));
+    },political,action=>sendCommand('plenary-action',{action}),{
+      send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
+    });
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
@@ -308,7 +310,7 @@ async function connect(join: () => Promise<Room>) {
       }
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
-    const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
+    const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action));
     const reactHud = mountReactHud();
     let appStatus:HudAppStatus = {};
     const appCommands:Record<HudApp,()=>void> = {
@@ -429,7 +431,6 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('players',(players: Player[]) => {
       political.players(players);
-      election.players(players);
       hud.players(players);
       game?.update(players);
       if (!matchRunning) characterPicker.render(players);

@@ -2,12 +2,10 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties, FormEvent } from 'react';
 import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
-import type { Player } from './map';
-import { stations, canReachStation, type PlenaryView } from './plenary';
+import type { PlenaryView } from './plenary';
 import { money } from './politics';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
-const actionButtons = ['advertise','speech','interview','object'] as const;
 
 export function ElectionSummary({rank,candidate,atRisk,remaining}:{
   rank:number; candidate?:ElectionView['polls'][number]; atRisk:boolean; remaining:number;
@@ -81,7 +79,7 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
   </>;
 }
 
-export function createElectionPanel(id:string, send:(action:ElectionAction) => void, hasVoice:()=>boolean) {
+export function createElectionPanel(id:string, send:(action:ElectionAction) => void) {
   const dock = el('election-dock');
   const openPolls = el<HTMLButtonElement>('open-election-polls');
   const polls = el<HTMLDialogElement>('election-poll-dialog');
@@ -93,41 +91,16 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   }
   openPolls.onclick = showPolls;
   let summaryKey = '';
-  let view:PlenaryView | undefined;
-  let own:Player | undefined;
   let pollsKey = '';
   const pollsRoot = createRoot(polls);
   dock.hidden = true;
-  for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = () => send({kind});
-
-  function controls() {
-    const election = view?.election;
-    const personal = election?.personal;
-    el('station-election-actions').hidden = !election?.canCampaign || !election.remaining || !personal;
-    el('interview-hint').hidden = true;
-    if (!election?.canCampaign || !personal) {
-      el<HTMLButtonElement>('advertise').disabled = true;
-      return;
-    }
-    const at = (key:keyof typeof stations) => !!own && canReachStation(own,key);
-    el<HTMLButtonElement>('advertise').disabled = !at('press') || !election.remaining || personal.advertised ||
-      (view?.politics?.wallet ?? 0)<ELECTION_RULES.advertisementCost;
-    el<HTMLButtonElement>('speech').disabled = !at('panel') || personal.spoke;
-    el<HTMLButtonElement>('interview').disabled = !at('tv') || !election.canInterview || !hasVoice();
-    el('interview-hint').hidden = !at('tv') || !election.canInterview || hasVoice();
-    el('object').hidden = false;
-    el<HTMLButtonElement>('object').disabled = !at('panel') || !election.canObject;
-  }
-
   return {
     showPolls,
-    render(next:PlenaryView) {
-      view = next;
+    render(view:PlenaryView) {
       const election = view.election;
       dock.hidden = !election;
       if (!election) {
         polls.close();
-        controls();
         return;
       }
       const {remaining,result} = election;
@@ -147,19 +120,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         pollsKey = nextPollsKey;
         pollsRoot.render(<ElectionPolls election={election} id={id} onSupport={to=>send({kind:'support',to})}/>);
       }
-      controls();
     },
     destroy() {
       polls.close();
       openPolls.onclick = null;
       pollsRoot.unmount();
       summaryRoot.unmount();
-      for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = null;
     },
-    players(players:Player[]) {
-      own = players.find(player => player.id===id);
-      controls();
-    },
-
   };
 }

@@ -1,3 +1,4 @@
+import {StationActionButton} from './station-action-button';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
 import type {Action,PlenaryView,Station} from '../plenary';
@@ -22,11 +23,7 @@ export function legislativeStationActions(view:PlenaryView|undefined,station:Sta
 
 export function LegislativeStationActions({actions,send}:{actions:readonly Action[];send:(action:Action)=>void}) {
   return actions.map(action=>{
-    const {station,label,icon} = definitions[action];
-    return <button key={action} className="hud-button hud-button--secondary" type="button"
-      data-action={action} data-station={station} onClick={()=>send(action)}>
-      <svg className="hud-glyph" aria-hidden="true"><use href={`#icon-${icon}`}/></svg><span>{label}</span>
-    </button>;
+    return <StationActionButton key={action} {...definitions[action]} action={action} activate={()=>send(action)}/>;
   });
 }
 

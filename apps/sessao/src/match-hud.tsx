@@ -5,6 +5,8 @@ import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
+import { mountElectionStationActions } from './ui/election-station-actions';
+import type { ElectionAction } from './elections';
 import { mountLegislativeStationActions } from './ui/legislative-station-actions';
 import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
@@ -32,7 +34,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
-  sendLegislative:(action:Action)=>void) {
+  sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
@@ -43,7 +45,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
   const shortcuts = element('station-shortcuts');
-  const interviewHint = element('interview-hint');
   function addStationButton(action:{station:Station; icon:string; label:string}) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -300,7 +301,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       </button>)));
   }
   const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
-  const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
+  const electoral = mountElectionStationActions(element('station-election-actions'),election.send);
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const more = hudButton('Mais ações',()=>{
     const expanded = more.getAttribute('aria-expanded')!=='true';
@@ -430,19 +431,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (institution.hearing) cassationAction.querySelector('span')!.textContent = cassationLabel(institution.hearing.fee);
     publishAction.hidden = context!=='press' || !canPublishEvidence(view,player);
     for (const {button,station} of activityButtons) button.hidden = context!==station;
-    for (const button of stationActions) {
-      const hidden = String(button.dataset.station!==context);
-      if (button.dataset.contextHidden!==hidden) button.dataset.contextHidden = hidden;
-    }
-    const hideInterview = String(context!=='tv');
-    if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
     const hasLegislativeAction = legislative.render(view,context);
-    const hasAction = hasLegislativeAction || [...stationActions,grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
+    const hasElectionAction = electoral.render(view,context,election.hasVoice());
+    const hasAction = hasLegislativeAction || hasElectionAction || [grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
       .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
-    const hint = !interviewHint.hidden && context==='tv';
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
-    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 
@@ -542,6 +537,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       notices.destroy();
       legislativeBrief.destroy();
       legislative.destroy();
+      electoral.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
