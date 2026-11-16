@@ -209,18 +209,25 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
-    second.send('election',{kind:'invest',amount:1,token:1810});
+    const broadcasts:string[] = [];
+    first.onMessage('campaign-advertisement',({advertiserId}:{advertiserId:string})=>broadcasts.push(advertiserId));
+    second.onMessage('campaign-advertisement',()=>{});
+    third.onMessage('campaign-advertisement',()=>{});
+    second.send('election',{kind:'advertise',token:1810});
     await walkTo(second,stations.press);
-    expect(secondView!.election?.personal?.invested).toBe(0);
-    second.send('election',{kind:'invest',amount:1,token:transfer.token});
-    second.send('election',{kind:'invest',amount:2,token:1850});
-    second.send('election',{kind:'invest',amount:2,token:1850});
+    expect(secondView!.election?.personal?.advertised).toBe(false);
+    second.send('election',{kind:'invest',amount:1,token:1840});
+    second.send('politics',{kind:'campaign',token:1841});
+    second.send('election',{kind:'advertise',token:transfer.token});
+    second.send('election',{kind:'advertise',token:1850});
+    second.send('election',{kind:'advertise',token:1850});
     second.send('politics',{...transfer,token:1850});
     await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
-    expect(secondView!.election?.personal?.invested).toBe(2);
-    expect(firstView!.election?.personal?.invested).toBe(0);
+    expect(secondView!.election?.personal?.advertised).toBe(true);
+    expect(firstView!.election?.personal?.advertised).toBe(false);
+    expect(broadcasts).toEqual([second.sessionId]);
     const previousMatch = secondView!.politics!.progression.matchId;
     await first.leave();
     await until(() => roster.at(-1)?.length===1);
@@ -247,8 +254,8 @@ test('clients share movement and voice, then receive private roles and payments'
     // The current view can change independently of the room's command sequence.
     second.send('politics',transfer);
     await walkTo(second,stations.press);
-    second.send('election',{kind:'invest',amount:2,token:1870});
-    await until(() => secondView?.election?.personal?.invested===2);
+    second.send('election',{kind:'advertise',token:1870});
+    await until(() => secondView?.election?.personal?.advertised===true);
     expect(secondView!.politics?.wallet).toBe(6);
     expect(thirdView!.politics?.wallet).toBe(8);
 

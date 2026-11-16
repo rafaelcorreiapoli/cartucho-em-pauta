@@ -1,3 +1,4 @@
+import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
@@ -162,26 +163,31 @@ test('the HUD replaces a credited voting mission without offering it again on th
   expect(hud.agenda.get()?.active.map(mission=>mission.kind)).toContain('apoio');
 });
 
-test('the HUD receives both campaign investments settled at the same server time',()=>{
+test('the HUD receives multiple deposits of the same cash lot in one server tick',()=>{
   const match = new PlenaryMatch(1);
-  const candidate = {...player,...terminals.press.point};
-  match.start(candidate.id,[candidate],0,()=>0);
+  const depositor = {...player,...terminals.treasury.point};
+  match.start(depositor.id,[depositor],0,()=>0);
   const economy:PoliticalEconomy = Reflect.get(match,'economy');
-  const {agenda} = Reflect.get(economy,'accounts').get(candidate.id);
+  const {agenda} = Reflect.get(economy,'accounts').get(depositor.id);
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
+  Reflect.set(agenda,'missionDeck',['contribuinte','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
+  const gameplay = new Gameplay();
+  const world = {...match.gameplayWorld([depositor],10,()=>false),takeWallet:()=>5};
+  gameplay.robNpc(depositor,{...depositor,id:'npc',npc:true},world);
+  const item = gameplay.view(depositor,world).inventory.find(item=>item.kind==='briefcase')!;
   const hud = createHudModel();
-  const render = ()=>hud.render(match.view(candidate.id,[candidate.id],10));
-  match.electionAction(candidate,{kind:'invest',amount:2},10,false);
+  const render = ()=>hud.render(match.view(depositor.id,[depositor.id],10));
+  const deposit = (target?:string)=>gameplay.act(depositor,{kind:'deliver',place:'treasury',item:item.id,target},world);
+  expect(deposit('partial')).toContain('R$ 25 mil');
   render();
-  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:2}));
-  match.electionAction(candidate,{kind:'invest',amount:2},10,false);
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'contribuinte',current:2.5}));
+  expect(deposit('partial')).toContain('R$ 12 mil');
   render();
-  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:4}));
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'contribuinte',current:3.7}));
   const xp = hud.profile.get()?.xp ?? 0;
-  match.electionAction(candidate,{kind:'invest',amount:1},10,false);
+  expect(deposit()).toContain('R$ 13 mil');
   render();
-  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:5}));
-  expect(hud.profile.get()?.xp).toBe(xp+missionReward('investimentoPolitico').xp);
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'contribuinte',current:5}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('contribuinte').xp);
 });

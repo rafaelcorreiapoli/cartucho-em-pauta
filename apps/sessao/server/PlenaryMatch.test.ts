@@ -147,15 +147,15 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(honest).politics?.wallet).toBe(11);
 });
 
-test('campaign unlocks a hearing, then a wrong removal costs stability and isolates the player for sixty seconds', () => {
+test('popularity unlocks a hearing, then a wrong removal costs stability and isolates the player for sixty seconds', () => {
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
   match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
   expect(view(host).phase).toBe('negotiation');
-  match.politics(at(host,'press'),{kind:'campaign'},people,20);
-  match.politics(at(host,'press'),{kind:'campaign'},people,21);
-  expect(view(host).politics).toMatchObject({wallet:6,popularity:57,canCallHearing:true});
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,17);
+  expect(view(host).politics).toMatchObject({wallet:8,popularity:57,canCallHearing:true});
   match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,50);
   expect(view(host).hearing?.target).toContain('Bolsonaro');
   match.vote(host.id,'yes',60);
@@ -166,7 +166,7 @@ test('campaign unlocks a hearing, then a wrong removal costs stability and isola
   expect(view(honest).politics?.suspended).toBe(true);
   expect(view(honest).role).toBe('Parlamentar');
   match.politics(honest,{kind:'transfer',to:host.id,amount:1,clandestine:false},people,resumed+1);
-  expect(view(host).politics?.wallet).toBe(6);
+  expect(view(host).politics?.wallet).toBe(8);
   expect(match.view(honest.id,ids,resumed).isolationSeconds).toBe(60);
   expect(match.canHandleObjects(honest.id,resumed)).toBe(false);
   match.advance(resumed+59_999);
@@ -352,8 +352,8 @@ test('another hearing is possible but the isolated player has immunity after ret
   match.start(host.id,people,0,()=>.9);
   const view = (now:number)=>match.view(host.id,ids,now);
   const accuse = (target:Player,now:number)=>match.politics(at(host,'panel'),{kind:'hearing',target:target.id},people,now);
-  match.politics(at(host,'press'),{kind:'campaign'},people,20);
-  match.politics(at(host,'press'),{kind:'campaign'},people,21);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,17);
   accuse(honest,50);
   match.vote(host.id,'yes',60);
   match.vote(traitor.id,'yes',60);
@@ -653,7 +653,8 @@ test('legislative brief activities require their respective stations and the neg
 test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  match.politics(at(host,'press'),{kind:'campaign'},people,20);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,17);
   match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
   const open = 50+CASSATION_NOTICE_MS;
   const view = (now:number)=>match.view(host.id,ids,now);
@@ -750,7 +751,7 @@ test('the extintor bill delays the next ignition only when approved and funded',
   }
 });
 
-test.each(['recovery','coffee','hearing','furniture','campaign','equipment','mail'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
+test.each(['recovery','coffee','hearing','furniture','equipment','mail'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
   const project = bills.findIndex(bill=>bill.effect?.kind==='policy' && bill.effect.policy===policy);
   for (const approved of [false,true]) {
     const match = new PlenaryMatch(1);

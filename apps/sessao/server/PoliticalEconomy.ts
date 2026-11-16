@@ -2,7 +2,7 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { CABINET_GRANT, CAMPAIGN_COST, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+import { CABINET_GRANT, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
@@ -11,7 +11,7 @@ type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number
 
 type Account = AgendaMetrics & {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
-  grantUsed:boolean; campaignRound:number; auditRound:number; audits:number; paymentRound:number; payments:number;
+  grantUsed:boolean; auditRound:number; audits:number; paymentRound:number; payments:number;
   selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
@@ -72,7 +72,7 @@ export class PoliticalEconomy {
       });
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
-        grantUsed:false,campaignRound:-1,auditRound:-1,audits:0,paymentRound:-1,payments:0,
+        grantUsed:false,auditRound:-1,audits:0,paymentRound:-1,payments:0,
         known:new Set(),
       });
     }
@@ -214,16 +214,6 @@ export class PoliticalEconomy {
     account.agenda.progress(account);
     if (diverted>0) this.record('diversion',id,diverted,round);
     return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
-  }
-
-  campaign(id:string, round:number) {
-    const account = this.accounts.get(id);
-    if (!account || account.wallet<CAMPAIGN_COST || account.campaignRound===round) return;
-    account.wallet -= CAMPAIGN_COST;
-    this.rewardReserve += CAMPAIGN_COST;
-    this.reserveFees += CAMPAIGN_COST;
-    account.campaignRound = round;
-    this.changePopularity(id,17);
   }
 
   audit(id:string, round:number, limit=1) {
@@ -429,7 +419,7 @@ export class PoliticalEconomy {
     if (!account) return;
     const {wallet,walletIncome,popularity,grantUsed} = account;
     return {
-      wallet,walletIncome,popularity,grantUsed,suspended:this.suspended(id),campaigned:account.campaignRound===round,
+      wallet,walletIncome,popularity,grantUsed,suspended:this.suspended(id),
       missions:account.agenda.view(account),
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,

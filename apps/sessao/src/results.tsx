@@ -102,7 +102,6 @@ export function mountResults() {
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
         flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));
-        document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
         document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
         if (!dialog.open) dialog.showModal();
       }

@@ -16,7 +16,7 @@ test('the election summary hides the countdown after the match ends',()=>{
 
 test('the polls dialog presents the current candidate and uses the shared native close',()=>{
   const candidate = {id:'a',name:'Rafa',character:0,race:'deputy' as const,estimate:73,trend:1};
-  const markup = renderToStaticMarkup(<ElectionPolls id="a" election={{
+  const markup = renderToStaticMarkup(<ElectionPolls id="a" onSupport={()=>{}} election={{
     cycle:1,remaining:85,offices:[],polls:[candidate],canObject:false,canCampaign:true,canInterview:false,
   }}/>);
   expect(markup).toContain('id="election-poll-title"');

@@ -1,3 +1,4 @@
+import type {PoliticalEconomy} from '../server/PoliticalEconomy';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {CassationResult,ElectionResult,ResultsContent,SessionResult} from './results';
@@ -98,7 +99,8 @@ test('an authoritative cassation without a majority renders its verdict',()=>{
   const ids = players.map(({id})=>id);
   const match = new PlenaryMatch(1);
   match.start(host.id,players,0,()=>.9);
-  match.politics({...host,...stations.press},{kind:'campaign'},players,20);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,17);
   match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);

@@ -6,11 +6,10 @@ export const offices = {
 export type Office = keyof typeof offices;
 export const officeKeys = Object.keys(offices) as Office[];
 export const ELECTION_RULES = {
-  interval:300_000, cycles:3, matchDuration:1_200_000, minimumMandates:3, startingBudget:32, salary:3, salaryShare:.4, publicDuty:6, publicDutyPenalty:6, treasuryReputationCap:4, investmentCap:8, advertisementCost:2,
+  interval:300_000, cycles:3, matchDuration:1_200_000, minimumMandates:3, startingBudget:32, salary:3, salaryShare:.4, publicDuty:6, publicDutyPenalty:6, treasuryReputationCap:4, advertisementCost:2, advertisementStrength:5,
   interviewLength:15_000, interviewGap:15_000,
 } as const;
 export type ElectionAction =
-  | {kind:'invest'; amount:number}
   | {kind:'support'; to:string}
   | {kind:'advertise' | 'speech' | 'interview' | 'object'};
 
@@ -22,7 +21,7 @@ export type Poll = {id:string; name:string; character:number; race:Office; estim
 export type ElectionView = {
   cycle:number; remaining:number;
   offices:Assignment[]; polls:Poll[];
-  personal?:{office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean; interviewed:boolean; salary:number; lost?:boolean};
+  personal?:{office:Office; race:Office; advertised:boolean; spoke:boolean; interviewed:boolean; salary:number; lost?:boolean};
   result?:{cycle:number; offices:Elected[]; salary:number; eliminated?:string; expectedSalary?:number};
   broadcast?:{id:string; name:string; remaining:number};
   notice?:{seq:number; text:string};
@@ -34,9 +33,6 @@ export type ElectionView = {
 export function readElectionAction(raw:unknown):ElectionAction|undefined {
   if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
   switch (raw.kind) {
-    case 'invest':
-      if ('amount' in raw && Number.isSafeInteger(raw.amount) && Number(raw.amount)>0) return {kind:'invest',amount:Number(raw.amount)};
-      break;
     case 'support':
       if ('to' in raw && typeof raw.to==='string') return {kind:'support',to:raw.to};
       break;

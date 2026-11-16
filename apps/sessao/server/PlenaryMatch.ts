@@ -117,7 +117,6 @@ export class PlenaryMatch {
   private renew(now:number) {
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
-    this.election.setCampaignBonus(!!this.activePolicies(now).campaign);
     this.election.advance(now,this.popularity,ids=>this.settleBudget(ids));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
@@ -199,7 +198,6 @@ export class PlenaryMatch {
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
-    this.election.setCampaignBonus(false);
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     campaignReady = true;
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -471,9 +469,6 @@ export class PlenaryMatch {
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
         break;
       }
-      case 'campaign':
-        if (this.canVote(id) && this.at(player,'press')) this.economy.campaign(id,this.round);
-        break;
       case 'transfer':
         if (!this.canReceivePix(action.to) || !this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round)) return false;
         this.publishActivity(player,'pix-sent',now,{target:action.to,amount:action.amount});
@@ -523,16 +518,11 @@ export class PlenaryMatch {
     if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id) || !this.election.open(now)) return;
     const spend = (amount:number) => this.economy.spend(id,amount);
     switch (action.kind) {
-      case 'invest':
-        if (this.at(player,'press') && this.election.invest(id,action.amount,spend)) {
-          this.publishActivity(player,'campaign-investment',now,{amount:action.amount,duration:this.election.timeUntilRenewal(now)});
-        }
-        break;
       case 'advertise': {
         if (!this.at(player,'press')) return;
         const advertisement = this.election.advertise(id,spend);
         if (!advertisement) return;
-        this.publishActivity(player,'advertisement-aired',now);
+        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now)});
         return {...advertisement,character:player.character};
       }
       case 'speech':
@@ -543,7 +533,7 @@ export class PlenaryMatch {
         break;
       case 'interview': if (hasVoice && this.at(player,'tv')) this.election.interview(id,now); break;
       case 'support':
-        if (this.at(player,'press')) this.election.support(id,action.to);
+        if (this.election.currentCycle<=rules.cycles) this.election.support(id,action.to);
         break;
       case 'object':
         if (this.at(player,'panel') && !this.objection() && this.election.object(id)) this.objector = id;
@@ -734,7 +724,6 @@ export class PlenaryMatch {
   }
 
   view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
-    this.election.setCampaignBonus(!!this.activePolicies(now).campaign);
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;

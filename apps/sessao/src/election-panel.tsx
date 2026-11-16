@@ -1,6 +1,5 @@
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
-import { flushSync } from 'react-dom';
 import type { CSSProperties, FormEvent } from 'react';
 import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
 import type { Player } from './map';
@@ -25,31 +24,30 @@ export function ElectionSummary({rank,candidate,atRisk,remaining}:{
   </>;
 }
 
-function ElectionCycle({invested,result}:{invested?:number;result?:ElectionView['result']}) {
+function ElectionCycle({result}:{result?:ElectionView['result']}) {
   const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
-  return <>
-    <div className="electoral-metrics">
-      <div><span><button className="resource-help profile-help" type="button" aria-label="Investimento na campanha"
-        data-help="Total que você já gastou na campanha deste ciclo."><svg className="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg></button>Investido na campanha</span>
-        <strong id="election-wallet">{invested===undefined ? '—' : money(invested)}</strong></div>
-    </div>
-    {result && <details id="election-result" key={result.cycle}>
+  return result ? <details id="election-result" key={result.cycle}>
       <summary>Renovação {result.cycle}</summary>
       <p>{eliminated && `${eliminated} perdeu o mandato. `}
         {!!result.expectedSalary && `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).`}
       </p>
-    </details>}
-  </>;
+    </details> : null;
 }
 
-export function ElectionPolls({election,id}:{election:ElectionView; id:string}) {
+export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id:string; onSupport:(candidate:string)=>void}) {
   const name = (candidateId:string)=>election.offices.find(person=>person.id===candidateId)?.name;
+  const candidates = election.offices.filter(candidate=>candidate.id!==id);
+  const current = election.polls.find(candidate=>candidate.id===id)?.supports ?? '';
+  const submit = (event:FormEvent<HTMLFormElement>)=>{
+    event.preventDefault();
+    onSupport(String(new FormData(event.currentTarget).get('candidate') ?? ''));
+  };
   return <>
     <header>
       <h2 id="election-poll-title">Pesquisa eleitoral</h2>
       <DialogDismiss label="Fechar pesquisa eleitoral">×</DialogDismiss>
     </header>
-    <div id="election-cycle"><ElectionCycle invested={election.personal?.invested} result={election.result}/></div>
+    <div id="election-cycle"><ElectionCycle result={election.result}/></div>
     <section aria-label="Pesquisa eleitoral"><div id="election-polls">
       <section><h4>Classificação projetada</h4><ol role="list">
         {election.polls.map((candidate,index)=>{
@@ -70,6 +68,16 @@ export function ElectionPolls({election,id}:{election:ElectionView; id:string}) 
         })}
       </ol></section>
     </div></section>
+    <div id="election-support">
+      {election.canCampaign && election.remaining>0 && candidates.length>0 &&
+        <form id="support-form" onSubmit={submit}>
+          <label>Apoio público <select id="endorsement" name="candidate" key={current} defaultValue={current}>
+            <option value="">Sem apoio</option>
+            {candidates.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+          </select></label>
+          <button className="hud-button hud-button--secondary">Declarar ou retirar apoio</button>
+        </form>}
+    </div>
   </>;
 }
 
@@ -84,53 +92,20 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   let own:Player | undefined;
   let pollsKey = '';
   const pollsRoot = createRoot(polls);
-  let campaignKey = '';
   dock.hidden = true;
-  const campaign = el<HTMLDialogElement>('campaign-dialog');
-  const openCampaign = el<HTMLButtonElement>('election-actions');
-  const campaignRoot = createRoot(campaign);
-  openCampaign.onclick = () => { renderCampaign(); campaign.showModal(); };
-  function renderCampaign() {
-    const election = view?.election;
-    const candidates = election?.offices.filter(candidate=>candidate.id!==id) ?? [];
-    const max = Math.min(view?.politics?.wallet ?? 0,ELECTION_RULES.investmentCap-(election?.personal?.invested ?? 0));
-    const key = JSON.stringify([max,candidates.map(({id,name})=>[id,name])]);
-    if (key===campaignKey) return;
-    campaignKey = key;
-    const submit = (kind:'invest'|'support',event:FormEvent<HTMLFormElement>)=>{
-      event.preventDefault();
-      const data = new FormData(event.currentTarget);
-      if (kind==='invest') send({kind,amount:Number(data.get('amount'))});
-      else send({kind,to:String(data.get('candidate') ?? '')});
-    };
-    flushSync(()=>campaignRoot.render(<>
-      <header><h2 id="campaign-title">Minha campanha</h2><DialogDismiss label="Fechar campanha">×</DialogDismiss></header>
-      <form id="invest-form" onSubmit={event=>submit('invest',event)}>
-        <label>Investir em campanha (R$ 10 mil por unidade)
-          <input id="investment" name="amount" type="number" defaultValue={1} min={1} max={max} step={1} required/>
-        </label>
-        <button id="invest" className="hud-button" disabled={max<1}>Investir</button>
-      </form>
-      <form id="support-form" onSubmit={event=>submit('support',event)}>
-        <label>Apoio público <select id="endorsement" name="candidate"><option value="">Sem apoio</option>
-          {candidates.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
-        </select></label>
-        <button className="hud-button hud-button--secondary">Declarar ou retirar apoio</button>
-      </form>
-    </>));
-  }
   for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = () => send({kind});
 
   function controls() {
     const election = view?.election;
     const personal = election?.personal;
-    el('station-election-actions').hidden = !election?.canCampaign || !personal;
-    openCampaign.disabled = !election?.canCampaign || !personal || !own || !canReachStation(own,'press');
-    if (openCampaign.disabled && campaign.open) campaign.close();
+    el('station-election-actions').hidden = !election?.canCampaign || !election.remaining || !personal;
     el('interview-hint').hidden = true;
-    if (!election?.canCampaign || !personal) return;
+    if (!election?.canCampaign || !personal) {
+      el<HTMLButtonElement>('advertise').disabled = true;
+      return;
+    }
     const at = (key:keyof typeof stations) => !!own && canReachStation(own,key);
-    el<HTMLButtonElement>('advertise').disabled = !at('press') || personal.advertised ||
+    el<HTMLButtonElement>('advertise').disabled = !at('press') || !election.remaining || personal.advertised ||
       (view?.politics?.wallet ?? 0)<ELECTION_RULES.advertisementCost;
     el<HTMLButtonElement>('speech').disabled = !at('panel') || personal.spoke;
     el<HTMLButtonElement>('interview').disabled = !at('tv') || !election.canInterview || !hasVoice();
@@ -142,7 +117,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   return {
     render(next:PlenaryView) {
       view = next;
-      const election = view.election, personal = election?.personal;
+      const election = view.election;
       dock.hidden = !election;
       if (!election) {
         polls.close();
@@ -161,22 +136,18 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
         summaryRoot.render(<ElectionSummary {...summary}/>);
       }
       dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
-      if (campaign.open) renderCampaign();
-      const nextPollsKey = JSON.stringify([personal?.invested,result,election.polls,election.offices]);
+      const nextPollsKey = JSON.stringify([result,election.canCampaign,remaining>0,election.polls,election.offices]);
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
-        pollsRoot.render(<ElectionPolls election={election} id={id}/>);
+        pollsRoot.render(<ElectionPolls election={election} id={id} onSupport={to=>send({kind:'support',to})}/>);
       }
       controls();
     },
     destroy() {
-      campaign.close();
       polls.close();
       openPolls.onclick = null;
-      campaignRoot.unmount();
       pollsRoot.unmount();
       summaryRoot.unmount();
-      openCampaign.onclick = null;
       for (const kind of actionButtons) el<HTMLButtonElement>(kind).onclick = null;
     },
     players(players:Player[]) {

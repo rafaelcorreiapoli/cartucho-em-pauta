@@ -1,4 +1,5 @@
 import { mountRoomSettings } from './ui/room-settings';
+import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
@@ -148,7 +149,6 @@ function showLobby(message: string) {
   game = undefined;
   room = undefined;
   roomCommand = undefined;
-  document.querySelector<HTMLDialogElement>('#campaign-dialog')?.close();
   settings.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
@@ -312,7 +312,12 @@ async function connect(join: () => Promise<Room>) {
       else gameplay.feedback(message);
     });
     const campaignTv = createCampaignTv(session);
-    joined.onMessage('campaign-advertisement',campaignTv.enqueue);
+    joined.onMessage('campaign-advertisement',(ad:CampaignAdvertisement & {advertiserId:string})=>{
+      campaignTv.enqueue(ad);
+      if (ad.advertiserId===joined.sessionId) {
+        hud.notify('Propaganda no ar',`+${ELECTION_RULES.advertisementStrength} de força eleitoral neste ciclo.`);
+      }
+    });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));

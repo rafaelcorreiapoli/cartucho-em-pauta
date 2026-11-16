@@ -4,7 +4,7 @@ import type { Contact } from '../src/politics';
 type Candidate = Contact & {
   character:number;
   campaignNumber:number;
-  office:Office; race:Office; invested:number; advertised:boolean; spoke:boolean;
+  office:Office; race:Office; advertised:boolean; spoke:boolean;
   interviewed:boolean; support?:string; scandal:number;
   noise:number; tie:number;
 };
@@ -18,8 +18,6 @@ export class ElectionCycle {
   private result?:Result;
   private previousPoll = new Map<string,number>();
   private nextPoll = 0;
-  private investmentWeight = 1;
-  setCampaignBonus(active:boolean) { this.investmentWeight = active ? 1.5 : 1; }
   private broadcast?:{id:string; until:number};
   private availableAt = 0;
   private notice?:ElectionView['notice'];
@@ -39,7 +37,7 @@ export class ElectionCycle {
     this.previousPoll.clear();
     this.nextPoll = now;
     for (const contact of contacts) {
-      this.people.set(contact.id,{...contact,character:contact.character ?? 0,campaignNumber:100+this.people.size,office:'deputy',race:'deputy',invested:0,
+      this.people.set(contact.id,{...contact,character:contact.character ?? 0,campaignNumber:100+this.people.size,office:'deputy',race:'deputy',
         advertised:false,spoke:false,interviewed:false,scandal:0,noise:this.noise(),tie:random()});
     }
   }
@@ -64,23 +62,15 @@ export class ElectionCycle {
     for (const person of this.people.values()) if (person.support===id) person.support = undefined;
   }
 
-  invest(id:string, amount:number, spend:(amount:number)=>boolean) {
-    const person = this.people.get(id);
-    if (!person || amount<=0 || person.invested+amount>rules.investmentCap || !spend(amount)) return false;
-    person.invested += amount;
-    return true;
-  }
-
   canCampaignAction(id:string,kind:'propaganda'|'discurso') {
     const person = this.people.get(id);
-    return !!person && !(kind==='propaganda' ? person.advertised : person.spoke);
+    return !!person && (kind==='propaganda' ? this.cycle<=rules.cycles && !person.advertised : !person.spoke);
   }
 
   advertise(id:string, spend:(amount:number)=>boolean):CampaignAdvertisement | undefined {
     const person = this.people.get(id);
-    if (person && !person.advertised && spend(rules.advertisementCost)) {
+    if (person && this.cycle<=rules.cycles && !person.advertised && spend(rules.advertisementCost)) {
       person.advertised = true;
-      this.announce(`${person.name} colocou propaganda no ar.`);
       return {name:person.name,character:person.character,number:person.campaignNumber};
     }
   }
@@ -137,8 +127,8 @@ export class ElectionCycle {
 
   private strength(person:Candidate, popularity:(id:string)=>number) {
     const support = [...this.people.values()].filter(other => other.support===person.id).length;
-    return Math.max(1,popularity(person.id)+5*this.investmentWeight*Math.sqrt(person.invested)+
-      (person.advertised ? 5 : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
+    return Math.max(1,popularity(person.id)+
+      (person.advertised ? rules.advertisementStrength : 0)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
       Math.min(12,support*4)-person.scandal);
   }
 
@@ -175,7 +165,7 @@ export class ElectionCycle {
       this.announce(eliminated ? `${eliminated.name} perdeu o mandato.` : 'Renovação concluída. Mandatos preservados.');
       this.objected = false;
       for (const person of this.people.values()) {
-        person.invested = person.scandal = 0;
+        person.scandal = 0;
         person.advertised = person.spoke = person.interviewed = false;
         person.support = undefined;
         person.noise = this.noise();
@@ -204,7 +194,7 @@ export class ElectionCycle {
     return {
       cycle:this.cycle,remaining:Math.max(0,Math.ceil(((this.cycle<=rules.cycles ? this.due : now)-now)/1000)),
       mandate:!!person,offices:this.assignments(),polls:this.polls(popularity),
-      personal:person && {office:person.office,race:person.race,invested:person.invested,advertised:person.advertised,
+      personal:person && {office:person.office,race:person.race,advertised:person.advertised,
         spoke:person.spoke,interviewed:person.interviewed,salary:rules.salary},
       result:this.result && {cycle:this.result.cycle,offices:this.result.offices,
         eliminated:this.result.eliminated,expectedSalary:this.people.has(id) ? rules.salary : 0,salary:this.result.salaries.get(id) ?? 0},
