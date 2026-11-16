@@ -376,8 +376,8 @@ export class SessionRoom extends Room {
     this.onMessage('allocate-attribute',(client,raw:unknown)=>{
       const request = readAttributeRequest(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!request || !player || player.knockedOut || player.carrying || this.match.ballotCountdown(this.clock.currentTime)!==undefined) return;
-      if (this.match.allocateAttribute(player.id,request,this.clock.currentTime)) {
+      if (!request || !player) return;
+      if (this.match.allocateAttribute(player,request,this.clock.currentTime)) {
         this.gameplay.applyAttribute(player,request.attribute);
       }
     });
