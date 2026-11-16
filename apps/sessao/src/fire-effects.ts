@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
 import {fireSites} from './fire';
-import {rooms} from './map';
 
 const flameSize = 80;
 const flameFrames = 16;
@@ -68,8 +67,7 @@ function drawFlames(scene:Phaser.Scene) {
 
 export function createRoomFires(scene:Phaser.Scene) {
   drawFlames(scene);
-  return fireSites.map(({name,x,y},index)=>{
-    const [left,top,width,height] = rooms.find(room=>room.name===name)!.bounds;
+  return fireSites.map(({x,y,bounds:[left,top,width,height]},index)=>{
     const glowKey = `room-fire-glow-${index}`;
     const glow = scene.textures.createCanvas(glowKey,width,height)!;
     const ctx = glow.context;
@@ -106,4 +104,38 @@ export function createRoomFires(scene:Phaser.Scene) {
       },
     };
   });
+}
+
+export function createFuseSmoke(scene:Phaser.Scene) {
+  const key = 'incendiary-smoke';
+  const texture = scene.textures.createCanvas(key,32,32)!;
+  const ctx = texture.context;
+  const gradient = ctx.createRadialGradient(16,16,0,16,16,16);
+  gradient.addColorStop(0,'rgba(236,233,215,.98)');
+  gradient.addColorStop(.42,'rgba(173,172,161,.82)');
+  gradient.addColorStop(1,'rgba(119,119,110,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0,0,32,32);
+  texture.refresh();
+
+  const plume = scene.add.particles(0,0,key,{
+    emitting:false,frequency:95,lifespan:1150,
+    speedX:{min:-6,max:6},speedY:{min:-24,max:-18},
+    scale:{start:.24,end:.62},alpha:{start:.92,end:0},maxAliveParticles:14,
+  });
+  const still = scene.add.image(0,0,key).setScale(.55).setVisible(false);
+  let site:number|undefined;
+  return (visibleSite:number|undefined,reduced:boolean)=>{
+    if (site!==visibleSite && plume.emitting) plume.stop(true);
+    site = visibleSite;
+    still.setVisible(site!==undefined && reduced);
+    if (site===undefined) return;
+    const {x,y} = fireSites[site];
+    if (reduced) {
+      if (plume.emitting) plume.stop(true);
+      still.setPosition(x,y-40).setDepth(y+2);
+    } else if (!plume.emitting) {
+      plume.setPosition(x,y-31).setDepth(y+2).start();
+    }
+  };
 }

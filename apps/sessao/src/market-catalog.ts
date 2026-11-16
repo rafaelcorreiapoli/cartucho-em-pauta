@@ -1,3 +1,4 @@
+import { incendiary } from './fire';
 import type {BillPolicies} from './plenary';
 import { concealment, equipment } from './equipment';
 import { foods } from './food';
@@ -10,6 +11,7 @@ const supplies = {
   mensalUnderwear:concealment,
   forensicKit:{price:documentRules.kitPrice},
   firstAidKit,
+  incendiary,
 } as const;
 
 const {officeTv,officeRug,officeChair,...securityGoods} = officeGoods;

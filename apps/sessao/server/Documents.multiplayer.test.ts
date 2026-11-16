@@ -1,4 +1,4 @@
-import {fireRules,fireSites} from '../src/fire';
+import {extinguisherSpawns,fireRules,fireSites,incendiary,type FireExtinguished} from '../src/fire';
 import {expect,test} from 'bun:test';
 import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
@@ -42,6 +42,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const photos = new Map<string,PhotoAccessView>();
     const mailErrors = new Map<string,string|null>();
     const feedback = new Map<string,string>();
+    const fireNotices = new Map<string,FireExtinguished>();
     const controls = new Map<string,ControlState>();
     const snapshots = new Map<string,Player[]>();
     const reports = new Map<string,ForensicReport[]>();
@@ -55,6 +56,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
       peer.onMessage('photo-state',(view:PhotoAccessView)=>photos.set(peer.sessionId,view));
       peer.onMessage('mail-result',(error:string|null)=>mailErrors.set(peer.sessionId,error));
       peer.onMessage('control',(state:ControlState)=>controls.set(peer.sessionId,state));
+      peer.onMessage('fire-extinguished',(notice:FireExtinguished)=>fireNotices.set(peer.sessionId,notice));
       peer.onMessage('gameplay-feedback',(message:string)=>feedback.set(peer.sessionId,message));
       peer.onMessage('players',(players:Player[])=>snapshots.set(peer.sessionId,players));
       peer.onMessage('item-obtained',()=>{});
@@ -248,22 +250,48 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>feedback.get(alice.sessionId)==='O objeto não está com você.');
     expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
     const fire = Reflect.get(match,'fire');
-    Reflect.set(fire,'clock',fireRules.firstAfter/2);
     const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;
     const firefighter = rooms.find(peer=>peer!==infiltrator)!;
-    await wait(()=>views.get(infiltrator.sessionId)?.sabotageFireSite===0);
-    expect(views.get(firefighter.sessionId)?.sabotageFireSite).toBeUndefined();
-    move(infiltrator,fireSites[0]);
-    infiltrator.send('fire-action',{kind:'ignite',site:0,token:2260});
-    await wait(()=>views.get(firefighter.sessionId)?.fire?.site===0);
+    const remote = rooms.find(peer=>peer!==infiltrator && peer!==firefighter)!;
     const site = fireSites[0];
+    move(remote,stations.secretary);
+    // Earlier mail fees and transfers can leave a different wallet based on the role draw.
+    const purchaseShortfall = Math.round((incendiary.price-economy.wallet(firefighter.sessionId))*10)/10;
+    if (purchaseShortfall>0) economy.rewardFromReserve(firefighter.sessionId,purchaseShortfall);
+    move(firefighter,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    const previousShopToken = state(firefighter)?.dialogue?.token;
+    firefighter.send('gameplay',{action:{kind:'open-shop',target:'vendor'},token:2230});
+    const technical = await wait(()=>{
+      const current = state(firefighter)?.dialogue;
+      return current?.npc==='vendor' && current.shop && current.token!==previousShopToken ? current : undefined;
+    });
+    feedback.delete(firefighter.sessionId);
+    firefighter.send('gameplay',{action:{kind:'shop-buy',target:'incendiary',token:technical.token},token:2240});
+    expect(await wait(()=>feedback.get(firefighter.sessionId))).toBe('Compra guardada no inventário.');
+    await wait(()=>state(firefighter)?.inventory.some(item=>item.kind==='incendiary'));
+    const nearbyTarget = {x:site.x,y:site.y+10};
+    move(firefighter,nearbyTarget);
+    move(infiltrator,nearbyTarget);
+    await wait(()=>views.get(firefighter.sessionId)?.fireInteraction?.option?.kind==='plant');
+    firefighter.send('fire-action',{kind:'plant',site:0,token:2260});
+    await wait(()=>views.get(firefighter.sessionId)?.fireInteraction?.progress);
+    await wait(()=>snapshots.get(infiltrator.sessionId)?.some(player=>player.id===firefighter.sessionId && player.handlingObject!==undefined));
+    expect(views.get(infiltrator.sessionId)?.fireInteraction?.progress).toBeUndefined();
+    const armed = await wait(()=>Reflect.get(fire,'armed') as {site:number;ignites:number}|undefined);
+    await wait(()=>state(firefighter)?.inventory.some(item=>item.kind==='incendiary')===false);
+    expect(views.get(remote.sessionId)?.fireInteraction).toBeUndefined();
+    Reflect.set(fire,'clock',armed.ignites-fireRules.smoke);
+    await wait(()=>views.get(infiltrator.sessionId)?.fireInteraction?.smoke===0);
+    expect(views.get(remote.sessionId)?.fireInteraction?.smoke).toBeUndefined();
+    Reflect.set(fire,'clock',armed.ignites);
+    await wait(()=>views.get(firefighter.sessionId)?.fire?.site===0);
     const commandTokens = Reflect.get(room,'lastRoomCommandToken') as Map<string,number>;
     move(firefighter,site);
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2270});
     await wait(()=>commandTokens.get(firefighter.sessionId)===2270);
     expect(views.get(firefighter.sessionId)?.fire?.site).toBe(0);
-    move(firefighter,site.extinguisher);
-    move(infiltrator,site.extinguisher);
+    move(firefighter,extinguisherSpawns[0]);
+    move(infiltrator,extinguisherSpawns[0]);
     const extinguisher = await wait(()=>state(firefighter)?.nearby.find(item=>item.kind==='extinguisher'));
     await wait(()=>state(infiltrator)?.ground.some(item=>item.id===extinguisher.id));
     const collect = {kind:'collect',item:extinguisher.id};
@@ -280,9 +308,12 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(views.get(firefighter.sessionId)?.fire?.site).toBe(0);
     move(firefighter,site);
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2290});
-    await wait(()=>feedback.get(firefighter.sessionId)==='Incêndio apagado.');
+    await wait(()=>rooms.every(peer=>fireNotices.has(peer.sessionId)));
+    for (const notice of fireNotices.values()) {
+      expect(notice).toEqual({actor:players.get(firefighter.sessionId)!.player.nick,room:site.name});
+    }
     await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
-    move(firefighter,site.extinguisher);
+    move(firefighter,extinguisherSpawns[0]);
     firefighter.send('gameplay',{action:{kind:'drop',item:extinguisher.id},token:2292});
     await wait(()=>state(infiltrator)?.nearby.some(item=>item.id===extinguisher.id));
     infiltrator.send('gameplay',{action:collect,token:2294});

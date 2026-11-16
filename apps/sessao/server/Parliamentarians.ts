@@ -4,7 +4,7 @@ import { npcRules } from '../src/parliamentarians';
 import type { GameplayEvent } from '../src/gameplay';
 import { bills, stations, type Vote } from '../src/plenary';
 
-const destinations = [stations.coffee,stations.archive,stations.secretary,stations.committees,stations.press,{x:140,y:146}];
+const destinations = [stations.coffee,stations.archive,stations.secretary,stations.quorum,stations.press,{x:140,y:146}];
 const profiles = [
   {signature:0,price:2,conviction:1, preferences:['yes','no',undefined]},
   {signature:2,price:2,conviction:2, preferences:['no',undefined,'yes']},

@@ -179,6 +179,7 @@
               <button id="open-election-polls" class="hud-option" type="button" aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)"></button>
             </div>
             <div id="active-fire-mount"></div>
+            <div id="active-outage-mount"></div>
           </div>
         </header>
         <div id="agenda-dock"></div>
@@ -347,6 +348,19 @@
       <dialog id="surveillance-dialog" class="hud-panel" aria-labelledby="surveillance-title">
         <header><h2 id="surveillance-title">Central de Vigilância</h2><form method="dialog"><button type="submit" class="hud-button hud-button--secondary" aria-label="Fechar vigilância">✕</button></form></header>
         <div class="spy-console"><div id="spy-channels"></div><section id="spy-monitor"></section></div>
+      </dialog>
+      <dialog id="security-dialog" class="hud-panel" aria-labelledby="security-title">
+        <header>
+          <h2 id="security-title">Sala de Segurança</h2>
+          <form method="dialog"><button type="submit" class="hud-button hud-button--secondary" aria-label="Fechar terminal">✕</button></form>
+        </header>
+        <div class="security-console">
+          <div class="security-channels" role="group" aria-label="Câmeras"></div>
+          <section aria-label="Imagem da câmera">
+            <div class="spy-viewport"></div>
+            <small role="status"></small>
+          </section>
+        </div>
       </dialog>
       <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title"></dialog>
       <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title"></dialog>

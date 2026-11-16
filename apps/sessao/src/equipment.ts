@@ -29,15 +29,18 @@ export const megaphone = {duration:15_000,cooldown:45_000,volume:.85} as const;
 export const accessorySlots = 2;
 export function equipmentGroup(kind:Gear) {
   const {slot} = equipment[kind];
-  return slot==='weapon' ? 'hands' : slot==='feet' ? 'feet' : 'accessory';
+  if (slot==='weapon') return 'hands';
+  if (slot==='armor') return 'torso';
+  if (slot==='feet') return 'feet';
+  return 'accessory';
 }
 
 export function equipmentSlots<T extends {kind:string}>(items:readonly T[]): (T|undefined)[] {
-  const groups = {hands:[] as T[],feet:[] as T[],accessory:[] as T[]};
+  const groups = {hands:[] as T[],torso:[] as T[],feet:[] as T[],accessory:[] as T[]};
   for (const item of items) {
     if (isGear(item.kind)) groups[equipmentGroup(item.kind)].push(item);
   }
-  return [groups.hands[0],groups.feet[0],...Array.from({length:accessorySlots},(_,index)=>groups.accessory[index])];
+  return [groups.hands[0],groups.torso[0],groups.feet[0],...Array.from({length:accessorySlots},(_,index)=>groups.accessory[index])];
 }
 
 export function gearConflict<T extends {kind:string}>(kind:Gear, equipped:readonly T[]) {

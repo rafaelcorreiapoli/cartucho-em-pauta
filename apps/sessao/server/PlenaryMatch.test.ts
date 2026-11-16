@@ -307,24 +307,30 @@ test('validated filings schedule distinct successive ballots, with the standard 
   expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
 });
 
-test('only infiltrators can start a fire, and nearby parliamentarians can put it out',()=>{
+test('parliamentarians can install a device and the fire still requires an extinguisher',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  const now = fireRules.firstAfter/2;
-  match.advance(now);
-  const view = (player:Player, at=now) => match.view(player.id,ids,at);
-  const site = view(traitor).sabotageFireSite!;
-  expect(site).toBeDefined();
-  expect(view(honest).sabotageFireSite).toBeUndefined();
-  expect(match.actOnFire({...honest,...fireSites[site]},'ignite',site,now)).toBeUndefined();
-  expect(match.actOnFire(traitor,'ignite',site,now)).toBeUndefined();
-  expect(match.actOnFire({...traitor,...fireSites[site]},'ignite',site,now)).toBe('Incêndio provocado.');
-  expect(view(honest).fire?.site).toBe(site);
-  match.advance(now+fireRules.tick);
-  expect(view(honest,now+fireRules.tick).stability).toBe(48-fireRules.damage);
-  expect(match.actOnFire(honest,'extinguish',site,now+fireRules.tick)).toBeUndefined();
-  expect(match.actOnFire({...honest,...fireSites[site]},'extinguish',site,now+fireRules.tick,true)).toBe('Incêndio apagado.');
-  expect(view(honest,now+fireRules.tick).fire).toBeUndefined();
+  const site = 0;
+  const installer = {...honest,x:fireSites[site].x,y:fireSites[site].y+10};
+  expect(match.actOnFire(installer,'plant',site,0)).toBeUndefined();
+  expect(match.fireInteraction(installer,0,86,true,false)?.option?.kind).toBe('plant');
+  expect(match.actOnFire(installer,'plant',site,0,false,1)).toBe('Instalando dispositivo…');
+  expect(match.fireInteraction(installer,1000,86,true,false)?.progress).toBeCloseTo(1/3);
+  expect(match.fireInteraction(traitor,1000,86,false,false)).toBeUndefined();
+  match.advance(fireRules.install);
+  match.updateFireInstallation(fireRules.install,()=>installer,()=>true,()=>true);
+  const ignites = fireRules.install+fireRules.fuse;
+  match.advance(ignites-fireRules.smoke);
+  expect(match.fireInteraction(installer,ignites-fireRules.smoke,86,false,false)).toMatchObject({smoke:site,option:{kind:'disarm'}});
+  expect(match.fireInteraction(traitor,ignites-fireRules.smoke,86,false,false)).toBeUndefined();
+  match.advance(ignites);
+  expect(match.view(honest.id,ids,ignites).fire?.site).toBe(site);
+  const later = ignites+fireRules.tick;
+  match.advance(later);
+  expect(match.view(honest.id,ids,later).stability).toBe(48-fireRules.damage);
+  expect(match.actOnFire(installer,'extinguish',site,later)).toBeUndefined();
+  expect(match.actOnFire(installer,'extinguish',site,later,true)).toBe('Incêndio apagado.');
+  expect(match.view(honest.id,ids,later).fire).toBeUndefined();
 });
 
 test('an informal loan and a later manual repayment conserve both wallets',()=>{

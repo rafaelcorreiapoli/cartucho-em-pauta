@@ -16,6 +16,7 @@ import { type GameplayAction } from './gameplay';
 import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
+import { createSecurityPanel } from './security-panel';
 import { createSurveillancePanel } from './surveillance-panel';
 import type { PhotoScene } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
@@ -276,10 +277,11 @@ async function connect(join: () => Promise<Room>) {
 
     const audioReady = audio.enter();
     let assetsReady = false;
+    const security = createSecurityPanel(action=>sendCommand('security-camera',action));
     const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
-      sendGameplay,action=>sendCommand('fire-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),progress=>{
+      sendGameplay,action=>sendCommand('fire-action',action),action=>sendCommand('power-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),security.open,progress=>{
         if (room!==joined) return;
         if (progress<0) {
           assetError = true;
@@ -296,6 +298,8 @@ async function connect(join: () => Promise<Room>) {
           });
         }
       });
+    joined.onMessage('security-frame',security.frame);
+    joined.onDrop(()=>security.render());
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
@@ -314,7 +318,9 @@ async function connect(join: () => Promise<Room>) {
     },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
       if (action.kind!=='attack') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='power') { sendCommand('power-action',action.option); return; }
       if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
+      if (action.kind==='open-security') { security.open(); return; }
       if (action.kind==='spy') { sendCommand('spy',action.option); return; }
       if (action.kind==='edit-document') {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
@@ -350,6 +356,8 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('pickup');
     });
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
+    joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
+      hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
     joined.onMessage('gameplay-feedback',(message:string)=>{
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
@@ -407,6 +415,7 @@ async function connect(join: () => Promise<Room>) {
       election.render(view);
       gameplay.render(view);
       surveillance.render(view.gameplay?.surveillance);
+      security.render(view.gameplay?.security);
       market.render(view);
       npcPanel.update(view);
       const disguise = view.gameplay?.modulator?.active ?? false;
@@ -508,6 +517,7 @@ async function connect(join: () => Promise<Room>) {
       mail.destroy();
       progression.destroy();
       surveillance.destroy();
+      security.destroy();
       gameplay.destroy();
       market.destroy();
       npcPanel.destroy();

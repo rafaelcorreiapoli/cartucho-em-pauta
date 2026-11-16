@@ -1,5 +1,5 @@
 import { privateOffices } from './private-offices';
-import { obstacleBetween, type Motion } from './map';
+import { obstacleBetween, securityRoom, type Motion } from './map';
 
 export const spyProducts = {
   wiretap:{name:'Grampo',price:2,portrait:'retrato-grampo.webp',description:'Escuta remota ao redor de um esconderijo.'},
@@ -14,7 +14,7 @@ const both = ['wiretap','spyCamera'] as const;
 export const hideouts = [
   {id:'coffee',name:'Cafeteira',room:'Cafezinho',x:247,y:243,accepts:both},
   {id:'press',name:'Vaso',room:'Sala de Imprensa',x:933,y:244,accepts:both},
-  {id:'committee',name:'Mesa',room:'Comissões',x:788,y:352,accepts:both},
+  {id:'security-terminal',name:'Terminal',room:securityRoom.name,...securityRoom.terminal,y:securityRoom.terminal.y+2,accepts:both},
   {id:'meeting',name:'Mesa',room:'Antecâmara',x:307,y:66,accepts:['wiretap'] as readonly SpyDevice[]},
   {id:'library',name:'Estante',room:'Biblioteca',x:527,y:337,accepts:both},
   ...privateOffices.map(office=>({id:'office-'+office.id,name:'Armário',room:office.name,...office.cabinet,accepts:both})),
