@@ -1,5 +1,5 @@
 import type { GameplayAction } from './gameplay';
-import type { FireAction } from './fire';
+import type { FireCommand } from './fire';
 import type { RoomActivity } from './room-activities';
 import type { ElectionAction } from './elections';
 import type { PoliticsAction } from './politics';
@@ -13,7 +13,7 @@ type RoomActions = {
   gameplay:{action:GameplayAction};
   spy:object;
   'npc-deal':object;
-  'fire-action':{kind:FireAction;site:number};
+  'fire-action':FireCommand;
   'room-activity':{activity:RoomActivity};
   politics:PoliticsAction;
   election:ElectionAction;

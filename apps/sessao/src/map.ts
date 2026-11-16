@@ -74,12 +74,14 @@ export const furnishings = [
   {texture:'coffee-maker', area:[236,211,22,30], footprint:10},
   {frame:4, area:[651,36,30,37], footprint:10},
   {frame:4, area:[896,29,32,39], footprint:10},
+  {frame:3, area:[204,199,24,31], footprint:8,fireTarget:true},
+  {frame:3, area:[78,661,24,31], footprint:8,fireTarget:true},
   {frame:3, area:[922,210,22,31], footprint:9},
   {frame:4, area:[31,300,28,37], footprint:10},
   {frame:4, area:[513,298,28,37], footprint:10},
   {frame:3, area:[34,480,30,38], footprint:9},
   {frame:3, area:[541,485,26,34], footprint:9},
-] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number})[];
+] satisfies (({frame:number} | {texture:string}) & {area:Rect; footprint:number; fireTarget?:true})[];
 function npcFootprint(npc:(typeof mapNpcs)[keyof typeof mapNpcs]):Rect {
   const {x,y} = npc;
   return npc===npcs.snackVendor ? [x-7,y-9,14,10] : [x-5,y-5,10,5];
@@ -98,7 +100,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 

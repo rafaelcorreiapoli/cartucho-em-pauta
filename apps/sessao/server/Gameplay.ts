@@ -1,4 +1,4 @@
-import { fireSites } from '../src/fire';
+import { extinguisherSpawns } from '../src/fire';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
 import { marketProduct } from '../src/market-catalog';
@@ -81,6 +81,16 @@ export class Gameplay {
     return {document:{id,title,description,signatures:document.signatures.map(({name})=>name)},authentic};
   }
 
+  incendiaryItem(owner:string,serial?:number) {
+    return this.inventory(owner).find(({data})=>data.kind==='incendiary' && (serial===undefined || data.id===serial))?.data.id;
+  }
+
+  consumeIncendiary(owner:string,serial:number) {
+    if (this.incendiaryItem(owner,serial)===undefined) return false;
+    this.remove(this.items.get(serial)!);
+    return true;
+  }
+
   consumeForensicKit(owner:string) {
     const kit = this.inventory(owner).find(({data})=>data.kind==='forensicKit');
     if (!kit) return false;
@@ -148,7 +158,7 @@ export class Gameplay {
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.stationCooldowns.reset();
     this.items.clear();
-    for (const {extinguisher} of fireSites) this.create('extinguisher',this.groundPlace('extinguisher',extinguisher,now));
+    for (const extinguisher of extinguisherSpawns) this.create('extinguisher',this.groundPlace('extinguisher',extinguisher,now));
     this.surveillance.reset();
     this.roomSamples.clear();
     this.lastPolicyHeal = now;

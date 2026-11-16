@@ -1,3 +1,4 @@
+import { fireSites, type FireExtinguished } from '../src/fire';
 import { gameplayMetrics } from './gameplay-metrics';
 import { isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
@@ -295,11 +296,16 @@ export class SessionRoom extends Room {
     this.onMessage('fire-action',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
-          !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='ignite' && raw.kind!=='extinguish')) return;
-      if (!this.consumeRoomCommand(player.id,raw)) return;
+          !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='plant' && raw.kind!=='disarm' && raw.kind!=='extinguish')) return;
+      if (!this.consumeRoomCommand(player.id,raw) || this.gameplay.hasOfficeChannel(player.id) ||
+          this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
       const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime,
-        raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'));
-      if (result) client.send('gameplay-feedback',result);
+        raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'),
+        raw.kind==='plant' ? this.gameplay.incendiaryItem(player.id) : undefined);
+      if (!result) return;
+      if (raw.kind==='extinguish') {
+        this.broadcast('fire-extinguished',{actor:player.nick,room:fireSites[raw.site].name} satisfies FireExtinguished);
+      } else client.send('gameplay-feedback',result);
     });
     this.onMessage('gameplay',(client, raw:unknown) => {
       if (!raw || typeof raw!=='object' || !('action' in raw)) return;
@@ -451,7 +457,13 @@ export class SessionRoom extends Room {
         } else if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
         else if (wasIsolated) Object.assign(state.player,isolationRoom.exit,{direction:2});
       }
+      const installation = this.match.updateFireInstallation(now,id=>{
+        if (!world.present(id) || this.gameplay.hasOfficeChannel(id) || this.npcTalk.robberyProgress(id,now)!==undefined) return;
+        return this.players.get(id)?.player;
+      },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
+      if (installation) world.feedback(installation.actor,installation.feedback);
       for (const player of players) {
+        player.handlingObject = this.match.fireHandlingDirection(player);
         player.former = this.match.running ? this.match.former(player.id) : undefined;
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,now) : undefined;
@@ -476,6 +488,8 @@ export class SessionRoom extends Room {
           if (this.match.canFileComplaint(state.player,now)) view.complaints.atDesk = true;
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
+        if (this.match.phase==='negotiation') view.fireInteraction = this.match.fireInteraction(
+          state.player,now,this.gameplay.vision(id,now),this.gameplay.incendiaryItem(id)!==undefined,this.gameplay.owns(id,'extinguisher'));
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running ? this.gameplay.photoRevision : -1;
         const lastPhotos = this.lastPhotos.get(id);
