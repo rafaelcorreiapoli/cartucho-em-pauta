@@ -76,6 +76,10 @@ export function ResultsContent({children}:{children:ReactNode}) {
   </>;
 }
 
+export function CassationResult({text}:{text:string}) {
+  return <section><h3>Resultado da cassação</h3><p>{text}</p></section>;
+}
+
 export function mountResults() {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
@@ -94,7 +98,7 @@ export function mountResults() {
         flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
         finale.showModal();
       } else if (cassation) {
-        flushSync(()=>root.render(<ResultsContent><section><h3>Resultado da cassação</h3><p>{cassation.text}</p></section></ResultsContent>));
+        flushSync(()=>root.render(<ResultsContent><CassationResult text={cassation.text}/></ResultsContent>));
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
         flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));

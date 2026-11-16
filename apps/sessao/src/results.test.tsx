@@ -1,9 +1,10 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ElectionResult,ResultsContent,SessionResult} from './results';
+import {CassationResult,ElectionResult,ResultsContent,SessionResult} from './results';
 import {PlenaryMatch} from '../server/PlenaryMatch';
 import {ELECTION_RULES} from './elections';
-import {NEGOTIATION_MS,BALLOT_MS} from './plenary';
+import {HEARING_MS} from './politics';
+import {NEGOTIATION_MS,BALLOT_MS,CASSATION_NOTICE_MS,stations} from './plenary';
 import type {Player} from './map';
 
 test('a player outside the plenary receives the final result in the modal content',()=>{
@@ -87,4 +88,27 @@ test('an authoritative mandate renewal renders inside the shared results dialog'
   expect(html).toContain('Renovação de Mandato 1');
   expect(html).toContain('Rafa');
   expect(html).toContain('Continuar');
+});
+
+test('an authoritative cassation without a majority renders its verdict',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:String(character),nick,character,direction:0,moving:false,x:140,y:146,
+  }));
+  const [host,first,second] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  match.start(host.id,players,0,()=>.9);
+  match.politics({...host,...stations.press},{kind:'campaign'},players,20);
+  match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
+  const open = 50+CASSATION_NOTICE_MS;
+  match.advance(open);
+  match.castCassation(host.id,first.id,open);
+  match.castCassation(first.id,second.id,open);
+  const end = open+HEARING_MS;
+  match.advance(end);
+  const outcome = match.view(host.id,ids,end).cassationResult;
+  expect(outcome?.text).toContain('Ninguém foi cassado');
+  const html = renderToStaticMarkup(<ResultsContent><CassationResult text={outcome!.text}/></ResultsContent>);
+  expect(html).toContain('Resultado da cassação');
+  expect(html).toContain('Ninguém foi cassado');
 });
