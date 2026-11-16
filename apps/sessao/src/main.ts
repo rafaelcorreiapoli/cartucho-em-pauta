@@ -1,3 +1,4 @@
+import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
 import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
@@ -169,28 +170,7 @@ async function connect(join: () => Promise<Room>) {
     closeDetails();
     const hudListeners = new AbortController();
     const updateFloorPlan = bindFloorPlan(session,hudListeners.signal);
-    const latency = document.querySelector<HTMLElement>('#connection-latency')!;
-    let latencyGeneration = 0;
-    const measureLatency = () => {
-      const generation = latencyGeneration;
-      joined.ping(ms=>{
-        if (hudListeners.signal.aborted || generation!==latencyGeneration) return;
-        const label = `${Math.round(ms)} ms`;
-        if (latency.textContent!==label) latency.textContent = label;
-        latency.hidden = false;
-      });
-    };
-    measureLatency();
-    const pingTimer = window.setInterval(measureLatency,3000);
-    hudListeners.signal.addEventListener('abort',()=>{
-      clearInterval(pingTimer);
-      latency.hidden = true;
-    },{once:true});
-    joined.onDrop(()=>{
-      latencyGeneration++;
-      latency.hidden = true;
-    });
-    joined.onReconnect(measureLatency);
+    mountConnectionLatency(document.getElementById('connection-latency-mount')!,joined,hudListeners.signal);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
         !session.querySelector('details[name="game-panels"][open]')) return;

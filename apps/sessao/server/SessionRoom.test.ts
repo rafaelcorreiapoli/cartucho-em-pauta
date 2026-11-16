@@ -620,6 +620,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
     await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
     expect(reconnectCount()).toBe(beforeReconnect+1);
+    let latency:number|undefined;
+    passenger.ping(milliseconds=>{ latency = milliseconds; });
+    await wait(()=>latency!==undefined);
+    expect(latency).toBeGreaterThanOrEqual(0);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     expect(progression()).toEqual(progressionBeforeReconnect);
