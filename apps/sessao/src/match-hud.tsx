@@ -1,5 +1,6 @@
 import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
 import type {FireOption} from './fire';
+import {powerOption,type PowerAction} from './power';
 import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
 import { mountLegislativeBrief } from './ui/legislative-brief';
@@ -22,7 +23,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
+type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -213,6 +214,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
       if (extinguisher && !player.knockedOut && !player.carrying) {
         actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'collect',item:extinguisher.id}});
+      }
+      if (view?.ballotCountdown===undefined) {
+        for (const panel of [0,1] as const) {
+          const option = powerOption(player,panel,view?.outage,view?.canSabotagePower);
+          if (option) actions.push({label:option.label,icon:'alert',action:{kind:'power',option}});
+        }
       }
     }
     const fire = view?.fireInteraction;

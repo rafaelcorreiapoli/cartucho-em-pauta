@@ -6,6 +6,8 @@ import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
 import {canActOnFire,fireSites,type FireAction,type FireInteraction} from '../src/fire';
+import {Power} from './Power';
+import {canOperatePanel,type PowerAction,type PowerPanel} from '../src/power';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
@@ -30,6 +32,8 @@ export class PlenaryMatch {
   private project?:number;
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
+  private power = new Power();
+  get powerOut() { return this.running && this.power.active; }
   private readonly agenda = new Set<number>();
   get projectIndex() { return this.project ?? this.agenda.values().next().value ?? this.round%bills.length; }
   private started = 0;
@@ -74,7 +78,10 @@ export class PlenaryMatch {
 
   setPlayerConnected(id:string,connected:boolean) {
     if (connected) this.disconnected.delete(id);
-    else this.disconnected.add(id);
+    else {
+      this.disconnected.add(id);
+      this.power.remove(id);
+    }
     if (this.running) this.refreshAgendaEligibility();
   }
 
@@ -186,6 +193,7 @@ export class PlenaryMatch {
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
     this.fire.reset(now,random);
+    this.power = new Power();
     this.stationCooldowns.reset();
     this.policies.clear();
     this.treasuryBonus = undefined;
@@ -236,6 +244,7 @@ export class PlenaryMatch {
   }
 
   leave(id:string, now:number) {
+    this.power.remove(id);
     this.disconnected.delete(id);
     if (!this.running || !this.electorate.delete(id)) return;
     this.votes.delete(id);
@@ -583,6 +592,33 @@ export class PlenaryMatch {
     this.economy.recordOfficialScandal();
   }
 
+  private canUsePower(now:number) {
+    return this.phase==='negotiation' && this.ballotCountdown(now)===undefined;
+  }
+
+  private canSabotagePower(id:string,now:number) {
+    return this.electorate.size-this.disconnected.size>=2 && this.infiltrators.has(id) &&
+      this.canUsePower(now) && this.canHandleObjects(id,now) && this.power.canSabotage(now);
+  }
+
+  private canOperatePower(player:Player,panel:PowerPanel,now:number) {
+    return this.canUsePower(now) && this.canHandleObjects(player.id,now) &&
+      !this.disconnected.has(player.id) && !player.carried && canOperatePanel(player,panel);
+  }
+
+  actOnPower(player:Player,action:PowerAction,now:number) {
+    if (!this.canOperatePower(player,action.panel,now)) return;
+    if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
+    return this.power.act(player.id,action,now);
+  }
+
+  advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
+    this.power.advance(now,(id,panel)=>{
+      const player = playerAt(id);
+      return !!player && this.canOperatePower(player,panel,now);
+    });
+  }
+
   private canUseFire(player:Player,now:number) {
     return this.phase==='negotiation' && now<this.ends && this.ballotCountdown(now)===undefined &&
       (this.canHandleObjects(player.id,now) ||
@@ -780,6 +816,8 @@ export class PlenaryMatch {
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
+      outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
+      canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),

@@ -1,5 +1,6 @@
 import type { GameplayAction } from './gameplay';
 import type { FireCommand } from './fire';
+import type { PowerAction } from './power';
 import type { RoomActivity } from './room-activities';
 import type { ElectionAction } from './elections';
 import type { PoliticsAction } from './politics';
@@ -17,6 +18,7 @@ type RoomActions = {
   'security-camera':SecurityAction;
   'npc-deal':object;
   'fire-action':FireCommand;
+  'power-action':PowerAction;
   'room-activity':{activity:RoomActivity};
   politics:PoliticsAction;
   election:ElectionAction;

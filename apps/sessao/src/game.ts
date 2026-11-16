@@ -4,6 +4,7 @@ import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
 import {canActOnFire,fireSites,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke} from './fire-effects';
+import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
 import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
@@ -60,7 +61,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
@@ -213,6 +214,22 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           }
         });
       },art=>this.registerInteraction(art,()=>!!plenaryView?.gameplay?.security,openSecurity));
+      powerPanels.forEach(({x,y},index)=>{
+        const panel = index as PowerPanel;
+        const fixture = this.add.text(x,y,`⚡ ${panel===0 ? 'A' : 'B'}`,{
+          fontFamily:'system-ui',fontSize:'8px',color:'#ffe09a',backgroundColor:'#24303b',
+          padding:{x:3,y:1},resolution:3,
+        }).setOrigin(.5).setDepth(2);
+        const option = ()=>{
+          const player = local.state?.player;
+          if (!player || !negotiating || !plenaryView?.gameplay || plenaryView.ballotCountdown!==undefined) return;
+          return powerOption(player,panel,plenaryView.outage,plenaryView.canSabotagePower);
+        };
+        this.registerInteraction(fixture,()=>!!option(),()=>{
+          const action = option();
+          if (action) actOnPower(action);
+        });
+      });
       this.fog = this.add.graphics().setDepth(3);
       this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
@@ -474,7 +491,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1);
+      const powerOut = !!plenaryView?.outage;
+      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
+        (powerOut ? powerRules.visionFactor : 1);
       const cooldowns = plenaryView?.gameplay?.stationCooldowns;
       if (negotiating && ownPlayer && cooldowns) {
         for (const {station,duration,point,top} of rechargeFixtures) {
@@ -693,8 +712,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
           this.fog.setVisible(running);
-          this.fogEdge.setVisible(running && !inSession);
-          if (running && inSession && !this.fogInSession) {
+          const roomFog = inSession && !powerOut;
+          this.fogEdge.setVisible(running && !roomFog);
+          if (running && roomFog && !this.fogInSession) {
             this.fogInSession = true;
             this.fogGeometry = undefined;
             this.fog.clear();
@@ -705,7 +725,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
               .fillRect(-edge,top,left+edge,height)
               .fillRect(left+width,top,edge-left-width,height)
               .fillRect(-edge,top+height,edge*2,edge-top-height);
-          } else if (running && !inSession) {
+          } else if (running && !roomFog) {
             this.fogInSession = false;
             const wallX = Math.round(x), wallY = Math.round(y), radius = Math.round(this.drawnVisionRadius);
             const barriers = JSON.stringify(ownPlayer?.barriers ?? []);

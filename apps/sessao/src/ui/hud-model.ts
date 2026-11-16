@@ -1,4 +1,5 @@
 import type {FireView} from '../fire';
+import type {PowerView} from '../power';
 import type { Player } from '../map';
 import { MAX_STAMINA } from '../movement';
 import { stabilityRules, type PlenaryView } from '../plenary';
@@ -33,6 +34,7 @@ function channel<T>(initial:T) {
 
 export function createHudModel() {
   const fire = channel<FireView|undefined>(undefined);
+  const outage = channel<PowerView|undefined>(undefined);
   const broadcast = channel(false);
   const television = channel<{name:string;remaining:number}|undefined>(undefined);
   const congress = channel<Congress>({stability:stabilityRules.initial,budget:ELECTION_RULES.startingBudget});
@@ -43,13 +45,14 @@ export function createHudModel() {
   const resources = channel<PersonalResources|undefined>(undefined);
   let matchId:number|undefined;
   return {
-    fire,broadcast,television,congress,countdown,agenda,profile,stamina,resources,
+    fire,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,
     player(player:Pick<Player,'stamina'|'staminaMax'>) {
       const max = player.staminaMax ?? MAX_STAMINA;
       stamina.update({current:Math.floor(player.stamina ?? max),max});
     },
     render(view:PlenaryView) {
       fire.update(view.fire);
+      outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;
       television.update(interview && {name:interview.name,remaining:interview.remaining});
       congress.update({stability:view.stability,budget:view.budget});
