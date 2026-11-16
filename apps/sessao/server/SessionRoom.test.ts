@@ -11,7 +11,7 @@ import { Client, type Room } from '@colyseus/sdk';
 import { join } from 'node:path';
 import type { PhotoAccessView } from '../src/photography';
 import type { PlenaryView } from '../src/plenary';
-import { canStand, PLENARY_SEATS, roomAt, type Player } from '../src/map';
+import { canStand, PLENARY_SEATS, roomAt, securityRoom, type Player } from '../src/map';
 
 test('clients share movement and voice, then receive private roles and payments', async () => {
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
@@ -359,12 +359,14 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
     const spyFrames = new Map<string,PhotoScene>();
+    const securityFrames = new Map<string,{camera:string;scene:PhotoScene}>();
     const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
       peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
+      peer.onMessage('security-frame',(frame:{camera:string;scene:PhotoScene})=>securityFrames.set(peer.sessionId,frame));
       const cues:string[] = [];
       foodCues.set(peer.sessionId,cues);
       peer.onMessage('food-consumed',(cue:string)=>cues.push(cue));
@@ -507,6 +509,28 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('spy',{kind:'close',token:3580});
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);
+
+    carrier.send('security-camera',{kind:'open',token:3590});
+    await Bun.sleep(150);
+    expect(gameplay()?.security).toBeUndefined();
+    expect(securityFrames.has(carrier.sessionId)).toBe(false);
+
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:securityRoom.terminal.x,y:securityRoom.terminal.y+15});
+    await wait(()=>!!gameplay()?.security);
+    carrier.send('security-camera',{kind:'open',token:3600});
+    await wait(()=>securityFrames.get(carrier.sessionId)?.camera==='corridor');
+    Object.assign(positions.get(passenger.sessionId)!.player,{x:219,y:216});
+    carrier.send('security-camera',{kind:'select',camera:'coffee',token:3610});
+    await wait(()=>securityFrames.get(carrier.sessionId)?.scene.people.some(person=>person.id===passenger.sessionId)===true);
+    expect(gameplay()?.security?.camera).toBe('coffee');
+    expect(securityFrames.has(passenger.sessionId)).toBe(false);
+
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:986,y:309});
+    await wait(()=>gameplay()?.security===undefined);
+    securityFrames.delete(carrier.sessionId);
+    await Bun.sleep(150);
+    expect(securityFrames.has(carrier.sessionId)).toBe(false);
+    Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
     const passengerGameplay = ()=>views.get(passenger.sessionId)?.gameplay;
     passenger.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3630});

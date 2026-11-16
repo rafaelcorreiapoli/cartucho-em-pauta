@@ -14,6 +14,7 @@ import type { Decoration, Photo } from './photography';
 import type { Contact } from './politics';
 import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 
+import type { SecurityView } from "./security";
 import { spyProducts, type SpyView } from "./surveillance";
 
 export const objects = {
@@ -115,6 +116,7 @@ export type GameplayView = {
   robberyProgress?:number;
   forgeryRemaining?:number;
   surveillance?:SpyView;
+  security?:SecurityView;
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};

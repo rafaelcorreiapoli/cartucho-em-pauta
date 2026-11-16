@@ -2,10 +2,12 @@ import type Phaser from 'phaser';
 import { snackBar, treasurer, treasuryLayout } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
 import { infirmary } from './medical';
-import { desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
+import { securityCameras } from './security';
+import { securityRoom, desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
-  officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void) {
+  officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void,
+  securityTerminal?:(art:Phaser.GameObjects.Image)=>void) {
   const graphics = scene.add.graphics();
   const fill = (color:number, x:number, y:number, width:number, height:number, alpha=1) => {
     graphics.fillStyle(color,alpha).fillRect(x,y,width,height);
@@ -61,6 +63,14 @@ export function drawMap(scene: Phaser.Scene,
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
   }
+  const [securityX,securityY,securityW,securityH] = securityRoom.door;
+  fill(0x757f78,securityX,securityY,securityW,securityH);
+  fill(0x9b8d6d,securityX+3,securityY,3,securityH);
+  for (const {x,y} of securityCameras) {
+    fill(0x263a31,x-4,y-3,8,5);
+    fill(0xbed9cb,x-2,y-2,4,3);
+    fill(0x497963,x+2,y-1,3,2);
+  }
   const [snackX,snackY,snackWidth] = snackBar.door;
   for (const [x,y,w] of [
     [177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[69,161,36],[218,161,44],
@@ -88,7 +98,14 @@ export function drawMap(scene: Phaser.Scene,
   scene.add.image(0,0,backdrop).setOrigin(0).setDepth(-1);
 
   for (const [x,y] of desks) {
-    if ((x!==treasurer.counter.x || y!==treasurer.counter.y)) prop(2,x+13,y-17,19,23,y+1);
+    if (x===securityRoom.terminal.x-22 && y===securityRoom.terminal.y-20) {
+      const desk = prop(1,x,y-3,45,23,y+20);
+      securityTerminal?.(desk);
+      prop(2,x+3,y-15,19,23,y+21);
+      prop(2,x+23,y-15,19,23,y+21);
+      continue;
+    }
+    if (x!==treasurer.counter.x || y!==treasurer.counter.y) prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   for (const furnishing of furnishings) {

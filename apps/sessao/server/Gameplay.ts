@@ -28,6 +28,7 @@ import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
+import { securityCameraSees, type SecurityCamera } from "../src/security";
 import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
@@ -677,11 +678,21 @@ export class Gameplay {
   spyFrame(player:Player,world:GameplayWorld):PhotoScene|undefined {
     const device = this.surveillance.channel(player.id,'spyCamera');
     if (!device || player.knockedOut || player.carried) return;
+    const camera = this.surveillance.origin(device);
+    return this.cameraScene(player,camera,world,cameraSees);
+  }
+
+  securityFrame(player:Player, camera:SecurityCamera, world:GameplayWorld) {
+    return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point));
+  }
+
+  private cameraScene(player:Player, position:Motion, world:GameplayWorld,
+    sees:(origin:Motion,point:Motion)=>boolean):PhotoScene {
     const barriers = player.barriers?.filter(([x,y,w,h])=>
-      Math.hypot(x+w/2-device.site.x,y+h/2-device.site.y)<=spyRules.range+Math.hypot(w,h)/2);
-    const camera = this.surveillance.origin(device,barriers);
+      Math.hypot(x+w/2-position.x,y+h/2-position.y)<=spyRules.range+Math.hypot(w,h)/2);
+    const camera = {x:position.x,y:position.y,barriers};
     const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
-    const visible = (point:Motion)=>cameraSees(camera,point);
+    const visible = (point:Motion)=>sees(camera,point);
     return {center,camera,
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,

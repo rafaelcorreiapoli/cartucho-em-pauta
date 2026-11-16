@@ -12,6 +12,13 @@ export type Rect = readonly [x: number, y: number, width: number, height: number
 
 export const isolationRoom = {name:'Sala de Isolamento',bounds:[65,655,129,94] as Rect,spawn:{x:129.5,y:703},exit:{x:130,y:516}};
 
+export const securityRoom = {
+  name:'Sala de Segurança', bounds:[960,280,129,112] as Rect,
+  door:[950,290,10,36] as Rect, terminal:{x:1045,y:326},
+};
+const [securityX,securityY,securityW,securityH] = securityRoom.bounds;
+const [securityDoorX,securityDoorY,securityDoorW,securityDoorH] = securityRoom.door;
+
 export const PLENARY_BOUNDS = [268,541,424,208] as const;
 export const PLENARY_DOORS:Rect[] = [[284,530,26,11],[500,530,60,11],[638,530,28,11]];
 export const PLENARY_SEATS = [655,710].flatMap(y => [324,386,448,512,574,636].map(x => ({x,y})));
@@ -21,7 +28,10 @@ export const reprographyEntrance = [780,392,infirmary.door[0]-780,11] as const;
 const [luxuryDoorX,luxuryDoorY,luxuryDoorWidth,luxuryDoorHeight] = treasuryLayout.luxuryDoor;
 
 export const walls: Rect[] = [
-  [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,530-eastAnnex.opening[1]],
+  [0,0,960,10], [0,10,10,520], [950,10,10,eastAnnex.opening[0]-10], [950,eastAnnex.opening[1],10,securityDoorY-eastAnnex.opening[1]],
+  [securityDoorX,securityDoorY+securityDoorH,securityDoorW,530-securityDoorY-securityDoorH],
+  [securityX,securityY-10,securityW+10,10], [securityX+securityW,securityY,10,securityH],
+  [securityX,securityY+securityH,securityW+10,11],
   [0,530,65,11], [194,530,90,11], [310,530,PLENARY_DOORS[1][0]-310,11], [PLENARY_DOORS[1][0]+PLENARY_DOORS[1][2],530,638-PLENARY_DOORS[1][0]-PLENARY_DOORS[1][2],11], [666,530,100,11], [895,530,65,11],
   [258,541,10,218], [692,541,10,218], [268,749,424,10],
   [470,10,10,115], [470,161,10,98],
@@ -58,6 +68,7 @@ export const desks = [
   [128,460],[493,438],[713,460],[757,435],
   [274,614],[274,677],[643,614],[643,677],
   [treasurer.counter.x,treasurer.counter.y],
+  [securityRoom.terminal.x-22,securityRoom.terminal.y-20],
 ] as const;
 export const furnishings = [
   {texture:'technical-shelf',area:[653,174,40,30],footprint:5},
@@ -111,7 +122,9 @@ export function blockedBy(rect:Rect,x:number,y:number) {
 const southRooms = [...privateOffices,isolationRoom].filter(({bounds})=>bounds[1]>=541);
 
 export function canStand(x: number, y: number) {
-  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom))) return false;
+  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT) return false;
+  if (x>=eastAnnex.left && !(x<=eastAnnex.right && y>=eastAnnex.top && y<=eastAnnex.bottom) &&
+      !(x<=securityX+securityW && y>=securityY && y<=securityY+securityH)) return false;
   if (y>541 && (x<274 || x>686) && !southRooms.some(({bounds:[left,top,width,height]})=> x>=left && x<=left+width && y>=top && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
 }
@@ -193,6 +206,7 @@ export function localPerception(a: Motion, b: Motion, vision=VISION_RADIUS) {
 export const rooms = [
   ...privateOffices.map(({name,bounds})=>({name,bounds,color:0xa88d68})),
   {...isolationRoom,color:0x61716a},
+  {...securityRoom,color:0x587470},
   {name:'Antecâmara', bounds:[148,10,184,104], color:0x3e6154},
   {name:'Plenário', bounds:PLENARY_BOUNDS, color:0x3e6154},
   {name:'Secretaria', bounds:[10,172,177,87], color:0x858c80},
