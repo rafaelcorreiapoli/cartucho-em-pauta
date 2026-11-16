@@ -183,3 +183,9 @@ test('Plantão de Emergência tells players to enter the room and extinguish the
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'plantaoEmergencia',current:0,target:1}}/>);
   expect(markup).toContain('Entre na sala em chamas e apague o incêndio');
 });
+
+test('Reunião de Alto Nível identifies the installed VIP plaque and shows the countdown progress',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'reuniaoVip',current:6000,target:15_000}}/>);
+  expect(markup).toContain('outro parlamentar perto de uma Placa VIP instalada');
+  expect(markup).toContain('6 / 15 s');
+});

@@ -13,7 +13,7 @@ import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhon
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { installationSites, shop } from '../src/installations';
+import { installationSites, shop, vipAreaRadius } from '../src/installations';
 import { bills, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -44,7 +44,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; concealedCash:boolean; securityPeer?:string}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -196,8 +196,10 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait', replacement=false) {
-    if (kind==='anyPortrait') return [...this.installations.values()].some(item=>item.kind==='portrait');
+  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait'|'anyVip', replacement=false) {
+    if (kind==='anyPortrait' || kind==='anyVip') {
+      return [...this.installations.values()].some(item=>item.kind===(kind==='anyPortrait' ? 'portrait' : 'vip'));
+    }
     if (replacement) return Object.entries(installationSites).some(([site,definition])=>{
       if (definition.kind!==kind) return false;
       const installed = this.installations.get(site);
@@ -497,10 +499,20 @@ export class Gameplay {
     if (item) this.modulator.deactivate(item.id);
   }
 
-  private securityPeer(player:Player,world:GameplayWorld,previous?:string) {
+  private nearbyParliamentarian(player:Player,world:GameplayWorld,previous?:string,eligible?:(other:Player)=>boolean) {
     const nearby = world.players.filter(other=>other.id!==player.id && !other.knockedOut && !other.carried &&
-      world.present?.(other.id)!==false && world.hasMandate?.(other.id)!==false && canReachObject(player,other));
+      world.present?.(other.id)!==false && world.hasMandate?.(other.id)!==false && canReachObject(player,other) && (!eligible || eligible(other)));
     return nearby.find(other=>other.id===previous)?.id ?? nearby[0]?.id;
+  }
+
+  private vipMeeting(player:Player,world:GameplayWorld,previous?:{id:number; peer:string}) {
+    const room = roomAt(player);
+    for (const plate of this.installations.values()) {
+      if (plate.kind!=='vip' || roomAt(plate)!==room || !canReachObject(player,plate,{radius:vipAreaRadius})) continue;
+      const peer = this.nearbyParliamentarian(player,world,previous?.id===plate.id ? previous.peer : undefined,
+        person=>roomAt(person)===room && canReachObject(person,plate,{radius:vipAreaRadius}));
+      if (peer) return {id:plate.id,peer};
+    }
   }
 
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
@@ -511,8 +523,17 @@ export class Gameplay {
       const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
         (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
       const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
-        world.hasMission?.(player.id,'segurancaParlamentar') ? this.securityPeer(player,world,previous?.securityPeer) : undefined;
-      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,concealedCash,securityPeer});
+        world.hasMission?.(player.id,'segurancaParlamentar') ? this.nearbyParliamentarian(player,world,previous?.securityPeer) : undefined;
+      const vip = active && world.hasMission?.(player.id,'reuniaoVip') ? this.vipMeeting(player,world,previous?.vip) : undefined;
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,concealedCash,securityPeer,vip});
+      if (previous?.vip) {
+        if (previous.vip.id!==vip?.id || previous.vip.peer!==vip.peer) {
+          publishGameplay(world,player,'vip-meeting-interrupted',{witnesses:[]});
+        } else {
+          const duration = Math.min(100,world.now-previous.at);
+          if (duration>0) publishGameplay(world,player,'vip-meeting-time',{duration,witnesses:[]});
+        }
+      }
       if (previous?.securityPeer) {
         if (previous.securityPeer!==securityPeer) {
           publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
@@ -560,6 +581,9 @@ export class Gameplay {
     this.privateOffices.channels.delete(player.id);
     if (this.roomSamples.get(player.id)?.securityPeer) {
       publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+    }
+    if (this.roomSamples.get(player.id)?.vip) {
+      publishGameplay(world,player,'vip-meeting-interrupted',{witnesses:[]});
     }
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;

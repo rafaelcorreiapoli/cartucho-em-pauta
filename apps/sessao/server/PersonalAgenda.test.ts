@@ -1143,3 +1143,49 @@ test('Segurança Parlamentar requires an uninterrupted watch next to the same pa
   tick(1);
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'segurancaParlamentar',current:10_000}));
 });
+
+test('Reunião de Alto Nível needs a live VIP plaque and both players inside its area',()=>{
+  const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const [host,guest] = players;
+  const game = new Gameplay();
+  const options = {...metrics,hasAgendaDecoration:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip')=>game.hasAgendaDecoration(host.id,kind)};
+  const agenda = new PersonalAgenda(options,2,()=>0,()=>{});
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['reuniaoVip','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(options,2,true,3,0,[{id:guest.id,name:guest.nick}]);
+    return agenda.hasActive('reuniaoVip');
+  };
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},spend:()=>true,
+    hasMission:(id,kind)=>id===host.id && agenda.hasActive(kind),publish:event=>{
+      if (agenda.acceptGameplayEvent(event)) agenda.applyGameplayEvent(options,event,false);
+    }};
+  expect(draw()).toBe(false);
+  expect(game.act(host,{kind:'buy',target:'vip'},world)).toContain('inventário');
+  const plate = game.view(host,world).inventory.find(item=>item.kind==='vip')!;
+  const point = installationSites.coffeeVip.point;
+  Object.assign(host,point);
+  expect(game.act(host,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(draw()).toBe(true);
+  const current = ()=>agenda.view(options).active.find(mission=>mission.kind==='reuniaoVip')?.current;
+  const tick = (count:number)=>{
+    for (let i=0;i<count;i++) {
+      world.now += 100;
+      game.tick(world,true);
+    }
+  };
+  Object.assign(guest,{...point,x:point.x+13});
+  tick(20);
+  expect(current()).toBe(0);
+  Object.assign(guest,{...point,x:point.x+8});
+  tick(61);
+  expect(current()).toBe(6000);
+  expect(game.act(host,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
+  tick(1);
+  expect(current()).toBe(0);
+  expect(game.act(host,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  tick(150);
+  expect(current()).toBe(14900);
+  tick(1);
+  expect(agenda.view(options).completed).toContainEqual(expect.objectContaining({kind:'reuniaoVip',current:15_000}));
+});

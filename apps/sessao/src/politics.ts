@@ -26,7 +26,7 @@ export const targetedAgendas = {
   visitaCortesia:'Interaja dentro do gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000} as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -125,6 +125,7 @@ export const agendas = {
   limpeza:'Remova um dispositivo clandestino descoberto',
   fiscalizacaoParalela:'Revele o saldo do cofre de outro parlamentar com o Raio X',
   patrimonioSuspeito:'Revele o saldo de um parlamentar NPC com o Raio X',
+  reuniaoVip:`Fique ${agendaDurationMs.reuniaoVip/1000} segundos com outro parlamentar perto de uma Placa VIP instalada`,
   segurancaParlamentar:`Fique ${agendaDurationMs.segurancaParlamentar/1000} segundos perto do mesmo parlamentar com um Porrete equipado, sem atacar`,
   escutaAtiva:'Monitore um grampo por 15 segundos',
   instalarGrampo:'Instale um grampo em um esconderijo',
@@ -155,7 +156,7 @@ export type MissionReward = {xp:number; cash?:number; popularity?:number};
 const xpOnly:Partial<Record<Agenda,number>> = {
   trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
-  segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
+  reuniaoVip:40,segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,

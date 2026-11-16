@@ -1,3 +1,4 @@
+import { vipAreaRadius } from '../src/installations';
 import type { GameplayEvent } from '../src/gameplay';
 import { privateOffices } from '../src/private-offices';
 import { roomAt } from '../src/map';
@@ -48,7 +49,7 @@ export const photoMissions = {
     event.type==='installed' && event.kind==='vip' && event.place==='coffeeVip' ? fact(event.item!) : []},
   fiscalVip:{target:1,players:3,facts:capture((photo,actor)=>
     photo.decorations.some(item=>item.kind==='vip' && item.owner.id!==actor && people(photo,actor).some(person=>
-      person.id!==item.owner.id && Math.hypot(person.x-item.x,person.y-item.y)<=12)) ? fact(photo.id) : [])},
+      person.id!==item.owner.id && Math.hypot(person.x-item.x,person.y-item.y)<=vipAreaRadius)) ? fact(photo.id) : [])},
   mandaVip:{target:1,players:2,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.replaced ? fact(event.item!) : []},
   fatias:{target:2,players:3,facts:event=>event.type==='slice' && event.target ? fact(event.target) : []},
