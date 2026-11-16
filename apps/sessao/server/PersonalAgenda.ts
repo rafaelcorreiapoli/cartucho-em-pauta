@@ -88,7 +88,7 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,vigilanciaInstitucional:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -332,6 +332,9 @@ export class PersonalAgenda {
       }
       if (kind==='reuniaoGabinete' && event.type==='office-meeting-time' ||
           kind==='reuniaoPublica' && event.type==='public-meeting-time') gains[kind] = event.duration ?? 0;
+      if (kind==='vigilanciaInstitucional' && event.type==='security-camera-viewed' && event.place) {
+        gains[kind] = this.countFacts(mission,[{value:event.place}]);
+      }
       if (kind==='duasCameras' && event.type==='spy-viewed' && event.kind==='spyCamera' && event.item!==undefined) {
         gains[kind] = this.countFacts(mission,[{value:String(event.item)}]);
       }

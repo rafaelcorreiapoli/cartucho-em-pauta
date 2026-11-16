@@ -1,4 +1,5 @@
 import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
+import { publishGameplay } from './gameplay-world';
 import { gameplayMetrics } from './gameplay-metrics';
 import { isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
@@ -123,7 +124,7 @@ export class SessionRoom extends Room {
   }
 
   private spyFrameAt = 0;
-  private securityFeeds = new Map<string,SecurityCamera>();
+  private securityFeeds = new Map<string,{camera:SecurityCamera; delivered:boolean}>();
 
   private atSecurityTerminal(player:Player, now:number) {
     return this.match.phase==='negotiation' && this.match.ballotCountdown(now)===undefined &&
@@ -309,11 +310,13 @@ export class SessionRoom extends Room {
       }
       if (!this.atSecurityTerminal(player,this.clock.currentTime)) return;
       if (raw.kind==='open' && !this.securityFeeds.has(player.id)) {
-        this.securityFeeds.set(player.id,securityCameras[0]);
+        this.securityFeeds.set(player.id,{camera:securityCameras[0],delivered:false});
       } else if (raw.kind==='select' && 'camera' in raw && this.securityFeeds.has(player.id)) {
         const cameraId = raw.camera;
         const camera = securityCameras.find(({id})=>id===cameraId);
-        if (camera) this.securityFeeds.set(player.id,camera);
+        if (camera && camera!==this.securityFeeds.get(player.id)?.camera) {
+          this.securityFeeds.set(player.id,{camera,delivered:false});
+        }
       }
     });
     this.onMessage('fire-action',(client,raw:unknown)=>{
@@ -521,15 +524,20 @@ export class SessionRoom extends Room {
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);
         }
-        const securityCamera = this.securityFeeds.get(id);
-        if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityCamera?.id};
+        const securityFeed = this.securityFeeds.get(id);
+        if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityFeed?.camera.id};
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
         }
-        if (sendSpyFrame && securityCamera) {
-          client.send('security-frame',{camera:securityCamera.id,scene:this.gameplay.securityFrame(state.player,securityCamera,world)});
+        if (sendSpyFrame && securityFeed) {
+          const {camera} = securityFeed;
+          client.send('security-frame',{camera:camera.id,scene:this.gameplay.securityFrame(state.player,camera,world)});
+          if (!securityFeed.delivered) {
+            securityFeed.delivered = true;
+            publishGameplay(world,state.player,'security-camera-viewed',{place:camera.id,witnesses:[]});
+          }
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);

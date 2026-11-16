@@ -252,3 +252,28 @@ test('the agenda renders only payable Pix missions and tracks distinct senders f
   expect(pay(caio,rafa,22)).toBe(true);
   expect(render()).toContain('data-done="true"');
 });
+
+test('the solo security mission displays distinct institutional cameras from the private server view',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>0)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['vigilanciaInstitucional','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const missions = ()=>match.view(player.id,[player.id],2).politics!.missions;
+  const active = ()=>missions().active.find(mission=>mission.kind==='vigilanciaInstitucional')!;
+  const world = match.gameplayWorld([player],1,()=>false);
+  const consult = (place:string,at:number)=>world.publish({
+    type:'security-camera-viewed',actor:player.id,position:player,at,place,witnesses:[],
+  });
+  const initial = renderToStaticMarkup(<MissionRow mission={active()}/>);
+  expect(initial).toContain('Consulte duas câmeras diferentes na Sala de Segurança');
+  expect(initial).toContain('0 / 2');
+  consult('corridor',1);
+  consult('corridor',2);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('1 / 2');
+  consult('coffee',3);
+  const completed = missions().completed.find(mission=>mission.kind==='vigilanciaInstitucional')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+});

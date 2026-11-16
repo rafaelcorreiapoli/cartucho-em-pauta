@@ -521,19 +521,38 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);
 
+    for (const playerAccount of [carrierAccount,account]) {
+      Reflect.set(playerAccount.agenda,'missions',[]);
+      Reflect.set(playerAccount.agenda,'missionDeck',['vigilanciaInstitucional','cafe','passeio','selfieSolo']);
+    }
+    match.refreshAgendaEligibility();
+    const cameraMission = (id:string)=>views.get(id)?.politics?.missions.active.find(mission=>mission.kind==='vigilanciaInstitucional');
+    const completedCameraMission = ()=>views.get(carrier.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='vigilanciaInstitucional');
+    await wait(()=>cameraMission(carrier.sessionId)?.current===0 && cameraMission(passenger.sessionId)?.current===0);
+
     carrier.send('security-camera',{kind:'open',token:3590});
     await Bun.sleep(150);
     expect(gameplay()?.security).toBeUndefined();
     expect(securityFrames.has(carrier.sessionId)).toBe(false);
+    expect(cameraMission(carrier.sessionId)?.current).toBe(0);
 
     Object.assign(positions.get(carrier.sessionId)!.player,{x:securityRoom.terminal.x,y:securityRoom.terminal.y+15});
     await wait(()=>!!gameplay()?.security);
     carrier.send('security-camera',{kind:'open',token:3600});
-    await wait(()=>securityFrames.get(carrier.sessionId)?.camera==='corridor');
+    await wait(()=>securityFrames.get(carrier.sessionId)?.camera==='corridor' && cameraMission(carrier.sessionId)?.current===1);
+    carrier.send('security-camera',{kind:'select',camera:'corridor',token:3601});
+    carrier.send('security-camera',{kind:'select',camera:'invalid',token:3602});
+    await Bun.sleep(150);
+    expect(cameraMission(carrier.sessionId)?.current).toBe(1);
+    expect(completedCameraMission()).toBeUndefined();
+    const xpBeforeCamera = views.get(carrier.sessionId)!.politics!.progression.xp;
     Object.assign(positions.get(passenger.sessionId)!.player,{x:219,y:216});
     carrier.send('security-camera',{kind:'select',camera:'coffee',token:3610});
     await wait(()=>securityFrames.get(carrier.sessionId)?.scene.people.some(person=>person.id===passenger.sessionId)===true);
     expect(gameplay()?.security?.camera).toBe('coffee');
+    await wait(()=>completedCameraMission()?.current===2);
+    expect(views.get(carrier.sessionId)!.politics!.progression.xp).toBe(xpBeforeCamera+25);
+    expect(cameraMission(passenger.sessionId)?.current).toBe(0);
     expect(securityFrames.has(passenger.sessionId)).toBe(false);
 
     Object.assign(positions.get(carrier.sessionId)!.player,{x:712,y:337});
