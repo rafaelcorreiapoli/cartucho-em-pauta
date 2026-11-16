@@ -138,6 +138,11 @@ export class PersonalAgenda {
   private votedThisBallot = false;
   private supportedThisBallot = false;
 
+  interruptPlenaryVisit() {
+    const mission = this.missions.find(mission=>mission.kind==='presencaPlenario');
+    if (mission) this.factsByMission.delete(mission.id);
+  }
+
   resetBallot() {
     this.votedThisBallot = this.supportedThisBallot = false;
   }

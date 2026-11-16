@@ -404,6 +404,10 @@ export class PoliticalEconomy {
     }
   }
 
+  interruptPlenaryVisits() {
+    for (const account of this.accounts.values()) account.agenda.interruptPlenaryVisit();
+  }
+
   updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set(),remainingAdvertisements?:(id:string)=>number) {
     if (this.agendaRound!==round) for (const account of this.accounts.values()) account.agenda.resetBallot();
     this.agendaRound = round;

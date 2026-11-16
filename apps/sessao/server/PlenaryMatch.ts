@@ -546,6 +546,7 @@ export class PlenaryMatch {
         this.ends = now+HEARING_MS;
         this.votes.clear();
         this.economy.cancelOffers();
+        this.economy.interruptPlenaryVisits();
         this.phase = 'hearing';
         break;
     }
@@ -750,6 +751,7 @@ export class PlenaryMatch {
       this.interruptedTime = Math.max(0,this.ends-now);
       this.ends = now+HEARING_MS;
       this.economy.cancelOffers();
+      this.economy.interruptPlenaryVisits();
       this.phase = 'hearing';
       return;
     }
@@ -783,6 +785,7 @@ export class PlenaryMatch {
       this.economy.cancelOffers();
       this.project = this.projectIndex;
       this.agenda.delete(this.project);
+      this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
       this.ends = now+BALLOT_MS;
       return;

@@ -47,7 +47,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; archiveDuty:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; archiveDuty:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -551,7 +551,7 @@ export class Gameplay {
       const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
         world.hasMission?.(player.id,'segurancaParlamentar') ? this.nearbyParliamentarian(player,world,previous?.securityPeer) : undefined;
       const vip = active && world.hasMission?.(player.id,'reuniaoVip') ? this.vipMeeting(player,world,previous?.vip) : undefined;
-      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,archiveDuty,concealedCash,securityPeer,vip});
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,active,archiveDuty,concealedCash,securityPeer,vip});
       if (previous?.archiveDuty && !archiveDuty) {
         publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
       }
@@ -576,7 +576,7 @@ export class Gameplay {
         const duration = Math.min(100,world.now-previous.at);
         if (duration>0) publishGameplay(world,player,'concealed-cash-time',{duration,witnesses:[]});
       }
-      if (previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
+      if (previous.active && previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
         publishGameplay(world,player,'room-left',{place:previous.room});
       }
       if (previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento' &&
@@ -588,7 +588,7 @@ export class Gameplay {
         const duration = Math.min(100,world.now-previous.at);
         if (type && duration>0) publishGameplay(world,player,type,{duration,place:room});
       }
-      if (previous.room!==room && room!=='Corredor') {
+      if (previous.room!==room && room!=='Corredor' && (room!=='Plenário' || previous.active)) {
         const office = [...this.privateOffices.offices.values()].find(entry=>entry.layout.name===room &&
           world.players.some(other=>other.id===entry.owner));
         const carryingBriefcase = office?.owner===player.id && this.inventory(player.id).some(item=>item.data.kind==='briefcase');
