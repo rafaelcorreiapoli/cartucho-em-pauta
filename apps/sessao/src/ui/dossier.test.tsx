@@ -16,7 +16,7 @@ test('the dossier keeps evidence private until a nearby offer clears and the buy
   const view = (player:Player,now:number,people:Player[])=>match.view(player.id,ids,now,match.contacts(player,people));
   const render = (player:Player,now:number,people=players,visible=people)=>{
     const model = dossierModel(player.id,view(player,now,people),visible)!;
-    return renderToStaticMarkup(<Dossier model={model} send={()=>{}}/>);
+    return renderToStaticMarkup(<Dossier model={model} send={()=>{}} close={()=>{}}/>);
   };
   match.politics({...rafa,...stations.cabinet},{kind:'grant',diverted:3},players,1);
   match.act({...bia,...stations.audit},'audit',2);
@@ -25,6 +25,7 @@ test('the dossier keeps evidence private until a nearby offer clears and the buy
   expect(render(bia,2)).toContain('data-skin="2"');
   expect(render(bia,2,players,[rafa,bia])).not.toContain('data-skin="2"');
   expect(render(caio,2)).toContain('Nenhuma prova no dossiê');
+  expect(render(caio,2)).toContain('aria-label="Fechar dossiê"');
   match.politics(bia,{kind:'share',to:caio.id,evidence:proof.id,price:2},players,3);
   const offer = view(caio,3,players).politics!.incoming[0];
   expect(render(caio,3)).toContain('Bia oferece um documento por R$ 20 mil');

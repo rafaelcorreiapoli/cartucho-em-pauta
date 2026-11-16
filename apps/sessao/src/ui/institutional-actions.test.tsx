@@ -13,7 +13,7 @@ const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
 const [rafa,bia] = players;
 const ids = players.map(({id})=>id);
 const paint = (model:ReturnType<typeof institutionalActions>)=>
-  renderToStaticMarkup(<InstitutionalActions model={model} send={()=>{}}/>);
+  renderToStaticMarkup(<InstitutionalActions model={model} send={()=>{}} close={()=>{}}/>);
 
 test('the grant control appears at the cabinet and disappears after the authoritative grant',()=>{
   const match = new PlenaryMatch(1);
@@ -25,6 +25,7 @@ test('the grant control appears at the cabinet and disappears after the authorit
   const markup = paint(institutionalActions(before,cabinet));
   expect(markup).toContain('aria-pressed="true">Aplicar tudo</button>');
   expect(markup).toContain('Desviar R$ 10 mil');
+  expect(markup).toContain('aria-label="Fechar ações institucionais"');
   expect(markup).toContain('type="submit">Aplicar verba');
   match.politics(rafa,{kind:'grant',diverted:1},players,1);
   expect(view(1).budget).toBe(before.budget);
