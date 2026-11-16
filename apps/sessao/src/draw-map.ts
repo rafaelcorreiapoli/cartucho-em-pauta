@@ -2,7 +2,6 @@ import type Phaser from 'phaser';
 import { snackBar, treasurer, treasuryLayout } from './npcs';
 import { eastAnnex, officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
 import { infirmary } from './medical';
-import { securityCameras } from './security';
 import { securityRoom, desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
@@ -62,11 +61,6 @@ export function drawMap(scene: Phaser.Scene,
     fill(0x526b5d,x,y+2,w,Math.min(3,h-2));
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
-  }
-  for (const {x,y} of securityCameras) {
-    fill(0x263a31,x-4,y-3,8,5);
-    fill(0xbed9cb,x-2,y-2,4,3);
-    fill(0x497963,x+2,y-1,3,2);
   }
   const [snackX,snackY,snackWidth] = snackBar.door;
   for (const [x,y,w] of [
