@@ -3,7 +3,10 @@ import { stations } from './plenary';
 export const vipAreaRadius = 12;
 
 export const installationSites = {
-  hall:{kind:'portrait',point:{x:556,y:415},label:'Gabinete de Luxo'},
+  hall:{kind:'portrait',point:{x:240,y:21},label:'Antecâmara'},
+  archivePortrait:{kind:'portrait',point:{x:608,y:21},label:'Arquivo'},
+  protocolPortrait:{kind:'portrait',point:{x:220,y:281},label:'Protocolo'},
+  libraryPortrait:{kind:'portrait',point:{x:404,y:281},label:'Biblioteca'},
   coffeeVip:{kind:'vip',point:{x:218,y:228},label:'Cadeira do Cafezinho'},
   lobbyVip:{kind:'vip',point:{x:240,y:79},label:'Antecâmara'},
   pizza:{kind:'pizza',point:stations.coffee,label:'Mesa do Cafezinho'},

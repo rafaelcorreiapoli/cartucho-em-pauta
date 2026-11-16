@@ -7,7 +7,8 @@ import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
-import type { Player } from '../src/map';
+import { canStand, type Player } from '../src/map';
+import { installationSites } from '../src/installations';
 
 function setup() {
   const player = (id:string,x:number,y:number):Player => ({id,nick:id,x,y,moving:false,direction:0,character:0});
@@ -252,7 +253,7 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(bob,{kind:'buy',target:'portrait'},world);
   const [first] = game.view(alice,world).inventory;
   const [second] = game.view(bob,world).inventory;
-  Object.assign(alice,{x:556,y:415});
+  Object.assign(alice,installationSites.hall.point);
   Object.assign(bob,alice,{id:'Bob',nick:'Bob'});
   game.act(alice,{kind:'install',place:'hall',item:first.id},world);
   expect(game.view(watcher,world).decorations.map(item=>item.kind)).toEqual(['pizza']);
@@ -264,6 +265,28 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(alice,{kind:'uninstall',item:second.id},world);
   expect(game.view(alice,world).inventory[0].id).toBe(second.id);
   expect(game.view(alice,world).interactive).toEqual([]);
+});
+
+test('public portrait frames are reachable and show the installer’s character to other players', () => {
+  const {alice,bob,game,world} = setup();
+  world.spend = ()=>true;
+  alice.character = 4;
+  for (const [place,site] of Object.entries(installationSites)) {
+    if (site.kind!=='portrait') continue;
+    Object.assign(alice,terminals.credentials.point);
+    expect(game.act(alice,{kind:'buy',target:'portrait'},world)).toBe('Compra guardada no inventário.');
+    const [portrait] = game.view(alice,world).inventory;
+    expect(game.act(alice,{kind:'install',place,item:portrait.id},world)).toBe('Aproxime-se do local.');
+    const approach = {x:site.point.x,y:site.point.y+12};
+    expect(canStand(approach.x,approach.y)).toBe(true);
+    Object.assign(alice,approach);
+    Object.assign(bob,approach);
+    expect(game.view(alice,world).installable).toContain(place);
+    expect(game.act(alice,{kind:'install',place,item:portrait.id},world)).toBe('Objeto instalado.');
+    expect(game.view(bob,world).decorations).toContainEqual(expect.objectContaining({
+      ...site.point, id:portrait.id,kind:'portrait',character:4,owner:{id:alice.id,name:alice.nick},
+    }));
+  }
 });
 
 test('surveillance shops, races, discoveries, reconnection, audio and photo evidence stay private', () => {

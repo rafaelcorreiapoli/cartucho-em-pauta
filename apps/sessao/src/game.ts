@@ -17,6 +17,7 @@ import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
+import { installationSites } from './installations';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -130,6 +131,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.interactionTargets.set(art,{outline,ready,run});
       art.once('destroy',()=>this.interactionTargets.delete(art));
     }
+    private portraitFrames: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -247,6 +249,34 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (option) actOnFire(option);
         });
       });
+      const frameKey = 'empty-portrait-frame';
+      if (!this.textures.exists(frameKey)) {
+        const texture = this.textures.createCanvas(frameKey,20,20)!;
+        const ctx = texture.context;
+        ctx.fillStyle = '#cb9853';
+        ctx.fillRect(0,0,20,20);
+        ctx.fillStyle = '#543b24';
+        ctx.fillRect(1,1,18,18);
+        ctx.fillStyle = '#ffe3a8';
+        ctx.fillRect(6,9,8,2);
+        ctx.fillRect(9,6,2,8);
+        texture.refresh();
+      }
+      for (const [place,site] of Object.entries(installationSites)) {
+        if (site.kind!=='portrait') continue;
+        const {point} = site;
+        const art = this.add.image(point.x,point.y,frameKey).setDepth(point.y+1).setVisible(false);
+        this.portraitFrames.push({point,art});
+        const install = () => {
+          const gameplay = plenaryView?.gameplay;
+          if (!gameplay?.installable.includes(place)) return;
+          return gameplay.inventory.find(item=>item.kind==='portrait');
+        };
+        this.registerInteraction(art,()=>!!install(),()=>{
+          const portrait = install();
+          if (portrait) interact({kind:'install',item:portrait.id,place});
+        });
+      }
       this.officeDoors = this.add.graphics().setDepth(2);
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
@@ -538,6 +568,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
+      for (const {point,art} of this.portraitFrames) {
+        art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible &&
+          !decorations.some(item=>item.kind==='portrait' && item.x===point.x && item.y===point.y));
+      }
       for (const [art,{outline,ready}] of this.interactionTargets) {
         outline.setVisible(negotiating && art.visible && ready());
       }
