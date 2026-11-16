@@ -9,7 +9,7 @@ import { money } from '../src/politics';
 import { foods, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
@@ -372,7 +372,7 @@ export class Gameplay {
     const cash = this.create('briefcase',{holder:player.id});
     cash.cash = amount;
     this.expose(player.id,cash.id);
-    publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind});
+    publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind,amount});
     console.info(JSON.stringify({event:'npc-robbery',from:npc.id,to:player.id,amount,item:cash.id}));
     return 'Maleta roubada. Leve-a ao seu cofre.';
   }
@@ -1367,9 +1367,17 @@ export class Gameplay {
         this.event(world,player,'stored',data);
         return 'Objeto armazenado.';
       case 'deliver': {
-        const amount = cashAmount(data);
+        const total = cashAmount(data);
+        const partial = action.target==='partial';
+        const amount = partial ? treasuryPartialAmount(total ?? 0) : total;
         if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
-        this.remove(item);
+        if (partial) {
+          data.cash = Math.round((total!-amount)*10)/10;
+          this.clearRequests(data.id);
+          this.event(world,player,'cash-part-deposited',data,undefined,{place,amount,witnesses:[]});
+        } else {
+          this.remove(item);
+        }
         this.event(world,player,'delivered',data,undefined,{place,amount});
         return `${money(amount)} entregues à Tesouraria.`;
       }

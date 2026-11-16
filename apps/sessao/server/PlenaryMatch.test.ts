@@ -427,6 +427,9 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   expect(world.spend!(player.id,1.5)).toBe(true);
   expect(match.economySummary(game.physicalCash())).toMatchObject({transferred:3,reserveFees:1.5,discrepancy:0});
   Object.assign(player,terminals.treasury.point);
+  expect(game.act(player,{kind:'deliver',item:item.id,place:'treasury',target:'partial'},world)).toContain('R$ 15 mil');
+  expect(match.economySummary(game.physicalCash())).toMatchObject({treasury:1.5,physical:1.5,discrepancy:0});
+  expect(game.view(player,world).inventory).toContainEqual(expect.objectContaining({id:item.id,cash:1.5}));
   expect(game.act(player,{kind:'deliver',item:item.id,place:'treasury'},world)).toContain('Tesouraria');
   expect(match.economySummary(game.physicalCash())).toMatchObject({treasury:3,physical:0,discrepancy:0});
   match.advance(NEGOTIATION_MS);

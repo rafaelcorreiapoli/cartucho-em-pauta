@@ -158,3 +158,9 @@ test('Raio X missions identify which kind of balance to reveal',()=>{
   expect(npc).toContain('saldo de um parlamentar NPC com o Raio X');
   expect(npc).toContain('data-done="true"');
 });
+
+test('the extraordinary collection mission shows its partial delivery and two steps',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'recolhimentoExtraordinario',current:1,target:2}}/>);
+  expect(markup).toContain('entregue parte dela à Tesouraria');
+  expect(markup).toContain('1 / 2');
+});

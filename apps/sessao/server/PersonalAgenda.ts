@@ -83,7 +83,7 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -217,7 +217,7 @@ export class PersonalAgenda {
       if (this.spyAvailability?.(device)===false) return false;
     }
     if (kind==='presidenteFoto') return false;
-    if ((kind==='rouboNpc' || kind==='votoNpc') && !this.npcCount) return false;
+    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc') && !this.npcCount) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
     // Isolation is temporary. Keep collective missions already in progress.
     const usesAvailablePlayers = drawing && kind!=='visitaGabinete' && kind!=='visitaAlvo' && kind!=='visitaCortesia' && kind!=='jogarOculto';
@@ -290,6 +290,14 @@ export class PersonalAgenda {
           kind==='doisPix' && event.type==='pix-received' && event.target) {
         gains[kind] = this.countFacts(mission,[{value:event.target!}]);
       }
+      if (kind==='recolhimentoExtraordinario' && event.item!==undefined) {
+        const item = String(event.item);
+        if (event.type==='npc-robbed' && (event.amount ?? 0)>=0.2) {
+          this.countFacts(mission,[{value:item}]);
+          if (mission.current===0) gains[kind] = 1;
+        }
+        if (event.type==='cash-part-deposited' && this.factsByMission.get(mission.id)?.get('')?.has(item)) gains[kind] = 1;
+      }
       if (kind==='presencaPlenario' && event.place==='Plenário') {
         if (event.type==='room-entered') this.countFacts(mission,[{value:'entrada'}]);
         if (event.type==='room-left' && this.factsByMission.has(mission.id)) gains[kind] = 1;
@@ -355,7 +363,7 @@ export class PersonalAgenda {
       if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
     }
     if (kind==='dinheiroPresencialVinte' && !metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)) return false;
-    if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
+    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario') && metrics.npcHasCash?.()===false) return false;
     if (kind==='votoNpc') {
       if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;
       if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;

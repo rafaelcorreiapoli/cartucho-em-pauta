@@ -1006,3 +1006,45 @@ test('Raio X missions require the equipment and the corresponding targets',()=>{
   expect(draw(true,false,1)).not.toContain('fiscalizacaoParalela');
   expect(draw(true,false,1)).toContain('patrimonioSuspeito');
 });
+
+test('extraordinary collection requires a partial treasury deposit from a robbery during the mission',()=>{
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...terminals.treasury.point};
+  const npc:Player = {...player,id:'npc',npc:true};
+  const game = new Gameplay();
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  let deposits = 0;
+  let allowDeposit = true;
+  const world:GameplayWorld = {players:[player,npc],now:10,voice:()=>false,office:()=>undefined,earn:()=>{},
+    takeWallet:()=>3,deposit:(_id,amount)=>{
+      if (!allowDeposit) return false;
+      deposits += amount;
+      return true;
+    },publish:event=>recordAgendaEvent(agenda,event)};
+  const steal = ()=>{
+    const before = new Set(game.view(player,world).inventory.map(item=>item.id));
+    expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
+    return game.view(player,world).inventory.find(item=>!before.has(item.id))!.id;
+  };
+  const earlier = steal();
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['recolhimentoExtraordinario','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,1,true,3,1);
+  const active = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='recolhimentoExtraordinario');
+  const deliver = (id:number,partial:boolean)=>game.act(player,{kind:'deliver',place:'treasury',item:id,target:partial ? 'partial' : undefined},world);
+  expect(active()?.current).toBe(0);
+  expect(deliver(earlier,true)).toContain('R$ 15 mil');
+  expect(active()?.current).toBe(0);
+  const full = steal();
+  expect(active()?.current).toBe(1);
+  expect(deliver(full,false)).toContain('R$ 30 mil');
+  expect(active()?.current).toBe(1);
+  const tracked = steal();
+  allowDeposit = false;
+  expect(deliver(tracked,true)).toBe('Leve a maleta à Tesouraria.');
+  expect(active()?.current).toBe(1);
+  allowDeposit = true;
+  expect(deliver(tracked,true)).toContain('R$ 15 mil');
+  expect(deposits).toBe(6);
+  expect(game.view(player,world).inventory).toContainEqual(expect.objectContaining({id:tracked,cash:1.5}));
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'recolhimentoExtraordinario',current:2}));
+});

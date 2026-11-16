@@ -60,11 +60,17 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
+export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/2)/10;
+
 export function treasuryDeliveries(inventory:readonly WorldItem[]) {
   return inventory.flatMap(item=>{
     const amount = cashAmount(item);
-    return amount ? [{label:`Entregar ${money(amount)} ao tesoureiro`,
-      action:{kind:'deliver',place:'treasury',item:item.id} as const}] : [];
+    if (!amount) return [];
+    const action = {kind:'deliver',place:'treasury',item:item.id} as const;
+    const deliveries:{label:string;action:GameplayAction}[] = [{label:`Entregar ${money(amount)} ao tesoureiro`,action}];
+    const portion = treasuryPartialAmount(amount);
+    if (portion>0) deliveries.push({label:`Entregar só ${money(portion)}`,action:{...action,target:'partial'}});
+    return deliveries;
   });
 }
 
@@ -134,7 +140,7 @@ export type GameplayView = {
 export type InteractionCue = 'cash'|'stamp'|'lock';
 
 export type GameplayEvent = {
-  type:'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'campaign-investment'|'pix-sent'|'pix-received'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'credential-checked'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  type:'cash-part-deposited'|'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'campaign-investment'|'pix-sent'|'pix-received'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'credential-checked'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 
