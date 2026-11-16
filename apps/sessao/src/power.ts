@@ -1,7 +1,7 @@
 import {canInteract,type InteractionActor} from './interactions';
 
 export const powerPanels = [
-  {name:'Apoio Técnico',x:620,y:183},
+  {name:'Apoio Técnico',x:510,y:183},
   {name:'Credenciamento',x:260,y:418},
 ] as const;
 

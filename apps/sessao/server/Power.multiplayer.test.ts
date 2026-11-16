@@ -78,7 +78,7 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     await wait(()=>[first,second,infiltrator].every(peer=>view(peer)?.politics?.missions.active.some(
       mission=>mission.kind==='manutencaoEmergencia' && mission.current===0)));
     const xpBefore = view(first)!.politics!.progression.xp;
-    const nearA = {x:a.x-49,y:a.y};
+    const nearA = {x:a.x+49,y:a.y};
     expect(view(infiltrator)?.canSabotagePower).toBe(true);
     expect(view(first)?.canSabotagePower).toBeUndefined();
 
