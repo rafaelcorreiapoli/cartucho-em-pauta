@@ -19,7 +19,7 @@ export const incendiary = {
   name:'Incendiário',
   price:3,
   portrait:'retrato-incendiario.webp',
-  description:'Instale em um móvel ou vaso. O dispositivo acende após 15 segundos e só pode ser usado uma vez.',
+  description:`Instale em um móvel ou vaso. O dispositivo acende após ${fireRules.fuse/1000} segundos e só pode ser usado uma vez.`,
 } as const;
 
 export const extinguisherSpawns = [{x:271,y:241},{x:453,y:358}] as const;

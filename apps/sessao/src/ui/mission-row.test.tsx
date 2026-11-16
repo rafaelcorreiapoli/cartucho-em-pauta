@@ -11,7 +11,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
+import {agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -90,6 +90,13 @@ test('timed mission labels and progress display the same duration in seconds',()
     expect(html).toContain(`${target/1000} segundos`);
     expect(html).toContain(`1 / ${target/1000} s`);
   }
+});
+
+test('urgent calls show the minimum per call and progress by distinct contact',()=>{
+  const {minCallMs,contacts} = urgentCallMission;
+  const html = renderToStaticMarkup(<MissionRow mission={{id:8,kind:'chamadasUrgentes',current:1,target:contacts}}/>);
+  expect(html).toContain(`${minCallMs/1000} segundos com ${contacts} colegas diferentes`);
+  expect(html).toContain(`1 / ${contacts}`);
 });
 
 test('coffee delivery shows distinct recipient progress and the completion check',()=>{
