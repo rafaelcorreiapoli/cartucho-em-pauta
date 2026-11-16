@@ -20,7 +20,8 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
   const game = new Gameplay();
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
   game.reset(0,()=>.9,[player]);
-  const {progression} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  const economy = Reflect.get(match,'economy');
+  const {progression} = Reflect.get(economy,'accounts').get(player.id);
   progression.earn(100);
   const view = (now:number)=>{
     const world = match.gameplayWorld([player],now,()=>false);
@@ -34,6 +35,12 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
   expect(allowed(2)).toBe(false);
   expect(match.allocateAttribute(player,request,2)).toBe(false);
   player.carried = undefined;
+  economy.suspend(player.id,100);
+  expect(view(3).isolationSeconds).toBeGreaterThan(0);
+  expect(allowed(3)).toBe(false);
+  expect(match.allocateAttribute(player,request,3)).toBe(false);
+  match.advance(100);
+  expect(allowed(100)).toBe(true);
   const countdown = NEGOTIATION_MS-1;
   expect(view(countdown).ballotCountdown).toBeDefined();
   expect(allowed(countdown)).toBe(false);
