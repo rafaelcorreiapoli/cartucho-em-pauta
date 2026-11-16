@@ -20,7 +20,7 @@ import {
   hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
-import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -399,6 +399,15 @@ export class PlenaryMatch {
     return this.canVote(id) && !this.disconnected.has(id);
   }
 
+  private canCallCassation(id:string, now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.cassationAt===undefined &&
+      this.canVoteInCassation(id) && this.popularity(id)>=CASSATION_POPULARITY && this.cassationElectorate().length>=3;
+  }
+
+  private cassationElectorate() {
+    return [...this.electorate].filter(id=>this.canVoteInCassation(id));
+  }
+
   castCassation(id:string, candidate:string|null, now:number) {
     if (!this.cassationOpen || now>=this.ends || !this.canVoteInCassation(id) ||
         (candidate!==null && (candidate===id || !this.canVoteInCassation(candidate)))) return;
@@ -406,7 +415,7 @@ export class PlenaryMatch {
   }
 
   private resolveCassation(now:number) {
-    const electorate = [...this.electorate].filter(id=>this.canVoteInCassation(id));
+    const electorate = this.cassationElectorate();
     const tally = new Map<string,number>();
     for (const id of electorate) {
       const target = this.cassationVotes.get(id);
@@ -497,8 +506,7 @@ export class PlenaryMatch {
         break;
       }
       case 'call-cassation':
-        if (!this.canVoteInCassation(id) || !this.economy.canCall(id) || this.cassationAt!==undefined ||
-            this.votingPlayers()<2 || !this.at(player,'panel')) break;
+        if (!this.canCallCassation(id,now) || !this.at(player,'panel')) break;
         if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
         this.cassationAt = now+CASSATION_NOTICE_MS;
         this.ends = Math.max(this.ends,this.cassationAt);
@@ -798,6 +806,7 @@ export class PlenaryMatch {
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
     return {
       policies:this.activePolicies(now),
+      canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
         quorum:Math.floor(candidates.length/2)+1,voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
