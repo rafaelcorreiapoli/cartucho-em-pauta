@@ -13,7 +13,7 @@ import { StationCooldowns } from './StationCooldowns';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
 import { roomActivities, type RoomActivity } from '../src/room-activities';
-import { readElectionAction } from '../src/elections';
+import { readElectionAction, type CampaignBroadcast } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
 import { isolationRoom, localPerception, characterVisible, NAMES, PLENARY_SEATS, inPlenary, type Player } from '../src/map';
@@ -346,7 +346,10 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const advertisement = this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
-      if (advertisement) this.broadcast('campaign-advertisement',{...advertisement,advertiserId:player.id});
+      if (advertisement) {
+        const broadcast:CampaignBroadcast = {...advertisement,advertiserId:player.id};
+        this.broadcast('campaign-advertisement',broadcast);
+      }
     });
     this.onMessage('bill-intent',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;

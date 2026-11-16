@@ -1,10 +1,11 @@
 import { setCharacterPortrait } from './character-art';
-import type { CampaignAdvertisement } from './elections';
+import type { CampaignBroadcast } from './elections';
 import './campaign-tv.css';
 
 const airtime = 4_000;
+const slideTime = 280;
 
-export function createCampaignTv(session:HTMLElement) {
+export function createCampaignTv(session:HTMLElement, localPlayerId:string) {
   const tv = document.createElement('div');
   tv.className = 'campaign-tv';
   tv.hidden = true;
@@ -32,31 +33,45 @@ export function createCampaignTv(session:HTMLElement) {
   announcement.setAttribute('role','status');
   session.append(tv,announcement);
 
-  const pending:CampaignAdvertisement[] = [];
-  let timer:number | undefined;
+  const pending:CampaignBroadcast[] = [];
+  let playback:Animation | undefined;
 
   function playNext() {
     const ad = pending.shift();
-    timer = undefined;
+    playback = undefined;
     tv.hidden = !ad;
     if (!ad) {
       announcement.textContent = '';
       return;
     }
+    const own = ad.advertiserId===localPlayerId;
+    tv.dataset.side = own ? 'left' : 'right';
     setCharacterPortrait(portrait,ad.character);
     name.textContent = `Vote ${ad.name}`;
     number.textContent = String(ad.number);
     announcement.textContent = `Propaganda eleitoral. Vote ${ad.name}, número ${ad.number}.`;
-    timer = window.setTimeout(playNext,airtime);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const duration = reducedMotion ? airtime : airtime+2*slideTime;
+    const edge = own ? 'translateX(calc(-100% - 3rem))' : 'translateX(calc(100% + 3rem))';
+    playback = tv.animate(reducedMotion ? [] : [
+      {transform:edge,easing:'ease-out'},
+      {transform:'none',offset:slideTime/duration},
+      {transform:'none',offset:1-slideTime/duration,easing:'ease-in'},
+      {transform:edge},
+    ], {duration,fill:'forwards'});
+    playback.onfinish = () => {
+      playback?.cancel();
+      playNext();
+    };
   }
 
   return {
-    enqueue(ad:CampaignAdvertisement) {
+    enqueue(ad:CampaignBroadcast) {
       pending.push(ad);
-      if (timer===undefined) playNext();
+      if (!playback) playNext();
     },
     destroy() {
-      window.clearTimeout(timer);
+      playback?.cancel();
       pending.length = 0;
       tv.remove();
       announcement.remove();

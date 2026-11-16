@@ -14,6 +14,7 @@ export type ElectionAction =
   | {kind:'advertise' | 'speech' | 'interview' | 'object'};
 
 export type CampaignAdvertisement = {name:string; character:number; number:number};
+export type CampaignBroadcast = CampaignAdvertisement & {advertiserId:string};
 
 export type Assignment = {id:string; name:string; office:Office};
 export type Elected = Assignment & {character:number; race:Office; percentage:number};
