@@ -1,3 +1,4 @@
+import { fireSites } from '../src/fire';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
 import { marketProduct } from '../src/market-catalog';
@@ -147,6 +148,7 @@ export class Gameplay {
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
     this.stationCooldowns.reset();
     this.items.clear();
+    for (const {extinguisher} of fireSites) this.create('extinguisher',this.groundPlace('extinguisher',extinguisher,now));
     this.surveillance.reset();
     this.roomSamples.clear();
     this.lastPolicyHeal = now;

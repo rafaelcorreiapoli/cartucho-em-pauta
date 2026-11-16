@@ -1,4 +1,3 @@
-import { fireSites } from './fire';
 import type { RechargeStation } from './station-recharge';
 import { firstAidKit } from './medical';
 import { money } from './politics';
@@ -162,8 +161,6 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
 }
 
 export const terminals = {
-  extinguisherCoffee:{point:fireSites[0].extinguisher,title:'Extintor',supply:'extinguisher'},
-  extinguisherLibrary:{point:fireSites[1].extinguisher,title:'Extintor',supply:'extinguisher'},
   reprography:{point:reprography,title:reprography.title},
   press:{point:stations.press,title:'Imprensa'},
   coffee:{point:stations.coffee,title:'Cafezinho',supply:'coffee'},
