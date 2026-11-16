@@ -1,3 +1,4 @@
+import { credentialGoods } from './installations';
 import { incendiary } from './fire';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
 import { concealment, equipment } from './equipment';
@@ -17,11 +18,16 @@ const supplies = {
 const {officeTv,officeRug,officeChair,...securityGoods} = officeGoods;
 const furniture = {officeTv,officeRug,officeChair};
 const technical = {...equipment,...securityGoods,...spyProducts,...supplies};
-const catalogs = {equipment:technical,food:foods,furniture} as const;
+const catalogs = {equipment:technical,food:foods,furniture,credentials:credentialGoods} as const;
 type Catalog = keyof typeof catalogs;
 type TechnicalProduct = keyof typeof technical;
 
+export function isCredentialGood(kind:unknown):kind is keyof typeof credentialGoods {
+  return typeof kind==='string' && Object.hasOwn(credentialGoods,kind);
+}
+
 export const marketKinds = {
+  credentials:Object.keys(credentialGoods) as (keyof typeof credentialGoods)[],
   equipment:Object.keys(technical) as TechnicalProduct[],
   food:Object.keys(foods) as (keyof typeof foods)[],
   furniture:Object.keys(furniture) as (keyof typeof furniture)[],
@@ -39,5 +45,5 @@ export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:B
     catalog==='furniture' && policies?.furniture ||
     catalog==='equipment' && (policies?.equipment && (Object.hasOwn(equipment,kind) || Object.hasOwn(spyProducts,kind)) ||
       kind==='forensicKit' && policies?.mail);
-  return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods,price:subsidized && Math.round(publicBudget*10)>=Math.round((price-discountedPrice(price))*10) ? discountedPrice(price) : price};
+  return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods|keyof typeof credentialGoods,price:subsidized && Math.round(publicBudget*10)>=Math.round((price-discountedPrice(price))*10) ? discountedPrice(price) : price};
 }

@@ -16,7 +16,7 @@ import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
 import { paintSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
-import { installationSites, shop } from './installations';
+import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
@@ -343,7 +343,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
-          const label = item.kind==='pizza' ? 'Servir na mesa' : 'Instalar ou substituir';
+          const label = item.kind==='pizza' ? 'Servir na mesa' : item.kind==='vip' ? 'Reservar cadeira' : 'Instalar ou substituir';
           if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
         }
         if (contacts.length) {
@@ -539,10 +539,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           add('decoration-'+decoration.id,decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id));
         }
         for (const place of state.locations) {
-          for (const kind of place==='credentials' ? ['portrait','vip'] as const : []) {
-            add('purchase-'+kind,kind,`${objects[kind].name} · ${money(shop[kind])}`,'Comprar',
-              ()=>pickUp(player=>canReachObject(player,terminals[place as keyof typeof terminals].point),()=>send({kind:'buy',target:kind})));
-          }
           const terminal = terminals[place as keyof typeof terminals];
           if (!('supply' in terminal) || terminal.supply==='document') continue;
           add('supply-'+place,terminal.supply,objects[terminal.supply].name,'Pegar',()=>pickUp(

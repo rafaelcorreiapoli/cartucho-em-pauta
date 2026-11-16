@@ -100,7 +100,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','buy','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -111,7 +111,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'edit','call','answer','game-start','game-turn','photo','selfie','buy','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','call','answer','game-start','game-turn','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean, voting=false) {

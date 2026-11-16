@@ -2,7 +2,7 @@ import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
-import { marketProduct } from '../src/market-catalog';
+import { isCredentialGood, marketProduct } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
@@ -15,7 +15,7 @@ import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhon
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { installationSites, shop, vipAreaRadius } from '../src/installations';
+import { installationSites, vipAreaRadius } from '../src/installations';
 import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -1199,7 +1199,7 @@ export class Gameplay {
     return this.dialogues.purchase(player,token,(npc,direct)=>{
       const product = marketProduct(npcs[npc].catalog,requested,world.policies,world.publicBudget);
       if (!product) {
-        return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested)
+        return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested) || isCredentialGood(requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price} = product;
@@ -1209,6 +1209,7 @@ export class Gameplay {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
       } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
+      if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
       const basePrice = marketProduct(npcs[npc].catalog,kind)!.price;
       const subsidy = Math.round((basePrice-price)*10)/10;
@@ -1376,16 +1377,6 @@ export class Gameplay {
     if (action.kind==='conceal') {
       if (action.item===undefined || !this.exposed.get(id)?.delete(action.item)) return 'Objeto não está exposto.';
       return 'Objeto guardado.';
-    }
-    if (action.kind==='buy') {
-      const kind = action.target;
-      if ((kind!=='portrait' && kind!=='vip') || !canReachObject(player,stations.credentials)) return 'Aproxime-se do balcão.';
-      if (!this.available(id)) return 'Inventário cheio.';
-      if (this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
-      if (!world.spend?.(id,shop[kind])) return 'Saldo insuficiente.';
-      const item = this.create(kind,{holder:id});
-      this.event(world,player,'collected',item);
-      return 'Compra guardada no inventário.';
     }
     if (['install','uninstall','mark','slice'].includes(action.kind)) return this.changeInstallation(player,action,world);
     if (isPhoneAction(action)) return this.phone.act(player,action,world);

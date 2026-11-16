@@ -1,3 +1,4 @@
+import { installationArt } from './installations';
 import { isOfficeFurniture, officeFurniture } from './private-offices';
 import { equipment } from './equipment';
 import type Phaser from 'phaser';
@@ -76,16 +77,23 @@ export class PhotoRenderer {
         const sprite = this.textures.get(`furniture-${decoration.kind}`).getSourceImage() as HTMLImageElement;
         ctx.drawImage(sprite,x-width/2,y-height*anchor,width,height);
       } else if (decoration.kind==='portrait') {
-        ctx.fillStyle = '#ae7746';
-        ctx.fillRect(x-9,y-15,18,18);
+        const {texture,width,height} = installationArt.portrait;
+        const mount = this.textures.get(texture).getSourceImage() as HTMLImageElement;
+        ctx.drawImage(mount,x-width/2,y-height/2,width,height);
         const atlas = this.textures.get('installed-portraits').getSourceImage() as HTMLImageElement;
-        ctx.drawImage(atlas,decoration.character%2*256,Math.floor(decoration.character/2)*256,256,256,x-7,y-13,14,14);
+        ctx.drawImage(atlas,decoration.character%2*256,Math.floor(decoration.character/2)*256,256,256,x-9,y-9,18,18);
         if (decoration.marked) {
           ctx.strokeStyle = '#eb664e';
           ctx.beginPath();
-          ctx.moveTo(x-6,y-12); ctx.lineTo(x+6,y);
-          ctx.moveTo(x+6,y-12); ctx.lineTo(x-6,y); ctx.stroke();
+          ctx.moveTo(x-6,y-6); ctx.lineTo(x+6,y+6);
+          ctx.moveTo(x+6,y-6); ctx.lineTo(x-6,y+6); ctx.stroke();
         }
+      } else if (decoration.kind==='vip') {
+        const {texture,width,height,centerY} = installationArt.vip;
+        const chair = this.textures.get(texture).getSourceImage() as HTMLImageElement;
+        ctx.drawImage(chair,x-width/2,y+centerY-height/2,width,height);
+        const plate = this.textures.get('item-vip').getSourceImage() as HTMLImageElement;
+        ctx.drawImage(plate,x-6.5,y+centerY-6.5,13,13);
       } else item(decoration.kind,x,y+2,19);
     }
 

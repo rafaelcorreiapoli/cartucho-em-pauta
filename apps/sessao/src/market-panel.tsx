@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { DialogDismiss } from './ui/dialog-dismiss';
-import { marketKinds, marketProduct } from './market-catalog';
+import { isCredentialGood, marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { EquipmentReplacement } from './ui/equipment-replacement';
 import { describeFood, foodDefinition, isFood } from './food';
@@ -86,7 +86,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const item = objects[kind];
       const price = marketProduct(catalog,kind,policies,budget)!.price;
       const furniture = isOfficeFurniture(kind);
-      const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
+      const hasItem = furniture ? furnishings.includes(kind) : (isCredentialGood(kind) || isGear(kind)) && owned.some(entry=>entry.kind===kind);
       const stack = inventory.some(entry=>entry.kind===kind) && canStackItem(kind);
       const needsSpace = !isGear(kind) || !!gearConflict(kind,equipped);
       const noSpace = needsSpace && !furniture && !stack && inventory.length>=INVENTORY_SLOTS;
@@ -102,7 +102,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         <div className="market-vendor">
           <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
           <div><h2 id="market-catalog-title">{vendor.label}</h2><strong>{vendor.name}</strong><p>{vendor.catalog==='equipment' ? 'Equipamentos, espionagem e utilidades parlamentares.' :
-            vendor.catalog==='furniture' ? 'Móveis instalados no seu gabinete.' : 'Lanches e bebidas.'}</p></div>
+            vendor.catalog==='furniture' ? 'Móveis instalados no seu gabinete.' :
+            vendor.catalog==='credentials' ? 'Retratos oficiais e placas para reservar cadeiras.' : 'Lanches e bebidas.'}</p></div>
         </div>
         <p className="market-wallet tabular-nums"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}</p>
       </div>

@@ -17,7 +17,7 @@ import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import type { Assignment, Office } from './elections';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
-import { installationSites } from './installations';
+import { installationArt, installationSites } from './installations';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
@@ -131,7 +131,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.interactionTargets.set(art,{outline,ready,run});
       art.once('destroy',()=>this.interactionTargets.delete(art));
     }
-    private installationMarkers: {point:Motion; kind:'portrait'|'vip'; art:Phaser.GameObjects.Image}[] = [];
+    private installationFixtures: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
     private textResolution = 3;
     private safeFraction = 0;
@@ -158,6 +158,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
 
+      for (const {texture,sprite} of Object.values(installationArt)) {
+        this.load.image(texture,import.meta.env.BASE_URL+'assets/'+sprite);
+      }
       this.load.image('cash-briefcase',import.meta.env.BASE_URL+'assets/maleta-social.png');
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
@@ -249,34 +252,29 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (option) actOnFire(option);
         });
       });
-      for (const kind of ['portrait','vip'] as const) {
-        const key = `installation-marker-${kind}`;
-        if (this.textures.exists(key)) continue;
-        const texture = this.textures.createCanvas(key,24,20)!;
-        const ctx = texture.context;
-        ctx.fillStyle = '#cb9853';
-        ctx.fillRect(0,0,24,20);
-        ctx.fillStyle = kind==='vip' ? '#142820' : '#543b24';
-        ctx.fillRect(1,1,22,18);
-        ctx.fillStyle = '#ffe3a8';
-        ctx.font = 'bold 10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(kind==='vip' ? 'VIP' : '+',12,10);
-        texture.refresh();
-      }
       for (const [place,{point,kind}] of Object.entries(installationSites)) {
         if (kind==='pizza') continue;
-        const art = this.add.image(point.x,point.y,`installation-marker-${kind}`).setDepth(point.y+1).setVisible(false);
-        this.installationMarkers.push({point,kind,art});
-        const install = () => {
+        const {texture,width,height,centerY} = installationArt[kind];
+        const art = this.add.image(point.x,point.y+centerY,texture)
+          .setDisplaySize(width,height).setDepth(point.y).setVisible(false);
+        this.installationFixtures.push({point,art});
+        const installed = () => decorations.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
+        const availableItem = () => {
           const gameplay = plenaryView?.gameplay;
           if (!gameplay?.installable.includes(place)) return;
           return gameplay.inventory.find(item=>item.kind===kind);
         };
-        this.registerInteraction(art,()=>!!install(),()=>{
-          const item = install();
-          if (item) interact({kind:'install',item:item.id,place});
+        this.registerInteraction(art,()=>{
+          const decoration = installed();
+          return decoration ? !!plenaryView?.gameplay?.interactive.some(item=>item.id===decoration.id) : !!availableItem();
+        },()=>{
+          const decoration = installed();
+          if (decoration) {
+            inspect(decoration.id);
+          } else {
+            const item = availableItem();
+            if (item) interact({kind:'install',item:item.id,place});
+          }
         });
       }
       this.officeDoors = this.add.graphics().setDepth(2);
@@ -410,19 +408,26 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.installed.set(item.id,{marker});
           continue;
         }
-        const art = item.kind==='portrait' ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
-          : item.kind==='vip'
-            ? this.add.image(0,0,'installation-marker-vip').setTint(0xffdd92)
-            : this.add.image(0,0,`item-${item.kind}`).setDisplaySize(26,26);
-        const label = this.add.text(0,9,decorationLabel(item),{
+        const portrait = item.kind==='portrait';
+        const art = portrait
+          ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
+          : this.add.image(0,item.kind==='vip' ? -9 : 0,`item-${item.kind}`)
+            .setDisplaySize(item.kind==='vip' ? 13 : 26,item.kind==='vip' ? 13 : 26);
+        const label = this.add.text(0,item.kind==='vip' ? 5 : 13,decorationLabel(item),{
           fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
         }).setOrigin(.5,0);
-        const frame = this.add.rectangle(0,0,20,20,0x543b24,.92).setStrokeStyle(1,0xcb9853);
-        const mark = this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3}).setOrigin(.5).setVisible(!!item.marked);
-        const marker = this.add.container(item.x,item.y,[frame,art,label,mark]).setDepth(item.y+1);
+        const marker = this.add.container(item.x,item.y).setDepth(item.y+1);
+        if (portrait && item.privateOffice) {
+          const {texture,width,height} = installationArt.portrait;
+          marker.add(this.add.image(0,0,texture).setDisplaySize(width,height));
+        }
+        marker.add([art,label]);
+        const mark = portrait ? this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3})
+          .setOrigin(.5).setVisible(!!item.marked) : undefined;
+        if (mark) marker.add(mark);
         this.installed.set(item.id,{marker,label,mark});
-        this.registerInteraction(art,()=>!!plenaryView?.gameplay?.interactive.some(entry=>entry.id===item.id),
-          ()=>inspect(item.id),marker);
+        if (item.privateOffice || item.kind==='pizza') this.registerInteraction(art,
+          ()=>!!plenaryView?.gameplay?.interactive.some(entry=>entry.id===item.id),()=>inspect(item.id),marker);
       }
     }
 
@@ -570,9 +575,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
-      for (const {point,kind,art} of this.installationMarkers) {
-        art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible &&
-          !decorations.some(item=>item.kind===kind && item.x===point.x && item.y===point.y));
+      for (const {point,art} of this.installationFixtures) {
+        art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible);
       }
       for (const [art,{outline,ready}] of this.interactionTargets) {
         outline.setVisible(negotiating && art.visible && ready());
