@@ -7,8 +7,10 @@ import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
-import { canStand, type Player } from '../src/map';
+import { canStand, HEIGHT, rooms, WIDTH, type Player } from '../src/map';
 import { photoMissions } from './photo-missions';
+import { findRoute } from '../src/navigation';
+import { installationBounds, overlaps } from '../src/map-props';
 import { decorationActions, installationSites } from '../src/installations';
 
 function buyCredentialGood(game:Gameplay,player:Player,kind:'portrait'|'vip',world:GameplayWorld) {
@@ -131,6 +133,31 @@ test('spawned and dropped cash share visibility and custody without immediate re
   game.act(alice,{kind:'use',item:item.id},world);
   expect(credits).toEqual([]);
   expect(game.view(bob,world).ground[0]?.id).toBe(item.id);
+});
+
+test('cash skips reachable floor where the sprite would overlap a map prop', () => {
+  const {alice,game,world} = setup();
+  const blocked = [
+    {x:520,y:46}, // Desk and chair in the Archive.
+    {x:211,y:199}, // Plant in the Cafezinho.
+    {x:600,y:240}, // Reserved chair, including when empty.
+    {x:280,y:301}, // Portrait mount, including when empty.
+  ];
+  const clear = {x:151,y:146};
+  const entrance = {x:140,y:146};
+  for (const point of blocked) {
+    expect(canStand(point.x-8,point.y+6) && canStand(point.x+8,point.y+6)).toBe(true);
+    expect(findRoute(entrance,point).at(-1)).toEqual(point);
+  }
+  const values = [0,0,...[...blocked,clear].flatMap(({x,y})=>[
+    (x-24+.5)/(WIDTH-48),(y-24+.5)/(HEIGHT-48),
+  ])];
+  game.reset(0,()=>values.shift() ?? .5);
+  Object.assign(alice,entrance);
+  world.now = 4000;
+  game.tick(world,true);
+  expect(game.view(alice,world).ground).toEqual([expect.objectContaining({...clear,kind:'briefcase'})]);
+  expect(values).toEqual([]);
 });
 
 test('cash on the ground expires after the same interval on spawn or drop', () => {
@@ -285,6 +312,12 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
     const approach = {x:site.point.x,y:site.point.y+10};
     expect(canStand(approach.x,approach.y)).toBe(true);
+    expect(findRoute({x:140,y:146},approach).at(-1)).toEqual(approach);
+    if (site.kind==='portrait') {
+      const {name,bounds:[x,y,width]} = rooms.find(room=>room.name===site.label)!;
+      const titleWidth = name.length*8+10;
+      expect(overlaps(installationBounds(site.point,site.kind),[x+(width-titleWidth)/2,y+4,titleWidth,14])).toBe(false);
+    }
     Object.assign(alice,approach);
     Object.assign(bob,approach);
     const [install] = decorationActions(alice.id,game.view(alice,world));

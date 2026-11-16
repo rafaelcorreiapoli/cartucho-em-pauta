@@ -13,6 +13,7 @@ import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
+import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { installationSites, vipAreaRadius } from '../src/installations';
@@ -432,7 +433,7 @@ export class Gameplay {
       const x = 24+Math.floor(this.random()*(WIDTH-48));
       const y = 24+Math.floor(this.random()*(HEIGHT-48));
       if (barriers.some(rect=>blockedBy(rect,x,y)) || !canStand(x,y) || !canStand(x-8,y+6) || !canStand(x+8,y+6) ||
-        ground.some(item=>Math.hypot(x-item.x,y-item.y)<36)) continue;
+        ground.some(item=>Math.hypot(x-item.x,y-item.y)<36) || !cashSpriteFits({x,y},this.installations.values())) continue;
       const last = findRoute({...mapEntrance,barriers},{x,y}).at(-1);
       if (last?.x!==x || last.y!==y) continue;
       const kind = 'briefcase';

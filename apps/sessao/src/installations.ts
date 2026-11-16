@@ -4,10 +4,10 @@ import { roomActivities } from './room-activities';
 export const vipAreaRadius = 12;
 
 export const installationSites = {
-  hall:{kind:'portrait',point:{x:240,y:21},label:'Antecâmara'},
-  archivePortrait:{kind:'portrait',point:{x:608,y:21},label:'Arquivo'},
-  protocolPortrait:{kind:'portrait',point:{x:181,y:284},label:'Protocolo'},
-  libraryPortrait:{kind:'portrait',point:{x:404,y:281},label:'Biblioteca'},
+  hall:{kind:'portrait',point:{x:210,y:96},label:'Antecâmara'},
+  archivePortrait:{kind:'portrait',point:{x:540,y:27},label:'Arquivo'},
+  protocolPortrait:{kind:'portrait',point:{x:280,y:291},label:'Protocolo'},
+  libraryPortrait:{kind:'portrait',point:{x:380,y:293},label:'Biblioteca'},
   technicalVip:{kind:'vip',point:{x:600,y:232},label:'Apoio Técnico'},
   lobbyVip:{kind:'vip',point:{x:240,y:79},label:'Antecâmara'},
   libraryVip:{kind:'vip',point:{x:455,y:373},label:'Biblioteca'},
