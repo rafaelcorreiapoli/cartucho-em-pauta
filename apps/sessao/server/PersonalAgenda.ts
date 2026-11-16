@@ -84,7 +84,7 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
@@ -206,7 +206,11 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
+      if (mission.kind==='doisPix') {
+        const credited = this.factsByMission.get(mission.id)?.get('');
+        const remaining = mission.target-mission.current;
+        if (targets.filter(person=>!credited?.has(person.id)).length>=remaining) return true;
+      } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
           (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       this.callSamples.delete(mission.id);
@@ -404,11 +408,12 @@ export class PersonalAgenda {
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
     if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
         metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
-    if (kind==='recebido' || kind==='articulacao') {
-      const requiredPayers = kind==='articulacao' ? missionTargets.articulacao! : 1;
+    if (kind==='recebido' || kind==='articulacao' || kind==='doisPix') {
+      const requiredPayers = missionTargets[kind] ?? 1;
+      if (kind==='doisPix' && !metrics.canReceivePayments) return false;
       if (metrics.canReceivePayments?.(requiredPayers)===false) return false;
     }
-    if (kind==='pagamento' || kind==='dinheiroAlvo') {
+    if (kind==='pagamento' || kind==='dinheiroAlvo' || kind==='pixVinte') {
       if (metrics.canPay?.()===false) return false;
       if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
     }

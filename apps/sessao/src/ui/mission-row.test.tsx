@@ -1,3 +1,5 @@
+import {PlenaryMatch} from '../../server/PlenaryMatch';
+import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {stabilityRules} from '../plenary';
@@ -211,4 +213,42 @@ test('campaign investment shows only the paid amount confirmed by the gameserver
   const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'investimentoPolitico',current:4,target:5}}/>);
   expect(markup).toContain('em propaganda eleitoral');
   expect(markup).toContain('R$ 40 mil / R$ 50 mil');
+});
+
+test('the agenda renders only payable Pix missions and tracks distinct senders from the server',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,x:140,y:146,character,direction:0,moving:false,
+  }));
+  const [rafa,bia,caio] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(rafa.id);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pixVinte','doisPix','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+  const pay = (from:Player,to:Player,now:number)=>match.politics(from,{kind:'transfer',to:to.id,amount:1},players,now);
+  const view = ()=>match.view(rafa.id,ids,100).politics!;
+  const render = ()=>{
+    const {active,completed} = view().missions;
+    return renderToStaticMarkup(<ul>
+      {active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
+      {completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}
+    </ul>);
+  };
+  const remaining = view().paymentsLeft;
+  for (let i=0;i<remaining;i++) expect(pay(rafa,bia,1+i)).toBe(true);
+  draw();
+  expect(render()).not.toContain('Envie um Pix de R$ 20 mil');
+  expect(render()).toContain('0 / 2');
+  expect(pay(bia,rafa,20)).toBe(true);
+  expect(pay(bia,rafa,21)).toBe(true);
+  expect(render()).toContain('Receba Pix de dois jogadores distintos');
+  expect(render()).toContain('1 / 2');
+  expect(render()).not.toContain('data-done="true"');
+  expect(pay(caio,rafa,22)).toBe(true);
+  expect(render()).toContain('data-done="true"');
 });

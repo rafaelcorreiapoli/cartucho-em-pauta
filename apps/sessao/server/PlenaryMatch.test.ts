@@ -922,3 +922,51 @@ test('PEC da Reeleição Infinita increases the paid ad weight in polling and th
     expect(view(ELECTION_RULES.matchDuration).policies?.campaign).toBeUndefined();
   }
 });
+
+test('Pix missions only enter the agenda with usable payment quotas and solvent distinct senders',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const agenda = Reflect.get(economy,'accounts').get(host.id).agenda;
+  const view = ()=>match.view(host.id,ids,100).politics!;
+  const pay = (from:Player,to:Player,amount=1)=>match.politics(from,{kind:'transfer',to:to.id,amount},people,1);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pixVinte','doisPix','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    return view().missions.active.map(mission=>mission.kind);
+  };
+  const quota = view().paymentsLeft;
+  for (let payment=0;payment<quota;payment++) expect(pay(host,traitor)).toBe(true);
+  expect(economy.spend(honest.id,economy.wallet(honest.id))).toBe(true);
+  expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
+  economy.earn(honest.id,1);
+  expect(draw()).toEqual(['doisPix','cafe','passeio']);
+  expect(pay(host,honest,2)).toBe(false);
+  expect(pay(traitor,host)).toBe(true);
+  expect(pay(traitor,host)).toBe(true);
+  expect(view().missions.active.find(mission=>mission.kind==='doisPix')?.current).toBe(1);
+  expect(pay(honest,host)).toBe(true);
+  expect(view().missions.completed).toContainEqual(expect.objectContaining({kind:'doisPix',current:2}));
+});
+
+test('a Pix mission keeps credit from a player who left while another unused sender remains',()=>{
+  const match = new PlenaryMatch(1);
+  const fourth = {...host,id:'fourth',nick:'Quarto'};
+  const players = [host,honest,fourth,traitor];
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['doisPix','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(host.id,players.map(({id})=>id),100).politics!.missions;
+  const pay = (from:Player,now:number)=>match.politics(from,{kind:'transfer',to:host.id,amount:1},players,now);
+  expect(pay(honest,1)).toBe(true);
+  const active = view().active.find(mission=>mission.kind==='doisPix');
+  expect(active?.current).toBe(1);
+  match.leave(honest.id,2);
+  expect(view().active).toContainEqual(active!);
+  expect(pay(fourth,3)).toBe(true);
+  expect(view().completed).toContainEqual(expect.objectContaining({id:active!.id,current:2}));
+});
