@@ -3,7 +3,7 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { EquipmentReplacement } from './ui/equipment-replacement';
-import { describeFood, foods, isFood } from './food';
+import { describeFood, foodDefinition, isFood } from './food';
 import { gearConflict, isGear } from './equipment';
 import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
@@ -95,7 +95,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       return {kind,item,price,status,hasItem};
     });
     const product = stock[selected];
-    const food = product && isFood(product.kind) ? foods[product.kind] : undefined;
+    const food = product && isFood(product.kind) ? foodDefinition(product.kind) : undefined;
     const vendor = npcs[npc];
     flushSync(()=>root.render(<MarketDialogContent title={vendor.label}>
       <div className="market-toolbar">

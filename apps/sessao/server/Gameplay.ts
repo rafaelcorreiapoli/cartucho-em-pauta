@@ -7,7 +7,7 @@ import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { archiveDutyRoom, money } from '../src/politics';
-import { foods, isFood, type FoodEffect } from '../src/food';
+import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
@@ -335,6 +335,13 @@ export class Gameplay {
     const extinguisher = this.inventory(id).find(({data})=>data.kind==='extinguisher');
     if (extinguisher) visible.push({id:extinguisher.data.id,kind:'extinguisher'});
     return visible;
+  }
+
+  distributePinga(player:Player,now:number) {
+    if (this.available(player.id) || this.stack(player.id,'pinga')) {
+      const item = this.create('pinga',{holder:player.id});
+      this.addToInventory(this.items.get(item.id)!,player.id);
+    } else this.create('pinga',this.groundPlace('pinga',player,now));
   }
 
   private create(kind:ObjectKind, place:Place) {
@@ -1473,7 +1480,7 @@ export class Gameplay {
         }
         const consumed = this.takeUnits(item,1);
         this.remove(consumed);
-        if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
+        if (isFood(data.kind)) this.consumeFood(player,foodDefinition(data.kind).effect);
         const consumptionRoom = roomAt(player);
         const ownOffice = this.privateOffices.ownedBy(id)?.name===consumptionRoom;
         this.event(world,player,'used',consumed.data,ownOffice ? id : undefined,{place:consumptionRoom});

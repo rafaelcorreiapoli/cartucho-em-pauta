@@ -15,7 +15,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  campaignPolicyMultiplier, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, pingaProgram, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import { roomAt, type Player } from '../src/map';
 import { HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -565,6 +565,10 @@ export class PlenaryMatch {
     if (vote==='yes' && bill.effect?.kind==='allowance') {
       return {...impact,budget:-this.allowancePerMandate(bill.effect.perMandate)*this.votingPlayers()};
     }
+    if (vote==='yes' && bill.effect?.kind==='pinga-distribution') {
+      const cost = this.pingaProgramCost();
+      return {...impact,budget:cost<=this.budget ? -cost : 0};
+    }
     if (vote==='no') return {...impact,budget:Math.min(0,impact.budget)};
     return {
       stability:impact.stability-(this.amended ? 8 : 0),
@@ -609,7 +613,11 @@ export class PlenaryMatch {
     if (this.infiltrators.has(player.id) && this.fire.potentialSite===site && this.fire.ignite(site)) return 'Incêndio provocado.';
   }
 
-  advance(now:number) {
+  private pingaRecipients() { return [...this.electorate].filter(id=>this.canVote(id)); }
+
+  private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
+
+  advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
@@ -681,8 +689,10 @@ export class PlenaryMatch {
     const needed = this.billQuorum();
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
-    const balance = this.budget+Math.min(0,impact.budget);
     const effect = passed ? bills[this.projectIndex].effect : undefined;
+    const servesPinga = effect?.kind==='pinga-distribution' && impact.budget<0 && distributePinga;
+    const balance = this.budget+(effect?.kind==='pinga-distribution' && !servesPinga ? 0 : Math.min(0,impact.budget));
+    if (servesPinga) servesPinga(this.pingaRecipients());
     if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
     if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
     if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+policyDuration);

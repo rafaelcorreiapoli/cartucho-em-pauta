@@ -1,7 +1,7 @@
 import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
 import { publishGameplay } from './gameplay-world';
 import { gameplayMetrics } from './gameplay-metrics';
-import { isFood } from '../src/food';
+import { isDrink, isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
 import { megaphone } from '../src/equipment';
 import { Parliamentarians } from './Parliamentarians';
@@ -79,7 +79,7 @@ export class SessionRoom extends Room {
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
         if (event.type==='used' && isFood(event.kind)) {
-          const drink = event.kind==='coffee' || event.kind==='energyDrink';
+          const drink = isDrink(event.kind);
           this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
@@ -442,7 +442,9 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state => state.player);
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       const wasVoting = this.match.allowsPlenaryCombat;
-      this.match.advance(now);
+      this.match.advance(now, recipients=>{
+        for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,now);
+      });
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
       if (!freeze || this.match.phase!=='negotiation') {

@@ -18,9 +18,17 @@ export const foods = {
   picanha:{name:'Picanha',description:'Uma refeição de respeito.',portrait:'retrato-picanha.webp',price:4,use:'consume',category:'Luxo',effect:{hp:70}},
 } as const satisfies Record<string,Food>;
 
-export type FoodKind = keyof typeof foods;
-export const foodKinds = Object.keys(foods) as FoodKind[];
-export const isFood = (kind:unknown):kind is FoodKind => typeof kind==='string' && Object.hasOwn(foods,kind);
+export const pinga = {
+  name:'Pinga',description:'Recupera 15 PV e reduz a velocidade por 8 segundos.',
+  portrait:'retrato-pinga.webp',use:'consume',category:'Especial',
+  effect:{hp:15,speed:{factor:.8,durationMs:8_000}},
+} as const satisfies Omit<Food,'price'>;
+
+const consumables = {...foods,pinga};
+export type FoodKind = keyof typeof consumables;
+export const isFood = (kind:unknown):kind is FoodKind => typeof kind==='string' && Object.hasOwn(consumables,kind);
+export const foodDefinition = (kind:FoodKind) => consumables[kind];
+export const isDrink = (kind:unknown) => kind==='coffee' || kind==='energyDrink' || kind==='pinga';
 
 export function describeFood({hp,stamina,speed,staminaRegen}:FoodEffect) {
   return [

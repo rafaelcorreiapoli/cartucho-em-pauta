@@ -35,12 +35,16 @@ export function canReachStation(player:InteractionActor, station:Station, radius
 export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign';
 export const hearingPolicyFee = 2;
 export const campaignPolicyMultiplier = 2;
+export const pingaProgram = {
+  doseCost:.5,
+  detail:'Uma dose por mandato ativo, se houver orçamento para toda a distribuição',
+} as const;
 export const policyDuration = 120_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
 
 type Bill = {
   id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;
-  effect?:{kind:'policy';policy:BillPolicy;detail:string}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
+  effect?:{kind:'policy';policy:BillPolicy;detail:string}|{kind:'pinga-distribution'}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
 };
 
 export const bills:readonly Bill[] = [
@@ -83,6 +87,9 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N09',name:'PEC da Reeleição Infinita',banner:'retrato-documento.webp',
     description:'A propaganda paga ganha o dobro de peso na disputa durante a vigência da PEC.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'campaign',detail:'Propagandas eleitorais valem o dobro na pesquisa e na apuração por 120 s'}},
+  {id:'PROJ-N02',name:'Minha Pinga, Minha Vida',banner:'retrato-pinga.webp',
+    description:'Financia uma dose de cachaça para cada mandato ativo.',
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'pinga-distribution'}},
 ];
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];

@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
-import { describeFood, foods, isFood } from './food';
+import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
 import { paintSnake, snakeDirection } from './phone-snake';
 import { hudConsumesKeys } from './game-keys';
@@ -99,7 +99,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const definition = objects[item.kind];
     const doc = item.document;
     const cash = cashAmount(item);
-    const food = isFood(item.kind) ? foods[item.kind] : undefined;
+    const food = isFood(item.kind) ? foodDefinition(item.kind) : undefined;
     const isBag = bagOpen && chooseQuantity;
     const controls = isBag ? [...actions].sort((first,second)=>{
       const rank = (action:ObjectAction) => action.label==='Equipar' ? 0 : action.label==='Largar no chão' ? 1 : 2;

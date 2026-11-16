@@ -5,7 +5,7 @@ import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { binoculars, concealment, equipment, megaphone, xray } from './equipment';
-import { foods, isFood } from './food';
+import { foodDefinition, foods, isDrink, isFood, pinga } from './food';
 import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
@@ -22,6 +22,7 @@ export const objects = {
   extinguisher:{name:'Extintor',portrait:'extintor.webp',description:'Leve até as chamas e interaja com o incêndio para apagá-lo.'},
   forensicKit:{name:'Kit de Perícia',portrait:'retrato-kit-pericia.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
+  pinga,
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
@@ -51,7 +52,7 @@ export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
   const {kind} = item;
   if (!('use' in objects[kind])) return;
   const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' ? 'Usar' :
-    kind==='coffee' || kind==='energyDrink' ? 'Beber' : 'Comer';
+    isDrink(kind) ? 'Beber' : 'Comer';
   return {label,key:'1',action:{kind:'use',item:item.id}} as const;
 }
 
@@ -80,7 +81,7 @@ export type DocumentData = {
 };
 export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
-export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foods[kind]);
+export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foodDefinition(kind));
 export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;
 export function selectedItemQuantity(item:WorldItem, quantity:number) {
   return Math.min(itemQuantity(item),Math.max(1,quantity));
