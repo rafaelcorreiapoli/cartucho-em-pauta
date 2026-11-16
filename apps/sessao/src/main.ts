@@ -4,8 +4,7 @@ import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
-import { discountedPrice } from './market-catalog';
-import { internalMailRules } from './internal-mail';
+import { mailPublicationFee } from './market-catalog';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
 import { hudAppStatus, launchHudApp, type HudApp, type HudAppStatus } from './hud-apps';
@@ -402,7 +401,7 @@ async function connect(join: () => Promise<Room>) {
       hud.render(view);
       reactHud.render(view);
       mail.complaints(view.complaints);
-      mail.price(view.policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee);
+      mail.price(mailPublicationFee(view.policies));
       mail.phase(view.phase==='negotiation');
       const priorProgress = previousView?.politics?.progression;
       const currentProgress = view.politics?.progression;

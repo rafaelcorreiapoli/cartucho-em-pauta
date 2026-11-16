@@ -1378,3 +1378,41 @@ test('campaign spending is offered only when enough remaining broadcasts can rea
   expect(agenda.hasActive('investimentoPolitico')).toBe(false);
   expect(agenda.view(options).active).toHaveLength(3);
 });
+
+test('a furniture basket accounts for the subsidy already used by its first purchase',()=>{
+  let publicBudget = .8;
+  const state = {wallet:2.4,popularity:40,officeStock:()=>['officeRug','officeChair'] as const,
+    commerce:()=>({policies:{furniture:120_000},publicBudget})};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['doisMoveis','ostentacao','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    return agenda.view(state).active.map(mission=>mission.kind);
+  };
+  expect(draw()).not.toContain('doisMoveis');
+  publicBudget = 1.6;
+  const discounted = draw();
+  expect(discounted).toContain('doisMoveis');
+  expect(discounted).not.toContain('ostentacao');
+});
+
+test('equipment and mail missions follow their own current subsidy and fee',()=>{
+  let publicBudget = 0;
+  const state = {wallet:1.2,popularity:40,owns:()=>false,commerce:()=>({
+    policies:{equipment:120_000,mail:120_000},publicBudget,
+  })};
+  const agenda = new PersonalAgenda(state,2,()=>0,()=>{});
+  const draw = (kind:'equipamento'|'varredura'|'mensagemComAnexo')=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,2,true,3,0,[{id:'b',name:'Bia'}]);
+    return agenda.hasActive(kind);
+  };
+  expect(draw('mensagemComAnexo')).toBe(true);
+  expect(draw('equipamento')).toBe(false);
+  expect(draw('varredura')).toBe(false);
+  publicBudget = .8;
+  expect(draw('equipamento')).toBe(true);
+  expect(draw('varredura')).toBe(true);
+});

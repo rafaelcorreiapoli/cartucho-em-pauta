@@ -70,6 +70,10 @@ export class PlenaryMatch {
 
   canFightCrisis() { return this.stability<30 && (this.powerOut || !!this.fire.view(true)); }
 
+  setAgendaCommerce(now:()=>number) {
+    this.economy.setAgendaCommerce(()=>({policies:this.activePolicies(now()),publicBudget:this.budget}));
+  }
+
   setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
     this.economy.setAgendaInventory(...inventory);
   }

@@ -381,6 +381,10 @@ export class PoliticalEconomy {
     }
   }
 
+  setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
+    for (const account of this.accounts.values()) Object.assign(account,{commerce});
+  }
+
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean,
     npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {

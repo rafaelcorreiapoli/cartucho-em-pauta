@@ -1,4 +1,4 @@
-import { discountedPrice } from '../src/market-catalog';
+import { mailPublicationFee } from '../src/market-catalog';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
@@ -49,7 +49,7 @@ export class InternalMail {
     const resolved = source ? source.attachment && {attachment:source.attachment,authentic:this.authenticity.get(source.id)} :
       reference===undefined ? undefined : resolve?.(reference);
     if (reference!==undefined && !resolved) return 'Anexo indisponível.';
-    if (!world.spend?.(player.id,world.policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee)) return 'Saldo insuficiente para publicar.';
+    if (!world.spend?.(player.id,mailPublicationFee(world.policies))) return 'Saldo insuficiente para publicar.';
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);

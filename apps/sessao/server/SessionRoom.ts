@@ -199,6 +199,7 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
+        this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
           id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),

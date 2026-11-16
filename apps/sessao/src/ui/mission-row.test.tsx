@@ -5,7 +5,7 @@ import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {stabilityRules,stations} from '../plenary';
+import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
@@ -417,4 +417,56 @@ test('free coffee missions can be drawn and completed with an empty wallet',()=>
   }
   expect(find(1+2*stationRecharge.coffee.duration,'fiscalCafe',true)).toContain('data-done="true"');
   expect(view(1+2*stationRecharge.coffee.duration).wallet).toBe(0);
+});
+
+test('a furniture subsidy updates agenda eligibility and the HUD shows what the shop actually charged',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...npcs.furnitureVendor.interaction,
+  }));
+  const [buyer,limited] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  let now = 0;
+  expect(match.start(buyer.id,players,now,()=>.9)).toBe(true);
+  game.reset(now,()=>.9,players);
+  match.setAgendaCommerce(()=>now);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
+  const economy = Reflect.get(match,'economy');
+  expect(economy.spend(limited.id,5.5)).toBe(true);
+  const view = (player:Player)=>match.view(player.id,ids,now);
+  const draw = (player:Player,kind:Mission['kind'])=>{
+    const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    return view(player).politics!.missions.active.find(mission=>mission.kind===kind);
+  };
+  expect(draw(limited,'doisMoveis')).toBeUndefined();
+  expect(draw(buyer,'ostentacao')).toBeDefined();
+  now = 1;
+  match.gameplayWorld(players,now,()=>false).publish({
+    type:'filed',actor:buyer.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N07'),
+    position:stations.amendment,at:now,witnesses:[],
+  });
+  now = NEGOTIATION_MS;
+  match.advance(now);
+  match.vote(buyer.id,'yes',now+1);
+  match.vote(limited.id,'yes',now+1);
+  now += BALLOT_MS;
+  match.advance(now);
+  expect(draw(limited,'doisMoveis')).toBeDefined();
+  const before = view(buyer);
+  const world = match.gameplayWorld(players,++now,()=>false);
+  game.act(buyer,{kind:'open-shop',target:'furnitureVendor'},world);
+  const token = game.view(buyer,world).dialogue?.token;
+  expect(game.act(buyer,{kind:'shop-buy',target:'officeTv',token},world)).toBe('Compra instalada no seu gabinete.');
+  const after = view(buyer);
+  expect(after.politics!.wallet).toBe(before.politics!.wallet-1.8);
+  expect(after.budget).toBeCloseTo(before.budget-1.2);
+  const mission = after.politics!.missions.active.find(mission=>mission.kind==='ostentacao')!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('R$ 18 mil / R$ 50 mil');
+  expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
+  now += policyDuration;
+  expect(draw(limited,'doisMoveis')).toBeUndefined();
 });

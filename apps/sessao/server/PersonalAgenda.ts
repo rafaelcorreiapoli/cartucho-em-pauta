@@ -1,9 +1,8 @@
-import { internalMailRules } from '../src/internal-mail';
+import {mailPublicationFee,marketProduct} from '../src/market-catalog';
+import type {BillPolicies} from '../src/plenary';
 import { firstAidKit } from '../src/medical';
 import { inPlenary } from '../src/map';
 import { shop } from '../src/installations';
-import { spyProducts } from '../src/surveillance';
-import { equipment } from '../src/equipment';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
@@ -11,7 +10,7 @@ import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
 import { agendaDurationMs, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaMetrics = Readonly<{wallet:number; popularity:number; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
@@ -96,7 +95,6 @@ const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   campanhaUltimaHora:ELECTION_RULES.advertisementCost,pixVinte:2,
-  equipamento:equipment.binoculars.price,
   comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
   pagamento:AGENDA_TRANSFER_MIN,
@@ -276,7 +274,7 @@ export class PersonalAgenda {
     const gains:Partial<Record<Agenda,number>> = {};
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
-      gains.ostentacao = officeGoods[event.kind].price;
+      gains.ostentacao = event.amount ?? officeGoods[event.kind].price;
     }
     for (const mission of this.missions) {
       const kind = mission.kind;
@@ -411,6 +409,10 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    const equipmentPrice = (item:ObjectKind)=>{
+      const commerce = metrics.commerce?.();
+      return marketProduct('equipment',item,commerce?.policies,commerce?.publicBudget)?.price ?? Infinity;
+    };
     if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
         metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao' || kind==='doisPix') {
@@ -445,7 +447,7 @@ export class PersonalAgenda {
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
     if ((kind==='jornalismo' || kind==='mensagemComAnexo' || kind==='retratacaoOficial') &&
-        metrics.wallet<internalMailRules.fee) return false;
+        metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
@@ -453,18 +455,18 @@ export class PersonalAgenda {
     if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
     if (kind==='flagraGabinete' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
-    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<spyProducts.bugDetector.price) return false;
+    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<equipmentPrice('bugDetector')) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
     if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
-      if (!metrics.canInstallSpy?.(device) || metrics.wallet<spyProducts[device].price && !metrics.owns?.(device)) return false;
+      if (!metrics.canInstallSpy?.(device) || metrics.wallet<equipmentPrice(device) && !metrics.owns?.(device)) return false;
     }
-    if (kind==='segurancaParlamentar' && metrics.wallet<equipment.baton.price && !metrics.owns?.('baton')) return false;
-    if (kind==='discursoMegafone' && metrics.wallet<equipment.megaphone.price && !metrics.owns?.('megaphone')) return false;
-    if (kind==='equipamento' && metrics.owns?.('binoculars')) return false;
+    if (kind==='segurancaParlamentar' && metrics.wallet<equipmentPrice('baton') && !metrics.owns?.('baton')) return false;
+    if (kind==='discursoMegafone' && metrics.wallet<equipmentPrice('megaphone') && !metrics.owns?.('megaphone')) return false;
+    if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<equipmentPrice('binoculars'))) return false;
     if (kind==='reuniaoVip' && !metrics.hasAgendaDecoration?.('anyVip')) return false;
     if (kind==='cerimonialOficial' && !metrics.hasAgendaDecoration?.('anyPortrait')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
@@ -474,22 +476,29 @@ export class PersonalAgenda {
     if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;
     if (kind==='escandalo' && !metrics.canExposeScandal?.()) return false;
     if (kind==='pizzada' && !metrics.hasScandal?.()) return false;
-    const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
-    const canBuyFurniture = (item:OfficeFurniture) => stock.includes(item) && officeGoods[item].price<=metrics.wallet;
-    const canInstallFurniture = (item:OfficeFurniture) => !!metrics.owns?.(item) || canBuyFurniture(item);
-    if (kind==='televisao' && !canInstallFurniture('officeTv')) return false;
-    if (kind==='poltrona' && !canBuyFurniture('officeChair')) return false;
-    if (kind==='gabinete' && !furnitureKinds.some(canInstallFurniture)) return false;
-    if (kind==='doisMoveis' && !furnitureKinds.some((item,index)=>canInstallFurniture(item) &&
-        furnitureKinds.slice(index+1).some(other=>canInstallFurniture(other) &&
-          (metrics.owns?.(item) ? 0 : officeGoods[item].price)+(metrics.owns?.(other) ? 0 : officeGoods[other].price)<=metrics.wallet))) return false;
-    if (kind==='ostentacao') {
-      let totals = [0];
-      for (const item of stock) {
-        const price = officeGoods[item].price;
-        totals = [...totals,...totals.map(total=>total+price).filter(total=>total<=metrics.wallet)];
+    if (kind==='televisao' || kind==='poltrona' || kind==='gabinete' || kind==='doisMoveis' || kind==='ostentacao') {
+      const commerce = metrics.commerce?.();
+      const stock = metrics.officeStock?.() ?? furnitureKinds.filter(item=>!this.acquired.has(item));
+      const price = (item:OfficeFurniture,budget=commerce?.publicBudget)=>marketProduct('furniture',item,commerce?.policies,budget)!.price;
+      const canBuy = (item:OfficeFurniture)=>stock.includes(item) && price(item)<=metrics.wallet;
+      const canInstall = (item:OfficeFurniture)=>!!metrics.owns?.(item) || canBuy(item);
+      if (kind==='televisao' && !canInstall('officeTv')) return false;
+      if (kind==='poltrona' && !canBuy('officeChair')) return false;
+      if (kind==='gabinete' && !furnitureKinds.some(canInstall)) return false;
+      if (kind==='doisMoveis' || kind==='ostentacao') {
+        const alreadyOwned = kind==='doisMoveis' ? furnitureKinds.filter(item=>metrics.owns?.(item)) : [];
+        function viable(remaining:readonly OfficeFurniture[],count:number,spent:number,budget:number):boolean {
+          if (kind==='doisMoveis' ? count>=2 : spent>=furnitureSpendingTarget*10) return true;
+          return remaining.some(item=>{
+            const quoted = price(item,budget);
+            const total = spent+Math.round(quoted*10);
+            const afterSubsidy = Math.round((budget-(officeGoods[item].price-quoted))*10)/10;
+            return total<=Math.round(metrics.wallet*10) &&
+              viable(remaining.filter(other=>other!==item),count+1,total,afterSubsidy);
+          });
+        }
+        if (!viable(stock.filter(item=>!alreadyOwned.includes(item)),alreadyOwned.length,0,commerce?.publicBudget ?? Infinity)) return false;
       }
-      if (!totals.some(total=>total>=furnitureSpendingTarget)) return false;
     }
     return (!Object.hasOwn(targetedAgendas,kind) || !!this.pickTarget(kind)) && this.availableInMatch(kind,missionTargets[kind] ?? 1,metrics) &&
       metrics.wallet>=(purchaseRequirements[kind] ?? 0) &&
@@ -533,7 +542,8 @@ export class PersonalAgenda {
     const reward = {xp:0,cash:0,popularity:0};
     const completed:Mission[] = [];
     for (const mission of this.missions) {
-      const current = this.missionProgress(metrics,mission)+(gains[mission.kind] ?? 0);
+      const total = this.missionProgress(metrics,mission)+(gains[mission.kind] ?? 0);
+      const current = mission.kind==='ostentacao' ? Math.round(total*10)/10 : total;
       mission.current = Math.min(current,mission.target);
       if (current>=mission.target) {
         this.factsByMission.delete(mission.id);

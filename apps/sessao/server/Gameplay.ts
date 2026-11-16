@@ -1216,7 +1216,7 @@ export class Gameplay {
         this.changeGear(player,data.id,true,world);
         confirmation = 'Compra equipada.';
       }
-      this.event(world,player,'purchased',data,undefined,{inventoryItem});
+      this.event(world,player,'purchased',data,undefined,{inventoryItem,amount:price});
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
         confirmation = 'Compra instalada no seu gabinete.';
