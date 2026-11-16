@@ -1,7 +1,7 @@
-import { discountedPrice } from '../src/market-catalog';
+import { mailPublicationFee } from '../src/market-catalog';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
-import type { GameplayWorld } from './gameplay-world';
+import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 export class InternalMail {
   private readonly cooldowns = new Map<string,number>();
@@ -32,8 +32,10 @@ export class InternalMail {
 
   view() { return this.notices; }
 
+  nextPublicationAt(id:string) { return this.cooldowns.get(id) ?? 0; }
+
   publish(player:Player, raw:unknown, world:GameplayWorld,resolve?:(ref:unknown)=>{attachment:MailAttachment;authentic?:boolean}|undefined) {
-    if ((this.cooldowns.get(player.id) ?? 0)>world.now) return 'Aguarde para publicar outro comunicado.';
+    if (this.nextPublicationAt(player.id)>world.now) return 'Aguarde para publicar outro comunicado.';
     if (!raw || typeof raw!=='object' || !('subject' in raw) || !('body' in raw) ||
       typeof raw.subject!=='string' || typeof raw.body!=='string') return 'Preencha o assunto e a mensagem.';
     const subject = raw.subject.trim();
@@ -49,7 +51,7 @@ export class InternalMail {
     const resolved = source ? source.attachment && {attachment:source.attachment,authentic:this.authenticity.get(source.id)} :
       reference===undefined ? undefined : resolve?.(reference);
     if (reference!==undefined && !resolved) return 'Anexo indisponível.';
-    if (!world.spend?.(player.id,world.policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee)) return 'Saldo insuficiente para publicar.';
+    if (!world.spend?.(player.id,mailPublicationFee(world.policies))) return 'Saldo insuficiente para publicar.';
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
@@ -57,12 +59,10 @@ export class InternalMail {
     if (expired) this.authenticity.delete(expired.id);
     this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
       ...this.notices].slice(0,internalMailRules.history);
-    if (!source && resolved) world.publish({type:'mail-published',actor:player.id,at:world.now,
-      position:player,item:id,place:resolved.attachment.kind,witnesses:[]});
+    if (!source && resolved) publishGameplay(world,player,'mail-published',{item:id,place:resolved.attachment.kind,witnesses:[]});
     if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
       const {photo} = resolved.attachment;
-      world.publish({type:'photo-published',actor:player.id,at:world.now,position:{x:player.x,y:player.y},
-        item:photo.id,photo,place:'internal-mail',witnesses:[]});
+      publishGameplay(world,player,'photo-published',{item:photo.id,photo,place:'internal-mail',witnesses:[]});
     }
   }
 }

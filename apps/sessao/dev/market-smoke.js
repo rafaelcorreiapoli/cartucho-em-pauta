@@ -41,10 +41,17 @@ async page => {
     if (name==='Colete') await acquired.waitFor();
   }
   await equip.getByText(/Binóculo.*Modulador/i).waitFor();
+  const keep = equip.getByRole('button',{name:'Não',exact:true});
+  if (!await keep.evaluate(button=>button===document.activeElement)) throw Error('A opção segura deve receber foco');
+  if (await keep.getAttribute('aria-keyshortcuts')!=='2') throw Error('Atalho de recusa ausente');
   await page.keyboard.press('1');
   await equip.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
   await page.locator('#equipped-gear').locator('[aria-label*="Modulador" i]').waitFor();
+  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await detail.waitFor();
+  await dialog.getByRole('button',{name:'Fechar',exact:true}).click();
+  await dialog.waitFor({state:'hidden'});
   await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
   await detail.waitFor();
   await page.keyboard.press('Escape');

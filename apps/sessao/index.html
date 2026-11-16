@@ -72,12 +72,10 @@
       <audio id="voice-result" controls hidden aria-label="Gravação com filtro"></audio>
     </details>
     <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
-      <dialog id="ballot-countdown" aria-labelledby="ballot-countdown-message">
-        <p id="ballot-countdown-message" role="status"></p>
-      </dialog>
+      <dialog id="ballot-countdown" aria-labelledby="ballot-countdown-message"></dialog>
       <div id="world">
         <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>
-        <span id="connection-latency" title="Latência de ida e volta ao gameserver" hidden></span>
+        <span id="connection-latency-mount"></span>
         <div id="wallet-effects" role="status">
           <template id="wallet-gain">
             <div class="wallet-gain"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg><strong></strong></div>
@@ -91,18 +89,8 @@
       <div id="context-hud">
         <section id="stations" aria-label="Ações próximas" hidden>
           <div class="station-actions">
-            <div class="station-grid">
-              <button class="hud-button hud-button--secondary" data-action="amendment" data-station="amendment" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Propor emenda</span></button>
-              <button class="hud-button hud-button--secondary" data-action="audit" data-station="audit" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg><span>Auditar</span></button>
-              <button class="hud-button hud-button--secondary" data-action="panel" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-check"/></svg><span>Corrigir</span></button>
-              <button class="hud-button hud-button--secondary" data-action="fraud" data-station="panel" type="button" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-alert"/></svg><span>Fraudar</span></button>
-            </div>
-            <div class="station-grid" id="station-election-actions" hidden>
-              <button class="hud-button hud-button--secondary" id="advertise" data-station="press" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span>Veicular propaganda<small>R$ 20 mil · 1 por ciclo</small></span></button>
-              <button class="hud-button hud-button--secondary" id="speech" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Discursar</span></button>
-              <button class="hud-button hud-button--secondary" id="interview" data-station="tv" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Entrevista ao vivo</span></button>
-              <button class="hud-button hud-button--secondary" id="object" data-station="panel" type="button" disabled><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg><span>Contestar projeto</span></button>
-            </div>
+            <div id="legislative-station-actions" class="station-grid"></div>
+            <div class="station-grid" id="station-election-actions"></div>
             <div id="office-progress-mount"></div>
             <div class="context-nearby">
               <button class="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items" aria-expanded="false" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos</button>
@@ -111,7 +99,6 @@
             <div id="station-shortcuts"></div>
             <div id="field-actions"></div>
           </div>
-          <p id="interview-hint" hidden>Ative a voz para entrar ao vivo.</p>
         </section>
       </div>
       <section id="plenary" class="hud-panel lobby-card" aria-label="Sessão legislativa">
@@ -125,58 +112,18 @@
           </div>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
-        <div class="lobby-options">
-          <div id="infiltrator-setup" class="lobby-count" role="group" aria-labelledby="infiltrator-label" hidden>
-            <span id="infiltrator-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>
-            <div id="infiltrator-count">
-              <button type="button" data-count="1" aria-pressed="true">1</button>
-              <button type="button" data-count="2" aria-pressed="false">2</button>
-            </div>
-          </div>
-          <div id="parliamentarian-setup" class="lobby-count" role="group" aria-labelledby="parliamentarian-label">
-            <span id="parliamentarian-label"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg> Parlamentares NPC</span>
-            <div id="parliamentarian-count">
-              <button type="button" data-count="0" aria-pressed="false" aria-label="Nenhum parlamentar NPC">0</button>
-              <button type="button" data-count="1" aria-pressed="false">1</button>
-              <button type="button" data-count="2" aria-pressed="true">2</button>
-              <button type="button" data-count="3" aria-pressed="false">3</button>
-            </div>
-          </div>
-        </div>
-        <footer class="lobby-footer">
-          <button class="hud-button hud-button--secondary" id="lobby-back" type="button">‹ Voltar</button>
-          <p id="start-hint" role="status"></p>
-          <button class="hud-button" id="start-match" type="button">Iniciar sessão <span aria-hidden="true">›</span></button>
-        </footer>
+        <div id="lobby-controls"></div>
       </section>
       <div id="match" hidden>
         <header id="command-strip" aria-label="Indicadores da partida">
           <div class="character-dock">
-            <section id="profile-dock" aria-label="Seu personagem">
-              <div class="profile-portrait">
-                <span class="portrait" id="hud-portrait" aria-hidden="true"></span>
-                <div id="profile-xp-reward" role="status"></div>
-              </div>
-              <div class="deck-identity">
-                <div class="profile-name-row">
-                  <strong id="hud-nick"></strong>
-                  <button id="profile-role" class="resource-help profile-help" type="button" aria-label="Infiltrado" data-help="Infiltrado. Derrube a estabilidade." hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg></button>
-                  <span id="profile-level-mount"></span>
-                </div>
-                <div class="profile-subtitle">
-                  <small id="hud-office">Parlamentar</small>
-                  <small id="own-office" hidden></small>
-                </div>
-                <div id="profile-resources"></div>
-              </div>
-              <div id="profile-vitals"></div>
-            </section>
+            <section id="profile-dock" aria-label="Seu personagem"></section>
             <div id="equipped-gear" role="list" aria-label="Equipamentos em uso" hidden></div>
           </div>
           <div id="congress-dock" class="hud-module"></div>
           <div class="election-and-incidents">
             <div id="election-dock" class="hud-strip hud-module" hidden>
-              <button id="open-election-polls" class="hud-option" type="button" aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)"></button>
+              <button id="open-election-polls" aria-keyshortcuts="L" class="hud-option" type="button" aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)"></button>
             </div>
             <div id="active-fire-mount"></div>
             <div id="active-outage-mount"></div>
@@ -208,58 +155,16 @@
             <div id="item-slots" role="group" aria-label="Itens carregados" hidden></div>
             <div class="deck-tool-row">
               <div id="congress-apps"></div>
-              <div id="gameplay-tools" hidden>
-                <button id="open-bag" type="button" hidden>Mochila</button>
-                <button class="hud-button hud-button--secondary" id="open-surveillance" type="button" title="Vigilância (V)" aria-label="Vigilância" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><span hidden></span></button>
-                <button class="hud-button hud-button--secondary" id="open-attributes" type="button" title="Atributos (P)" aria-label="Atributos" aria-haspopup="dialog" hidden><svg class="hud-glyph" aria-hidden="true"><use href="#icon-chart"/></svg><span id="attribute-points-badge" aria-hidden="true" hidden></span></button>
-                <button class="hud-button hud-button--secondary" id="open-equipment" type="button" title="Equipamentos" aria-label="Equipamentos" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg></button>
-                <button class="hud-button hud-button--secondary" id="open-phone" type="button" title="Celular"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-phone"/></svg><span class="sr-only">Celular</span></button>
-              </div>
               <div id="social-docks">
                 <details id="institutional-dock" class="social-module" name="game-panels" hidden>
-                  <summary class="social-trigger" title="Ações institucionais"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg><span class="sr-only">Ações institucionais</span></summary>
+                  <summary hidden>Ações institucionais</summary>
                   <div class="politics-content social-panel">
-                    <header class="social-header"><h2>Ações institucionais</h2></header>
-                    <div id="politics-actions">
-                      <form id="cabinet-form" hidden>
-                        <div class="section-label">Destino da verba</div>
-                        <div class="choice-grid" id="grant-split" role="group" aria-label="Destino da verba"></div>
-                        <button class="hud-button" id="grant" type="submit">Aplicar verba de R$ 40 mil</button>
-                      </form>
-                      <button class="hud-button" id="call-cassation" type="button" hidden>Convocar cassação</button>
-                      <form id="hearing-form" hidden>
-                        <div class="section-label">Afastamento temporário</div><div class="choice-grid" id="hearing-target" role="group" aria-label="Alvo da afastamento"></div>
-                        <button class="hud-button" id="hearing-confirm" type="submit">Convocar votação</button>
-                      </form>
-                    </div>
+                    <div id="institutional-actions"></div>
                   </div>
                 </details>
                 <details id="politics-dock" class="social-module" name="game-panels" hidden>
-                  <summary class="social-trigger" title="Dossiê"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span class="sr-only">Dossiê</span><span class="sr-only" id="personal-stats"></span></summary>
-                  <div class="politics-content social-panel">
-                    <header class="social-header"><h2>Dossiê</h2></header>
-                    <section id="offer-list" aria-label="Ofertas de documentos"></section>
-                    <section aria-label="Provas privadas">
-                      <h3><svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg> Provas privadas</h3>
-                      <div class="social-empty" id="empty-evidence">
-                        <svg class="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
-                        <strong>Nenhuma prova no dossiê</strong>
-                        <p>Audite documentos na Corregedoria ou receba provas de outros jogadores.</p>
-                      </div>
-                      <form id="evidence-form" hidden>
-                        <div class="choice-grid" id="evidence" role="group" aria-label="Selecionar documento"></div>
-                        <p id="evidence-detail"></p>
-                        <div id="evidence-tools">
-                          <div class="section-label">Compartilhar com</div><div class="choice-grid" id="evidence-contact" role="group" aria-label="Destinatário da prova"></div>
-                          <div class="game-stepper" id="evidence-price" role="group" aria-label="Preço da prova"></div>
-                          <div class="economy-row">
-                            <button class="hud-button hud-button--secondary" id="share" type="button">Enviar a quem está perto</button>
-                            <button class="hud-button hud-button--secondary" id="publish" type="button">Divulgar na imprensa</button>
-                          </div>
-                        </div>
-                      </form>
-                    </section>
-                  </div>
+                  <summary hidden>Dossiê</summary>
+                  <div id="dossier-content" class="politics-content social-panel"></div>
                 </details>
               </div>
               <div id="voice-host"></div>
@@ -270,34 +175,9 @@
       <div id="voice-lobby">
         <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
           <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
-          <button class="hud-icon-button" hidden id="open-settings" type="button" aria-label="Configurações" aria-haspopup="dialog"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
         </aside>
       </div>
-      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title">
-        <header><h2 id="settings-title">Configurações</h2>
-          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar configurações">×</button></form>
-        </header>
-        <section aria-label="Sala">
-          <div id="room-bar">
-            <span id="room-label" role="status"></span>
-            <button id="leave" class="hud-button hud-button--secondary" type="button">Sair</button>
-          </div>
-        </section>
-        <section aria-label="Som do jogo">
-          <h3>Som do jogo</h3>
-          <label for="music-volume">Música</label>
-          <input id="music-volume" class="hud-range" type="range" min="0" max="100" step="1">
-          <label for="effects-volume">Efeitos e passos</label>
-          <input id="effects-volume" class="hud-range" type="range" min="0" max="100" step="1">
-          <label class="mute-option"><input id="sound-mute" type="checkbox"> Silenciar som do jogo</label>
-        </section>
-        <section aria-label="Microfone">
-          <h3>Microfone</h3>
-          <button class="hud-button" id="voice-toggle" type="button"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-mic"/></svg><span>Ativar voz</span></button>
-          <button class="hud-button hud-button--secondary" id="voice-leave" type="button" hidden>Sair da voz</button>
-          <p id="voice-status" role="status"></p>
-        </section>
-      </dialog>
+      <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title"></dialog>
       <div id="asset-loading" hidden>
         <div class="hud-panel lobby-card">
           <div class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></div>
@@ -307,61 +187,22 @@
         </div>
       </div>
       <div id="floor-plan" hidden></div>
-      <div id="phone-mail" class="phone-app-content"></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
-      <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title">
-        <header><h2 id="result-title">Resultados</h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar resultados"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
-        <div id="result-content"></div>
-        <form method="dialog"><button class="hud-button">Continuar</button></form>
-      </dialog>
+      <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title"></dialog>
       <dialog id="session-finale" aria-labelledby="session-finale-title"></dialog>
       <dialog id="legislative-brief" class="hud-panel" aria-labelledby="legislative-brief-title"></dialog>
-      <dialog id="election-poll-dialog" class="hud-panel" aria-labelledby="election-poll-title">
-        <header><h2 id="election-poll-title">Pesquisa eleitoral</h2>
-          <form method="dialog"><button class="hud-icon-button" aria-label="Fechar pesquisa eleitoral">×</button></form>
-        </header>
-        <div id="election-cycle"></div>
-        <section aria-label="Pesquisa eleitoral">
-          <div id="election-polls"></div>
-        </section>
-        <div id="election-support"></div>
-      </dialog>
-      <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title">
-        <header><h2 id="market-title"></h2><form method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
-        <div id="market-body"></div>
-      </dialog>
-      <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item">
-        <h2 id="equip-purchase-title">Substituir equipamento?</h2>
-        <p id="equip-purchase-item"></p>
-        <div class="equip-purchase-actions">
-          <button type="button" class="hud-button" id="equip-purchase-yes">Sim</button>
-          <button type="button" class="hud-button hud-button--secondary" id="equip-purchase-no" autofocus>Não</button>
-        </div>
-      </dialog>
+      <dialog id="election-poll-dialog" class="hud-panel" aria-labelledby="election-poll-title"></dialog>
+      <dialog id="market-dialog" class="hud-panel" aria-labelledby="market-title"></dialog>
+      <dialog id="equip-purchase-dialog" class="hud-panel" aria-labelledby="equip-purchase-title" aria-describedby="equip-purchase-item"></dialog>
       <dialog id="action-shortcuts" class="hud-panel" aria-labelledby="action-shortcuts-title"></dialog>
       <dialog id="gameplay-dialog" class="hud-panel" aria-labelledby="gameplay-title">
-        <header><h2 id="gameplay-title"></h2><button id="phone-back" type="button" class="hud-icon-button" aria-label="Fechar aplicativo" aria-keyshortcuts="Escape" hidden>✕</button><form id="gameplay-close" method="dialog"><button class="hud-icon-button" aria-label="Fechar"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></button></form></header>
+        <header></header>
         <nav id="phone-apps" aria-label="Apps do celular" hidden></nav>
-        <label id="gameplay-target-label" hidden>Jogador <select id="gameplay-target"></select></label>
         <div id="gameplay-body"></div>
+        <div id="phone-mail" class="phone-app-content" hidden></div>
       </dialog>
-      <dialog id="surveillance-dialog" class="hud-panel" aria-labelledby="surveillance-title">
-        <header><h2 id="surveillance-title">Central de Vigilância</h2><form method="dialog"><button type="submit" class="hud-button hud-button--secondary" aria-label="Fechar vigilância">✕</button></form></header>
-        <div class="spy-console"><div id="spy-channels"></div><section id="spy-monitor"></section></div>
-      </dialog>
-      <dialog id="security-dialog" class="hud-panel" aria-labelledby="security-title">
-        <header>
-          <h2 id="security-title">Sala de Segurança</h2>
-          <form method="dialog"><button type="submit" class="hud-button hud-button--secondary" aria-label="Fechar terminal">✕</button></form>
-        </header>
-        <div class="security-console">
-          <div class="security-channels" role="group" aria-label="Câmeras"></div>
-          <section aria-label="Imagem da câmera">
-            <div class="spy-viewport"></div>
-            <small role="status"></small>
-          </section>
-        </div>
-      </dialog>
+      <dialog id="surveillance-dialog" class="hud-panel" aria-labelledby="surveillance-title"></dialog>
+      <dialog id="security-dialog" class="hud-panel" aria-labelledby="security-title"></dialog>
       <dialog id="level-up-dialog" class="progression-dialog" aria-labelledby="level-up-title"></dialog>
       <dialog id="parliamentarian-dialog" class="progression-dialog" aria-labelledby="parliamentarian-title"></dialog>
       <dialog id="attributes-dialog" class="progression-dialog" aria-labelledby="attributes-title"></dialog>

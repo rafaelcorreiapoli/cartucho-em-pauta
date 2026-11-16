@@ -2,7 +2,7 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { CABINET_GRANT, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+import { CABINET_GRANT, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
@@ -216,7 +216,7 @@ export class PoliticalEconomy {
     return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
   }
 
-  audit(id:string, round:number, limit=1) {
+  audit(id:string, round:number, limit=1, bankFee=0) {
     const account = this.accounts.get(id);
     if (!account) return;
     if (account.auditRound!==round) {
@@ -229,9 +229,14 @@ export class PoliticalEconomy {
       !account.known.has(record.id) && !this.published.has(record.id))
       .sort((a,b) => b.amount-a.amount || b.id-a.id)[0];
     if (!candidate) return 'Nenhum registro novo nesta auditoria.';
+    const charge = candidate.kind==='clandestine-transfer' ? bankFee : 0;
+    if (charge>0 && !this.spend(id,charge)) {
+      return `A consulta bancária custa ${money(bankFee)}. Saldo insuficiente.`;
+    }
     this.deliverEvidence(id,candidate.id);
     account.audits++;
-    return 'Documento encontrado. Confira seu dossiê.';
+    return charge>0 ? `Documento encontrado. Taxa da consulta bancária: ${money(charge)}.`
+      : 'Documento encontrado. Confira seu dossiê.';
   }
 
   share(from:string, to:string, evidence:number, price:number) {
@@ -376,9 +381,17 @@ export class PoliticalEconomy {
     }
   }
 
+  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean) {
+    for (const [id,account] of this.accounts) Object.assign(account,{canPublishMail:()=>canPublishMail(id)});
+  }
+
+  setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
+    for (const account of this.accounts.values()) Object.assign(account,{commerce});
+  }
+
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
-    hasAgendaDecoration?:(id:string,kind:'portrait'|'vip',replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean) {
+    hasAgendaDecoration?:(id:string,kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean,
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
     for (const [id,account] of this.accounts) {
       const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
         const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
@@ -386,12 +399,12 @@ export class PoliticalEconomy {
         return prices.length===needed && total<=account.wallet &&
           prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
       });
-      Object.assign(account,{canFightCrisis,ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,ownsSpyCameras:ownsSpyCameras && (()=>ownsSpyCameras(id)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
-        hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
+      Object.assign(account,{canFightCrisis,hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,ownsSpyCameras:ownsSpyCameras && (()=>ownsSpyCameras(id)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+        hasAgendaDecoration:hasAgendaDecoration && ((kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set()) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set(),remainingAdvertisements?:(id:string)=>number) {
     if (this.agendaRound!==round) for (const account of this.accounts.values()) account.agenda.resetBallot();
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
@@ -403,9 +416,9 @@ export class PoliticalEconomy {
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
-      Object.assign(account,{canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
+      Object.assign(account,{remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
-        ballotsLeft,this.npcIds.size,targets,availableTargets);
+        ballotsLeft,this.npcIds.size,targets,availableTargets,this.npcIds);
     }
   }
 

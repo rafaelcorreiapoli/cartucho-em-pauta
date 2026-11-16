@@ -3,6 +3,7 @@ import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {canStand,roomAt,type Motion,type Player} from '../src/map';
+import {missionReward} from '../src/politics';
 import type {PlenaryView} from '../src/plenary';
 import {powerPanels,powerRules,type PowerAction} from '../src/power';
 import {SessionRoom} from './SessionRoom';
@@ -64,6 +65,19 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     const infiltrator = rooms.find(peer=>view(peer)?.role==='Infiltrado')!;
     const [first,second] = rooms.filter(peer=>peer!==infiltrator);
     const [a,b] = powerPanels;
+    const match = Reflect.get(room,'match');
+    const agendaOf = (peer:Room)=>Reflect.get(Reflect.get(match,'economy'),'accounts').get(peer.sessionId).agenda;
+    for (const peer of [first,second,infiltrator]) {
+      const agenda = agendaOf(peer);
+      Reflect.set(agenda,'missions',[]);
+      Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio','selfieSolo']);
+    }
+    match.refreshAgendaEligibility();
+    const finished = (peer:Room)=>view(peer)?.politics?.missions.completed
+      .filter(mission=>mission.kind==='manutencaoEmergencia');
+    await wait(()=>[first,second,infiltrator].every(peer=>view(peer)?.politics?.missions.active.some(
+      mission=>mission.kind==='manutencaoEmergencia' && mission.current===0)));
+    const xpBefore = view(first)!.politics!.progression.xp;
     const nearA = {x:a.x+49,y:a.y};
     expect(view(infiltrator)?.canSabotagePower).toBe(true);
     expect(view(first)?.canSabotagePower).toBeUndefined();
@@ -93,11 +107,18 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     move(second,nearA);
     await wait(()=>view(first)?.outage?.occupied[1]===false && view(first)?.outage?.seconds===undefined);
 
+    expect(finished(first)).toHaveLength(0);
+    expect(finished(second)).toHaveLength(0);
     move(second,b);
     await act(second,{kind:'repair',panel:1});
     await wait(()=>!!view(first)?.outage?.seconds);
     await wait(()=>rooms.every(peer=>view(peer)?.outage===undefined));
     expect(view(infiltrator)?.canSabotagePower).toBeUndefined();
+    for (const peer of [first,second]) expect(finished(peer)).toHaveLength(1);
+    expect(finished(infiltrator)).toHaveLength(0);
+    expect(view(first)!.politics!.progression.xp).toBe(xpBefore+missionReward('manutencaoEmergencia').xp);
+    await act(first,{kind:'repair',panel:0});
+    expect(finished(first)).toHaveLength(1);
     move(first,nearA);
     await wait(()=>sees(first,infiltrator) && sees(infiltrator,first));
   } finally {

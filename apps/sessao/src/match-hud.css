@@ -308,31 +308,6 @@
 }
 .choice-empty { color: #d6cfb5; font-size: .78rem; }
 
-@media (max-width: 480px) {
-  #social-docks > details > summary { gap: .28rem; padding: .4rem .45rem; }
-  #personal-stats:not(:empty) { max-width: 4.8ch; overflow: hidden; text-overflow: ellipsis; }
-}
-
-.social-trigger {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  min-height: 38px;
-  padding: .45rem .7rem;
-  border: 1px solid #8c835d;
-  border-radius: 6px;
-  background: #142522f5;
-  color: var(--hud-paper);
-  font-size: .8rem;
-  font-weight: 650;
-  cursor: pointer;
-  list-style: none;
-}
-.social-trigger::-webkit-details-marker { display: none; }
-.social-trigger:hover, .social-module[open] > .social-trigger {
-  background: #253a31;
-  border-color: #d7b574;
-}
 #social-docks .social-panel {
   width: min(350px, calc(100vw - 2 * var(--hud-edge)));
   padding: .8rem;
@@ -639,18 +614,6 @@
 
 @media (min-width: 921px) {
   #social-docks { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; width: var(--hud-side); }
-  #social-docks .social-trigger {
-    gap: .45rem;
-    min-height: 48px;
-    padding: .65rem .6rem;
-    background: #193329f5;
-    font: 800 .95rem/1.15 var(--party-display);
-    white-space: nowrap;
-  }
-  #social-docks .social-trigger:hover,
-  #social-docks details[open] > .social-trigger { background: #294334; }
-  #social-docks .social-trigger .hud-glyph { width: 20px; height: 20px; }
-  #personal-stats:not(:empty) { font-size: .7rem; white-space: normal; }
   #social-docks .social-panel, #session #election-dock .politics-content {
     width: var(--hud-side);
     padding: 1rem;
@@ -730,15 +693,6 @@
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }
 
-#gameplay-tools {
-  position: absolute;
-  right: var(--hud-edge);
-  bottom: calc(var(--hud-edge) + 58px);
-  display: flex;
-  gap: .5rem;
-  z-index: 3;
-}
-#gameplay-tools button { display: flex; align-items: center; gap: .35rem; }
 #object-request {
   position: absolute;
   right: var(--hud-edge);
@@ -762,8 +716,9 @@
 #gameplay-dialog header { display: flex; align-items: center; justify-content: space-between; }
 #gameplay-title { margin: 0 0 .55rem; font: 850 1.35rem/1.2 var(--party-display); }
 #gameplay-body { display: flex; flex-wrap: wrap; gap: .55rem; }
-#gameplay-body { align-items: center; margin-top: .65rem; }
-#gameplay-target-label { display: grid; gap: .25rem; margin-top: .65rem; }
+#gameplay-body { align-items: center; }
+:is(#gameplay-body,#phone-mail) { margin-top: .65rem; }
+.object-recipient { display: grid; gap: .25rem; margin-top: .65rem; }
 .object-card { width: 100%; background: #142522; border-radius: 8px; padding: .7rem; }
 .object-card h3 { display: flex; align-items: center; gap: .4rem; margin: 0; font: 800 1.05rem/1.2 var(--party-display); }
 .object-card h3 .hud-glyph { color: var(--party-gold); }
@@ -934,7 +889,7 @@ button.item-tile:active { transform: translateY(3px); }
 .phone-app[aria-pressed="true"] .phone-app-icon { border-color: #f9e7ac; }
 .phone-app:hover .phone-app-icon { filter: brightness(1.18); }
 .phone-app-icon .hud-glyph { width: 62%; height: 62%; stroke-width: 2; }
-#gameplay-dialog[data-mode="phone"] #gameplay-body {
+#gameplay-dialog[data-mode="phone"] :is(#gameplay-body,#phone-mail) {
   grid-row: 4;
   align-content: start;
   align-items: stretch;
@@ -943,7 +898,7 @@ button.item-tile:active { transform: translateY(3px); }
   padding: .2rem .2rem .45rem;
 }
 #gameplay-dialog[data-mode="phone"] #gameplay-body > :is(h3,p) { flex-basis: 100%; margin: .25rem 0; }
-#gameplay-dialog[data-mode="phone"] #gameplay-body h3 { font: 850 1.25rem/1.15 var(--party-display); }
+#gameplay-dialog[data-mode="phone"] :is(#gameplay-body,#phone-mail) h3 { font: 850 1.25rem/1.15 var(--party-display); }
 .phone-contacts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1088,7 +1043,7 @@ button.item-tile:active { transform: translateY(3px); }
 
 #gameplay-dialog[data-mode="phone"] { grid-template-rows: auto minmax(0,1fr) auto; }
 #gameplay-dialog[data-mode="phone"] > header { grid-row: 1; border-bottom: 1px solid #ffffff14; }
-#gameplay-dialog[data-mode="phone"] #gameplay-body { grid-row: 2; padding: .55rem .2rem; }
+#gameplay-dialog[data-mode="phone"] :is(#gameplay-body,#phone-mail) { grid-row: 2; padding: .55rem .2rem; }
 #gameplay-dialog[data-mode="phone"] #phone-apps {
   grid-row: 2;
   align-self: start;

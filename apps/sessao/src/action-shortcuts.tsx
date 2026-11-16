@@ -2,7 +2,7 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
-import { apps } from './ui/app-launcher';
+import { appForKey, type LaunchHudApp } from './hud-apps';
 import { hudConsumesKeys } from './game-keys';
 
 const pageSize = 9;
@@ -14,12 +14,6 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
   badge.setAttribute('aria-hidden','true');
   control.append(badge);
 }
-
-const quickActions = [
-  ...apps.map(({id,key})=>[key.toLowerCase(),'#'+id] as const),
-  ['j','#politics-dock > summary'],
-  ['l','#open-election-polls'],
-] as const;
 
 function available(control:HTMLElement) {
   return !control.matches(':disabled, [aria-disabled="true"], input[type="hidden"]') &&
@@ -53,17 +47,13 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean}) {
   disableHudTabStops(root,signal);
   const launcher = root.querySelector<HTMLButtonElement>('#open-action-shortcuts')!;
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
   const map = root.querySelector<HTMLElement>('#map')!;
-  const controls = quickActions.map(([key,selector])=>[key,root.querySelector<HTMLElement>(selector)!] as const);
-  for (const [key,control] of controls) control.setAttribute('aria-keyshortcuts',key.toUpperCase());
-  const settingsButton = root.querySelector<HTMLButtonElement>('#open-settings')!;
   const settings = root.querySelector<HTMLDialogElement>('#room-settings')!;
-  settingsButton.onclick = ()=>{ if (!settings.open) settings.showModal(); };
   let scope:HTMLElement = root;
   let page = 0;
 
@@ -126,7 +116,19 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
       return;
     }
     if (event.shiftKey || hudConsumesKeys(event.target)) return;
-    const key = event.key.toLowerCase()==='i' ? 'p' : event.key.toLowerCase();
+    const key = event.key.toLowerCase();
+    const app = appForKey(key);
+    if (app) {
+      if (launchApp(app)) {
+        event.preventDefault();
+        if (!modal()) map.focus({preventScroll:true});
+      }
+      return;
+    }
+    if (key==='j' || key==='l') {
+      if (shortcuts[key]()) event.preventDefault();
+      return;
+    }
     const cassation = /^[0-9]$/.test(key) ? root.querySelector<HTMLButtonElement>(`.cassation-ballot button[aria-keyshortcuts="${key}"]`) : null;
     if (cassation && available(cassation)) {
       event.preventDefault();
@@ -136,17 +138,14 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal) {
     }
     const control = key==='y' || key==='r' || key==='n' && root.querySelector('[data-vote="abstain"]')
       ? root.querySelector<HTMLElement>(`[data-vote="${key==='y' ? 'yes' : key==='r' ? 'no' : 'abstain'}"]`)
-      : controls.find(([shortcut])=>shortcut===key)?.[1] ??
-        (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
-    if (!control) return;
-    const viaApp = control.closest('#gameplay-tools') || control.id==='voice-toggle' || control===settingsButton;
-    if (viaApp ? control.matches(':disabled') || control.hidden && control!==settingsButton || !root.querySelector('#match:not([hidden])') && !available(control) : !available(control)) return;
+      : (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
+    if (!control || !available(control)) return;
     event.preventDefault();
     control.click();
     if (!modal()) map.focus({preventScroll:true});
   },{signal});
   signal.addEventListener('abort',()=>{
-    launcher.onclick = settingsButton.onclick = null;
+    launcher.onclick = null;
     if (settings.open) settings.close();
     palette.close();
     paletteRoot.unmount();

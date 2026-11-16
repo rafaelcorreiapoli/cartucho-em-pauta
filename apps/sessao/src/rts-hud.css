@@ -355,7 +355,7 @@ button.equipped-gear-tile { cursor: pointer; }
   pointer-events: none;
 }
 .deck-tool-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
-#command-deck :is(#gameplay-tools,#social-docks,#voice-dock) {
+#command-deck :is(#social-docks,#voice-dock) {
   position: static;
   display: flex;
   align-items: center;
@@ -371,7 +371,7 @@ button.equipped-gear-tile { cursor: pointer; }
 #command-deck #voice-host { position: relative; display: flex; padding-left: 4px; border-left: 1px solid var(--command-divider); }
 #command-deck #social-docks { width: auto; }
 #command-deck #voice-dock { flex-wrap: nowrap; }
-#command-deck :is(#gameplay-tools button,#social-docks .social-trigger,#voice-dock button,#voice-dock summary) {
+#command-deck :is(#voice-dock button,#voice-dock summary) {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -388,24 +388,10 @@ button.equipped-gear-tile { cursor: pointer; }
   font: 660 11px/1 system-ui,sans-serif;
   white-space: nowrap;
 }
-#command-deck :is(#gameplay-tools button,#social-docks .social-trigger,#voice-dock button,#voice-dock summary):hover { background: #375c49; }
-#command-deck :is(#gameplay-tools button,#social-docks .social-trigger) .hud-glyph { width: 15px; height: 15px; }
-#command-deck :is(#gameplay-tools button,#social-docks .social-trigger) { position: relative; }
-#command-deck #open-phone[data-call="incoming"] { border-color: var(--party-gold); color: var(--party-gold); }
-#command-deck #open-phone[data-call="connected"] { border-color: var(--party-mint); color: var(--party-mint); }
+#command-deck :is(#voice-dock button,#voice-dock summary):hover { background: #375c49; }
 #command-deck #voice-toggle[data-voice="live"] { color: var(--party-mint); }
 #command-deck #voice-toggle[data-voice="muted"] { color: var(--party-coral); }
 #command-deck #voice-toggle > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#command-deck #politics-dock:has(#personal-stats:not(:empty)) > summary::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--party-gold);
-}
 #command-deck #voice-status:not(:empty) {
   position: absolute;
   right: 0;
@@ -705,16 +691,6 @@ img.market-art {
 
 
 
-#open-surveillance { position: relative; }
-#open-surveillance span:not([hidden]) {
-  position: absolute;
-  inset: -5px -4px auto auto;
-  padding: 0 .35em;
-  border-radius: 1em;
-  background: #a8f7c8;
-  color: #122c20;
-  font-weight: 800;
-}
 #surveillance-dialog, #security-dialog { width: min(720px, 90vw); }
 #surveillance-dialog header, #security-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .spy-console { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.6fr); gap: 1rem; }

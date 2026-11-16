@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
+import { DialogDismiss } from './ui/dialog-dismiss';
 import { marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
-import { markShortcut } from './action-shortcuts';
-import { describeFood, foods, isFood } from './food';
+import { EquipmentReplacement } from './ui/equipment-replacement';
+import { describeFood, foodDefinition, isFood } from './food';
 import { gearConflict, isGear } from './equipment';
 import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
@@ -15,28 +17,23 @@ function marketVendorPortrait(npc:NpcId) {
   return 'portrait' in vendor ? vendor.portrait : vendor.sprite;
 }
 
+export function MarketDialogContent({title,children}:{title:string;children:ReactNode}) {
+  return <>
+    <header>
+      <h2 id="market-title">{title}</h2>
+      <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+    </header>
+    <div id="market-body">{children}</div>
+  </>;
+}
+
 export function createMarketPanel(send:(action:GameplayAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
-  const heading = dialog.querySelector('h2')!;
-  const body = dialog.querySelector<HTMLElement>('#market-body')!;
-  const root = createRoot(body);
+  const root = createRoot(dialog);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
-  const purchasedName = prompt.querySelector('#equip-purchase-item')!;
-  const yes = prompt.querySelector<HTMLButtonElement>('#equip-purchase-yes')!;
-  const no = prompt.querySelector<HTMLButtonElement>('#equip-purchase-no')!;
-  if (!yes.hasAttribute('aria-keyshortcuts')) {
-    markShortcut(yes,'1');
-    markShortcut(no,'2');
-  }
+  const promptRoot = createRoot(prompt);
   let replacement:number|undefined;
   let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
-  yes.onclick = () => {
-    const item = purchase?.id;
-    const token = replacement;
-    prompt.close();
-    if (item!==undefined && token!==undefined) send({kind:'replace-gear',item,token});
-  };
-  no.onclick = () => prompt.close();
   const dismissPurchase = () => { purchase = undefined; replacement = undefined; };
   prompt.addEventListener('close',dismissPurchase);
   const pageSize = 9;
@@ -56,7 +53,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   function onPageKey(event:KeyboardEvent) {
     if (!event.defaultPrevented && event.key==='Enter' && !event.repeat && !event.altKey &&
         !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      const purchaseButton = body.querySelector<HTMLButtonElement>('.market-buy');
+      const purchaseButton = dialog.querySelector<HTMLButtonElement>('#market-body .market-buy');
       if (purchaseButton) {
         event.preventDefault();
         purchaseButton.click();
@@ -65,7 +62,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
     }
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
         (event.key!=='ArrowLeft' && event.key!=='ArrowRight')) return;
-    const arrow = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+    const arrow = dialog.querySelector<HTMLButtonElement>(`#market-body button[aria-keyshortcuts="${event.key}"]`);
     if (!arrow) return;
     event.preventDefault();
     if (!arrow.disabled) arrow.click();
@@ -98,9 +95,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       return {kind,item,price,status,hasItem};
     });
     const product = stock[selected];
-    const food = product && isFood(product.kind) ? foods[product.kind] : undefined;
+    const food = product && isFood(product.kind) ? foodDefinition(product.kind) : undefined;
     const vendor = npcs[npc];
-    flushSync(()=>root.render(<>
+    flushSync(()=>root.render(<MarketDialogContent title={vendor.label}>
       <div className="market-toolbar">
         <div className="market-vendor">
           <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
@@ -147,7 +144,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         <button type="button" className="market-page-arrow" aria-label="Próxima página" aria-keyshortcuts="ArrowRight"
           disabled={page===pageCount-1} onClick={()=>goTo(page+1)}>›</button>
       </nav>
-    </>));
+    </MarketDialogContent>));
     if (dialog.open && !prompt.open && !dialog.contains(document.activeElement)) {
       dialog.querySelector<HTMLButtonElement>('header button')?.focus({preventScroll:true});
     }
@@ -165,8 +162,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         if (prompt.open) prompt.close();
       } else if (!prompt.open && conflict && purchase && inventory.some(item=>item.id===purchase?.id)) {
         replacement = conflict.id;
-        purchasedName.textContent = `${objects[conflict.kind].name} → ${objects[purchase.kind].name}`;
+        const {id:item,kind} = purchase;
+        flushSync(()=>promptRoot.render(<EquipmentReplacement equipped={objects[conflict.kind].name} purchased={objects[kind].name}
+          confirm={()=>{
+            prompt.close();
+            send({kind:'replace-gear',item,token:conflict.id});
+          }}
+          cancel={()=>prompt.close()}/>));
         prompt.showModal();
+        prompt.querySelector<HTMLButtonElement>('#equip-purchase-no')?.focus();
       }
       const state = view.phase==='negotiation' ? view.gameplay?.dialogue : undefined;
       if (!state) {
@@ -198,10 +202,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const npc = npcs[state.npc];
       dialog.classList.toggle('market-catalog',state.shop);
       dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
-      heading.textContent = state.shop ? npc.label : npc.name;
-      if (!dialog.open) dialog.showModal();
       if (!state.shop) {
-        flushSync(()=>root.render(<>
+        flushSync(()=>root.render(<MarketDialogContent title={npc.name}>
           <div className="market-line">
             <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>
             <p>{state.text}</p>
@@ -212,11 +214,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
               {option.label}<kbd className="action-key" aria-hidden="true">{index+1}</kbd>
             </button>)}
           </div>
-        </>));
-        body.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
+        </MarketDialogContent>));
+        if (!dialog.open) dialog.showModal();
+        dialog.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
       renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget);
+      if (!dialog.open) dialog.showModal();
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;
@@ -227,7 +231,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       prompt.removeEventListener('close',dismissPurchase);
       purchase = undefined;
       prompt.close();
-      yes.onclick = no.onclick = null;
+      promptRoot.unmount();
       dialog.removeEventListener('cancel',close);
       dialog.removeEventListener('submit',close);
       dialog.removeEventListener('keydown',onPageKey);

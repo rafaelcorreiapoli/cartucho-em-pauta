@@ -4,46 +4,22 @@ import { mountVoteBrief, mountVoteHistory } from './ui/vote-history';
 import {mountProjectImpact} from './ui/project-impact';
 import { mountBallot } from './ui/ballot';
 import type { createRoomCommandSender } from './room-commands';
-import type { Player } from './map';
-import { MIN_PLAYERS, canReachStation, type Action, type PlenaryView } from './plenary';
+import { mountLobbyControls } from './ui/lobby-controls';
+import type { PlenaryView } from './plenary';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
-const start = element<HTMLButtonElement>('start-match');
-const actions = [...document.querySelectorAll<HTMLButtonElement>('[data-action]')];
-export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean) {
+export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean,back:()=>void) {
   let view: PlenaryView | undefined;
-  let own: Player | undefined;
-  function countPicker(id:string,initial:number) {
-    let selected = initial;
-    const buttons = [...element(id).querySelectorAll<HTMLButtonElement>('[data-count]')];
-    for (const button of buttons) {
-      button.setAttribute('aria-pressed',String(Number(button.dataset.count)===selected));
-      button.onclick = ()=>{
-        selected = Number(button.dataset.count);
-        for (const option of buttons) option.setAttribute('aria-pressed',String(option===button));
-      };
-    }
-    return ()=>selected;
-  }
-  const infiltrators = countPicker('infiltrator-count',1);
-  const npcButtons = [...element('parliamentarian-count').querySelectorAll<HTMLButtonElement>('[data-count]')];
-  for (const button of npcButtons) button.onclick = ()=>command('lobby-npc-count',{count:Number(button.dataset.count)});
+  const lobby = mountLobbyControls(element('lobby-controls'),id,{
+    changeNpcCount:count=>command('lobby-npc-count',{count}),
+    start:infiltrators=>{ if (assetsReady()) command('start-match',{infiltrators}); },
+    back,
+  });
   const brief = mountVoteBrief(element('project-outcome-brief'));
-  start.onclick = () => { if (assetsReady()) command('start-match',{infiltrators:infiltrators()}); };
-  for (const button of actions) button.onclick = () => command('plenary-action',{action:button.dataset.action as Action});
   const ballot = mountBallot(element('ballot-host'),vote=>command('bill-vote',{vote}),
     candidate=>command('cassation-vote',{candidate}),id);
 
   const details = mountProjectDetails(element('project-details-content'),id,vote=>command('bill-intent',{vote}));
-
-  function updateActions() {
-    for (const button of actions) {
-      const action = button.dataset.action as Action;
-      const nearby = !!own && canReachStation(own,action==='fraud' ? 'panel' : action);
-      button.disabled = !nearby || (action==='amendment' && !!view?.amended);
-    }
-
-  }
 
   const heading = mountProjectHeading(element('project-heading'));
   const impact = mountProjectImpact(element('impact'));
@@ -63,23 +39,9 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         brief.render(next.outcome);
       }
       view = next;
-      const {phase,players,host} = view;
-      const hearing = view.hearing;
+      const {phase,hearing} = view;
       const running = phase==='negotiation' || phase==='ballot' || phase==='hearing';
-      element('infiltrator-setup').hidden = running || host!==id || players<6;
-      element('parliamentarian-setup').hidden = running;
-      const npcCount = view.lobbyNpcCount ?? 2;
-      for (const button of npcButtons) {
-        button.disabled = running || host!==id;
-        button.setAttribute('aria-pressed',String(Number(button.dataset.count)===npcCount));
-      }
-      start.hidden = running || host!==id;
-      const minimum = view.minimumPlayers ?? MIN_PLAYERS;
-      start.disabled = !assetsReady() || players<minimum;
-      const startLabel = phase==='finished' ? 'Jogar de novo' : 'Iniciar sessão';
-      if (start.firstChild?.textContent?.trim()!==startLabel && start.firstChild) start.firstChild.textContent = startLabel+' ';
-      element('start-hint').textContent = running ? '' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
-        host!==id ? 'Aguardando quem criou a sala iniciar a sessão.' : '';
+      lobby.render(view,assetsReady());
       element('match').hidden = phase==='lobby';
       element('proposal').hidden = !running;
       if (running && phase!=='ballot') heading.render(view);
@@ -87,14 +49,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       details.render(view);
       impact.render(view.yes,view.no,running && phase!=='ballot' && !hearing && !view.cassation);
       ballot.render(view);
-      actions.find(button => button.dataset.action==='panel')!.hidden = view.audit!=='fraud' || view.reportedFraud;
-      actions.find(button => button.dataset.action==='fraud')!.hidden = !view.canFraud;
-      updateActions();
     },
-    destroy() { brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); details.destroy(); },
-    players(players:Player[]) {
-      own = players.find(player => player.id===id);
-      updateActions();
-    },
+    destroy() { lobby.destroy(); brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); details.destroy(); },
   };
 }

@@ -1,5 +1,7 @@
 import { stations } from './plenary';
 
+export const vipAreaRadius = 12;
+
 export const installationSites = {
   hall:{kind:'portrait',point:{x:556,y:415},label:'Gabinete de Luxo'},
   coffeeVip:{kind:'vip',point:{x:218,y:228},label:'Cadeira do Cafezinho'},

@@ -1,3 +1,4 @@
+import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
@@ -24,7 +25,7 @@ test('movement snapshots only notify stamina consumers when the displayed value 
   expect(snapshot).toEqual({current:89,max:110});
   expect(updates).toEqual(['stamina']);
   unsubscribe();
-  hud.player({stamina:90,staminaMax:110});
+  hud.player({...player,stamina:90,staminaMax:110});
   expect(updates).toEqual(['stamina']);
 });
 
@@ -160,4 +161,33 @@ test('the HUD replaces a credited voting mission without offering it again on th
   expect(hud.agenda.get()?.recent.map(mission=>mission.kind)).toContain('votacao');
   expect(hud.agenda.get()?.active.map(mission=>mission.kind)).not.toContain('votacao');
   expect(hud.agenda.get()?.active.map(mission=>mission.kind)).toContain('apoio');
+});
+
+test('the HUD receives multiple deposits of the same cash lot in one server tick',()=>{
+  const match = new PlenaryMatch(1);
+  const depositor = {...player,...terminals.treasury.point};
+  match.start(depositor.id,[depositor],0,()=>0);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(depositor.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['contribuinte','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const gameplay = new Gameplay();
+  const world = {...match.gameplayWorld([depositor],10,()=>false),takeWallet:()=>5};
+  gameplay.robNpc(depositor,{...depositor,id:'npc',npc:true},world);
+  const item = gameplay.view(depositor,world).inventory.find(item=>item.kind==='briefcase')!;
+  const hud = createHudModel();
+  const render = ()=>hud.render(match.view(depositor.id,[depositor.id],10));
+  const deposit = (target?:string)=>gameplay.act(depositor,{kind:'deliver',place:'treasury',item:item.id,target},world);
+  expect(deposit('partial')).toContain('R$ 25 mil');
+  render();
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'contribuinte',current:2.5}));
+  expect(deposit('partial')).toContain('R$ 12 mil');
+  render();
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'contribuinte',current:3.7}));
+  const xp = hud.profile.get()?.xp ?? 0;
+  expect(deposit()).toContain('R$ 13 mil');
+  render();
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'contribuinte',current:5}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('contribuinte').xp);
 });

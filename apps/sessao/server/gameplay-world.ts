@@ -5,6 +5,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
+  nextEventId?:()=>number;
   policies?:BillPolicies;
   publicBudget?:number;
   spendSubsidized?:(id:string,price:number,subsidy:number)=>boolean;
@@ -28,10 +29,10 @@ export function gameplayWitnesses(players:Player[], actor:Player, target?:string
     .map(other => other.id);
 }
 
-type EventDetails = Partial<Omit<GameplayEvent,'type'|'actor'|'at'|'position'|'witnesses'>> & {witnesses?:Iterable<string>};
+type EventDetails = Partial<Omit<GameplayEvent,'type'|'actor'|'at'|'position'|'witnesses'|'eventId'>> & {witnesses?:Iterable<string>};
 
-export function publishGameplay(world:Pick<GameplayWorld,'players'|'now'|'publish'|'present'|'vision'>, actor:Player,
+export function publishGameplay(world:Pick<GameplayWorld,'players'|'now'|'publish'|'present'|'vision'|'nextEventId'>, actor:Player,
   type:GameplayEvent['type'], {witnesses,...details}:EventDetails = {}) {
-  world.publish({type,actor:actor.id,at:world.now,position:{x:actor.x,y:actor.y},...details,
+  world.publish({eventId:world.nextEventId?.(),type,actor:actor.id,at:world.now,position:{x:actor.x,y:actor.y},...details,
     witnesses:[...(witnesses ?? gameplayWitnesses(world.players.filter(player=>world.present?.(player.id)!==false),actor,details.target,world.vision))]});
 }

@@ -12,10 +12,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void) {
-  const reward = element('profile-xp-reward');
-  const launch = element<HTMLButtonElement>('open-attributes');
-  const badge = element('attribute-points-badge');
+export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void,reward:(text:string)=>void) {
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
   const attributesRoot = createRoot(attributes);
@@ -142,18 +139,17 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     renderAttributes();
     attributes.showModal();
   }
-  launch.onclick = openAttributes;
   celebration.addEventListener('close',closeCelebration);
   document.addEventListener('close',closeOtherDialog,true);
 
   return {
+    open:openAttributes,
     render(next:PlenaryView) {
       view = next;
       const progress = next.politics?.progression;
       const before = latest?.matchId===progress?.matchId && !reconnecting ? latest : undefined;
       reconnecting = false;
       latest = progress;
-      launch.hidden = !progress || next.phase==='lobby' || next.phase==='finished';
       if (next.phase!=='negotiation') {
         if (celebration.open) celebration.close('later');
         if (attributes.open) attributes.close();
@@ -164,16 +160,12 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         clearTimeout(requestTimer);
         requested = undefined;
       }
-      badge.hidden = !progress.available;
-      badge.textContent = String(progress.available);
-      launch.title = progress.available ? `Atributos (P) · ${pointLabel(progress.available)} para distribuir` : 'Atributos (P)';
-      launch.setAttribute('aria-label',progress.available ? `Atributos, ${pointLabel(progress.available)} para distribuir` : 'Atributos');
       if (!before) {
         pending = undefined;
         clearTimeout(revealTimer);
         revealTimer = undefined;
         clearTimeout(rewardTimer);
-        reward.textContent = '';
+        reward('');
         if (celebration.open) celebration.close('later');
       }
       if (before && progress.xp>before.xp) {
@@ -181,10 +173,10 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         const extras = next.politics?.missions.completed.slice(previousCount).map(mission=>missionReward(mission.kind)) ?? [];
         const cash = extras.reduce((sum,earned)=>sum+(earned.cash ?? 0),0);
         const popularity = extras.reduce((sum,earned)=>sum+(earned.popularity ?? 0),0);
-        reward.textContent = [`+${progress.xp-before.xp} XP`,cash ? `+${money(cash)}` : '',
-          popularity ? `+${popularity} popularidade` : ''].filter(Boolean).join(' · ');
+        reward([`+${progress.xp-before.xp} XP`,cash ? `+${money(cash)}` : '',
+          popularity ? `+${popularity} popularidade` : ''].filter(Boolean).join(' · '));
         clearTimeout(rewardTimer);
-        rewardTimer = window.setTimeout(()=>reward.textContent='',2700);
+        rewardTimer = window.setTimeout(()=>reward(''),2700);
       }
       if (before && progress.level>before.level && celebration.open && displayed) {
         displayed.to = progress.level;
@@ -225,9 +217,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       attributes.close();
       attributesRoot.unmount();
       celebrationRoot.unmount();
-      launch.hidden = true;
-      reward.textContent = '';
-      launch.onclick = null;
+      reward('');
     },
   };
 

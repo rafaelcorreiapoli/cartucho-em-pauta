@@ -1,8 +1,8 @@
 import { incendiary } from './fire';
-import type {BillPolicies} from './plenary';
+import {policyDiscountPercent,type BillPolicies} from './plenary';
 import { concealment, equipment } from './equipment';
 import { foods } from './food';
-import { documentRules } from './internal-mail';
+import { documentRules,internalMailRules } from './internal-mail';
 import { firstAidKit } from './medical';
 import { officeGoods } from './private-offices';
 import { spyProducts } from './surveillance';
@@ -27,7 +27,9 @@ export const marketKinds = {
   furniture:Object.keys(furniture) as (keyof typeof furniture)[],
 };
 
-export const discountedPrice = (price:number) => Math.max(.1,Math.round(price*6)/10);
+export const discountedPrice = (price:number) => Math.max(.1,Math.round(price*(100-policyDiscountPercent)/10)/10);
+
+export const mailPublicationFee = (policies?:BillPolicies) => policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee;
 
 export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:BillPolicies,publicBudget=Infinity) {
   if (!catalog || typeof kind!=='string' || !Object.hasOwn(catalogs[catalog],kind)) return;

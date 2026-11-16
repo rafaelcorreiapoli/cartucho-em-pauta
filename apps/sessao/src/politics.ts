@@ -13,16 +13,24 @@ export type Split = typeof splits[number];
 
 export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
+export const TARGET_TRANSFER_AMOUNT = 1;
+export const CAMPAIGN_SPENDING_TARGET = 5;
+export const NEW_PORTRAIT_MS = 60_000;
+export const CASH_HANDOVER_MISSION_AMOUNT = 2;
+export const SAVINGS_MISSION_AMOUNT = 10;
+export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export const targetedAgendas = {
   documentoAlvo:'Entregue um documento a',
   assinaturaAlvo:'Consiga uma assinatura de',
   pizzaAlvo:'Entregue uma pizza a',
-  dinheiroAlvo:'Faça uma transferência para',
+  dinheiroAlvo:`Transfira ${money(TARGET_TRANSFER_AMOUNT)} para`,
   visitaAlvo:'Visite o gabinete de',
+  visitaCortesia:'Interaja dentro do gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000} as const;
+export const archiveDutyRoom = 'Arquivo';
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,plantaoArquivo:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -52,8 +60,8 @@ export const agendas = {
   poltrona:'Compre uma poltrona',
   ostentacao:'Gaste R$ 50 mil em móveis',
   visitaGabinete:'Visite o gabinete de um colega',
-  passeio:'Visite três ambientes do Congresso',
-  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho`,
+  passeio:'Visite três salas públicas diferentes',
+  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
@@ -69,6 +77,7 @@ export const agendas = {
   publicouSelfie:'Publique uma selfie sua com pelo menos dois colegas.',
   retrato:'Instale seu retrato no Congresso.',
   autorretrato:'Tire uma selfie ao lado do seu retrato.',
+  cerimonialOficial:'Tire uma selfie perto de um Retrato Oficial instalado',
   reforma:'Substitua o retrato de outro parlamentar pelo seu.',
   reserva:'Reserve uma cadeira no Cafezinho com uma placa VIP.',
   fiscalVip:'Fotografe um visitante na área VIP de outro parlamentar.',
@@ -79,6 +88,8 @@ export const agendas = {
   gabinete: 'Instale um móvel de luxo no seu gabinete.',
   televisao:'Instale uma TV no seu gabinete',
   fortuna: 'Aumente sua carteira',
+  poupancaInstitucional:`Aumente sua carteira em ${money(SAVINGS_MISSION_AMOUNT)}`,
+  pautaPrioritaria:'Entregue um Presente Institucional antes da votação',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
   projetos: 'Vote a favor de dois projetos aprovados',
@@ -90,6 +101,10 @@ export const agendas = {
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
+  plantaoArquivo:`Fique ${agendaDurationMs.plantaoArquivo/1000} segundos seguidos no ${archiveDutyRoom}`,
+  solenidadeInauguracao:`Rabisque um Retrato Oficial de outro jogador instalado há até ${NEW_PORTRAIT_MS/1000} segundos`,
+  amizadeInstitucional:'Entregue um item a outro jogador e receba dele um item diferente',
+  privilegioAdquirido:'Instale uma Placa VIP',
   trabalhoRemoto:'Passe 30 segundos no seu gabinete',
   produtividade:'Jogue no celular por 30 segundos no seu gabinete',
   cafeEstrategico:'Beba um café no Cafezinho',
@@ -97,11 +112,13 @@ export const agendas = {
   contribuinte:'Contribua com R$ 50 mil à Tesouraria',
   registroHistorico:'Tire uma selfie no Plenário',
   jornalismo:'Publique uma foto pelo Correio Interno',
+  manutencaoEmergencia:'Conclua o reparo de uma pane elétrica junto a outro jogador',
   apagarIncendio:'Apague um incêndio com o extintor',
   primeirosSocorros:'Recupere PV com um Kit Médico',
   socorro:'Socorra um jogador nocauteado',
   fiscalCafe:'Beba três cafés',
   almocoPlenario:'Coma uma pizza no Plenário',
+  nadaADeclarar:`Transporte dinheiro oculto por ${agendaDurationMs.nadaADeclarar/1000} segundos`,
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
   reservaCofre:'Embolse R$ 50 mil no seu cofre',
   turismo:'Tire fotos em três salas diferentes',
@@ -111,11 +128,17 @@ export const agendas = {
   reuniaoGabinete:'Passe 15 segundos no mesmo gabinete que outro jogador',
   reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
   tresSelfies:'Tire selfies em três salas públicas diferentes',
-  heroiInesperado:'Apague um incêndio com Estabilidade abaixo de 30',
+  plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
+  heroiInesperado:'Ajude a resolver uma crise com Estabilidade abaixo de 30',
   varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
   limpeza:'Remova um dispositivo clandestino descoberto',
+  fiscalizacaoParalela:'Revele o saldo do cofre de outro parlamentar com o Raio X',
+  patrimonioSuspeito:'Revele o saldo de um parlamentar NPC com o Raio X',
+  reuniaoVip:`Fique ${agendaDurationMs.reuniaoVip/1000} segundos com outro parlamentar perto de uma Placa VIP instalada`,
+  segurancaParlamentar:`Fique ${agendaDurationMs.segurancaParlamentar/1000} segundos perto do mesmo parlamentar com um Porrete equipado, sem atacar`,
   escutaAtiva:'Monitore um grampo por 15 segundos',
   instalarGrampo:'Instale um grampo em um esconderijo',
+  vigilanciaInstitucional:'Consulte duas câmeras diferentes na Sala de Segurança',
   duasCameras:'Consulte duas câmeras escondidas próprias',
   instalarCamera:'Instale uma câmera escondida',
   mensagemComAnexo:'Publique um comunicado com anexo',
@@ -124,11 +147,15 @@ export const agendas = {
   fotoDinheiro:'Fotografe alguém com dinheiro exposto',
   doisMoveis:'Instale dois móveis diferentes no seu gabinete',
   visitaDoisGabinetes:'Visite gabinetes de dois colegas diferentes',
+  recolhimentoExtraordinario:'Roube uma maleta de um NPC e entregue parte dela à Tesouraria',
+  dinheiroPresencialVinte:`Entregue ${money(CASH_HANDOVER_MISSION_AMOUNT)} em espécie a outro jogador`,
+  caixaDois:'Receba dinheiro em espécie de outro jogador',
   pixVinte:'Envie um Pix de R$ 20 mil',
   doisPix:'Receba Pix de dois jogadores distintos',
   debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
   chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
   discursoMegafone:'Use o Megafone por 10 segundos',
+  investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
   campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',
   bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
   provaDocumental:'Fotografe um documento físico visível',
@@ -137,16 +164,17 @@ export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
+  plantaoArquivo:25,privilegioAdquirido:25,amizadeInstitucional:35,solenidadeInauguracao:30,
   trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
-  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
-  varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
-  visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,campanhaUltimaHora:30,bandejaGourmet:35,
-  cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
-  jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
+  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
+  reuniaoVip:40,segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,vigilanciaInstitucional:25,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
+  poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,campanhaUltimaHora:30,investimentoPolitico:50,bandejaGourmet:35,
+  nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
+  jornalismo:30,manutencaoEmergencia:45,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
   selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
   visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,
-  retrato:25,autorretrato:25,reforma:35,reserva:25,mandaVip:30,
+  retrato:25,autorretrato:25,cerimonialOficial:25,reforma:35,reserva:25,mandaVip:30,
 };
 const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {
   embolso:{xp:40,cash:AGENDA_REWARD},
@@ -158,7 +186,7 @@ export const missionReward = (kind:Agenda):MissionReward =>
   rewardOverrides[kind] ?? (xpOnly[kind] ? {xp:xpOnly[kind]} : {xp:30,cash:AGENDA_REWARD});
 export const timedAgendas = new Set<Agenda>(Object.keys(agendaDurationMs) as (keyof typeof agendaDurationMs)[]);
 export type Mission = {id:number; kind:Agenda; current:number; target:number; person?:Contact};
-export const missionTitle = ({kind,target,person}:Mission) => person ? `${kind==='dinheiroAlvo' ? 'Transfira '+money(AGENDA_TRANSFER_MIN)+' para' : agendas[kind]} ${person.name}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
+export const missionTitle = ({kind,target,person}:Mission) => person ? `${agendas[kind]} ${person.name}${kind==='visitaCortesia' ? ' (por exemplo, tire uma foto)' : ''}` : kind==='fortuna' ? `Chegue a ${money(target)} na carteira` :
   kind==='campanha' ? `Chegue a ${target} de popularidade` : kind==='pagamento' ? `Transfira pelo menos ${money(AGENDA_TRANSFER_MIN)}` : agendas[kind];
 export type EvidenceKind = 'public-transfer' | 'clandestine-transfer' | 'diversion';
 export type Evidence = {id:number; kind:EvidenceKind; from:string; to?:string; amount:number; round:number};
@@ -181,7 +209,6 @@ export type PoliticsAction =
   | {kind:'hearing'; target:string}
   | {kind:'call-cassation'};
 
-export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   if (!data || typeof data!=='object' || !('kind' in data)) return;

@@ -1,11 +1,14 @@
+import {mountConnectionLatency} from './ui/connection-latency';
+import { mountBallotCountdown } from './ui/ballot-countdown';
+import { mountRoomSettings } from './ui/room-settings';
 import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
-import { discountedPrice } from './market-catalog';
-import { internalMailRules } from './internal-mail';
+import { mailPublicationFee } from './market-catalog';
 import { mountInternalMail } from './ui/internal-mail';
 import type { InternalNotice, ForensicReport } from './internal-mail';
+import { hudAppStatus, launchHudApp, type HudApp, type HudAppStatus } from './hud-apps';
 import { mountAppLauncher } from './ui/app-launcher';
 import { mountReactHud } from './ui/hud';
 import { createParliamentarianPanel } from './parliamentarian-panel';
@@ -13,7 +16,6 @@ import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
 import { type GameplayAction } from './gameplay';
-import { characterStats } from './character-stats';
 import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createSecurityPanel } from './security-panel';
@@ -21,7 +23,7 @@ import { createSurveillancePanel } from './surveillance-panel';
 import type { PhotoScene } from './photography';
 import { createGameplayPanel } from './gameplay-panel';
 import { mountResults } from './results';
-import { setCharacterPortrait } from './character-art';
+import { mountCharacterPicker } from './ui/character-picker';
 import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
@@ -35,7 +37,7 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import { MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
-import { inPlenary, NAMES, type Player } from './map';
+import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
@@ -49,24 +51,8 @@ const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:
 const client = new Client(server);
 const audio = new GameAudio();
 installHudHelp(document.querySelector('main')!);
-const musicVolume = document.querySelector<HTMLInputElement>('#music-volume')!;
-const effectsVolume = document.querySelector<HTMLInputElement>('#effects-volume')!;
-const soundMute = document.querySelector<HTMLInputElement>('#sound-mute')!;
-const soundPrefs = audio.preferences;
-function syncSoundControls() {
-  const prefs = soundPrefs.getSnapshot();
-  musicVolume.value = String(Math.round(prefs.musicVolume*100));
-  effectsVolume.value = String(Math.round(prefs.sfxVolume*100));
-  soundMute.checked = prefs.muted;
-}
-musicVolume.oninput = () => soundPrefs.update({musicVolume:musicVolume.valueAsNumber/100});
-effectsVolume.oninput = () => soundPrefs.update({sfxVolume:effectsVolume.valueAsNumber/100});
-soundMute.onchange = () => soundPrefs.update({muted:soundMute.checked});
-soundPrefs.subscribe(syncSoundControls);
-syncSoundControls();
 const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
-const roomLabel = document.querySelector<HTMLElement>('#room-label')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
 const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
@@ -74,127 +60,77 @@ const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status
 const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
 const lobbyInvite = document.querySelector<HTMLInputElement>('#lobby-invite-url')!;
 const copyLobbyInvite = document.querySelector<HTMLButtonElement>('#lobby-copy-invite')!;
-const portraitPlayers:HTMLElement[] = [];
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
-const ballotCountdown = document.querySelector<HTMLDialogElement>('#ballot-countdown')!;
-const ballotCountdownMessage = document.querySelector<HTMLElement>('#ballot-countdown-message')!;
-ballotCountdown.oncancel = event => event.preventDefault();
-function showBallotCountdown(seconds?:number) {
-  if (seconds===undefined) {
-    ballotCountdown.close();
-    return;
-  }
-  const message = `Votação começando em ${seconds}…`;
-  if (ballotCountdownMessage.textContent!==message) ballotCountdownMessage.textContent = message;
-  if (!ballotCountdown.open) ballotCountdown.showModal();
-}
+const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
 const create = document.querySelector<HTMLButtonElement>('#create')!;
-const leave = document.querySelector<HTMLButtonElement>('#leave')!;
-const characters = document.querySelector<HTMLElement>('#characters')!;
-const buttons = NAMES.map((name,index) => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'hud-option character-option';
-  const portrait = document.createElement('span');
-  portrait.className = 'portrait';
-  setCharacterPortrait(portrait,index);
-  portrait.setAttribute('aria-hidden','true');
-  const caption = document.createElement('span');
-  caption.className = 'character-name';
-  caption.textContent = name;
-  const players = document.createElement('span');
-  players.className = 'character-players';
-  portraitPlayers.push(players);
-  button.append(portrait,players,caption);
-  const stats = characterStats[index];
-  button.title = `${stats.hp} PV · Força ${stats.attack} · Velocidade ${stats.speed}`;
-  button.setAttribute('aria-pressed','false');
-  button.onclick = () => {
-    roomCommand?.('character',{character:index});
-  };
-  characters.append(button);
-  return button;
-});
-const voiceToggle = document.querySelector<HTMLButtonElement>('#voice-toggle')!;
-const voiceLabel = voiceToggle.querySelector('span')!;
-const voiceLeave = document.querySelector<HTMLButtonElement>('#voice-leave')!;
-const voiceStatus = document.querySelector<HTMLElement>('#voice-status')!;
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
 function applyVoiceEquipment(current:RoomVoice|undefined) {
   void current?.setDisguise(disguiseActive ? {pitch:-6,style:'radio'} : undefined)?.catch(()=>{
-    if (current===voice) voiceStatus.textContent = 'Não foi possível ativar o modulador.';
+    if (current===voice) settings.update({voiceMessage:'Não foi possível ativar o modulador.'});
   });
 }
 let matchRunning = false;
 let room: Room | undefined;
-let roomCommand:ReturnType<typeof createRoomCommandSender>|undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
 try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
 nickInput.oninput = () => nickInput.setCustomValidity('');
 code.value = new URL(location.href).searchParams.get('sala') || '';
 
-function resetVoiceButtons() {
-  voiceToggle.disabled = false;
-  voiceToggle.dataset.voice = 'off';
-  voiceLabel.textContent = voiceToggle.title = 'Ativar voz';
-  voiceLeave.hidden = true;
-  voiceStatus.textContent = '';
-}
+const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#room-settings')!,audio.preferences,{
+  leave:()=>void room?.leave(),
+  toggleVoice:()=>void toggleVoice(),
+  leaveVoice:()=>{
+    voice?.stop();
+    settings.update({microphone:'off',voiceMessage:''});
+  },
+});
 
-voiceToggle.onclick = async () => {
+let startingVoice:RoomVoice|undefined;
+
+async function toggleVoice() {
   const current = voice;
-  if (!current) return;
+  if (!current || startingVoice===current) return;
   if (current.active) {
     current.toggleMute();
-    voiceToggle.dataset.voice = current.muted ? 'muted' : 'live';
-    voiceLabel.textContent = voiceToggle.title = current.muted ? 'Ativar microfone' : 'Silenciar microfone';
+    settings.update({microphone:current.muted ? 'muted' : 'live'});
     return;
   }
-  voiceToggle.disabled = true;
-  voiceStatus.textContent = 'Ativando microfone…';
+  startingVoice = current;
+  settings.update({microphone:'starting',voiceMessage:'Ativando microfone…'});
   try {
     await current.start();
-    if (current !== voice || !current.active) return;
-    voiceToggle.dataset.voice = 'live';
-    voiceLabel.textContent = voiceToggle.title = 'Silenciar microfone';
-    voiceStatus.textContent = '';
-    voiceLeave.hidden = false;
-    applyVoiceEquipment(current);
+    if (current !== voice) return;
+    settings.update({microphone:current.active ? 'live' : 'off',voiceMessage:''});
+    if (current.active) applyVoiceEquipment(current);
   } catch (error) {
     if (current !== voice) return;
-    voiceStatus.textContent = !window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
+    settings.update({microphone:'off',voiceMessage:!window.isSecureContext ? 'O microfone precisa de HTTPS ou localhost.' :
       error instanceof DOMException && error.name === 'NotAllowedError' ?
-        'Permita o microfone no navegador e tente novamente.' : 'Não foi possível abrir o microfone.';
+        'Permita o microfone no navegador e tente novamente.' : 'Não foi possível abrir o microfone.'});
   } finally {
-    if (current === voice) voiceToggle.disabled = false;
+    if (startingVoice===current) startingVoice = undefined;
   }
-};
-
-voiceLeave.onclick = () => {
-  voice?.stop();
-  resetVoiceButtons();
-};
+}
 
 function showLobby(message: string) {
-  showBallotCountdown();
+  ballotCountdown.update();
   audio.leave();
   voice?.stop(false);
   voice = undefined;
   disguiseActive = false;
   matchRunning = false;
-  resetVoiceButtons();
+  settings.update({microphone:'off',voiceMessage:'',voiceDescription:undefined,roomLabel:''});
   game?.destroy();
   game = undefined;
   room = undefined;
-  roomCommand = undefined;
-  document.querySelector<HTMLDialogElement>('#room-settings')?.close();
+  settings.close();
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
@@ -213,7 +149,8 @@ async function connect(join: () => Promise<Room>) {
     const sendCommand = createRoomCommandSender((channel,command)=>{
       if (!ballotCountdown.open) joined.send(channel,command);
     });
-    roomCommand = sendCommand;
+    const characterPicker = mountCharacterPicker(document.querySelector<HTMLElement>('#characters')!,joined.sessionId,
+      character=>sendCommand('character',{character}));
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
     });
@@ -232,40 +169,17 @@ async function connect(join: () => Promise<Room>) {
     };
     closeDetails();
     const hudListeners = new AbortController();
-    bindActionShortcuts(session,hudListeners.signal);
     const updateFloorPlan = bindFloorPlan(session,hudListeners.signal);
-    const latency = document.querySelector<HTMLElement>('#connection-latency')!;
-    let latencyGeneration = 0;
-    const measureLatency = () => {
-      const generation = latencyGeneration;
-      joined.ping(ms=>{
-        if (hudListeners.signal.aborted || generation!==latencyGeneration) return;
-        const label = `${Math.round(ms)} ms`;
-        if (latency.textContent!==label) latency.textContent = label;
-        latency.hidden = false;
-      });
-    };
-    measureLatency();
-    const pingTimer = window.setInterval(measureLatency,3000);
-    hudListeners.signal.addEventListener('abort',()=>{
-      clearInterval(pingTimer);
-      latency.hidden = true;
-    },{once:true});
-    joined.onDrop(()=>{
-      latencyGeneration++;
-      latency.hidden = true;
-    });
-    joined.onReconnect(measureLatency);
+    mountConnectionLatency(document.getElementById('connection-latency-mount')!,joined,hudListeners.signal);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
         !session.querySelector('details[name="game-panels"][open]')) return;
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    for (const labels of portraitPlayers) labels.replaceChildren();
     document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
     document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
-    roomLabel.textContent = `Sala ${joined.roomId}`;
+    settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);
     lobbyInvite.value = inviteUrl.href;
@@ -311,6 +225,7 @@ async function connect(join: () => Promise<Room>) {
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
         ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
       ]));
+    const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
@@ -334,8 +249,11 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
+    },political,action=>sendCommand('plenary-action',{action}),{
+      send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
-    const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue));
+    const reactHud = mountReactHud();
+    const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
@@ -373,10 +291,16 @@ async function connect(join: () => Promise<Room>) {
       }
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
-    const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
-    const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
-    const reactHud = mountReactHud();
-    const appLauncher = mountAppLauncher();
+    const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action));
+    let appStatus:HudAppStatus = {};
+    const appCommands:Record<HudApp,()=>void> = {
+      bag:gameplay.openBag,equipment:gameplay.openEquipment,phone:gameplay.openPhone,
+      attributes:progression.open,surveillance:surveillance.open,settings:settings.open,
+      microphone:()=>void toggleVoice(),
+    };
+    const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
+    const appLauncher = mountAppLauncher(launchApp);
+    bindActionShortcuts(session,hudListeners.signal,launchApp,{j:political.toggleDossier,l:election.showPolls});
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -388,13 +312,12 @@ async function connect(join: () => Promise<Room>) {
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
-    },()=>assetsReady);
+    },()=>assetsReady,()=>void joined.leave());
     let phase: PlenaryView['phase'] = 'lobby';
-    let rosterKey = '';
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
-      showBallotCountdown(view.ballotCountdown);
+      ballotCountdown.update(view.ballotCountdown);
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
@@ -411,6 +334,10 @@ async function connect(join: () => Promise<Room>) {
         hud.showIncome(income,game?.playerHead());
       }
       panel.render(view);
+      const previousOffers = previousView?.politics?.incoming ?? [];
+      if (view.politics?.incoming.some(offer=>!previousOffers.some(previous=>previous.id===offer.id))) {
+        hud.notify('Oferta de documento','Abra o Dossiê com J.');
+      }
       political.render(view);
       election.render(view);
       gameplay.render(view);
@@ -426,7 +353,7 @@ async function connect(join: () => Promise<Room>) {
       hud.render(view);
       reactHud.render(view);
       mail.complaints(view.complaints);
-      mail.price(view.policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee);
+      mail.price(mailPublicationFee(view.policies));
       mail.phase(view.phase==='negotiation');
       const priorProgress = previousView?.politics?.progression;
       const currentProgress = view.politics?.progression;
@@ -436,7 +363,8 @@ async function connect(join: () => Promise<Room>) {
       }
       suppressXpEffect = false;
       progression.render(view);
-      appLauncher.render();
+      appStatus = hudAppStatus(view,assetsReady);
+      appLauncher.render(appStatus);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
@@ -445,7 +373,7 @@ async function connect(join: () => Promise<Room>) {
       game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
-      if (roomLabel.textContent!==label) roomLabel.textContent = label;
+      settings.update({roomLabel:label});
       if (phase===view.phase) {
         if (nextBallot) audio.cue('ballot');
         return;
@@ -458,8 +386,8 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      voiceToggle.setAttribute('aria-description',negotiating ? 'Voz por proximidade' :
-        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala');
+      settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
+        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
       if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
@@ -482,40 +410,25 @@ async function connect(join: () => Promise<Room>) {
       game?.reconcile(snapshot);
     });
     joined.onMessage('players',(players: Player[]) => {
-      panel.players(players);
       political.players(players);
-      election.players(players);
       hud.players(players);
       game?.update(players);
-      const self = players.find(player => player.id===joined.sessionId);
-      for (const [index,button] of buttons.entries()) {
-        const pressed = String(index===self?.character);
-        if (button.getAttribute('aria-pressed')!==pressed) button.setAttribute('aria-pressed',pressed);
-      }
-      if (matchRunning) return;
-      const key = JSON.stringify(players.map(({id,nick,character})=>[id,nick,character]));
-      if (rosterKey===key) return;
-      rosterKey = key;
-      for (const labels of portraitPlayers) labels.replaceChildren();
-      for (const player of players) {
-        const label = document.createElement('span');
-        label.textContent = player.nick;
-        label.title = player.nick;
-        portraitPlayers[player.character]?.append(label);
-      }
+      if (!matchRunning) characterPicker.render(players);
     });
     joined.onReconnect(() => { joined.send('mail-read'); suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
+      characterPicker.destroy();
       election.destroy();
       political.destroy();
       hud.destroy();
       appLauncher.destroy();
-      reactHud.destroy();      results.destroy();
+      progression.destroy();
+      reactHud.destroy();
+      results.destroy();
       projectPicker.destroy();
       mail.destroy();
-      progression.destroy();
       surveillance.destroy();
       security.destroy();
       gameplay.destroy();
@@ -555,11 +468,9 @@ lobby.onsubmit = event => {
   const nick = nickname();
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
-leave.onclick = () => void room?.leave();
-document.querySelector<HTMLButtonElement>('#lobby-back')!.onclick = () => void room?.leave();
 loadingBack.onclick = () => void room?.leave();
 for (const id of ['lobby-settings','plenary-settings']) {
-  document.getElementById(id)!.onclick = () => document.querySelector<HTMLDialogElement>('#room-settings')!.showModal();
+  document.getElementById(id)!.onclick = settings.open;
 }
 lobbyInvite.onclick = () => lobbyInvite.select();
 async function copyInvite(button:HTMLButtonElement, label:string) {

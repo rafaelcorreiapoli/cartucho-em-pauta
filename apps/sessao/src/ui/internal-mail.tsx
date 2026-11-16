@@ -78,7 +78,6 @@ export function ComplaintDesk({view,photos,submit}:{view:ComplaintView;photos:re
 export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number})=>void,
   notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void,submit:(id:number,photo?:number)=>void) {
   const host = document.querySelector<HTMLElement>('#phone-mail')!;
-  const originalParent = host.parentElement!;
   const root = createRoot(host);
   let choices:readonly AttachmentChoice[] = [];
   let reports:readonly ForensicReport[] = [];
@@ -91,6 +90,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   let pending = false;
   let error:string|null = null;
   let reviewing:number|undefined;
+  const visible = ()=>!host.hidden && !!host.closest('dialog[open]');
 
   function render() {
     const attachments = [...choices,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
@@ -168,17 +168,17 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         notify('Boletim da Corregedoria',`${infractionLabels[latest.kind]} confirmada · ${latest.accused}`);
       }
       complaints = updated;
-      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
+      if (visible() && !composing) render();
     },
     receive(next:readonly InternalNotice[]) {
       if (next[0] && next[0].id!==notices[0]?.id) notify('Correio Interno',next[0].subject);
       notices = next;
-      if (host.isConnected && !!host.closest('dialog[open]') && !composing) render();
+      if (visible() && !composing) render();
     },
     reports(next:readonly ForensicReport[]) {
       if (next[0] && next[0].notice!==reports[0]?.notice) notify('Perícia concluída',next[0].document.title);
       reports = next;
-      if (host.isConnected && !!host.closest('dialog[open]')) render();
+      if (visible()) render();
     },
     result(message:string|null) {
       if (!composing) return;
@@ -195,8 +195,8 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         pending = false;
         source = undefined;
       }
-      if (host.closest('dialog[open]')) render();
+      if (visible()) render();
     },
-    destroy() { root.unmount(); originalParent.append(host); },
+    destroy() { root.unmount(); },
   };
 }

@@ -2,10 +2,11 @@ import { canReachObject, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player, type Rect } from '../src/map';
 import { cameraSees, hideouts, spyRules, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
 
-type Device = SpyChannel & {owner:string; site:Hideout; until:number; alertAt:number; installedAt:number};
+type Hardware = {id:number; discoveredBy:Set<string>};
+type Device = SpyChannel & {owner:string; hardware:Hardware; site:Hideout; until:number; alertAt:number; installedAt:number};
 type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:number; target?:number; x:number;y:number; ends:number};
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
-  restore?:(id:string,kind:SpyDevice)=>boolean;
+  restore?:(id:string,kind:SpyDevice)=>WorldItem|undefined;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
   monitor?:(player:Player,duration:number)=>void;
   event?:(player:Player,kind:'spy-viewed'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string,device?:{kind:SpyDevice;id:number})=>void};
@@ -21,10 +22,12 @@ export class Surveillance {
   }
 
   private devices = new Map<number,Device>();
+  private recoveredHardware = new Map<number,Hardware>();
   private occupied = new Map<string,Device>();
   private jobs = new Map<string,Job>();
   private discoveries = new Map<string,Map<string,number>>();
   private selected = new Map<string,number>();
+  private deliveredCameraFrames = new Set<string>();
   private listening = new Map<string,number>();
   private muted = new Set<string>();
   private lastSound = new Map<string,number>();
@@ -34,12 +37,12 @@ export class Surveillance {
   private lastTick?:number;
 
   reset() {
-    this.devices.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
-    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
+    this.devices.clear(); this.recoveredHardware.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
+    this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
   }
 
   leave(id:string, permanent=false) {
-    this.jobs.delete(id); this.selected.delete(id); this.listening.delete(id); this.muted.delete(id); this.lastSound.delete(id);
+    this.jobs.delete(id); this.selected.delete(id); this.deliveredCameraFrames.delete(id); this.listening.delete(id); this.muted.delete(id); this.lastSound.delete(id);
     if (permanent) this.discoveries.delete(id);
   }
 
@@ -53,9 +56,25 @@ export class Surveillance {
     return device.owner===id || this.discoveries.get(id)?.get(device.site.id)===device.id;
   }
 
+  hasKnownForeignDevice(id:string) {
+    for (const deviceId of this.discoveries.get(id)?.values() ?? []) {
+      const device = this.devices.get(deviceId);
+      if (device && !device.removed && device.owner!==id) return true;
+    }
+    return false;
+  }
+
   channel(id:string, kind:SpyDevice) {
     const device = this.devices.get((kind==='wiretap' ? this.listening : this.selected).get(id) ?? -1);
     return device?.owner===id && !device.removed && device.kind===kind ? device : undefined;
+  }
+
+  takeCameraFrameCredit(id:string) {
+    if (this.deliveredCameraFrames.has(id)) return;
+    const device = this.channel(id,'spyCamera');
+    if (!device) return;
+    this.deliveredCameraFrames.add(id);
+    return {item:device.hardware.id,place:device.site.id};
   }
 
   origin({site:{x,y}}:Device,barriers?:readonly Rect[]):Motion { return {x,y,barriers}; }
@@ -101,7 +120,7 @@ export class Surveillance {
   act(player:Player,raw:unknown,now:number,access:Access) {
     if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
     const id = player.id;
-    if (raw.kind==='close') { this.selected.delete(id); this.listening.delete(id); this.muted.delete(id); return; }
+    if (raw.kind==='close') { this.selected.delete(id); this.deliveredCameraFrames.delete(id); this.listening.delete(id); this.muted.delete(id); return; }
     if (raw.kind==='cancel') { this.jobs.delete(id); return; }
     if ('channel' in raw && typeof raw.channel==='number') {
       const device = this.devices.get(raw.channel);
@@ -109,10 +128,11 @@ export class Surveillance {
       const selection = device.kind==='wiretap' ? this.listening : this.selected;
       if (raw.kind==='open') {
         this.selected.delete(id);
+        this.deliveredCameraFrames.delete(id);
         this.listening.delete(id);
         this.muted.delete(id);
         selection.set(id,device.id);
-        access.event?.(player,'spy-viewed',device.site.id,device);
+        if (device.kind==='wiretap') access.event?.(player,'spy-viewed',device.site.id,{kind:device.kind,id:device.hardware.id});
       }
       if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
       if (raw.kind==='mute' && this.listening.get(id)===device.id) {
@@ -145,7 +165,7 @@ export class Surveillance {
     const barriers = players[0]?.barriers;
     const elapsed = Math.min(100,now-(this.lastTick ?? now));
     this.lastTick = now;
-    if (!exploring) { this.jobs.clear(); this.selected.clear(); this.listening.clear(); this.muted.clear(); return; }
+    if (!exploring) { this.jobs.clear(); this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
       if (!player || !present(id) || !this.near(player,job.site) || player.x!==job.x || player.y!==job.y) {
@@ -199,7 +219,9 @@ export class Surveillance {
         const channel = ++this.serial;
         const name = `${item.kind==='wiretap' ? 'Grampo' : 'Câmera'} ${channel}`;
         const installed:Device = {id:channel,kind:item.kind,name,room:job.site.room,site:job.site,owner:id,
+          hardware:this.recoveredHardware.get(item.id) ?? {id:item.id,discoveredBy:new Set()},
           active:false,removed:false,alerts:true,until:now,alertAt:now,installedAt:now};
+        this.recoveredHardware.delete(item.id);
         this.devices.set(channel,installed);
         this.occupied.set(job.site.id,installed);
         access.event?.(player,'spy-installed',job.site.id,installed);
@@ -213,16 +235,21 @@ export class Surveillance {
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
-        if (known.get(job.site.id)!==device.id && device.owner!==id) {
+        known.set(job.site.id,device.id);
+        if (device.owner!==id && !device.hardware.discoveredBy.has(id)) {
+          device.hardware.discoveredBy.add(id);
           access.event?.(player,'spy-discovered',job.site.id,device);
         }
-        known.set(job.site.id,device.id);
       }
       access.feedback(id,device ? device.kind==='wiretap' ? 'Grampo encontrado.' : 'Câmera escondida encontrada.' : 'Nenhum dispositivo encontrado.');
     } else if (device && device.id===job.target && this.known(id,device)) {
-      if (job.kind==='recover' && !access.restore?.(id,device.kind)) {
-        access.feedback(id,'Inventário cheio.');
-        return;
+      if (job.kind==='recover') {
+        const recovered = access.restore?.(id,device.kind);
+        if (!recovered) {
+          access.feedback(id,'Inventário cheio.');
+          return;
+        }
+        this.recoveredHardware.set(recovered.id,device.hardware);
       }
       device.removed = true;
       this.occupied.delete(job.site.id);

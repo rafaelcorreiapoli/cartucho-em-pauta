@@ -7,17 +7,17 @@ import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
 import {canActOnFire,fireSites,type FireAction,type FireInteraction} from '../src/fire';
 import {Power} from './Power';
-import {canOperatePanel,type PowerAction,type PowerPanel} from '../src/power';
+import {canOperatePanel,powerPanels,powerRules,type PowerAction,type PowerPanel} from '../src/power';
 import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
-import type { GameplayWorld } from './gameplay-world';
+import { publishGameplay, type GameplayWorld } from './gameplay-world';
 import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditFee, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
 import { CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -68,7 +68,15 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  canFightCrisis() { return this.stability<30 && !!this.fire.view(true); }
+  canFightCrisis() { return this.stability<30 && (this.powerOut || !!this.fire.view(true)); }
+
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number) {
+    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration);
+  }
+
+  setAgendaCommerce(now:()=>number) {
+    this.economy.setAgendaCommerce(()=>({policies:this.activePolicies(now()),publicBudget:this.budget}));
+  }
 
   setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
     this.economy.setAgendaInventory(...inventory);
@@ -88,7 +96,7 @@ export class PlenaryMatch {
   refreshAgendaEligibility() {
     const scheduled = this.agenda.size+Number(this.phase==='ballot');
     const ballotsLeft = Math.max(scheduled,bills.length-this.round%bills.length);
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected);
+    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -100,11 +108,12 @@ export class PlenaryMatch {
     if (this.phase==='ballot' && this.npcIds.has(id) && !this.npcVotes.has(id)) this.npcVotes.set(id,vote);
   }
 
-  private settleBudget(ids:string[]) {
+  private settleBudget(ids:string[],now:number) {
     const planned = ids.length*rules.salary;
     const salaryShare = Math.floor(this.budget*rules.salaryShare*10)/10;
     const publicShare = this.budget-salaryShare;
-    const publicPaid = Math.min(rules.publicDuty,publicShare+Math.max(0,salaryShare-planned));
+    const publicDuty = rules.publicDuty-(this.energySavingsActive(now) ? energySavings.publicDutyDiscount : 0);
+    const publicPaid = Math.min(publicDuty,publicShare+Math.max(0,salaryShare-planned));
     const salaryFunds = Math.min(planned,this.budget-publicPaid);
     // Equal salaries rounded down to a thousand reais. The remainder stays in the budget.
     const paid = ids.length ? Math.floor(Math.round(salaryFunds*10)/ids.length)/10 : 0;
@@ -117,14 +126,18 @@ export class PlenaryMatch {
     this.cash.publicDuty += publicPaid;
     this.cash.salaries += paid*ids.length;
     this.treasuryReputation.clear();
-    this.stability = clamp(this.stability-Math.ceil(rules.publicDutyPenalty*(1-publicPaid/rules.publicDuty)));
+    this.stability = clamp(this.stability-Math.ceil(rules.publicDutyPenalty*(1-publicPaid/publicDuty)));
     return payments;
+  }
+
+  private advertisementMultiplier(now:number) {
+    return (this.policies.get('campaign') ?? 0)>now ? campaignPolicyMultiplier : 1;
   }
 
   private renew(now:number) {
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
-    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids));
+    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids,now),this.advertisementMultiplier(now));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
       this.votes.delete(eliminated);
@@ -150,6 +163,8 @@ export class PlenaryMatch {
   private election = new ElectionCycle();
   private objector?:string;
   private popularity = (id:string) => this.economy.popularity(id);
+  private eventSequence = 0;
+  private readonly receivedEvents = new Set<number>();
   private readonly filedDocuments = new Set<number>();
   private hearingTarget?: string;
   private cassationAt?:number;
@@ -198,6 +213,7 @@ export class PlenaryMatch {
     this.policies.clear();
     this.treasuryBonus = undefined;
     this.complaints.reset();
+    this.receivedEvents.clear();
     this.filedDocuments.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
@@ -257,8 +273,30 @@ export class PlenaryMatch {
     else if (this.electorate.size<Math.min(3,this.initialPlayers)) this.finish(undefined,'Partida encerrada: faltaram jogadores.');
   }
 
-  private publishActivity(player:Player,type:GameplayEvent['type'],now:number) {
-    this.economy.recordGameplay({type,actor:player.id,at:now,position:{x:player.x,y:player.y},witnesses:[]});
+  private publishActivity(player:Player,type:GameplayEvent['type'],now:number,
+    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'>) {
+    publishGameplay({players:[],now,nextEventId:()=>++this.eventSequence,publish:event=>this.recordGameplay(event)},
+      player,type,{...details,witnesses:[]});
+  }
+
+  private recordGameplay(event:GameplayEvent):boolean {
+    if (event.eventId!==undefined) {
+      if (this.receivedEvents.has(event.eventId)) return false;
+      this.receivedEvents.add(event.eventId);
+    }
+    if (event.type==='filed' && event.item!==undefined) {
+      if (this.filedDocuments.has(event.item)) return false;
+      this.filedDocuments.add(event.item);
+    }
+    if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
+      if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
+      this.agenda.add(event.project);
+      this.refreshAgendaEligibility();
+    }
+    this.complaints.record(event,this.started);
+    this.economy.recordGameplay(event);
+    if (event.type==='spy-removed' || event.type==='advertisement-aired') this.refreshAgendaEligibility();
+    return true;
   }
 
   act(player:Player, action:Action, now:number) {
@@ -282,7 +320,8 @@ export class PlenaryMatch {
     if (action==='audit') {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
       this.publishActivity(player,'audit-performed',now);
-      const note = this.economy.audit(player.id,this.round,1);
+      const fee = (this.policies.get('bankAudit') ?? 0)>now ? bankAuditFee : 0;
+      const note = this.economy.audit(player.id,this.round,1,fee);
       if (note) this.auditNotes.set(player.id,note);
       const finding = this.reportedFraud ? 'O Painel já mostra os números corrigidos.' :
         this.fraud ? 'Fraude no projeto. Vá ao Painel para corrigir os números.' : 'Os números do projeto conferem.';
@@ -316,7 +355,7 @@ export class PlenaryMatch {
     }
   }
 
-  gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):GameplayWorld {
+  gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
@@ -346,19 +385,8 @@ export class PlenaryMatch {
       payNpc:(from,to,amount)=>this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
-      publish:event=>{
-        if (event.type==='filed' && event.item!==undefined) {
-          if (this.filedDocuments.has(event.item)) return;
-          this.filedDocuments.add(event.item);
-        }
-        if (this.phase==='negotiation' && event.type==='filed' && event.project!==undefined && bills[event.project]) {
-          if (!this.agenda.size && event.project!==this.projectIndex) this.voteIntents.clear();
-          this.agenda.add(event.project);
-          this.refreshAgendaEligibility();
-        }
-        this.complaints.record(event,this.started);
-        this.economy.recordGameplay(event);
-      },
+      nextEventId:()=>++this.eventSequence,
+      publish:event=>this.recordGameplay(event),
     };
   }
 
@@ -482,11 +510,9 @@ export class PlenaryMatch {
       }
       case 'transfer':
         if (!this.canReceivePix(action.to) || !this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round)) return false;
-        this.economy.recordGameplay({type:'pix-sent',actor:id,target:action.to,amount:action.amount,
-          at:now,position:player,witnesses:[]});
+        this.publishActivity(player,'pix-sent',now,{target:action.to,amount:action.amount});
         const receiver = players.find(other=>other.id===action.to);
-        if (receiver) this.economy.recordGameplay({type:'pix-received',actor:receiver.id,target:id,amount:action.amount,
-          at:now,position:receiver,witnesses:[]});
+        if (receiver) this.publishActivity(receiver,'pix-received',now,{target:id,amount:action.amount});
         return true;
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
@@ -534,8 +560,7 @@ export class PlenaryMatch {
         if (!this.at(player,'press')) return;
         const advertisement = this.election.advertise(id,spend);
         if (!advertisement) return;
-        this.economy.recordGameplay({type:'advertisement-aired',actor:id,at:now,position:player,witnesses:[],
-          duration:this.election.timeUntilRenewal(now)});
+        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now),amount:rules.advertisementCost});
         return {...advertisement,character:player.character};
       }
       case 'speech':
@@ -567,6 +592,10 @@ export class PlenaryMatch {
     const impact = bill[vote];
     if (vote==='yes' && bill.effect?.kind==='allowance') {
       return {...impact,budget:-this.allowancePerMandate(bill.effect.perMandate)*this.votingPlayers()};
+    }
+    if (vote==='yes' && bill.effect?.kind==='pinga-distribution') {
+      const cost = this.pingaProgramCost();
+      return {...impact,budget:cost<=this.budget ? -cost : 0};
     }
     if (vote==='no') return {...impact,budget:Math.min(0,impact.budget)};
     return {
@@ -600,13 +629,19 @@ export class PlenaryMatch {
     this.economy.recordOfficialScandal();
   }
 
+  private energySavingsActive(now:number) { return (this.policies.get('energySavings') ?? 0)>now; }
+
+  private powerCooldown(now:number) {
+    return this.energySavingsActive(now) ? energySavings.sabotageCooldown : powerRules.cooldownMs;
+  }
+
   private canUsePower(now:number) {
     return this.phase==='negotiation' && this.ballotCountdown(now)===undefined;
   }
 
   private canSabotagePower(id:string,now:number) {
     return this.electorate.size-this.disconnected.size>=2 && this.infiltrators.has(id) &&
-      this.canUsePower(now) && this.canHandleObjects(id,now) && this.power.canSabotage(now);
+      this.canUsePower(now) && this.canHandleObjects(id,now) && this.power.canSabotage(now,this.powerCooldown(now));
   }
 
   private canOperatePower(player:Player,panel:PowerPanel,now:number) {
@@ -617,14 +652,22 @@ export class PlenaryMatch {
   actOnPower(player:Player,action:PowerAction,now:number) {
     if (!this.canOperatePower(player,action.panel,now)) return;
     if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
-    return this.power.act(player.id,action,now);
+    return this.power.act(player.id,action,now,this.powerCooldown(now));
   }
 
   advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
-    this.power.advance(now,(id,panel)=>{
+    const repairedBy = this.power.advance(now,(id,panel)=>{
       const player = playerAt(id);
       return !!player && this.canOperatePower(player,panel,now);
     });
+    if (!repairedBy) return;
+    for (const panel of [0,1] as const) {
+      const id = repairedBy[panel];
+      const player = id && playerAt(id);
+      if (player) this.publishActivity(player,'power-repaired',now,{
+        amount:this.stability,place:roomAt(player)===powerPanels[panel].name ? 'inside-crisis-room' : undefined,
+      });
+    }
   }
 
   private canUseFire(player:Player,now:number) {
@@ -672,11 +715,17 @@ export class PlenaryMatch {
       return;
     }
     if (!hasExtinguisher || !this.fire.extinguish(site)) return;
-    this.economy.recordGameplay({type:'fire-extinguished',actor:player.id,at:now,position:player,witnesses:[],amount:this.stability});
+    const insideRoom = roomAt(player)===fireSites[site].name;
+    this.publishActivity(player,'fire-extinguished',now,
+      {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
     return 'Incêndio apagado.';
   }
 
-  advance(now:number) {
+  private pingaRecipients() { return [...this.electorate].filter(id=>this.canVote(id) && !this.disconnected.has(id)); }
+
+  private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
+
+  advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
@@ -748,11 +797,13 @@ export class PlenaryMatch {
     const needed = this.billQuorum();
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');
-    const balance = this.budget+Math.min(0,impact.budget);
     const effect = passed ? bills[this.projectIndex].effect : undefined;
+    const servesPinga = effect?.kind==='pinga-distribution' && impact.budget<0 && distributePinga;
+    const balance = this.budget+(effect?.kind==='pinga-distribution' && !servesPinga ? 0 : Math.min(0,impact.budget));
+    if (servesPinga) servesPinga(this.pingaRecipients());
     if (effect?.kind==='fire-safety' && balance>=0) this.fire.increaseSafety();
     if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
-    if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+policyDuration);
+    if (effect?.kind==='policy' && balance>=0) this.policies.set(effect.policy,now+(effect.duration ?? policyDuration));
     const payout = effect?.kind==='allowance' ? this.allowancePerMandate(effect.perMandate) : 0;
     this.economy.billResult(this.votes,passed,bills[this.projectIndex].yes.stability>0);
     const previous = {budget:this.budget,stability:this.stability};
@@ -823,7 +874,7 @@ export class PlenaryMatch {
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
-      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection()) : undefined,
+      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,

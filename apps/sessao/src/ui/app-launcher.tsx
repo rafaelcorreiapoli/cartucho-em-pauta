@@ -1,23 +1,13 @@
 import {useEffect, useState, type CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 
-export const apps = [
-  {id:'open-equipment',label:'Equipamentos',icon:'inventory',key:'E'},
-  {id:'open-attributes',label:'Personagem',icon:'chart',key:'P'},
-  {id:'open-phone',label:'Celular',icon:'phone',key:'C'},
-  {id:'open-surveillance',label:'Vigilância',icon:'camera',key:'V'},
-  {id:'voice-toggle',label:'Microfone',icon:'mic',key:'M'},
-  {id:'open-settings',label:'Configurações',icon:'settings',key:'K'},
-] as const;
-
-type AppId = typeof apps[number]['id'];
-type AppStatus = Partial<Record<AppId,{hidden:boolean; badge?:string}>>;
+import {apps, type HudAppStatus, type LaunchHudApp} from '../hud-apps';
 
 function Icon({name}:{name:string}) {
   return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
 }
 
-export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=>void}) {
+export function AppLauncher({status,launch}:{status:HudAppStatus;launch:LaunchHudApp}) {
   const [open,setOpen] = useState(false);
   useEffect(()=>{
     if (!open) return;
@@ -36,7 +26,7 @@ export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=
   },[open]);
   return <>
     {open && <section id="congress-app-panel" className="congress-app-panel" aria-label="Aplicativos do parlamentar">
-      {apps.filter(app=>!status[app.id]?.hidden).map((app,index)=><button key={app.id} tabIndex={-1} type="button"
+      {apps.filter(app=>status[app.id]).map((app,index)=><button key={app.id} tabIndex={-1} type="button"
         className="congress-app-toggle congress-app" aria-label={app.label} title={app.label} aria-keyshortcuts={app.key}
         style={{'--app-index':index} as CSSProperties}
         onClick={()=>{setOpen(false);launch(app.id);}}>
@@ -44,13 +34,13 @@ export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=
         {status[app.id]?.badge && <strong className="congress-app-badge">{status[app.id]?.badge}</strong>}
       </button>)}
     </section>}
-    <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Mochila" title="Mochila (O)" aria-keyshortcuts="O"
-      onClick={()=>{setOpen(false);document.getElementById('open-bag')?.click();}}>
+    {status.bag && <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Mochila" title="Mochila (O)" aria-keyshortcuts="O"
+      onClick={()=>{setOpen(false);launch('bag');}}>
       <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M8 7V5a4 4 0 0 1 8 0v2M6 7h12l2 4v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9zM4 13h16M9 12v5h6v-5"/>
       </svg>
       <kbd className="slot-key" aria-hidden="true">O</kbd>
-    </button>
+    </button>}
     <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Aplicativos" title="Aplicativos (U)" aria-keyshortcuts="U" aria-expanded={open}
       aria-controls={open ? 'congress-app-panel' : undefined} onClick={()=>setOpen(value=>!value)}>
       <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -61,21 +51,15 @@ export function AppLauncher({status,launch}:{status:AppStatus;launch:(id:AppId)=
   </>;
 }
 
-export function mountAppLauncher() {
+export function mountAppLauncher(launch:LaunchHudApp) {
   const root = createRoot(document.getElementById('congress-apps')!);
-  const controls = apps.map(app=>({id:app.id,button:document.getElementById(app.id)!}));
   let previous = '';
   return {
-    render() {
-      const status:AppStatus = {};
-      for (const {id,button} of controls) {
-        const badge = id!=='voice-toggle' && id!=='open-settings' ? button.querySelector('span:not([hidden]):not(.sr-only)')?.textContent?.trim() : undefined;
-        status[id] = {hidden:id!=='open-settings' && button.hidden,badge};
-      }
+    render(status:HudAppStatus) {
       const key = JSON.stringify(status);
       if (key===previous) return;
       previous = key;
-      root.render(<AppLauncher status={status} launch={id=>document.getElementById(id)?.click()}/>);
+      root.render(<AppLauncher status={status} launch={launch}/>);
     },
     destroy() { root.unmount(); },
   };

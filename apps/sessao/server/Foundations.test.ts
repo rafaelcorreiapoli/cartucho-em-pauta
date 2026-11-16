@@ -9,7 +9,8 @@ import { findRoute } from '../src/navigation';
 import { npcs, snackBar, type NpcId } from '../src/npcs';
 import { weapons } from '../src/weapons';
 import { applyInput, restMovement, STEP_MS } from '../src/movement';
-import { foods, type FoodKind } from '../src/food';
+import { foods } from '../src/food';
+import { policyDuration, recoveryPolicy } from '../src/plenary';
 
 function player(id:string, x:number, y:number, character=0):Player {
   return {id,nick:id,x,y,character,direction:0,moving:false};
@@ -426,7 +427,7 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
 });
 
 
-const consumableCases:[FoodKind,number,number][] = [
+const consumableCases:[keyof typeof foods,number,number][] = [
   ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40],
   ['coxinha',42,40], ['coffee',22,70], ['energyDrink',22,40], ['mortadellaRoll',47,50],
   ['lobster',100,40], ['picanha',92,40],
@@ -707,13 +708,16 @@ test('Bolsa Churrasco restores HP once per second while the policy is active',()
   game.tick(world,true);
   expect(game.view(bob,world).vitality?.hp).toBe(74);
   world.hasMandate = id=>id===bob.id;
-  world.policies = {recovery:120_000};
-  world.now = 1000;
+  world.policies = {recovery:policyDuration};
+  world.now = recoveryPolicy.tickMs-1;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBe(74);
+  world.now++;
   game.tick(world,true);
   game.tick(world,true);
-  expect(game.view(bob,world).vitality?.hp).toBe(76);
+  expect(game.view(bob,world).vitality?.hp).toBe(74+recoveryPolicy.hpPerTick);
   world.policies = {};
-  world.now += 1000;
+  world.now += recoveryPolicy.tickMs;
   game.tick(world,true);
-  expect(game.view(bob,world).vitality?.hp).toBe(76);
+  expect(game.view(bob,world).vitality?.hp).toBe(74+recoveryPolicy.hpPerTick);
 });

@@ -2,7 +2,7 @@ import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
-import { terminals, type InteractionCue } from '../src/gameplay';
+import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
@@ -61,16 +61,17 @@ test('clients share movement and voice, then receive private roles and payments'
     track(second);
     let seq = 0;
     const findFirst = () => seen.find(player => player.id===first.sessionId);
-    const until = async (ready: () => boolean) => {
-      for (let attempt=0;attempt<85;attempt++) {
+    const until = async (ready: () => boolean, pollMs=35) => {
+      for (let attempt=0;attempt<85*35/pollMs;attempt++) {
         if (ready()) return;
-        await Bun.sleep(35);
+        await Bun.sleep(pollMs);
       }
       throw new Error('Expected room update did not arrive');
     };
     await until(() => seen.length===2);
     const start = findFirst()!;
     first.send('character',{character:2,token:1});
+    first.send('character',{character:1,token:1});
     for (let step=0;step<10;step++) {
       first.send('input',{seq:++seq,motion:{x:0,y:-1}});
       await Bun.sleep(50);
@@ -185,15 +186,27 @@ test('clients share movement and voice, then receive private roles and payments'
       }
       peer.send('input',{seq:sequence,revision:control.revision,destination,sprint:true});
       for (let attempt=0;attempt<350;attempt++) {
-        const player = positions.get(peer.sessionId)!;
-        if (Math.hypot(player.x-destination.x,player.y-destination.y)<2) return;
+        await until(()=> {
+          const latest = controls.get(peer.sessionId)!;
+          return latest.ack>=sequence || latest.revision!==control.revision;
+        },5);
+        const latest = controls.get(peer.sessionId)!;
+        const {x,y,knockedOut} = latest.player;
+        if (latest.revision===control.revision && Math.hypot(x-destination.x,y-destination.y)<2) return;
+        if (latest.revision!==control.revision || knockedOut || !latest.route.length) {
+          throw new Error(`Walk to ${destination.x},${destination.y} stopped at ${x},${y} (ack ${latest.ack}, revision ${control.revision} → ${latest.revision})`);
+        }
         peer.send('input',{seq:++sequence,revision:control.revision,sprint:true});
-        await Bun.sleep(52);
       }
-      throw new Error('Could not reach the requested station');
+      throw new Error(`Could not reach ${destination.x},${destination.y} in 350 acknowledged steps`);
     }
     await Promise.all([second,third].map((peer,index)=>walkTo(peer,{x:140+index*12,y:146},true)));
     const sourceBefore = secondView!.politics!.wallet;
+    const sourceIncomeBefore = secondView!.politics!.walletIncome;
+    const sourceWalletWithoutNewIncome = ()=> {
+      const politics = secondView?.politics;
+      return politics && politics.wallet-(politics.walletIncome-sourceIncomeBefore);
+    };
     const balanceBefore = thirdView!.politics!.wallet;
     const completedBefore = thirdView!.politics!.missions.completed.length;
     const thirdRewards = () => thirdView!.politics!.missions.completed.slice(completedBefore)
@@ -202,7 +215,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('politics',{...transfer,token:undefined});
     second.send('politics',transfer);
     second.send('politics',{...transfer,amount:1});
-    await until(() => secondView?.politics?.wallet===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
+    await until(() => sourceWalletWithoutNewIncome()===sourceBefore-2 && thirdView?.politics?.wallet===balanceBefore+2+thirdRewards());
     expect(firstView!.politics?.wallet).toBe(8);
     expect(firstView!.politics?.evidence).toEqual([]);
     expect(firstView!.politics?.ledger).toEqual([]);
@@ -222,7 +235,7 @@ test('clients share movement and voice, then receive private roles and payments'
     second.send('election',{kind:'advertise',token:1850});
     second.send('election',{kind:'advertise',token:1850});
     second.send('politics',{...transfer,token:1850});
-    await until(() => secondView?.politics?.wallet===sourceBefore-4 &&
+    await until(() => sourceWalletWithoutNewIncome()===sourceBefore-2-ELECTION_RULES.advertisementCost &&
       firstView?.election?.polls.some(entry => entry.id===second.sessionId && entry.race==='deputy')===true);
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.advertised).toBe(true);
@@ -256,7 +269,8 @@ test('clients share movement and voice, then receive private roles and payments'
     await walkTo(second,stations.press);
     second.send('election',{kind:'advertise',token:1870});
     await until(() => secondView?.election?.personal?.advertised===true);
-    expect(secondView!.politics?.wallet).toBe(6);
+    const secondMatchWallet = secondView!.politics!;
+    expect(secondMatchWallet.wallet-secondMatchWallet.walletIncome).toBe(8-ELECTION_RULES.advertisementCost);
     expect(thirdView!.politics?.wallet).toBe(8);
 
 
@@ -318,8 +332,8 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
-    await Promise.allSettled(rooms.map(room => room.leave()));
     server.kill();
+    await Promise.allSettled(rooms.map(room => room.leave(false)));
     await server.exited;
   }
 },65_000);
@@ -478,6 +492,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>interactionCues.get(passenger.sessionId)?.length===1);
     expect(interactionCues.get(passenger.sessionId)).toEqual(['cash']);
     expect(interactionCues.get(carrier.sessionId)).toEqual([]);
+    // Replay a delivered event through the same publisher that sends browser audio cues.
+    const playback = Reflect.get(room,'gameplayWorld').call(room);
+    const cueEvent:GameplayEvent = {type:'delivered',actor:passenger.sessionId,item:999,place:'treasury',
+      position:terminals.treasury.point,at:playback.now,eventId:playback.nextEventId(),witnesses:[]};
+    playback.publish(cueEvent);
+    playback.publish({...cueEvent});
+    // The stamp is an ordering barrier on the same socket.
+    playback.publish({...cueEvent,type:'stamped',eventId:playback.nextEventId()});
+    await wait(()=>interactionCues.get(passenger.sessionId)?.includes('stamp')===true);
+    expect(interactionCues.get(passenger.sessionId)).toEqual(['cash','cash','stamp']);
+    expect(interactionCues.get(carrier.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
     carrier.send('gameplay',{action:{kind:'talk',target:'vendor'},token:3320});
@@ -510,19 +535,38 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);
 
+    for (const playerAccount of [carrierAccount,account]) {
+      Reflect.set(playerAccount.agenda,'missions',[]);
+      Reflect.set(playerAccount.agenda,'missionDeck',['vigilanciaInstitucional','cafe','passeio','selfieSolo']);
+    }
+    match.refreshAgendaEligibility();
+    const cameraMission = (id:string)=>views.get(id)?.politics?.missions.active.find(mission=>mission.kind==='vigilanciaInstitucional');
+    const completedCameraMission = ()=>views.get(carrier.sessionId)?.politics?.missions.completed.find(mission=>mission.kind==='vigilanciaInstitucional');
+    await wait(()=>cameraMission(carrier.sessionId)?.current===0 && cameraMission(passenger.sessionId)?.current===0);
+
     carrier.send('security-camera',{kind:'open',token:3590});
     await Bun.sleep(150);
     expect(gameplay()?.security).toBeUndefined();
     expect(securityFrames.has(carrier.sessionId)).toBe(false);
+    expect(cameraMission(carrier.sessionId)?.current).toBe(0);
 
     Object.assign(positions.get(carrier.sessionId)!.player,{x:securityRoom.terminal.x,y:securityRoom.terminal.y+15});
     await wait(()=>!!gameplay()?.security);
     carrier.send('security-camera',{kind:'open',token:3600});
-    await wait(()=>securityFrames.get(carrier.sessionId)?.camera==='corridor');
+    await wait(()=>securityFrames.get(carrier.sessionId)?.camera==='corridor' && cameraMission(carrier.sessionId)?.current===1);
+    carrier.send('security-camera',{kind:'select',camera:'corridor',token:3601});
+    carrier.send('security-camera',{kind:'select',camera:'invalid',token:3602});
+    await Bun.sleep(150);
+    expect(cameraMission(carrier.sessionId)?.current).toBe(1);
+    expect(completedCameraMission()).toBeUndefined();
+    const xpBeforeCamera = views.get(carrier.sessionId)!.politics!.progression.xp;
     Object.assign(positions.get(passenger.sessionId)!.player,{x:219,y:216});
     carrier.send('security-camera',{kind:'select',camera:'coffee',token:3610});
     await wait(()=>securityFrames.get(carrier.sessionId)?.scene.people.some(person=>person.id===passenger.sessionId)===true);
     expect(gameplay()?.security?.camera).toBe('coffee');
+    await wait(()=>completedCameraMission()?.current===2);
+    expect(views.get(carrier.sessionId)!.politics!.progression.xp).toBe(xpBeforeCamera+25);
+    expect(cameraMission(passenger.sessionId)?.current).toBe(0);
     expect(securityFrames.has(passenger.sessionId)).toBe(false);
 
     Object.assign(positions.get(carrier.sessionId)!.player,{x:712,y:337});
@@ -576,6 +620,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>!snapshots.get(carrier.sessionId)?.carrying);
     await wait(()=>reconnected && views.has(passenger.sessionId) && snapshots.get(passenger.sessionId)?.carried===undefined);
     expect(reconnectCount()).toBe(beforeReconnect+1);
+    let latency:number|undefined;
+    passenger.ping(milliseconds=>{ latency = milliseconds; });
+    await wait(()=>latency!==undefined);
+    expect(latency).toBeGreaterThanOrEqual(0);
     expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
     expect(views.get(passenger.sessionId)?.politics?.missions).toEqual(agendaBeforeReconnect);
     expect(progression()).toEqual(progressionBeforeReconnect);
@@ -650,14 +698,28 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     for (let i=2;i<=6;i++) rooms.push(await client.joinById(host.roomId,{nick:`Pessoa ${i}`}));
     const states = new Map<string,Player[]>();
     const phases = new Map<string,PlenaryView['phase']>();
+    const npcCounts = new Map<string,number|undefined>();
+    const roles = new Map<string,PlenaryView['role']>();
     for (const peer of rooms) {
       peer.onMessage('players',(players:Player[])=>states.set(peer.sessionId,players));
-      peer.onMessage('plenary',(view:PlenaryView)=>phases.set(peer.sessionId,view.phase));
+      peer.onMessage('plenary',(view:PlenaryView)=>{
+        phases.set(peer.sessionId,view.phase);
+        npcCounts.set(peer.sessionId,view.lobbyNpcCount);
+        roles.set(peer.sessionId,view.role);
+      });
       for (const key of ['control','mail-state','mail-reports','photo-state']) peer.onMessage(key,()=>{});
     }
-    host.send('start-match',{npcs:3,token:1});
-    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
+    host.send('lobby-npc-count',{count:3,token:1});
+    await wait(()=>rooms.every(peer=>npcCounts.get(peer.sessionId)===3));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    const guest = rooms[1];
+    guest.send('lobby-npc-count',{count:0,token:1});
+    const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
+    await wait(()=>commandTokens.get(guest.sessionId)===1);
+    expect(Reflect.get(room,'lobbyNpcCount')).toBe(3);
+    host.send('start-match',{infiltrators:2,token:2});
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
+    expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
     const observer = Reflect.get(room,'players').get(host.sessionId).player as Player;
     const [walkingNpc] = Reflect.get(room,'parliamentarians').players as Player[];
     Object.assign(observer,{x:30,y:197});

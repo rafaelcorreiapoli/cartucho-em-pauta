@@ -1,24 +1,27 @@
-import { createElement as createIcon, Hand, Shirt, Footprints, Cpu } from 'lucide';
+import {contextActionKeys} from './ui/context-action-keys';
+import {mountStationShortcuts} from './ui/station-shortcuts';
+import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
 import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
-import { weapons } from './weapons';
 import { documentRules } from './internal-mail';
+import { mountElectionStationActions } from './ui/election-station-actions';
+import type { ElectionAction } from './elections';
+import { mountLegislativeStationActions } from './ui/legislative-station-actions';
 import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { equippedWeapon, equipmentSlots, xray } from './equipment';
+import { equippedWeapon, xray } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
 import { infirmary } from './medical';
 import { npcs } from './npcs';
-import { button as hudButton, glyph as hudGlyph, itemPortrait, node } from './gameplay-ui';
+import { button as hudButton, glyph as hudGlyph, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
 import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
-import { setCharacterPortrait } from './character-art';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
-import { money } from './politics';
-import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type PlenaryView, type Station } from './plenary';
+import { money, type PoliticsAction } from './politics';
+import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
@@ -28,8 +31,8 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void) {
-  const roleBadge = element<HTMLButtonElement>('profile-role');
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
   let incomeEffect:HTMLElement | undefined;
@@ -38,93 +41,20 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const {notify} = notices;
   const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
-  const shortcuts = element('station-shortcuts');
-  const interviewHint = element('interview-hint');
-  function addStationButton(action:{station:Station; icon:string; label:string}) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'hud-button hud-button--secondary';
-    button.dataset.station = action.station;
-    button.hidden = true;
-    const label = document.createElement('span');
-    label.textContent = action.label;
-    const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    icon.classList.add('hud-glyph');
-    icon.setAttribute('aria-hidden','true');
-    const glyph = document.createElementNS(icon.namespaceURI,'use');
-    glyph.setAttribute('href','#icon-'+action.icon);
-    icon.append(glyph);
-    button.append(icon,label);
-    shortcuts.append(button);
-    return button;
-  }
-
-  const quickActions = ([
-    {target:'grant',panel:'institutional-dock',label:'Aplicar verba',station:'cabinet',icon:'wallet'},
-    {target:'call-cassation',label:'Convocar cassação',station:'panel',icon:'ballot'},
-    {target:'publish',panel:'politics-dock',label:'Divulgar evidência',station:'press',icon:'document'},
-  ] as const).map(action => {
-    const control = element<HTMLButtonElement>(action.target);
-    const button = addStationButton(action);
-    button.onclick = () => {
-      if ('panel' in action) {
-        element<HTMLDetailsElement>(action.panel).open = true;
-        const field = control.closest('form')?.querySelector<HTMLElement>('.game-choice');
-        field?.focus();
-      } else control.click();
-    };
-    return {button,control,station:action.station};
-  });
-  const activityButtons = (Object.keys(roomActivities) as RoomActivity[]).map(station => {
-    const activity = roomActivities[station];
-    const button = addStationButton({...activity,station});
-    button.onclick = () => sendActivity(station);
-    return {button,station};
+  const shortcuts = mountStationShortcuts(element('station-shortcuts'),kind=>{
+    switch (kind) {
+      case 'grant':
+      case 'hearing': institutional.openInstitutional(); return;
+      case 'cassation': institutional.sendInstitutional({kind:'call-cassation'}); return;
+      case 'publish': institutional.openDossier(); return;
+      default: sendActivity(kind);
+    }
   });
   const fieldActions = element('field-actions');
   const progressRoot = createRoot(element('office-progress-mount'));
   let progressKey = '';
-  const officeBadge = element('own-office');
-  const gearStrip = element('equipped-gear');
-  const gearSlots = [
-    {label:'Mãos',icon:Hand},
-    {label:'Tronco',icon:Shirt},
-    {label:'Pés',icon:Footprints},
-    {label:'Acessório 1',icon:Cpu},
-    {label:'Acessório 2',icon:Cpu},
-  ].map(({label,icon})=>{
-    const slot = node('div');
-    slot.className = 'gear-slot';
-    slot.setAttribute('role','listitem');
-    slot.title = label;
-    const empty = node('span');
-    empty.className = 'gear-slot-empty';
-    empty.setAttribute('aria-label',label+' · vazio');
-    empty.append(createIcon(icon,{class:'hud-glyph','aria-hidden':'true'}));
-    slot.append(empty);
-    gearStrip.append(slot);
-    return {slot,empty};
-  });
-  const gearTiles = new Map<number,{tile:HTMLElement; timer:HTMLElement}>();
-  const secondsLabel = new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1});
-  const concealmentTimer = node('span');
-  concealmentTimer.className = 'equipped-gear-tile';
-  concealmentTimer.setAttribute('role','listitem');
-  const concealmentLabel = node('span');
-  concealmentLabel.className = 'equipped-gear-timer';
-  const concealmentFooter = node('span');
-  concealmentFooter.className = 'equipped-gear-footer';
-  concealmentFooter.append(concealmentLabel);
-  concealmentTimer.append(itemPortrait('mensalUnderwear'),concealmentFooter);
-  const equipmentControls = {
-    xray:{key:'X',action:'scan-xray'},
-    binoculars:{key:'B',action:'use-binoculars'},
-    megaphone:{key:'H',action:'toggle-megaphone'},
-    voiceModulator:{key:'U',action:'toggle-modulator'},
-  } as const;
-  const weaponControl = {key:'Space',action:'attack'} as const;
-  type EquipmentControl = typeof equipmentControls[keyof typeof equipmentControls] | typeof weaponControl;
-  function useEquipped(kind:EquipmentControl['action']) {
+  const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
+  function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
     const voting = previous?.phase==='ballot' || !!previous?.cassation;
     if ((previous?.phase!=='negotiation' && !(voting && (kind==='attack' || kind==='toggle-modulator'))) || !own || own.knockedOut || own.carrying || own.carried) return false;
@@ -132,75 +62,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         !equipped?.some(item=>equipmentControls[item.kind as keyof typeof equipmentControls]?.action===kind)) return false;
     sendField({kind});
     return true;
-  }
-
-  function renderEquipped(state?:GameplayView) {
-    const equipped = state?.equipped ?? [];
-    for (const [id,{tile}] of gearTiles) {
-      if (equipped.some(item=>item.id===id)) continue;
-      tile.remove();
-      gearTiles.delete(id);
-    }
-    for (const item of equipped) {
-      const name = objects[item.kind].name;
-      let entry = gearTiles.get(item.id);
-      if (!entry) {
-        const control:EquipmentControl|undefined = equippedWeapon([item]) ? weaponControl : equipmentControls[item.kind as keyof typeof equipmentControls];
-        const shortcut = control?.key;
-        const tile = control ? hudButton('',()=>useEquipped(control.action)) : node('span');
-        tile.className = 'equipped-gear-tile';
-        const footer = node('span');
-        footer.className = 'equipped-gear-footer';
-        const hint = shortcut ?? (item.kind==='runningShoes' ? 'Shift' : undefined);
-        if (hint) {
-          tile.setAttribute('aria-keyshortcuts',hint);
-          const badge = node('kbd',hint==='Space' ? 'Espaço' : hint.toUpperCase());
-          badge.className = 'equipped-gear-key';
-          badge.setAttribute('aria-hidden','true');
-          footer.append(badge);
-        }
-        if (!shortcut) tile.setAttribute('role','listitem');
-        tile.dataset.kind = item.kind;
-        const timer = node('span');
-        timer.className = 'equipped-gear-timer';
-        timer.setAttribute('aria-hidden','true');
-        footer.prepend(timer);
-        tile.append(itemPortrait(item.kind),footer);
-        entry = {tile,timer};
-        gearTiles.set(item.id,entry);
-      }
-      const seconds = state?.equipmentCooldowns?.[item.id] ?? 0;
-      const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const active = item.kind==='binoculars' ? state?.binocularSeconds : item.kind==='megaphone' ? state?.megaphoneSeconds : undefined;
-      const time = active ? `${active} s` : item.kind==='xray' && state?.xrayVision ? `${state.xrayVision.remaining}s · ${charges}` : charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
-      const modulating = item.kind==='voiceModulator' && !!state?.modulator?.active;
-      const weapon = equippedWeapon([item]);
-      const label = active ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` : charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
-      const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` : item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
-      if (entry.tile.title===tooltip) continue;
-      entry.tile.dataset.active = String(modulating || !!active || item.kind==='xray' && !!state?.xrayVision);
-      entry.timer.textContent = time;
-      entry.timer.hidden = !time;
-      entry.tile.title = tooltip;
-      entry.tile.setAttribute('aria-label',item.kind==='xray' ? `${state?.xrayVision ? 'Desativar' : 'Ativar'} ${label}` : label);
-      if (item.kind==='voiceModulator') entry.tile.setAttribute('aria-pressed',String(modulating));
-      if (item.kind==='xray' || item.kind==='megaphone') {
-        entry.tile.setAttribute('aria-pressed',String(item.kind==='xray' ? !!state?.xrayVision : !!active));
-      }
-    }
-    equipmentSlots(equipped).forEach((item,index)=>{
-      const {slot,empty} = gearSlots[index];
-      const tile = item && gearTiles.get(item.id)?.tile;
-      empty.hidden = !!tile;
-      if (tile && tile.parentElement!==slot) slot.prepend(tile);
-    });
-    const remaining = state?.concealmentSeconds;
-    if (remaining) {
-      concealmentLabel.textContent = `${remaining} s`;
-      concealmentTimer.title = `Dinheiro oculto · ${remaining} s`;
-      if (!concealmentTimer.isConnected) gearStrip.append(concealmentTimer);
-    } else concealmentTimer.remove();
-    gearStrip.hidden = !state;
   }
 
   const fieldRoot = createRoot(fieldActions);
@@ -249,9 +110,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
     if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
-    const ownOffice = state?.ownOffice;
-    officeBadge.hidden = !ownOffice;
-    if (ownOffice) officeBadge.textContent = `Gabinete ${ownOffice.padStart(2,'0')}`;
     for (const {label,...action} of state?.officeOptions ?? []) {
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
@@ -303,7 +161,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
       </button>)));
   }
-  const stationActions = [...stations.querySelectorAll<HTMLButtonElement>('button[data-station]')];
+  const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
+  const electoral = mountElectionStationActions(element('station-election-actions'),election.send);
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const more = hudButton('Mais ações',()=>{
     const expanded = more.getAttribute('aria-expanded')!=='true';
@@ -320,30 +179,19 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   stations.querySelector('.station-actions')!.append(overflowBreak,more);
   const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
   function refreshActionKeys() {
-    let index = 0;
-    let primaryCount = 0;
-    const expanded = more.getAttribute('aria-expanded')==='true';
     const buttons = actionButtons();
-    const nearbyOpen = nearbyToggle.getAttribute('aria-expanded')==='true';
-    for (const button of buttons) {
-      if (button===more || button.closest('#nearby-items')) continue;
-      if (button.closest(unavailable)) { delete button.dataset.contextOverflow; continue; }
-      primaryCount++;
-      button.dataset.contextOverflow = primaryCount>3 ? (expanded ? 'expanded' : 'true') : 'false';
-    }
-    more.hidden = primaryCount<=3;
-    overflowBreak.hidden = !expanded || more.hidden;
-    if (more.hidden) more.setAttribute('aria-expanded','false');
-    const ordered = [
-      ...buttons.filter(button=>button.dataset.contextOverflow==='false'),
-      more,
-      ...buttons.filter(button=>button.dataset.contextOverflow==='expanded'),
-      ...buttons.filter(button=>button!==more && button.dataset.contextOverflow!=='false' && button.dataset.contextOverflow!=='expanded'),
-    ];
-    for (const button of ordered) {
-      const available = !button.disabled && !button.closest(unavailable) && button.dataset.contextOverflow!=='true' &&
-        (!nearbyOpen || button===nearbyToggle || !!button.closest('#nearby-items'));
-      const key = available ? (++index<=9 ? String(index) : null) : null;
+    const model = contextActionKeys(buttons.map(button=>({
+      kind:button===more ? 'more' : button===nearbyToggle ? 'nearby' : button.closest('#nearby-items') ? 'item' : 'action',
+      visible:!button.closest(unavailable),enabled:!button.disabled,
+    })),more.getAttribute('aria-expanded')==='true',nearbyToggle.getAttribute('aria-expanded')==='true');
+    more.hidden = !model.hasMore;
+    overflowBreak.hidden = !model.showOverflow;
+    if (!model.hasMore) more.setAttribute('aria-expanded','false');
+    for (const [index,button] of buttons.entries()) {
+      const {placement,key:shortcut} = model.buttons[index];
+      if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
+      else delete button.dataset.contextOverflow;
+      const key = shortcut ?? null;
       if (button.getAttribute('aria-keyshortcuts')===key) continue;
       if (!key) {
         button.querySelector('.station-key')?.remove();
@@ -390,7 +238,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
     const key = event.key;
     const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
-    if (!button || button.disabled || button.closest(unavailable)) return;
+    if (!button || button.disabled || button.closest(unavailable) || button.dataset.contextOverflow==='true') return;
     event.preventDefault();
     button.click();
   }
@@ -426,24 +274,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    for (const {button,control,station} of quickActions) {
-      if (control.id==='call-cassation') button.querySelector('span')!.textContent = control.textContent;
-      button.hidden = context!==station || control.disabled || !!control.closest('[hidden]') ||
-        (control.id==='publish' && !element('evidence').dataset.value);
-    }
-    for (const {button,station} of activityButtons) button.hidden = context!==station;
-    for (const button of stationActions) {
-      const hidden = String(button.dataset.station!==context);
-      if (button.dataset.contextHidden!==hidden) button.dataset.contextHidden = hidden;
-    }
-    const hideInterview = String(context!=='tv');
-    if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
-    const hasAction = [...stationActions,...quickActions.map(({button})=>button),...activityButtons.map(({button})=>button)]
-      .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
-    const hint = !interviewHint.hidden && context==='tv';
+    const hasLegislativeAction = legislative.render(view,context);
+    const hasElectionAction = electoral.render(view,context,election.hasVoice());
+    const hasShortcut = shortcuts.render(view,player,context);
+    const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
-    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && !hint && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 
@@ -491,8 +328,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     },
     render(view:PlenaryView) {
       if (view.phase!=='negotiation') legislativeBrief.close();
-      roleBadge.hidden = view.role!=='Infiltrado';
-      element('hud-office').textContent = view.mandate===false ? 'Ex-parlamentar' : 'Parlamentar';
       const politics = view.politics;
 
       if (previous) {
@@ -522,7 +357,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
 
       }
-      renderEquipped(view.gameplay);
+      gear.render(view.gameplay);
 
       previous = view;
       actions(view);
@@ -530,18 +365,14 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     players(players:Player[]) {
       roster = players;
       own = players.find(player => player.id===id);
-      if (own) {
-        const nick = element('hud-nick');
-        if (nick.textContent!==own.nick) nick.textContent = own.nick;
-        setCharacterPortrait(element('hud-portrait'),own.character);
-      }
       actions();
     },
     destroy() {
-      renderEquipped();
-      gearSlots.forEach(({slot})=>slot.remove());
+      gear.destroy();
       notices.destroy();
       legislativeBrief.destroy();
+      legislative.destroy();
+      electoral.destroy();
       incomeEffect?.remove();
       xpEffect?.remove();
       document.removeEventListener('keydown',onActionKey);
@@ -552,9 +383,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
-      officeBadge.hidden = true;
       progressRoot.unmount();
-      shortcuts.replaceChildren();
+      shortcuts.destroy();
       more.remove();
       overflowBreak.remove();
       fieldRoot.unmount();

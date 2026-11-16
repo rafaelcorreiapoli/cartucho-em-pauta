@@ -1,7 +1,8 @@
 import { fireSites, type FireExtinguished } from '../src/fire';
 import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
+import { publishGameplay } from './gameplay-world';
 import { gameplayMetrics } from './gameplay-metrics';
-import { isFood } from '../src/food';
+import { isDrink, isFood } from '../src/food';
 import { InternalMail } from './InternalMail';
 import { megaphone } from '../src/equipment';
 import { Parliamentarians } from './Parliamentarians';
@@ -68,7 +69,7 @@ export class SessionRoom extends Room {
       vision:(id:string)=>this.gameplay.vision(id,world.now),
       present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
-        world.publish(event);
+        if (!world.publish(event)) return;
         this.parliamentarians.witnessAggression(event);
         let cue:InteractionCue | undefined;
         if (event.type==='delivered' && event.place==='treasury') cue = 'cash';
@@ -79,7 +80,7 @@ export class SessionRoom extends Room {
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
         if (event.type==='used' && isFood(event.kind)) {
-          const drink = event.kind==='coffee' || event.kind==='energyDrink';
+          const drink = isDrink(event.kind);
           this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
@@ -124,7 +125,7 @@ export class SessionRoom extends Room {
   }
 
   private spyFrameAt = 0;
-  private securityFeeds = new Map<string,SecurityCamera>();
+  private securityFeeds = new Map<string,{camera:SecurityCamera; delivered:boolean}>();
 
   private atSecurityTerminal(player:Player, now:number) {
     return this.match.phase==='negotiation' && this.match.ballotCountdown(now)===undefined &&
@@ -198,12 +199,14 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id));
+        this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
           id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id));
+          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
@@ -269,7 +272,10 @@ export class SessionRoom extends Room {
         }
       });
       client.send('mail-result',error ?? null);
-      if (!error) this.broadcast('mail-state',this.internalMail.view());
+      if (!error) {
+        this.match.refreshAgendaEligibility();
+        this.broadcast('mail-state',this.internalMail.view());
+      }
     });
     this.onMessage('plenary-action', (client, raw:unknown) => {
       if (!raw || typeof raw!=='object' || !('action' in raw)) return;
@@ -310,11 +316,13 @@ export class SessionRoom extends Room {
       }
       if (!this.atSecurityTerminal(player,this.clock.currentTime)) return;
       if (raw.kind==='open' && !this.securityFeeds.has(player.id)) {
-        this.securityFeeds.set(player.id,securityCameras[0]);
+        this.securityFeeds.set(player.id,{camera:securityCameras[0],delivered:false});
       } else if (raw.kind==='select' && 'camera' in raw && this.securityFeeds.has(player.id)) {
         const cameraId = raw.camera;
         const camera = securityCameras.find(({id})=>id===cameraId);
-        if (camera) this.securityFeeds.set(player.id,camera);
+        if (camera && camera!==this.securityFeeds.get(player.id)?.camera) {
+          this.securityFeeds.set(player.id,{camera,delivered:false});
+        }
       }
     });
     this.onMessage('power-action',(client,raw:unknown)=>{
@@ -454,7 +462,9 @@ export class SessionRoom extends Room {
       const players = [...this.players.values()].map(state => state.player);
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       const wasVoting = this.match.allowsPlenaryCombat;
-      this.match.advance(now);
+      this.match.advance(now, recipients=>{
+        for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,now);
+      });
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
       if (!freeze || this.match.phase!=='negotiation') {
@@ -539,21 +549,29 @@ export class SessionRoom extends Room {
           view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
           if (sendSpyFrame) {
             const frame = this.gameplay.spyFrame(state.player,world);
-            if (frame) client.send('spy-frame',frame);
+            if (frame) {
+              client.send('spy-frame',frame);
+              this.gameplay.confirmSpyFrame(state.player,world);
+            }
           }
           view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);
         }
-        const securityCamera = this.securityFeeds.get(id);
-        if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityCamera?.id};
+        const securityFeed = this.securityFeeds.get(id);
+        if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityFeed?.camera.id};
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
         }
-        if (sendSpyFrame && securityCamera) {
-          client.send('security-frame',{camera:securityCamera.id,scene:this.gameplay.securityFrame(state.player,securityCamera,world)});
+        if (sendSpyFrame && securityFeed) {
+          const {camera} = securityFeed;
+          client.send('security-frame',{camera:camera.id,scene:this.gameplay.securityFrame(state.player,camera,world)});
+          if (!securityFeed.delivered) {
+            securityFeed.delivered = true;
+            publishGameplay(world,state.player,'security-camera-viewed',{place:camera.id,witnesses:[]});
+          }
         }
         if (this.match.running) {
           const vision = this.gameplay.vision(id,now);

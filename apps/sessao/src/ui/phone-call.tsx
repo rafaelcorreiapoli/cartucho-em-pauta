@@ -1,12 +1,11 @@
-import type {CSSProperties} from 'react';
+import {CharacterPortrait} from './character-portrait';
 import type {GameplayAction,PhoneCall} from '../gameplay';
 import type {DirectoryContact} from '../politics';
 
 export function PhoneContactFace({person}:{person:DirectoryContact}) {
   const character = person.character;
   if (character===undefined) return <span className="phone-contact-face" aria-hidden="true">{person.name.slice(0,1).toUpperCase()}</span>;
-  const position = {'--portrait-column':character%2,'--portrait-row':Math.floor(character/2)} as CSSProperties;
-  return <span className="portrait phone-contact-face" data-skin={character} style={position} aria-hidden="true"/>;
+  return <CharacterPortrait character={character} className="phone-contact-face"/>;
 }
 
 function Icon({name,className=''}:{name:string;className?:string}) {

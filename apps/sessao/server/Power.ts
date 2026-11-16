@@ -2,17 +2,17 @@ import {powerRules,type PowerAction,type PowerPanel,type PowerView} from '../src
 
 export class Power {
   active = false;
-  private readyAt = 0;
+  private lastRepairedAt = -Infinity;
   private operators:[string?,string?] = [];
   private repairAt?:number;
 
-  canSabotage(now:number) {
-    return !this.active && now>=this.readyAt;
+  canSabotage(now:number,cooldown:number=powerRules.cooldownMs) {
+    return !this.active && now>=this.lastRepairedAt+cooldown;
   }
 
-  act(id:string,{kind,panel}:PowerAction,now:number) {
+  act(id:string,{kind,panel}:PowerAction,now:number,cooldown:number=powerRules.cooldownMs) {
     if (kind==='sabotage') {
-      if (panel!==0 || !this.canSabotage(now)) return;
+      if (panel!==0 || !this.canSabotage(now,cooldown)) return;
       this.active = true;
       return 'Energia cortada.';
     }
@@ -46,10 +46,12 @@ export class Power {
       if (id && !eligible(id,panel)) this.release(panel);
     }
     if (this.repairAt===undefined || now<this.repairAt) return;
+    const repairedBy = this.operators;
     this.active = false;
     this.operators = [];
     this.repairAt = undefined;
-    this.readyAt = now+powerRules.cooldownMs;
+    this.lastRepairedAt = now;
+    return repairedBy;
   }
 
   view(id:string,now:number,paused:boolean):PowerView|undefined {

@@ -6,7 +6,7 @@ import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { binoculars, concealment, equipment, megaphone, xray } from './equipment';
-import { foods, isFood } from './food';
+import { foodDefinition, foods, isDrink, isFood, pinga } from './food';
 import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
 import type { Office } from './elections';
@@ -24,6 +24,7 @@ export const objects = {
   extinguisher:{name:'Extintor',portrait:'extintor.webp',description:'Leve até as chamas e interaja com o incêndio para apagá-lo.'},
   forensicKit:{name:'Kit de Perícia',portrait:'retrato-kit-pericia.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,
+  pinga,
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
@@ -53,7 +54,7 @@ export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
   const {kind} = item;
   if (!('use' in objects[kind])) return;
   const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' ? 'Usar' :
-    kind==='coffee' || kind==='energyDrink' ? 'Beber' : 'Comer';
+    isDrink(kind) ? 'Beber' : 'Comer';
   return {label,key:'1',action:{kind:'use',item:item.id}} as const;
 }
 
@@ -62,11 +63,17 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
+export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/2)/10;
+
 export function treasuryDeliveries(inventory:readonly WorldItem[]) {
   return inventory.flatMap(item=>{
     const amount = cashAmount(item);
-    return amount ? [{label:`Entregar ${money(amount)} ao tesoureiro`,
-      action:{kind:'deliver',place:'treasury',item:item.id} as const}] : [];
+    if (!amount) return [];
+    const action = {kind:'deliver',place:'treasury',item:item.id} as const;
+    const deliveries:{label:string;action:GameplayAction}[] = [{label:`Entregar ${money(amount)} ao tesoureiro`,action}];
+    const portion = treasuryPartialAmount(amount);
+    if (portion>0) deliveries.push({label:`Entregar só ${money(portion)}`,action:{...action,target:'partial'}});
+    return deliveries;
   });
 }
 
@@ -76,7 +83,7 @@ export type DocumentData = {
 };
 export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
-export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foods[kind]);
+export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foodDefinition(kind));
 export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;
 export function selectedItemQuantity(item:WorldItem, quantity:number) {
   return Math.min(itemQuantity(item),Math.max(1,quantity));
@@ -137,8 +144,8 @@ export type GameplayView = {
 export type InteractionCue = 'cash'|'stamp'|'lock';
 
 export type GameplayEvent = {
-  type:'wiretap-time'|'room-left'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'pix-sent'|'pix-received'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'credential-checked'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
-  actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; photo?:Photo; place?:string; replaced?:boolean;
+  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'pix-sent'|'pix-received'|'power-repaired'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'credential-checked'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  eventId?:number; actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 
 export function readGameplayAction(raw:unknown):GameplayAction | undefined {

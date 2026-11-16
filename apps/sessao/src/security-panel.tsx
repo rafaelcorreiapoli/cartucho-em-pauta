@@ -1,32 +1,31 @@
+import {flushSync} from 'react-dom';
+import {createRoot} from 'react-dom/client';
+import {SecurityDialogContent} from './ui/security-dialog';
 import type { PhotoScene } from './photography';
-import { securityCameras, type SecurityAction, type SecurityCameraId, type SecurityView } from './security';
+import type { SecurityAction, SecurityCameraId, SecurityView } from './security';
 import { createSurveillanceViewport } from './surveillance-viewport';
 
 export function createSecurityPanel(send:(action:SecurityAction)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#security-dialog')!;
-  const channels = dialog.querySelector<HTMLElement>('.security-channels')!;
-  const viewport = dialog.querySelector<HTMLElement>('.spy-viewport')!;
-  const status = dialog.querySelector<HTMLElement>('[role="status"]')!;
-  const buttons = securityCameras.map(({id,label})=>{
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'hud-button hud-button--secondary spy-channel';
-    button.textContent = label;
-    button.setAttribute('aria-pressed','false');
-    button.onclick = ()=>send({kind:'select',camera:id});
-    return {id,button};
-  });
-  channels.replaceChildren(...buttons.map(({button})=>button));
+  const root = createRoot(dialog);
 
   let requested = false;
   let selected:SecurityCameraId|undefined;
+  let ready = false;
   let live:ReturnType<typeof createSurveillanceViewport>|undefined;
+
+  function paint() {
+    flushSync(()=>root.render(<SecurityDialogContent camera={selected} ready={ready} send={send}/>));
+  }
+
+  paint();
+  const viewport = dialog.querySelector<HTMLElement>('.spy-viewport')!;
 
   function stop() {
     live?.destroy();
     live = undefined;
-    viewport.classList.add('waiting-for-feed');
-    status.textContent = 'Conectando à câmera…';
+    ready = false;
+    paint();
   }
 
   function dismiss(event:Event) {
@@ -50,9 +49,8 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
       return;
     }
     if (requested && !dialog.open) dialog.showModal();
-    status.textContent = 'Conectando à câmera…';
-    viewport.classList.add('waiting-for-feed');
-    for (const {id,button} of buttons) button.setAttribute('aria-pressed',String(id===camera));
+    ready = false;
+    paint();
   }
 
   return {
@@ -66,17 +64,17 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
       if (!dialog.open || camera!==selected) return;
       live ??= createSurveillanceViewport(viewport);
       live.receive(scene);
-      if (viewport.classList.contains('waiting-for-feed')) {
-        viewport.classList.remove('waiting-for-feed');
-        status.textContent = 'Ao vivo';
+      if (!ready) {
+        ready = true;
+        paint();
       }
     },
     destroy() {
       dialog.oncancel = null;
       dialog.querySelector('form')!.onsubmit = null;
-      render();
-      stop();
-      channels.replaceChildren();
+      dialog.close();
+      live?.destroy();
+      root.unmount();
     },
   };
 }

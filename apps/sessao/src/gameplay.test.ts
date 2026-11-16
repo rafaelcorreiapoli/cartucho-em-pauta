@@ -30,8 +30,10 @@ test('treasury prompts use the carried amount and identity and disappear when re
   const coffee = {id:8,kind:'coffee' as const};
   expect(treasuryDeliveries([cash,coffee])).toEqual([
     {label:'Entregar R$ 80 mil ao tesoureiro',action:{kind:'deliver',place:'treasury',item:7}},
+    {label:'Entregar só R$ 40 mil',action:{kind:'deliver',place:'treasury',item:7,target:'partial'}},
   ]);
   expect(treasuryDeliveries([coffee])).toEqual([]);
+  expect(treasuryDeliveries([{...cash,cash:.1}])).toHaveLength(1);
 });
 
 test('the inventory offers the healing shortcut for the selected kit',()=>{
@@ -139,4 +141,11 @@ test('catalog prices reflect only the applicable public policies',()=>{
   expect(marketProduct('equipment','binoculars',policies)!.price).toBeLessThan(marketProduct('equipment','binoculars')!.price);
   expect(marketProduct('equipment','forensicKit',policies)!.price).toBeLessThan(marketProduct('equipment','forensicKit')!.price);
   expect(marketProduct('equipment','firstAidKit',policies)).toEqual(marketProduct('equipment','firstAidKit'));
+});
+
+test('Pinga has a drink action and enters circulation through the bill, outside the snack shop',()=>{
+  expect(consumableAction({id:12,kind:'pinga'})).toMatchObject({label:'Beber',action:{kind:'use',item:12}});
+  expect(objects.pinga.portrait).toBe('retrato-pinga.webp');
+  expect(marketKinds.food).not.toContain('pinga');
+  expect(marketProduct('food','pinga')).toBeUndefined();
 });

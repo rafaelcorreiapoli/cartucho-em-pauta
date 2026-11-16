@@ -7,16 +7,16 @@ import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
-import { money } from '../src/politics';
-import { foods, isFood, type FoodEffect } from '../src/food';
+import { archiveDutyRoom, money } from '../src/politics';
+import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { installationSites, shop } from '../src/installations';
-import { bills, stations } from '../src/plenary';
+import { installationSites, shop, vipAreaRadius } from '../src/installations';
+import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
@@ -47,7 +47,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; archiveDuty:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -58,10 +58,11 @@ export class Gameplay {
   private modulator = new VoiceEquipment();
   private serial = 0;
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
-  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>}>();
+  private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
+  private portraitInstalledAt = new Map<string,number>();
   private installations = new Map<string,Decoration>();
   private servings = new Map<number,Set<string>>();
   private clearedSites = new Map<string,{by:string;owner:string}>();
@@ -172,6 +173,7 @@ export class Gameplay {
     this.scanning.clear();
     this.binocularUse.clear();
     this.installations.clear();
+    this.portraitInstalledAt.clear();
     this.servings.clear();
     this.clearedSites.clear();
     this.transfers = [];
@@ -210,7 +212,10 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:'portrait'|'vip', replacement=false) {
+  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait'|'anyVip', replacement=false) {
+    if (kind==='anyPortrait' || kind==='anyVip') {
+      return [...this.installations.values()].some(item=>item.kind===(kind==='anyPortrait' ? 'portrait' : 'vip'));
+    }
     if (replacement) return Object.entries(installationSites).some(([site,definition])=>{
       if (definition.kind!==kind) return false;
       const installed = this.installations.get(site);
@@ -226,6 +231,8 @@ export class Gameplay {
     const served = this.servings.get(pizza.id) ?? new Set<string>();
     return {id:pizza.id,owned:pizza.owner.id===id,canTakeSlice:!served.has(id),slices:pizza.slices,served};
   }
+
+  hasKnownForeignSpy(id:string) { return this.surveillance.hasKnownForeignDevice(id); }
 
   ownsWiretap(id:string) { return this.surveillance.countInstalled(id,'wiretap')>0; }
 
@@ -343,6 +350,13 @@ export class Gameplay {
     return visible;
   }
 
+  distributePinga(player:Player,now:number) {
+    if (this.available(player.id) || this.stack(player.id,'pinga')) {
+      const item = this.create('pinga',{holder:player.id});
+      this.addToInventory(this.items.get(item.id)!,player.id);
+    } else this.create('pinga',this.groundPlace('pinga',player,now));
+  }
+
   private create(kind:ObjectKind, place:Place) {
     const data:WorldItem = {id:++this.serial,kind};
     if (kind==='xray') data.charges = xray.capacity;
@@ -351,6 +365,10 @@ export class Gameplay {
   }
 
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
+
+  hasCashLot(id:string,amount:number) {
+    return this.inventory(id).some(({data})=>cashAmount(data)===amount);
+  }
 
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
 
@@ -381,13 +399,13 @@ export class Gameplay {
     const cash = this.create('briefcase',{holder:player.id});
     cash.cash = amount;
     this.expose(player.id,cash.id);
-    publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind});
+    publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind,amount});
     console.info(JSON.stringify({event:'npc-robbery',from:npc.id,to:player.id,amount,item:cash.id}));
     return 'Maleta roubada. Leve-a ao seu cofre.';
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'duration'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -426,11 +444,11 @@ export class Gameplay {
   }
 
   tick(world:GameplayWorld, exploring:boolean, voting=false) {
-    if (world.policies?.recovery && world.now>=this.lastPolicyHeal+1000) {
+    if (world.policies?.recovery && world.now>=this.lastPolicyHeal+recoveryPolicy.tickMs) {
       this.lastPolicyHeal = world.now;
       for (const player of world.players) {
         if (!player.npc && !player.knockedOut && world.present?.(player.id)!==false && world.hasMandate?.(player.id)) {
-          this.combat.heal(player,2);
+          this.combat.heal(player,recoveryPolicy.hpPerTick);
         }
       }
     }
@@ -452,11 +470,6 @@ export class Gameplay {
       }
     }
     this.album.tick(world.now);
-    for (const [id,scan] of this.scanning) {
-      const player = world.players.find(player=>player.id===id);
-      if (!exploring || scan.ends<=world.now || !player || player.knockedOut || player.carried ||
-          this.wearing(id,'xray')?.id!==scan.item) this.scanning.delete(id);
-    }
     for (const [id,ends] of this.concealedUntil) {
       if (ends>world.now) continue;
       this.concealedUntil.delete(id);
@@ -473,6 +486,7 @@ export class Gameplay {
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
+    this.tickXray(world,exploring);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
@@ -510,12 +524,58 @@ export class Gameplay {
     if (item) this.modulator.deactivate(item.id);
   }
 
+  private nearbyParliamentarian(player:Player,world:GameplayWorld,previous?:string,eligible?:(other:Player)=>boolean) {
+    const nearby = world.players.filter(other=>other.id!==player.id && !other.knockedOut && !other.carried &&
+      world.present?.(other.id)!==false && world.hasMandate?.(other.id)!==false && canReachObject(player,other) && (!eligible || eligible(other)));
+    return nearby.find(other=>other.id===previous)?.id ?? nearby[0]?.id;
+  }
+
+  private vipMeeting(player:Player,world:GameplayWorld,previous?:{id:number; peer:string}) {
+    const room = roomAt(player);
+    for (const plate of this.installations.values()) {
+      if (plate.kind!=='vip' || roomAt(plate)!==room || !canReachObject(player,plate,{radius:vipAreaRadius})) continue;
+      const peer = this.nearbyParliamentarian(player,world,previous?.id===plate.id ? previous.peer : undefined,
+        person=>roomAt(person)===room && canReachObject(person,plate,{radius:vipAreaRadius}));
+      if (peer) return {id:plate.id,peer};
+    }
+  }
+
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
     for (const player of world.players) {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
-      this.roomSamples.set(player.id,{room,at:world.now});
-      if (!exploring || !previous || world.present?.(player.id)===false || player.knockedOut || player.carried) continue;
+      const active = exploring && world.present?.(player.id)!==false && !player.knockedOut && !player.carried;
+      const archiveDuty = active && room===archiveDutyRoom && !!world.hasMission?.(player.id,'plantaoArquivo');
+      const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
+        (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
+      const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
+        world.hasMission?.(player.id,'segurancaParlamentar') ? this.nearbyParliamentarian(player,world,previous?.securityPeer) : undefined;
+      const vip = active && world.hasMission?.(player.id,'reuniaoVip') ? this.vipMeeting(player,world,previous?.vip) : undefined;
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,archiveDuty,concealedCash,securityPeer,vip});
+      if (previous?.archiveDuty && !archiveDuty) {
+        publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
+      }
+      if (previous?.vip) {
+        if (previous.vip.id!==vip?.id || previous.vip.peer!==vip.peer) {
+          publishGameplay(world,player,'vip-meeting-interrupted',{witnesses:[]});
+        } else {
+          const duration = Math.min(100,world.now-previous.at);
+          if (duration>0) publishGameplay(world,player,'vip-meeting-time',{duration,witnesses:[]});
+        }
+      }
+      if (previous?.securityPeer) {
+        if (previous.securityPeer!==securityPeer) {
+          publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+        } else {
+          const duration = Math.min(100,world.now-previous.at);
+          if (duration>0) publishGameplay(world,player,'security-watch-time',{target:securityPeer,duration,witnesses:[]});
+        }
+      }
+      if (!active || !previous) continue;
+      if (concealedCash && previous.concealedCash && (previous.x!==player.x || previous.y!==player.y)) {
+        const duration = Math.min(100,world.now-previous.at);
+        if (duration>0) publishGameplay(world,player,'concealed-cash-time',{duration,witnesses:[]});
+      }
       if (previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
         publishGameplay(world,player,'room-left',{place:previous.room});
       }
@@ -535,7 +595,8 @@ export class Gameplay {
         publishGameplay(world,player,'room-entered',{place:room,target:office?.owner,kind:carryingBriefcase ? 'briefcase' : undefined});
       } else if (previous.room===room) {
         const ownOffice = this.privateOffices.ownedBy(player.id)?.name===room;
-        const recording = room==='Cafezinho' && world.hasMission?.(player.id,'pausaCafe') ||
+        const recording = archiveDuty && previous.archiveDuty ||
+          room==='Cafezinho' && !world.plenary && world.hasMission?.(player.id,'pausaCafe') ||
           ownOffice && world.hasMission?.(player.id,'trabalhoRemoto');
         const duration = Math.min(100,world.now-previous.at);
         if (recording && duration>0) publishGameplay(world,player,'room-time',{place:room,duration,target:ownOffice ? player.id : undefined});
@@ -548,6 +609,15 @@ export class Gameplay {
     this.scanning.delete(player.id);
     this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
+    if (this.roomSamples.get(player.id)?.securityPeer) {
+      publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+    }
+    if (this.roomSamples.get(player.id)?.vip) {
+      publishGameplay(world,player,'vip-meeting-interrupted',{witnesses:[]});
+    }
+    if (this.roomSamples.get(player.id)?.archiveDuty) {
+      publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
+    }
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
     this.album.leave(player.id,permanent);
@@ -644,9 +714,8 @@ export class Gameplay {
         return true;
       },
       restore:(id:string,kind:SpyDevice)=>{
-        if (!this.available(id)) return false;
-        this.create(kind,{holder:id});
-        return true;
+        if (!this.available(id)) return undefined;
+        return this.create(kind,{holder:id});
       },
       feedback:(id:string,message:string)=>world.feedback?.(id,message),
       monitor:(player:Player,duration:number)=>{
@@ -691,6 +760,11 @@ export class Gameplay {
     if (!device || player.knockedOut || player.carried) return;
     const camera = this.surveillance.origin(device);
     return this.cameraScene(player,camera,world,cameraSees);
+  }
+
+  confirmSpyFrame(player:Player,world:GameplayWorld) {
+    const credit = this.surveillance.takeCameraFrameCredit(player.id);
+    if (credit) publishGameplay(world,player,'spy-viewed',{...credit,kind:'spyCamera',witnesses:[]});
   }
 
   securityFrame(player:Player, camera:SecurityCamera, world:GameplayWorld) {
@@ -738,6 +812,10 @@ export class Gameplay {
       [...this.privateOffices.offices.values()].some(office=>office.owner && office.owner!==person.id && office.layout.name===roomAt(person)));
     this.event(world,player,'photo',undefined,undefined,{photo:result,
       place:foreignOfficeSubject ? 'foreign-office-subject' : undefined,witnesses:[...ids].filter(id=>id!==player.id)});
+    if (world.hasMission?.(player.id,'visitaCortesia')) {
+      const office = [...this.privateOffices.offices.values()].find(office=>this.privateOffices.isInside(player,office));
+      if (office) this.recordGuestInteraction(player,office,world);
+    }
     return 'Foto guardada no álbum.';
   }
 
@@ -758,6 +836,7 @@ export class Gameplay {
       const replaced = placed?.owner.id ?? (cleared?.by===player.id ? cleared.owner : undefined);
       this.installations.set(siteKey,{x:site.point.x,y:site.point.y,id:item.data.id,kind:site.kind,owner:{id:player.id,name:player.nick},
         character:player.character,slices:site.kind==='pizza' ? 6 : undefined});
+      if (site.kind==='portrait') this.portraitInstalledAt.set(siteKey,world.now);
       this.event(world,player,'installed',item.data,replaced,{place:siteKey,replaced:!!replaced});
       return placed ? 'Objeto substituído.' : 'Objeto instalado.';
     }
@@ -771,7 +850,7 @@ export class Gameplay {
       served.add(player.id);
       placed.slices--;
       const host = world.players.find(person=>person.id===placed.owner.id);
-      this.consumeFood(player,foods.pizza.effect);
+      this.consumeFood(player,foodDefinition('pizza').effect);
       this.event(world,player,'used',data,placed.owner.id);
       if (host && host.id!==player.id) this.event(world,host,'slice',data,player.id);
       if (!placed.slices) {
@@ -783,11 +862,14 @@ export class Gameplay {
     if (action.kind==='mark') {
       if (placed.kind!=='portrait' || placed.marked || placed.owner.id===player.id) return 'Este retrato não pode ser rabiscado.';
       placed.marked = true;
-      this.event(world,player,'marked',data,placed.owner.id,{place:siteKey});
+      const installedAt = this.portraitInstalledAt.get(siteKey);
+      this.event(world,player,'marked',data,placed.owner.id,{place:siteKey,
+        duration:installedAt===undefined ? undefined : world.now-installedAt});
       return 'Retrato rabiscado.';
     }
     if (!this.available(player.id)) return 'Inventário cheio.';
     this.installations.delete(siteKey);
+    this.portraitInstalledAt.delete(siteKey);
     this.servings.delete(placed.id);
     this.items.set(data.id,{data,place:{holder:player.id}});
     if (placed.owner.id!==player.id) this.clearedSites.set(siteKey,{by:player.id,owner:placed.owner.id});
@@ -906,7 +988,9 @@ export class Gameplay {
     const own = office.owner===player.id;
     if (kind==='office-open' || kind==='office-close' || kind==='office-lock' || kind==='office-unlock') {
       if ((kind==='office-close' || kind==='office-lock') && world.players.some(other=>blockedBy(office.layout.door,other.x,other.y))) return 'A passagem está ocupada.';
+      const previousDoor = office.door;
       const result = offices.doorAction(player,office,kind,now);
+      if (office.door!==previousDoor) this.recordGuestInteraction(player,office,world);
       this.syncOfficeDoors(world.players,now);
       return result;
     }
@@ -924,6 +1008,7 @@ export class Gameplay {
         this.move(item,{storage:`office:${office.layout.id}`});
       }
       this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id});
+      this.recordGuestInteraction(player,office,world);
       return kind==='office-take' ? 'Objeto retirado do armário.' : 'Objeto guardado no armário.';
     }
     if (kind==='office-remove') {
@@ -972,6 +1057,12 @@ export class Gameplay {
     if (kind==='office-cash') {
       player.pocketing = true;
       this.expose(player.id,item.data.id);
+    }
+  }
+
+  private recordGuestInteraction(player:Player, office:Parameters<PrivateOffices['isInside']>[1], world:GameplayWorld) {
+    if (office.owner && office.owner!==player.id && this.privateOffices.isInside(player,office)) {
+      publishGameplay(world,player,'office-guest-interaction',{target:office.owner,place:office.layout.id,witnesses:[]});
     }
   }
 
@@ -1037,6 +1128,27 @@ export class Gameplay {
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
 
+  private tickXray(world:GameplayWorld, exploring:boolean) {
+    for (const [id,scan] of this.scanning) {
+      const player = world.players.find(player=>player.id===id);
+      if (!exploring || scan.ends<=world.now || !player || world.present?.(id)===false ||
+          player.knockedOut || player.carried || this.wearing(id,'xray')?.id!==scan.item) {
+        this.scanning.delete(id);
+        continue;
+      }
+      const safeMission = world.hasMission?.(id,'fiscalizacaoParalela');
+      const npcMission = world.hasMission?.(id,'patrimonioSuspeito');
+      if (!safeMission && !npcMission) continue;
+      for (const target of this.xrayVision(player,world)?.targets ?? []) {
+        const place = target.safe ? 'safe' : 'npc';
+        const key = place+':'+target.id;
+        if (!(target.safe ? safeMission : npcMission) || scan.reported.has(key)) continue;
+        scan.reported.add(key);
+        publishGameplay(world,player,'xray-target-revealed',{target:target.id,place,witnesses:[]});
+      }
+    }
+  }
+
   private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {
     const scan = this.scanning.get(player.id);
     if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
@@ -1076,7 +1188,7 @@ export class Gameplay {
     if (this.scanning.delete(player.id)) return 'Raio X desativado.';
     if (!item.charges) return 'Raio X sem cargas. Recarregue no Apoio Técnico.';
     item.charges--;
-    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map()});
+    this.scanning.set(player.id,{item:item.id,ends:world.now+xray.duration,balances:new Map(),reported:new Set()});
     this.event(world,player,'xray-scanned',item,undefined,{witnesses:[]});
     return 'Raio X ativado.';
   }
@@ -1108,7 +1220,7 @@ export class Gameplay {
         this.changeGear(player,data.id,true,world);
         confirmation = 'Compra equipada.';
       }
-      this.event(world,player,'purchased',data,undefined,{inventoryItem});
+      this.event(world,player,'purchased',data,undefined,{inventoryItem,amount:price});
       if (layout && isOfficeFurniture(kind)) {
         this.installOfficeDecor(player,layout,kind,data,world);
         confirmation = 'Compra instalada no seu gabinete.';
@@ -1248,7 +1360,13 @@ export class Gameplay {
     if (action.kind==='attack') {
       const weapon = equippedWeapon(this.equipped(id).map(item=>item.data));
       if (!weapon) return 'Equipe uma arma.';
-      return this.combat.attack(player,world.now,weapon);
+      const result = this.combat.attack(player,world.now,weapon);
+      const sample = this.roomSamples.get(id);
+      if (!result && sample?.securityPeer) {
+        sample.securityPeer = undefined;
+        publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
+      }
+      return result;
     }
     if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
     if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {
@@ -1349,9 +1467,17 @@ export class Gameplay {
         this.event(world,player,'stored',data);
         return 'Objeto armazenado.';
       case 'deliver': {
-        const amount = cashAmount(data);
+        const total = cashAmount(data);
+        const partial = action.target==='partial';
+        const amount = partial ? treasuryPartialAmount(total ?? 0) : total;
         if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
-        this.remove(item);
+        if (partial) {
+          data.cash = Math.round((total!-amount)*10)/10;
+          this.clearRequests(data.id);
+          this.event(world,player,'cash-part-deposited',data,undefined,{place,amount,witnesses:[]});
+        } else {
+          this.remove(item);
+        }
         this.event(world,player,'delivered',data,undefined,{place,amount});
         return `${money(amount)} entregues à Tesouraria.`;
       }
@@ -1371,7 +1497,7 @@ export class Gameplay {
         }
         const consumed = this.takeUnits(item,1);
         this.remove(consumed);
-        if (isFood(data.kind)) this.consumeFood(player,foods[data.kind].effect);
+        if (isFood(data.kind)) this.consumeFood(player,foodDefinition(data.kind).effect);
         const consumptionRoom = roomAt(player);
         const ownOffice = this.privateOffices.ownedBy(id)?.name===consumptionRoom;
         this.event(world,player,'used',consumed.data,ownOffice ? id : undefined,{place:consumptionRoom});
@@ -1436,7 +1562,16 @@ export class Gameplay {
       }
       this.addToInventory(transferred,player.id);
       if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
-      this.event(world,owner,'transferred',transferred.data,player.id);
+      this.event(world,owner,'transferred',transferred.data,player.id,
+        !world.plenary && transferred.data.kind==='gift' ? {place:'articulation'} : undefined);
+      const amount = cashAmount(transferred.data);
+      if (!amount && !owner.npc && !player.npc && world.hasMission?.(player.id,'amizadeInstitucional')) {
+        this.event(world,player,'item-received',transferred.data,owner.id,{witnesses:[]});
+      }
+      if (amount && !owner.npc && !player.npc) {
+        this.event(world,owner,'cash-handed-over',transferred.data,player.id,{amount,witnesses:[]});
+        this.event(world,player,'cash-received',transferred.data,owner.id,{amount,witnesses:[]});
+      }
       return 'Objeto recebido.';
     }
     const doc = item.data.document;
