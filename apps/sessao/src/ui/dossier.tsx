@@ -36,7 +36,7 @@ export function dossierModel(id:string,view:PlenaryView|undefined,players:readon
   };
 }
 
-export function Dossier({model,send}:{model:NonNullable<ReturnType<typeof dossierModel>>;send:(action:PoliticsAction)=>void}) {
+export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<ReturnType<typeof dossierModel>>;send:(action:PoliticsAction)=>void}) {
   const [evidence,setEvidence] = useState<number>();
   const [recipient,setRecipient] = useState<string>();
   const [price,setPrice] = useState(0);
@@ -45,7 +45,10 @@ export function Dossier({model,send}:{model:NonNullable<ReturnType<typeof dossie
   if (recipient!==undefined && !contact) setRecipient(undefined);
   if (evidence!==undefined && selected?.id!==evidence) setEvidence(undefined);
   return <>
-    <header className="social-header"><h2>Dossiê</h2></header>
+    <header className="social-header">
+      <h2>Dossiê</h2>
+      {close && <button className="hud-icon-button" type="button" aria-label="Fechar dossiê" onClick={close}>×</button>}
+    </header>
     <section aria-label="Ofertas de documentos">
       {model.offers.map(offer=><div className="offer" key={offer.id}>
         {offer.outgoing ? `Oferta para ${offer.name} · ${money(offer.price)}` : `${offer.name} oferece um documento por ${money(offer.price)}`}

@@ -30,7 +30,7 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openGrant:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
+  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void}) {
   const roleBadge = element<HTMLButtonElement>('profile-role');
   const walletEffects = element('wallet-effects');
   const walletGain = element<HTMLTemplateElement>('wallet-gain');
@@ -62,7 +62,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
 
   const grantAction = addStationButton({label:'Aplicar verba',station:'cabinet',icon:'wallet'});
-  grantAction.onclick = institutional.openGrant;
+  grantAction.onclick = institutional.openInstitutional;
+  const hearingAction = addStationButton({label:'Pedir afastamento',station:'panel',icon:'ballot'});
+  hearingAction.onclick = institutional.openInstitutional;
   const cassationAction = addStationButton({label:'Convocar cassação',station:'panel',icon:'ballot'});
   cassationAction.onclick = ()=>institutional.sendInstitutional({kind:'call-cassation'});
   const publishAction = addStationButton({label:'Divulgar evidência',station:'press',icon:'document'});
@@ -420,6 +422,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     const institution = context==='cabinet' || context==='panel' ? institutionalActions(view,player) : {};
     grantAction.hidden = context!=='cabinet' || !institution.grant?.affordable;
+    hearingAction.hidden = context!=='panel' || !institution.hearing?.candidates.length;
     cassationAction.hidden = context!=='panel' || !institution.hearing?.affordable;
     if (institution.hearing) cassationAction.querySelector('span')!.textContent = cassationLabel(institution.hearing.fee);
     publishAction.hidden = context!=='press' || !canPublishEvidence(view,player);
@@ -431,7 +434,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hideInterview = String(context!=='tv');
     if (interviewHint.dataset.contextHidden!==hideInterview) interviewHint.dataset.contextHidden = hideInterview;
     renderNearby(player,canInteract);
-    const hasAction = [...stationActions,grantAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
+    const hasAction = [...stationActions,grantAction,hearingAction,cassationAction,publishAction,...activityButtons.map(({button})=>button)]
       .some(button => !button.disabled && !button.closest('[hidden]:not(#stations),[data-context-hidden="true"]'));
     const hint = !interviewHint.hidden && context==='tv';
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');

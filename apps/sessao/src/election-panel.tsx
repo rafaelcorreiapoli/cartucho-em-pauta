@@ -86,7 +86,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   const openPolls = el<HTMLButtonElement>('open-election-polls');
   const polls = el<HTMLDialogElement>('election-poll-dialog');
   const summaryRoot = createRoot(openPolls);
-  openPolls.onclick = ()=>{ if (!polls.open) polls.showModal(); };
+  function showPolls() {
+    if (dock.hidden) return false;
+    if (!polls.open) polls.showModal();
+    return true;
+  }
+  openPolls.onclick = showPolls;
   let summaryKey = '';
   let view:PlenaryView | undefined;
   let own:Player | undefined;
@@ -115,6 +120,7 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
   }
 
   return {
+    showPolls,
     render(next:PlenaryView) {
       view = next;
       const election = view.election;

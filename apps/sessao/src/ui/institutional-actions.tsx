@@ -22,12 +22,16 @@ export function cassationLabel(fee:number) {
   return 'Convocar cassação'+(fee ? ' · '+money(fee) : '');
 }
 
-export function InstitutionalActions({model,send}:{model:ReturnType<typeof institutionalActions>;send:(action:PoliticsAction)=>void}) {
+export function InstitutionalActions({model,send,close}:{close?:()=>void;model:ReturnType<typeof institutionalActions>;send:(action:PoliticsAction)=>void}) {
   const [diverted,setDiverted] = useState<Split>(0);
   const [target,setTarget] = useState('');
   const {grant,hearing} = model;
   const nominee = hearing?.candidates.find(candidate=>candidate.id===target);
   return <div id="politics-actions">
+    <header className="social-header">
+      <h2>Ações institucionais</h2>
+      {close && <button className="hud-icon-button" type="button" aria-label="Fechar ações institucionais" onClick={close}>×</button>}
+    </header>
     {grant && <form id="cabinet-form" onSubmit={event=>{
       event.preventDefault();
       if (grant.affordable) send({kind:'grant',diverted});

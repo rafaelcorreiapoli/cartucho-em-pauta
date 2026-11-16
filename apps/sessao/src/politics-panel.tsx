@@ -24,36 +24,46 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
     if (action.kind!=='hearing') focusMap();
   }
 
+  function closeDossier() { dock.open = false; focusMap(); }
+  function closeInstitutional() { institutional.open = false; focusMap(); }
+
+  function openDossier() {
+    dock.open = true;
+    el('dossier-content').querySelector<HTMLElement>('button[aria-pressed="true"]')?.focus();
+  }
+
   function renderPanels() {
     const dossier = dossierModel(id,view,players);
     const nextDossierKey = JSON.stringify(dossier) ?? '';
     if (nextDossierKey!==dossierKey) {
       dossierKey = nextDossierKey;
-      dossierRoot.render(dossier ? <Dossier model={dossier} send={send}/> : null);
+      dossierRoot.render(dossier ? <Dossier model={dossier} send={send} close={closeDossier}/> : null);
     }
 
     const model = institutionalActions(view,players.find(player=>player.id===id));
     const key = JSON.stringify(model);
     if (key===institutionalKey) return;
     institutionalKey = key;
-    institutionalRoot.render(<InstitutionalActions model={model} send={sendInstitutional}/>);
+    institutionalRoot.render(<InstitutionalActions model={model} send={sendInstitutional} close={closeInstitutional}/>);
   }
 
   return {
     sendInstitutional,
-    openGrant() {
+    openInstitutional() {
       institutional.open = true;
       el('institutional-actions').querySelector<HTMLElement>('.game-choice')?.focus();
     },
-    openDossier() {
-      dock.open = true;
-      el('dossier-content').querySelector<HTMLElement>('button[aria-pressed="true"]')?.focus();
+    openDossier,
+    toggleDossier() {
+      if (dock.hidden) return false;
+      if (dock.open) closeDossier();
+      else openDossier();
+      return true;
     },
     render(next:PlenaryView) {
       view = next;
       dock.hidden = !view.politics;
       institutional.hidden = !view.politics || view.phase!=='negotiation';
-      el('personal-stats').textContent = view.politics?.incoming.length ? 'Nova oferta' : '';
       renderPanels();
     },
     destroy() {

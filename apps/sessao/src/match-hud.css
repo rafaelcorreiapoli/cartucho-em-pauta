@@ -308,31 +308,6 @@
 }
 .choice-empty { color: #d6cfb5; font-size: .78rem; }
 
-@media (max-width: 480px) {
-  #social-docks > details > summary { gap: .28rem; padding: .4rem .45rem; }
-  #personal-stats:not(:empty) { max-width: 4.8ch; overflow: hidden; text-overflow: ellipsis; }
-}
-
-.social-trigger {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  min-height: 38px;
-  padding: .45rem .7rem;
-  border: 1px solid #8c835d;
-  border-radius: 6px;
-  background: #142522f5;
-  color: var(--hud-paper);
-  font-size: .8rem;
-  font-weight: 650;
-  cursor: pointer;
-  list-style: none;
-}
-.social-trigger::-webkit-details-marker { display: none; }
-.social-trigger:hover, .social-module[open] > .social-trigger {
-  background: #253a31;
-  border-color: #d7b574;
-}
 #social-docks .social-panel {
   width: min(350px, calc(100vw - 2 * var(--hud-edge)));
   padding: .8rem;
@@ -639,18 +614,6 @@
 
 @media (min-width: 921px) {
   #social-docks { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; width: var(--hud-side); }
-  #social-docks .social-trigger {
-    gap: .45rem;
-    min-height: 48px;
-    padding: .65rem .6rem;
-    background: #193329f5;
-    font: 800 .95rem/1.15 var(--party-display);
-    white-space: nowrap;
-  }
-  #social-docks .social-trigger:hover,
-  #social-docks details[open] > .social-trigger { background: #294334; }
-  #social-docks .social-trigger .hud-glyph { width: 20px; height: 20px; }
-  #personal-stats:not(:empty) { font-size: .7rem; white-space: normal; }
   #social-docks .social-panel, #session #election-dock .politics-content {
     width: var(--hud-side);
     padding: 1rem;

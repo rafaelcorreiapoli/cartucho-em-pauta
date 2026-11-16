@@ -84,6 +84,21 @@ async page => {
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
+  const dossier = page.locator('#dossier-content');
+  for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:800,height:600}]) {
+    await page.setViewportSize(viewport);
+    await page.keyboard.press('j');
+    await dossier.getByRole('heading',{name:'Dossiê'}).waitFor();
+    const panel = await dossier.boundingBox();
+    if (!panel || panel.x<0 || panel.y<0 || panel.x+panel.width>viewport.width || panel.y+panel.height>viewport.height) {
+      throw Error('Dossiê fora do viewport: '+JSON.stringify({viewport,panel}));
+    }
+    if (await page.locator('#social-docks > details > summary:visible').count()) throw Error('Acionador legado do Dossiê visível');
+    if (viewport.width===1024) await page.keyboard.press('j');
+    else await dossier.getByRole('button',{name:'Fechar dossiê'}).click();
+    await dossier.waitFor({state:'hidden'});
+  }
+  await page.setViewportSize({width:1280,height:720});
   await page.keyboard.press('l');
   const polls = page.getByRole('dialog',{name:'Pesquisa eleitoral'});
   await polls.getByRole('progressbar',{name:'Intenção de voto de Atalhos QA'}).waitFor();

@@ -157,7 +157,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 
 #infiltrator-setup { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.5rem; align-items:center; margin:.5rem 0; }
 #movement-hint { bottom:64px; }
-#personal-stats { color:var(--hud-gold); white-space:nowrap; }
 .politics-content {
   position:absolute; bottom:calc(100% + 6px); right:0; width:min(350px,calc(100vw - 24px));
   max-height:65dvh; overflow:auto; scrollbar-width:thin; padding:.7rem;

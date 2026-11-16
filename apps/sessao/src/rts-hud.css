@@ -371,7 +371,7 @@ button.equipped-gear-tile { cursor: pointer; }
 #command-deck #voice-host { position: relative; display: flex; padding-left: 4px; border-left: 1px solid var(--command-divider); }
 #command-deck #social-docks { width: auto; }
 #command-deck #voice-dock { flex-wrap: nowrap; }
-#command-deck :is(#social-docks .social-trigger,#voice-dock button,#voice-dock summary) {
+#command-deck :is(#voice-dock button,#voice-dock summary) {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -388,22 +388,10 @@ button.equipped-gear-tile { cursor: pointer; }
   font: 660 11px/1 system-ui,sans-serif;
   white-space: nowrap;
 }
-#command-deck :is(#social-docks .social-trigger,#voice-dock button,#voice-dock summary):hover { background: #375c49; }
-#command-deck :is(#social-docks .social-trigger) .hud-glyph { width: 15px; height: 15px; }
-#command-deck :is(#social-docks .social-trigger) { position: relative; }
+#command-deck :is(#voice-dock button,#voice-dock summary):hover { background: #375c49; }
 #command-deck #voice-toggle[data-voice="live"] { color: var(--party-mint); }
 #command-deck #voice-toggle[data-voice="muted"] { color: var(--party-coral); }
 #command-deck #voice-toggle > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#command-deck #politics-dock:has(#personal-stats:not(:empty)) > summary::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--party-gold);
-}
 #command-deck #voice-status:not(:empty) {
   position: absolute;
   right: 0;

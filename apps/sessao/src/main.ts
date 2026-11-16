@@ -348,7 +348,7 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
-    bindActionShortcuts(session,hudListeners.signal,launchApp);
+    bindActionShortcuts(session,hudListeners.signal,launchApp,{j:political.toggleDossier,l:election.showPolls});
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -383,6 +383,10 @@ async function connect(join: () => Promise<Room>) {
         hud.showIncome(income,game?.playerHead());
       }
       panel.render(view);
+      const previousOffers = previousView?.politics?.incoming ?? [];
+      if (view.politics?.incoming.some(offer=>!previousOffers.some(previous=>previous.id===offer.id))) {
+        hud.notify('Oferta de documento','Abra o Dossiê com J.');
+      }
       political.render(view);
       election.render(view);
       gameplay.render(view);

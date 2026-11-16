@@ -15,11 +15,6 @@ export function markShortcut(control:HTMLElement, key:string, label = key) {
   control.append(badge);
 }
 
-const quickActions = [
-  ['j','#politics-dock > summary'],
-  ['l','#open-election-polls'],
-] as const;
-
 function available(control:HTMLElement) {
   return !control.matches(':disabled, [aria-disabled="true"], input[type="hidden"]') &&
     !control.closest('[hidden], [inert], [data-context-hidden="true"]') && control.checkVisibility({visibilityProperty:true});
@@ -52,14 +47,12 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean}) {
   disableHudTabStops(root,signal);
   const launcher = root.querySelector<HTMLButtonElement>('#open-action-shortcuts')!;
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
   const map = root.querySelector<HTMLElement>('#map')!;
-  const controls = quickActions.map(([key,selector])=>[key,root.querySelector<HTMLElement>(selector)!] as const);
-  for (const [key,control] of controls) control.setAttribute('aria-keyshortcuts',key.toUpperCase());
   const settings = root.querySelector<HTMLDialogElement>('#room-settings')!;
   let scope:HTMLElement = root;
   let page = 0;
@@ -132,6 +125,10 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       }
       return;
     }
+    if (key==='j' || key==='l') {
+      if (shortcuts[key]()) event.preventDefault();
+      return;
+    }
     const cassation = /^[0-9]$/.test(key) ? root.querySelector<HTMLButtonElement>(`.cassation-ballot button[aria-keyshortcuts="${key}"]`) : null;
     if (cassation && available(cassation)) {
       event.preventDefault();
@@ -141,8 +138,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
     }
     const control = key==='y' || key==='r' || key==='n' && root.querySelector('[data-vote="abstain"]')
       ? root.querySelector<HTMLElement>(`[data-vote="${key==='y' ? 'yes' : key==='r' ? 'no' : 'abstain'}"]`)
-      : controls.find(([shortcut])=>shortcut===key)?.[1] ??
-        (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
+      : (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
     if (!control || !available(control)) return;
     event.preventDefault();
     control.click();
