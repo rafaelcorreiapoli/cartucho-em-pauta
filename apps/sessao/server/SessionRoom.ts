@@ -54,7 +54,7 @@ export class SessionRoom extends Room {
     const token = readRoomCommandToken(raw);
     if (token===undefined || token<=(this.lastRoomCommandToken.get(id) ?? 0)) return false;
     this.lastRoomCommandToken.set(id,token);
-    return true;
+    return this.match.ballotCountdown(this.clock.currentTime)===undefined;
   }
 
   private gameplayWorld() {
@@ -325,7 +325,7 @@ export class SessionRoom extends Room {
     this.onMessage('allocate-attribute',(client,raw:unknown)=>{
       const request = readAttributeRequest(raw);
       const player = this.players.get(client.sessionId)?.player;
-      if (!request || !player || player.knockedOut || player.carrying) return;
+      if (!request || !player || player.knockedOut || player.carrying || this.match.ballotCountdown(this.clock.currentTime)!==undefined) return;
       if (this.match.allocateAttribute(player.id,request,this.clock.currentTime)) {
         this.gameplay.applyAttribute(player,request.attribute);
       }
@@ -374,6 +374,7 @@ export class SessionRoom extends Room {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
       const queue = this.movementQueue.get(client.sessionId);
+      if (this.match.ballotCountdown(this.clock.currentTime)!==undefined) return;
       if (!input || !state || !queue || input.revision!==state.revision || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
@@ -389,29 +390,37 @@ export class SessionRoom extends Room {
     let previousActiveTick:number|undefined;
     let sendPlayerSnapshot = true;
     let projectedPhase = this.match.phase;
+    let countingDown = false;
     this.setFixedTimestep(() => {
       const startedAt = performance.now();
       const active = this.match.running && this.clients.length>0;
       const gap = active && previousActiveTick!==undefined ? startedAt-previousActiveTick : undefined;
       previousActiveTick = active ? startedAt : undefined;
+      const now = this.clock.currentTime;
+      const freeze = this.match.ballotCountdown(now)!==undefined;
+      if (freeze && !countingDown) this.parliamentarians.stopRoutes();
       for (const [id,state] of this.players) {
-        const input = this.movementQueue.get(id)?.shift();
+        if (freeze && !countingDown) this.resetMovement(state);
+        const input = freeze ? undefined : this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);
         else {
           restMovement(state.player);
           if (state.player.knockedOut) state.route = [];
         }
       }
+      countingDown = freeze;
       const players = [...this.players.values()].map(state => state.player);
-      const now = this.clock.currentTime;
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       const wasVoting = this.match.allowsPlenaryCombat;
       this.match.advance(now);
       this.resetFinishedMatch(now);
       const world = this.gameplayWorld();
-      this.gameplay.tick(world,this.match.phase==='negotiation',wasVoting && this.match.allowsPlenaryCombat);
-      const paused = this.npcTalk.tick(world,this.match.phase==='negotiation');
-      this.parliamentarians.tick(now,STEP_MS/1000,paused,this.match.phase==='negotiation');
+      if (!freeze || this.match.phase!=='negotiation') {
+        const exploring = this.match.phase==='negotiation';
+        this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+        const paused = this.npcTalk.tick(world,exploring);
+        this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
+      }
       if (this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();
         this.parliamentarians.players.forEach((npc,index)=>{

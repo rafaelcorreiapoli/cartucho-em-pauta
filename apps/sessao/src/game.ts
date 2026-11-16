@@ -87,7 +87,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     shiftKeys.clear();
   };
   document.addEventListener('keydown', event => {
-    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
+    if (plenaryView?.ballotCountdown!==undefined || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
       (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
     if (key==='shift') shiftKeys.add(event.code);
@@ -270,6 +270,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
+        if (plenaryView?.ballotCountdown!==undefined) return;
         parent.focus({preventScroll:true});
         keys.clear();
         shiftKeys.clear();
@@ -418,7 +419,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
     update(time: number, delta: number) {
       if (this.assetsFailed || inLobby) return;
-      if (local.state && time>=nextStep) {
+      if (plenaryView?.ballotCountdown===undefined && local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
         if (destination) {
@@ -792,6 +793,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) {
+      if (view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined) {
+        stop();
+        manual = false;
+        destination = undefined;
+      }
       plenaryView = view;
       plenaryViewReceivedAt = performance.now();
     },
