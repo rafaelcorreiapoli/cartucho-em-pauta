@@ -24,6 +24,7 @@ import type { RoomActivityResult } from './room-activities';
 import { createMatchHud } from './match-hud';
 import { Client, type Room } from '@colyseus/sdk';
 import { createElectionPanel } from './election-panel';
+import { createCampaignTv } from './campaign-tv';
 import { GameAudio } from './game-audio';
 import { installHudHelp } from './hud-help';
 import { createGame } from './game';
@@ -338,6 +339,9 @@ async function connect(join: () => Promise<Room>) {
       else if (market.isOpen()) hud.notify('Loja',message);
       else gameplay.feedback(message);
     });
+    const campaignTv = createCampaignTv(session);
+    joined.onMessage('campaign-advertisement',campaignTv.enqueue);
+    hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
     const election = createElectionPanel(joined.sessionId,action => sendCommand('election',action),() => voice?.active ?? false);
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const reactHud = mountReactHud();

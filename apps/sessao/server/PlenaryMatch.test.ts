@@ -545,7 +545,10 @@ test('campaign missions return to the draw after renewal resets used actions',()
     Reflect.set(agenda,'missionDeck',['propaganda','discurso','cafe','passeio','selfieSolo']);
   };
   const active = () => match.view(host.id,ids,0).politics!.missions.active.map(mission=>mission.kind);
-  match.electionAction(at(host,'press'),{kind:'advertise'},1,false);
+  expect(match.electionAction(at(host,'panel'),{kind:'advertise'},1,false)).toBeUndefined();
+  const ad = match.electionAction(at(host,'press'),{kind:'advertise'},1,false);
+  expect(ad).toEqual({name:host.nick,character:host.character,number:100});
+  expect(match.electionAction(at(host,'press'),{kind:'advertise'},2,false)).toBeUndefined();
   match.electionAction(at(host,'panel'),{kind:'speech'},2,false);
   resetDraw();
   match.refreshAgendaEligibility();
@@ -555,7 +558,7 @@ test('campaign missions return to the draw after renewal resets used actions',()
   Reflect.set(match,'ends',ELECTION_RULES.interval+100);
   match.advance(ELECTION_RULES.interval);
   expect(active()).toEqual(['propaganda','discurso','cafe']);
-  match.electionAction(at(host,'press'),{kind:'advertise'},ELECTION_RULES.interval+1,false);
+  expect(match.electionAction(at(host,'press'),{kind:'advertise'},ELECTION_RULES.interval+1,false)).toEqual(ad);
   expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'propaganda'}));
 });
 
