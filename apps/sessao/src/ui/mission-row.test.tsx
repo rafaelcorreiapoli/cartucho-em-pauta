@@ -164,3 +164,10 @@ test('the extraordinary collection mission shows its partial delivery and two st
   expect(markup).toContain('entregue parte dela à Tesouraria');
   expect(markup).toContain('1 / 2');
 });
+
+test('savings shows net progress in reais and Pauta Prioritária names the deadline',()=>{
+  const savings = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'poupancaInstitucional',current:7.5,target:10}}/>);
+  const gift = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'pautaPrioritaria',current:0,target:1}}/>);
+  expect(savings).toContain('R$ 75 mil / R$ 100 mil');
+  expect(gift).toContain('Presente Institucional antes da votação');
+});

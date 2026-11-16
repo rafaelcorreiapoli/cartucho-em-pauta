@@ -8,7 +8,7 @@ import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { agendaDurationMs, agendas, targetedAgendas, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { agendaDurationMs, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; canFightCrisis?:()=>boolean; hasForensicReport?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
@@ -18,6 +18,8 @@ const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
+  pautaPrioritaria:(event:GameplayEvent) => event.type==='transferred' && event.kind==='gift' &&
+    event.place==='articulation' && !!event.target && event.target!==event.actor,
   fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
   patrimonioSuspeito:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='npc',
   dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='cash-handed-over' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
@@ -79,11 +81,11 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,doisPix:3,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:2,doisPix:2,investimentoPolitico:5,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:3, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
   assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -114,6 +116,7 @@ export class PersonalAgenda {
   private completed:Mission[] = [];
   private missionDeck:Agenda[];
   private nextMissionId = 0;
+  private savingsStartingWallet = 0;
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
   private missionPayers = new Set<string>();
@@ -447,6 +450,7 @@ export class PersonalAgenda {
       const [kind] = this.missionDeck.splice(index,1);
       this.missionDeck.push(kind);
       let target = photoMissions[kind as keyof typeof photoMissions]?.target ?? missionTargets[kind] ?? 1;
+      if (kind==='poupancaInstitucional') this.savingsStartingWallet = metrics.wallet;
       if (kind==='fortuna') target = Math.max(target,metrics.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,metrics.popularity+15));
       if (kind==='articulacao') this.missionPayers.clear();
@@ -457,6 +461,7 @@ export class PersonalAgenda {
   }
 
   private missionProgress(metrics:AgendaMetrics, mission:Mission) {
+    if (mission.kind==='poupancaInstitucional') return Math.max(0,Math.round((metrics.wallet-this.savingsStartingWallet)*10)/10);
     if (mission.kind==='fortuna') return metrics.wallet;
     if (mission.kind==='campanha') return metrics.popularity;
     if (mission.kind==='articulacao') return this.missionPayers.size;

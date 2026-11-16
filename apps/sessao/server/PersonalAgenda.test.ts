@@ -1048,3 +1048,51 @@ test('extraordinary collection requires a partial treasury deposit from a robber
   expect(game.view(player,world).inventory).toContainEqual(expect.objectContaining({id:tracked,cash:1.5}));
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'recolhimentoExtraordinario',current:2}));
 });
+
+test('savings tracks the net increase after assignment, including spending and fractional credits',()=>{
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'A'}],()=>0);
+  economy.earn('a',20);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['poupancaInstitucional','cafe','passeio','selfieSolo']);
+  economy.updateAgendaEligibility(new Set(['a']),3);
+  const view = ()=>economy.view('a',[],0,false,()=>true)!.missions;
+  const progress = ()=>view().active.find(mission=>mission.kind==='poupancaInstitucional')?.current;
+  expect(progress()).toBe(0);
+  economy.earn('a',7.5);
+  expect(progress()).toBe(7.5);
+  expect(economy.spend('a',2.5)).toBe(true);
+  expect(progress()).toBe(5);
+  economy.earn('a',4.9);
+  expect(progress()).toBe(9.9);
+  economy.earn('a',.1);
+  expect(view().completed).toContainEqual(expect.objectContaining({kind:'poupancaInstitucional',current:10}));
+});
+
+test('Pauta Prioritária uses the phase when the recipient accepts the gift',()=>{
+  const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const [sender,recipient] = players;
+  const agenda = new PersonalAgenda(metrics,2,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pautaPrioritaria','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,2,true,3,0,[{id:recipient.id,name:recipient.nick}]);
+  const game = new Gameplay();
+  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
+    publish:event=>recordAgendaEvent(agenda,event)};
+  const offer = ()=>{
+    expect(game.act(sender,{kind:'supply',place:'credentials'},world)).toContain('inventário');
+    const item = game.view(sender,world).inventory.find(item=>item.kind==='gift')!;
+    expect(game.act(sender,{kind:'offer',item:item.id,target:recipient.id},world)).toBe('Pedido enviado.');
+    return game.view(recipient,world).requests.at(-1)!.id;
+  };
+  const accept = (item:number)=>game.act(recipient,{kind:'accept',item},world);
+  const first = offer();
+  world.plenary = true;
+  expect(accept(first)).toBe('Objeto recebido.');
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='pautaPrioritaria')?.current).toBe(0);
+  world.plenary = false;
+  world.now++;
+  expect(accept(offer())).toBe('Objeto recebido.');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'pautaPrioritaria',current:1}));
+});

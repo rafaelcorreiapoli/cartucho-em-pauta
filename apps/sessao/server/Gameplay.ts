@@ -1462,7 +1462,8 @@ export class Gameplay {
       }
       this.addToInventory(transferred,player.id);
       if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
-      this.event(world,owner,'transferred',transferred.data,player.id);
+      this.event(world,owner,'transferred',transferred.data,player.id,
+        !world.plenary && transferred.data.kind==='gift' ? {place:'articulation'} : undefined);
       const amount = cashAmount(transferred.data);
       if (amount && !owner.npc && !player.npc) {
         this.event(world,owner,'cash-handed-over',transferred.data,player.id,{amount,witnesses:[]});

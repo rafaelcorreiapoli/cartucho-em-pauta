@@ -14,6 +14,7 @@ export type Split = typeof splits[number];
 export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
+export const SAVINGS_MISSION_AMOUNT = 10;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export const targetedAgendas = {
@@ -83,6 +84,8 @@ export const agendas = {
   gabinete: 'Instale um móvel de luxo no seu gabinete.',
   televisao:'Instale uma TV no seu gabinete',
   fortuna: 'Aumente sua carteira',
+  poupancaInstitucional:`Aumente sua carteira em ${money(SAVINGS_MISSION_AMOUNT)}`,
+  pautaPrioritaria:'Entregue um Presente Institucional antes da votação',
   campanha: 'Aumente sua popularidade',
   articulacao: 'Receba dinheiro de dois jogadores diferentes',
   projetos: 'Vote a favor de dois projetos aprovados',
@@ -151,7 +154,7 @@ const xpOnly:Partial<Record<Agenda,number>> = {
   trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
   fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
-  recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
+  poupancaInstitucional:50,pautaPrioritaria:30,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   nadaADeclarar:45,cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
