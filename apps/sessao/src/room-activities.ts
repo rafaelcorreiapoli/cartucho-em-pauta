@@ -1,4 +1,4 @@
-import { treasurer } from './npcs';
+import { npcs, treasurer } from './npcs';
 
 export const roomActivities = {
   cabinet: {...treasurer.interaction, title:treasurer.label, label:'Consultar orçamento', icon:'wallet'},
@@ -7,7 +7,7 @@ export const roomActivities = {
   archive: {x:549,y:90, title:'Arquivo', label:'Abrir registro público', icon:'document'},
   library: {x:424,y:364, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},
   quorum: {x:481,y:364, title:'Biblioteca', label:'Consultar quórum', icon:'ballot'},
-  credentials: {x:149,y:493, title:'Credenciamento', label:'Conferir credencial', icon:'check'},
+  credentials: {...npcs.credentialsVendor.interaction, title:'Credenciamento', label:'Conferir credencial', icon:'check'},
   benches: {x:210,y:489, title:'Credenciamento', label:'Consultar bancadas', icon:'ballot'},
 } as const satisfies Record<string, {x:number; y:number; title:string; label:string; icon:string}>;
 

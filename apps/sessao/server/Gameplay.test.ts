@@ -11,6 +11,11 @@ import { canStand, type Player } from '../src/map';
 import { photoMissions } from './photo-missions';
 import { installationSites } from '../src/installations';
 
+function buyCredentialGood(game:Gameplay,player:Player,kind:'portrait'|'vip',world:GameplayWorld) {
+  game.act(player,{kind:'open-shop',target:'credentialsVendor'},world);
+  return game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);
+}
+
 function setup() {
   const player = (id:string,x:number,y:number):Player => ({id,nick:id,x,y,moving:false,direction:0,character:0});
   const alice = player('Alice',240,250), bob = player('Bob',250,250), watcher = player('Clara',228,240);
@@ -230,7 +235,7 @@ test('installations validate location, keep one occupant and serve each diner on
   const {alice,bob,watcher,events,game,world} = setup();
   const purchases:number[] = [];
   world.spend = (_id,amount)=>{ purchases.push(amount); return true; };
-  expect(game.act(alice,{kind:'buy',target:'pizza'},world)).toBe('Aproxime-se do balcão.');
+  expect(game.act(alice,{kind:'open-shop',target:'credentialsVendor'},world)).toBe('Aproxime-se para conversar.');
   const coffeeRoom = {x:alice.x,y:alice.y};
   Object.assign(alice,npcs.snackVendor.interaction);
   game.act(alice,{kind:'talk',target:'snackVendor'},world);
@@ -250,8 +255,8 @@ test('installations validate location, keep one occupant and serve each diner on
 
   Object.assign(alice,terminals.credentials.point);
   Object.assign(bob,terminals.credentials.point);
-  game.act(alice,{kind:'buy',target:'portrait'},world);
-  game.act(bob,{kind:'buy',target:'portrait'},world);
+  buyCredentialGood(game,alice,'portrait',world);
+  buyCredentialGood(game,bob,'portrait',world);
   const [first] = game.view(alice,world).inventory;
   const [second] = game.view(bob,world).inventory;
   Object.assign(alice,installationSites.hall.point);
@@ -275,7 +280,7 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
     Object.assign(alice,terminals.credentials.point);
-    expect(game.act(alice,{kind:'buy',target:site.kind},world)).toBe('Compra guardada no inventário.');
+    expect(buyCredentialGood(game,alice,site.kind,world)).toBe('Compra guardada no inventário.');
     const [item] = game.view(alice,world).inventory;
     expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
     const approach = {x:site.point.x,y:site.point.y+10};

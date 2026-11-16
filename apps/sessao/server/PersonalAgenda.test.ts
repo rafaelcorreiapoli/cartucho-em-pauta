@@ -14,6 +14,11 @@ import { agendaDurationMs } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
+function buyCredentialGood(game:Gameplay,player:Player,kind:'portrait'|'vip',world:GameplayWorld) {
+  game.act(player,{kind:'open-shop',target:'credentialsVendor'},world);
+  return game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);
+}
+
 function recordAgendaEvent(agenda:PersonalAgenda,event:GameplayEvent) {
   if (agenda.acceptGameplayEvent(event)) agenda.applyGameplayEvent(metrics,event,false);
 }
@@ -356,7 +361,7 @@ test('decoration missions require enough money or an item already in the invento
     return economy.view(player.id,[],0,false,()=>true)!.missions.active.map(mission=>mission.kind);
   };
   expect(draw()).toContain('reserva');
-  expect(game.act(player,{kind:'buy',target:'portrait'},world)).toContain('inventário');
+  expect(buyCredentialGood(game,player,'portrait',world)).toContain('inventário');
   expect(economy.spend(player.id,6)).toBe(true);
   expect(draw()).toEqual(['retrato','cafe','passeio']);
   const portrait = game.view(player,world).inventory.find(item=>item.kind==='portrait')!;
@@ -415,7 +420,7 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   };
   const install = (player:Player, place:'hall'|'coffeeVip') => {
     const {kind,point} = installationSites[place];
-    expect(game.act(player,{kind:'buy',target:kind},world)).toContain('inventário');
+    expect(buyCredentialGood(game,player,kind,world)).toContain('inventário');
     const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
     Object.assign(player,point);
     expect(game.act(player,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
@@ -1166,7 +1171,7 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
       if (agenda.acceptGameplayEvent(event)) agenda.applyGameplayEvent(options,event,false);
     }};
   expect(draw()).toBe(false);
-  expect(game.act(host,{kind:'buy',target:'vip'},world)).toContain('inventário');
+  expect(buyCredentialGood(game,host,'vip',world)).toContain('inventário');
   const plate = game.view(host,world).inventory.find(item=>item.kind==='vip')!;
   const point = installationSites.coffeeVip.point;
   Object.assign(host,point);
@@ -1246,7 +1251,7 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
   const game = new Gameplay();
   const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,
     spend:()=>true,earn:()=>{},publish:entry=>recordAgendaEvent(agenda,entry)};
-  expect(game.act(player,{kind:'buy',target:'vip'},world)).toContain('inventário');
+  expect(buyCredentialGood(game,player,'vip',world)).toContain('inventário');
   const [plate] = game.view(player,world).inventory;
   expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Aproxime-se do local.');
   expect(rewards).toEqual([]);
@@ -1345,7 +1350,7 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   const game = new Gameplay();
   const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},spend:()=>true,
     publish:entry=>{if (entry.actor===visitor.id) recordAgendaEvent(agenda,entry);}};
-  expect(game.act(owner,{kind:'buy',target:'portrait'},world)).toContain('inventário');
+  expect(buyCredentialGood(game,owner,'portrait',world)).toContain('inventário');
   const [portrait] = game.view(owner,world).inventory;
   for (const player of players) Object.assign(player,installationSites.hall.point);
   const install = ()=>game.act(owner,{kind:'install',place:'hall',item:portrait.id},world);

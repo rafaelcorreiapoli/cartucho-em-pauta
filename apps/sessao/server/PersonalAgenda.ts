@@ -2,7 +2,7 @@ import {mailPublicationFee,marketProduct} from '../src/market-catalog';
 import type {BillPolicies} from '../src/plenary';
 import { firstAidKit } from '../src/medical';
 import { inPlenary } from '../src/map';
-import { shop } from '../src/installations';
+import { credentialGoods } from '../src/installations';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
@@ -108,7 +108,7 @@ const consumableRequirements = {
 const decorationRequirements = {
   retrato:'portrait',retratoGabinete:'portrait',reforma:'portrait',
   privilegioAdquirido:'vip',reserva:'vip',mandaVip:'vip',
-} as const satisfies Partial<Record<Agenda,keyof typeof shop>>;
+} as const satisfies Partial<Record<Agenda,keyof typeof credentialGoods>>;
 
 const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
@@ -461,7 +461,7 @@ export class PersonalAgenda {
       } else return false;
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
-    if (decoration && metrics.wallet<shop[decoration] && !metrics.owns?.(decoration)) return false;
+    if (decoration && metrics.wallet<credentialGoods[decoration].price && !metrics.owns?.(decoration)) return false;
     if (!canCompleteTimedMission(kind,metrics)) return false;
     if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
@@ -486,7 +486,7 @@ export class PersonalAgenda {
     if (kind==='reuniaoVip' && !metrics.hasAgendaDecoration?.('anyVip')) return false;
     if (kind==='cerimonialOficial' && !metrics.hasAgendaDecoration?.('anyPortrait')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
-        metrics.wallet<shop.portrait && !metrics.owns?.('portrait')) return false;
+        metrics.wallet<credentialGoods.portrait.price && !metrics.owns?.('portrait')) return false;
     if (kind==='reforma' && !metrics.hasAgendaDecoration?.('portrait',true)) return false;
     if (kind==='mandaVip' && !metrics.hasAgendaDecoration?.('vip',true)) return false;
     if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;

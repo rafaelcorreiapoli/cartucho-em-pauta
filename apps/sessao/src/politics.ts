@@ -79,7 +79,7 @@ export const agendas = {
   autorretrato:'Tire uma selfie ao lado do seu retrato.',
   cerimonialOficial:'Tire uma selfie perto de um Retrato Oficial instalado',
   reforma:'Substitua o retrato de outro parlamentar pelo seu.',
-  reserva:'Reserve um lugar no Congresso com uma Placa VIP.',
+  reserva:'Reserve uma cadeira no Congresso com uma Placa VIP.',
   fiscalVip:'Fotografe um visitante na área VIP de outro parlamentar.',
   mandaVip:'Substitua a placa VIP de outro parlamentar pela sua.',
   fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',

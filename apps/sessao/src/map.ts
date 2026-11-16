@@ -1,3 +1,4 @@
+import { installationSites } from './installations';
 import { reprography } from './room-activities';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
@@ -99,6 +100,8 @@ const obstacles = [
     const {width,footOffset} = officeFixtures[kind];
     return [x-width/2,y-footOffset-5,width,5];
   })),
+  ...Object.values(installationSites).flatMap(({kind,point}):Rect[] =>
+    kind==='vip' ? [[point.x-9,point.y-7,18,9]] : []),
   ...Object.values(mapNpcs).map(npc=>npcFootprint(npc)),
   ...desks.map(([x,y]):Rect => [x,y+2,45,18]),
   ...furnishings.map(({area:[x,y,width,height],footprint}):Rect =>
