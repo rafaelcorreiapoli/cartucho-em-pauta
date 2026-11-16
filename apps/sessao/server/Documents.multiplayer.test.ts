@@ -1,4 +1,4 @@
-import {extinguisherSpawns,fireRules,fireSites,type FireExtinguished} from '../src/fire';
+import {extinguisherSpawns,fireRules,fireSites,incendiary,type FireExtinguished} from '../src/fire';
 import {expect,test} from 'bun:test';
 import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
@@ -255,10 +255,19 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const remote = rooms.find(peer=>peer!==infiltrator && peer!==firefighter)!;
     const site = fireSites[0];
     move(remote,stations.secretary);
+    // Earlier mail fees and transfers can leave a different wallet based on the role draw.
+    const purchaseShortfall = Math.round((incendiary.price-economy.wallet(firefighter.sessionId))*10)/10;
+    if (purchaseShortfall>0) economy.rewardFromReserve(firefighter.sessionId,purchaseShortfall);
     move(firefighter,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+    const previousShopToken = state(firefighter)?.dialogue?.token;
     firefighter.send('gameplay',{action:{kind:'open-shop',target:'vendor'},token:2230});
-    const technical = await wait(()=>state(firefighter)?.dialogue?.shop ? state(firefighter)?.dialogue : undefined);
+    const technical = await wait(()=>{
+      const current = state(firefighter)?.dialogue;
+      return current?.npc==='vendor' && current.shop && current.token!==previousShopToken ? current : undefined;
+    });
+    feedback.delete(firefighter.sessionId);
     firefighter.send('gameplay',{action:{kind:'shop-buy',target:'incendiary',token:technical.token},token:2240});
+    expect(await wait(()=>feedback.get(firefighter.sessionId))).toBe('Compra guardada no inventário.');
     await wait(()=>state(firefighter)?.inventory.some(item=>item.kind==='incendiary'));
     const nearbyTarget = {x:site.x,y:site.y+10};
     move(firefighter,nearbyTarget);
