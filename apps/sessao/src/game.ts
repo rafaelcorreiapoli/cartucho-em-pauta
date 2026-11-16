@@ -178,6 +178,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
       this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
       this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
+      this.load.image('power-panel',import.meta.env.BASE_URL+'assets/painel-eletrico.webp');
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
     create() {
@@ -216,10 +217,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       },art=>this.registerInteraction(art,()=>!!plenaryView?.gameplay?.security,openSecurity));
       powerPanels.forEach(({x,y},index)=>{
         const panel = index as PowerPanel;
-        const fixture = this.add.text(x,y,`⚡ ${panel===0 ? 'A' : 'B'}`,{
-          fontFamily:'system-ui',fontSize:'8px',color:'#ffe09a',backgroundColor:'#24303b',
-          padding:{x:3,y:1},resolution:3,
-        }).setOrigin(.5).setDepth(2);
+        const fixture = this.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
         const option = ()=>{
           const player = local.state?.player;
           if (!player || !negotiating || !plenaryView?.gameplay || plenaryView.ballotCountdown!==undefined) return;
