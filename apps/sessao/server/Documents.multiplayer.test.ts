@@ -263,8 +263,16 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>commandTokens.get(firefighter.sessionId)===2270);
     expect(views.get(firefighter.sessionId)?.fire?.site).toBe(0);
     move(firefighter,site.extinguisher);
-    firefighter.send('gameplay',{action:{kind:'supply',place:site.extinguisher.station},token:2280});
-    await wait(()=>state(firefighter)?.inventory.some(item=>item.kind==='extinguisher'));
+    move(infiltrator,site.extinguisher);
+    const extinguisher = await wait(()=>state(firefighter)?.nearby.find(item=>item.kind==='extinguisher'));
+    await wait(()=>state(infiltrator)?.ground.some(item=>item.id===extinguisher.id));
+    const collect = {kind:'collect',item:extinguisher.id};
+    firefighter.send('gameplay',{action:collect,token:2280});
+    await wait(()=>state(firefighter)?.inventory.some(item=>item.id===extinguisher.id));
+    await wait(()=>!state(infiltrator)?.ground.some(item=>item.id===extinguisher.id));
+    infiltrator.send('gameplay',{action:collect,token:2281});
+    await wait(()=>feedback.get(infiltrator.sessionId)==='Objeto fora de alcance ou inventário cheio.');
+    expect(state(infiltrator)?.inventory.some(item=>item.id===extinguisher.id)).toBe(false);
     await wait(()=>snapshots.get(firefighter.sessionId)?.some(player=>player.id===firefighter.sessionId &&
       player.exposed?.some(item=>item.kind==='extinguisher')));
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2285});
@@ -274,6 +282,11 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2290});
     await wait(()=>feedback.get(firefighter.sessionId)==='Incêndio apagado.');
     await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
+    move(firefighter,site.extinguisher);
+    firefighter.send('gameplay',{action:{kind:'drop',item:extinguisher.id},token:2292});
+    await wait(()=>state(infiltrator)?.nearby.some(item=>item.id===extinguisher.id));
+    infiltrator.send('gameplay',{action:collect,token:2294});
+    await wait(()=>state(infiltrator)?.inventory.some(item=>item.id===extinguisher.id));
 
     economy.changePopularity(alice.sessionId,40);
     move(alice,stations.panel);
