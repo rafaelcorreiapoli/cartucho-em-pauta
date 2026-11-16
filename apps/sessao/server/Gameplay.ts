@@ -141,14 +141,16 @@ export class Gameplay {
     if (active) {
       const player = world.players.find(player=>player.id===active.owner);
       if (!exploring || !player || player.knockedOut || player.carried || !world.voice(active.owner) ||
-          this.wearing(active.owner,'megaphone')?.id!==active.item || world.now>=active.until) {
+          this.wearing(active.owner,'megaphone')?.id!==active.item) {
         this.stopMegaphone(active.owner,world);
       } else {
-        const duration = Math.min(100,world.now-active.sampledAt);
-        active.sampledAt = world.now;
+        const end = Math.min(world.now,active.until);
+        const duration = Math.min(100,end-active.sampledAt);
+        active.sampledAt = end;
         if (duration>0 && world.hasMission?.(player.id,'discursoMegafone')) {
           publishGameplay(world,player,'megaphone-time',{duration,witnesses:[]});
         }
+        if (world.now>=active.until) this.stopMegaphone(active.owner,world);
       }
     }
     for (const [item,recharge] of this.megaphoneRecharge) {

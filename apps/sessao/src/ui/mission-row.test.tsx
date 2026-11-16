@@ -683,3 +683,42 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
 });
+
+test('Discurso Histórico credits the final active interval without counting time past expiry',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(player,{kind:'open-shop',target:'vendor'},world(1));
+  const token = game.view(player,world(1)).dialogue?.token;
+  expect(game.act(player,{kind:'shop-buy',target:'megaphone',token},world(1))).toBe('Compra equipada.');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['discursoMegafone','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const start = 100;
+  expect(game.act(player,{kind:'toggle-megaphone'},world(start))).toBe('Megafone ativo.');
+  for (let elapsed=5_100;elapsed<=14_900;elapsed+=100) game.tick(world(start+elapsed),true);
+  game.tick(world(start+14_950),true);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = view(start+14_950).missions.active.find(({kind})=>kind==='discursoMegafone')!;
+  expect(active.current).toBe(9_950);
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('9 / 10 s');
+
+  const after = world(start+15_050);
+  const samples:number[] = [];
+  game.tick({...after,publish:event=>{
+    if (event.type==='megaphone-time') samples.push(event.duration!);
+    return after.publish(event);
+  }},true);
+  expect(samples).toEqual([50]);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  const completed = view(after.now).missions.completed.find(({kind})=>kind==='discursoMegafone')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(after.now).progression.xp).toBe(35);
+});
