@@ -321,6 +321,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   world.now += 3000;
   game.tick(world,true);
   expect(feedback.get(watcher.id)).toBe('Câmera escondida encontrada.');
+  expect(events).toContainEqual(expect.objectContaining({type:'spy-discovered',actor:watcher.id,item:channel.id,witnesses:[]}));
   expect(game.spyView(watcher,world).channels).toEqual([]);
   expect(game.spyFrame(alice,world)).toBeDefined();
   game.spyAction(watcher,{kind:'remove',site:'coffee'},world);
@@ -328,6 +329,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   game.tick(world,true);
   expect(game.spyFrame(alice,world)).toBeUndefined();
   expect(game.spyView(alice,world).channels[0].removed).toBe(true);
+  expect(events).toContainEqual(expect.objectContaining({type:'spy-removed',actor:watcher.id,item:channel.id,witnesses:[]}));
   expect(game.view(watcher,world).inventory).toContainEqual(detector);
   game.spyAction(bob,{kind:'install',site:'coffee',item:wiretap.id},world);
   world.now += 5000;

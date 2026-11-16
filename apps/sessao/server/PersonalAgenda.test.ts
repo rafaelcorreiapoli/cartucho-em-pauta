@@ -849,3 +849,64 @@ test('photo tourism counts distinct locations after assignment',()=>{
   }
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'turismo',current:3}));
 });
+
+test('calls need ten seconds on each of two distinct lines after the mission starts',()=>{
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','credencial']);
+  agenda.updateEligibility(metrics,3,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'}]);
+  for (const [at,target,item,duration] of [[1,'b',1,9_900],[2,'b',2,100],[3,'b',1,100],[4,'b',3,10_000],[5,'c',4,10_000]] as const) {
+    const sample = event('call-time',{at,target,item,duration});
+    recordAgendaEvent(agenda,sample);
+    recordAgendaEvent(agenda,sample);
+    if (at<5) expect(agenda.view(metrics).active.find(mission=>mission.kind==='chamadasUrgentes')?.current).toBe(at<3 ? 0 : 1);
+  }
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'chamadasUrgentes',current:2}));
+});
+
+test.each([
+  ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
+  ['debateTelefonico',event('call-time',{duration:20_000,target:'b'}),event('called',{target:'b'})],
+  ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
+  ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
+  ['limpeza',event('spy-removed',{item:3}),event('spy-removed')],
+  ['escutaAtiva',event('wiretap-time',{duration:15_000}),event('wiretap-time',{duration:0,at:2})],
+  ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
+  ['investimentoPolitico',event('campaign-investment',{amount:5}),event('advertisement-aired')],
+  ['campanhaUltimaHora',event('campaign-investment',{duration:60_000}),event('campaign-investment',{duration:60_001,at:2})],
+  ['mensagemComAnexo',event('mail-published',{place:'document'}),event('photo-published')],
+  ['retratacaoOficial',event('mail-published',{place:'report'}),event('mail-published',{place:'document'})],
+  ['instalarGrampo',event('spy-installed',{kind:'wiretap'}),event('spy-installed',{kind:'spyCamera'})],
+  ['instalarCamera',event('spy-installed',{kind:'spyCamera'}),event('spy-installed',{kind:'wiretap'})],
+  ['reuniaoGabinete',event('office-meeting-time',{duration:15_000}),event('public-meeting-time',{duration:15_000})],
+  ['reuniaoPublica',event('public-meeting-time',{duration:10_000}),event('office-meeting-time',{duration:10_000})],
+  ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
+] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
+  const rewards:number[] = [];
+  const options = {...metrics,hasForensicReport:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
+  recordAgendaEvent(agenda,{...valid,at:0});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','credencial']);
+  agenda.updateEligibility(options,4,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
+  recordAgendaEvent(agenda,wrong);
+  expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
+  recordAgendaEvent(agenda,valid);
+  recordAgendaEvent(agenda,valid);
+  expect(agenda.view(options).completed.filter(mission=>mission.kind===kind)).toHaveLength(1);
+  expect(rewards).toHaveLength(1);
+});
+
+test('three signatures must all come from distinct signers on a single document',()=>{
+  const agenda = new PersonalAgenda(metrics,4,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['comissaoImprovisada','passeio','cafe']);
+  agenda.updateEligibility(metrics,4,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
+  agenda.recordSignature(metrics,1,'b');
+  agenda.recordSignature(metrics,1,'b');
+  agenda.recordSignature(metrics,1,'c');
+  agenda.recordSignature(metrics,2,'d');
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='comissaoImprovisada')?.current).toBe(2);
+  agenda.recordSignature(metrics,1,'d');
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'comissaoImprovisada',current:3}));
+});

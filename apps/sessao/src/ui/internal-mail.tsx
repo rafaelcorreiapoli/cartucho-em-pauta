@@ -85,6 +85,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   let notices:readonly InternalNotice[] = [];
   let composing = false;
   let exploring = false;
+  let fee:number = internalMailRules.fee;
   let complaints:ComplaintView = {available:[],history:[]};
   let source:InternalNotice|undefined;
   let pending = false;
@@ -110,7 +111,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
         <label>Mensagem<textarea name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
         {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <AttachmentPicker choices={attachments}/>}
         <p role="status">{error}</p>
-        <button className="hud-button" disabled={pending}>Publicar · {money(internalMailRules.fee)}</button>
+        <button className="hud-button" disabled={pending}>Publicar · {money(fee)}</button>
         <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={()=>{
           composing = false;
           source = undefined;
@@ -145,6 +146,11 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
   }
 
   return {
+    price(next:number) {
+      if (fee===next) return;
+      fee = next;
+      if (composing) render();
+    },
     open(attachments:readonly AttachmentChoice[]) {
       composing = false;
       source = undefined;

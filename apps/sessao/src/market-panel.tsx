@@ -7,7 +7,7 @@ import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type World
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { npcs, type NpcId } from './npcs';
-import type { PlenaryView } from './plenary';
+import type { BillPolicies, PlenaryView } from './plenary';
 import { money } from './politics';
 
 function marketVendorPortrait(npc:NpcId) {
@@ -72,7 +72,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
   }
   dialog.addEventListener('keydown',onPageKey);
 
-  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[]) {
+  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number) {
     const catalog = npcs[npc].catalog;
     if (!catalog) return;
     const kinds = marketKinds[catalog];
@@ -83,11 +83,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
       selected = 0;
-      renderCatalog(npc,token,wallet,inventory,equipped,furnishings);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget);
     };
     const stock = visible.map(kind=>{
       const item = objects[kind];
-      const price = marketProduct(catalog,kind)!.price;
+      const price = marketProduct(catalog,kind,policies,budget)!.price;
       const furniture = isOfficeFurniture(kind);
       const hasItem = furniture ? furnishings.includes(kind) : isGear(kind) && owned.some(entry=>entry.kind===kind);
       const stack = inventory.some(entry=>entry.kind===kind) && canStackItem(kind);
@@ -114,7 +114,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         <div className="market-products" aria-label="Produtos">
           {stock.map(({kind,item,price,hasItem,status},index)=><button type="button" className="market-product-button item-tile"
             key={kind} aria-pressed={selected===index} aria-label={item.name+' · '+money(price)} aria-keyshortcuts={String(index+1)}
-            onClick={()=>{selected = index;renderCatalog(npc,token,wallet,inventory,equipped,furnishings);}}>
+            onClick={()=>{selected = index;renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget);}}>
             <img className="market-art" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
             <span className="market-product-caption"><strong>{item.name}</strong><span className="market-product-price">{hasItem ? status : money(price)}</span></span>
             <kbd className="action-key" aria-hidden="true">{index+1}</kbd>
@@ -187,10 +187,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         selected = 0;
       }
       const wallet = view.politics?.wallet ?? 0;
+      const {policies,budget} = view;
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.options,wallet,inventory,equipped,furnishings]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -215,7 +216,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
         body.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
-      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings);
+      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget);
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {
       purchase = item;

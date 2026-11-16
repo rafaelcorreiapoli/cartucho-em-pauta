@@ -7,9 +7,19 @@ type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:num
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>boolean;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
-  event?:(player:Player,kind:'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string)=>void};
+  monitor?:(player:Player,duration:number)=>void;
+  event?:(player:Player,kind:'spy-viewed'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'spy-activity',site:string,device?:{kind:SpyDevice;id:number})=>void};
 
 export class Surveillance {
+  countInstalled(id:string,kind:SpyDevice) {
+    return [...this.occupied.values()].filter(device=>device.owner===id && device.kind===kind).length;
+  }
+
+  canInstall(id:string,kind:SpyDevice) {
+    return this.countInstalled(id,kind)<spyRules.limit &&
+      hideouts.some(site=>(site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
+  }
+
   private devices = new Map<number,Device>();
   private occupied = new Map<string,Device>();
   private jobs = new Map<string,Job>();
@@ -21,10 +31,11 @@ export class Surveillance {
   private motion = new Map<number,string>();
   private serial = 0;
   private sampleAt = 0;
+  private lastTick?:number;
 
   reset() {
     this.devices.clear(); this.occupied.clear(); this.jobs.clear(); this.discoveries.clear();
-    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0;
+    this.selected.clear(); this.listening.clear(); this.muted.clear(); this.lastSound.clear(); this.motion.clear(); this.sampleAt = 0; this.lastTick = undefined;
   }
 
   leave(id:string, permanent=false) {
@@ -101,6 +112,7 @@ export class Surveillance {
         this.listening.delete(id);
         this.muted.delete(id);
         selection.set(id,device.id);
+        access.event?.(player,'spy-viewed',device.site.id,device);
       }
       if (raw.kind==='close-channel' && selection.get(id)===device.id) selection.delete(id);
       if (raw.kind==='mute' && this.listening.get(id)===device.id) {
@@ -131,6 +143,8 @@ export class Surveillance {
 
   tick(players:Player[],now:number,access:Access,exploring:boolean,present:(id:string)=>boolean) {
     const barriers = players[0]?.barriers;
+    const elapsed = Math.min(100,now-(this.lastTick ?? now));
+    this.lastTick = now;
     if (!exploring) { this.jobs.clear(); this.selected.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
@@ -140,6 +154,11 @@ export class Surveillance {
       if (now<job.ends) continue;
       this.jobs.delete(id);
       this.finish(player,job,now,access);
+    }
+    if (elapsed>0) for (const player of players) {
+      if (present(player.id) && !player.knockedOut && !this.muted.has(player.id) && this.channel(player.id,'wiretap')) {
+        access.monitor?.(player,elapsed);
+      }
     }
     if (now<this.sampleAt) return;
     this.sampleAt = now+spyRules.sample;
@@ -183,7 +202,7 @@ export class Surveillance {
           active:false,removed:false,alerts:true,until:now,alertAt:now,installedAt:now};
         this.devices.set(channel,installed);
         this.occupied.set(job.site.id,installed);
-        access.event?.(player,'spy-installed',job.site.id);
+        access.event?.(player,'spy-installed',job.site.id,installed);
         access.feedback(id,'Dispositivo instalado.');
       } else {
         access.event?.(player,'spy-install-failed',job.site.id);
@@ -194,8 +213,10 @@ export class Surveillance {
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
+        if (known.get(job.site.id)!==device.id && device.owner!==id) {
+          access.event?.(player,'spy-discovered',job.site.id,device);
+        }
         known.set(job.site.id,device.id);
-        access.event?.(player,'spy-discovered',job.site.id);
       }
       access.feedback(id,device ? device.kind==='wiretap' ? 'Grampo encontrado.' : 'Câmera escondida encontrada.' : 'Nenhum dispositivo encontrado.');
     } else if (device && device.id===job.target && this.known(id,device)) {
@@ -208,7 +229,7 @@ export class Surveillance {
       this.motion.delete(device.id);
       if (this.selected.get(device.owner)===device.id) this.selected.delete(device.owner);
       if (this.listening.get(device.owner)===device.id) this.listening.delete(device.owner);
-      access.event?.(player,'spy-removed',job.site.id);
+      access.event?.(player,'spy-removed',job.site.id,id!==device.owner ? device : undefined);
       access.feedback(id,job.kind==='recover' ? 'Dispositivo recuperado.' : 'Dispositivo removido.');
       if (id!==device.owner) access.feedback(device.owner,'Dispositivo desconectado.');
     }

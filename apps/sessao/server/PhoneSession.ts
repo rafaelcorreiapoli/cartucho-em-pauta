@@ -3,7 +3,7 @@ import { worldVisible, type Player } from '../src/map';
 import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
 
-type Call = {from:string; to:string; connected:boolean; expires:number};
+type Call = {from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
 type PhoneRound = {snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
 type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'>;
 
@@ -16,10 +16,21 @@ export class PhoneSession {
     this.games.clear();
   }
 
-  tick(world:PhoneWorld, exploring:boolean) {
+  tick(world:PhoneWorld, exploring:boolean, inOwnOffice?:(player:Player)=>boolean) {
     for (const call of new Set(this.calls.values())) {
       if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
         this.endCall(call,world);
+      } else if (call.connected && call.sampledAt!==undefined) {
+        const duration = Math.min(100,world.now-call.sampledAt);
+        call.sampledAt = world.now;
+        if (duration<=0) continue;
+        for (const [id,target] of [[call.from,call.to],[call.to,call.from]]) {
+          if (!world.hasMission?.(id,'debateTelefonico') && !world.hasMission?.(id,'chamadasUrgentes')) continue;
+          const player = world.players.find(person=>person.id===id);
+          if (player && !player.knockedOut && world.present?.(id)!==false && world.present?.(target)!==false) {
+            publishGameplay(world,player,'call-time',{target,duration,item:call.expires,witnesses:[]});
+          }
+        }
       }
     }
     for (const [id,game] of this.games) {
@@ -36,8 +47,8 @@ export class PhoneSession {
         worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
       for (const witness of witnesses) game.witnesses.add(witness);
       if (game.snake.status==='playing' && duration>0 &&
-          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto'))) {
-        publishGameplay(world,player,'game-played',{duration,witnesses});
+          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto') || world.hasMission?.(id,'produtividade'))) {
+        publishGameplay(world,player,'game-played',{duration,witnesses,place:inOwnOffice?.(player) ? 'own-office' : undefined});
       }
       if (world.now-game.start>=60_000) game.snake.status = 'lost';
       else stepSnake(game.snake,world.now);
@@ -114,6 +125,7 @@ export class PhoneSession {
         if (!call || call.to!==id || call.connected || call.expires<=world.now ||
           !world.voice(id) || !world.voice(call.from)) return 'Chamada indisponível.';
         call.connected = true;
+        call.sampledAt = world.now;
         publishGameplay(world,player,'called',{target:call.from});
         return 'Ligação atendida.';
       case 'hangup':

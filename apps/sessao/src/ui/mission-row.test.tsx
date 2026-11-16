@@ -92,3 +92,35 @@ test('coffee delivery shows distinct recipient progress and the completion check
   expect(done).toContain('data-done="true"');
   expect(done).not.toContain('2 / 3');
 });
+
+test('campaign investment and phone call missions show the units players need',()=>{
+  const investment = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'investimentoPolitico',current:2,target:5}}/>);
+  const phone = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'debateTelefonico',current:12_500,target:20_000}}/>);
+  expect(investment).toContain('R$ 20 mil / R$ 50 mil');
+  expect(phone).toContain('12 / 20 s');
+});
+
+test('the surveillance mission renders sampled progress without exposing any channel',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'escutaAtiva',current:8250,target:15_000}}/>);
+  expect(markup).toContain('8 / 15 s');
+  expect(markup).toContain('Monitore um grampo por 15 segundos');
+});
+
+test('commission mission shows three signatures and keeps the document requirement',()=>{
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'comissaoImprovisada',current:2,target:3}}/>);
+  expect(markup).toContain('três assinaturas no mesmo documento');
+  expect(markup).toContain('2 / 3');
+});
+
+test('counter-surveillance missions describe discovery and removal separately', () => {
+  const discovery = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'varredura',current:0,target:1}}/>);
+  const removal = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'limpeza',current:1,target:1}}/>);
+  expect(discovery).toContain('Detector de Escutas');
+  expect(removal).toContain('Remova um dispositivo clandestino descoberto');
+});
+
+test('the office phone mission shows time remaining as seconds', () => {
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'produtividade',current:5000,target:30_000}}/>);
+  expect(markup).toContain('no seu gabinete');
+  expect(markup).toContain('5 / 30 s');
+});

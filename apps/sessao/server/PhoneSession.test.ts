@@ -19,3 +19,27 @@ test('phone invitations expire and release both lines without connecting',()=>{
   expect(events).toEqual([]);
   expect(phone.act(receiver,{kind:'call',target:caller.id},world)).toBe('Chamando…');
 });
+
+test('only connected, present players in articulation receive bounded mission time',()=>{
+  const phone = new PhoneSession();
+  const caller:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
+  const receiver:Player = {...caller,id:'b',nick:'Bia'};
+  const events:GameplayEvent[] = [];
+  let connected = true;
+  const world = {players:[caller,receiver],now:10,voice:()=>true,present:()=>connected,
+    hasMission:()=>true,publish:(event:GameplayEvent)=>events.push(event)};
+  phone.act(caller,{kind:'call',target:receiver.id},world);
+  world.now = 1000;
+  phone.tick(world,true);
+  expect(events.filter(event=>event.type==='call-time')).toEqual([]);
+  expect(phone.act(receiver,{kind:'answer'},world)).toBe('Ligação atendida.');
+  world.now += 4000;
+  phone.tick(world,true);
+  expect(events.filter(event=>event.type==='call-time').map(event=>[event.actor,event.target,event.duration]))
+    .toEqual([['a','b',100],['b','a',100]]);
+  connected = false;
+  world.now += 50;
+  phone.tick(world,true);
+  phone.tick(world,false);
+  expect(events.filter(event=>event.type==='call-time')).toHaveLength(2);
+});

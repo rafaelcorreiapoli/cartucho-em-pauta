@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { canReachStation, type Station, type PlenaryView } from './plenary';
+import { hearingPolicyFee } from './plenary';
 import { CABINET_GRANT, CAMPAIGN_COST, money, splits, describeEvidence, type Offer, type PoliticsAction, type Split } from './politics';
 import type { Player } from './map';
 
@@ -104,7 +105,14 @@ export function createPoliticsPanel(id:string, send:(action:PoliticsAction) => v
     el('call-cassation').hidden = !canSummon;
     el<HTMLButtonElement>('publish').disabled = !exploring || !at('press') || !dossier.value;
     el<HTMLButtonElement>('share').disabled = !recipient.value || !dossier.value;
-    el<HTMLButtonElement>('hearing-confirm').disabled = !nominee.value;
+    const fee = view.policies?.hearing ? hearingPolicyFee : 0;
+    const feeLabel = fee ? ' · '+money(fee) : '';
+    const hearing = el<HTMLButtonElement>('hearing-confirm');
+    const cassation = el<HTMLButtonElement>('call-cassation');
+    hearing.textContent = 'Convocar votação'+feeLabel;
+    hearing.disabled = !nominee.value || politics.wallet<fee;
+    cassation.textContent = 'Convocar cassação'+feeLabel;
+    cassation.disabled = politics.wallet<fee;
   }
 
   el<HTMLFormElement>('cabinet-form').onsubmit = event => {

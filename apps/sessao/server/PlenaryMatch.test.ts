@@ -743,3 +743,36 @@ test('the extintor bill delays the next ignition only when approved and funded',
     expect(match.economySummary(0)).toMatchObject({projects:approved ? 3 : 0,discrepancy:0});
   }
 });
+
+test.each(['recovery','coffee','hearing','furniture','campaign','equipment','mail'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
+  const project = bills.findIndex(bill=>bill.effect?.kind==='policy' && bill.effect.policy===policy);
+  for (const approved of [false,true]) {
+    const match = new PlenaryMatch(1);
+    match.start(host.id,people,0,()=>.9);
+    match.gameplayWorld(people,1,()=>false).publish({
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    });
+    match.advance(NEGOTIATION_MS);
+    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+    const now = NEGOTIATION_MS+BALLOT_MS;
+    match.advance(now);
+    expect(match.view(host.id,ids,now).policies?.[policy]).toBe(approved ? now+120_000 : undefined);
+    expect(match.gameplayWorld(people,now+119_999,()=>false).policies?.[policy]).toBe(approved ? now+120_000 : undefined);
+    expect(match.view(host.id,ids,now+120_000).policies?.[policy]).toBeUndefined();
+    expect(match.economySummary(0).discrepancy).toBe(0);
+  }
+});
+
+test('a shop subsidy spends public funds and the purchase conserves money',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const world = match.gameplayWorld(people,1,()=>false);
+  const before = match.view(host.id,ids,1);
+  expect(world.spendSubsidized!(host.id,.3,.2)).toBe(true);
+  const after = match.view(host.id,ids,1);
+  expect(after.politics!.wallet).toBe(before.politics!.wallet-.3);
+  expect(after.budget).toBe(before.budget-.2);
+  expect(match.economySummary(0).discrepancy).toBe(0);
+  expect(world.spendSubsidized!(host.id,1,after.budget+1)).toBe(false);
+  expect(match.view(host.id,ids,1).politics!.wallet).toBe(after.politics!.wallet);
+});

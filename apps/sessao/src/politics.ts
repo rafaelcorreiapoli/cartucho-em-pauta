@@ -22,7 +22,7 @@ export const targetedAgendas = {
   visitaAlvo:'Visite o gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000} as const;
+export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000} as const;
 
 export const agendas = {
   ...targetedAgendas,
@@ -91,6 +91,7 @@ export const agendas = {
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
   trabalhoRemoto:'Passe 30 segundos no seu gabinete',
+  produtividade:'Jogue no celular por 30 segundos no seu gabinete',
   cafeEstrategico:'Beba um café no Cafezinho',
   contasTesouraria:'Entregue uma maleta à Tesouraria',
   contribuinte:'Contribua com R$ 50 mil à Tesouraria',
@@ -104,13 +105,43 @@ export const agendas = {
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
   reservaCofre:'Embolse R$ 50 mil no seu cofre',
   turismo:'Tire fotos em três salas diferentes',
+  comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
+  flagraGabinete:'Fotografe alguém em um gabinete alheio',
+  presencaPlenario:'Entre e saia do Plenário durante a articulação',
+  reuniaoGabinete:'Passe 15 segundos no mesmo gabinete que outro jogador',
+  reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
+  tresSelfies:'Tire selfies em três salas públicas diferentes',
+  heroiInesperado:'Apague um incêndio com Estabilidade abaixo de 30',
+  varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
+  limpeza:'Remova um dispositivo clandestino descoberto',
+  escutaAtiva:'Monitore um grampo por 15 segundos',
+  instalarGrampo:'Instale um grampo em um esconderijo',
+  duasCameras:'Consulte duas câmeras escondidas próprias',
+  instalarCamera:'Instale uma câmera escondida',
+  mensagemComAnexo:'Publique um comunicado com anexo',
+  retratacaoOficial:'Publique um Laudo de Perícia',
+  fotoOstentacao:'Fotografe um móvel de luxo instalado',
+  fotoDinheiro:'Fotografe alguém com dinheiro exposto',
+  doisMoveis:'Instale dois móveis diferentes no seu gabinete',
+  visitaDoisGabinetes:'Visite gabinetes de dois colegas diferentes',
+  pixVinte:'Envie um Pix de R$ 20 mil',
+  doisPix:'Receba Pix de dois jogadores distintos',
+  debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
+  chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
+  discursoMegafone:'Use o Megafone por 10 segundos',
+  investimentoPolitico:'Invista R$ 50 mil em campanha',
+  campanhaUltimaHora:'Invista em campanha no último minuto antes da eleição',
+  bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
   provaDocumental:'Fotografe um documento físico visível',
 } as const;
 export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
-  trabalhoRemoto:25,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
+  trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
+  comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,heroiInesperado:55,
+  varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
+  visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,investimentoPolitico:40,campanhaUltimaHora:30,bandejaGourmet:35,
   cuecaDinheiro:35,reservaCofre:40,turismo:35,provaDocumental:25,
   jornalismo:30,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
