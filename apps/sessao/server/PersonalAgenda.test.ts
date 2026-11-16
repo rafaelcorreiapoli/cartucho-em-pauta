@@ -1416,3 +1416,30 @@ test('equipment and mail missions follow their own current subsidy and fee',()=>
   expect(draw('equipamento')).toBe(true);
   expect(draw('varredura')).toBe(true);
 });
+
+test.each([true,false])('office visits preserve credit only if another distinct office is reachable, credited owner leaves=%s',creditedOwnerLeaves=>{
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  const targets = [{id:'b',name:'Bia'},{id:'c',name:'Caio'},{id:'d',name:'Duda'}];
+  const state = {...metrics,hasOffice:(id?:string)=>id!=='d'};
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['visitaDoisGabinetes','cafe','passeio','selfieSolo']);
+  const refresh = (contacts:typeof targets)=>agenda.updateEligibility(state,contacts.length+1,true,3,0,contacts);
+  refresh(targets);
+  const active = ()=>agenda.view(state).active.find(mission=>mission.kind==='visitaDoisGabinetes');
+  const visit = (id:string,at:number)=>recordAgendaEvent(agenda,event('room-entered',{target:id,place:'Gabinete',at}));
+  expect(active()?.current).toBe(0);
+  visit('d',1);
+  expect(active()?.current).toBe(0);
+  visit('b',2);
+  visit('b',3);
+  expect(active()?.current).toBe(1);
+  refresh(targets.filter(({id})=>id!==(creditedOwnerLeaves ? 'b' : 'c')));
+  if (creditedOwnerLeaves) {
+    expect(active()?.current).toBe(1);
+    visit('c',4);
+    expect(agenda.view(state).completed).toContainEqual(expect.objectContaining({kind:'visitaDoisGabinetes',current:2}));
+  } else {
+    expect(active()).toBeUndefined();
+    expect(agenda.view(state).active).toHaveLength(3);
+  }
+});

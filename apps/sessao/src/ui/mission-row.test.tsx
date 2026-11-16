@@ -609,3 +609,36 @@ test.each([true,false])('the final campaign slot is consumed once and only the l
   expect(after.progression.xp-before.progression.xp).toBe(isLastMinute ? 30 : 0);
   if (completed) expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });
+
+test('office diplomacy keeps HUD progress after the visited owner leaves',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio','Duda'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [visitor,firstOwner,secondOwner,withoutOffice] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(visitor.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players.slice(0,3));
+  expect(game.hasOffice(withoutOffice.id)).toBe(false);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(visitor.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['visitaDoisGabinetes','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  let now = 100;
+  const tick = (present=players)=>game.tick(match.gameplayWorld(present,now+=100,()=>false),true);
+  const view = ()=>match.view(visitor.id,players.map(({id})=>id),now).politics!;
+  const active = ()=>view().missions.active.find(mission=>mission.kind==='visitaDoisGabinetes')!;
+  tick();
+  Object.assign(visitor,game.officeSpawn(firstOwner.id));
+  tick();
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('1 / 2');
+  match.leave(firstOwner.id,now);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('1 / 2');
+  const remaining = players.filter(({id})=>id!==firstOwner.id);
+  Object.assign(visitor,game.officeSpawn(secondOwner.id));
+  tick(remaining);
+  const completed = view().missions.completed.find(mission=>mission.kind==='visitaDoisGabinetes')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});

@@ -84,7 +84,7 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,visitaDoisGabinetes:3,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
+  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,pautaPrioritaria:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:4,fotoDinheiro:2,chamadasUrgentes:3,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:4, assinar:2,
   recebido:2, pagamento:2, presente:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
@@ -212,10 +212,12 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (mission.kind==='doisPix') {
+      if (mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
-        if (targets.filter(person=>!credited?.has(person.id)).length>=remaining) return true;
+        const canContribute = ({id}:Contact) => !credited?.has(id) &&
+          (mission.kind==='doisPix' || this.hasOffice?.(id)!==false);
+        if (targets.filter(canContribute).length>=remaining) return true;
       } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
           canCompleteTimedMission(mission.kind,metrics) &&
@@ -230,7 +232,7 @@ export class PersonalAgenda {
   private availableInMatch(kind:Agenda, remaining:number, metrics?:AgendaMetrics) {
     const drawing = metrics!==undefined;
     if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
-    if (kind==='visitaDoisGabinetes' && this.hasOffice && this.targets.filter(person=>this.hasOffice?.(person.id)).length<2) return false;
+    if (kind==='visitaDoisGabinetes' && this.targets.filter(person=>this.hasOffice?.(person.id)!==false).length<remaining) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
@@ -317,7 +319,8 @@ export class PersonalAgenda {
         const facts = this.factsByMission.get(mission.id);
         if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
       }
-      if (kind==='visitaDoisGabinetes' && event.type==='room-entered' && event.target && event.target!==event.actor ||
+      if (kind==='visitaDoisGabinetes' && event.type==='room-entered' &&
+          this.targets.some(person=>person.id===event.target && this.hasOffice?.(person.id)!==false) ||
           kind==='doisPix' && event.type==='pix-received' && event.target) {
         gains[kind] = this.countFacts(mission,[{value:event.target!}]);
       }
