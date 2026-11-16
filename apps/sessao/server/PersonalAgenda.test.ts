@@ -1253,6 +1253,13 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
   expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto indisponível.');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'privilegioAdquirido'}));
   expect(rewards).toEqual([25]);
+  agenda.progress(metrics,{cafe:1});
+  const beforeReinstall = [...rewards];
+  expect(draw(metrics)).toBe(true);
+  expect(game.act(player,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
+  world.now++;
+  expect(game.act(player,{kind:'install',place:'coffeeVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(rewards).toEqual(beforeReinstall);
 });
 
 test('an exchange counts accepted different items with the same human and rewards each peer once',()=>{
@@ -1351,4 +1358,23 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
   expect(rewards).toEqual([30]);
+});
+
+test('campaign spending is offered only when enough remaining broadcasts can reach the target',()=>{
+  let slots = 2;
+  const options = {...metrics,remainingAdvertisements:()=>slots};
+  const agenda = new PersonalAgenda(options,1,()=>0,()=>{});
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','credencial']);
+    agenda.updateEligibility(options,1,true,3);
+    return agenda.hasActive('investimentoPolitico');
+  };
+  expect(draw()).toBe(false);
+  slots = 3;
+  expect(draw()).toBe(true);
+  slots = 2;
+  agenda.updateEligibility(options,1,true,3);
+  expect(agenda.hasActive('investimentoPolitico')).toBe(false);
+  expect(agenda.view(options).active).toHaveLength(3);
 });

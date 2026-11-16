@@ -384,7 +384,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'duration'|'replaced'|'witnesses'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 

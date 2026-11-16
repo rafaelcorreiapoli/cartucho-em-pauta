@@ -146,7 +146,7 @@ export class PersonalAgenda {
   private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
-  private readonly rewardedTargetItems = new Set<number>();
+  private readonly rewardedItemIds = new Set<number>();
   private pickTarget(kind:Agenda) {
     const targets = this.targets.filter(person=>this.targetAvailable(kind,person.id));
     return targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
@@ -276,9 +276,9 @@ export class PersonalAgenda {
       const kind = mission.kind;
       if (mission.person) {
         const target = mission.person.id;
-        if (event.type==='transferred' && event.target===target && event.item!==undefined && !this.rewardedTargetItems.has(event.item) &&
+        if (event.type==='transferred' && event.target===target && event.item!==undefined && !this.rewardedItemIds.has(event.item) &&
             (kind==='documentoAlvo' && event.kind==='document' || kind==='pizzaAlvo' && event.kind==='pizza')) {
-          this.rewardedTargetItems.add(event.item);
+          this.rewardedItemIds.add(event.item);
           gains[kind] = 1;
         }
         if (kind==='visitaCortesia' && event.type==='office-guest-interaction' && event.target===target) gains[kind] = 1;
@@ -287,7 +287,14 @@ export class PersonalAgenda {
             event.photo.people.some(person=>person.id===target)) gains[kind] = 1;
       }
       const matches = activityMissions[kind as keyof typeof activityMissions];
-      if (matches?.(event)) gains[kind] = 1;
+      if (matches?.(event)) {
+        const requiresNewItem = kind==='solenidadeInauguracao' || kind==='privilegioAdquirido';
+        if (!requiresNewItem) gains[kind] = 1;
+        else if (event.item!==undefined && !this.rewardedItemIds.has(event.item)) {
+          this.rewardedItemIds.add(event.item);
+          gains[kind] = 1;
+        }
+      }
       const rule = photoMissions[kind as keyof typeof photoMissions];
       if (rule && (kind!=='pizzada' || scandalPizza)) {
         const photo = event.photo;
@@ -396,7 +403,7 @@ export class PersonalAgenda {
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
     if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
-        metrics.wallet<ELECTION_RULES.advertisementCost)) return false;
+        metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao') {
       const requiredPayers = kind==='articulacao' ? missionTargets.articulacao! : 1;
       if (metrics.canReceivePayments?.(requiredPayers)===false) return false;
