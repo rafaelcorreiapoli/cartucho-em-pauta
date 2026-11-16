@@ -715,12 +715,20 @@ img.market-art {
   color: #122c20;
   font-weight: 800;
 }
-#surveillance-dialog { width: min(720px, 90vw); }
-#surveillance-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+#surveillance-dialog, #security-dialog { width: min(720px, 90vw); }
+#surveillance-dialog header, #security-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .spy-console { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.6fr); gap: 1rem; }
 #spy-channels, #spy-monitor { padding: .8rem; border-radius: .6rem; background: #101c18; }
 .spy-viewport { aspect-ratio: 1; margin-bottom: .6rem; border: 1px solid #4b816a; background: #09120f; overflow: hidden; }
 .spy-viewport canvas { display: block; width: 100%; height: auto; }
+.security-console { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1rem; margin-top: 1rem; }
+#security-dialog .spy-viewport { width: min(100%, 48dvh); margin-inline: auto; }
+#security-dialog .waiting-for-feed canvas { visibility: hidden; }
+@media (max-width: 520px) {
+  .security-console { grid-template-columns: 1fr; }
+  .security-channels { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+  .security-channels .spy-channel { margin: 0; }
+}
 #spy-monitor button { margin: .25rem; }
 .spy-channel { width: 100%; display: flex; gap: .65rem; align-items: center; margin-bottom: .45rem; text-align: left; }
 .spy-channel small, .spy-channel strong { display: block; }
