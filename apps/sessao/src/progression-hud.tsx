@@ -1,3 +1,4 @@
+import type { ShortcutEntry } from './action-shortcuts';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
@@ -61,8 +62,14 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let reconnecting = false;
   let completedCount = 0;
 
+  const canSpendPoint = () => !!latest?.available && requested!==latest.revision && canSelectAttribute(view,player);
+  function select(attribute:Attribute) {
+    if (!attributes.open || !canSpendPoint()) return;
+    selected = attribute;
+    renderAttributes();
+  }
   function confirmAttribute() {
-    if (!latest || !selected || requested===latest.revision || !latest.available || !canSelectAttribute(view,player)) return;
+    if (!attributes.open || !latest || !selected || !canSpendPoint()) return;
     requested = latest.revision;
     clearTimeout(requestTimer);
     requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
@@ -78,19 +85,14 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   function renderAttributes() {
     if (!latest || !player) return;
-    const {xp,level,nextLevelXp,available,invested,revision} = latest;
+    const {xp,level,nextLevelXp,available,invested} = latest;
     const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
     const agility = 100+invested.agility*attributeUpgrades.agility.bonus;
     const stamina = Math.floor(player.stamina ?? staminaMax);
-    const canSpend = !!available && requested!==revision && canSelectAttribute(view,player);
+    const canSpend = canSpendPoint();
     const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
-    const select = (attribute:Attribute) => {
-      if (!canSpend) return;
-      selected = attribute;
-      renderAttributes();
-    };
     const actionForKey = (key:string) => {
       if (!canSpend) return;
       if (key==='3') return selected ? confirmAttribute : undefined;
@@ -174,6 +176,19 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   return {
     open:openAttributes,
+    shortcuts(scope:HTMLElement):ShortcutEntry[]|undefined {
+      if (scope===celebration) return [
+        {name:'Distribuir ponto',activate:()=>{ if (celebration.open) celebration.close('allocate'); }},
+        {name:'Depois',activate:()=>{ if (celebration.open) celebration.close('later'); }},
+      ];
+      if (scope!==attributes) return;
+      const entries:ShortcutEntry[] = [{name:'Fechar',activate:()=>attributes.close()}];
+      if (canSpendPoint()) {
+        entries.push(...keys.map(attribute=>({name:'Investir em '+attributeUpgrades[attribute].label,activate:()=>select(attribute)})));
+        if (selected) entries.push({name:'Confirmar +1',activate:confirmAttribute});
+      }
+      return entries;
+    },
     render(next:PlenaryView) {
       view = next;
       const progress = next.politics?.progression;

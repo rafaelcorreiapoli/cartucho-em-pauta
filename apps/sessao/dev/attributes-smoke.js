@@ -26,7 +26,7 @@ async page => {
   await page.keyboard.press('1');
   const attributes = page.locator('#attributes-dialog[open]');
   await attributes.getByText('2 pontos para distribuir').waitFor();
-  const stamina = attributes.getByRole('button',{name:'Investir em Fôlego'});
+  const stamina = attributes.locator('[data-attribute=stamina] button');
   for (const [button,label] of [[stamina,'+1'],[attributes.getByRole('button',{name:'Confirmar +1'}),'Confirmar +1']]) {
     const bounds = await button.boundingBox();
     const badge = await button.locator('kbd').boundingBox();
@@ -41,8 +41,14 @@ async page => {
   await attributes.locator('button[aria-keyshortcuts]').evaluateAll(buttons=>{
     for (const button of buttons) button.removeAttribute('aria-keyshortcuts');
   });
-  await page.keyboard.press('2');
-  if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('A tecla 2 não selecionou Fôlego.');
+  await stamina.evaluate(button=>button.removeAttribute('aria-label'));
+  await page.keyboard.press('F2');
+  const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+  const paletteChoice = palette.getByRole('button',{name:'Investir em Fôlego',exact:true});
+  await paletteChoice.waitFor();
+  await page.keyboard.press(await paletteChoice.getAttribute('aria-keyshortcuts'));
+  await palette.waitFor({state:'hidden'});
+  if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('O F2 não selecionou Fôlego sem consultar o botão original.');
   await attributes.getByText('100/100 → 150/150',{exact:true}).waitFor();
   await page.keyboard.press('3');
   await attributes.getByText('1 ponto para distribuir').waitFor();

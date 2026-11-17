@@ -39,7 +39,7 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean;vote:(key:string)=>boolean;context:()=>readonly ShortcutEntry[]}) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean;vote:(key:string)=>boolean;context:()=>readonly ShortcutEntry[];dialog:(scope:HTMLElement)=>readonly ShortcutEntry[]|undefined}) {
   disableHudTabStops(root,signal);
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
@@ -55,11 +55,12 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
   }
 
   function render() {
-    const otherActions = [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
+    const registered = shortcuts.dialog(scope);
+    const otherActions = registered ? [] : [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
       .filter(control=>!palette.contains(control) && !control.closest('#context-actions-mount') && available(control))
       .map(control=>({control,name:actionName(control)})).filter(({name})=>name);
     const actions:ShortcutEntry[] = [
-      ...(scope===root ? shortcuts.context() : []),
+      ...(scope===root ? shortcuts.context() : registered ?? []),
       ...otherActions.map(({control,name})=>({
         name,
         activate:()=>{
