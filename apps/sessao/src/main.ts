@@ -251,7 +251,7 @@ async function connect(join: () => Promise<Room>) {
     },political,action=>action==='denounce' ? gameplay.openComplaint() : sendCommand('plenary-action',{action}),{
       send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
-    const reactHud = mountReactHud();
+    const reactHud = mountReactHud(settings.open);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
@@ -461,6 +461,5 @@ lobby.onsubmit = event => {
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
 loadingBack.onclick = () => void room?.leave();
-document.getElementById('plenary-settings')!.onclick = settings.open;
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());

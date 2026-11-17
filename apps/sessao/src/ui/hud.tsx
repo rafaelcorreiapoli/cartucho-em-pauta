@@ -1,6 +1,7 @@
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
+import {settingsApp} from '../hud-apps';
 import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
@@ -220,7 +221,15 @@ function LiveTelevision({state}:{state:HudModel['television']}) {
   return interview && <TelevisionNotice {...interview}/>;
 }
 
-export function mountReactHud() {
+export function PlenarySettingsButton({open}:{open:()=>void}) {
+  const {label,key,icon} = settingsApp;
+  return <button id="plenary-settings" className="hud-icon-button" type="button" tabIndex={-1}
+    aria-label={label} aria-keyshortcuts={key} title={label+' ('+key+')'} onClick={open}>
+    <Icon name={icon}/>
+  </button>;
+}
+
+export function mountReactHud(openSettings:()=>void) {
   const model = createHudModel();
   const {broadcast,congress,agenda} = model;
   const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
@@ -235,7 +244,7 @@ export function mountReactHud() {
   profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
-  parliamentRoot.render(<Parliament state={congress} countdown={model.countdown}/>);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,

@@ -50,6 +50,8 @@ async page => {
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
+  const settingsButton = page.locator('#plenary-settings');
+  await settingsButton.waitFor({state:'hidden'});
   await page.locator('.plenary-countdown').getByText('Votação de projeto').waitFor();
   await page.waitForFunction(()=>!document.querySelector('.character-dock').getAnimations().length);
 
@@ -64,6 +66,15 @@ async page => {
   const exploring = ['.character-dock','#agenda-dock','.deck-tools','#election-dock','#context-hud'];
   for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
   await page.locator('#congress-dock').waitFor({state:'visible'});
+  const settings = page.getByRole('dialog',{name:'Configurações'});
+  await settingsButton.click();
+  await settings.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
+  await page.keyboard.press('k');
+  await settings.waitFor({state:'visible'});
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
   await page.locator('.plenary-countdown').waitFor({state:'hidden'});
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   await page.locator('[data-vote="yes"]').waitFor();
@@ -96,6 +107,7 @@ async page => {
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});
+  await settingsButton.waitFor({state:'hidden'});
   const brief = page.locator('#project-outcome-brief');
   await brief.locator('#brief-project').filter({hasText:'Auxílio Churrasco'}).waitFor({state:'attached'});
   if (await brief.getAttribute('hidden')!==null) throw Error('New outcome brief was not activated');
