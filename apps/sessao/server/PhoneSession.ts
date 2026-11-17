@@ -1,4 +1,4 @@
-import type { GameplayView, PhoneAction } from '../src/gameplay';
+import type { GameplayView, PhoneAction, PhoneActivity } from '../src/gameplay';
 import { worldVisible, type Player } from '../src/map';
 import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
@@ -10,13 +10,16 @@ type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'
 export class PhoneSession {
   private calls = new Map<string,Call>();
   private games = new Map<string,PhoneRound>();
+  private openScreens = new Set<string>();
 
   reset() {
     this.calls.clear();
     this.games.clear();
+    this.openScreens.clear();
   }
 
   tick(world:PhoneWorld, exploring:boolean, inOwnOffice?:(player:Player)=>boolean) {
+    if (!exploring) this.openScreens.clear();
     for (const call of new Set(this.calls.values())) {
       if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
         this.endCall(call,world);
@@ -77,13 +80,15 @@ export class PhoneSession {
   }
 
   leave(player:Player, world:PhoneWorld) {
+    this.openScreens.delete(player.id);
     this.disconnectCall(player.id,world);
     this.stopPhoneGame(player,world);
   }
 
-  activity(id:string) {
+  activity(id:string):PhoneActivity|undefined {
     if (this.playingPhoneGame(this.games.get(id))) return 'game';
     if (this.calls.get(id)?.connected) return 'call';
+    if (this.openScreens.has(id)) return 'open';
   }
 
   callPeer(id:string) {
@@ -112,6 +117,12 @@ export class PhoneSession {
     const id = player.id;
     const call = this.calls.get(id);
     switch (action.kind) {
+      case 'phone-open':
+        if (!player.carried) this.openScreens.add(id);
+        return;
+      case 'phone-close':
+        this.openScreens.delete(id);
+        return;
       case 'call': {
         const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
         if (!target || !world.voice(id) || !world.voice(target.id)) return 'Os dois jogadores precisam ativar a voz.';

@@ -129,7 +129,7 @@ export class PhotoRenderer {
         ctx.font = '9px system-ui';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#b7f0d3';
-        ctx.fillText(person.phone==='game' ? '🎮' : '☎',x+13,y-25);
+        ctx.fillText(person.phone==='game' ? '🎮' : person.phone==='call' ? '☎' : ')))',x+13,y-25);
       }
       for (const handoff of recent.filter(event=>event.to===person.id)) item(handoff.kind,x+16,y-9,12);
       labels.push({name:person.name,x,y:person.carried ? y-53 : y});

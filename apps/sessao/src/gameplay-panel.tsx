@@ -46,7 +46,7 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const headerRoot = createRoot(dialog.querySelector('header')!);
@@ -83,6 +83,19 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const photos = createPhonePhotos(send,drawPhoto,render);
   let previous:PlenaryView | undefined;
   let renderKey = '';
+  let phoneOpen = false;
+  function refreshPhoneInset() {
+    setPhoneInset(phoneOpen ? dialog.offsetLeft+dialog.offsetWidth : 0);
+  }
+  const phoneResize = new ResizeObserver(refreshPhoneInset);
+  phoneResize.observe(dialog);
+  function syncPhoneOpen() {
+    const open = dialog.open && dialog.dataset.mode==='phone';
+    if (open===phoneOpen) return;
+    phoneOpen = open;
+    send({kind:open ? 'phone-open' : 'phone-close'});
+    refreshPhoneInset();
+  }
   let recipient = '';
   let quantity = 1;
 
@@ -177,6 +190,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     dialog.dataset.mode = bag ? 'bag' : equipment || stash ? 'equipment' : object ? 'item' : 'phone';
     renderHeader();
     if (!dialog.open) dialog.showModal();
+    syncPhoneOpen();
     render();
   }
 
@@ -478,12 +492,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
-  dialog.addEventListener('cancel',event=>{
-    if (dialog.dataset.mode!=='phone' || !app) return;
-    event.preventDefault();
-    selectApp();
-  });
   const closed = () => {
+    if (dialog.open) return;
+    syncPhoneOpen();
     bodyRoot.render(null);
     mailHost.hidden = true;
     renderKey = '';
@@ -497,6 +508,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   return {
     openPhone() { app = undefined; open(); },
+    restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
     openEquipment() { open(undefined,undefined,true); },
     itemObtained(pickup:boolean) {
@@ -611,6 +623,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       photos.destroy();
       document.removeEventListener('keydown',onSlotKey);
       document.removeEventListener('keydown',onSnakeKey);
+      phoneResize.disconnect();
+      setPhoneInset(0);
       dialog.removeEventListener('close',closed);
       dialog.close();
       element('object-request').hidden = true;
