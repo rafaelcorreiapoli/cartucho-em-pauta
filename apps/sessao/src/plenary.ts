@@ -52,6 +52,7 @@ export const energySavings = {
 export const policyDuration = 120_000;
 const policySeconds = policyDuration/1_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
+export const bankAuditCost = (policies?:BillPolicies) => policies?.bankAudit!==undefined ? bankAuditFee : 0;
 
 type Bill = {
   id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;

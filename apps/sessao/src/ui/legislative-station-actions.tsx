@@ -1,7 +1,8 @@
 import {StationActionButton} from './station-action-button';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
-import type {Action,PlenaryView,Station} from '../plenary';
+import {bankAuditCost,type Action,type PlenaryView,type Station} from '../plenary';
+import {money} from '../politics';
 
 const definitions = {
   amendment:{station:'amendment',label:'Propor emenda',icon:'document'},
@@ -21,10 +22,12 @@ export function legislativeStationActions(view:PlenaryView|undefined,station:Sta
   return actions;
 }
 
-export function LegislativeStationActions({actions,send}:{actions:readonly Action[];send:(action:Action)=>void}) {
-  return actions.map(action=>{
-    return <StationActionButton key={action} {...definitions[action]} action={action} activate={()=>send(action)}/>;
-  });
+export function LegislativeStationActions({actions,send,auditFee=0}:{
+  actions:readonly Action[];send:(action:Action)=>void;auditFee?:number;
+}) {
+  return actions.map(action=><StationActionButton key={action} {...definitions[action]} action={action}
+    detail={action==='audit' && auditFee ? `${money(auditFee)} se revelar registro sigiloso` : undefined}
+    activate={()=>send(action)}/>);
 }
 
 export function mountLegislativeStationActions(element:HTMLElement,send:(action:Action)=>void) {
@@ -33,11 +36,12 @@ export function mountLegislativeStationActions(element:HTMLElement,send:(action:
   return {
     render(view:PlenaryView|undefined,station:Station|undefined) {
       const actions = legislativeStationActions(view,station);
-      const key = actions.join(',');
+      const auditFee = actions.includes('audit') ? bankAuditCost(view?.policies) : 0;
+      const key = actions.join(',')+':'+auditFee;
       if (key!==current) {
         current = key;
         // Keyboard badges are assigned alongside the other contextual actions in this same update.
-        flushSync(()=>root.render(<LegislativeStationActions actions={actions} send={send}/>));
+        flushSync(()=>root.render(<LegislativeStationActions actions={actions} send={send} auditFee={auditFee}/>));
       }
       return actions.length>0;
     },
