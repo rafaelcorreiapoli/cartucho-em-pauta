@@ -117,9 +117,9 @@ function agendaEquipmentPrice(item:ObjectKind,metrics:AgendaMetrics) {
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if (kind==='manutencaoEmergencia') return metrics.powerOut?.()===true;
-  if (kind==='escutaAtiva' && metrics.ownsWiretap?.()===false) {
-    return !!metrics.canInstallSpy?.('wiretap') &&
-      (!!metrics.owns?.('wiretap') || agendaEquipmentPrice('wiretap',metrics)<=metrics.wallet);
+  if (kind==='escutaAtiva') {
+    return !!metrics.ownsWiretap?.() || (!!metrics.canInstallSpy?.('wiretap') &&
+      (!!metrics.owns?.('wiretap') || agendaEquipmentPrice('wiretap',metrics)<=metrics.wallet));
   }
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
@@ -530,7 +530,6 @@ export class PersonalAgenda {
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
     if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
-    if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaEquipmentPrice('bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
     if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<2) return false;

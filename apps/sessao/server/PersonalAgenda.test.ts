@@ -1670,6 +1670,23 @@ test('one selfie cannot repeatedly pay the publication mission across channels',
   expect(agenda.view(metrics).completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(2);
 });
 
+test('Escuta Ativa can be drawn with an installed, portable or affordable wiretap',()=>{
+  const draw = (wallet:number,installed:boolean,owned:boolean,siteAvailable:boolean)=>{
+    const state = {...metrics,wallet,ownsWiretap:()=>installed,
+      owns:(kind:string)=>kind==='wiretap' && owned,canInstallSpy:(kind:string)=>kind==='wiretap' && siteAvailable};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    return agenda.hasActive('escutaAtiva');
+  };
+  expect(draw(0,true,false,false)).toBe(true);
+  expect(draw(0,false,true,true)).toBe(true);
+  expect(draw(2,false,false,true)).toBe(true);
+  expect(draw(1.9,false,false,true)).toBe(false);
+  expect(draw(2,false,true,false)).toBe(false);
+});
+
 test('Escuta Ativa keeps its progress only while the player can still use or reinstall a wiretap',()=>{
   let installed = true;
   let owned = false;

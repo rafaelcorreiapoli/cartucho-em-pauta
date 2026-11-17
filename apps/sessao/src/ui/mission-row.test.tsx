@@ -841,6 +841,17 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   account.canInstallSpy = (kind:'wiretap'|'spyCamera')=>game.canInstallSpy(player.id,kind);
   account.owns = (kind:'wiretap')=>game.owns(player.id,kind);
   const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  let now = 1;
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(player.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
+  expect(active()).toBeDefined();
+  const missionId = active().id;
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('0 / 15 s');
+
   Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(player,{kind:'open-shop',target:'vendor'},world(1));
   const token = game.view(player,world(1)).dialogue?.token;
@@ -848,15 +859,11 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   const wiretap = game.view(player,world(1)).inventory.find(({kind})=>kind==='wiretap')!;
   Object.assign(player,{x:254,y:252});
   game.spyAction(player,{kind:'install',site:'coffee',item:wiretap.id},world(10));
-  let now = 10+spyRules.install;
+  now = 10+spyRules.install;
   game.tick(world(now),true);
   const channel = game.spyView(player,world(now)).channels[0].id;
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
-  match.refreshAgendaEligibility();
+  expect(active()).toMatchObject({id:missionId,current:0});
 
-  const view = ()=>match.view(player.id,ids,now).politics!;
-  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
   const tick = (elapsed:number)=>game.tick(world(now+=elapsed),true);
   game.spyAction(player,{kind:'open',channel},world(now+99));
   tick(100);
