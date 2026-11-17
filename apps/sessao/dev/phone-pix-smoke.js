@@ -95,9 +95,20 @@ async page => {
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
     const cashReward = await receiver.locator('[aria-label="Objetivos ativos"]')
       .getByText('Receba dinheiro de outro parlamentar',{exact:true}).count();
+    const transfer = pix.getByRole('button',{name:'Transferir',exact:true});
+    if (!await transfer.isDisabled()) throw Error('O Pix deve exigir um destinatário');
+    await page.keyboard.press('1');
     await pix.getByRole('button',{name:'Bia',exact:true}).click();
+    await transfer.evaluate(button=>{
+      window.syntheticPixClicks = 0;
+      button.addEventListener('click',event=>{
+        if (!event.isTrusted) window.syntheticPixClicks++;
+      });
+      button.removeAttribute('aria-keyshortcuts');
+    });
     await page.keyboard.press('1');
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
+    if (await page.evaluate(()=>window.syntheticPixClicks)!==0) throw Error('O atalho simulou clique para transferir');
 
     const receivedBalance = receiver.locator(dialog).locator('.pix-balance');
     await receivedBalance.getByText(cashReward ? 'R$ 110 mil' : 'R$ 90 mil',{exact:true}).waitFor();
