@@ -585,9 +585,14 @@ export class PlenaryMatch {
     }
   }
 
+  private canUseCampaignActions(id:string, now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.canVote(id) &&
+      this.election.open(now) && this.ballotCountdown(now)===undefined;
+  }
+
   electionAction(player:Player, action:ElectionAction, now:number, hasVoice:boolean) {
     const {id} = player;
-    if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id) || !this.election.open(now)) return;
+    if (!this.canUseCampaignActions(id,now)) return;
     const spend = (amount:number) => this.economy.spend(id,amount);
     switch (action.kind) {
       case 'advertise': {
@@ -932,7 +937,7 @@ export class PlenaryMatch {
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
-      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection(),this.advertisementMultiplier(now)) : undefined,
+      election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,

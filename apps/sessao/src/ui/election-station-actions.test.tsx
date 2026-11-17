@@ -33,3 +33,32 @@ test('campaign controls match the current station, voice state and completed act
   expect(render('tv',true,4)).toBe('');
   expect(render('panel',true,NEGOTIATION_MS-1)).toBe('');
 });
+
+test('the gameserver and HUD close campaigning during a project countdown',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
+  const now = NEGOTIATION_MS-1;
+  const view = ()=>match.view(player.id,[player.id],now);
+  const wallet = view().politics!.wallet;
+  expect(electionStationActions(view(),'press',false).actions).toEqual([]);
+  expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeUndefined();
+  expect(view().politics!.wallet).toBe(wallet);
+  expect(view().election?.personal?.advertised).toBe(false);
+});
+
+test('the HUD keeps plenary speech available after the final renewal',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...stations.panel};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  for (let cycle=1;cycle<=ELECTION_RULES.cycles;cycle++) match.advance(cycle*ELECTION_RULES.interval);
+  const now = ELECTION_RULES.cycles*ELECTION_RULES.interval+1;
+  const view = ()=>match.view(player.id,[player.id],now);
+  expect(view().election?.remaining).toBe(0);
+  expect(electionStationActions(view(),'press',false).actions).not.toContain('advertise');
+  expect(electionStationActions(view(),'panel',false).actions).toContain('speech');
+  match.electionAction(player,{kind:'speech'},now,false);
+  expect(view().election?.personal?.spoke).toBe(true);
+  expect(electionStationActions(view(),'panel',false).actions).not.toContain('speech');
+});
