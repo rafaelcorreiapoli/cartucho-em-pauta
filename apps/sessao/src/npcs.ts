@@ -23,9 +23,10 @@ export const npcs = {
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
+const treasuryCounter = mapPoint('Balcão da tesouraria');
 export const treasurer = {
-  name:'Eduardo Cunha', sprite:'eduardo-cunha-tesoureiro.webp', x:427, y:321, direction:0,
-  counter:mapPoint('Balcão da tesouraria'), interaction:{x:427,y:361}, label:'Tesouraria',
+  name:'Eduardo Cunha', sprite:'eduardo-cunha-tesoureiro.webp', x:treasuryCounter.x+23, y:treasuryCounter.y+13, direction:0,
+  counter:treasuryCounter, interaction:{x:treasuryCounter.x+23,y:treasuryCounter.y+30}, label:'Tesouraria',
 } as const;
 
 export const mapNpcs = {...npcs,treasurer};
