@@ -18,18 +18,17 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     pendingFrame = undefined;
   }
   function drawFrame(frame:SpyCameraFrame) {
-    if (!viewport) {
+    const host = viewport;
+    if (!host || host.dataset.channel!==String(frame.channel)) {
       pendingFrame = frame;
       return;
     }
-    live ??= createSurveillanceViewport(viewport);
+    live ??= createSurveillanceViewport(host,()=>host.setAttribute('aria-busy','false'));
     live.receive(frame);
   }
   function attachViewport(host:HTMLDivElement|null) {
     viewport = host;
-    if (!host) {
-      stopViewport();
-    } else if (pendingFrame) {
+    if (host && pendingFrame) {
       const frame = pendingFrame;
       pendingFrame = undefined;
       if (dialog.open && acceptsSpyCameraFrame(view,frame)) drawFrame(frame);
@@ -137,7 +136,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       entries.push({id:`rename:${channel.id}`,name:'Salvar',activate:saveName});
     }
     root.render(<SurveillanceDialogContent entries={entries} channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
-      camera={selected && {name:selected.name,attach:attachViewport}}/>);
+      camera={selected && {id:selected.id,name:selected.name,attach:attachViewport}}/>);
   }
 
   let wasOpened = false;

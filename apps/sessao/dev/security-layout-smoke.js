@@ -91,14 +91,18 @@ async page => {
     else await useShortcut(button);
     await surveillance.getByRole('heading',{name,exact:true}).waitFor();
     if (previousCanvas) await page.waitForFunction(node=>!node.isConnected,previousCanvas);
+    await surveillance.locator('.spy-viewport[aria-busy="false"]').waitFor();
     await page.waitForFunction(()=>{
       const canvases = document.querySelectorAll('#spy-monitor .spy-viewport canvas');
       if (canvases.length!==1) return false;
       const canvas = canvases[0];
       const context = canvas.getContext('2d');
-      const center = context?.getImageData(canvas.width/2-12,canvas.height/2-12,24,24).data;
-      if (!center) return false;
-      return center.some((value,index)=>value!==center[index%4]);
+      if (!context) return false;
+      const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
+      for (let index=4;index<pixels.length;index+=64) {
+        if (pixels[index]!==pixels[0] || pixels[index+1]!==pixels[1] || pixels[index+2]!==pixels[2]) return true;
+      }
+      return false;
     });
   }
   await openCamera('Câmera Cafezinho');

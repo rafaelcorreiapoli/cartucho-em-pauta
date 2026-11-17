@@ -6,7 +6,7 @@ import type { ReactNode, Ref } from 'react';
 export function SurveillanceDialogContent({channels,monitor,camera,actionForKey,entries}:{
   entries?:readonly ShortcutEntry[];
   actionForKey?:(key:string)=>(()=>void)|undefined;
-  channels:ReactNode; monitor:ReactNode; camera?:{name:string;attach:Ref<HTMLDivElement>};
+  channels:ReactNode; monitor:ReactNode; camera?:{id:number;name:string;attach:Ref<HTMLDivElement>};
 }) {
   const panel = useDialogKeys<HTMLDivElement>(key=>actionForKey?.(key),entries);
   return <>
@@ -14,7 +14,7 @@ export function SurveillanceDialogContent({channels,monitor,camera,actionForKey,
     <div className="spy-console" ref={panel}>
       <div id="spy-channels">{channels}</div>
       <section id="spy-monitor">
-        {camera && <><h3>{camera.name}</h3><div className="spy-viewport" aria-label="Visão ao vivo da câmera" ref={camera.attach}/></>}
+        {camera && <><h3>{camera.name}</h3><div key={camera.id} data-channel={camera.id} className="spy-viewport" aria-busy="true" aria-label="Visão ao vivo da câmera" ref={camera.attach}/></>}
         {monitor}
       </section>
     </div>

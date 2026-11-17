@@ -256,7 +256,8 @@ async page => {
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
     const denounce = page.getByRole('button',{name:'Denunciar',exact:true});
     await denounce.waitFor();
-    await receiver.keyboard.press('c');
+    await receiver.locator('#asset-loading').waitFor({state:'hidden'});
+    await receiver.locator('#map').press('c');
     await receiver.locator(dialog).getByRole('button',{name:'Joguinhos'}).waitFor();
     await receiver.keyboard.press('2');
     await receiver.locator(dialog).getByRole('button',{name:'Snake',exact:true}).waitFor();

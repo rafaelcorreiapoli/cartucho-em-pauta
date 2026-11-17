@@ -198,7 +198,10 @@ async function connect(join: () => Promise<Room>) {
             if (room!==joined || assetError) return;
             assetsReady = true;
             renderLoading();
-            if (previousView) panel.render(previousView);
+            if (previousView) {
+              panel.render(previousView);
+              renderApps(previousView);
+            }
           });
         }
       });
@@ -293,6 +296,10 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
+    function renderApps(view:PlenaryView) {
+      appStatus = hudAppStatus(view,assetsReady);
+      appLauncher.render(appStatus);
+    }
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}),gameplay.closePhoneApp);
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -355,8 +362,7 @@ async function connect(join: () => Promise<Room>) {
       suppressXpEffect = false;
       progression.render(view);
       if (view.phase!==previousView?.phase && (view.phase==='ballot' || view.phase==='hearing')) appLauncher.close();
-      appStatus = hudAppStatus(view,assetsReady);
-      appLauncher.render(appStatus);
+      renderApps(view);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
