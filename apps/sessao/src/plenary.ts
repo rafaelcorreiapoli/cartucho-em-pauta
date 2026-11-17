@@ -12,7 +12,8 @@ import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
-export const NEGOTIATION_MS = 205_000;
+export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, requiredVotes:3} as const;
+export const NEGOTIATION_MS = projectRules.debateMs;
 export const BALLOT_MS = 35_000;
 export const CASSATION_NOTICE_MS = 30_000;
 
@@ -123,13 +124,13 @@ export type BillVoter = Omit<SessionParticipant,'role'> & {vote?:BillVote};
 export type CassationView = {candidates:Omit<SessionParticipant,'role'>[]; eligible:boolean; voted:number; electorate:number; quorum:number; choice?:string|null};
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
 export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
-export type Outcome = {round:number; project?:number; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
+export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
 export type PlenaryView = {
   ballotCountdown?: number;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; queuedProjects?:number[]; remaining:number; stability:number; budget:number; host?:string;
+  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;

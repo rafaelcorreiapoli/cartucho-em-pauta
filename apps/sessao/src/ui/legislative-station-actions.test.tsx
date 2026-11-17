@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -13,6 +14,7 @@ test('station controls follow actual amendment, audit and correction state witho
   const [host,auditor,traitor] = people;
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  publishProjectFiling(match,host);
   const ids = people.map(({id})=>id);
   const render = (player:Player,station?:Station,now=1)=>renderToStaticMarkup(
     <LegislativeStationActions actions={legislativeStationActions(match.view(player.id,ids,now),station)} send={()=>{}}/>,

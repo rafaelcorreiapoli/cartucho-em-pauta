@@ -1,3 +1,4 @@
+import {publishProjectFiling} from './project-test-fixture';
 import { npcs } from '../src/npcs';
 import { expect,test } from 'bun:test';
 import { Gameplay } from './Gameplay';
@@ -40,6 +41,7 @@ test('signature and competing vote offers transfer existing money and the commit
   expect(document.document?.signatures.map(signer=>signer.id)).toEqual([npc.id]);
   expect(talk.act(a,{kind:'sign',target:npc.id,item:document.id,amount:2},world(4))).toBe('A proposta de assinatura mudou.');
   expect(members.intention(npc.id,0)).toBe('no');
+  publishProjectFiling(match,a);
   expect(talk.act(a,{kind:'vote',target:npc.id,round:0,project:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
   talk.act(b,{kind:'talk',target:npc.id},world(6));
   expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:2},world(7))).toContain('recusada');
@@ -138,7 +140,7 @@ test('NPC preferences are tied to projects and paid promises stay on the negotia
   const target = world(1).players.find(player=>player.npc)!;
   Object.assign(buyer,{x:target.x+8,y:target.y});
   talk.act(buyer,{kind:'talk',target:target.id},world(1));
-  expect(talk.view(buyer,world(1))?.projectIndex).toBe(0);
+  expect(talk.view(buyer,world(1))?.project).toBeUndefined();
   world(2).publish({type:'filed',actor:buyer.id,project:1,at:2,position:buyer,witnesses:[]});
   expect(match.projectIndex).toBe(1);
   expect(talk.view(buyer,world(3))?.projectIndex).toBe(1);

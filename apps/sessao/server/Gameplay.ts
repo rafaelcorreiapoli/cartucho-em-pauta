@@ -385,7 +385,7 @@ export class Gameplay {
   signableDocuments(player:Player,npc:Player,world:GameplayWorld) {
     return this.inventory(player.id).flatMap(({data})=>{
       const doc = data.document;
-      return doc && !doc.signatures.some(person=>person.id===npc.id) &&
+      return doc && doc.project===undefined && !doc.signatures.some(person=>person.id===npc.id) &&
         (!doc.requiredOffice || (world.hasMandate?.(npc.id) ?? world.office(npc.id)===doc.requiredOffice))
         ? [{id:data.id,title:doc.title}] : [];
     });
@@ -1411,11 +1411,11 @@ export class Gameplay {
         const bill = project===undefined ? undefined : bills[project];
         if (project!==undefined && (!action.target || !/^project-[0-9]+$/.test(action.target) || !bill)) { this.remove(this.items.get(data.id)!); return 'Projeto indisponível.'; }
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
-        const requiredOffice = 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
+        const requiredOffice = !bill && 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
           template.office : undefined;
         data.document = {
           author:player.nick,title:bill?.name ?? template.title,project,description:bill?.description,edited:false,signatures:[],stamps:[],
-          requiredSignatures:Math.min(template.signatures,Math.max(0,world.players.length-1)),
+          requiredSignatures:bill ? world.projectSignatures ?? Number(world.players.some(person=>person.id!==id && !person.npc)) : Math.min(template.signatures,Math.max(0,world.players.length-1)),
           requiredStamps:[...template.stamps],requiredOffice,
         };
       }
@@ -1453,6 +1453,9 @@ export class Gameplay {
         if (!target) return 'Aproxime-se do destinatário.';
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return 'Este jogador não pode assinar o documento.';
+        }
+        if (action.kind==='sign-request' && data.document?.project!==undefined && world.canSignProject?.(target.id)===false) {
+          return 'A assinatura precisa ser de outro jogador com mandato.';
         }
         this.clearRequests(data.id);
         const key = ++this.serial;
@@ -1539,6 +1542,14 @@ export class Gameplay {
         if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
         const error = this.documentRequirements(data);
         if (error) return error;
+        if (data.document.project!==undefined) {
+          if (data.document.requiredSignatures && !data.document.signatures.some(signer=>
+            signer.id!==id && (world.canSignProject?.(signer.id) ?? world.players.some(person=>person.id===signer.id && !person.npc)))) {
+            return 'A assinatura precisa ser de outro jogador com mandato.';
+          }
+          const reason = world.projectFilingError?.(id,data.document.project);
+          if (reason) return reason;
+        }
         const filed = [...this.items.values()].filter(item=>'filed' in item.place);
         if (filed.length>=24) this.remove(filed[0]);
         this.move(item,{filed:true});
@@ -1584,6 +1595,7 @@ export class Gameplay {
     }
     const doc = item.data.document;
     if (!doc || doc.signatures.some(person => person.id===player.id) ||
+      (doc.project!==undefined && (player.npc || world.canSignProject?.(player.id)===false)) ||
       (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});

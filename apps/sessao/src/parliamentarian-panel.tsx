@@ -33,7 +33,7 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
         `${doc.title} · ${doc.price ? money(doc.price) : 'Assinatura gratuita'}`,
         ()=>send({kind:'sign',target:deal.id,item:doc.id,amount:doc.price}),doc.price>deal.wallet
       )}</div>)}
-      <h3>{deal.project}</h3>
+      {deal.project ? <><h3>{deal.project}</h3>
       {(['yes','no'] as const).map(vote=>action(vote==='yes' ? 'Negociar voto a favor' : 'Negociar voto contra',
         ()=>setQuote({vote,amount:deal.minimum[vote]})))}
       {quote && <>
@@ -46,7 +46,7 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
           send({kind:'vote',target:deal.id,round,project:deal.projectIndex,vote:quote.vote,amount});
           setQuote(undefined);
         },amount>deal.wallet)}
-      </>}
+      </>}</> : <p>Nenhum projeto em pauta.</p>}
     </div>
   </>;
 }

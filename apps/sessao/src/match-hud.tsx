@@ -23,7 +23,7 @@ import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } f
 import { PLENARY_DOORS, type Motion, type Player } from './map';
 import { npcRules } from './parliamentarians';
 import { money, type PoliticsAction } from './politics';
-import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
+import { projectRules, stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 import type { SpyOption } from "./surveillance";
@@ -313,7 +313,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
           notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Renovação de Mandato' : 'Campanha',notice.text);
         }
-        if (view.phase==='negotiation' && !view.cassationIn && view.remaining<=30 && previous.remaining>30) {
+        if (view.phase==='negotiation' && view.project!==undefined && !view.cassationIn && view.remaining<=projectRules.warningSeconds && previous.remaining>projectRules.warningSeconds) {
           notify('Votação de projeto',`Plenário em ${view.remaining} s.`);
         }
         if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {

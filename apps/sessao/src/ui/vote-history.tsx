@@ -40,6 +40,7 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
         </div>
         <p>{outcome.yes+outcome.no===0 ? 'Ninguém votou · ' : ''}{threshold}</p>
         <p id="outcome">{details}</p>
+        {outcome.proposer && <p>Protocolado por {outcome.proposer}</p>}
       </div>
     </section>
     <div className="sr-only" role="status">{agendaProject(recent).name}: {recent.passed ? 'aprovado' : 'rejeitado'}. {recent.yes} a favor, {recent.no} contra.</div>

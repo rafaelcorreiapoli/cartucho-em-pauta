@@ -3,6 +3,7 @@ const apps = {
   'Joguinhos':['app-games','2'],
   'Câmera':['app-camera','3'],
   'Álbum':['app-photos','4'],
+  'Projetos':['ballot','5'],
   'Correio':['document','8'],
   'Pix':['wallet','9'],
 } as const;

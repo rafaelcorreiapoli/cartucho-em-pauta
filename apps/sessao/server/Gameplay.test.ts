@@ -696,3 +696,40 @@ test('an NPC raises its quote only after witnessing a weapon hit',()=>{
   Object.assign(witness,{x:720,y:240});
   expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });
+
+test.each([true,false])('only a human mandate can support a legislative project (solo=%s)',solo=>{
+  const {alice,bob,game,world} = setup();
+  const npc:Player = {...bob,id:'npc',npc:true};
+  world.players = solo ? [alice,npc] : [alice,bob,npc];
+  world.canSignProject = id=>id===bob.id;
+  world.hasMandate = ()=>true;
+  Object.assign(alice,terminals.secretary.point);
+  Object.assign(bob,{x:alice.x+12,y:alice.y});
+  game.act(alice,{kind:'supply',place:'secretary',target:'project-0'},world);
+  const [doc] = game.view(alice,world).inventory;
+  expect(doc.document?.requiredSignatures).toBe(solo ? 0 : 1);
+  expect(game.signWithNpc(alice,npc,doc.id,0,world)).toBe('Documento indisponível.');
+  game.act(alice,{kind:'stamp',item:doc.id,place:'secretary'},world);
+  Object.assign(alice,terminals.cabinet.point);
+  game.act(alice,{kind:'stamp',item:doc.id,place:'cabinet'},world);
+  const file = () => game.act(alice,{kind:'file',item:doc.id,place:'protocol'},world);
+  if (!solo) {
+    Object.assign(alice,terminals.protocol.point);
+    expect(file()).toBe('Falta: 1 assinatura(s).');
+    Object.assign(bob,{x:alice.x+8,y:alice.y});
+    game.act(alice,{kind:'sign-request',item:doc.id,target:bob.id},world);
+    const [request] = game.view(bob,world).requests;
+    world.canSignProject = ()=>false;
+    expect(game.act(bob,{kind:'accept',item:request.id},world)).toBe('Assinatura inválida.');
+    world.canSignProject = id=>id===bob.id;
+    expect(game.act(bob,{kind:'accept',item:request.id},world)).toBe('Documento assinado.');
+  }
+  Object.assign(alice,terminals.protocol.point);
+  world.projectFilingError = ()=>'Já há um projeto em pauta.';
+  expect(file()).toBe('Já há um projeto em pauta.');
+  expect(game.view(alice,world).inventory.map(item=>item.id)).toEqual([doc.id]);
+  expect(game.view(alice,world).filed).toEqual([]);
+  world.projectFilingError = ()=>undefined;
+  expect(file()).toBe('Documento protocolado.');
+  expect(game.view(alice,world).filed.map(item=>item.id)).toEqual([doc.id]);
+});

@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -83,6 +84,7 @@ test('the central countdown follows the authoritative last 30 seconds before vot
   const match = new PlenaryMatch(1);
   const hud = createHudModel();
   match.start(player.id,[{...player}],0,()=>0);
+  publishProjectFiling(match,player);
   const render = (now:number) => hud.render(match.view(player.id,[player.id],now));
   const deadline = match.view(player.id,[player.id],0).remaining*1000;
   render(deadline-31_000);
@@ -145,6 +147,7 @@ test('replayed pizza installation leaves the HUD unchanged until a valid Pizzada
 test('the HUD replaces a credited voting mission without offering it again on the last ballot',()=>{
   const match = new PlenaryMatch(1);
   match.start(player.id,[player],0,()=>0);
+  publishProjectFiling(match,player);
   Reflect.set(match,'round',2);
   const economy:PoliticalEconomy = Reflect.get(match,'economy');
   const {agenda} = Reflect.get(economy,'accounts').get(player.id);

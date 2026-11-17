@@ -1,5 +1,7 @@
 import {installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
+
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {InternalMail} from '../../server/InternalMail';
 import {ELECTION_RULES} from '../elections';
 import {internalMailRules} from '../internal-mail';
@@ -551,7 +553,7 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
     type:'filed',actor:buyer.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N07'),
     position:stations.amendment,at:now,witnesses:[],
   });
-  now = NEGOTIATION_MS;
+  now += NEGOTIATION_MS;
   match.advance(now);
   match.vote(buyer.id,'yes',now+1);
   match.vote(limited.id,'yes',now+1);
@@ -698,6 +700,7 @@ test('the plenary visit objective requires entry and exit within the same articu
   const match = new PlenaryMatch(1);
   const game = new Gameplay();
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
   game.reset(0,()=>.9,[player]);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   Reflect.set(agenda,'missions',[]);

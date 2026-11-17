@@ -565,8 +565,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
-      const agenda = plenaryView && agendaProject(plenaryView);
-      this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Painel de votação');
+      const agenda = plenaryView?.project!==undefined ? agendaProject(plenaryView) : undefined;
+      this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Nenhum projeto em pauta');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;
       const cssHeight = parent.clientHeight || 1;

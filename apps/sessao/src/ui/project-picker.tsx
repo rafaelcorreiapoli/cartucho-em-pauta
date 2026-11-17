@@ -9,7 +9,7 @@ export function mountProjectPicker() {
   const dialog = document.querySelector<HTMLDialogElement>('#project-picker')!;
   const root = createRoot(dialog);
   return {
-    open(title:string, select:(project:number)=>void, current?:number) {
+    open(title:string, select:(project:number)=>void, current?:number,unavailable:ReadonlySet<number> = new Set()) {
       if (dialog.open) return;
       flushSync(()=>root.render(<>
         <header><h2 className="hud-title" id="project-picker-title">{title}</h2>
@@ -18,7 +18,7 @@ export function mountProjectPicker() {
         <form className="project-picker-form" onSubmit={event=>{
           event.preventDefault();
           const project = new FormData(event.currentTarget).get('project');
-          if (project===null) return;
+          if (project===null || unavailable.has(Number(project))) return;
           select(Number(project));
           dialog.close();
         }}>
@@ -26,10 +26,10 @@ export function mountProjectPicker() {
             {bills.map((bill,index)=>index!==current && <label key={bill.id} className="project-picker-option">
               <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/documento-legislativo.webp'} alt=""/>
               <span className="project-picker-copy">
-                <strong id={`project-picker-name-${index}`}>{bill.name}</strong>
+                <strong id={`project-picker-name-${index}`}>{bill.name}{unavailable.has(index) && ' · Já votado'}</strong>
                 <span id={`project-picker-description-${index}`}>{bill.description}</span>
               </span>
-              <input type="radio" name="project" value={index} required
+              <input type="radio" name="project" value={index} required disabled={unavailable.has(index)}
                 aria-labelledby={`project-picker-name-${index}`} aria-describedby={`project-picker-description-${index}`}/>
             </label>)}
           </div>

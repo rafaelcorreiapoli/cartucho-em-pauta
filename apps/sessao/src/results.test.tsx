@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../server/project-test-fixture';
 import type {PoliticalEconomy} from '../server/PoliticalEconomy';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -79,6 +80,7 @@ test('an authoritative mandate renewal renders inside the shared results dialog'
   const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,x:140,y:146};
   const match = new PlenaryMatch(1);
   match.start(player.id,[player],0,()=>0);
+  publishProjectFiling(match,player);
   match.advance(NEGOTIATION_MS);
   match.vote(player.id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);

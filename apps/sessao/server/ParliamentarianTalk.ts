@@ -1,3 +1,4 @@
+import {bills} from '../src/plenary';
 import { canReachObject } from '../src/gameplay';
 import type { Player } from '../src/map';
 import { npcRules } from '../src/parliamentarians';
@@ -29,10 +30,12 @@ export class ParliamentarianTalk {
     const session = this.sessions.get(player.id);
     const npc = session && this.target(session.target);
     if (!session || !npc || session.until<=world.now || !this.available(player,npc,false)) return;
-    return {id:npc.id,name:npc.nick,project:this.match.projectName,projectIndex:this.match.projectIndex,wallet:world.wallet?.(player.id) ?? 0,
+    const projectIndex = this.match.projectIndex;
+    const minimum = (vote:'yes'|'no') => projectIndex===undefined ? 0 : this.members.minimum(npc.id,this.match.projectRound,vote,projectIndex,player.id);
+    return {id:npc.id,name:npc.nick,project:projectIndex===undefined ? undefined : bills[projectIndex].name,projectIndex,wallet:world.wallet?.(player.id) ?? 0,
       expiresIn:Math.ceil((session.until-world.now)/1000),
       documents:this.gameplay.signableDocuments(player,npc,world).map(doc=>({...doc,price:this.members.signature(npc.id,player.id)})),
-      minimum:{yes:this.members.minimum(npc.id,this.match.projectRound,'yes',this.match.projectIndex,player.id),no:this.members.minimum(npc.id,this.match.projectRound,'no',this.match.projectIndex,player.id)}};
+      minimum:{yes:minimum('yes'),no:minimum('no')}};
   }
 
   act(player:Player,raw:unknown,world:GameplayWorld) {
@@ -61,7 +64,7 @@ export class ParliamentarianTalk {
       if (result==='Assinatura obtida.') this.members.rememberAgreement(target.id,player.id);
       return result;
     }
-    if (raw.kind==='vote' && 'vote' in raw && (raw.vote==='yes' || raw.vote==='no') &&
+    if (raw.kind==='vote' && deal.projectIndex!==undefined && 'vote' in raw && (raw.vote==='yes' || raw.vote==='no') &&
         'amount' in raw && typeof raw.amount==='number' && Number.isSafeInteger(raw.amount) && raw.amount>=0 &&
         'round' in raw && raw.round===this.match.projectRound && 'project' in raw && raw.project===deal.projectIndex) {
       const minimum = deal.minimum[raw.vote];

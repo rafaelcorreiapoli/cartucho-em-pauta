@@ -36,7 +36,7 @@ import { createGame } from './game';
 import { createRoomCommandSender } from './room-commands';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
-import { MAX_PLAYERS, type PlenaryView } from './plenary';
+import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
@@ -243,7 +243,8 @@ async function connect(join: () => Promise<Room>) {
         return;
       }
       if (action.kind==='request-document') {
-        projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}));
+        const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
+        projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}),undefined,voted);
         return;
       }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
@@ -322,8 +323,11 @@ async function connect(join: () => Promise<Room>) {
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
       const cassationAnnounced = !!view.cassationIn && !previousView?.cassationIn;
-      const projectAnnounced = !view.cassationIn && view.remaining<=30 &&
-        ((previousView?.remaining ?? 0)>30 || !!previousView?.cassation);
+      const projectAnnounced = view.project!==undefined && !view.cassationIn && view.remaining<=projectRules.warningSeconds &&
+        ((previousView?.remaining ?? 0)>projectRules.warningSeconds || !!previousView?.cassation);
+      if (view.phase==='negotiation' && view.project!==undefined && view.proposer && view.project!==previousView?.project) {
+        hud.notify('Projeto em pauta',`${view.proposer} protocolou ${bills[view.project].name}. Votação em ${Math.ceil(view.remaining/60)} min.`);
+      }
       if (view.phase==='negotiation' && (cassationAnnounced || projectAnnounced)) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
@@ -363,14 +367,12 @@ async function connect(join: () => Promise<Room>) {
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
-      const nextBallot = phase==='ballot' && view.phase===phase && previousView?.round!==view.round;
       previousView = view;
       game?.setPlenaryView(view);
       game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       settings.update({roomLabel:label});
       if (phase===view.phase) {
-        if (nextBallot) audio.cue('ballot');
         return;
       }
       if ((phase==='lobby' || phase==='finished') && view.phase==='negotiation') audio.cue('session');

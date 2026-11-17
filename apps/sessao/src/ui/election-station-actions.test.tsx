@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -11,6 +12,7 @@ test('campaign controls match the current station, voice state and completed act
   const player:Player = {id:'a',nick:'Rafa',character:0,x:0,y:0,direction:0,moving:false};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
   const render = (station?:Station,voice=false,now=1)=>renderToStaticMarkup(
     <ElectionStationActions {...electionStationActions(match.view(player.id,[player.id],now),station,voice)} send={()=>{}}/>,
   );

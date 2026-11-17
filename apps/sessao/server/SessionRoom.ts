@@ -199,7 +199,10 @@ export class SessionRoom extends Room {
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
-          id=>this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,this.match.projectIndex),
+          id=>{
+            const project = this.match.projectIndex;
+            return project===undefined ? undefined : this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,project);
+          },
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
           id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
@@ -469,11 +472,12 @@ export class SessionRoom extends Room {
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }
-      if (this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
+      const project = this.match.projectIndex;
+      if (project!==undefined && this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();
         this.parliamentarians.players.forEach((npc,index)=>{
           Object.assign(npc,PLENARY_SEATS[PLENARY_SEATS.length-1-index],{direction:2});
-          const intention = this.parliamentarians.castVote(npc.id,this.match.projectRound,this.match.projectIndex);
+          const intention = this.parliamentarians.castVote(npc.id,this.match.projectRound,project);
           if (intention) this.match.recordNpcVote(npc.id,intention);
         });
       }

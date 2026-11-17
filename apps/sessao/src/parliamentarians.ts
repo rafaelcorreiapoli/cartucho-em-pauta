@@ -7,7 +7,7 @@ export const npcRules = {
 } as const;
 
 export type ParliamentarianDeal = {
-  id:string; name:string; project:string; projectIndex:number; wallet:number; expiresIn:number;
+  id:string; name:string; project?:string; projectIndex?:number; wallet:number; expiresIn:number;
   documents:{id:number;title:string;price:number}[];
   minimum:Record<Vote,number>;
 };
