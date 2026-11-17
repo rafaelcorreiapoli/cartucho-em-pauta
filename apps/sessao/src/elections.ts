@@ -17,7 +17,6 @@ export const advertisements = {
 export type Advertisement = keyof typeof advertisements;
 
 export type ElectionAction =
-  | {kind:'support'; to:string}
   | {kind:'advertise'; advertisement?:Advertisement}
   | {kind:'speech' | 'interview' | 'object'};
 
@@ -26,7 +25,7 @@ export type CampaignBroadcast = CampaignAdvertisement & {advertiserId:string};
 
 export type Assignment = {id:string; name:string; office:Office};
 export type Elected = Assignment & {character:number; race:Office; percentage:number};
-export type Poll = {id:string; name:string; character:number; race:Office; estimate:number; trend:number; supports?:string};
+export type Poll = {id:string; name:string; character:number; race:Office; estimate:number; trend:number};
 export type ElectionView = {
   cycle:number; remaining:number;
   offices:Assignment[]; polls:Poll[];
@@ -42,9 +41,6 @@ export type ElectionView = {
 export function readElectionAction(raw:unknown):ElectionAction|undefined {
   if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
   switch (raw.kind) {
-    case 'support':
-      if ('to' in raw && typeof raw.to==='string') return {kind:'support',to:raw.to};
-      break;
     case 'advertise':
       if (!('advertisement' in raw)) return {kind:'advertise'};
       if (typeof raw.advertisement==='string' && Object.hasOwn(advertisements,raw.advertisement)) {

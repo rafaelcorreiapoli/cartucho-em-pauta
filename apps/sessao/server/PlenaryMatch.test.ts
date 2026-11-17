@@ -13,7 +13,7 @@ import {privateOffices} from '../src/private-offices';
 import {fireRules,fireSites} from '../src/fire';
 import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
-import { ELECTION_RULES } from '../src/elections';
+import { ELECTION_RULES, readElectionAction } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT, readPoliticsAction } from '../src/politics';
 
@@ -1469,19 +1469,10 @@ test('a captured phone game can be reported once with a photo and pays the repor
 });
 
 
-test('election support and withdrawal are visible in observers’ polls',()=>{
-  const [voter,candidate,observer] = people;
-  const match = new PlenaryMatch(1);
-  expect(match.start(voter.id,people,0,()=>0)).toBe(true);
-  const position = (now:number)=>match.view(observer.id,ids,now).election?.polls.find(poll=>poll.id===voter.id);
-  match.electionAction(voter,{kind:'support',to:voter.id},1,false);
-  expect(position(4)?.supports).toBeUndefined();
-  match.electionAction(voter,{kind:'support',to:candidate.id},2,false);
-  expect(position(4)?.supports).toBe(candidate.id);
-  match.electionAction(voter,{kind:'support',to:''},3,false);
-  expect(position(4)?.supports).toBeUndefined();
+test('legacy public support commands are rejected',()=>{
+  expect(readElectionAction({kind:'support',to:honest.id})).toBeUndefined();
+  expect(readElectionAction({kind:'support',to:''})).toBeUndefined();
 });
-
 
 test('the Pix agenda uses the same amount for the wallet check and exact payment',()=>{
   const match = new PlenaryMatch(1);

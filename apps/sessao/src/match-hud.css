@@ -655,24 +655,7 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
-#support-form {
-  display: grid;
-  gap: .55rem;
-  margin-top: .65rem;
-  padding: .8rem;
-  border-radius: 8px;
-  background: #142522;
-}
 #election-indicator-mount { display: contents; }
-.support-candidates {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
-  gap: .45rem;
-}
-.support-candidates > button { display: flex; align-items: center; gap: .4rem; min-width: 0; text-align: left; }
-.support-candidates > button[aria-pressed="true"] { border-color: var(--party-gold); }
-.support-candidates > button > span:not(.portrait) { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.support-candidates .portrait { --portrait-size: 30px; flex: none; }
 
 #result-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 #result-title, #result-dialog h3, #result-dialog h4 { margin: 0 0 .55rem; font-family: var(--party-display); }

@@ -621,7 +621,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(events.filter(event=>event.type.startsWith('spy-')).every(event=>event.witnesses.length===0)).toBe(true);
 });
 
-function buyTechnical(game:Gameplay,player:Player,world:GameplayWorld,kind:'mensalUnderwear'|'xray') {
+function buyTechnical(game:Gameplay,player:Player,world:GameplayWorld,kind:'mensalUnderwear'|'xray'|'baton') {
   Object.assign(player,npcs.vendor);
   game.act(player,{kind:'talk',target:'vendor'},world);
   game.act(player,{kind:'dialogue-choice',target:'products',token:game.view(player,world).dialogue?.token},world);
@@ -843,4 +843,33 @@ test.each([0,1,2])('projects require %i other player signatures and no stamps',r
   world.projectFilingError = ()=>undefined;
   expect(file()).toBe('Documento protocolado.');
   expect(game.view(alice,world).filed.map(item=>item.id)).toEqual([doc.id]);
+});
+
+test('a knocked-out player bot drops its carried briefcase for another player to collect',()=>{
+  const {alice,bob,game,world,events} = setup();
+  bob.bot = true;
+  world.players = [alice,bob];
+  world.spend = ()=>true;
+  world.takeWallet = ()=>12;
+  const baton = buyTechnical(game,alice,world,'baton');
+  game.act(alice,{kind:'equip',item:baton.id},world);
+  Object.assign(alice,{x:240,y:250,direction:1});
+  Object.assign(bob,{x:249,y:250});
+  game.robNpc(bob,{...bob,id:'cash-source',npc:true},world);
+  const cash = game.view(bob,world).inventory.find(item=>item.kind==='briefcase')!;
+  for (let strike=0;strike<12 && !bob.knockedOut;strike++) {
+    world.now = 100+strike*500;
+    game.act(alice,{kind:'attack'},world);
+    world.now += weapons.baton.impactMs;
+    game.tick(world,true);
+    world.now += weapons.baton.swingMs;
+    game.tick(world,true);
+  }
+  expect(bob.knockedOut).toBe(true);
+  expect(game.view(bob,world).inventory).toEqual([]);
+  expect(events.filter(event=>event.type==='dropped' && event.item===cash.id)).toHaveLength(1);
+  expect(game.view(alice,world).nearby).toContainEqual(expect.objectContaining({id:cash.id}));
+  expect(game.act(alice,{kind:'collect',item:cash.id},world)).toBe('Objeto recolhido.');
+  expect(game.view(alice,world).inventory).toContainEqual(cash);
+  expect(game.physicalCash()).toBe(12);
 });

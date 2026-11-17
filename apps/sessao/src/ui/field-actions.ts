@@ -3,7 +3,7 @@ import {powerOption,type PowerAction} from '../power';
 import {canReachDownedPlayer,doorDestination} from '../interactions';
 import {decorationActions} from '../installations';
 import {npcs} from '../npcs';
-import {treasuryDeliveries,type GameplayAction} from '../gameplay';
+import {cashAmount,treasuryDeliveries,type GameplayAction} from '../gameplay';
 import {PLENARY_DOORS,type Player} from '../map';
 import type {ParliamentarianFieldAction} from '../parliamentarians';
 import type {PlenaryView} from '../plenary';
@@ -25,6 +25,10 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean;target?:{id:string;name:string;verb:string}}[] = [];
   const state = view?.gameplay;
   if (state && player) {
+    const cash = state.nearby.find(item=>cashAmount(item));
+    if (cash && !player.knockedOut && !player.carrying && !player.carried && view?.ballotCountdown===undefined) {
+      actions.push({label:'Pegar maleta',icon:'wallet',action:{kind:'collect',item:cash.id}});
+    }
     const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
     if (extinguisher && !player.knockedOut && !player.carrying) {
       actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'collect',item:extinguisher.id}});

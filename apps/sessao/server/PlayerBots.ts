@@ -1,9 +1,10 @@
 import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type GameplayView} from '../src/gameplay';
-import {NAMES,type Motion,type Player} from '../src/map';
+import {canStand,NAMES,type Motion,type Player} from '../src/map';
 import {applyInput,type ControlState} from '../src/movement';
 import {nickKey} from '../src/nick';
 import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
+import {BotAgenda} from './BotAgenda';
 import type {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
 import type {PlenaryMatch} from './PlenaryMatch';
@@ -14,6 +15,8 @@ const safeDifference = 6;
 type Bot = {
   control:ControlState;
   index:number;
+  agenda:BotAgenda;
+  tempo:number;
   nextThink:number;
   destination?:Motion;
   retryRouteAt:number;
@@ -40,7 +43,7 @@ export class PlayerBots {
   private filingSince?:number;
   messages:NonNullable<PlenaryView['botMessages']> = [];
 
-  addTo(players:Map<string,ControlState>,now:number) {
+  addTo(players:Map<string,ControlState>,now:number,random=Math.random) {
     this.started = now;
     const occupied = new Set([...players.values()].map(({player})=>player.character));
     const nicknames = new Set([...players.values()].map(({player})=>nickKey(player.nick)));
@@ -52,7 +55,8 @@ export class PlayerBots {
       const player:Player = {id:`bot-${number}`,bot:true,nick,character,x:140,y:146,direction:0,moving:false};
       const control:ControlState = {player,ack:0,route:[]};
       const index = this.bots.size;
-      this.bots.set(player.id,{control,index,nextThink:now+index*125,retryRouteAt:now});
+      const tempo = Math.floor(random()*350);
+      this.bots.set(player.id,{control,index,agenda:new BotAgenda(random,now),tempo,nextThink:now+index*125+tempo,retryRouteAt:now});
       players.set(player.id,control);
     }
   }
@@ -79,7 +83,7 @@ export class PlayerBots {
     const ids = players.map(player=>player.id);
     for (const [id,bot] of this.bots) {
       if (now<bot.nextThink) continue;
-      bot.nextThink = now+thinkMs;
+      bot.nextThink = now+thinkMs+bot.tempo;
       const {player} = bot.control;
       if (player.knockedOut || player.carried || player.carrying || !match.canHandleObjects(id,now)) continue;
       const visible = world.players.filter(peer=>peer!==player && world.present?.(peer.id)!==false && canSee(bot.control,peer));
@@ -120,6 +124,16 @@ export class PlayerBots {
     control.route = [];
   }
 
+  private meetAtSecretary(bot:Bot,now:number) {
+    const {player} = bot.control;
+    const center = stations.secretary;
+    const angle = bot.index*2*Math.PI/5;
+    const point = {x:Math.round(center.x+9*Math.cos(angle)),y:Math.round(center.y+9*Math.sin(angle))};
+    const target = canStand(point.x,point.y) && canReachObject({...player,...point},center) ? point : center;
+    if (Math.hypot(player.x-target.x,player.y-target.y)<3) this.stop(bot);
+    else this.go(bot,target,now);
+  }
+
   private explore(bot:Bot,match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,view:PlenaryView,visible:Player[]) {
     const {player} = bot.control;
     const {now} = world;
@@ -158,24 +172,28 @@ export class PlayerBots {
       this.stop(bot);
       return;
     }
-    if (view.project!==undefined && !view.projectVoteExpired) {
-      this.workOnBill(bot,match,view,visible,now);
-      return;
-    }
+    if (view.project!==undefined && !view.projectVoteExpired &&
+        this.workOnBill(bot,match,view,visible,now)) return;
     const document = game.inventory.find(item=>item.document?.project!==undefined);
     if (document && view.outcomes.some(outcome=>outcome.project===document.document?.project)) {
       act({kind:'destroy',item:document.id});
       return;
     }
     const filingElapsed = this.filingSince===undefined ? -Infinity : now-this.filingSince;
-    const first = (view.round+this.bots.size-1)%this.bots.size;
-    const filingOrder = (bot.index-first+this.bots.size)%this.bots.size;
-    if (filingElapsed>=8_000 && (document || filingElapsed>=8_000+filingOrder*22_000)) {
-      this.file(bot,view,game,visible,now,act);
-      return;
+    if (filingElapsed>=8_000) {
+      const first = (view.round+this.bots.size-1+Math.floor((filingElapsed-8_000)/32_000))%this.bots.size;
+      const filingOrder = (bot.index-first+this.bots.size)%this.bots.size;
+      if (filingOrder===0) {
+        this.file(bot,view,game,visible,now,act);
+        return;
+      }
+      if (filingOrder<=2 && filingElapsed>=13_000) {
+        this.meetAtSecretary(bot,now);
+        return;
+      }
     }
-    if (canReachObject(player,stations.secretary)) this.stop(bot);
-    else this.go(bot,stations.secretary,now);
+    bot.agenda.tick(player,view,game,gameplay,world,point=>this.go(bot,point,now),()=>this.stop(bot),act,
+      ()=>match.roomActivity(player,'library',now,world.publish));
   }
 
   private workOnBill(bot:Bot,match:PlenaryMatch,view:PlenaryView,visible:Player[],now:number) {
@@ -188,7 +206,7 @@ export class PlayerBots {
         this.stop(bot);
         if (!visible.some(peer=>canReachObject(player,peer,{radius:48}))) match.act(player,'fraud',now);
       } else this.go(bot,stations.panel,now);
-      return;
+      return true;
     }
     if (infiltrator && !bot.cutPower && view.canSabotagePower && elapsed>=22 && elapsed<85) {
       if (canOperatePanel(player,0)) {
@@ -196,14 +214,14 @@ export class PlayerBots {
         if (!visible.some(peer=>canReachObject(player,peer,{radius:48})) &&
             match.actOnPower(player,{kind:'sabotage',panel:0},now)) bot.cutPower = true;
       } else this.go(bot,powerPanels[0],now);
-      return;
+      return true;
     }
     if (view.audit==='fraud' && !view.reportedFraud && !infiltrator) {
       if (canReachStation(player,'panel')) {
         this.stop(bot);
         match.act(player,'panel',now);
       } else this.go(bot,stations.panel,now);
-      return;
+      return true;
     }
     if (view.audit===undefined && !view.reportedFraud && elapsed>=32+bot.index*7 && view.remaining>7) {
       if (canReachStation(player,'audit')) {
@@ -215,10 +233,9 @@ export class PlayerBots {
           if (seen && now-seen.at<35_000) bot.suspicion = seen.name;
         }
       } else this.go(bot,stations.audit,now);
-      return;
+      return true;
     }
-    if (canReachStation(player,'library')) this.stop(bot);
-    else this.go(bot,stations.library,now);
+    return false;
   }
 
   private file(bot:Bot,view:PlenaryView,game:GameplayView,visible:Player[],now:number,act:(action:GameplayAction)=>void) {
@@ -260,8 +277,7 @@ export class PlayerBots {
       act({kind:'sign-request',target:peer.id,item:document.id});
     } else if (candidates.length) {
       if (now>=bot.retryRouteAt || !bot.control.route.length) this.go(bot,candidates[0],now);
-    } else if (canReachObject(player,stations.secretary)) this.stop(bot);
-    else this.go(bot,stations.secretary,now);
+    } else this.meetAtSecretary(bot,now);
   }
 
   private votePreference(bot:Bot,view:PlenaryView):{vote:Vote;reason:string} {

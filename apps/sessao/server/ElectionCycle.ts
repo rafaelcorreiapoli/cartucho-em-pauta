@@ -5,7 +5,7 @@ type Candidate = Contact & {
   character:number;
   campaignNumber:number;
   office:Office; race:Office; advertisementPopularity:number; spoke:boolean;
-  interviewed:boolean; support?:string; scandal:number;
+  interviewed:boolean; scandal:number;
   noise:number; tie:number;
 };
 type Result = {cycle:number; offices:Elected[]; salaries:Map<string,number>; eliminated?:string};
@@ -59,7 +59,6 @@ export class ElectionCycle {
     if (!previous) return;
     this.people.delete(id);
     if (this.broadcast?.id===id) this.stopBroadcast(now);
-    for (const person of this.people.values()) if (person.support===id) person.support = undefined;
   }
 
   canCampaignAction(id:string,kind:'propaganda'|'discurso') {
@@ -80,13 +79,6 @@ export class ElectionCycle {
       const broadcast:CampaignAdvertisement = {name:person.name,character:person.character,number:person.campaignNumber};
       return {broadcast,offer};
     }
-  }
-
-  support(id:string, to:string) {
-    const person = this.people.get(id);
-    if (!person || to===id || (to && !this.people.has(to)) || person.support===(to || undefined)) return;
-    person.support = to || undefined;
-    this.announce(to ? `${person.name} declarou apoio a ${this.people.get(to)!.name}.` : `${person.name} retirou seu apoio eleitoral.`);
   }
 
   speech(id:string) {
@@ -133,10 +125,8 @@ export class ElectionCycle {
   canObject(id:string) { return !!this.office(id) && !this.objected; }
 
   private strength(person:Candidate, popularity:(id:string)=>number,advertisementMultiplier:number) {
-    const support = [...this.people.values()].filter(other => other.support===person.id).length;
     return Math.max(1,popularity(person.id)+
-      person.advertisementPopularity*(advertisementMultiplier-1)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)+
-      Math.min(12,support*4)-person.scandal);
+      person.advertisementPopularity*(advertisementMultiplier-1)+(person.spoke ? 4 : 0)+(person.interviewed ? 8 : 0)-person.scandal);
   }
 
   private tallyScore(person:Candidate, popularity:(id:string)=>number,advertisementMultiplier:number) {
@@ -155,7 +145,7 @@ export class ElectionCycle {
       const sum = estimates.reduce((total,{score}) => total+score,0);
       return estimates.sort((a,b) => b.score-a.score || a.person.tie-b.person.tie).map(({person,score}) => {
         const estimate = Math.round(score/sum*100);
-        return {id:person.id,name:person.name,character:person.character,race,estimate,trend:estimate-(this.previousPoll.get(person.id) ?? estimate),supports:person.support};
+        return {id:person.id,name:person.name,character:person.character,race,estimate,trend:estimate-(this.previousPoll.get(person.id) ?? estimate)};
       });
     });
   }
@@ -175,7 +165,6 @@ export class ElectionCycle {
         person.scandal = 0;
         person.advertisementPopularity = 0;
         person.spoke = person.interviewed = false;
-        person.support = undefined;
         person.noise = this.noise();
       }
       const salaries = settle([...this.people.keys(),...this.paidDeputies]);
