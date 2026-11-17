@@ -912,6 +912,26 @@ test('replaying a server-identified event does not apply progress twice',()=>{
   expect(active()).toBe(4);
 });
 
+test('a previous match event cannot reserve the new match’s document ID',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
+  const before = match.gameplayWorld([host],1,()=>false);
+  const filed = {
+    type:'filed',actor:host.id,item:1,project:2,position:stations.amendment,at:1,witnesses:[],
+    eventId:before.nextEventId!(),
+  } as const;
+  expect(before.publish({...filed,witnesses:[]})).toBe(true);
+  match.leave(host.id,2);
+  expect(match.start(host.id,[host],3,()=>.9)).toBe(true);
+
+  const after = match.gameplayWorld([host],4,()=>false);
+  const view = ()=>match.view(host.id,[host.id],4);
+  expect(after.publish({...filed,at:4,witnesses:[]})).toBe(false);
+  expect(view().queuedProjects).toEqual([]);
+  expect(after.publish({...filed,at:4,eventId:after.nextEventId!(),witnesses:[]})).toBe(true);
+  expect(view().queuedProjects).toEqual([2]);
+});
+
 test('Investimento Político counts paid advertisements after assignment across renewals',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
