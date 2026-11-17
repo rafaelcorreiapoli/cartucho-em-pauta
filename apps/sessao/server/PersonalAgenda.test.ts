@@ -924,7 +924,6 @@ test.each([
   ['cafeEstrategico',event('used',{kind:'coffee',place:'Cafezinho'}),event('used',{kind:'coffee',place:'Arquivo'})],
   ['contasTesouraria',event('delivered',{kind:'briefcase',place:'treasury'}),event('delivered',{kind:'briefcase',place:'press'})],
   ['contribuinte',event('delivered',{amount:5,place:'treasury'}),event('delivered',{amount:5,place:'press'})],
-  ['trabalhoRemoto',event('room-time',{duration:30_000,target:'a'}),event('room-time',{duration:30_000,target:'b'})],
   ['apagarIncendio',event('fire-extinguished'),event('room-entered',{place:'Cafezinho'})],
   ['primeirosSocorros',event('used',{kind:'firstAidKit'}),event('collected',{kind:'firstAidKit'})],
   ['socorro',event('aided',{target:'b'}),event('aided',{target:'npc-parliamentarian-1'})],
@@ -994,7 +993,7 @@ test('urgent calls are replaced if too few distinct contacts remain to finish',(
 test.each([
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b',item:1}),event('called',{target:'b'})],
   ['nadaADeclarar',event('concealed-cash-time',{duration:15_000}),event('concealment-started',{amount:1})],
-  ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
+  ['produtividade',event('game-played',{duration:agendaDurationMs.produtividade,place:'own-office'}),event('game-played',{duration:agendaDurationMs.produtividade})],
   ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
   ['limpeza',event('spy-removed',{item:3}),event('spy-removed')],
   ['escutaAtiva',event('wiretap-time',{duration:15_000}),event('wiretap-time',{duration:0,at:2})],
@@ -1274,42 +1273,6 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   expect(agenda.view(options).completed).toContainEqual(expect.objectContaining({kind:'reuniaoVip',current:15_000}));
 });
 
-test('archive duty requires continuous time and restarts on disconnect',()=>{
-  const player:Player = {id:'a',nick:'A',x:511,y:65,moving:false,direction:0,character:0};
-  const xp:number[] = [];
-  const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>xp.push(reward.xp));
-  const game = new Gameplay();
-  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-    hasMission:(_id,kind)=>agenda.hasActive(kind),publish:entry=>recordAgendaEvent(agenda,entry)};
-  const tick = (count:number)=>{
-    for (let i=0;i<count;i++) {
-      world.now += 100;
-      game.tick(world,true);
-    }
-  };
-  const progress = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='plantaoArquivo')?.current;
-  tick(310);
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['plantaoArquivo','cafe','passeio','selfieSolo']);
-  agenda.updateEligibility(metrics,1,true,3);
-  expect(progress()).toBe(0);
-  tick(11);
-  expect(progress()).toBe(1000);
-  player.y = 140;
-  tick(1);
-  expect(progress()).toBe(0);
-  player.y = 65;
-  tick(5);
-  expect(progress()).toBe(400);
-  game.leave(player,world,false);
-  expect(progress()).toBe(0);
-  tick(300);
-  expect(progress()).toBe(29_900);
-  tick(10);
-  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'plantaoArquivo',current:30_000}));
-  expect(xp).toEqual([25]);
-});
-
 test('the VIP mission requires an installed plaque rather than just buying it',()=>{
   const player:Player = {id:'a',nick:'A',...npcs.credentialsVendor.interaction,moving:false,direction:0,character:0};
   const rewards:number[] = [];
@@ -1390,28 +1353,17 @@ test('an exchange counts accepted different items with the same human and reward
   expect(agenda.hasActive('amizadeInstitucional')).toBe(false);
 });
 
-test('Cafezinho counts only articulation and public tours exclude isolated and private areas',()=>{
-  const player:Player = {id:'a',nick:'A',x:240,y:210,moving:false,direction:0,character:0};
+test('public tours exclude isolated and private areas',()=>{
   const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['pausaCafe','passeio','selfieSolo']);
+  Reflect.set(agenda,'missionDeck',['passeio','cafe','selfieSolo']);
   agenda.updateEligibility(metrics,1,true,3);
-  const game = new Gameplay();
-  const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-    hasMission:(_id,kind)=>agenda.hasActive(kind),publish:entry=>recordAgendaEvent(agenda,entry),plenary:true};
-  const current = (kind:'pausaCafe'|'passeio')=>agenda.view(metrics).active.find(mission=>mission.kind===kind)?.current;
-  game.tick(world,true);
-  world.now += 100;
-  game.tick(world,true);
-  expect(current('pausaCafe')).toBe(0);
-  world.plenary = false;
-  world.now += 100;
-  game.tick(world,true);
-  expect(current('pausaCafe')).toBe(100);
+  const current = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='passeio')?.current;
+  let now = 0;
   for (const place of [privateOffices[0].name,'Sala de Isolamento','Arquivo','Arquivo','Biblioteca','Cafezinho']) {
-    recordAgendaEvent(agenda,event('room-entered',{place,at:++world.now}));
-    if (place===privateOffices[0].name || place==='Sala de Isolamento') expect(current('passeio')).toBe(0);
-    if (place==='Arquivo') expect(current('passeio')).toBe(1);
+    recordAgendaEvent(agenda,event('room-entered',{place,at:++now}));
+    if (place===privateOffices[0].name || place==='Sala de Isolamento') expect(current()).toBe(0);
+    if (place==='Arquivo') expect(current()).toBe(1);
   }
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'passeio',current:3}));
 });

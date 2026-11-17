@@ -39,9 +39,8 @@ export const targetedAgendas = {
   visitaCortesia:'Interaja dentro do gabinete de',
   selfieAlvo:'Tire uma selfie com',
 } as const;
-export const archiveDutyRoom = 'Arquivo';
 export const urgentCallMission = {minCallMs:10_000,contacts:2} as const;
-export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,plantaoArquivo:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
+export const agendaDurationMs = {jogar:20_000,jogarOculto:20_000,produtividade:20_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
 export const agendaCounts = {
   assinaturas:2, comissaoImprovisada:3, passeio:3, articulacao:2, projetos:2, oposicao:2,
@@ -83,7 +82,6 @@ export const agendas = {
   ostentacao:`Gaste ${money(agendaCashTargets.ostentacao)} em móveis`,
   visitaGabinete:'Visite o gabinete de um colega',
   passeio:`Visite ${countWord(agendaCounts.passeio,true)} salas públicas diferentes`,
-  pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
   entrega:`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`,
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:`Vença uma partida de Snake coletando ${SNAKE_GOAL} frutas sem ser visto durante a partida.`,
@@ -121,11 +119,9 @@ export const agendas = {
   emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
-  plantaoArquivo:`Fique ${agendaDurationMs.plantaoArquivo/1000} segundos seguidos no ${archiveDutyRoom}`,
   solenidadeInauguracao:`Rabisque um Retrato Oficial de outro jogador instalado há até ${NEW_PORTRAIT_MS/1000} segundos`,
   amizadeInstitucional:'Entregue um item a outro jogador e receba dele um item diferente',
   privilegioAdquirido:'Instale uma Placa VIP',
-  trabalhoRemoto:`Passe ${agendaDurationMs.trabalhoRemoto/1000} segundos no seu gabinete`,
   produtividade:`Jogue no celular por ${agendaDurationMs.produtividade/1000} segundos no seu gabinete`,
   cafeEstrategico:'Beba um café no Cafezinho',
   contasTesouraria:'Entregue uma maleta à Tesouraria',
@@ -184,8 +180,8 @@ export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
-  plantaoArquivo:25,privilegioAdquirido:25,amizadeInstitucional:35,solenidadeInauguracao:30,
-  trabalhoRemoto:25,produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
+  privilegioAdquirido:25,amizadeInstitucional:35,solenidadeInauguracao:30,
+  produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
   reuniaoVip:40,segurancaParlamentar:40,fiscalizacaoParalela:35,patrimonioSuspeito:30,varredura:35,limpeza:40,escutaAtiva:35,instalarGrampo:35,instalarCamera:35,duasCameras:30,vigilanciaInstitucional:25,mensagemComAnexo:35,retratacaoOficial:45,fotoOstentacao:30,fotoDinheiro:35,doisMoveis:45,
   poupancaInstitucional:50,recolhimentoExtraordinario:60,dinheiroPresencialVinte:35,caixaDois:25,visitaDoisGabinetes:35,pixVinte:25,doisPix:30,debateTelefonico:35,chamadasUrgentes:45,discursoMegafone:35,campanhaUltimaHora:30,investimentoPolitico:50,bandejaGourmet:35,
@@ -193,7 +189,7 @@ const xpOnly:Partial<Record<Agenda,number>> = {
   jornalismo:30,manutencaoEmergencia:45,apagarIncendio:45,primeirosSocorros:25,socorro:40,fiscalCafe:30,almocoPlenario:30,
   cafe:20,pizza:20,lagosta:30,comprarLagosta:25,bombom:20,jogar:35,jogarOculto:45,
   selfieSolo:20,retratoGabinete:30,poltrona:25,ostentacao:35,gabinete:30,televisao:30,
-  visitaGabinete:25,passeio:35,pausaCafe:20,joguinho:35,selfie:35,presidenteFoto:30,
+  visitaGabinete:25,passeio:35,joguinho:35,selfie:35,presidenteFoto:30,
   retrato:25,autorretrato:25,cerimonialOficial:25,reforma:35,reserva:25,mandaVip:30,
 };
 const rewardOverrides:Partial<Record<Agenda,MissionReward>> = {

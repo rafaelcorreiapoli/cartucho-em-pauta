@@ -9,6 +9,9 @@ import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gamepl
 
 type Call = {id:number; from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
 type PhoneRound = {id:number;snake:SnakeRound; startedAt?:number; sampledAt:number; witnesses:Set<string>};
+type MiniGameSession = {id:number; activity?:{sampledAt:number; until:number}};
+const miniGameActivityMs = 3_000;
+
 type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'|'wallet'|'settleBet'|'earnXp'>;
 
 export class PhoneSession {
@@ -16,7 +19,7 @@ export class PhoneSession {
   private calls = new Map<string,Call>();
   private games = new Map<string,PhoneRound>();
   private nextGameId = 0;
-  private miniGames = new Map<string,number>();
+  private miniGames = new Map<string,MiniGameSession>();
   private nextCandyId = 0;
   private candy = new Map<string,{round:CandyRound;readyAt:number}>();
   private bets = new Map<string,{round:BetsRound;readyAt:number}>();
@@ -52,17 +55,13 @@ export class PhoneSession {
         continue;
       }
       if (!this.playingPhoneGame(game)) continue;
-      const witnesses = world.players.filter(other=>other.id!==id && world.present?.(other.id)!==false &&
-        worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
+      const witnesses = this.gameWitnesses(player,world);
       for (const witness of witnesses) game.witnesses.add(witness);
       if (game.startedAt===undefined) continue;
       const deadline = game.startedAt+SNAKE_ROUND_MS;
       const duration = Math.min(100,Math.min(world.now,deadline)-game.sampledAt);
       game.sampledAt = world.now;
-      if (duration>0 &&
-          (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto') || world.hasMission?.(id,'produtividade'))) {
-        publishGameplay(world,player,'game-played',{duration,witnesses,place:inOwnOffice?.(player) ? 'own-office' : undefined});
-      }
+      this.recordPlay(player,world,duration,inOwnOffice,witnesses);
       if (world.now>=deadline) game.snake.status = 'lost';
       else {
         const score = game.snake.score;
@@ -75,6 +74,39 @@ export class PhoneSession {
           {duration:Math.min(world.now,deadline)-game.startedAt,witnesses:game.witnesses});
       }
     }
+    for (const [id,game] of this.miniGames) {
+      const player = world.players.find(person=>person.id===id);
+      if (!player || !this.canPlayMiniGame(player,world)) {
+        game.activity = undefined;
+        continue;
+      }
+      const activity = game.activity;
+      if (!activity) continue;
+      const duration = Math.min(100,Math.min(world.now,activity.until)-activity.sampledAt);
+      activity.sampledAt = world.now;
+      if (world.now>=activity.until) game.activity = undefined;
+      this.recordPlay(player,world,duration,inOwnOffice);
+    }
+  }
+
+  private gameWitnesses(player:Player,world:PhoneWorld) {
+    return world.players.filter(other=>other.id!==player.id && world.present?.(other.id)!==false &&
+      worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
+  }
+
+  private recordPlay(player:Player,world:PhoneWorld,duration:number,inOwnOffice?: (player:Player)=>boolean,witnesses?:string[]) {
+    const id = player.id;
+    if (duration<=0 || !(world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto') || world.hasMission?.(id,'produtividade'))) return;
+    publishGameplay(world,player,'game-played',{
+      duration,witnesses:witnesses ?? this.gameWitnesses(player,world),place:inOwnOffice?.(player) ? 'own-office' : undefined,
+    });
+  }
+
+  private markMiniGameActivity(id:string,now:number) {
+    const game = this.miniGames.get(id) ?? {id:++this.nextGameId};
+    const previous = game.activity;
+    game.activity = {sampledAt:previous && previous.until>=now ? previous.sampledAt : now,until:now+miniGameActivityMs};
+    this.miniGames.set(id,game);
   }
 
   private sampleCall(call:Call,world:PhoneWorld) {
@@ -123,7 +155,7 @@ export class PhoneSession {
   gameSession(id:string) {
     const snake = this.games.get(id);
     if (snake && this.playingPhoneGame(snake)) return snake.id;
-    return this.miniGames.get(id);
+    return this.miniGames.get(id)?.id;
   }
 
   activity(id:string):PhoneActivity|undefined {
@@ -199,13 +231,14 @@ export class PhoneSession {
         const previous = this.candy.get(id);
         if (previous && previous.readyAt>world.now) return;
         if (action.kind==='candy-start') {
-          this.miniGames.set(id,++this.nextGameId);
+          this.miniGames.set(id,{id:++this.nextGameId});
           this.candy.set(id,{round:{id:++this.nextCandyId,board:newCandyBoard(),score:0},readyAt:world.now});
           return;
         }
         if (!previous || action.token!==previous.round.id || !action.cells) return;
         const move = swapCandy(previous.round.board,...action.cells);
         if (!move?.matches.size) return;
+        this.markMiniGameActivity(id,world.now);
         const count = move.matches.size;
         this.candy.set(id,{round:{id:++this.nextCandyId,board:newCandyBoard(move.board,move.matches),
           score:previous.round.score+count},readyAt:world.now+CANDY_BURST_MS});
@@ -224,12 +257,14 @@ export class PhoneSession {
         const maxPayout = amount*BET_PAYOUT/10;
         const payout = winningReels(reels) ? maxPayout : 0;
         if (!world.settleBet?.(id,stake,payout,maxPayout)) return 'O Bets está sem reserva para pagar o prêmio desta aposta.';
-        if (!this.miniGames.has(id)) this.miniGames.set(id,++this.nextGameId);
+        this.markMiniGameActivity(id,world.now);
         this.bets.set(id,{round:{id:(previous?.round.id ?? 0)+1,reels,stake,payout},readyAt:world.now+BET_SPIN_MS});
         return;
       }
       case 'game-start':
         if (!this.canPlayMiniGame(player,world)) return;
+        this.miniGames.delete(id);
+        this.candy.delete(id);
         this.games.set(id,{id:++this.nextGameId,snake:createSnake(world.now),sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
         publishGameplay(world,player,'game-started');
         return;

@@ -106,6 +106,39 @@ test('Bets settles once against the wallet and preserves the result after closin
   expect(phone.act(player,{...spin,token:round.id},world)).toBe('Saldo insuficiente para apostar.');
 });
 
+test('Bets credits active rounds, excludes idle gaps and stops when the phone closes',()=>{
+  const phone = new PhoneSession();
+  const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
+  const events:GameplayEvent[] = [];
+  const world = {players:[player],now:0,voice:()=>false,publish:(event:GameplayEvent)=>events.push(event),
+    wallet:()=>8,settleBet:()=>true,hasMission:()=>true};
+  const spin = (token:number)=>phone.act(player,{kind:'bets-spin',quantity:2,token},world);
+  const tick = (count:number)=>{
+    for (let i=0;i<count;i++) {
+      world.now += 100;
+      phone.tick(world,true,()=>true);
+    }
+  };
+  const played = ()=>events.filter(event=>event.type==='game-played').reduce((sum,event)=>sum+(event.duration ?? 0),0);
+  phone.act(player,{kind:'phone-open'},world);
+  tick(40);
+  expect(played()).toBe(0);
+  spin(0);
+  tick(20);
+  spin(0); // replay
+  tick(20);
+  expect(played()).toBe(3000);
+  expect(events.every(event=>event.place==='own-office')).toBe(true);
+  for (let token=1;token<=8;token++) {
+    spin(token);
+    tick(25);
+  }
+  expect(played()).toBe(23_000);
+  phone.act(player,{kind:'phone-close'},world);
+  tick(10);
+  expect(played()).toBe(23_000);
+});
+
 test('Snake awards XP once when a fruit is collected',()=>{
   const phone = new PhoneSession();
   const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
@@ -127,7 +160,8 @@ test('Combina Doces awards XP for each matched fruit and rejects replayed swaps'
   const phone = new PhoneSession();
   const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
   const rewards:number[] = [];
-  const world = {players:[player],now:0,voice:()=>false,publish:()=>{},earnXp:(_:string,xp:number)=>rewards.push(xp)};
+  const samples:GameplayEvent[] = [];
+  const world = {players:[player],now:0,voice:()=>false,publish:(event:GameplayEvent)=>samples.push(event),hasMission:()=>true,earnXp:(_:string,xp:number)=>rewards.push(xp)};
   phone.act(player,{kind:'phone-open'},world);
   phone.act(player,{kind:'candy-start'},world);
   const round = phone.view(player.id,world.players).candy!;
@@ -138,9 +172,15 @@ test('Combina Doces awards XP for each matched fruit and rejects replayed swaps'
     3,4,0,1,2,
     4,0,1,2,3);
   phone.act(player,{kind:'candy-swap',cells:[0,6],token:round.id},world);
+  world.now = 100;
+  phone.tick(world,true);
+  expect(samples).toEqual([]);
   expect(rewards).toEqual([]);
   const swap = {kind:'candy-swap',cells:[2,7],token:round.id} satisfies GameplayAction;
   phone.act(player,swap,world);
+  world.now += 100;
+  phone.tick(world,true);
+  expect(samples).toMatchObject([{type:'game-played',duration:100}]);
   world.now += CANDY_BURST_MS;
   phone.act(player,swap,world);
   expect(phone.view(player.id,world.players).candy?.score).toBe(3);

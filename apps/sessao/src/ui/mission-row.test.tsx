@@ -149,9 +149,9 @@ test('counter-surveillance missions describe discovery and removal separately', 
 });
 
 test('the office phone mission shows time remaining as seconds', () => {
-  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'produtividade',current:5000,target:30_000}}/>);
+  const markup = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'produtividade',current:5000,target:agendaDurationMs.produtividade}}/>);
   expect(markup).toContain('no seu gabinete');
-  expect(markup).toContain('5 / 30 s');
+  expect(markup).toContain('5 / 20 s');
 });
 
 test('concealed transport shows the authoritative progress in seconds', () => {
@@ -217,16 +217,13 @@ test('Reunião de Alto Nível identifies the installed VIP plaque and shows the 
   expect(markup).toContain('6 / 15 s');
 });
 
-test('the expansion renders archive progress and explains the installation and exchange requirements',()=>{
-  const render = (kind:'plantaoArquivo'|'privilegioAdquirido'|'amizadeInstitucional'|'passeio'|'pausaCafe',current=0,target=1,done=false)=>
+test('the expansion explains installation, exchange and public tour requirements',()=>{
+  const render = (kind:'privilegioAdquirido'|'amizadeInstitucional'|'passeio',current=0,target=1,done=false)=>
     renderToStaticMarkup(<MissionRow mission={{id:1,kind,current,target}} done={done}/>);
-  expect(render('plantaoArquivo',7000,30_000)).toContain('7 / 30 s');
-  expect(render('plantaoArquivo')).toContain('seguidos no Arquivo');
   expect(render('privilegioAdquirido',1,1,true)).toContain('data-done="true"');
   expect(render('privilegioAdquirido')).toContain('Instale uma Placa VIP');
   expect(render('amizadeInstitucional')).toContain('receba dele um item diferente');
   expect(render('passeio')).toContain('três salas públicas diferentes');
-  expect(render('pausaCafe')).toContain('no Cafezinho durante a articulação');
 });
 
 test('the portrait and transfer objectives state the actual time and amount required',()=>{

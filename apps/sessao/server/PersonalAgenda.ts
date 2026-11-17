@@ -6,7 +6,7 @@ import { isFood } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type MissionSwapResult = 'swapped'|'used'|'unavailable';
@@ -90,7 +90,7 @@ const missionTargets:Partial<Record<Agenda,number>> = {
   fortuna:12,campanha:65,...agendaCounts,...agendaCashTargets,...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
-const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
+const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   campanhaUltimaHora:ELECTION_RULES.advertisementCost,pixVinte:PIX_MISSION_AMOUNT,
   propaganda:ELECTION_RULES.advertisementCost,
@@ -107,7 +107,7 @@ const decorationRequirements = {
   privilegioAdquirido:'vip',reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof credentialGoods>>;
 
-const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
 const photoPublicationKey = (id:number,channel?:string) => JSON.stringify(['photo-published',id,channel]);
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
@@ -485,11 +485,6 @@ export class PersonalAgenda {
       if (kind==='turismo' && event.type==='photo' && event.photo && event.photo.location!=='Corredor') {
         gains[kind] = this.countFacts(mission,[{value:event.photo.location}]);
       }
-      if (kind==='trabalhoRemoto' && event.type==='room-time' && event.target===event.actor) gains[kind] = event.duration ?? 0;
-      if (kind==='plantaoArquivo' && event.place===archiveDutyRoom) {
-        if (event.type==='room-left') mission.current = 0;
-        if (event.type==='room-time') gains[kind] = event.duration ?? 0;
-      }
       if (kind==='entrega' && event.type==='transferred' && event.kind==='coffee' && event.target) {
         gains[kind] = this.countFacts(mission,[{value:event.target}]);
       }
@@ -497,9 +492,8 @@ export class PersonalAgenda {
           event.place!=='Sala de Isolamento' && !privateOffices.some(office=>office.name===event.place)) {
         gains.passeio = this.countFacts(mission,[{value:event.place}]);
       }
-      if ((event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length ||
-          kind==='produtividade' && event.place==='own-office')) ||
-          (event.type==='room-time' && event.place==='Cafezinho' && kind==='pausaCafe')) gains[kind] = event.duration ?? 0;
+      if (event.type==='game-played' && (kind==='jogar' || kind==='jogarOculto' && !event.witnesses.length ||
+          kind==='produtividade' && event.place==='own-office')) gains[kind] = event.duration ?? 0;
     }
     this.progress(metrics,gains);
   }
