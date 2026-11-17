@@ -311,17 +311,21 @@ test('the infirmary can treat a passenger and heals only after a valid payment',
   Object.assign(alice,{x:infirmary.x,y:infirmary.y});
   game.tick(world,true);
   balance.set(alice.id,0);
+  expect(game.view(alice,world).treatment).toEqual({target:bob.id,price:infirmary.price,affordable:false});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Saldo insuficiente para o atendimento.');
   expect(game.view(bob,world).vitality?.hp).toBe(0);
   expect(bob.carried).toBe(true);
 
-  balance.set(alice.id,2);
+  balance.set(alice.id,infirmary.price);
+  expect(game.view(alice,world).treatment).toEqual({target:bob.id,price:infirmary.price,affordable:true});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento concluído.');
   expect(game.view(bob,world).vitality?.hp).toBe(80);
   expect(bob.carried).toBeUndefined();
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
-  expect(balance.get(alice.id)).toBe(1);
+  expect(balance.get(alice.id)).toBe(0);
+  expect(game.view(bob,world).treatment).toEqual({target:undefined,price:infirmary.price,affordable:true});
   expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento concluído.');
+  expect(game.view(bob,world).treatment).toBeUndefined();
   expect(game.view(bob,world).vitality?.hp).toBe(100);
   expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   expect(balance.get(bob.id)).toBe(4);
