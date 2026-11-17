@@ -32,7 +32,7 @@ type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:Fire
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;expanded:()=>boolean;visible:()=>boolean;close:()=>void}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
@@ -171,7 +171,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
   const more = hudButton('Mais ações',()=>{
     const expanded = more.getAttribute('aria-expanded')!=='true';
-    if (expanded && nearbyToggle.getAttribute('aria-expanded')==='true') nearbyToggle.click();
+    if (expanded && nearby.expanded()) nearby.close();
     more.setAttribute('aria-expanded',String(expanded));
     refreshActionKeys();
   });
@@ -186,9 +186,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function refreshActionKeys() {
     const buttons = actionButtons();
     const model = contextActionKeys(buttons.map(button=>({
-      kind:button===more ? 'more' : button===nearbyToggle ? 'nearby' : button.closest('#nearby-items') ? 'item' : 'action',
+      kind:button===more ? 'more' : button.id==='nearby-objects' ? 'nearby' : button.closest('#nearby-items') ? 'item' : 'action',
       visible:!button.closest(unavailable),enabled:!button.disabled,
-    })),more.getAttribute('aria-expanded')==='true',nearbyToggle.getAttribute('aria-expanded')==='true');
+    })),more.getAttribute('aria-expanded')==='true',nearby.expanded());
     more.hidden = !model.hasMore;
     overflowBreak.hidden = !model.showOverflow;
     if (!model.hasMore) more.setAttribute('aria-expanded','false');
@@ -214,10 +214,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       button.setAttribute('aria-keyshortcuts',key);
     }
   }
-  const nearbyToggle = element('nearby-objects');
   function onContextClick(event:MouseEvent) {
     if (event.target instanceof Element && event.target.closest('#nearby-objects') &&
-      nearbyToggle.getAttribute('aria-expanded')==='true') more.setAttribute('aria-expanded','false');
+      nearby.expanded()) more.setAttribute('aria-expanded','false');
     refreshActionKeys();
   }
   stations.addEventListener('click',onContextClick);
@@ -231,9 +230,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       return;
     }
     if (event.key==='Escape') {
-      if (!stations.hidden && nearbyToggle.getAttribute('aria-expanded')==='true') {
+      if (!stations.hidden && nearby.expanded()) {
         event.preventDefault();
-        nearbyToggle.click();
+        nearby.close();
+        refreshActionKeys();
       } else if (!stations.hidden && more.getAttribute('aria-expanded')==='true') {
         event.preventDefault();
         more.click();
@@ -279,13 +279,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    renderNearby(player,canInteract);
+    nearby.render(player,canInteract);
     const hasLegislativeAction = legislative.render(view,context);
     const hasElectionAction = electoral.render(view,context,election.hasVoice());
     const hasShortcut = shortcuts.render(view,player,context);
     const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
     if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
-    stations.hidden = !exploring || (nearbyToggle.hidden && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (!nearby.visible() && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 

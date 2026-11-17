@@ -1,5 +1,5 @@
 import type {ComplaintProof} from './complaints';
-import {NearbyItems,type NearbyItem} from './ui/nearby-items';
+import {mountNearbyActions,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
 import type { PoliticsAction } from './politics';
@@ -61,9 +61,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const slotsRoot = createRoot(slots);
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
-  const nearbyItems = element('nearby-items');
-  const nearbyRoot = createRoot(nearbyItems);
-  const nearbyButton = element<HTMLButtonElement>('nearby-objects');
+  const nearbyActions = mountNearbyActions(element('nearby-actions'));
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
@@ -478,19 +476,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   };
   document.addEventListener('keydown',onSnakeKey);
 
-  function setNearbyExpanded(expanded:boolean) {
-    nearbyItems.hidden = !expanded;
-    nearbyButton.setAttribute('aria-expanded',String(expanded));
-    if (expanded) nearbyItems.scrollTop = 0;
-  }
-
   function pickUp(area:InteractionArea, action:()=>void) {
     if (pendingPickup) return;
     pendingPickup = area;
     action();
   }
 
-  nearbyButton.onclick = () => setNearbyExpanded(nearbyItems.hidden);
   const closed = () => {
     if (dialog.open) return;
     syncPhoneOpen();
@@ -520,9 +511,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       collectedArea = pendingPickup;
       pendingPickup = undefined;
       nearbyKey = '';
-      nearbyButton.hidden = true;
-      setNearbyExpanded(false);
+      nearbyActions.update([]);
     },
+    nearbyActions,
     nearby(player:Motion | undefined, exploring:boolean) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
@@ -566,9 +557,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           add('filed-'+item.id,item.kind,itemName(item),'Consultar',()=>open({id:item.id,source:'filed'}));
         }
       }
-      flushSync(()=>nearbyRoot.render(<NearbyItems items={tiles}/>));
-      nearbyButton.hidden = !tiles.length;
-      if (!tiles.length) setNearbyExpanded(false);
+      nearbyActions.update(tiles);
     },
     render(view:PlenaryView) {
       const call = view.gameplay?.call;
@@ -576,8 +565,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') { pendingPickup = undefined; setNearbyExpanded(false); }
-      if (document.querySelector('dialog:modal')) setNearbyExpanded(false);
+      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.close(); }
+      if (document.querySelector('dialog:modal')) nearbyActions.close();
       if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory);
@@ -637,11 +626,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       navigationRoot.unmount();
       bodyRoot.unmount();
       mailHost.hidden = true;
-      slots.hidden = nearbyButton.hidden = true;
+      slots.hidden = true;
       slotsRoot.unmount();
       requestRoot.unmount();
-      nearbyRoot.unmount();
-      setNearbyExpanded(false);
+      nearbyActions.destroy();
     },
   };
 }
