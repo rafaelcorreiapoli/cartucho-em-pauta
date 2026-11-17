@@ -122,19 +122,26 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       camera={selected && {name:selected.name,attach:attachViewport}}/>);
   }
 
-  function open() {
-    if (dialog.open || !view) return;
-    device = monitoredChannel(view)?.kind ?? (view?.channels.some(channel=>channel.kind==='spyCamera') ? 'spyCamera' : 'wiretap');
-    page = 0;
-    flushSync(()=>update(true));
-    dialog.showModal();
-  }
-  dialog.onclose = ()=>{
+  let wasOpened = false;
+  function finishClose() {
+    if (!wasOpened || dialog.open) return;
+    wasOpened = false;
     stopViewport();
     key = '';
     editing = undefined;
     send({kind:'close'});
-  };
+  }
+  function open() {
+    if (dialog.open || !view) return;
+    // Flush a pending native close before the reopened dialog can send channel commands.
+    finishClose();
+    device = monitoredChannel(view)?.kind ?? (view?.channels.some(channel=>channel.kind==='spyCamera') ? 'spyCamera' : 'wiretap');
+    page = 0;
+    flushSync(()=>update(true));
+    dialog.showModal();
+    wasOpened = true;
+  }
+  dialog.onclose = finishClose;
   dialog.onkeydown = event=>{
     if (event.target instanceof HTMLInputElement || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
     if (event.key==='ArrowLeft' && page===0 || event.key==='ArrowRight' && (page+1)*pageSize>=(view?.channels.filter(channel=>channel.kind===device).length ?? 0)) return;

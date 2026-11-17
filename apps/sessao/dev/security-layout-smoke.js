@@ -51,7 +51,6 @@ async page => {
   const canvas = viewport.locator('canvas');
   async function useShortcut(button) {
     await button.waitFor();
-    await button.focus();
     const key = await button.evaluate(control=>{
       const shortcut = control.getAttribute('aria-keyshortcuts') ?? control.querySelector('kbd')?.textContent;
       control.removeAttribute('aria-keyshortcuts');
@@ -87,6 +86,19 @@ async page => {
   await page.keyboard.press('v');
   await surveillance.getByText('Selecione um canal.').waitFor();
   if (await viewport.count()) throw Error('Monitor reabriu com a câmera anterior');
+
+  // Native close events are queued. Reopen and select again before that event fires.
+  await surveillance.evaluate(dialog=>{
+    const press = key=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+    dialog.close();
+    press('v');
+    if (!dialog.open) throw Error('A Vigilância não reabriu');
+    dialog.querySelector('.spy-channel[aria-keyshortcuts="1"]')?.removeAttribute('aria-keyshortcuts');
+    press('1');
+  });
+  await surveillance.getByRole('heading',{name:'Câmera Cafezinho',exact:true}).waitFor();
+  await canvas.waitFor();
+
 
   if (await page.evaluate(()=>window.micAttempts)) throw Error('O teste tentou abrir o microfone');
   return results;
