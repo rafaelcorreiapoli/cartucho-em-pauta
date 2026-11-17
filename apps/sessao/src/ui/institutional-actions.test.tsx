@@ -5,7 +5,7 @@ import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
 import type {Player} from '../map';
 import {bills,BALLOT_MS,CASSATION_NOTICE_MS,hearingPolicyFee,NEGOTIATION_MS,stations} from '../plenary';
 import {ELECTION_RULES} from '../elections';
-import {CABINET_GRANT,HEARING_MS} from '../politics';
+import {HEARING_MS} from '../politics';
 import {InstitutionalActions,institutionalActions} from './institutional-actions';
 
 const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
@@ -16,7 +16,7 @@ const ids = players.map(({id})=>id);
 const paint = (model:ReturnType<typeof institutionalActions>)=>
   renderToStaticMarkup(<InstitutionalActions model={model} send={()=>{}} close={()=>{}}/>);
 
-test('the grant control appears at the cabinet and disappears after the authoritative grant',()=>{
+test('the grant control appears at the cabinet with a preview and a server-authoritative cooldown',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
   const cabinet = {...rafa,...stations.cabinet};
@@ -24,17 +24,18 @@ test('the grant control appears at the cabinet and disappears after the authorit
   expect(institutionalActions(view(0),rafa).grant).toBeUndefined();
   const before = view(0);
   const markup = paint(institutionalActions(before,cabinet));
-  expect(markup).toContain('aria-pressed="true">Aplicar tudo</button>');
-  expect(markup).toContain('Desviar R$ 10 mil');
+  expect(markup).toContain('aria-pressed="true">Saúde</button>');
+  expect(markup).toContain('Desviar 25%');
+  expect(markup).toContain('Até +2 PV por jogador em pé');
   expect(markup).toContain('aria-label="Fechar ações institucionais"');
   expect(markup).toContain('type="submit">Aplicar verba');
-  match.politics(rafa,{kind:'grant',diverted:1},players,1);
+  match.politics(rafa,{kind:'grant',area:'health',amount:4,diversion:25},players,1);
   expect(view(1).budget).toBe(before.budget);
-  match.politics(cabinet,{kind:'grant',diverted:1},players,2);
+  match.politics(cabinet,{kind:'grant',area:'health',amount:4,diversion:25},players,2);
   const after = view(2);
-  expect(after.budget).toBe(before.budget-CABINET_GRANT);
+  expect(after.budget).toBe(before.budget-4);
   expect(after.politics!.wallet).toBe(before.politics!.wallet+1);
-  expect(paint(institutionalActions(after,cabinet))).not.toContain('id="cabinet-form"');
+  expect(paint(institutionalActions(after,cabinet))).toContain('Disponível em 60 s');
 });
 
 test('the panel projects valid targets and the enacted hearing fee',()=>{

@@ -1,3 +1,4 @@
+import {investmentImpact,type InvestmentAnnouncement} from '../src/public-investments';
 import { StationCooldowns } from './StationCooldowns';
 import type {SessionParticipant} from '../src/plenary';
 import {Complaints} from './Complaints';
@@ -42,6 +43,10 @@ export class PlenaryMatch {
   private readonly policies = new Map<BillPolicy,number>();
   private activePolicies(now:number):BillPolicies {
     return Object.fromEntries([...this.policies].filter(([,until])=>until>now));
+  }
+
+  transportActive(now:number) {
+    return this.running && (this.policies.get('transport') ?? 0)>now;
   }
 
   private treasuryBonus?:{until:number;amount:number};
@@ -661,17 +666,21 @@ export class PlenaryMatch {
     const near = (target:string) => players.some(other => other.id===target && this.nearby(player,other));
     switch (action.kind) {
       case 'grant': {
-        if (!this.at(player,'cabinet') || !this.canVote(id)) break;
-        const result = this.economy.grant(id,action.diverted,this.budget,this.round);
-        if (!result) break;
-        this.changeBudget(-result.budget,now);
-        this.cash.diverted += action.diverted;
-        this.cash.projects += result.budget-action.diverted;
+        if (!this.at(player,'cabinet') || !this.canVote(id) || this.ballotCountdown(now)!==undefined || this.budget<action.amount) break;
+        const {invested,diverted,stability,hp,duration} = investmentImpact(action.amount,action.diversion);
+        if (!this.economy.grant(id,diverted,this.round,now)) break;
+        this.changeBudget(-action.amount,now);
+        this.cash.diverted += diverted;
+        this.cash.projects += invested;
         const wasCritical = this.criticalStability;
-        this.stability = clamp(this.stability+result.stability);
-        if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
-        else if ((this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
-        break;
+        this.stability = clamp(this.stability+stability);
+        if (action.area==='safety') this.fire.delayNextFire(duration);
+        if (action.area==='supplies' || action.area==='transport') {
+          this.policies.set(action.area,Math.max(now,this.policies.get(action.area) ?? 0)+duration);
+        }
+        if ((this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
+        const announcement:InvestmentAnnouncement = {author:player.nick,area:action.area,amount:action.amount};
+        return {announcement,hp:action.area==='health' ? hp : 0};
       }
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
@@ -1091,6 +1100,7 @@ export class PlenaryMatch {
     const hearing = this.hearingTarget ? this.hearingTally() : undefined;
     return {
       policies:this.activePolicies(now),
+      suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
       canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
@@ -1116,7 +1126,7 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient)) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient),now) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,

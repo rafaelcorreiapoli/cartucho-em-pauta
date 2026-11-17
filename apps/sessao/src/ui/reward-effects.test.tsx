@@ -13,7 +13,7 @@ test('the HUD shows private wallet and XP gains from a new server snapshot once'
   const game = new Gameplay();
   const view = (at:number)=>match.view(player.id,[player.id],at);
   const before = view(0);
-  match.politics({...player,...stations.cabinet},{kind:'grant',diverted:3},[player],1);
+  match.politics({...player,...stations.cabinet},{kind:'grant',area:'health',amount:6,diversion:50},[player],1);
   game.drinkStationCoffee({...player,...stations.coffee},match.gameplayWorld([player],2,()=>false));
   match.electionAction({...player,...stations.panel},{kind:'speech'},2,false);
   const after = view(2);
@@ -33,7 +33,7 @@ test('the HUD shows private wallet and XP gains from a new server snapshot once'
   expect(rewardGains(undefined,after,false)).toEqual({income:0,xp:0,popularity:0});
   expect(rewardGains(before,after,true)).toEqual({income:3,xp:0,popularity:0});
 
-  match.politics({...player,...stations.cabinet},{kind:'grant',diverted:3},[player],3);
+  match.politics({...player,...stations.cabinet},{kind:'grant',area:'health',amount:6,diversion:50},[player],3);
   game.drinkStationCoffee({...player,...stations.coffee},match.gameplayWorld([player],4,()=>false));
   expect(rewardGains(after,view(4),false)).toEqual({income:0,xp:0,popularity:0});
 });

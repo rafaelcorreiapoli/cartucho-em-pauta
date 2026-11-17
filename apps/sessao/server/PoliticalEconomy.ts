@@ -1,11 +1,12 @@
+import {investmentRules} from '../src/public-investments';
 import type {AgendaDecoration} from '../src/installations';
 import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import {decorationPopularity} from '../src/gameplay';
-import { CABINET_GRANT, canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
-  type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
+import { canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+  type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaAction, type AgendaMetrics } from './PersonalAgenda';
 
@@ -14,7 +15,7 @@ type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number
 
 type Account = AgendaMetrics & {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
-  grantUsed:boolean; auditRound:number; audits:number; paymentRound:number; payments:number;
+  grantReadyAt:number; auditRound:number; audits:number; paymentRound:number; payments:number;
   selfieBonus:boolean; known:Set<number>; suspendedUntil?:number;
 };
 const cap = (value:number) => Math.max(0,Math.min(100,value));
@@ -73,7 +74,7 @@ export class PoliticalEconomy {
       });
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
-        grantUsed:false,auditRound:-1,audits:0,paymentRound:-1,payments:0,
+        grantReadyAt:0,auditRound:-1,audits:0,paymentRound:-1,payments:0,
         known:new Set(),
       });
     }
@@ -237,14 +238,14 @@ export class PoliticalEconomy {
     source.agenda.recordTransfer(source,amount,to,event.id,channel==='pix');
   }
 
-  grant(id:string, diverted:Split, budget:number, round:number) {
+  grant(id:string,diverted:number,round:number,now:number) {
     const account = this.accounts.get(id);
-    if (!account || account.grantUsed || this.suspended(id) || budget<CABINET_GRANT) return;
-    account.grantUsed = true;
+    if (!account || now<account.grantReadyAt || this.suspended(id)) return false;
+    account.grantReadyAt = now+investmentRules.cooldownMs;
     this.credit(account,diverted);
     account.agenda.progress(account);
     if (diverted>0) this.record('diversion',id,diverted,round);
-    return {budget:CABINET_GRANT,stability:(CABINET_GRANT-diverted)*2-diverted};
+    return true;
   }
 
   audit(id:string, round:number, limit=1, bankFee=0) {
@@ -491,12 +492,12 @@ export class PoliticalEconomy {
     return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }
 
-  view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean, pixAvailable?:(id:string)=>boolean): PoliticsView | undefined {
+  view(id:string, contacts:Contact[], round:number, canCallHearing:boolean, eligible:(id:string) => boolean, pixAvailable?:(id:string)=>boolean,now=0): PoliticsView | undefined {
     const account = this.accounts.get(id);
     if (!account) return;
-    const {wallet,walletIncome,popularity,grantUsed} = account;
+    const {wallet,walletIncome,popularity,grantReadyAt} = account;
     return {
-      wallet,walletIncome,popularity,grantUsed,suspended:this.suspended(id),
+      wallet,walletIncome,popularity,grantCooldown:Math.max(0,Math.ceil((grantReadyAt-now)/1000)),suspended:this.suspended(id),
       missions:account.agenda.view(account),
       progression:account.progression.view(),
       canCallHearing:canCallHearing && this.canCall(id),contacts,

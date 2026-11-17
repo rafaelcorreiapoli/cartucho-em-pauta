@@ -42,7 +42,7 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
+export type BillPolicy = 'supplies'|'transport'|'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
 export const hearingPolicyFee = 2;
 export const bankAuditFee = 1;
 export const campaignPolicyMultiplier = 2;
@@ -138,7 +138,7 @@ export type PlenaryView = {
   projectWarning?: number;
   projectVoteExpired?: boolean;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; stability:number; budget:number; host?:string;
+  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;

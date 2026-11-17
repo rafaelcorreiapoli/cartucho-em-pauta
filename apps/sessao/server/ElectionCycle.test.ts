@@ -90,7 +90,7 @@ test('private discovery leaves the race intact until the evidence is published',
   match.start('a',players,0,() => .9);
   const estimate = () => match.view('c',ids,0).election!.polls.find(p => p.id==='a')!.estimate;
   const before = estimate();
-  match.politics(at(players[0],'cabinet'),{kind:'grant',diverted:3},players,2);
+  match.politics(at(players[0],'cabinet'),{kind:'grant',area:'health',amount:6,diversion:50},players,2);
   match.act(at(players[1],'audit'),'audit',3);
   expect(estimate()).toBe(before);
   const record = match.view('b',ids,0).politics!.evidence[0];

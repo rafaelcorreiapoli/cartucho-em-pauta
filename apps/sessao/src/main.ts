@@ -1,3 +1,4 @@
+import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
 import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
@@ -269,6 +270,8 @@ async function connect(join: () => Promise<Room>) {
       if (pickup) hud.refreshActions();
       audio.cue('pickup');
     });
+    joined.onMessage('public-investment',({author,area,amount}:InvestmentAnnouncement)=>
+      hud.notify('Verba aplicada',`${author} aplicou ${money(amount)} em ${investmentAreas[area]}.`));
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
     joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
       hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));

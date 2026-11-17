@@ -1,7 +1,7 @@
 import type { Progression } from './progression';
 import { SNAKE_GOAL } from './snake';
 
-export const CABINET_GRANT = 4;
+import {diversionPercentages,investmentAmounts,investmentAreas,type PublicInvestment} from './public-investments';
 export const HEARING_POPULARITY = 55;
 export const CASSATION_POPULARITY = 40;
 export const HEARING_MS = 35_000;
@@ -9,8 +9,6 @@ export const SUSPENSION_MS = 60_000;
 export const HEARING_IMMUNITY_MS = 120_000;
 export const TRADE_RADIUS = 44;
 export const PAYMENTS_PER_ROUND = 6;
-export const splits = [0,1,2,3] as const;
-export type Split = typeof splits[number];
 
 export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
@@ -210,13 +208,13 @@ export type Contact = {id:string; name:string};
 export type DirectoryContact = Contact & {character?:number};
 export type PoliticsView = {
   progression:Progression;
-  wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantUsed:boolean;
+  wallet:number; walletIncome:number; popularity:number; missions:{active:Mission[]; completed:Mission[]}; grantCooldown:number;
   suspended:boolean; canCallHearing:boolean;
   evidence:Evidence[]; ledger:Evidence[]; incoming:Offer[]; outgoing?:Offer;
   contacts:Contact[]; directory:(DirectoryContact & {popularity:number; eligible:boolean; pixAvailable?:boolean})[]; paymentsLeft:number;
 };
 export type PoliticsAction =
-  | {kind:'grant'; diverted:Split}
+  | ({kind:'grant'} & PublicInvestment)
   | {kind:'transfer'; to:string; amount:number}
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
@@ -230,7 +228,11 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   const integer = (n:unknown, min=1) => typeof n==='number' && Number.isSafeInteger(n) && n>=min;
   switch (data.kind) {
     case 'grant':
-      if ('diverted' in data && splits.includes(data.diverted as Split)) return {kind:'grant',diverted:data.diverted as Split};
+      if ('area' in data && typeof data.area==='string' && Object.hasOwn(investmentAreas,data.area) &&
+          'amount' in data && investmentAmounts.some(amount=>amount===data.amount) &&
+          'diversion' in data && diversionPercentages.some(percentage=>percentage===data.diversion)) {
+        return {kind:'grant',area:data.area,amount:data.amount,diversion:data.diversion} as PoliticsAction;
+      }
       break;
     case 'transfer':
       if ('to' in data && typeof data.to==='string' && 'amount' in data && canTransferAmount(data.amount)) {

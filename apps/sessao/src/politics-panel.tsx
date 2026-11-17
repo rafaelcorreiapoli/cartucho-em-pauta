@@ -26,7 +26,7 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
 
   function sendInstitutional(action:PoliticsAction) {
     send(action);
-    if (action.kind==='call-cassation') institutional.close();
+    if (action.kind==='call-cassation' || action.kind==='grant') institutional.close();
     restoreFocus();
   }
 

@@ -1,7 +1,7 @@
 export const offices = {
   president: {name:'Presidente',salary:10,power:'No Painel, pode contestar um projeto por mandato. O Congresso pode derrubar a objeção com um voto a mais.'},
   senator: {name:'Senador',salary:6,power:'Pode encontrar até dois documentos por rodada na Corregedoria.'},
-  deputy: {name:'Deputado',salary:4,power:'Pode aplicar a verba pública no Gabinete B e negociar emendas no Protocolo.'},
+  deputy: {name:'Deputado',salary:4,power:'Pode aplicar a verba pública na Tesouraria e negociar emendas no Protocolo.'},
 } as const;
 export type Office = keyof typeof offices;
 export const officeKeys = Object.keys(offices) as Office[];

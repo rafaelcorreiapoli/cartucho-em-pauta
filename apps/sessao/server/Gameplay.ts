@@ -297,6 +297,10 @@ export class Gameplay {
     return this.equipped(id).find(({data})=>data.kind===kind)?.data;
   }
 
+  healFromInvestment(player:Player,hp:number) {
+    if (!player.knockedOut) this.combat.heal(player,hp);
+  }
+
   healthFraction(player:Player, now:number) {
     const {hp,max} = this.combat.view(player,now);
     return hp/max;
@@ -1324,7 +1328,7 @@ export class Gameplay {
         return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested) || isCredentialGood(requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
-      const {kind,price} = product;
+      const {kind,price,subsidy} = product;
       const storage = marketPurchaseSlot(kind,this.inventory(id).map(({data})=>data),this.equipped(id).map(({data})=>data),direct);
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
@@ -1333,8 +1337,6 @@ export class Gameplay {
       } else if (!storage) return 'Inventário cheio.';
       if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      const basePrice = marketProduct(catalog,kind)!.price;
-      const subsidy = Math.round((basePrice-price)*10)/10;
       const paid = subsidy && world.spendSubsidized ? world.spendSubsidized(id,price,subsidy) : world.spend?.(id,price);
       if (!paid) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});

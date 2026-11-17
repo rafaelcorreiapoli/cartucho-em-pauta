@@ -407,8 +407,17 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
       const now = this.clock.currentTime;
-      const transferred = this.match.politics(player,action,[...this.players.values()].map(state => state.player),now);
-      if (action.kind==='transfer' && transferred) {
+      const players = [...this.players.values()].map(state=>state.player);
+      const result = this.match.politics(player,action,players,now);
+      if (result && typeof result==='object') {
+        if (result.hp) {
+          for (const recipient of players) {
+            if (this.clients.getById(recipient.id)) this.gameplay.healFromInvestment(recipient,result.hp);
+          }
+        }
+        this.broadcast('public-investment',result.announcement);
+      }
+      if (action.kind==='transfer' && result===true) {
         this.clients.getById(action.to)?.send('pix-received',{from:player.nick,amount:action.amount});
       }
       this.resetFinishedMatch(now);
@@ -474,7 +483,9 @@ export class SessionRoom extends Room {
       const now = this.clock.currentTime;
       const freeze = this.match.ballotCountdown(now)!==undefined;
       if (freeze && !countingDown) this.parliamentarians.stopRoutes();
+      const transport = this.match.transportActive(now) || undefined;
       for (const [id,state] of this.players) {
+        state.player.publicTransport = transport;
         if (freeze && !countingDown) this.resetMovement(state);
         const input = freeze ? undefined : this.movementQueue.get(id)?.shift();
         if (input) applyInput(state,input);

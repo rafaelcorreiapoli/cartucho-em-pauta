@@ -39,10 +39,14 @@ async page => {
     await page.keyboard.press('F2');
     await page.locator('#action-shortcuts').getByRole('button',{name}).click();
   }
-  await runShortcut(institution.getByRole('button',{name:'Desviar R$ 30 mil'}),/Desviar R\$ 30 mil/);
+  await runShortcut(institution.getByRole('button',{name:'R$ 60 mil',exact:true}),/^R\$ 60 mil$/);
+  await runShortcut(institution.getByRole('button',{name:'Desviar 50%'}),/Desviar 50%/);
   await runShortcut(institution.getByRole('button',{name:/Aplicar verba de/}),/Aplicar verba de/);
   await institution.waitFor({state:'hidden'});
-  await grant.waitFor({state:'hidden'});
+  await page.getByText('Modais QA aplicou R$ 60 mil em Saúde.',{exact:true}).waitFor();
+  await grant.click();
+  await institution.getByText(/Disponível em [0-9]+ s/).waitFor();
+  await institution.getByRole('button',{name:'Fechar ações institucionais'}).click();
   await page.locator('#profile-dock').getByText('R$ 110 mil',{exact:true}).waitFor();
   await page.keyboard.press('j');
   await dossier.waitFor();

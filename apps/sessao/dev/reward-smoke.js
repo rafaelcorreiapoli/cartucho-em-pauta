@@ -82,9 +82,10 @@ async page => {
       page.getByRole('button',{name:'Beber café'}).click());
 
     await page.getByRole('button',{name:'Aplicar verba',exact:true}).click();
-    await page.getByRole('button',{name:'Desviar R$ 30 mil',exact:true}).click();
+    await page.getByRole('group',{name:'Verba retirada do caixa'}).getByRole('button',{name:'R$ 60 mil',exact:true}).click();
+    await page.getByRole('button',{name:'Desviar 50%',exact:true}).click();
     const income = await observeGain('.wallet-gain:not(.xp-gain,.popularity-gain)','+R$ 30 mil',()=>
-      page.getByRole('button',{name:'Aplicar verba de R$ 40 mil',exact:true}).click());
+      page.getByRole('button',{name:'Aplicar verba de R$ 60 mil',exact:true}).click());
     if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
     results.push({width,height,reducedMotion,xp,income});
   }

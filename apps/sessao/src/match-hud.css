@@ -1158,3 +1158,14 @@ button.item-tile:active { transform: translateY(3px); }
   white-space: normal;
   text-align: left;
 }
+
+.investment-preview {
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  border: 1px solid var(--color-hud-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-block: 8px;
+}
+.market-supplies { color: var(--color-hud-budget); margin: 0; }

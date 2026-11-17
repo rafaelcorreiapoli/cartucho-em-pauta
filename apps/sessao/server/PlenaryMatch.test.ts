@@ -1,3 +1,5 @@
+import {discountedPrice,marketProduct} from '../src/market-catalog';
+import {npcs} from '../src/npcs';
 import {pinga} from '../src/food';
 import {restMovement,STEP_MS} from '../src/movement';
 
@@ -13,10 +15,10 @@ import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
-import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT, readPoliticsAction } from '../src/politics';
 
 import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, publicDebtStabilityLoss, publicDebtRules } from '../src/plenary';
-import { canStand, localPerception, characterVisible, type Player } from '../src/map';
+import {movementSpeed, canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
 
@@ -141,11 +143,11 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   const accounts = [host,honest,traitor].map(player => view(player).politics!);
   for (const account of accounts) expect(account.missions.active).toHaveLength(3);
   expect(view(host).politics?.wallet).toBe(8);
-  match.politics(host,{kind:'grant',diverted:3},people,1); // Too far from the cabinet.
+  match.politics(host,{kind:'grant',area:'health',amount:6,diversion:50},people,1); // Too far from the cabinet.
   expect(view(host).budget).toBe(32);
-  match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,2);
-  match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,3);
-  expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11,walletIncome:3}});
+  match.politics(at(host,'cabinet'),{kind:'grant',area:'health',amount:6,diversion:50},people,2);
+  match.politics(at(host,'cabinet'),{kind:'grant',area:'health',amount:6,diversion:50},people,3);
+  expect(view(host)).toMatchObject({budget:26,stability:54,politics:{wallet:11,walletIncome:3}});
   expect(view(honest).politics?.evidence).toEqual([]);
   match.politics(host,{kind:'transfer',to:honest.id,amount:2},people,4);
   match.politics(host,{kind:'transfer',to:traitor.id,amount:0},people,5); // Invalid amount.
@@ -186,6 +188,66 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.vote(honest.id,'no',NEGOTIATION_MS+1);
   expect(view(honest).vote).toBe('no');
   expect(view(honest).politics?.wallet).toBe(11);
+});
+
+test('investments authorize only the selected amount, apply proportional bonuses, and recharge per player',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const view = (player:Player,now:number)=>match.view(player.id,ids,now);
+  const apply = (player:Player, action:Extract<NonNullable<ReturnType<typeof readPoliticsAction>>,{kind:'grant'}>, now:number)=>
+    match.politics(at(player,'cabinet'),action,people,now);
+  const health = {kind:'grant',area:'health',amount:4,diversion:25} as const;
+  expect(readPoliticsAction(health)).toEqual(health);
+  for (const invalid of [{area:'constructor'},{amount:3},{diversion:75},{area:[]},{amount:Infinity}]) {
+    expect(readPoliticsAction({...health,...invalid})).toBeUndefined();
+  }
+  expect(apply(host,health,1)).toEqual({announcement:{author:host.nick,area:'health',amount:4},hp:3});
+  expect(view(host,1)).toMatchObject({budget:28,stability:54,politics:{wallet:9,grantCooldown:60}});
+  expect(apply(host,health,60_000)).toBeUndefined();
+  expect(view(honest,1).politics?.grantCooldown).toBe(0);
+  expect(view(honest,1).politics?.evidence).toEqual([]);
+  expect(view(honest,1).politics?.ledger).toEqual([]);
+  expect(apply(honest,{kind:'grant',area:'transport',amount:2,diversion:50},2)).toBeDefined();
+  expect(match.transportActive(3001)).toBe(true);
+  expect(match.transportActive(3002)).toBe(false);
+  const walker = {...honest,publicTransport:true} as const;
+  expect(movementSpeed(walker)).toBeCloseTo(movementSpeed(honest)*1.2);
+  expect(movementSpeed({...walker,sprinting:true})).toBe(movementSpeed({...honest,sprinting:true}));
+  expect(apply(host,health,60_001)).toBeDefined();
+  expect(view(host,60_001)).toMatchObject({budget:22,stability:62,politics:{wallet:10,grantCooldown:60}});
+  expect(match.economySummary(0)).toMatchObject({projects:7,diverted:3,discrepancy:0});
+  Reflect.set(match,'budget',1);
+  expect(apply(traitor,health,60_002)).toBeUndefined();
+  expect(view(traitor,60_002)).toMatchObject({budget:1,politics:{grantCooldown:0}});
+});
+
+test('Segurança delays the next fire and Abastecimento applies a temporary price at the Lanchonete',()=>{
+  const match = new PlenaryMatch(1);
+  const buyer = at(honest,'coffee');
+  Object.assign(buyer,npcs.snackVendor.interaction);
+  const players = [host,buyer,traitor];
+  match.start(host.id,players,0,()=>.9);
+  const game = new Gameplay();
+  game.reset(0,()=>.5,players);
+  match.politics(at(host,'cabinet'),{kind:'grant',area:'safety',amount:2,diversion:50},players,1);
+  expect(match.politics(at(traitor,'cabinet'),{kind:'grant',area:'supplies',amount:4,diversion:25},players,2)).toBeDefined();
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const quote = (now:number)=>marketProduct('food','pizza',world(now).policies,world(now).publicBudget)?.price;
+  expect(quote(9001)).toBe(discountedPrice(2,30));
+  expect(quote(9002)).toBe(2);
+  expect(marketProduct('food','coffee',{coffee:1,supplies:1},1)?.price).toBe(.3);
+  expect(marketProduct('food','coffee',{coffee:1,supplies:1},0)?.price).toBe(.4);
+  const active = world(3000);
+  game.act(buyer,{kind:'open-shop',target:'snackVendor'},active);
+  const token = game.view(buyer,active).dialogue?.token;
+  expect(token).toBeDefined();
+  expect(game.act(buyer,{kind:'shop-buy',target:'pizza',token},active)).toBeDefined();
+  expect(game.view(buyer,active).inventory).toContainEqual(expect.objectContaining({kind:'pizza'}));
+  expect(match.view(buyer.id,ids,3000)).toMatchObject({budget:26,politics:{wallet:6.6}});
+  match.advance(fireRules.firstAfter+2999);
+  expect(match.view(host.id,ids,fireRules.firstAfter+2999).fire).toBeUndefined();
+  match.advance(fireRules.firstAfter+3000);
+  expect(match.view(host.id,ids,fireRules.firstAfter+3000).fire).toBeDefined();
 });
 
 test.each([honest,traitor])('an approved temporary hearing isolates the target without changing stability (%s)', target => {
