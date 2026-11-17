@@ -43,6 +43,11 @@ const cashLifetime = 55_000;
 const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
+function installationConflict(placed:Decoration|undefined,owner:string) {
+  if (placed?.kind==='pizza') return 'Já tem pizza na mesa.';
+  if (placed?.owner.id===owner) return 'Você já ocupou este lugar.';
+}
+
 export class Gameplay {
   constructor(private readonly stationCooldowns = new StationCooldowns(),private readonly powerOut = ()=>false) {}
 
@@ -690,7 +695,8 @@ export class Gameplay {
       decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
         localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
-      installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
+      installable:Object.entries(installationSites).filter(([key,site])=>
+        canReachObject(player,site.point) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
@@ -829,8 +835,8 @@ export class Gameplay {
     if (action.kind==='install') {
       const item = this.items.get(action.item ?? -1);
       if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return 'Objeto indisponível.';
-      if (placed?.kind==='pizza') return 'Já tem pizza na mesa.';
-      if (placed && placed.owner.id===player.id) return 'Você já ocupou este lugar.';
+      const conflict = installationConflict(placed,player.id);
+      if (conflict) return conflict;
       this.remove(item);
       const cleared = this.clearedSites.get(siteKey);
       this.clearedSites.delete(siteKey);
