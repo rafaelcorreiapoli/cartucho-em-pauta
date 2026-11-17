@@ -89,6 +89,7 @@ async page => {
   }
   await sheet.getByRole('button',{name:'Recolher votação'}).click();
   await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
+  await page.keyboard.press('y');
   const collapsedClock = await sheet.locator('.project-ballot-handle time').textContent();
   await page.waitForFunction(previous=>{
     const clock = document.querySelector('.project-ballot-handle time');
@@ -96,7 +97,13 @@ async page => {
   },collapsedClock);
   await sheet.getByRole('button',{name:'Expandir votação'}).waitFor();
   await sheet.getByRole('button',{name:'Expandir votação'}).click();
+  if (await sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'}).count()) {
+    throw Error('Y enviou voto com a cédula recolhida');
+  }
+  const yesButton = sheet.getByRole('button',{name:'Votar SIM'});
+  await yesButton.evaluate(button=>button.removeAttribute('data-vote'));
   await page.keyboard.press('y');
+  await yesButton.evaluate(button=>button.setAttribute('data-vote','yes'));
   const yesVoter = sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'});
   await yesVoter.getByText('Histórico QA').waitFor();
   await yesVoter.locator('.portrait.phone-contact-face[data-skin]').evaluate(async portrait=>{

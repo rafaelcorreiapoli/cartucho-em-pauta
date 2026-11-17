@@ -1,3 +1,4 @@
+import {billVoteKeys,cassationChoices} from './ballot-shortcuts';
 import type {CSSProperties} from 'react';
 import {PhoneContactFace} from './phone-call';
 import {ProjectBallot} from './project-ballot';
@@ -22,7 +23,7 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
     </div>
     <div className="station-grid">
       {(['yes','no'] as const).map(choice=><button key={choice} className={choice==='yes' ? 'hud-button' : 'hud-button hud-button--secondary'}
-        data-vote={choice} aria-pressed={choice===vote} aria-keyshortcuts={choice==='yes' ? 'Y' : 'R'} type="button" disabled={!eligible} onClick={()=>cast(choice)}>
+        data-vote={choice} aria-pressed={choice===vote} aria-keyshortcuts={billVoteKeys[choice]} type="button" disabled={!eligible} onClick={()=>cast(choice)}>
         <svg className="hud-glyph" aria-hidden="true"><use href={choice==='yes' ? '#icon-check' : '#icon-cross'}/></svg>
         <span>{options[choice]}</span>
       </button>)}
@@ -33,15 +34,14 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
 export function CassationBallot({state,ownId,cast}:{
   state:CassationView; ownId:string; cast:(candidate:string|null)=>void;
 }) {
-  const candidates = state.candidates.filter(person=>person.id!==ownId);
-  const skipKey = candidates.length<9 ? String(candidates.length+1) : '0';
+  const {candidates,skipKey} = cassationChoices(state,ownId);
   return <section className="cassation-ballot" aria-label="Votação de cassação">
     <p>{state.voted}/{state.electorate} votaram · {state.quorum} votos para cassar</p>
     <div className="cassation-candidates">
-      {candidates.map((person,index)=><button key={person.id}
+      {candidates.map(({person,key})=><button key={person.id}
         type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-        aria-keyshortcuts={index<9 ? String(index+1) : undefined} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
-        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
+        aria-keyshortcuts={key} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
+        <PhoneContactFace person={person}/><span>{person.name}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}
       </button>)}
     </div>
     <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
@@ -70,11 +70,26 @@ export function sessionBallotState(view:PlenaryView) {
   return hearing && {kind:'hearing' as const,state:hearing};
 }
 
-export function SessionBallot({state,ownId,cast,castCassation}:{
+export function SessionBallot({state,ownId,cast,castCassation,onExpansion}:{
   state:NonNullable<ReturnType<typeof sessionBallotState>>;
-  ownId:string; cast:(vote:BillVote)=>void; castCassation:(candidate:string|null)=>void;
+  ownId:string; onExpansion?:(expanded:boolean)=>void; cast:(vote:BillVote)=>void; castCassation:(candidate:string|null)=>void;
 }) {
-  if (state.kind==='project') return <ProjectBallot key={state.state.round} {...state.state} ownId={ownId} cast={cast}/>;
+  if (state.kind==='project') return <ProjectBallot key={state.state.round} {...state.state} ownId={ownId} cast={cast} onExpansion={onExpansion}/>;
   if (state.kind==='cassation') return <CassationBallot state={state.state} ownId={ownId} cast={castCassation}/>;
   return <Ballot {...state.state} cast={cast}/>;
+}
+
+export function ballotShortcut(view:PlenaryView,ownId:string,key:string,expanded:boolean) {
+  const ballot = sessionBallotState(view);
+  if (!ballot?.state.eligible) return;
+  if (ballot.kind==='cassation') {
+    const {candidates,skipKey} = cassationChoices(ballot.state,ownId);
+    if (key===skipKey) return {kind:'cassation',candidate:null} as const;
+    const choice = candidates.find(candidate=>candidate.key===key);
+    if (choice) return {kind:'cassation',candidate:choice.person.id} as const;
+    return;
+  }
+  if (ballot.kind==='project' && !expanded) return;
+  const vote = (Object.keys(billVoteKeys) as BillVote[]).find(vote=>billVoteKeys[vote]===key.toUpperCase());
+  if (vote && (vote!=='abstain' || ballot.kind==='project')) return {kind:'bill',vote} as const;
 }

@@ -1,3 +1,4 @@
+import {billVoteKeys} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
@@ -7,9 +8,9 @@ import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
 
 const choices = [
-  {vote:'yes',label:'SIM',action:'Votar SIM',key:'Y',symbol:'✓'},
-  {vote:'no',label:'NÃO',action:'Votar NÃO',key:'R',symbol:'×'},
-  {vote:'abstain',label:'Abstenções',action:'Abster-se',key:'N',symbol:'○'},
+  {vote:'yes',label:'SIM',action:'Votar SIM',key:billVoteKeys.yes,symbol:'✓'},
+  {vote:'no',label:'NÃO',action:'Votar NÃO',key:billVoteKeys.no,symbol:'×'},
+  {vote:'abstain',label:'Abstenções',action:'Abster-se',key:billVoteKeys.abstain,symbol:'○'},
 ] as const;
 
 
@@ -30,10 +31,10 @@ export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;bud
 }
 
 type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
-  ownId:string; eligible:boolean; cast:(choice:BillVote)=>void;
+  ownId:string; eligible:boolean; onExpansion?:(expanded:boolean)=>void; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -61,7 +62,7 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
   const clock = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
   return <section className="project-ballot" aria-label="Votação de projeto">
     <button className="project-ballot-handle" type="button" aria-expanded={expanded} aria-controls="project-ballot-body"
-      aria-label={expanded?'Recolher votação':'Expandir votação'} onClick={()=>setExpanded(!expanded)}>
+      aria-label={expanded?'Recolher votação':'Expandir votação'} onClick={()=>{ setExpanded(!expanded); onExpansion?.(!expanded); }}>
       <span aria-hidden="true">{expanded?'⌄':'⌃'}</span>
       {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
     </button>

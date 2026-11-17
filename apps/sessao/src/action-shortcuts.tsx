@@ -39,7 +39,7 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean;context:()=>readonly ShortcutEntry[]}) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean;vote:(key:string)=>boolean;context:()=>readonly ShortcutEntry[]}) {
   disableHudTabStops(root,signal);
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
@@ -130,19 +130,8 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       if (shortcuts[key]()) event.preventDefault();
       return;
     }
-    const cassation = /^[0-9]$/.test(key) ? root.querySelector<HTMLButtonElement>(`.cassation-ballot button[aria-keyshortcuts="${key}"]`) : null;
-    if (cassation && available(cassation)) {
-      event.preventDefault();
-      cassation.click();
-      map.focus({preventScroll:true});
-      return;
-    }
-    const control = key==='y' || key==='r' || key==='n' && root.querySelector('[data-vote="abstain"]')
-      ? root.querySelector<HTMLElement>(`[data-vote="${key==='y' ? 'yes' : key==='r' ? 'no' : 'abstain'}"]`)
-      : null;
-    if (!control || !available(control)) return;
+    if (!shortcuts.vote(key)) return;
     event.preventDefault();
-    control.click();
     if (!modal()) map.focus({preventScroll:true});
   },{signal});
   signal.addEventListener('abort',()=>{

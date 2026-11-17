@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Ballot,CassationBallot,hearingBallotState} from './ballot';
+import {Ballot,CassationBallot,ballotShortcut,hearingBallotState} from './ballot';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {CASSATION_NOTICE_MS,stations} from '../plenary';
 import type {Player} from '../map';
@@ -56,6 +56,9 @@ test('the hearing HUD renders the quorum and participation from the gameserver s
   match.vote(host.id,'yes',11);
   const view = match.view(host.id,ids,11);
   expect(view.hearing).toMatchObject({quorum:3,voted:1,vote:'yes'});
+  expect(ballotShortcut(view,host.id,'n',true)).toBeUndefined();
+  expect(ballotShortcut(view,host.id,'r',true)).toEqual({kind:'bill',vote:'no'});
+  expect(ballotShortcut({...view,mandate:false},host.id,'y',true)).toBeUndefined();
   const hearing = hearingBallotState(view)!;
   const html = renderToStaticMarkup(<Ballot {...hearing} cast={()=>{}}/>);
   expect(html).toContain('1/4 votaram · 3 votos a favor para afastar');
@@ -75,13 +78,19 @@ test('cassation removes a disconnected target and shows the gameserver participa
   match.politics(host,{kind:'call-cassation'},players,10);
   const openedAt = 10+CASSATION_NOTICE_MS;
   match.advance(openedAt);
-  match.castCassation(host.id,target.id,openedAt);
-  match.castCassation(observer.id,null,openedAt);
+  const selected = ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true);
+  const skipped = ballotShortcut(match.view(observer.id,ids,openedAt),observer.id,'3',true);
+  expect(selected).toEqual({kind:'cassation',candidate:target.id});
+  expect(skipped).toEqual({kind:'cassation',candidate:null});
+  if (selected?.kind==='cassation') match.castCassation(host.id,selected.candidate,openedAt);
+  if (skipped?.kind==='cassation') match.castCassation(observer.id,skipped.candidate,openedAt);
   const render = ()=>renderToStaticMarkup(<CassationBallot state={match.view(host.id,ids,openedAt).cassation!}
     ownId={host.id} cast={()=>{}}/>);
   expect(render()).toContain('2/3 votaram · 2 votos para cassar');
   expect(render()).toContain('Bia');
   match.setPlayerConnected(target.id,false);
+  expect(ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true))
+    .toEqual({kind:'cassation',candidate:observer.id});
   expect(render()).toContain('1/2 votaram · 2 votos para cassar');
   expect(render()).not.toContain('Bia');
   expect(render()).not.toContain('aria-pressed="true"');

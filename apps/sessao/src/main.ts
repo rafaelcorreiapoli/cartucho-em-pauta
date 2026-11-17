@@ -295,7 +295,6 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
-    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:hud.contextualShortcuts});
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -308,6 +307,8 @@ async function connect(join: () => Promise<Room>) {
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
     },()=>assetsReady,()=>void joined.leave());
+    let inVotingArea = false;
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:hud.contextualShortcuts,vote:key=>inVotingArea && panel.voteByKey(key)});
     let phase: PlenaryView['phase'] = 'lobby';
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
@@ -389,7 +390,8 @@ async function connect(join: () => Promise<Room>) {
       hud.notify('Corregedoria',text,critical);
     });
     joined.onMessage('control',(snapshot: ControlState) => {
-      const inside = String(inPlenary(snapshot.player) && !snapshot.isolated);
+      inVotingArea = inPlenary(snapshot.player) && !snapshot.isolated;
+      const inside = String(inVotingArea);
       if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);

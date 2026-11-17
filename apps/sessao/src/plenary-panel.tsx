@@ -4,7 +4,7 @@ import {ProjectDetails,projectDetailsState} from './ui/project-intents';
 import {ProjectHeading,projectHeading} from './ui/project-heading';
 import {VoteBrief,VoteHistory} from './ui/vote-history';
 import {ProjectImpact} from './ui/project-impact';
-import {SessionBallot,sessionBallotState} from './ui/ballot';
+import {SessionBallot,ballotShortcut,sessionBallotState} from './ui/ballot';
 import type {createRoomCommandSender} from './room-commands';
 import {mountLobbyControls} from './ui/lobby-controls';
 import type {Outcome,PlenaryView} from './plenary';
@@ -15,9 +15,9 @@ const showProposal = (phase:PlenaryView['phase']) => phase==='negotiation' || ph
 const showImpact = (view:PlenaryView) => showProposal(view.phase) && view.project!==undefined &&
   view.phase!=='ballot' && !view.hearing && !view.cassation;
 
-export function LegislativeDock({view,brief,outcomes,id,command}:{
+export function LegislativeDock({view,brief,outcomes,id,command,onExpansion}:{
   view:PlenaryView; brief?:Outcome; outcomes:readonly Outcome[];
-  id:string; command:ReturnType<typeof createRoomCommandSender>;
+  id:string; command:ReturnType<typeof createRoomCommandSender>; onExpansion?:(expanded:boolean)=>void;
 }) {
   const matchId = view.politics?.progression.matchId;
   const ballot = sessionBallotState(view);
@@ -35,7 +35,7 @@ export function LegislativeDock({view,brief,outcomes,id,command}:{
           {impact && <ProjectImpact yes={view.yes} no={view.no}/>}
         </div>
         <div id="ballot-host" hidden={!ballot}>
-          {ballot && <SessionBallot key={matchId} state={ballot} ownId={id}
+          {ballot && <SessionBallot key={matchId} state={ballot} ownId={id} onExpansion={onExpansion}
             cast={vote=>command('bill-vote',{vote})}
             castCassation={candidate=>command('cassation-vote',{candidate})}/>}
         </div>
@@ -68,6 +68,8 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   let brief:Outcome|undefined;
   let timer:number|undefined;
   let key = '';
+  let expanded = true;
+  const onExpansion = (next:boolean)=>{ expanded = next; };
 
   function clearBrief() {
     window.clearTimeout(timer);
@@ -80,10 +82,18 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       next.project,next.cassationIn,showImpact(next) && [next.yes,next.no],sessionBallotState(next)]);
     if (nextKey===key) return;
     key = nextKey;
-    root.render(<LegislativeDock view={next} brief={brief} outcomes={outcomes} id={id} command={command}/>);
+    root.render(<LegislativeDock view={next} brief={brief} outcomes={outcomes} id={id} command={command} onExpansion={onExpansion}/>);
   }
 
   return {
+    voteByKey(key:string) {
+      if (!view) return false;
+      const action = ballotShortcut(view,id,key,expanded);
+      if (!action) return false;
+      if (action.kind==='bill') command('bill-vote',{vote:action.vote});
+      else command('cassation-vote',{candidate:action.candidate});
+      return true;
+    },
     render(next:PlenaryView) {
       const sameMatch = next.politics?.progression.matchId===view?.politics?.progression.matchId;
       const historyChanged = !sameMatch || next.outcomes.length!==outcomes.length;
@@ -97,6 +107,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
           if (view) renderDock(view);
         },8500);
       }
+      if (!sameMatch || view?.phase!==next.phase || view.round!==next.round) expanded = true;
       if (historyChanged) outcomes = next.outcomes;
       view = next;
       lobby.render(next,assetsReady());
