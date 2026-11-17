@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { attackArt, downedArt, hitArt } from './character-art';
+import { attackArt, downedArt, hitArt, phoneArt, phoneSheets } from './character-art';
 import { NAMES } from './map';
 
 for (const [name,skin] of [
@@ -26,6 +26,21 @@ for (const [name,skin] of [
     expect([0,100,200,300,8000].map(elapsed=>downedArt(character,1,elapsed).frame)).toEqual([4,5,6,7,7]);
     expect(downedArt(character,3,8000)).toMatchObject({key:`${skin}-fall`,frame:7,flipX:true});
     expect(downedArt(character,2)).toMatchObject({key:`${skin}-fall`,frame:11,flipX:false});
+  });
+
+  test(`${name} uses its own four phone frames and honors reduced motion`, async ()=>{
+    const key = `${skin}-phone`;
+    const path = `assets/${key}.webp`;
+    expect(phoneSheets).toContainEqual({key,path});
+    expect([0,135,270,405,540].map(time=>phoneArt(character,time,false))).toEqual(
+      [0,1,2,3,0].map(frame=>({key,frame})),
+    );
+    expect(phoneArt(character,405,true)).toEqual({key,frame:0});
+    const asset = Bun.file(new URL(`../public/${path}`,import.meta.url));
+    expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
+    const header = new DataView(await asset.slice(21,25).arrayBuffer());
+    const dimensions = header.getUint32(0,true);
+    expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,128]);
   });
 }
 
