@@ -12,5 +12,5 @@ test('the phone shows score and restart controls from the authoritative Snake st
   expect(render()).toContain('1 / 5 frutas');
   for (let tick=4;tick<=6;tick++) stepSnake(round,tick*SNAKE_STEP_MS,()=>0);
   expect(render()).toContain('Fim de jogo');
-  expect(render()).toContain('aria-keyshortcuts="5">Jogar de novo');
+  expect(render()).toContain('aria-keyshortcuts="1">Jogar de novo');
 });

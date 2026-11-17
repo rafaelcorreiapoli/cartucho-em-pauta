@@ -19,9 +19,9 @@ export function PhoneSnake({game,bets,candy,wallet,available,board,send}:{
   if (!available) return <p>O jogo está disponível durante a articulação.</p>;
   if (mini) return mini==='candy' ? <CandyMatch round={candy} send={send}/> : <Bets wallet={wallet} round={bets} send={send}/>;
   if (!game) return <div className="phone-games-menu">
-    <PhoneAppButton name="Snake" icon="snake" shortcut="5" onClick={()=>send({kind:'game-start'})}/>
-    <PhoneAppButton name="Combina Doces" icon="candy" shortcut="6" onClick={()=>{setMini('candy');send({kind:'candy-start'});}}>🍬</PhoneAppButton>
-    <PhoneAppButton name="Bets" icon="bets" shortcut="7" onClick={()=>setMini('bets')}>🎲</PhoneAppButton>
+    <PhoneAppButton name="Snake" icon="snake" shortcut="1" onClick={()=>send({kind:'game-start'})}/>
+    <PhoneAppButton name="Combina Doces" icon="candy" shortcut="2" onClick={()=>{setMini('candy');send({kind:'candy-start'});}}>🍬</PhoneAppButton>
+    <PhoneAppButton name="Bets" icon="bets" shortcut="3" onClick={()=>setMini('bets')}>🎲</PhoneAppButton>
   </div>;
   const finished = game.status==='won' || game.status==='lost';
   const status = game.status==='ready' ? 'Use as setas para começar' : game.status==='won' ? 'Meta alcançada!' :
@@ -34,7 +34,7 @@ export function PhoneSnake({game,bets,candy,wallet,available,board,send}:{
         onClick={()=>send({kind:'game-turn',direction})}>{arrow}</button>)}
     </div>
     <p className="game-reward">{MINIGAME_FRUIT_XP} XP por fruta coletada</p>
-    {finished && <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts="5"
-      onClick={()=>send({kind:'game-start'})}>Jogar de novo <kbd className="action-key" aria-hidden="true">5</kbd></button>}
+    {finished && <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts="1"
+      onClick={()=>send({kind:'game-start'})}>Jogar de novo <kbd className="action-key" aria-hidden="true">1</kbd></button>}
   </section>;
 }

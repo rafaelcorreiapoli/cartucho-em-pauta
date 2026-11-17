@@ -1,4 +1,5 @@
 import type { Progression } from './progression';
+import { SNAKE_GOAL } from './snake';
 
 export const CABINET_GRANT = 4;
 export const HEARING_POPULARITY = 55;
@@ -65,7 +66,7 @@ export const agendas = {
   pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
   entrega:'Entregue cafezinho a três jogadores diferentes.',
   sigilo:'Largue um objeto sem testemunhas.',
-  joguinho:'Conclua uma rodada do joguinho sem testemunhas.',
+  joguinho:`Vença uma partida de Snake coletando ${SNAKE_GOAL} frutas sem ser visto durante a partida.`,
   fotografia:'Tire uma foto com outro jogador visível.',
   flagra:'Peguei no flagra! Fotografe alguém com uma maleta exposta.',
   selfie:'Tire selfies com três parlamentares diferentes.',

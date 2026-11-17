@@ -16,7 +16,7 @@ import { OfficeStash } from './ui/office-stash';
 import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
 import { paintSnake, snakeDirection } from './phone-snake';
-import { hudConsumesKeys } from './game-keys';
+import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
@@ -106,10 +106,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const cash = cashAmount(item);
     const food = isFood(item.kind) ? foodDefinition(item.kind) : undefined;
     const isBag = bagOpen && chooseQuantity;
+    const useLabel = consumableAction(item)?.label;
     const controls = isBag ? [...actions].sort((first,second)=>{
-      const rank = (action:ObjectAction) => action.label==='Equipar' ? 0 : action.label==='Largar no chão' ? 1 : 2;
+      const rank = (action:ObjectAction) => action.label==='Equipar' || action.label===useLabel ? 0 : action.label==='Largar no chão' ? 1 : 2;
       return rank(first)-rank(second);
     }) : actions;
+    let shortcut = 0;
     return <article className="object-card" key={item.id}>
       <div className={isBag ? "bag-item-info" : "object-card-content"}>
         <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
@@ -150,12 +152,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
           {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
             disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
-            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}>{index+1}</button>)}
+            aria-keyshortcuts={canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
+            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}><kbd aria-hidden="true">⇧ {index+1}</kbd></button>)}
           {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
             onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
         </div>}
-        {controls.map(({label,run,key,disabled})=><button type="button" key={label} className="hud-button hud-button--secondary"
-          aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>)}
+        {controls.map(({label,run,disabled})=>{
+          const key = !disabled && shortcut<9 ? String(++shortcut) : undefined;
+          return <button type="button" key={label} className="hud-button hud-button--secondary"
+            aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
+        })}
       </div>
     </article>;
   }
@@ -164,7 +170,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
-  type ObjectAction = {label:string;run:()=>void;key?:string;disabled?:boolean};
+  type ObjectAction = {label:string;run:()=>void;disabled?:boolean};
 
   function renderHeader() {
     const mode = dialog.dataset.mode;
@@ -306,7 +312,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                   renderKey = '';
                   render();
                 }}>
-                <kbd className="slot-key">{index+1}</kbd>
+                <kbd className="slot-key" aria-hidden="true">⇧ {index+1}</kbd>
                 {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
               </button>;
             })}
@@ -339,25 +345,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
     if (item) {
       const actions:ObjectAction[] = [];
-      const act = (label:string,kind:GameplayAction['kind'],place?:string,key?:string) => {
+      const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
         const transferQuantity = (kind==='offer' || kind==='drop') && itemQuantity(item)>1
           ? {quantity:selectedItemQuantity(item,quantity)} : {};
-        actions.push({label,key,run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
+        actions.push({label,run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
         if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
-        spyOptions.forEach((option,index)=>{
-          actions.push({label:option.label,key:String(index+1),run:()=>{ sendSpy(option); dialog.close(); }});
+        spyOptions.forEach(option=>{
+          actions.push({label:option.label,run:()=>{ sendSpy(option); dialog.close(); }});
         });
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
-        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip',undefined,bagOpen ? '7' : undefined);
+        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
-        if (consumable) actions.push({label:consumable.label,key:consumable.key,run:()=>send(consumable.action)});
+        if (consumable) actions.push({label:consumable.label,run:()=>send(consumable.action)});
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : item.kind==='vip' ? 'Reservar cadeira' : 'Instalar ou substituir';
@@ -367,7 +373,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           act('Oferecer','offer');
           if (item.document && (item.document.project===undefined || item.document.requiredSignatures>0)) act('Pedir assinatura','sign-request');
         }
-        act('Largar no chão','drop',undefined,bagOpen ? '8' : undefined);
+        act('Largar no chão','drop');
         if ('destructible' in definition) act('Destruir','destroy');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
@@ -440,28 +446,15 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
-    if (dialog.open && selection?.source==='inventory' && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
-        !event.metaKey && !hudConsumesKeys(event.target) && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
+    if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
+        !event.ctrlKey && !event.altKey && !event.metaKey && !isEditingText(event.target) &&
+        (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
       const control = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
       if (control) {
         event.preventDefault();
         control.click();
         return;
       }
-    }
-    if (dialog.open && stashOpen && !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey &&
-        !event.metaKey && !hudConsumesKeys(event.target) && /^Digit[1-6]$/.test(event.code)) {
-      const key = (event.shiftKey ? 'Shift+' : '')+event.code.at(-1);
-      body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]:enabled`)?.click();
-      event.preventDefault();
-      return;
-    }
-    if (dialog.open && bagOpen && event.shiftKey && /^Digit[1-6]$/.test(event.code) &&
-        !event.repeat && !event.defaultPrevented && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      const buttons = body.querySelectorAll<HTMLButtonElement>('.bag-preview-slots button');
-      event.preventDefault();
-      buttons[Number(event.code.at(-1))-1]?.click();
-      return;
     }
     if (dialog.open || slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
