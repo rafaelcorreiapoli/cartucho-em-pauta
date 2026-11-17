@@ -922,8 +922,8 @@ export class PlenaryMatch {
     }
     if (this.phase==='hearing') {
       const target = this.hearingTarget!;
-      const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-      const removed = this.canVote(target) && yes>=this.quorum();
+      const {yes,quorum} = this.hearingTally();
+      const removed = this.canVote(target) && yes>=quorum;
       if (removed) {
         this.voteIntents.delete(target);
         this.economy.suspend(target,now+SUSPENSION_MS);
@@ -1011,8 +1011,19 @@ export class PlenaryMatch {
     this.reason = reason;
   }
 
+  private hearingTally() {
+    let voted = 0;
+    let yes = 0;
+    for (const [id,vote] of this.votes) {
+      if (vote==='abstain' || !this.canVote(id)) continue;
+      voted++;
+      if (vote==='yes') yes++;
+    }
+    return {voted,yes,quorum:this.quorum()};
+  }
+
   private hearingVote(id:string) {
-    const vote = this.votes.get(id);
+    const vote = this.canVote(id) ? this.votes.get(id) : undefined;
     return vote==='abstain' ? undefined : vote;
   }
 
@@ -1021,6 +1032,7 @@ export class PlenaryMatch {
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
     const projectVoteExpired = this.phase==='negotiation' && this.projectVoteExpired(now);
+    const hearing = this.hearingTarget ? this.hearingTally() : undefined;
     return {
       policies:this.activePolicies(now),
       canCallCassation:this.canCallCassation(id,now),
@@ -1052,7 +1064,7 @@ export class PlenaryMatch {
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,quorum:this.quorum(),vote:this.hearingVote(id)} : undefined,
+      hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,congressDestroyed:this.congressDestroyed,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,

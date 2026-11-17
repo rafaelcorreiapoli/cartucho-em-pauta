@@ -4,6 +4,7 @@ import {Ballot,CassationBallot,ballotPalette,ballotShortcut,hearingBallotState} 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {CASSATION_NOTICE_MS,stations} from '../plenary';
 import type {Player} from '../map';
+import {HEARING_MS} from '../politics';
 import {ProjectImpact} from "./project-ballot";
 
 const state = {eligible:true,mandate:true,voted:2,electorate:5,quorum:3,cast:()=>{}};
@@ -67,6 +68,33 @@ test('the hearing HUD renders the quorum and participation from the gameserver s
   expect(html).toContain('Seu voto: afastar');
   expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:undefined}})?.quorum).toBe(3);
   expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:4}})?.quorum).toBe(4);
+});
+
+test('a hearing retains votes through reconnect and removes permanently departed voters from the tally',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio','Duda'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target,departing,other] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  Reflect.get(match,'economy').changePopularity(host.id,20);
+  match.politics(host,{kind:'hearing',target:target.id},players,10);
+  match.vote(host.id,'yes',11);
+  match.vote(departing.id,'yes',11);
+  match.vote(other.id,'no',11);
+  const render = (now:number)=>renderToStaticMarkup(<Ballot {...hearingBallotState(match.view(host.id,ids,now))!} cast={()=>{}}/>);
+  match.setPlayerConnected(departing.id,false);
+  expect(render(12)).toContain('3/4 votaram · 3 votos a favor para afastar');
+  match.setPlayerConnected(departing.id,true);
+  expect(render(13)).toContain('3/4 votaram · 3 votos a favor para afastar');
+
+  match.leave(departing.id,14);
+  expect(render(14)).toContain('2/3 votaram · 2 votos a favor para afastar');
+  match.advance(10+HEARING_MS);
+  const result = match.view(host.id,ids,10+HEARING_MS);
+  expect(result.hearingResult).toContain('afastamento rejeitado (1 votos pelo afastamento)');
+  expect(match.isolated(target.id)).toBe(false);
 });
 
 test('cassation removes a disconnected target and shows the gameserver participation count',()=>{
