@@ -66,6 +66,7 @@ export class ParliamentarianTalk {
     }
     const deal = this.view(player,world);
     if (deal?.id!==target.id) return 'Abra a negociação.';
+    if (!('session' in raw) || raw.session!==deal.session) return 'A negociação mudou.';
     if (raw.kind==='sign' && 'item' in raw && typeof raw.item==='number' && 'amount' in raw) {
       const document = deal.documents.find(doc=>doc.id===raw.item);
       if (!document || document.price!==raw.amount) return 'A proposta de assinatura mudou.';

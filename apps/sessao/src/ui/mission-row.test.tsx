@@ -1906,7 +1906,7 @@ test.each(['vote starts','vote expires'])('the Agenda drops NPC vote buying when
   const open = (now:number)=>talk.act(player,{kind:'talk',target:npc.id},world(now));
   open(filingAt);
   const quote = talk.view(player,world(filingAt))!;
-  const offer = {kind:'vote',target:npc.id,round:match.projectRound,project:quote.projectIndex,vote:'yes',amount:quote.minimum.yes};
+  const offer = {kind:'vote',session:quote.session,target:npc.id,round:match.projectRound,project:quote.projectIndex,vote:'yes',amount:quote.minimum.yes};
   expect(quote.minimum.yes).toBeGreaterThan(0);
   expect(hud(filingAt)).toContain('Compre um voto de um parlamentar NPC');
 

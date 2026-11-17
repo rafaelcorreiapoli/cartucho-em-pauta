@@ -38,15 +38,17 @@ test('signature and competing vote offers transfer existing money and the commit
   game.act(a,{kind:'supply',place:'secretary',target:'queue'},world(1));
   const document = game.view(a,world(1)).inventory[0];
   talk.act(a,{kind:'talk',target:npc.id},world(2));
-  expect(talk.act(a,{kind:'sign',target:npc.id,item:document.id,amount:2},world(3))).toBe('Assinatura obtida.');
+  const aSession = talk.view(a,world(2))!.session;
+  expect(talk.act(a,{kind:'sign',session:aSession,target:npc.id,item:document.id,amount:2},world(3))).toBe('Assinatura obtida.');
   expect(document.document?.signatures.map(signer=>signer.id)).toEqual([npc.id]);
-  expect(talk.act(a,{kind:'sign',target:npc.id,item:document.id,amount:2},world(4))).toBe('A proposta de assinatura mudou.');
+  expect(talk.act(a,{kind:'sign',session:aSession,target:npc.id,item:document.id,amount:2},world(4))).toBe('A proposta de assinatura mudou.');
   expect(members.intention(npc.id,0)).toBe('no');
   publishProjectFiling(match,a);
-  expect(talk.act(a,{kind:'vote',target:npc.id,round:0,project:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
+  expect(talk.act(a,{kind:'vote',session:aSession,target:npc.id,round:0,project:0,vote:'yes',amount:3},world(5))).toBe('Voto comprometido.');
   talk.act(b,{kind:'talk',target:npc.id},world(6));
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:2},world(7))).toContain('recusada');
-  expect(talk.act(b,{kind:'vote',target:npc.id,round:0,project:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
+  const bSession = talk.view(b,world(6))!.session;
+  expect(talk.act(b,{kind:'vote',session:bSession,target:npc.id,round:0,project:0,vote:'no',amount:2},world(7))).toContain('recusada');
+  expect(talk.act(b,{kind:'vote',session:bSession,target:npc.id,round:0,project:0,vote:'no',amount:4},world(8))).toBe('Voto comprometido.');
   expect(world(9).wallet!(npc.id)).toBe(starting+9);
   expect(world(9).wallet!(a.id)).toBe(3);
   expect(world(9).wallet!(b.id)).toBe(4);
@@ -146,7 +148,7 @@ test('NPC preferences are tied to projects and paid promises stay on the negotia
   expect(match.projectIndex).toBe(1);
   expect(talk.view(buyer,world(3))?.projectIndex).toBe(1);
   const balance = world(3).wallet!(buyer.id);
-  talk.act(buyer,{kind:'vote',target:target.id,round:0,project:0,vote:'no',amount:2},world(3));
+  talk.act(buyer,{kind:'vote',session:talk.view(buyer,world(3))!.session,target:target.id,round:0,project:0,vote:'no',amount:2},world(3));
   expect(world(3).wallet!(buyer.id)).toBe(balance);
 
 });
@@ -204,7 +206,7 @@ test('NPC negotiation exposes the live payment quota and still accepts a free vo
   for (let i=0;i<deal.paymentsLeft;i++) expect(active.payNpc!(buyer.id,npc.id,1)).toBe(true);
   const {minimum,wallet} = deal;
   expect(talk.view(buyer,active)).toMatchObject({paymentsLeft:0,wallet:wallet-deal.paymentsLeft});
-  const vote = {kind:'vote',target:npc.id,round:match.projectRound,project:deal.projectIndex};
+  const vote = {kind:'vote',session:deal.session,target:npc.id,round:match.projectRound,project:deal.projectIndex};
   expect(minimum.yes).toBeGreaterThan(0);
   expect(minimum.no).toBe(0);
   expect(talk.act(buyer,{...vote,vote:'yes',amount:minimum.yes},active)).toBe('Pagamento indisponível.');
@@ -240,7 +242,7 @@ test('the HUD cancels a robbery without transferring cash and a delayed conversa
   const view = {...match.view(buyer.id,[buyer.id],1),gameplay:{...game.view(buyer,state),robberyProgress}};
   const cancel = fieldActions(view,buyer,state.players).find(button=>button.label==='Cancelar roubo')?.action;
   if (cancel?.kind!=='npc-deal') throw Error('HUD did not offer the robbery cancellation');
-  expect(talk.act(buyer,{kind:cancel.command},state)).toBe('Roubo interrompido.');
+  expect(talk.act(buyer,cancel.request,state)).toBe('Roubo interrompido.');
   expect(talk.robberyProgress(buyer.id,1)).toBeUndefined();
   const wallet = state.wallet!(npc.id);
   talk.tick(world(1+npcRules.robberyMs),true);
@@ -248,4 +250,28 @@ test('the HUD cancels a robbery without transferring cash and a delayed conversa
   expect(game.view(buyer,state).inventory).toEqual([]);
   view.gameplay.robberyProgress = talk.robberyProgress(buyer.id,1);
   expect(fieldActions(view,buyer,state.players).map(button=>button.label)).not.toContain('Cancelar roubo');
+});
+
+test('reopening a negotiation with the same NPC rejects stale signatures and paid offers',()=>{
+  const {humans:[buyer],npcs:[,npc],game,match,talk,world} = fixture();
+  Object.assign(buyer,terminals.secretary.point);
+  Object.assign(npc,{x:buyer.x+8,y:buyer.y});
+  publishProjectFiling(match,buyer);
+  const state = world(1);
+  game.act(buyer,{kind:'supply',place:'secretary',target:'queue'},state);
+  const contact = {kind:'talk',target:npc.id};
+  talk.act(buyer,contact,state);
+  const previous = talk.view(buyer,state)!;
+  const document = previous.documents[0];
+  const signature = {kind:'sign',session:previous.session,target:npc.id,item:document.id,amount:document.price};
+  const offer = {kind:'vote',session:previous.session,target:npc.id,round:match.projectRound,project:previous.projectIndex,vote:'yes',amount:previous.minimum.yes};
+  expect(offer.amount).toBeGreaterThan(0);
+  talk.act(buyer,{kind:'close',session:previous.session},state);
+  talk.act(buyer,contact,state);
+  const current = talk.view(buyer,state)!;
+  expect(talk.act(buyer,signature,state)).toBe('A negociação mudou.');
+  expect(talk.act(buyer,offer,state)).toBe('A negociação mudou.');
+  expect(talk.view(buyer,state)).toEqual(current);
+  expect(talk.act(buyer,{...offer,session:current.session},state)).toBe('Voto comprometido.');
+  expect(talk.view(buyer,state)?.wallet).toBe(current.wallet-offer.amount);
 });
