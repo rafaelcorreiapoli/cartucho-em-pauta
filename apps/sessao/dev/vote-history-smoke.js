@@ -74,7 +74,9 @@ async page => {
   await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
   await sheet.getByRole('button',{name:'Expandir votação'}).click();
   await page.keyboard.press('y');
-  await sheet.locator('[data-vote-state="yes"]').getByText('Histórico QA').waitFor();
+  const yesVoter = sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'});
+  await yesVoter.getByText('Histórico QA').waitFor();
+  await yesVoter.locator('img.phone-contact-face').evaluate(image=>image.decode());
   await page.keyboard.press('r');
   await sheet.locator('[data-vote-state="no"]').getByText('Histórico QA').waitFor();
   await page.keyboard.press('n');
