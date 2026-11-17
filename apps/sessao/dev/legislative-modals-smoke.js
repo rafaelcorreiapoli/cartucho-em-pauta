@@ -221,9 +221,17 @@ async page => {
     await page.keyboard.press(await candidate.getAttribute('aria-keyshortcuts'));
     await ballot.getByRole('button',{name:'Caio',pressed:true}).waitFor();
     await witness.getByRole('region',{name:'Votação de cassação'}).getByText(/1\/2 votaram/).waitFor();
+    const result = page.getByRole('dialog',{name:'Resultados'});
+    const witnessResult = witness.getByRole('dialog',{name:'Resultados'});
+    for (const modal of [result,witnessResult]) {
+      await modal.getByText('Ninguém foi cassado. Nenhum suspeito recebeu a maioria dos votos.').waitFor();
+    }
+    await runShortcut(result.getByRole('button',{name:'Continuar',exact:true}),/^Continuar$/);
+    await result.waitFor({state:'hidden'});
+    if (!await witnessResult.isVisible()) throw Error('Fechar o resultado local afetou o outro jogador');
   } finally {
     if (!disconnected.isClosed()) await disconnected.close();
     await witness.close();
   }
-  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,staleCandidateRejected:true};
+  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,staleCandidateRejected:true,cassationResultDismissedViaF2:true};
 }

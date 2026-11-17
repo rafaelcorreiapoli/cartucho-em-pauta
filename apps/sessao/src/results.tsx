@@ -1,4 +1,5 @@
 import {DialogHeader} from './ui/dialog-header';
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -41,7 +42,10 @@ export function SessionResult({winner,reason,stability,congressDestroyed,finalRo
     result:winner===role ? 'won' : winner || outcome==='destroyed' ? 'lost' : 'neutral',
   })).sort((a,b)=>Number(b.result==='won')-Number(a.result==='won'));
 
-  return <section className="session-finale" data-outcome={outcome}>
+  const panel = useDialogKeys<HTMLElement>(()=>undefined,[
+    {name:'Continuar',activate:():void=>{panel.current?.closest('dialog')?.close();}},
+  ]);
+  return <section ref={panel} className="session-finale" data-outcome={outcome}>
     {outcome!=='ended' && <div className="finale-particles" aria-hidden="true">
       {finaleParticles.map((style,index)=><i key={index} style={style}/>)}
     </div>}
@@ -67,9 +71,14 @@ export function SessionResult({winner,reason,stability,congressDestroyed,finalRo
 }
 
 export function ResultsContent({children}:{children:ReactNode}) {
+  const dismiss = ():void=>{content.current?.closest('dialog')?.close();};
+  const content = useDialogKeys<HTMLDivElement>(()=>undefined,[
+    {name:'Fechar resultados',activate:dismiss},
+    {name:'Continuar',activate:dismiss},
+  ]);
   return <>
     <DialogHeader id="result-title" title="Resultados" dismissLabel="Fechar resultados"/>
-    <div id="result-content">{children}</div>
+    <div ref={content} id="result-content">{children}</div>
     <DialogDismiss className="hud-button">Continuar</DialogDismiss>
   </>;
 }
