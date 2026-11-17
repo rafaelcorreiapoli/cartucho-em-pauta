@@ -60,14 +60,6 @@
 #attributes-xp { margin-top: 4px; font-size: 12px; color: #bfd4c2; }
 #attributes-available { margin: 14px 0; color: #f9d982; font-weight: 750; }
 #attributes-dialog { width: min(560px,calc(100vw - 24px)); }
-#attributes-dialog button[aria-keyshortcuts] { position: relative; }
-#attributes-dialog button > .action-key {
-  position: absolute;
-  inset: -5px -5px auto auto;
-  margin: 0;
-  font-size: 10px;
-  pointer-events: none;
-}
 .attribute-columns { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); gap: 10px; }
 .attribute-panel { min-width: 0; padding: clamp(6px,2vw,12px); background: #10271e; border-radius: 9px; }
 .attribute-panel section { display: grid; align-items: center; gap: 10px; min-height: 60px; border-bottom: 1px solid #ffffff15; }
