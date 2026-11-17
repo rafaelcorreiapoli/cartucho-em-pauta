@@ -1,3 +1,4 @@
+import type {ShortcutEntry} from './action-shortcuts';
 import {fieldActions,type FieldAction} from './ui/field-actions';
 import {ContextActionButton} from './ui/context-action-button';
 import {ContextProgress,contextProgress} from './ui/context-progress';
@@ -36,6 +37,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let overflowExpanded = false;
   let contextKey = '';
   let lastItems:readonly NearbyItem[] = [];
+  const paletteActions = new Map<string,ShortcutEntry>();
   const keyboardActions = new Map<string,{activate:()=>void;station?:Station}>();
 
   function selectShortcut(kind:Shortcut['kind']) {
@@ -141,7 +143,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     nearby.render(player,canInteract);
     const items = canInteract ? nearby.get() : noNearbyItems;
-    if (!items.length || document.querySelector('dialog:modal')) nearbyOpen = false;
+    if (!items.length || (nearbyOpen && document.querySelector('dialog:modal:not(#action-shortcuts)'))) nearbyOpen = false;
     if (!exploring || !canInteract) overflowExpanded = false;
     const legislative = legislativeStationActions(view,context);
     const electoral = electionStationActions(view,context,election.hasVoice());
@@ -159,21 +161,31 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
       field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
     ] as const;
-    const normal = groups.map(group=>group.map(button=>({
+    const groupIds = [legislative,electoral.actions,shortcuts.map(action=>action.kind),field.map(({action})=>JSON.stringify(action))];
+    const normal = groups.map((group,groupIndex)=>group.map((button,index)=>({
+      id:groupIndex+':'+groupIds[groupIndex][index], name:button.label,
       kind:'action' as const,visible:true,enabled:!('blocked' in button && button.blocked) && !('disabled' in button && button.disabled),
       activate:button.activate,station:'station' in button ? button.station : undefined,
     })));
-    const trigger = {kind:'nearby' as const,visible:items.length>0,enabled:true,activate:toggleNearby,station:undefined};
-    const tiles = items.map(item=>({kind:'item' as const,visible:nearbyOpen,enabled:true,activate:item.activate,station:undefined}));
-    const more = {kind:'more' as const,visible:false,enabled:true,activate:toggleOverflow,station:undefined};
+    const trigger = {id:'nearby',name:'Objetos próximos',kind:'nearby' as const,visible:items.length>0,enabled:true,activate:toggleNearby,station:undefined};
+    const tiles = items.map(item=>({id:'item:'+item.key,name:item.verb+' '+item.name,kind:'item' as const,visible:nearbyOpen,enabled:true,activate:item.activate,station:undefined}));
+    const more = {id:'more',name:'Mais ações',kind:'more' as const,visible:false,enabled:true,activate:toggleOverflow,station:undefined};
     const controls = [...normal[0],...normal[1],trigger,...tiles,...normal[2],...normal[3],more];
     const model = contextActionKeys(controls,overflowExpanded,nearbyOpen);
     if (!model.hasMore) overflowExpanded = false;
     keyboardActions.clear();
+    paletteActions.clear();
     const presentation = new Map<typeof controls[number],ContextKey>();
     for (const [index,control] of controls.entries()) {
       const {key,placement} = model.buttons[index];
       if (key) keyboardActions.set(key,control);
+      if (control.enabled && (placement==='primary' || placement==='overflow' ||
+          control.kind==='item' && control.visible || control.kind==='more' && model.hasMore)) {
+        paletteActions.set(control.id,{name:control.name,activate:()=>{
+          if (control.station) stationFeedback(control.station);
+          control.activate();
+        }});
+      }
       presentation.set(control,{key,overflow:placement==='primary'?'false':placement==='overflow'?'expanded':placement==='hidden'?'true':undefined});
     }
     const keysFor = (index:number)=>normal[index].map(control=>presentation.get(control)!);
@@ -198,6 +210,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     notify,
     showReward:rewards.show,
     refreshActions:()=>actions(),
+    contextualShortcuts:()=>stations.hidden ? [] : [...paletteActions].map(([id,{name}])=>({
+      name,activate:()=>{ if (!stations.hidden) paletteActions.get(id)?.activate(); },
+    })),
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
       if (text) notify(info.title,text);

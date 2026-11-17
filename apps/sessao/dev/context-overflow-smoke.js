@@ -82,8 +82,15 @@ async page => {
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
   await coffee.waitFor();
-  await page.keyboard.press(await coffee.getAttribute('aria-keyshortcuts'));
-  await coffee.waitFor({state:'hidden'});
+  const paintedKey = await coffee.getAttribute('aria-keyshortcuts');
+  await coffee.evaluate(button=>button.setAttribute('aria-label','Rótulo alterado no DOM'));
+  await page.keyboard.press('F2');
+  await shortcuts.waitFor();
+  const paletteCoffee = shortcuts.getByRole('button',{name:'Pegar Café',exact:true});
+  await paletteCoffee.waitFor();
+  await page.keyboard.press(await paletteCoffee.getAttribute('aria-keyshortcuts'));
+  await shortcuts.waitFor({state:'hidden'});
+  await page.locator('#nearby-items button[aria-keyshortcuts="'+paintedKey+'"]').waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }

@@ -295,7 +295,7 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
-    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle});
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:hud.contextualShortcuts});
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));

@@ -5,6 +5,7 @@ import { appForKey, type LaunchHudApp } from './hud-apps';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 
 const pageSize = 9;
+export type ShortcutEntry = {name:string;activate:()=>void};
 
 function available(control:HTMLElement) {
   return !control.matches(':disabled, [aria-disabled="true"], input[type="hidden"]') &&
@@ -38,7 +39,7 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean}) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean;context:()=>readonly ShortcutEntry[]}) {
   disableHudTabStops(root,signal);
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
@@ -53,20 +54,25 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
   }
 
   function render() {
-    const actions = [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
-      .filter(control=>!palette.contains(control) && available(control))
+    const otherActions = [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
+      .filter(control=>!palette.contains(control) && !control.closest('#context-actions-mount') && available(control))
       .map(control=>({control,name:actionName(control)})).filter(({name})=>name);
-    const total = Math.max(1,Math.ceil(actions.length/pageSize));
-    page = Math.max(0,Math.min(page,total-1));
-    flushSync(()=>paletteRoot.render(<ShortcutPalette
-      entries={actions.slice(page*pageSize,(page+1)*pageSize).map(({control,name})=>({
+    const actions:ShortcutEntry[] = [
+      ...(scope===root ? shortcuts.context() : []),
+      ...otherActions.map(({control,name})=>({
         name,
         activate:()=>{
-          palette.close();
           if (!available(control)) return;
           if (control.matches('input:not([type="checkbox"], [type="radio"]), select, textarea')) control.focus();
           else control.click();
         },
+      })),
+    ];
+    const total = Math.max(1,Math.ceil(actions.length/pageSize));
+    page = Math.max(0,Math.min(page,total-1));
+    flushSync(()=>paletteRoot.render(<ShortcutPalette
+      entries={actions.slice(page*pageSize,(page+1)*pageSize).map(({name,activate})=>({
+        name,activate:()=>{ palette.close(); activate(); },
       }))}
       page={page} total={total} changePage={offset=>{ page += offset; render(); }}
     />));
@@ -147,7 +153,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
 }
 
 export function ShortcutPalette({entries,page,total,changePage}:{
-  entries: readonly {name:string; activate:()=>void}[];
+  entries: readonly ShortcutEntry[];
   page:number;
   total:number;
   changePage:(offset:number)=>void;
