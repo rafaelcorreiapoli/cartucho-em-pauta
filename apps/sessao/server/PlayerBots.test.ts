@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {ELECTION_RULES} from '../src/elections';
-import {characterVisible,inPlenary,PLENARY_SEATS,type Player} from '../src/map';
+import {characterVisible,inPlenary,PLENARY_SEATS,roomAt,type Player} from '../src/map';
 import {STEP_MS,type ControlState} from '../src/movement';
 import {BALLOT_MS,MIN_PLAYERS,projectRules,stations} from '../src/plenary';
 import {Gameplay} from './Gameplay';
@@ -15,7 +15,7 @@ function gameWithBots(random:()=>number) {
   const human = {...host};
   const controls = new Map<string,ControlState>([[human.id,{player:human,route:[],ack:0}]]);
   const bots = new PlayerBots();
-  bots.addTo(controls,0);
+  bots.addTo(controls,0,random);
   const players = [...controls.values()].map(state=>state.player);
   const cooldowns = new StationCooldowns();
   const match = new PlenaryMatch(MIN_PLAYERS,cooldowns);
@@ -72,7 +72,7 @@ test('a solo infiltrator can leave filing, signatures, and legislative voting to
   advance(45_000);
   expect(view(human.id,45_000).proposer).toMatch(/^Bot /);
   expect(match.projectIndex).toBeDefined();
-  const duringBallot = projectRules.debateMs+42_000;
+  const duringBallot = 45_000+view(human.id,45_000).remaining*1000+22_000;
   advance(duringBallot);
   expect(view(human.id,duringBallot).phase).toBe('ballot');
   expect(view(human.id,duringBallot).voted).toBe(5);
@@ -136,4 +136,12 @@ test('an affordable evidence offer can change a bot vote on a close project',()=
   advance(22_000);
   expect(view(buyer.id,22_000)).toMatchObject({vote:'no',politics:{wallet:wallet-1}});
   expect(bots.messages.find(message=>message.name===buyer.nick)?.text).toMatch(/Mudei meu voto.*comprova um desvio/);
+});
+
+test('bots complete private agenda tasks and spread out around the map',()=>{
+  const {advance,human,players,view} = gameWithBots(()=>0);
+  advance(95_000);
+  const bots = players.filter(player=>player!==human);
+  expect(bots.some(bot=>view(bot.id,95_000).politics?.missions.completed.some(mission=>mission.kind==='pizza'))).toBe(true);
+  expect(new Set(bots.map(bot=>roomAt(bot))).size).toBeGreaterThanOrEqual(3);
 });
