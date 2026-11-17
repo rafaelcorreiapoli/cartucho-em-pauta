@@ -8,7 +8,7 @@ import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
-import { missionTitle, money, timedAgendas, type Mission } from '../politics';
+import { missionReward, missionTitle, money, timedAgendas, type Mission } from '../politics';
 import './theme.css';
 
 function Meter({label,value,max,tone,target}:{label:string;value:number;max:number;tone:string;target?:number}) {
@@ -92,6 +92,7 @@ function AgendaPanel({state}:{state:HudModel['agenda']}) {
 }
 
 export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean}) {
+  const reward = missionReward(mission.kind);
   const timed = timedAgendas.has(mission.kind);
   const current = timed ? Math.floor(mission.current/1000) : mission.current;
   const target = timed ? mission.target/1000 : mission.target;
@@ -101,7 +102,14 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
     <span className="react-mission-check" aria-hidden="true">{done && <HudIcon name="check"/>}</span>
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
-      {!done && progress && <small>{progress}</small>}
+      <div className="react-mission-meta">
+        {!done && progress && <small>{progress}</small>}
+        <div className="react-mission-rewards" role="group" aria-label="Prêmios da missão">
+          <span data-reward="xp"><HudIcon name="star"/>{reward.xp} XP</span>
+          {!!reward.cash && <span data-reward="cash"><HudIcon name="wallet"/>{money(reward.cash)}</span>}
+          {!!reward.popularity && <span data-reward="popularity"><HudIcon name="chart"/>+{reward.popularity} Pop<span className="sr-only">ularidade</span></span>}
+        </div>
+      </div>
     </div>
   </li>;
 }

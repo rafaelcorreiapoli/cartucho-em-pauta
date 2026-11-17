@@ -38,6 +38,20 @@ test('active and completed targeted missions render the public nickname',()=>{
   }
 });
 
+test('mission rows show XP, cash and popularity from the reward table',()=>{
+  const render = (kind:Mission['kind'],done=false)=>renderToStaticMarkup(
+    <MissionRow mission={{id:1,kind,current:Number(done),target:1}} done={done}/>,
+  );
+  for (const done of [false,true]) {
+    const protocol = render('protocolo',done);
+    expect(protocol).toContain(`${missionReward('protocolo').xp} XP`);
+    expect(protocol).toContain(`+${missionReward('protocolo').popularity} Pop`);
+    expect(protocol).not.toContain('data-reward="cash"');
+  }
+  expect(render('assinaturas')).toContain(money(missionReward('assinaturas').cash!));
+  expect(render('cafe')).not.toContain('data-reward="popularity"');
+});
+
 test('the furniture spending objective displays currency on both sides of its progress',()=>{
   const markup = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'ostentacao',current:3,target:5}}/>);
   expect(markup).toContain('R$ 30 mil / R$ 50 mil');
