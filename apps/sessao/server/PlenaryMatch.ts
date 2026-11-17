@@ -845,8 +845,11 @@ export class PlenaryMatch {
     if (!this.proposal) return;
     const {project,proposer} = this.proposal;
     const bill = bills[project];
-    let yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-    let no = [...this.votes.values()].filter(vote => vote==='no').length;
+    const votes = [...this.votes.values()];
+    let yes = votes.filter(vote=>vote==='yes').length;
+    let no = votes.filter(vote=>vote==='no').length;
+    const abstentions = votes.filter(vote=>vote==='abstain').length;
+    const absences = Math.max(0,this.votingPlayers()-votes.length);
     const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
     if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
       if (preference>0) yes++;
@@ -873,7 +876,7 @@ export class PlenaryMatch {
     const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
     const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
     this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
-    this.outcomes.push({round:this.round,project,proposer,passed,yes,no,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
+    this.outcomes.push({round:this.round,project,proposer,passed,yes,no,abstentions,absences,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
     this.economy.cancelOffers();
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');

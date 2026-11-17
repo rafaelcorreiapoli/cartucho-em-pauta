@@ -118,6 +118,7 @@ async page => {
   await brief.locator('#brief-project').filter({hasText:'Auxílio Churrasco'}).waitFor({state:'attached'});
   if (await brief.getAttribute('hidden')!==null) throw Error('New outcome brief was not activated');
   await brief.locator('#brief-budget').filter({hasText:'R$ 0 mil'}).waitFor({state:'attached'});
+  await brief.getByText('1 abstenção',{exact:true}).waitFor({state:'attached'});
   const stabilityColor = await brief.locator('#brief-stability').evaluate(node=>getComputedStyle(node).color);
   if (stabilityColor!==impactColors.loss) throw Error('Resumo da votação não preservou a cor de perda');
   await page.locator('#project-outcome-brief[hidden]').waitFor({state:'attached'});
