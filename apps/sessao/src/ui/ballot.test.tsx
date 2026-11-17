@@ -1,6 +1,9 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Ballot,CassationBallot} from './ballot';
+import {Ballot,CassationBallot,hearingBallotState} from './ballot';
+import {PlenaryMatch} from '../../server/PlenaryMatch';
+import {CASSATION_NOTICE_MS,stations} from '../plenary';
+import type {Player} from '../map';
 import {ProjectImpact} from "./project-ballot";
 
 const state = {eligible:true,mandate:true,voted:2,electorate:5,quorum:3,cast:()=>{}};
@@ -36,4 +39,50 @@ test('project impacts signal each number independently of the vote outcome',()=>
   const rejected = renderToStaticMarkup(<ProjectImpact approved={false} impact={{stability:-14,budget:0}}/>);
   expect(rejected).toContain('data-effect="loss">−14');
   expect(rejected).toContain('data-effect="neutral">R$ 0 mil');
+});
+
+
+test('the hearing HUD renders the quorum and participation from the gameserver snapshot',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio','Duda'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  expect(hearingBallotState(match.view(host.id,ids,0))).toBeNull();
+  Reflect.get(match,'economy').changePopularity(host.id,20);
+  match.politics(host,{kind:'hearing',target:target.id},players,10);
+  match.vote(host.id,'yes',11);
+  const view = match.view(host.id,ids,11);
+  expect(view.hearing).toMatchObject({quorum:3,voted:1,vote:'yes'});
+  const hearing = hearingBallotState(view)!;
+  const html = renderToStaticMarkup(<Ballot {...hearing} cast={()=>{}}/>);
+  expect(html).toContain('1/4 votaram · 3 votos a favor para afastar');
+  expect(html).toContain('Seu voto: afastar');
+  expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:undefined}})?.quorum).toBe(3);
+  expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:4}})?.quorum).toBe(4);
+});
+
+test('cassation removes a disconnected target and shows the gameserver participation count',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target,observer] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  match.politics(host,{kind:'call-cassation'},players,10);
+  const openedAt = 10+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  match.castCassation(host.id,target.id,openedAt);
+  match.castCassation(observer.id,null,openedAt);
+  const render = ()=>renderToStaticMarkup(<CassationBallot state={match.view(host.id,ids,openedAt).cassation!}
+    ownId={host.id} cast={()=>{}}/>);
+  expect(render()).toContain('2/3 votaram · 2 votos para cassar');
+  expect(render()).toContain('Bia');
+  match.setPlayerConnected(target.id,false);
+  expect(render()).toContain('1/2 votaram · 2 votos para cassar');
+  expect(render()).not.toContain('Bia');
+  expect(render()).not.toContain('aria-pressed="true"');
 });

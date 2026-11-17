@@ -8,6 +8,11 @@ import type { Agenda } from '../src/politics';
 type Fact = {value:string; group?:string};
 type Rule = {target:number; players:number; facts:(event:GameplayEvent)=>Fact[]};
 const fact = (value:string|number, group?:string):Fact[] => [{value:String(value),group}];
+export function isGroupSelfie(photo:Photo,author:string) {
+  return photo.selfie && photo.author.id===author &&
+    photo.people.filter(person=>person.id!==author && !person.id.startsWith('npc-parliamentarian-')).length>=2;
+}
+
 const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.id!==actor);
 const portraitNear = (photo:Photo,owner?:string) => photo.decorations.some(item=>
   item.kind==='portrait' && (owner===undefined || item.owner.id===owner) &&
@@ -38,8 +43,7 @@ export const photoMissions = {
   entregaFoto:{target:1,players:3,facts:capture((photo,actor)=>
     photo.transfers.some(event=>event.from!==actor && event.to!==actor) ? fact(photo.id) : [])},
   publicouSelfie:{target:1,players:3,facts:event=>
-    event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
-      people(event.photo,event.actor).length>=2 ? fact(event.photo.id) : []},
+    event.type==='photo-published' && event.photo && isGroupSelfie(event.photo,event.actor) ? fact(event.photo.id) : []},
   retrato:{target:1,players:1,facts:event=>event.type==='installed' && event.kind==='portrait' ? fact(event.item!) : []},
   autorretrato:{target:1,players:1,facts:capture((photo,actor)=>photo.selfie && portraitNear(photo,actor) ? fact(photo.id) : [])},
   cerimonialOficial:{target:1,players:1,facts:capture(photo=>photo.selfie && portraitNear(photo) ? fact(photo.id) : [])},

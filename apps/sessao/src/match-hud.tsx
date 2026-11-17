@@ -33,7 +33,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;expanded:()=>boolean;visible:()=>boolean;close:()=>void}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
-  sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
+  sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
@@ -66,7 +66,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let roster:Player[] = [];
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
-    const actions:{label:string; icon:string; action:FieldAction}[] = [];
+    const actions:{label:string; icon:string; action:FieldAction;blocked?:string}[] = [];
     const state = view?.gameplay;
     if (state && player) {
       const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
@@ -106,7 +106,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       </> : null);
     }
     for (const option of spy?.options ?? []) actions.push({
-      label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
+      label:option.label,blocked:option.blocked,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
     if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
     for (const {label,...action} of state?.officeOptions ?? []) {
@@ -161,9 +161,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const key = JSON.stringify(actions);
     if (key===fieldKey) return;
     fieldKey = key;
-    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action})=>
-      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" onClick={()=>sendField(action)}>
-        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
+    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action,blocked})=>
+      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" disabled={!!blocked} onClick={()=>sendField(action)}>
+        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{blocked ? <span>{label}<small> · {blocked}</small></span> : label}
       </button>)));
   }
   const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);

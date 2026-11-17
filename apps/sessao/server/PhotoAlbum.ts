@@ -1,6 +1,7 @@
 import { PHOTO_LIMIT, ROOM_PHOTO_LIMIT, type AlbumEntry, type InformationRef, type Photo } from '../src/photography';
 import { canReachObject, type GameplayAction } from '../src/gameplay';
 import type { Player } from '../src/map';
+import { isGroupSelfie } from './photo-missions';
 import { InformationRequests } from './InformationRequests';
 
 export class PhotoAlbum {
@@ -56,6 +57,13 @@ export class PhotoAlbum {
     return {album,publicPhotos:[...this.publicPhotos].map(key=>this.photos.get(key)!),
       shown:shown===undefined ? undefined : this.photos.get(shown),
       request:this.requests.incoming(id,now)};
+  }
+
+  agendaSelfies(id:string) {
+    return [...(this.albums.get(id) ?? [])].flatMap(key=>{
+      const photo = this.photos.get(key);
+      return photo && isGroupSelfie(photo,id) ? [{id:key,public:this.publicPhotos.has(key)}] : [];
+    });
   }
 
   tick(now:number) {
