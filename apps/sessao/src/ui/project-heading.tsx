@@ -1,4 +1,3 @@
-import {createRoot} from 'react-dom/client';
 import {agendaProject,projectRules,type PlenaryView} from '../plenary';
 
 export function projectHeading(view:PlenaryView) {
@@ -27,19 +26,4 @@ export function ProjectHeading({title,round,phase,clockLabel,seconds,hint}:Retur
       <span><small id="clock-label">{clockLabel}</small><strong id="clock">{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}</strong></span>
     </div>
   </>;
-}
-
-export function mountProjectHeading(host:HTMLElement) {
-  const root = createRoot(host);
-  let key = '';
-  return {
-    render(view:PlenaryView) {
-      const heading = projectHeading(view);
-      const next = JSON.stringify(heading);
-      if (next===key) return;
-      key = next;
-      root.render(<ProjectHeading {...heading}/>);
-    },
-    destroy() { root.unmount(); },
-  };
 }

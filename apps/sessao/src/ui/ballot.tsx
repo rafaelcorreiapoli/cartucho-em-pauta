@@ -1,5 +1,4 @@
 import type {CSSProperties} from 'react';
-import {createRoot} from 'react-dom/client';
 import {PhoneContactFace} from './phone-call';
 import {ProjectBallot} from './project-ballot';
 import {majorityQuorum,type BillVote,type CassationView,type PlenaryView,type Vote} from '../plenary';
@@ -60,39 +59,22 @@ export function hearingBallotState(view:PlenaryView):BallotState|null {
   };
 }
 
-export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
-  const root = createRoot(host);
-  let key = '';
-  return {
-    render(view:PlenaryView) {
-      if (view.phase==='ballot') {
-        host.hidden = false;
-        const {round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
-        const state = {round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,eligible:!!mandate && !politics?.suspended};
-        const next = JSON.stringify(state);
-        if (next!==key) {
-          key = next;
-          root.render(<ProjectBallot key={round} {...state} ownId={ownId} cast={cast}/>);
-        }
-        return;
-      }
-      const cassation = view.cassation;
-      if (cassation) {
-        host.hidden = false;
-        const next = JSON.stringify(cassation);
-        if (next!==key) {
-          key = next;
-          root.render(<CassationBallot state={cassation} ownId={ownId} cast={castCassation}/>);
-        }
-        return;
-      }
-      const state = hearingBallotState(view);
-      host.hidden = !state;
-      const next = JSON.stringify(state);
-      if (next===key) return;
-      key = next;
-      root.render(state && <Ballot {...state} cast={cast}/>);
-    },
-    destroy() { root.unmount(); host.hidden = true; },
-  };
+export function sessionBallotState(view:PlenaryView) {
+  if (view.phase==='ballot') {
+    const {round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
+    return {kind:'project' as const,state:{round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,
+      eligible:!!mandate && !politics?.suspended}};
+  }
+  if (view.cassation) return {kind:'cassation' as const,state:view.cassation};
+  const hearing = hearingBallotState(view);
+  return hearing && {kind:'hearing' as const,state:hearing};
+}
+
+export function SessionBallot({state,ownId,cast,castCassation}:{
+  state:NonNullable<ReturnType<typeof sessionBallotState>>;
+  ownId:string; cast:(vote:BillVote)=>void; castCassation:(candidate:string|null)=>void;
+}) {
+  if (state.kind==='project') return <ProjectBallot key={state.state.round} {...state.state} ownId={ownId} cast={cast}/>;
+  if (state.kind==='cassation') return <CassationBallot state={state.state} ownId={ownId} cast={castCassation}/>;
+  return <Ballot {...state.state} cast={cast}/>;
 }
