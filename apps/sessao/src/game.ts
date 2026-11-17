@@ -572,7 +572,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
       const normalZoom = Math.max(1.5,Math.min(cssWidth/550,cssHeight/290),cssHeight/(cssWidth<=680 ? 310 : 360));
-      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : normalZoom;
+      const roomOnRight = Math.max(0,cssWidth-phoneInset);
+      const phoneZoom = phoneInset ? Math.min(normalZoom,Math.max(.95,roomOnRight/120)) : normalZoom;
+      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : phoneZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
       if (resolution!==this.textResolution) {
@@ -764,7 +766,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (inSession) {
             camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
           } else {
-            const roomOnRight = Math.max(0,cssWidth-phoneInset);
             const offset = phoneInset ? Math.max(0,phoneInset+Math.min(110,roomOnRight/2)-cssWidth/2) : 0;
             camera.centerOn(x-offset/cssZoom,y);
           }
