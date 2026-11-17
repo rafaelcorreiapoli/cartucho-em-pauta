@@ -727,9 +727,6 @@ export class PlenaryMatch {
         }
         break;
       case 'interview': if (hasVoice && this.at(player,'tv')) this.election.interview(id,now); break;
-      case 'support':
-        if (this.election.currentCycle<=rules.cycles) this.election.support(id,action.to);
-        break;
       case 'object':
         if (this.proposal && this.at(player,'panel') && !this.objection() && this.election.object(id)) this.objector = id;
         break;
