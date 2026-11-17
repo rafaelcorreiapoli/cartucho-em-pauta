@@ -1026,8 +1026,12 @@ test('cash missions require an accepted in-person handover and use the actual am
   economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
   const accounts = Reflect.get(economy,'accounts');
   const game = new Gameplay();
+  const events:GameplayEvent[] = [];
   const world:GameplayWorld = {players,now:10,voice:()=>false,office:()=>undefined,earn:()=>{},
-    takeWallet:()=>2,publish:entry=>economy.recordGameplay(entry)};
+    takeWallet:()=>2,publish:entry=>{
+      events.push(entry);
+      economy.recordGameplay(entry);
+    }};
   accounts.get(sender.id).hasCashLot = (amount:number)=>game.hasCashLot(sender.id,amount);
   const draw = (id:string,kind:'dinheiroPresencialVinte'|'caixaDois')=>{
     const {agenda} = accounts.get(id);
@@ -1062,9 +1066,14 @@ test('cash missions require an accepted in-person handover and use the actual am
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('O portador ou objeto está fora de alcance.');
   expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(false);
   recipient.x = 148;
+  const beforeAccept = events.length;
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Objeto recebido.');
   expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(true);
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Pedido indisponível.');
+  expect(events.slice(beforeAccept)).toEqual([
+    expect.objectContaining({type:'transferred',actor:sender.id,target:recipient.id,item:exact.id,amount:2}),
+    expect.objectContaining({type:'cash-received',actor:recipient.id,target:sender.id,item:exact.id,amount:2}),
+  ]);
 });
 
 test('Raio X missions require the equipment and the corresponding targets',()=>{

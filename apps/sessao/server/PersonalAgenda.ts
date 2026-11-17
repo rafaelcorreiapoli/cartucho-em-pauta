@@ -22,7 +22,7 @@ const activityMissions = {
   plantaoEmergencia:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.place==='inside-crisis-room',
   fiscalizacaoParalela:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='safe',
   patrimonioSuspeito:(event:GameplayEvent) => event.type==='xray-target-revealed' && event.place==='npc',
-  dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='cash-handed-over' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
+  dinheiroPresencialVinte:(event:GameplayEvent) => event.type==='transferred' && event.amount===CASH_HANDOVER_MISSION_AMOUNT,
   caixaDois:(event:GameplayEvent) => event.type==='cash-received',
   varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
   limpeza:(event:GameplayEvent) => event.type==='spy-removed' && event.item!==undefined,

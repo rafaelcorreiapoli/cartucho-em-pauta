@@ -1676,14 +1676,14 @@ export class Gameplay {
         if (this.transfers.length>16) this.transfers.shift();
       }
       this.addToInventory(transferred,player.id);
-      if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
-      this.event(world,owner,'transferred',transferred.data,player.id);
       const amount = cashAmount(transferred.data);
+      if (amount) this.expose(player.id,transferred.data.id);
+      this.event(world,owner,'transferred',transferred.data,player.id,
+        amount && !owner.npc && !player.npc ? {amount} : undefined);
       if (!amount && !owner.npc && !player.npc && world.hasMission?.(player.id,'amizadeInstitucional')) {
         this.event(world,player,'item-received',transferred.data,owner.id,{witnesses:[]});
       }
       if (amount && !owner.npc && !player.npc) {
-        this.event(world,owner,'cash-handed-over',transferred.data,player.id,{amount,witnesses:[]});
         this.event(world,player,'cash-received',transferred.data,owner.id,{amount,witnesses:[]});
       }
       return 'Objeto recebido.';
