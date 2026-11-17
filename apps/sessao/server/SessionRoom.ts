@@ -98,7 +98,12 @@ export class SessionRoom extends Room {
     };
   }
 
-  private match = new PlenaryMatch(process.env.SESSAO_LOCAL_SOLO==='1' || process.env.SESSAO_PREVIEW_SOLO==='1' || (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined,this.stationCooldowns);
+  private readonly localSolo = process.env.SESSAO_LOCAL_SOLO==='1';
+  private match = new PlenaryMatch(
+    this.localSolo || process.env.SESSAO_PREVIEW_SOLO==='1' ||
+      (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined,
+    this.stationCooldowns,this.localSolo,
+  );
   private parliamentarians = new Parliamentarians();
   private npcTalk = new ParliamentarianTalk(this.parliamentarians,this.gameplay,this.match);
   private lastMatchView = new Map<string,string>();
@@ -185,7 +190,10 @@ export class SessionRoom extends Room {
     this.onMessage('start-match', (client, countRequest:unknown) => {
       if (!this.consumeRoomCommand(client.sessionId,countRequest)) return;
       const players = [...this.players.values()].map(state=>state.player);
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,(typeof countRequest==='object' && countRequest && 'infiltrators' in countRequest ? countRequest.infiltrators : countRequest)===2 ? 2 : 1)) {
+      const request = countRequest && typeof countRequest==='object' ? countRequest : {};
+      const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
+      const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);

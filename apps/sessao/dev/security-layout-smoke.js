@@ -106,8 +106,12 @@ async page => {
     if (!hasScene) throw Error('Primeiro quadro sem cenário na câmera '+name);
   }
   async function markCanvas(id) {
-    await canvas.evaluate((node,mark)=>{node.dataset.testCanvas = mark;},id);
-    return page.locator(`canvas[data-test-canvas="${id}"]`);
+    const channel = await canvas.evaluate((node,mark)=>{
+      node.dataset.testCanvas = mark;
+      return node.parentElement.dataset.channel;
+    },id);
+    // Phaser can reuse the same canvas element when a different channel opens.
+    return page.locator(`.spy-viewport[data-channel="${channel}"] canvas[data-test-canvas="${id}"]`);
   }
   await openCamera('Câmera Cafezinho');
   const first = await markCanvas('first');

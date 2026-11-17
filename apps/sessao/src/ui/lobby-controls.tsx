@@ -6,20 +6,20 @@ export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolea
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
     running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
-    npcCount:view.lobbyNpcCount ?? 2, rematch:view.phase==='finished', assetsReady,
+    canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? 2, rematch:view.phase==='finished', assetsReady,
   };
 }
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
   changeNpcCount:(count:number)=>void;
-  start:(infiltrators:number)=>void;
+  start:(infiltrators:number,asInfiltrator?:boolean)=>void;
   back:()=>void;
 };
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
   const [infiltrators,setInfiltrators] = useState(1);
-  const {running,host,players,minimum,npcCount,rematch,assetsReady} = state;
+  const {running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator} = state;
   const showInfiltrators = host && players>=6;
   const canStart = host && players>=minimum && assetsReady;
   const hint = players<minimum ? `${players}/${minimum} jogadores para iniciar` :
@@ -42,6 +42,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
             onClick={()=>commands.changeNpcCount(count)}>{count}</button>)}
         </div>
       </div>
+      {host && canStartAsInfiltrator && <button className="hud-button hud-button--secondary" type="button" disabled={!canStart}
+        onClick={()=>commands.start(showInfiltrators ? infiltrators : 1,true)}>Iniciar como infiltrado</button>}
     </div>
     <footer className="lobby-footer">
       <button className="hud-button hud-button--secondary" id="lobby-back" type="button" onClick={commands.back}>‹ Voltar</button>

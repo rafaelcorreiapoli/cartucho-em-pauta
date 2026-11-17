@@ -207,7 +207,11 @@ export class PlenaryMatch {
     }
   }
 
-  constructor(private readonly minimumPlayers = MIN_PLAYERS, private readonly stationCooldowns = new StationCooldowns()) {}
+  constructor(
+    private readonly minimumPlayers = MIN_PLAYERS,
+    private readonly stationCooldowns = new StationCooldowns(),
+    private readonly localSolo = false,
+  ) {}
 
   private ends = 0;
   private stability:number = stabilityRules.initial;
@@ -251,7 +255,7 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
@@ -261,10 +265,14 @@ export class PlenaryMatch {
     this.npcIds.clear();
     this.npcVotes.clear();
     this.initialPlayers = ids.length;
-    const candidates = [...players];
-    const count = ids.length===1 ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
+    const forceHost = this.localSolo && asInfiltrator;
+    const candidates = forceHost ? players.slice(1) : [...players];
+    const count = ids.length===1 && !forceHost ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
     this.infiltrators.clear();
-    for (let i=0;i<count;i++) this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
+    if (forceHost) this.infiltrators.add(requester);
+    while (this.infiltrators.size<count) {
+      this.infiltrators.add(candidates.splice(Math.floor(random()*candidates.length),1)[0].id);
+    }
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
@@ -818,7 +826,7 @@ export class PlenaryMatch {
   }
 
   private canSabotagePower(id:string,now:number) {
-    return this.electorate.size-this.disconnected.size>=2 && this.infiltrators.has(id) &&
+    return (this.electorate.size-this.disconnected.size>=2 || this.localSolo && this.initialPlayers===1) && this.infiltrators.has(id) &&
       this.canUsePower(now) && this.canHandleObjects(id,now) && this.power.canSabotage(now,this.powerCooldown(now));
   }
 
@@ -1109,6 +1117,7 @@ export class PlenaryMatch {
       election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient)) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
+      canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
