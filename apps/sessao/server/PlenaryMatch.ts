@@ -276,6 +276,7 @@ export class PlenaryMatch {
     this.economy.reset(contacts,random,(id,kind)=>{
       if (!campaignReady) return true;
       if (kind==='emenda') return !this.amended;
+      if (kind==='leitura') return this.phase!=='ballot' && !!this.proposal || this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       return this.election.canCampaignAction(id,kind);
     });
@@ -570,6 +571,7 @@ export class PlenaryMatch {
     this.ends = this.sessionEndsAt;
     if (!result) {
       this.cassationResult = {text:'Ninguém foi cassado. Nenhum suspeito recebeu a maioria dos votos.'};
+      if (now<this.sessionEndsAt) this.refreshAgendaEligibility(now);
       return;
     }
     const [target,votes] = result;
@@ -938,7 +940,7 @@ export class PlenaryMatch {
         this.phase = 'negotiation';
         this.ends = this.sessionEndsAt;
         if (now>=this.sessionEndsAt) this.finishAtDeadline();
-        else if (removed) this.refreshAgendaEligibility(now);
+        else this.refreshAgendaEligibility(now);
       }
       return;
     }

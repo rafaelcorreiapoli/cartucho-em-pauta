@@ -2220,3 +2220,38 @@ test('the cash handover mission tracks custody across stash, drop, collection an
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view().progression.xp).toBe(35);
 });
+
+test('the reading mission follows the last project available to study',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.library};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['leitura','cafe','passeio']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const filingAt = deadline-BALLOT_MS-projectRules.debateMs;
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='leitura');
+
+  match.refreshAgendaEligibility(filingAt);
+  expect(active(filingAt)).toBeDefined();
+  expect(match.roomActivity(player,'library',filingAt)?.text).toBe('Nenhum projeto em pauta.');
+  expect(view(filingAt).progression.xp).toBe(0);
+  expect(match.gameplayWorld([player],filingAt,()=>false).publish({
+    type:'filed',actor:player.id,item:1,project:0,at:filingAt,position:stations.amendment,witnesses:[],
+  })).toBe(true);
+  expect(match.roomActivity(player,'library',filingAt+1)?.text).toContain('Auxílio Churrasco');
+  const completed = view(filingAt+1).missions.completed.find(mission=>mission.kind==='leitura')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(filingAt+1).progression.xp).toBe(missionReward('leitura').xp);
+
+  const voteAt = filingAt+projectRules.debateMs;
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  expect(active(voteAt)).toBeUndefined();
+  expect(match.roomActivity(player,'library',voteAt+1)).toBeUndefined();
+  const xp = view(voteAt+1).progression.xp;
+  match.advance(deadline);
+  expect(active(deadline)).toBeUndefined();
+  expect(view(deadline).progression.xp).toBe(xp);
+});

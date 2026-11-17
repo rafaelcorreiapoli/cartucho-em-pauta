@@ -9,7 +9,7 @@ import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind}
 import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'votoNpc';
+export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'votoNpc'|'leitura';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
@@ -117,6 +117,7 @@ function agendaProductPrice(catalog:Parameters<typeof marketProduct>[0],item:Obj
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && metrics.canUseXray?.()===false) return false;
+  if (kind==='leitura') return metrics.canAgendaAction?.('leitura')!==false;
   if (kind==='dinheiroPresencialVinte') return metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)===true;
   if (kind==='heroiInesperado') return metrics.canFightCrisis?.()===true;
   if (kind==='manutencaoEmergencia') return metrics.canRepairOutage?.()===true;
