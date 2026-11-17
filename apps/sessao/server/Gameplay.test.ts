@@ -295,8 +295,9 @@ test('installations validate location, keep one occupant and serve each diner on
   game.act(bob,{kind:'install',place:'hall',item:second.id},world);
   expect(game.view(alice,world).interactive.map(item=>item.owner.id)).toEqual([bob.id]);
   expect(game.act(alice,{kind:'uninstall',item:first.id},world)).toBe('Aproxime-se do local.');
-  game.act(alice,{kind:'uninstall',item:second.id},world);
-  expect(game.view(alice,world).inventory[0].id).toBe(second.id);
+  expect(game.act(alice,{kind:'uninstall',item:second.id},world)).toBe('Retrato arrancado e destruído.');
+  expect(game.view(alice,world).inventory).toEqual([]);
+  expect(game.view(bob,world).inventory).toEqual([]);
   expect(game.view(alice,world).interactive).toEqual([]);
 });
 
@@ -310,7 +311,7 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     expect(buyCredentialGood(game,alice,site.kind,world)).toBe('Compra guardada no inventário.');
     const [item] = game.view(alice,world).inventory;
     expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
-    const approach = {x:site.point.x,y:site.point.y+10};
+    const approach = {x:site.point.x,y:site.point.y+(place==='libraryPortrait' ? 30 : 10)};
     expect(canStand(approach.x,approach.y)).toBe(true);
     expect(findRoute({x:140,y:146},approach).at(-1)).toEqual(approach);
     if (site.kind==='portrait') {
@@ -329,8 +330,14 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     }));
     const remove = decorationActions(bob.id,game.view(bob,world)).find(option=>option.action.kind==='uninstall')!;
     expect(remove.action).toEqual({kind:'uninstall',item:item.id});
-    expect(game.act(bob,remove.action,world)).toBe('Objeto retirado.');
-    game.act(bob,{kind:'drop',item:item.id},world);
+    if (site.kind==='portrait') {
+      expect(remove.label).toBe('Arrancar retrato');
+      expect(game.act(bob,remove.action,world)).toBe('Retrato arrancado e destruído.');
+      expect(game.view(bob,world).inventory).toEqual([]);
+    } else {
+      expect(game.act(bob,remove.action,world)).toBe('Objeto retirado.');
+      game.act(bob,{kind:'drop',item:item.id},world);
+    }
     expect(decorationActions(alice.id,game.view(alice,world))).toEqual([]);
   }
 });

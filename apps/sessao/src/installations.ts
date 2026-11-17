@@ -1,4 +1,6 @@
 import type { GameplayAction, GameplayView } from './gameplay';
+import { canInteract, type InteractionActor } from './interactions';
+import type { Motion } from './map';
 import { roomActivities } from './room-activities';
 
 export const vipAreaRadius = 12;
@@ -21,6 +23,10 @@ export const installationArt = {
   vip:{texture:'reservation-chair',sprite:'cadeira-reserva.webp',width:27,height:31,centerY:-9},
 } as const;
 
+export function canReachInstallation(actor:InteractionActor,point:Motion,kind:Installable) {
+  return canInteract(actor,point,kind==='portrait' ? {radius:38} : undefined);
+}
+
 export function decorationActions(playerId:string, state:Pick<GameplayView,'interactive'|'installable'|'inventory'>) {
   const actions:{label:string; action:GameplayAction}[] = [];
   for (const place of state.installable) {
@@ -36,7 +42,7 @@ export function decorationActions(playerId:string, state:Pick<GameplayView,'inte
       actions.push({label,action:{kind:'install',item:item.id,place}});
     }
     if (placed) actions.push({
-      label:portrait ? 'Retirar retrato' : 'Retirar placa VIP',
+      label:portrait ? (placed.owner.id===playerId ? 'Retirar retrato' : 'Arrancar retrato') : 'Retirar placa VIP',
       action:{kind:'uninstall',item:placed.id},
     });
   }

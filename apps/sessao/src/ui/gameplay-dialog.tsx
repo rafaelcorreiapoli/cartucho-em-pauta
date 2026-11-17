@@ -32,7 +32,7 @@ export function DecorationCard({decoration,ownId,exploring,send}:{
     {kind==='vip' && <p>Área reservada por {owner.name}</p>}
     {exploring && !privateOffice && (kind==='pizza' ? control('Pegar uma fatia','slice') : <>
       {kind==='portrait' && !marked && owner.id!==ownId && control('Rabiscar','mark')}
-      {control('Retirar','uninstall')}
+      {control(kind==='portrait' && owner.id!==ownId ? 'Arrancar retrato' : 'Retirar','uninstall')}
     </>)}
   </article>;
 }
