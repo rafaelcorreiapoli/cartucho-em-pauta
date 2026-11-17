@@ -1222,3 +1222,46 @@ test('Solenidade appears with a fresh rival portrait and disappears once another
   expect(render(visitor)).not.toContain(label);
   expect(view(visitor).progression.xp).toBe(0);
 });
+
+test('the Agenda credits a published selfie once even when both channels publish it',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...stations.press,
+  }));
+  const [author] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const mail = new InternalMail();
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','jornalismo','cafe','passeio']);
+    match.refreshAgendaEligibility();
+  };
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(author.id,players.map(({id})=>id),now).politics!;
+  const capture = (now:number)=>{
+    game.act(author,{kind:'selfie'},world(now));
+    return game.photoView(author.id,now).album.at(-1)!.photo;
+  };
+  draw();
+  const photo = capture(100);
+  expect(game.act(author,{kind:'photo-publish',item:photo.id},world(101))).toBe('Fotografia publicada no álbum público.');
+  expect(view(101).progression.xp).toBe(30);
+  draw();
+  expect(mail.publish(author,{subject:'Selfie',body:'Foto no álbum',attachment:{kind:'photo',id:photo.id}},world(102),
+    ()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  const {active,completed} = view(102).missions;
+  const pending = active.find(row=>row.kind==='publicouSelfie')!;
+  expect(renderToStaticMarkup(<MissionRow mission={pending}/>)).toContain('data-done="false"');
+  expect(completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(1);
+  expect(completed.some(row=>row.kind==='jornalismo')).toBe(true);
+
+  const newPhoto = capture(3_000);
+  expect(newPhoto.id).not.toBe(photo.id);
+  expect(game.act(author,{kind:'photo-publish',item:newPhoto.id},world(3_001))).toBe('Fotografia publicada no álbum público.');
+  const latest = view(3_001).missions.completed.at(-1)!;
+  expect(latest).toMatchObject({id:pending.id,kind:'publicouSelfie'});
+  expect(renderToStaticMarkup(<MissionRow mission={latest} done/>)).toContain('data-done="true"');
+});

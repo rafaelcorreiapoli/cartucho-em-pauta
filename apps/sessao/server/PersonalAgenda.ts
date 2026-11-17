@@ -154,6 +154,7 @@ export class PersonalAgenda {
   private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
+  private readonly rewardedSelfieIds = new Set<number>();
   private readonly rewardedItemIds = new Set<number>();
   private pickTarget(kind:Agenda) {
     const targets = this.targets.filter(person=>this.targetAvailable(kind,person.id));
@@ -324,7 +325,12 @@ export class PersonalAgenda {
       if (rule && (kind!=='pizzada' || scandalPizza)) {
         const photo = event.photo;
         const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
-        gains[kind] = this.countFacts(mission,rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event));
+        const facts = rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event);
+        if (kind==='publicouSelfie' && photo && facts.length) {
+          if (this.rewardedSelfieIds.has(photo.id)) continue;
+          this.rewardedSelfieIds.add(photo.id);
+        }
+        gains[kind] = this.countFacts(mission,facts);
       }
       if ((kind==='assinaturas' || kind==='comissaoImprovisada') && event.type==='edited' && event.item!==undefined) {
         const facts = this.factsByMission.get(mission.id);
