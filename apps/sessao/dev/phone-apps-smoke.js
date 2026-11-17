@@ -16,6 +16,21 @@ async page => {
     await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   };
   await dialog.getByRole('button',{name:'Telefone',exact:true}).waitFor();
+  const viewport = page.viewportSize();
+  await page.setViewportSize({width:800,height:450});
+  await dialog.evaluate(async phone=>{ await Promise.all(phone.getAnimations().map(animation=>animation.finished)); });
+  const phoneFrame = await dialog.boundingBox();
+  for (const app of await dialog.locator('#phone-apps').getByRole('button').all()) {
+    const bounds = await app.boundingBox();
+    if (!phoneFrame || !bounds || bounds.y<phoneFrame.y || bounds.y+bounds.height>phoneFrame.y+phoneFrame.height-8) {
+      throw Error('Aplicativo fora da tela do telefone em 800×450');
+    }
+  }
+  const pixApp = dialog.getByRole('button',{name:'Pix',exact:true});
+  await page.keyboard.press(await pixApp.getAttribute('aria-keyshortcuts'));
+  await dialog.getByRole('heading',{name:'Pix',exact:true}).waitFor();
+  await home();
+  await page.setViewportSize(viewport);
   if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');
   await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-phone.png'});
   await page.keyboard.press('2');

@@ -30,9 +30,16 @@ async page => {
   if (await slots.count()!==9) throw Error('Unexpected slot count');
   const bounds = async ()=>JSON.stringify(await Promise.all([dialog.boundingBox(),detail.boundingBox(),dialog.locator('.market-paging').boundingBox()]));
   await dialog.locator(".market-buy").waitFor();
-  for (const size of [{width:1024,height:600},{width:1280,height:720}]) {
+  for (const size of [{width:800,height:450},{width:1024,height:600},{width:1280,height:720}]) {
     await page.setViewportSize(size);
     const before = await bounds();
+    for (const selector of ['header button','.market-buy','.market-paging','.market-products']) {
+      const control = await dialog.locator(selector).boundingBox();
+      const frame = await dialog.boundingBox();
+      if (!control || !frame || control.y<frame.y || control.y+control.height>Math.min(frame.y+frame.height,size.height)) {
+        throw Error(`Controle cortado em ${size.width}×${size.height}: ${selector} ${JSON.stringify({control,frame})}`);
+      }
+    }
     await page.keyboard.press('ArrowRight');
     await dialog.getByRole('button',{name:'Página 2',exact:true}).waitFor();
     if (await dialog.getByRole('button',{name:'Página 2',exact:true}).getAttribute('aria-current')!=='page') {

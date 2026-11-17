@@ -779,6 +779,29 @@
 .market-buy:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
 .market-catalog .market-product-button:hover:not([aria-pressed="true"]) { border-color: #8bab8a; }
 
+@media (max-height: 560px) {
+  #market-dialog.market-catalog {
+    --market-card-height: clamp(72px,calc((100dvh - 230px) / 3),96px);
+    --market-card-gap: clamp(.35rem,1.25dvh,.7rem);
+    padding: 12px;
+  }
+  .market-catalog .market-toolbar { margin-bottom: 6px; }
+  .market-catalog-label { margin-block: 6px; }
+  .market-catalog-label span { padding-block: 3px; }
+  .market-catalog-layout {
+    height: calc(3 * var(--market-card-height) + 2 * var(--market-card-gap));
+    grid-template-rows: minmax(0,1fr);
+  }
+  .market-catalog .market-products {
+    gap: var(--market-card-gap);
+    grid-template-rows: repeat(3,var(--market-card-height));
+  }
+  .market-catalog .market-product-button { grid-template-rows: minmax(0,1fr) 38px; }
+  .market-catalog .market-product-caption { min-height: 0; font-size: .75rem; }
+  .market-detail { padding: 8px; }
+  .market-detail-art { height: 68px; }
+}
+
 #connection-latency {
   position: absolute;
   top: 4px;
