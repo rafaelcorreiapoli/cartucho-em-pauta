@@ -7,7 +7,7 @@ import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { agendaDurationMs, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { URGENT_CALL_MIN_MS, CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
@@ -29,7 +29,7 @@ const activityMissions = {
   varredura:(event:GameplayEvent) => event.type==='spy-discovered' && event.item!==undefined,
   limpeza:(event:GameplayEvent) => event.type==='spy-removed' && event.item!==undefined,
   flagraGabinete:(event:GameplayEvent) => event.type==='photo' && event.place==='foreign-office-subject',
-  heroiInesperado:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && (event.amount ?? 100)<30,
+  heroiInesperado:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.amount!==undefined && event.amount<CRISIS_MISSION_STABILITY_LIMIT,
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
   instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
   mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published',
@@ -378,7 +378,7 @@ export class PersonalAgenda {
         if (!samples) this.callSamples.set(mission.id,samples=new Map());
         const elapsed = (samples.get(call) ?? 0)+(event.duration ?? 0);
         samples.set(call,elapsed);
-        if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
+        if (elapsed>=URGENT_CALL_MIN_MS) gains[kind] = this.countFacts(mission,[{value:event.target}]);
       }
       if (kind==='amizadeInstitucional' && event.target && event.kind && !cashAmount(event.kind) &&
           this.targets.some(person=>person.id===event.target) && !this.visitedTargets.has(kind+':'+event.target) &&

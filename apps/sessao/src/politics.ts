@@ -15,6 +15,8 @@ export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
 export const TARGET_TRANSFER_AMOUNT = 1;
 export const CAMPAIGN_SPENDING_TARGET = 5;
+export const URGENT_CALL_MIN_MS = 10_000;
+export const CRISIS_MISSION_STABILITY_LIMIT = 30;
 export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
 export const SAVINGS_MISSION_AMOUNT = 10;
@@ -129,7 +131,7 @@ export const agendas = {
   reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
   tresSelfies:'Tire selfies em três salas públicas diferentes',
   plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
-  heroiInesperado:'Ajude a resolver uma crise com Estabilidade abaixo de 30',
+  heroiInesperado:`Ajude a resolver uma crise com Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`,
   varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
   limpeza:'Remova um dispositivo clandestino descoberto',
   fiscalizacaoParalela:'Revele o saldo do cofre de outro parlamentar com o Raio X',
@@ -153,7 +155,7 @@ export const agendas = {
   pixVinte:'Envie um Pix de R$ 20 mil',
   doisPix:'Receba Pix de dois jogadores distintos',
   debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
-  chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
+  chamadasUrgentes:`Faça chamadas de ${URGENT_CALL_MIN_MS/1000} segundos com dois colegas diferentes`,
   discursoMegafone:'Use o Megafone por 10 segundos',
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
   campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',

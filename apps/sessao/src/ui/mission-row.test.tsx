@@ -11,7 +11,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,URGENT_CALL_MIN_MS,agendaDurationMs,targetedAgendas,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -682,4 +682,12 @@ test('the signature mission keeps the signed document visible after a signer lea
   const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
+});
+
+test('the crisis and urgent call instructions use the same limits as the gameserver',()=>{
+  const call = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'chamadasUrgentes',current:1,target:2}}/>);
+  expect(call).toContain(`Faça chamadas de ${URGENT_CALL_MIN_MS/1000} segundos com dois colegas diferentes`);
+  expect(call).toContain('1 / 2');
+  const crisis = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'heroiInesperado',current:0,target:1}}/>);
+  expect(crisis).toContain(`Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`);
 });
