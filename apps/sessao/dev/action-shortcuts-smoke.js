@@ -48,7 +48,12 @@ async page => {
   await gameplay.getByRole('heading',{name:'Inventário',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await gameplay.waitFor({state:'hidden'});
-  await page.keyboard.press('c');
+  await apps.waitFor({state:'hidden'});
+  await page.keyboard.press('F2');
+  const openPhone = palette.getByRole('button',{name:'Celular',exact:true});
+  while (!await openPhone.count() && !await next.isDisabled()) await page.keyboard.press('ArrowRight');
+  await openPhone.waitFor();
+  await page.keyboard.press(await openPhone.getAttribute('aria-keyshortcuts'));
   await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await gameplay.waitFor({state:'hidden'});

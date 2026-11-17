@@ -306,7 +306,7 @@ async function connect(join: () => Promise<Room>) {
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
     },()=>assetsReady,()=>void joined.leave());
     let inVotingArea = false;
-    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts(),...appLauncher.shortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
     let phase: PlenaryView['phase'] = 'lobby';
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;

@@ -1,6 +1,7 @@
 import {HudIcon} from './hud-icon';
 import {useEffect, type CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
+import type {ShortcutEntry} from '../action-shortcuts';
 
 import {apps, type HudAppStatus, type LaunchHudApp} from '../hud-apps';
 
@@ -62,8 +63,9 @@ export function mountAppLauncher(launch:LaunchHudApp) {
     open = false;
     render();
   }
+  const visible = ()=>host.checkVisibility({visibilityProperty:true,opacityProperty:true});
   function toggle() {
-    if (!status.settings || !host.checkVisibility({visibilityProperty:true,opacityProperty:true})) return false;
+    if (!status.settings || !visible()) return false;
     open = !open;
     render();
     return true;
@@ -75,6 +77,14 @@ export function mountAppLauncher(launch:LaunchHudApp) {
   };
   return {
     activate,toggle,close,
+    shortcuts():ShortcutEntry[] {
+      if (!status.settings || !visible()) return [];
+      return [
+        ...apps.filter(app=>status[app.id]).map(app=>({name:app.label,activate:()=>{if (visible()) activate(app.id);}})),
+        ...(status.bag ? [{name:'Mochila',activate:()=>{if (visible()) activate('bag');}}] : []),
+        {name:'Aplicativos',activate:toggle},
+      ];
+    },
     render(next:HudAppStatus) {
       const key = JSON.stringify(next);
       if (key===previous) return;
