@@ -85,7 +85,18 @@ export function drawMap(scene: Phaser.Scene,
       securityTerminal?.(terminal);
       continue;
     }
-    if (name!=='Balcão da tesouraria') prop(2,x+13,y-17,19,23,y+1);
+    if (name==='Balcão do Topa ou Não Topa') {
+      const envelopes = scene.add.graphics().setDepth(y+21);
+      for (const offset of [8,19,30]) {
+        envelopes.fillStyle(0xffe8aa).fillRect(x+offset,y+1,8,5);
+        envelopes.lineStyle(0.5,0x8e6b39).lineBetween(x+offset,y+1,x+offset+4,y+4)
+          .lineBetween(x+offset+4,y+4,x+offset+8,y+1);
+      }
+      scene.add.text(x+22.5,y+9,'TOPA OU NÃO TOPA',{
+        fontFamily:'system-ui',fontSize:'3.5px',fontStyle:'bold',color:'#fff3d6',
+        backgroundColor:'#412064',padding:{x:2,y:1},resolution:4,
+      }).setOrigin(.5,0).setDepth(y+21);
+    } else if (name!=='Balcão da tesouraria') prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   for (const furnishing of furnishings) {

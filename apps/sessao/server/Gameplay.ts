@@ -1430,7 +1430,7 @@ export class Gameplay {
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';
     if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
     if (action.kind==='talk' || action.kind==='open-shop') {
-      const error = this.dialogues.open(player,action.target,action.kind==='open-shop');
+      const error = this.dialogues.open(player,action.target,action.kind==='open-shop',action.target==='silvio' && world.missionSwapUsed?.(id));
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
       return error;
     }
@@ -1446,7 +1446,10 @@ export class Gameplay {
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,
-      this.dialogueEligibility(id,world),this.documentsForProtocol(id),item=>this.fileDocument(player,item,world));
+      this.dialogueEligibility(id,world),this.documentsForProtocol(id),{
+        file:item=>this.fileDocument(player,item,world),
+        swapMissions:()=>world.swapMissions?.(id) ?? 'unavailable',
+      });
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
@@ -1636,7 +1639,7 @@ export class Gameplay {
         if (!data.document || data.document.project===undefined) return 'Selecione um documento de projeto.';
         const project = Number(action.target);
         if (!action.target || !/^[0-9]+$/.test(action.target) || !Number.isInteger(project) || !bills[project] || project===data.document.project) return 'Escolha outro projeto.';
-        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return 'Aproxime-se da estação de Reprografia.';
+        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return 'Aproxime-se da copiadora da Central de Expediente.';
         if (this.forgery.has(id)) return 'Adulteração em andamento.';
         this.forgery.set(id,{item:data.id,project,end:world.now+documentRules.forgeryMs});
         return 'Adulteração iniciada.';

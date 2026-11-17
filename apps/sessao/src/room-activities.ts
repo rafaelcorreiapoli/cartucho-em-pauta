@@ -6,4 +6,4 @@ export const roomActivities = {
 export type RoomActivity = keyof typeof roomActivities;
 export type RoomActivityResult = {activity:RoomActivity; text?:string; unavailable?:true};
 
-export const reprography = {x:748,y:495,title:'Sala de Reprografia'} as const;
+export const reprography = {x:748,y:495,title:'Copiadora da Central de Expediente'} as const;

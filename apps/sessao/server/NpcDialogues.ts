@@ -1,3 +1,4 @@
+import type { MissionSwapResult } from './PersonalAgenda';
 import { canReachObject } from '../src/gameplay';
 import type { Player } from '../src/map';
 import { dialogues, npcs, type DialogueCondition, type DialogueNode, type DialogueOption, type DialogueView, type NpcId } from '../src/npcs';
@@ -34,11 +35,12 @@ export class NpcDialogues {
     return (Object.keys(npcs) as NpcId[]).filter(key=>this.nearby(player,key));
   }
 
-  open(player:Player, target?:string, direct=false) {
+  open(player:Player, target?:string, direct=false, missionSwapUsed=false) {
     if (!target || !Object.hasOwn(npcs,target) || !this.nearby(player,target as NpcId)) return 'Aproxime-se para conversar.';
     const npc = target as NpcId;
     if (direct && !npcs[npc].catalog) return 'Converse com o atendente.';
-    this.sessions.set(player.id,{npc,node:'start',shop:direct,direct,token:++this.serial});
+    const node = npc==='silvio' && missionSwapUsed ? 'used' : 'start';
+    this.sessions.set(player.id,{npc,node,shop:direct,direct,token:++this.serial});
   }
 
   private active(player:Player) {
@@ -48,21 +50,22 @@ export class NpcDialogues {
   }
 
   choose(player:Player, choice:string|undefined, token:number|undefined, eligible:Eligibility,
-    documents:readonly Document[], file:(item:number)=>string) {
+    documents:readonly Document[], effects:{file:(item:number)=>string;swapMissions:()=>MissionSwapResult}) {
     const session = this.active(player);
     if (!session || token!==session.token) return 'Esta conversa já mudou.';
     const option = this.options(session,eligible,documents).find(entry=>entry.id===choice);
     if (!option) return 'Opção indisponível.';
     if (option.fileItem!==undefined) {
       session.token = ++this.serial;
-      session.feedback = file(option.fileItem);
+      session.feedback = effects.file(option.fileItem);
       return session.feedback;
     }
     if (option.action==='close') {
       this.close(player.id);
       return;
     }
-    if (option.next) session.node = option.next;
+    if (option.action==='swap-missions') session.node = effects.swapMissions();
+    else if (option.next) session.node = option.next;
     session.shop = option.action==='shop';
     session.token = ++this.serial;
   }

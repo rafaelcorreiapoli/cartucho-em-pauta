@@ -1,3 +1,4 @@
+import { PlenaryMatch } from './PlenaryMatch';
 import { xray } from '../src/equipment';
 import { money } from '../src/politics';
 import { contextActionKeys } from '../src/ui/context-action-keys';
@@ -31,6 +32,59 @@ function setup() {
     earn:()=>{},publish:event=>events.push(event)};
   return {alice,bob,watcher,events,game,world};
 }
+
+test('Silvio trades three missions once per player and keeps the copier reachable',()=>{
+  const {alice,bob,game} = setup();
+  const match = new PlenaryMatch(1);
+  const players = [alice,bob];
+  expect(match.start(alice.id,players,0,()=>0)).toBe(true);
+  const world = match.gameplayWorld(players,1,()=>false);
+  const politics = (player:Player)=>match.view(player.id,players.map(({id})=>id),world.now).politics!;
+  const atCounter = npcs.silvio.interaction;
+  const copier = terminals.reprography.point;
+  const doorway = {x:800,y:390};
+  expect(findRoute(doorway,atCounter).at(-1)).toEqual(atCounter);
+  expect(findRoute(atCounter,copier).at(-1)).toEqual(copier);
+
+  const talk = (player:Player)=>game.act(player,{kind:'talk',target:'silvio'},world);
+  const dialogue = (player:Player)=>game.view(player,world).dialogue!;
+  const choose = (player:Player,target:string,token=dialogue(player).token)=>
+    game.act(player,{kind:'dialogue-choice',target,token},world);
+  expect(talk(alice)).toBe('Aproxime-se para conversar.');
+  Object.assign(alice,atCounter);
+  const before = politics(alice);
+  const other = politics(bob).missions;
+
+  expect(talk(alice)).toBeUndefined();
+  expect(choose(alice,'confirm-trade')).toBe('Opção indisponível.');
+  choose(alice,'trade');
+  const expired = dialogue(alice).token;
+  Object.assign(alice,copier);
+  expect(choose(alice,'confirm-trade',expired)).toBe('Esta conversa já mudou.');
+  expect(politics(alice).missions).toEqual(before.missions);
+
+  Object.assign(alice,atCounter);
+  talk(alice);
+  choose(alice,'trade');
+  const confirmation = dialogue(alice).token;
+  choose(alice,'confirm-trade',confirmation);
+  expect(dialogue(alice).text).toContain('Três missões novas');
+  const after = politics(alice);
+  expect(after.missions.active).toHaveLength(3);
+  expect(after.missions.active.some(mission=>before.missions.active.some(old=>old.kind===mission.kind))).toBe(false);
+  expect(after.missions.completed).toEqual(before.missions.completed);
+  expect(after.wallet).toBe(before.wallet);
+  expect(after.progression?.xp).toBe(before.progression?.xp);
+  expect(politics(bob).missions).toEqual(other);
+
+  expect(choose(alice,'confirm-trade',confirmation)).toBe('Esta conversa já mudou.');
+  talk(alice);
+  expect(dialogue(alice).text).toContain('Você já abriu seus três envelopes');
+  expect(politics(alice).missions).toEqual(after.missions);
+  Object.assign(bob,atCounter);
+  talk(bob);
+  expect(dialogue(bob).options).toContainEqual({id:'trade',label:'Trocar minhas 3 missões'});
+});
 
 test('custody moves exactly once and requests are private', () => {
   const {alice,bob,watcher,events,game,world} = setup();

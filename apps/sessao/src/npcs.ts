@@ -17,6 +17,8 @@ export const npcs = {
     interaction:{x:83,y:247},dialogue:'secretary',label:'Secretaria',catalog:undefined},
   protocol:{name:'Seu Mauro',sprite:'mauro-protocolo.webp',x:127,y:338,direction:0,
     interaction:{x:129,y:365},dialogue:'protocol',label:'Protocolo',catalog:undefined},
+  silvio:{name:'Silvio Santos',sprite:'silvio-santos.webp',...mapPoint('Silvio Santos'),direction:0,
+    interaction:mapPoint('Balcão do Topa ou Não Topa: atendimento'),dialogue:'topa',label:'Topa ou Não Topa',catalog:undefined},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
@@ -41,7 +43,7 @@ export type DialogueOption = {
   id:string;
   label:string;
   next?:string;
-  action?:'shop'|'close';
+  action?:'shop'|'close'|'swap-missions';
   requires?:DialogueCondition;
   fileItem?:number;
 };
@@ -56,6 +58,34 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
   protocol:{
     start:{
       text:'Qual documento você quer protocolar? Projetos só precisam das assinaturas exigidas.',
+      options:[{id:'leave',label:'Encerrar',action:'close'}],
+    },
+  },
+  topa:{
+    start:{
+      text:'Você fica com as suas três missões ou troca por tudo que está nos envelopes? A produção me garante que todas são urgentes.',
+      options:[
+        {id:'trade',label:'Trocar minhas 3 missões',next:'confirm'},
+        {id:'leave',label:'Ficar com a minha agenda',action:'close'},
+      ],
+    },
+    confirm:{
+      text:'A troca é grátis e vale uma vez por partida. Você perde o progresso das três missões atuais e fica com as recompensas que já ganhou.',
+      options:[
+        {id:'confirm-trade',label:'Abrir os três envelopes',action:'swap-missions'},
+        {id:'leave',label:'Ficar com a minha agenda',action:'close'},
+      ],
+    },
+    swapped:{
+      text:'Ma ôe! Três missões novas na sua agenda. Pode levar, que o intervalo comercial acabou!',
+      options:[{id:'leave',label:'Encerrar',action:'close'}],
+    },
+    used:{
+      text:'Você já abriu seus três envelopes nesta partida. Agora é com você, meu colega!',
+      options:[{id:'leave',label:'Encerrar',action:'close'}],
+    },
+    unavailable:{
+      text:'A produção não conseguiu separar três missões novas agora. Sua agenda continua valendo.',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
