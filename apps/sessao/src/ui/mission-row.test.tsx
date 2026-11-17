@@ -477,9 +477,12 @@ test.each([false,true])('Investigação Particular tracks reachable distinct cam
     expect(economy.spend(player.id,view(recoveredAt).wallet)).toBe(true);
     Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
     Object.assign(player,{x:933,y:244});
-    game.spyAction(player,{kind:'remove',site:'press'},at(recoveredAt));
+    game.spyAction(player,{kind:'recover',site:'press'},at(recoveredAt));
     const removedAt = recoveredAt+spyRules.remove;
     game.tick(at(removedAt),true);
+    const portable = game.view(player,at(removedAt)).inventory.find(item=>item.kind==='spyCamera' && item.id!==recovered.id)!;
+    expect(progress(removedAt).current).toBe(1);
+    game.act(player,{kind:'drop',item:portable.id},at(removedAt));
     const remaining = view(removedAt).missions;
     const hud = remaining.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
     expect(hud).not.toContain('Consulte duas câmeras escondidas próprias');
@@ -895,8 +898,11 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},world(now));
   tick(spyRules.install);
   expect(active().id).toBe(retry.id);
-  game.spyAction(player,{kind:'remove',site:'coffee'},world(now));
+  game.spyAction(player,{kind:'recover',site:'coffee'},world(now));
   tick(spyRules.remove);
+  const portable = game.view(player,world(now)).inventory.find(item=>item.kind==='wiretap')!;
+  expect(active().id).toBe(retry.id);
+  game.act(player,{kind:'drop',item:portable.id},world(now));
   expect(game.owns(player.id,'wiretap')).toBe(false);
   expect(active()).toBeUndefined();
   expect(view().missions.active).toHaveLength(3);

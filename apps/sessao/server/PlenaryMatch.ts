@@ -300,7 +300,8 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    if (event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
+    if (droppedSpy || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }
