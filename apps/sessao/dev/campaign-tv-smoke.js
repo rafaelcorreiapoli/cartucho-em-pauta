@@ -64,7 +64,8 @@ async page => {
         await image.decode();
       });
       await client.clock.install();
-      await client.clock.pauseAt(new Date(await client.evaluate(()=>Date.now())+1000));
+      // Give the remote browser room to receive the clock command under CI load.
+      await client.clock.pauseAt(new Date(Date.now()+10_000));
     }
     await advertiser(page).dispatchEvent('click');
     const rafa = await Promise.all([checkAd(page,'Rafa','left',true),checkAd(guest,'Rafa','right',false)]);
