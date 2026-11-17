@@ -1,3 +1,7 @@
+import { xray } from '../src/equipment';
+import { money } from '../src/politics';
+import { contextActionKeys } from '../src/ui/context-action-keys';
+import { xrayRechargeAction } from '../src/ui/xray-recharge-action';
 import { Parliamentarians } from './Parliamentarians';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
@@ -639,6 +643,7 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   const revealed = ()=>events.filter(event=>event.type==='xray-target-revealed');
   const activate = () => game.act(alice,{kind:'scan-xray'},world);
   const vision = () => game.view(alice,world).xrayVision;
+  const recharge = (wallet?:number) => xrayRechargeAction(game.view(alice,world),wallet);
   expect(activate()).toBe('Equipe o Raio X.');
   game.act(alice,{kind:'equip',item:scanner.id},world);
   expect(activate()).toBe('Raio X ativado.');
@@ -681,9 +686,21 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(activate()).toBe('Raio X ativado.');
   expect(activate()).toBe('Raio X desativado.');
   expect(activate()).toContain('sem cargas');
+  expect(recharge(xray.rechargePrice)).toBeUndefined();
   expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('Apoio Técnico');
   Object.assign(alice,npcs.vendor);
+  const noFunds = recharge(0)!;
+  expect(noFunds).toEqual({label:'Recarregar Raio X · '+money(xray.rechargePrice),disabled:true});
+  expect(contextActionKeys([{kind:'action',visible:true,enabled:!noFunds.disabled}],false,false).buttons[0].key).toBeUndefined();
+  const spend = world.spend;
+  world.spend = ()=>false;
+  expect(game.act(alice,{kind:'recharge-xray'},world)).toBe('Saldo insuficiente.');
+  expect(scanner.charges).toBe(0);
+  world.spend = spend;
+  expect(recharge(xray.rechargePrice)?.disabled).toBe(false);
   expect(game.act(alice,{kind:'recharge-xray'},world)).toContain('3/3');
+  expect(recharge(xray.rechargePrice)).toBeUndefined();
+  expect(game.act(alice,{kind:'recharge-xray'},world)).toBe('Raio X já está carregado.');
   expect(spent).toBe(6);
   expect(events.filter(event=>event.type==='xray-scanned' || event.type==='xray-recharged').map(event=>event.witnesses)).toEqual([[],[],[],[]]);
 });

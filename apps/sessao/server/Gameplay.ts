@@ -25,7 +25,7 @@ import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { gearConflict, binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, type Gear } from '../src/equipment';
+import { gearConflict, binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, xrayNeedsRecharge, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -1240,7 +1240,7 @@ export class Gameplay {
     if (!item) return 'Equipe o Raio X.';
     if (action.kind==='recharge-xray') {
       if (!canReachObject(player,npcs.vendor)) return 'Recarregue no Apoio Técnico.';
-      if ((item.charges ?? 0)>=xray.capacity) return 'Raio X já está carregado.';
+      if (!xrayNeedsRecharge(item.charges)) return 'Raio X já está carregado.';
       if (!world.spend?.(player.id,xray.rechargePrice)) return 'Saldo insuficiente.';
       item.charges = xray.capacity;
       this.event(world,player,'xray-recharged',item,undefined,{witnesses:[]});
