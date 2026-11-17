@@ -87,7 +87,8 @@ async page => {
     await page.keyboard.press('F2');
     const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
     const option = palette.getByRole('button',{name,exact:true});
-    if (!await option.count()) await page.keyboard.press('ArrowRight');
+    const next = palette.getByRole('button',{name:'Próxima página'});
+    while (!await option.count() && !await next.isDisabled()) await page.keyboard.press('ArrowRight');
     await option.waitFor();
     await page.keyboard.press(await option.getAttribute('aria-keyshortcuts'));
     await palette.waitFor({state:'hidden'});
@@ -164,5 +165,9 @@ async page => {
   for (const kind of ['baton','binoculars','voiceModulator']) {
     await page.locator(`#equipped-gear .equipped-gear-tile[data-kind=${kind}]`).waitFor();
   }
+  const equippedBinoculars = page.locator('#equipped-gear .equipped-gear-tile[data-kind="binoculars"]');
+  await equippedBinoculars.evaluate(button=>button.setAttribute('aria-label','Botão de equipamento alterado'));
+  await chooseFromPalette('Binóculo');
+  await equippedBinoculars.and(page.locator('[data-active="true"]')).waitFor();
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('A loja tentou acessar o microfone');
 }

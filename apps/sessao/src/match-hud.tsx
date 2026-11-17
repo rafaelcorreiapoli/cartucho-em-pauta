@@ -210,6 +210,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     notify,
     showReward:rewards.show,
     refreshActions:()=>actions(),
+    equippedShortcuts:gear.shortcuts,
     contextualShortcuts:()=>stations.hidden ? [] : [...paletteActions].map(([id,{name}])=>({
       name,activate:()=>{ if (!stations.hidden) paletteActions.get(id)?.activate(); },
     })),
