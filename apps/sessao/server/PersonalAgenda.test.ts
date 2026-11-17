@@ -871,7 +871,7 @@ test('coffee delivery counts accepted cups for three distinct available human re
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(1);
   const mission = active().active.find(({kind})=>kind==='entrega');
   economy.updateAgendaEligibility(new Set([host.id,caio.id,dani.id]),3);
-  expect(active().active).toContainEqual(mission);
+  expect(active().active.find(({kind})=>kind==='entrega')).toEqual(mission);
   deliver(caio);
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(2);
   deliver(dani);
