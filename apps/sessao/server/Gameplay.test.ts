@@ -209,7 +209,7 @@ test('spawned and dropped cash share visibility and custody without immediate re
 test('cash skips reachable floor where the sprite would overlap a map prop', () => {
   const {alice,game,world} = setup();
   const blocked = [
-    {x:520,y:46}, // Desk and chair in the Archive.
+    {x:520,y:46}, // Desk and chair in the Protocol office.
     {x:211,y:199}, // Plant in the Cafezinho.
     {x:600,y:240}, // Reserved chair, including when empty.
     {x:280,y:301}, // Portrait mount, including when empty.

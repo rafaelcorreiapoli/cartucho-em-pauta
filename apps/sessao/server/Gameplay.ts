@@ -760,7 +760,7 @@ export class Gameplay {
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
       vitality:this.combat.view(player,world.now),
-      treatment:this.treatmentOffer(player,world),
+      treatment:this.treatmentOffer(player,world.now),
       modulator,
       decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
         localPerception(player,item,this.vision(player.id,world.now)).visible),
@@ -1404,27 +1404,24 @@ export class Gameplay {
     return 'Guardado no inventário.';
   }
 
-  private treatmentAvailable(player:Player, now:number) {
-    if (player.knockedOut || !canReachObject(player,infirmary)) return;
+  private treatmentPatient(player:Player, now:number) {
+    if (!canReachObject(player,infirmary.doctor)) return;
     const patient = this.transport.passenger(player) ?? player;
     const {hp,max} = this.combat.view(patient,now);
-    if (hp<max) return {target:patient===player ? undefined : patient.id};
+    if (hp<max) return patient;
   }
 
-  private treatmentOffer(player:Player,world:GameplayWorld):GameplayView['treatment'] {
-    const patient = this.treatmentAvailable(player,world.now);
-    if (!patient) return;
-    const wallet = world.wallet?.(player.id);
-    return {...patient,price:infirmary.price,affordable:wallet===undefined ? undefined : wallet>=infirmary.price};
+  private treatmentOffer(player:Player,now:number):GameplayView['treatment'] {
+    const patient = this.treatmentPatient(player,now);
+    if (patient) return {target:patient===player ? undefined : patient.id};
   }
 
   private treat(player:Player, world:GameplayWorld) {
-    if (!this.treatmentAvailable(player,world.now)) return 'Atendimento indisponível.';
-    const patient = this.transport.passenger(player) ?? player;
-    if (!world.spend?.(player.id,infirmary.price)) return 'Saldo insuficiente para o atendimento.';
+    const patient = this.treatmentPatient(player,world.now);
+    if (!patient) return 'Atendimento indisponível.';
     const recovering = patient.knockedOut;
     this.transport.detach(patient,world);
-    this.combat.treat(patient,infirmary.healing,world.now);
+    this.combat.treat(patient,world.now);
     if (recovering) publishGameplay(world,patient,'character-recovered');
     publishGameplay(world,player,'treated',{target:patient.id});
     return 'Atendimento concluído.';

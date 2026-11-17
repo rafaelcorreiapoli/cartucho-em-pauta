@@ -72,7 +72,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
     if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
     const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
     if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
-    const treatment = treatmentAction(state.treatment,view?.politics?.wallet);
+    const treatment = treatmentAction(state.treatment);
     if (treatment) actions.push({...treatment,icon:'shield',action:{kind:'treat'}});
     if (player.carrying) {
       actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});

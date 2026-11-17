@@ -1,6 +1,6 @@
 export const roomActivities = {
   coffee: {x:240,y:250, title:'Cafezinho', label:'Beber café', icon:'coffee'},
-  library: {x:424,y:364, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},
+  library: {x:370,y:488, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},
 } as const satisfies Record<string, {x:number; y:number; title:string; label:string; icon:string}>;
 
 export type RoomActivity = keyof typeof roomActivities;
