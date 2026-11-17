@@ -7,6 +7,7 @@ import {missionReward} from '../politics';
 import type {Player} from '../map';
 import {NEGOTIATION_MS} from '../plenary';
 import {terminals} from '../gameplay';
+import {stationRecharge} from '../station-recharge';
 import {installationSites} from '../installations';
 import {npcs} from '../npcs';
 import {createHudModel} from './hud-model';
@@ -183,6 +184,45 @@ test('the HUD preserves Pizzada progress after a served guest leaves the match',
   hud.render(match.view(host.id,remainingIds,8));
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('pizzada').xp);
+});
+
+test('the HUD preserves completed coffee deliveries when a recipient leaves',()=>{
+  const host = {...player};
+  const recipients = ['bia','caio','dani'].map(id=>({...player,id,nick:id}));
+  const players = [host,...recipients];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  match.start(host.id,players,0,()=>0);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['entrega','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  let now = 0;
+  const deliver = (guest:Player)=>{
+    now += stationRecharge.coffee.duration;
+    const world = match.gameplayWorld(players,now,()=>false);
+    expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+    const coffee = game.view(host,world).inventory.find(item=>item.kind==='coffee')!;
+    expect(game.act(host,{kind:'offer',item:coffee.id,target:guest.id},world)).toBe('Pedido enviado.');
+    const request = game.view(guest,world).requests[0];
+    expect(game.act(guest,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
+  };
+
+  const hud = createHudModel();
+  deliver(recipients[0]);
+  match.leave(recipients[0].id,++now);
+  const present = ids.filter(id=>id!==recipients[0].id);
+  hud.render(match.view(host.id,present,now));
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'entrega',current:1,target:3}));
+  const xp = hud.profile.get()?.xp ?? 0;
+  deliver(recipients[1]);
+  deliver(recipients[2]);
+  hud.render(match.view(host.id,present,now));
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'entrega',current:3,target:3}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('entrega').xp);
 });
 
 test('the HUD replaces a credited voting mission without offering it again on the last ballot',()=>{

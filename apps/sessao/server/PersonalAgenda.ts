@@ -137,7 +137,6 @@ export class PersonalAgenda {
   private savingsStartingWallet = 0;
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
-  private missionCoffee = new Set<string>();
   private seenEvents = new Set<string>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
   private npcCount = 0;
@@ -228,7 +227,7 @@ export class PersonalAgenda {
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
       if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' ||
-          mission.kind==='chamadasUrgentes' || mission.kind==='selfie' || mission.kind==='fatias') {
+          mission.kind==='chamadasUrgentes' || mission.kind==='selfie' || mission.kind==='fatias' || mission.kind==='entrega') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
@@ -456,6 +455,9 @@ export class PersonalAgenda {
         if (event.type==='room-left') mission.current = 0;
         if (event.type==='room-time') gains[kind] = event.duration ?? 0;
       }
+      if (kind==='entrega' && event.type==='transferred' && event.kind==='coffee' && event.target) {
+        gains[kind] = this.countFacts(mission,[{value:event.target}]);
+      }
       if (kind==='passeio' && event.type==='room-entered' && event.place && !event.target &&
           event.place!=='Sala de Isolamento' && !privateOffices.some(office=>office.name===event.place)) {
         gains.passeio = this.countFacts(mission,[{value:event.place}]);
@@ -464,12 +466,7 @@ export class PersonalAgenda {
           kind==='produtividade' && event.place==='own-office')) ||
           (event.type==='room-time' && event.place==='Cafezinho' && kind==='pausaCafe')) gains[kind] = event.duration ?? 0;
     }
-    if (event.kind==='coffee') {
-      if (event.type==='used') gains.cafe = 1;
-      if (event.type==='transferred' && event.target && this.missions.some(mission=>mission.kind==='entrega')) {
-        this.missionCoffee.add(event.target);
-      }
-    }
+    if (event.kind==='coffee' && event.type==='used') gains.cafe = 1;
     this.progress(metrics,gains);
   }
 
@@ -591,7 +588,6 @@ export class PersonalAgenda {
       if (kind==='poupancaInstitucional') this.savingsStartingWallet = metrics.wallet;
       if (kind==='fortuna') target = Math.max(target,metrics.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,metrics.popularity+15));
-      if (kind==='entrega') this.missionCoffee.clear();
       const person = Object.hasOwn(targetedAgendas,kind) ? this.pickTarget(kind) : undefined;
       this.missions.push({id:++this.nextMissionId,kind,current:0,target,person});
     }
@@ -601,7 +597,6 @@ export class PersonalAgenda {
     if (mission.kind==='poupancaInstitucional') return Math.max(0,Math.round((metrics.wallet-this.savingsStartingWallet)*10)/10);
     if (mission.kind==='fortuna') return metrics.wallet;
     if (mission.kind==='campanha') return metrics.popularity;
-    if (mission.kind==='entrega') return this.missionCoffee.size;
     return mission.current;
   }
 

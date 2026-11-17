@@ -869,10 +869,19 @@ test('coffee delivery counts accepted cups for three distinct available human re
   deliver(bia);
   deliver(bia);
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(1);
+  const mission = active().active.find(({kind})=>kind==='entrega');
+  economy.updateAgendaEligibility(new Set([host.id,caio.id,dani.id]),3);
+  expect(active().active).toContainEqual(mission);
   deliver(caio);
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(2);
   deliver(dani);
   expect(active().completed).toContainEqual(expect.objectContaining({kind:'entrega',current:3,target:3}));
+
+  draw();
+  deliver(bia);
+  economy.updateAgendaEligibility(new Set([host.id,bia.id,caio.id]),3);
+  expect(active().active.some(({kind})=>kind==='entrega')).toBe(false);
+  expect(active().completed.filter(({kind})=>kind==='entrega')).toHaveLength(1);
 });
 
 test('solo players with NPCs are not offered human transfer or group photo missions',()=>{
