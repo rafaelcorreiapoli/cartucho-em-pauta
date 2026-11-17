@@ -2,7 +2,7 @@ import {billVoteKeys,projectVoteLabels} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
-import {agendaProject,bills,BALLOT_MS,fundedProjectStability,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {agendaProject,bills,BALLOT_MS,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
 import {money} from '../politics';
 import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
@@ -19,13 +19,12 @@ function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
 }
 
 export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;budget:number;approved:boolean;detail?:string}) {
-  const balance = budget+Math.min(0,impact.budget);
-  const stability = fundedProjectStability(impact,budget,balance);
+  const balance = Math.round((budget+Math.min(0,impact.budget))*10)/10;
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><HudIcon name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><HudIcon name="shield"/><ImpactValue value={stability}/> Estabilidade</span>
+    <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
     <span><HudIcon name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
-    {balance<0 && <small className="project-ballot-deficit">Déficit de {money(-balance)}</small>}
+    {balance<0 && <small className="project-ballot-deficit">Dívida após a votação de {money(-balance)}</small>}
     {detail && <small>{detail}</small>}
   </div>;
 }

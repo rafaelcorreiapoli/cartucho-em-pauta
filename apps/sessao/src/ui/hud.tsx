@@ -4,7 +4,7 @@ import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
 import {settingsApp} from '../hud-apps';
-import { stabilityRules } from '../plenary';
+import { stabilityRules, publicDebtRules, publicDebtStabilityLoss } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
@@ -38,7 +38,7 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
-export function ParliamentMetrics({stability,budget,sessionRemaining}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -54,9 +54,13 @@ export function ParliamentMetrics({stability,budget,sessionRemaining}:ReturnType
       <Laurel right/>
     </div>
     <HudHelpButton className="congress-budget flex items-center justify-center"
-      help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
-      <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
+      data-in-debt={budget<0}
+      help={`Projetos e despesas obrigatórias podem gerar dívida. A cada ${publicDebtRules.interval/1000} s, cada R$ 10 mil de dívida ou fração custa 1 ponto de estabilidade, até ${publicDebtRules.maximumLoss}. Depósitos na Tesouraria abatem a dívida.`}>
+      <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelpButton>
+    {debtPenaltyIn!==undefined && <div className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
+      <HudIcon name="alert"/><span>Dívida</span><strong>−{publicDebtStabilityLoss(budget)} de estabilidade em {debtPenaltyIn} s</strong>
+    </div>}
     {sessionRemaining!==undefined && <div className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
       <HudIcon name="clock"/><span>Fim da sessão</span>

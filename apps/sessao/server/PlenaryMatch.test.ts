@@ -15,7 +15,7 @@ import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT } from '../src/politics';
 
-import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, publicDebtStabilityLoss, publicDebtRules } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -472,7 +472,7 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.economySummary(game.physicalCash())).toMatchObject({projects:28,discrepancy:0});
   match.advance(ELECTION_RULES.interval);
-  expect(match.economySummary(game.physicalCash())).toMatchObject({publicDuty:4.2,salaries:2.7,discrepancy:0});
+  expect(match.economySummary(game.physicalCash())).toMatchObject({budget:-8,publicDuty:6,salaries:9,discrepancy:0});
 });
 
 test('NPC issuance, paid agreements, robbery and reserve fees conserve the same funds',()=>{
@@ -627,20 +627,46 @@ test('a station rejects a nearby player blocked by a barrier or carrying someone
   expect(game.drinkStationCoffee(nearby,world)).toBe('Café bebido.');
 });
 
-test('an approved project with a fractional deficit applies the same rounded penalty shown by the client',()=>{
+test('a project applies its full impact and public debt drains stability until repaid',()=>{
   const match = new PlenaryMatch(1);
-  expect(match.start(host.id,[host],0,()=>0)).toBe(true);
+  const ids = [host.id];
+  match.start(host.id,[host],0,()=>0);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
   publishProjectFiling(match,host);
-  expect(match.view(host.id,[host.id],0).stability).toBe(stabilityRules.initial);
   Reflect.set(match,'budget',24.7);
   match.advance(NEGOTIATION_MS);
   match.vote(host.id,'yes',NEGOTIATION_MS+1);
-  match.advance(NEGOTIATION_MS+BALLOT_MS);
-  const outcome = match.view(host.id,[host.id],0).outcome!;
-  expect(outcome.passed).toBe(true);
-  expect(outcome.deficit).toBeCloseTo(3.3);
-  expect(deficitStabilityLoss(outcome.deficit)).toBe(7);
-  expect(outcome.applied.stability).toBe(Math.floor(22*24.7/28)-7);
+  const passedAt = NEGOTIATION_MS+BALLOT_MS;
+  const firstPenalty = passedAt+publicDebtRules.interval;
+  match.advance(passedAt);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  expect(view(passedAt)).toMatchObject({budget:-3.3,stability:70,debtPenaltyIn:30,outcome:{
+    passed:true,deficit:3.3,applied:{budget:-28,stability:22},
+  }});
+
+  match.advance(firstPenalty-1);
+  expect(view(firstPenalty-1)).toMatchObject({stability:70,debtPenaltyIn:1});
+  match.advance(firstPenalty);
+  expect(view(firstPenalty)).toMatchObject({stability:66,debtPenaltyIn:30});
+  const deposit = (amount:number,now:number)=>match.gameplayWorld([host],now,()=>false).deposit!(host.id,amount);
+  expect(deposit(2.4,firstPenalty+1)).toBe(true);
+  expect(view(firstPenalty+1)).toMatchObject({budget:-.9,debtPenaltyIn:30});
+  expect(publicDebtStabilityLoss(view(firstPenalty+1).budget)).toBe(1);
+  expect(deposit(.9,firstPenalty+2)).toBe(true);
+  expect(view(firstPenalty+2).debtPenaltyIn).toBeUndefined();
+  expect(view(ELECTION_RULES.interval-1)).toMatchObject({budget:0});
+  match.advance(ELECTION_RULES.interval);
+  expect(view(ELECTION_RULES.interval)).toMatchObject({budget:-9,debtPenaltyIn:30,stability:66});
+  expect(view(ELECTION_RULES.interval).election?.result?.salary).toBe(3);
+  match.advance(firstPenalty+publicDebtRules.interval);
+  expect(view(firstPenalty+publicDebtRules.interval).stability).toBe(66);
+  const nextPenalty = ELECTION_RULES.interval+publicDebtRules.interval;
+  match.advance(nextPenalty);
+  expect(view(nextPenalty).stability).toBe(62);
+  Reflect.set(match,'stability',4);
+  const collapseAt = nextPenalty+publicDebtRules.interval;
+  match.advance(collapseAt);
+  expect(view(collapseAt)).toMatchObject({phase:'finished',stability:0,reason:'A dívida pública derrubou a estabilidade.'});
 });
 
 test('the last ballot does not redraw a voting mission from an already credited vote',()=>{
@@ -1094,7 +1120,7 @@ test('a Pix mission keeps credit from a player who left while another unused sen
   expect(view().completed).toContainEqual(expect.objectContaining({id:active!.id,current:2}));
 });
 
-test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida: %s',scenario=>{
+test.each(['approved','rejected','borrowed'] as const)('Minha Pinga, Minha Vida: %s',scenario=>{
   const players = people.map(person=>({...person}));
   const [rafa,bia,caio] = players;
   const match = new PlenaryMatch(1);
@@ -1110,7 +1136,7 @@ test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida:
   const create = Reflect.get(game,'create').bind(game);
   for (let i=0;i<INVENTORY_SLOTS;i++) create('coffee',{holder:bia.id});
   match.setPlayerConnected(caio.id,false);
-  if (scenario==='unfunded') {
+  if (scenario==='borrowed') {
     Reflect.set(match,'budget',.5);
     Reflect.get(match,'cash').projects += ELECTION_RULES.startingBudget-.5;
   }
@@ -1126,11 +1152,11 @@ test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida:
   match.advance(at,deliver);
   const result = match.view(rafa.id,ids,at);
   expect(result.outcome?.passed).toBe(scenario!=='rejected');
-  expect(result.budget).toBe(before-(scenario==='approved' ? 1 : 0));
+  expect(result.budget).toBe(before-(scenario==='rejected' ? 0 : 1));
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
   const doses = inventory(rafa,at).filter(item=>item.kind==='pinga');
-  expect(doses).toHaveLength(scenario==='approved' ? 1 : 0);
-  if (scenario!=='approved') return;
+  expect(doses).toHaveLength(scenario==='rejected' ? 0 : 1);
+  if (scenario==='rejected') return;
   expect(doses[0].quantity ?? 1).toBe(1);
   expect(inventory(bia,at)).toHaveLength(INVENTORY_SLOTS);
   const world = match.gameplayWorld(players,at+1,()=>false);

@@ -71,7 +71,10 @@ test('the parliament HUD uses the configured threshold and explains the budget p
   expect(atTarget).toContain('data-tone="stability"');
   expect(below).toContain('data-tone="danger"');
   expect(atTarget).toContain(`meta da sessão é ${stabilityRules.target}`);
-  expect(atTarget).toContain(`custa ${stabilityRules.deficitRate} pontos`);
+  expect(atTarget).toContain('Depósitos na Tesouraria abatem a dívida');
+  const inDebt = renderToStaticMarkup(<ParliamentMetrics stability={48} budget={-3} debtPenaltyIn={12}/>);
+  expect(inDebt).toContain('−R$ 30 mil');
+  expect(inDebt).toContain('−3 de estabilidade em 12 s');
 });
 
 
