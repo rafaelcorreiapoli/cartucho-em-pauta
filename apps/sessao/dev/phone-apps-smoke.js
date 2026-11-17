@@ -42,6 +42,18 @@ async page => {
   await page.setViewportSize(viewport);
   if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');
   await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-phone.png'});
+  const palette = page.locator('#action-shortcuts');
+  const viaPalette = async (button,label)=>{
+    await button.evaluate(node=>node.setAttribute('aria-label','Controle original oculto'));
+    await page.keyboard.press('F2');
+    await palette.getByRole('button',{name:new RegExp(label)}).click();
+    await palette.waitFor({state:'hidden'});
+  };
+  await viaPalette(dialog.getByRole('button',{name:'Câmera',exact:true}),'Câmera');
+  await dialog.getByRole('heading',{name:'Câmera',exact:true}).waitFor();
+  await viaPalette(dialog.getByRole('button',{name:'Selfie',exact:true}),'Selfie');
+  await dialog.locator('.camera-selfie-portrait').waitFor();
+  await home();
   await page.keyboard.press('2');
   await dialog.getByRole('heading',{name:'Joguinhos',exact:true}).waitFor();
   const games = dialog.locator('.phone-games-menu');
@@ -158,7 +170,7 @@ async page => {
   });
   await page.keyboard.press('2');
   await dialog.locator('.camera-selfie-portrait').waitFor();
-  await page.keyboard.press('1');
+  await viaPalette(dialog.getByRole('button',{name:'Tirar foto',exact:true}),'Tirar foto');
   await dialog.getByRole('button',{name:/Abrir álbum · 1\//}).waitFor();
   await page.keyboard.press('3');
   await preview.waitFor({state:'detached'});

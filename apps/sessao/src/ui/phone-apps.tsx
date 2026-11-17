@@ -1,4 +1,5 @@
-import type {ReactNode} from 'react';
+import type {ReactNode,Ref} from 'react';
+import {useDialogKeys} from './use-dialog-keys';
 
 const apps = {
   'Telefone':'app-call',
@@ -13,14 +14,10 @@ const apps = {
 export type PhoneApp = keyof typeof apps;
 const appOrder = Object.keys(apps) as PhoneApp[];
 
-export function phoneAppForKey(key:string) {
-  if (/^[1-9]$/.test(key)) return appOrder[Number(key)-1];
-}
-
-export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children}:{
-  name:string; icon:string; shortcut:string; pressed?:boolean; onClick:()=>void; children?:ReactNode;
+export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children,buttonRef}:{
+  name:string; icon:string; shortcut:string; pressed?:boolean; onClick:()=>void; children?:ReactNode; buttonRef?:Ref<HTMLButtonElement>;
 }) {
-  return <button type="button" className="phone-app" data-app={icon}
+  return <button ref={buttonRef} type="button" className="phone-app" data-app={icon}
     aria-pressed={pressed} aria-keyshortcuts={shortcut} onClick={onClick}>
     <span className="phone-app-icon" aria-hidden="true">
       {children ?? <svg className="hud-glyph"><use href={'#icon-'+icon}/></svg>}
@@ -30,7 +27,10 @@ export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children}:{
   </button>;
 }
 
-export function PhoneApps({active,select}:{active?:PhoneApp;select:(app:PhoneApp)=>void}) {
-  return appOrder.map((app,index)=><PhoneAppButton key={app} name={app} icon={apps[app]} shortcut={String(index+1)}
-    pressed={app===active} onClick={()=>select(app)}/>);
+export function PhoneApps({active,select,close}:{active?:PhoneApp;select:(app:PhoneApp)=>void;close?:()=>void}) {
+  const options = appOrder.map((app,index)=>({name:app,shortcut:String(index+1),activate:()=>select(app)}));
+  const entries = close ? [{name:'Fechar',activate:close},...options] : options;
+  const first = useDialogKeys<HTMLButtonElement>(key=>options.find(option=>option.shortcut===key)?.activate,entries);
+  return options.map(({name,shortcut,activate},index)=><PhoneAppButton key={name} name={name} icon={apps[name]} shortcut={shortcut}
+    buttonRef={index===0 ? first : undefined} pressed={name===active} onClick={activate}/>);
 }

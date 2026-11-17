@@ -122,8 +122,9 @@ async page => {
     await page.keyboard.press('c');
     await page.keyboard.press('1');
     const dial = page.locator(dialog).getByRole('button',{name:'Ligar para Bia',exact:true});
-    await dial.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
-    await page.keyboard.press('1');
+    await dial.evaluate(button=>button.setAttribute('aria-label','Contato original oculto'));
+    await page.keyboard.press('F2');
+    await palette.getByRole('button',{name:/Ligar para Bia/}).click();
     const decline = receiver.locator(dialog).getByRole('button',{name:'Recusar',exact:true});
     await decline.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
     await receiver.keyboard.press('2');
