@@ -82,7 +82,7 @@ export class ParliamentarianTalk {
       if (minimum===0 && raw.amount>0) return 'Já aceita esse voto sem pagamento.';
       if (raw.amount && !world.payNpc?.(player.id,target.id,raw.amount)) return 'Pagamento indisponível.';
       this.members.commit(target.id,this.match.projectRound,raw.vote,raw.amount,deal.projectIndex,player.id);
-      if (raw.amount) publishGameplay(world,player,'npc-vote-bought',{target:target.id});
+      if (raw.amount) publishGameplay(world,player,'npc-vote-bought',{target:target.id,project:deal.projectIndex,amount:raw.amount});
       console.info(JSON.stringify({event:'npc-vote-deal',from:player.id,to:target.id,amount:raw.amount,round:raw.round}));
       return 'Voto comprometido.';
     }

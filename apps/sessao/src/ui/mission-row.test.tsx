@@ -1,4 +1,4 @@
-import {terminals} from '../gameplay';
+import {terminals,type GameplayEvent} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
@@ -1957,4 +1957,55 @@ test.each([
   expect(completed).toEqual({...mission,current:target});
   expect(after.progression.xp).toBe(missionReward(kind).xp);
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+});
+
+test('an NPC vote purchase advances the Agenda once despite a repeat offer and event replay',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const members = new Parliamentarians();
+  members.reset(2,0);
+  const npc = members.players[1];
+  match.addParliamentarian(npc);
+  Object.assign(npc,{x:player.x+8,y:player.y});
+  publishProjectFiling(match,player);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = () => match.view(player.id,[player.id],1).politics!;
+  const active = view().missions.active.find(mission=>mission.kind==='votoNpc')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Compre um voto de um parlamentar NPC');
+
+  const events:GameplayEvent[] = [];
+  const state = match.gameplayWorld([player,npc],1,()=>false);
+  const instrumentedWorld = {...state,publish:(event:GameplayEvent)=>{
+    events.push(event);
+    state.publish(event);
+  }};
+  const talk = new ParliamentarianTalk(members,new Gameplay(),match);
+  talk.act(player,{kind:'talk',target:npc.id},state);
+  const deal = talk.view(player,state)!;
+  const offer = {kind:'vote',target:npc.id,session:deal.session,round:match.projectRound,project:deal.projectIndex,vote:'yes',amount:deal.minimum.yes};
+  expect(offer.amount).toBeGreaterThan(0);
+  const before = view();
+  expect(talk.act(player,offer,instrumentedWorld)).toBe('Voto comprometido.');
+  expect(events).toEqual([expect.objectContaining({type:'npc-vote-bought',target:npc.id,project:0,amount:offer.amount,eventId:expect.any(Number)})]);
+  const after = view();
+  const completed = after.missions.completed.find(mission=>mission.id===active.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(after.wallet).toBe(before.wallet-offer.amount+(missionReward('votoNpc').cash ?? 0));
+  expect(after.paymentsLeft).toBe(before.paymentsLeft-1);
+  expect(after.progression.xp).toBe(before.progression.xp+missionReward('votoNpc').xp);
+
+  expect(talk.act(player,offer,instrumentedWorld)).toBe('Já aceita esse voto sem pagamento.');
+  expect(events).toHaveLength(1);
+  expect(view()).toEqual(after);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['cafe','passeio','votoNpc']);
+  match.refreshAgendaEligibility();
+  const redrawn = view();
+  expect(redrawn.missions.active).toContainEqual(expect.objectContaining({kind:'votoNpc',current:0}));
+  state.publish(events[0]);
+  expect(view()).toEqual(redrawn);
 });
