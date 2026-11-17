@@ -112,15 +112,18 @@ export class Gameplay {
     return true;
   }
 
-  private documentRequirements(item:WorldItem) {
+  private documentRequirements(item:WorldItem,proposer:string) {
     const document = item.document!;
-    const missing = document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp));
+    const project = document.project;
+    const missing = project===undefined ? document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp)) : [];
     const recorded = this.signedProjects.get(item.id);
-    const valid = document.project===undefined ? document.signatures.length :
-      document.signatures.filter(person=>recorded?.get(person.id)?.project===document.project).length;
-    if (valid!==document.signatures.length) return 'O documento não atende aos requisitos formais.';
+    if (project!==undefined && document.signatures.some(person=>recorded?.get(person.id)?.project!==project)) {
+      return 'O documento não atende aos requisitos formais.';
+    }
+    const valid = project===undefined ? document.signatures.length :
+      new Set(document.signatures.filter(person=>person.id!==proposer).map(person=>person.id)).size;
     const signatures = document.requiredSignatures-valid;
-    if (signatures>0) missing.push(`${signatures} assinatura(s)`);
+    if (signatures>0) missing.push(signatures===1 ? '1 assinatura' : `${signatures} assinaturas`);
     if (missing.length) return `Falta: ${missing.join(', ')}.`;
   }
 
@@ -1458,8 +1461,8 @@ export class Gameplay {
           template.office : undefined;
         data.document = {
           author:player.nick,title:bill?.name ?? template.title,project,description:bill?.description,edited:false,signatures:[],stamps:[],
-          requiredSignatures:bill ? world.projectSignatures ?? Number(world.players.some(person=>person.id!==id && !person.npc)) : Math.min(template.signatures,Math.max(0,world.players.length-1)),
-          requiredStamps:[...template.stamps],requiredOffice,
+          requiredSignatures:bill ? world.projectSignatures ?? Math.min(2,world.players.filter(person=>person.id!==id && !person.npc).length) : Math.min(template.signatures,Math.max(0,world.players.length-1)),
+          requiredStamps:bill ? [] : [...template.stamps],requiredOffice,
         };
       }
       this.event(world,player,'collected',data);
@@ -1496,9 +1499,6 @@ export class Gameplay {
         if (!target) return 'Aproxime-se do destinatário.';
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return 'Este jogador não pode assinar o documento.';
-        }
-        if (action.kind==='sign-request' && data.document?.project!==undefined && world.canSignProject?.(target.id)===false) {
-          return 'A assinatura precisa ser de outro jogador com mandato.';
         }
         this.clearRequests(data.id);
         const key = ++this.serial;
@@ -1573,13 +1573,14 @@ export class Gameplay {
       }
       case 'stamp':
         if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
+        if (data.document.project!==undefined) return 'Projetos não exigem carimbos.';
         if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
         data.document.stamps.push(terminal.stamp);
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
       case 'verify-document':
         if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
-        return this.documentRequirements(data) ?? 'Documento atende aos requisitos formais.';
+        return this.documentRequirements(data,id) ?? 'Documento atende aos requisitos formais.';
     }
   }
 
@@ -1594,13 +1595,9 @@ export class Gameplay {
     if (!item || !('holder' in item.place) || item.place.holder!==id || !item.data.document) return 'O documento não está com você.';
     const {data} = item;
     const document = item.data.document;
-    const error = this.documentRequirements(data);
+    const error = this.documentRequirements(data,id);
     if (error) return error;
     if (document.project!==undefined) {
-      if (document.requiredSignatures && !document.signatures.some(signer=>
-        signer.id!==id && (world.canSignProject?.(signer.id) ?? world.players.some(person=>person.id===signer.id && !person.npc)))) {
-        return 'A assinatura precisa ser de outro jogador com mandato.';
-      }
       const reason = world.projectFilingError?.(id,document.project);
       if (reason) return reason;
     }
@@ -1647,7 +1644,7 @@ export class Gameplay {
     }
     const doc = item.data.document;
     if (!doc || doc.signatures.some(person => person.id===player.id) ||
-      (doc.project!==undefined && (player.npc || world.canSignProject?.(player.id)===false)) ||
+      (doc.project!==undefined && player.npc) ||
       (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});

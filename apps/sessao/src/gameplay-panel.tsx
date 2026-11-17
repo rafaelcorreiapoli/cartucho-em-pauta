@@ -121,7 +121,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
           {doc && <>
             <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
-            <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>
+            {doc.project===undefined && <p>Carimbos {doc.stamps.length}/{doc.requiredStamps.length} · {doc.requiredStamps.map(stamp=>doc.stamps.includes(stamp) ? '✓ '+stamp : stamp).join(', ')}</p>}
             {doc.requiredOffice && <p>Assinatura exigida: Parlamentar</p>}
           </>}
           {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
@@ -365,14 +365,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
         if (contacts.length) {
           act('Oferecer','offer');
-          if (item.document) act('Pedir assinatura','sign-request');
+          if (item.document && (item.document.project===undefined || item.document.requiredSignatures>0)) act('Pedir assinatura','sign-request');
         }
         act('Largar no chão','drop',undefined,bagOpen ? '8' : undefined);
         if ('destructible' in definition) act('Destruir','destroy');
         for (const place of state.locations) {
           const terminal = terminals[place as keyof typeof terminals];
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
-          if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
+          if (item.document && item.document.project===undefined && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
           if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
         }
       }
