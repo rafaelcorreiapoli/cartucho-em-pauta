@@ -5,7 +5,7 @@ import {wallVision} from './visibility';
 import {canActOnFire,fireSites,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke} from './fire-effects';
 import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
-import { isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
+import { decorPoint, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
@@ -290,6 +290,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
       this.phoneSignals = this.add.graphics().setDepth(HEIGHT+28);
       for (const office of privateOffices) {
+        const point = decorPoint(office,'portrait');
+        const {texture,width,height,centerY} = installationArt.portrait;
+        const frame = this.add.image(point.x,point.y+centerY,texture)
+          .setDisplaySize(width,height).setDepth(point.y).setVisible(false);
+        this.installationFixtures.push({point,art:frame});
+        const install = ()=>plenaryView?.gameplay?.officeOptions?.find(option=>option.kind==='office-install' && option.place===office.id);
+        this.registerInteraction(frame,()=>!!install(),()=>{
+          const action = install();
+          if (action) interact(action);
+        });
         const [doorX,doorY,doorWidth,doorHeight] = office.door;
         this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
           fontFamily:'system-ui',fontSize:'3.2px',color:'#eee0ba',backgroundColor:'#152720',
@@ -427,10 +437,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
         }).setOrigin(.5,0);
         const marker = this.add.container(item.x,item.y).setDepth(item.y+1);
-        if (portrait && item.privateOffice) {
-          const {texture,width,height} = installationArt.portrait;
-          marker.add(this.add.image(0,0,texture).setDisplaySize(width,height));
-        }
         marker.add([art,label]);
         const mark = portrait ? this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3})
           .setOrigin(.5).setVisible(!!item.marked) : undefined;

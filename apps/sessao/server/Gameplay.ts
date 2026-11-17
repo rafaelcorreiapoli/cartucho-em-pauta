@@ -1025,8 +1025,14 @@ export class Gameplay {
       }
       for (const slot of decorSlots) {
         if ((!own && slot!=='portrait') || !this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
-        if (own) officeDecor.push({id:layout.id,kind:slot});
         const decoration = this.installations.get(`office:${layout.id}:${slot}`);
+        if (own) {
+          officeDecor.push({id:layout.id,kind:slot});
+          if (slot==='portrait') {
+            const portrait = items.find(item=>item.kind==='portrait');
+            if (portrait) add('office-install',decoration ? 'Substituir retrato' : 'Pendurar retrato',portrait.id);
+          }
+        }
         if (decoration && (!own || this.available(player.id))) add('office-remove',own ? `Retirar · ${objects[slot].name}` : 'Arrancar retrato',decoration.id);
       }
     }
