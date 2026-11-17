@@ -1,3 +1,4 @@
+import type {ShortcutEntry} from './action-shortcuts';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import {flushSync} from 'react-dom';
@@ -17,11 +18,15 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
   const [quote,setQuote] = useState<{vote:Vote;amount:number}>();
   let shortcut = 0;
   const actions = new Map<string,()=>void>();
-  const panel = useDialogKeys<HTMLDivElement>(key=>actions.get(key));
+  const entries:ShortcutEntry[] = [{name:'Encerrar',activate:()=>panel.current?.closest('dialog')?.close()}];
+  const panel = useDialogKeys<HTMLDivElement>(key=>actions.get(key),entries);
   const paymentUnavailable = (price:number) => price>0 && (deal.paymentsLeft<=0 || price>deal.wallet);
   function action(label:string,run:()=>void,disabled=false) {
     const key = ++shortcut<=9 ? String(shortcut) : undefined;
-    if (key && !disabled) actions.set(key,run);
+    if (!disabled) {
+      entries.push({name:label,activate:run});
+      if (key) actions.set(key,run);
+    }
     return <button key={label} type="button" className="hud-button hud-button--secondary" onClick={run}
       disabled={disabled} aria-keyshortcuts={key}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
   }

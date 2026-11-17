@@ -1,9 +1,26 @@
-import {useEffect,useEffectEvent,useRef} from 'react';
+import {useEffect,useEffectEvent,useLayoutEffect,useRef} from 'react';
 import {isEditingText} from '../game-keys';
 
-export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=> (()=>void)|undefined) {
+import type {ShortcutEntry} from '../action-shortcuts';
+
+const paletteEntries = new WeakMap<Element,readonly ShortcutEntry[]>();
+
+export function dialogKeyActions(dialog:HTMLElement) {
+  const entries = paletteEntries.get(dialog);
+  return entries?.map(entry=>({name:entry.name,activate:()=>{
+    if (dialog.matches('dialog:modal') && paletteEntries.get(dialog)===entries) entry.activate();
+  }}));
+}
+
+export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=> (()=>void)|undefined,entries?:readonly ShortcutEntry[]) {
   const panel = useRef<T>(null);
   const currentAction = useEffectEvent(actionForKey);
+  useLayoutEffect(()=>{
+    const dialog = panel.current?.closest('dialog');
+    if (!dialog || !entries) return;
+    paletteEntries.set(dialog,entries);
+    return ()=>{ if (paletteEntries.get(dialog)===entries) paletteEntries.delete(dialog); };
+  },[entries]);
   useEffect(()=>{
     function keydown(event:KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing || event.shiftKey ||

@@ -110,10 +110,13 @@ async page => {
     const sign = npcDeal.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
     await sign.waitFor();
     if (await npcDeal.getByRole('button',{name:new RegExp(title)}).count()) throw Error('NPC ofereceu assinatura de projeto');
-    const shortcut = await sign.getAttribute('aria-keyshortcuts');
-    await sign.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
-    await page.keyboard.press(shortcut);
-    await sign.waitFor({state:'hidden'});
+    await sign.evaluate(button=>button.setAttribute('aria-label','Assinatura original oculta do F2'));
+    await page.keyboard.press('F2');
+    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+    const action = palette.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
+    await action.waitFor();
+    await page.keyboard.press(await action.getAttribute('aria-keyshortcuts'));
+    await npcDeal.getByRole('button',{name:'Assinatura original oculta do F2',exact:true}).waitFor({state:'hidden'});
     await page.keyboard.press('Escape');
     await npcDeal.waitFor({state:'hidden'});
   }
