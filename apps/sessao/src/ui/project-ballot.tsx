@@ -34,12 +34,25 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
   const art = bill.banner;
-  const groups = [
-    {key:'yes',label:'SIM',badge:'✓'},
-    {key:'pending',label:'Pendentes',badge:'?'},
-    {key:'no',label:'NÃO',badge:'×'},
-  ] as const;
-  const count = (choice:BillVote|undefined) => billVoters.filter(person=>person.vote===choice).length;
+  const voters = (choice?:BillVote) => billVoters.filter(person=>person.vote===choice);
+  const count = (choice?:BillVote) => voters(choice).length;
+
+  function portraits(choice?:BillVote) {
+    const label = choice==='yes' ? 'SIM' : choice==='no' ? 'NÃO' : choice==='abstain' ? 'Abstenção' : 'Pendente';
+    return <ul aria-label={label}>{voters(choice).map(person=>
+      <li key={person.id} data-vote-state={choice ?? 'pending'} title={person.name}>
+        <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
+        <b aria-label={label}>{choice==='abstain' ? '○' : choice ? label : '?'}</b>
+      </li>)}</ul>;
+  }
+
+  function side(choice:'yes'|'no',label:string,badge:string) {
+    return <section data-choice={choice} aria-label={label} className="project-ballot-group">
+      <div className="project-ballot-count"><span>{label}</span><strong><i aria-hidden="true">{badge}</i>{count(choice)}</strong></div>
+      {portraits(choice)}
+    </section>;
+  }
+
   const self = billVoters.find(person=>person.id===ownId);
   const clock = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
   return <section className="project-ballot" aria-label="Votação de projeto">
@@ -66,14 +79,20 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
         <time><HudIcon name="clock"/>{clock}</time>
       </div>
       <div className="project-ballot-score">
-        {groups.map(({key,label,badge})=><section key={key} data-choice={key} aria-label={label} className="project-ballot-group">
-          <div className="project-ballot-count"><span>{label}</span><strong>{key!=='pending' && <i aria-hidden="true">{badge}</i>}{count(key==='pending'?undefined:key)}</strong></div>
-          <ul>{billVoters.filter(person=>key==='pending' ? !person.vote || person.vote==='abstain' : person.vote===key).map(person=>
-            <li key={person.id} data-vote-state={person.vote ?? 'pending'} title={person.name}>
-              <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
-              <b aria-label={person.vote==='abstain'?'Abstenção':label}>{person.vote==='abstain'?'○':key==='pending'?badge:label}</b>
-            </li>)}</ul>
-        </section>)}
+        {side('yes','SIM','✓')}
+        <div className="project-ballot-group project-ballot-neutral" data-choice="pending">
+          <div className="project-ballot-neutral-lists">
+            <section aria-label="Pendentes">
+              <div className="project-ballot-count">Pendentes <strong>{count()}</strong></div>
+              {portraits()}
+            </section>
+            {count('abstain')>0 && <section aria-label="Abstenções" data-choice="abstain">
+              <div className="project-ballot-count">Abstenções <strong>{count('abstain')}</strong></div>
+              {portraits('abstain')}
+            </section>}
+          </div>
+        </div>
+        {side('no','NÃO','×')}
       </div>
       <div className="project-ballot-summary">
         {choices.map(({vote:choice,label})=><span key={choice} data-choice={choice}>{label} <strong>{count(choice)}</strong></span>)}

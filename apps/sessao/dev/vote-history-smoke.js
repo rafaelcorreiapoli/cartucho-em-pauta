@@ -166,7 +166,11 @@ async page => {
     await sheet.waitFor();
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});
-    await page.evaluate(()=>window.ballotGuests.forEach(room=>room.send('bill-vote',{vote:'yes',token:1})));
+    await page.evaluate(()=>window.ballotGuests[0].send('bill-vote',{vote:'abstain',token:1}));
+    await sheet.getByRole('region',{name:'Abstenções',exact:true}).locator('[data-vote-state="abstain"]').waitFor();
+    const pendingGroup = sheet.getByRole('region',{name:'Pendentes',exact:true});
+    if (await pendingGroup.locator('[data-vote-state="abstain"]').count()) throw Error('Abstenção apareceu entre os pendentes');
+    await page.evaluate(()=>window.ballotGuests.forEach(room=>room.send('bill-vote',{vote:'yes',token:2})));
     await page.keyboard.press('y');
     await sheet.locator('[data-vote-state="yes"]').nth(5).waitFor({state:'attached'});
     const board = sheet.locator('.project-ballot-score');

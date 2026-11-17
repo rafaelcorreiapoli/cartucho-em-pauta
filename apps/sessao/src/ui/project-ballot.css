@@ -233,3 +233,12 @@
 .project-ballot-impact span { flex-wrap: wrap; row-gap: 0; color: #e9e3d6; }
 .project-ballot-impact span svg { color: #a9bcae; }
 .project-impact-value { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.project-ballot-neutral-lists {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.project-ballot-neutral-lists ul { overflow: visible; }
+.project-ballot-neutral-lists section + section { border-top: 1px solid var(--color-hud-border); }
