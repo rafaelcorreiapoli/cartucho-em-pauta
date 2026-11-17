@@ -25,6 +25,11 @@ async page => {
     await page.keyboard.press('o');
     const bag = page.locator(dialog);
     await bag.getByRole('button',{name:'Café',exact:true}).click();
+    const bind = bag.getByRole('button',{name:'Vincular ao slot 1',exact:true});
+    await page.keyboard.press('Shift+1');
+    await bind.and(bag.locator('[aria-pressed="true"]')).waitFor();
+    const use = bag.getByRole('button',{name:'Beber',exact:true});
+    if (await use.getAttribute('aria-keyshortcuts')!=='1') throw Error('O primeiro atalho do item deve ser 1');
     await bag.getByLabel('Jogador').selectOption({label:'Bia'});
     await bag.getByRole('button',{name:'Oferecer',exact:true}).click();
     await receiver.locator('#object-request').getByRole('button',{name:'Aceitar',exact:true}).click();
@@ -43,7 +48,7 @@ async page => {
     if (await page.locator('#cabinet-form,#hearing-form').count()) throw Error('Institutional actions should require station proximity');
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
     await pix.getByRole('button',{name:'Bia',exact:true}).click();
-    await page.keyboard.press('5');
+    await page.keyboard.press('1');
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
 
     await receiver.locator(dialog).locator('.pix-balance').getByText('R$ 90 mil',{exact:true}).waitFor();
@@ -57,7 +62,7 @@ async page => {
     await receiver.keyboard.down('ArrowDown');
     await receiver.waitForTimeout(900);
     await receiver.keyboard.up('ArrowDown');
-    await page.keyboard.press('5');
+    await page.keyboard.press('1');
     await pix.locator('.pix-balance').getByText('R$ 60 mil',{exact:true}).waitFor();
     await page.locator(dialog).getByRole('button',{name:'Fechar aplicativo'}).click();
     await receiver.keyboard.press('c');

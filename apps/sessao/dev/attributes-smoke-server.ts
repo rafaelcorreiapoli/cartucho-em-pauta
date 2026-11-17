@@ -14,14 +14,14 @@ class AttributesSmokeRoom extends SessionRoom {
     let countdown = false;
     this.clock.setInterval(()=>{
       if (match.phase!=='negotiation') return;
-      for (const account of accounts.values()) {
+      for (const [player,account] of accounts) {
         if (!seeded.has(account)) {
           account.progression.earn(levelThresholds[2]);
           seeded.add(account);
         }
         if (!countdown && account.progression.view().revision===1) {
           countdown = true;
-          Reflect.set(match,'ends',this.clock.currentTime+5_000);
+          Reflect.set(match,'proposal',{project:0,proposer:player,voteAt:this.clock.currentTime+5_000});
         }
       }
     },50);
