@@ -2,7 +2,7 @@ import type {CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 import {PhoneContactFace} from './phone-call';
 import {ProjectBallot} from './project-ballot';
-import type {BillVote,CassationView,PlenaryView,Vote} from '../plenary';
+import {majorityQuorum,type BillVote,type CassationView,type PlenaryView,type Vote} from '../plenary';
 
 type BallotState = {
   hearing:boolean; eligible:boolean; mandate:boolean; voted:number;
@@ -51,6 +51,15 @@ export function CassationBallot({state,ownId,cast}:{
   </section>;
 }
 
+export function hearingBallotState(view:PlenaryView):BallotState|null {
+  const {hearing,mandate,politics,electorate} = view;
+  if (!hearing) return null;
+  return {
+    hearing:true, eligible:!!mandate && !politics?.suspended, mandate:!!mandate,
+    electorate,voted:hearing.voted,quorum:hearing.quorum ?? majorityQuorum(electorate),vote:hearing.vote,
+  };
+}
+
 export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
   const root = createRoot(host);
   let key = '';
@@ -77,15 +86,8 @@ export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCass
         }
         return;
       }
-      const hearing = view.hearing;
-      const visible = !!hearing;
-      host.hidden = !visible;
-      const state:BallotState|null = visible ? {
-        hearing:!!hearing, eligible:!!view.mandate && !view.politics?.suspended, mandate:!!view.mandate,
-        voted:view.voted, electorate:view.electorate,
-        quorum:hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum,
-        vote:hearing?.vote,
-      } : null;
+      const state = hearingBallotState(view);
+      host.hidden = !state;
       const next = JSON.stringify(state);
       if (next===key) return;
       key = next;
