@@ -4,6 +4,7 @@ import {Gameplay} from '../server/Gameplay';
 import {publishProjectFiling} from '../server/project-test-fixture';
 import type {Player} from './map';
 import {BALLOT_MS,NEGOTIATION_MS,stations} from './plenary';
+import {attributeUpgrades,baseStamina} from './progression';
 import {attributePlayerView,canSelectAttribute} from './progression-hud';
 
 test('the attribute player projection ignores movement and subunit stamina',()=>{
@@ -56,5 +57,5 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
   expect(match.allocateAttribute(player,request,next)).toBe(true);
   game.applyAttribute(player,request.attribute);
   expect(view(next).politics?.progression).toMatchObject({available:0,revision:1,invested:{stamina:1}});
-  expect(player.staminaMax).toBe(110);
+  expect(player.staminaMax).toBe(baseStamina+attributeUpgrades.stamina.bonus);
 });

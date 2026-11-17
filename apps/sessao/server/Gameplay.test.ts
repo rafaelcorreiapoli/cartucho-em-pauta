@@ -376,7 +376,9 @@ test('occupied installation sites expose only the actions the server accepts',()
   };
 
   const first = buy(alice);
-  expect(game.act(alice,first,world)).toBe('Objeto instalado.');
+  expect(game.act(alice,first,world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   const spare = buy(alice);
   const own = game.view(alice,world);
   expect(own.installable).not.toContain(place);
@@ -388,7 +390,9 @@ test('occupied installation sites expose only the actions the server accepts',()
   const rivalView = game.view(bob,world);
   expect(rivalView.installable).toContain(place);
   expect(decorationActions(bob.id,rivalView)).toContainEqual({label:'Substituir placa VIP',action:rival});
-  expect(game.act(bob,rival,world)).toBe('Objeto substituído.');
+  expect(game.act(bob,rival,world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(game.view(alice,world).installable).toContain(place);
 });
 

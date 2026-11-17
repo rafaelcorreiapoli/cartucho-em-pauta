@@ -1,4 +1,4 @@
-import {installationSites} from '../installations';
+import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
 
 import {publishProjectFiling} from '../../server/project-test-fixture';
@@ -917,7 +917,9 @@ test('the VIP reservation mission uses a chair the player can actually reserve',
     expect(game.act(player,{kind:'shop-buy',target:'vip',token},world(now))).toBe('Compra guardada no inventário.');
     const item = game.view(player,world(now)).inventory.find(item=>item.kind==='vip')!;
     Object.assign(player,installationSites[place].point);
-    expect(game.act(player,{kind:'install',place,item:item.id},world(++now))).toBe('Objeto instalado.');
+    expect(game.act(player,{kind:'install',place,item:item.id},world(++now))).toBe('Instalando decoração…');
+    now += decorationInstallMs;
+    game.tick(world(now),true);
   }
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['reserva','privilegioAdquirido','cafe','passeio']);
@@ -927,7 +929,9 @@ test('the VIP reservation mission uses a chair the player can actually reserve',
   expect(game.act(player,{kind:'uninstall',item:plaque.id},world(++now))).toBe('Objeto retirado.');
   const active = view(now).missions.active.find(({kind})=>kind==='reserva')!;
   expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Reserve uma cadeira');
-  expect(game.act(player,{kind:'install',place:'pressVip',item:plaque.id},world(++now))).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'pressVip',item:plaque.id},world(++now))).toBe('Instalando decoração…');
+  now += decorationInstallMs;
+  game.tick(world(now),true);
   const completed = view(now).missions.completed.find(({kind})=>kind==='reserva')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });
