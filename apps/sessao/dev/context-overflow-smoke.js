@@ -91,6 +91,27 @@ async page => {
   await page.keyboard.press(await paletteCoffee.getAttribute('aria-keyshortcuts'));
   await shortcuts.waitFor({state:'hidden'});
   await page.locator('#nearby-items button[aria-keyshortcuts="'+paintedKey+'"]').waitFor({state:'hidden'});
+  await page.setViewportSize({width:800,height:450});
+  await page.keyboard.press('o');
+  const bag = page.getByRole('dialog',{name:'Inventário'});
+  const bagCoffee = bag.getByRole('button',{name:'Café',exact:true});
+  await bagCoffee.waitFor();
+  const bagGeometry = ()=>Promise.all([bag.boundingBox(),bag.locator('.bag-detail').boundingBox(),
+    bag.locator('.bag-preview').boundingBox()]);
+  const emptyGeometry = JSON.stringify(await bagGeometry());
+  await bagCoffee.click();
+  if (JSON.stringify(await bagGeometry())!==emptyGeometry) throw Error('Seleção moveu o layout do inventário');
+  const drop = bag.getByRole('button',{name:'Largar no chão',exact:true});
+  await drop.waitFor();
+  const actions = await bag.locator('.bag-item-actions').boundingBox();
+  const dropBounds = await drop.boundingBox();
+  if (!actions || !dropBounds || dropBounds.y+dropBounds.height>actions.y+actions.height) {
+    throw Error('Largar no chão ficou fora da área visível do inventário');
+  }
+  await drop.click();
+  await bagCoffee.waitFor({state:'hidden'});
+  await page.keyboard.press('Escape');
+  await bag.waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }

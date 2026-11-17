@@ -718,6 +718,22 @@
   .bag-filters button { gap: 4px; font-size: .75rem; }
 }
 
+@media (max-height: 560px) {
+  #gameplay-dialog[data-mode="bag"] { padding: 12px; }
+  #gameplay-dialog[data-mode="bag"][open] { gap: 8px; }
+  #gameplay-dialog[data-mode="bag"] h2 { font-size: 23px; }
+  .bag-layout { row-gap: 8px; }
+  .bag-filters button { padding-block: 5px; }
+  .bag-layout .congress-bag { grid-template-rows: repeat(2,minmax(0,68px)); }
+  .bag-storage .item-tile { aspect-ratio: auto; }
+  .bag-capacity { margin-top: 5px; }
+  .bag-detail .object-card { grid-template-rows: minmax(0,1fr) min(62%,150px); padding: 8px; }
+  .bag-detail .object-card h3 img { width: 42px; height: 42px; }
+  .bag-item-actions > button { min-height: 29px; margin-bottom: 3px; padding-block: 3px; }
+  .bag-preview { padding-top: 6px; }
+  .bag-preview-slots { grid-template-columns: repeat(6,minmax(0,39px)); margin-top: 4px; }
+}
+
 :is(#gameplay-dialog[data-mode="bag"],#market-dialog.market-catalog) {
   border: 1px solid #6e9077;
   border-radius: 20px;
