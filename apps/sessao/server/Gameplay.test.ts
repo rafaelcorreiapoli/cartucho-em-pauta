@@ -45,7 +45,10 @@ test('custody moves exactly once and requests are private', () => {
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(bob,world).inventory).toEqual([coffee]);
   expect(events.filter(event=>event.type==='transferred')).toHaveLength(1);
-  expect(events.at(-1)?.witnesses).toEqual([watcher.id]);
+  expect(events.find(event=>event.type==='transferred')?.witnesses).toEqual([watcher.id]);
+  expect(events.filter(event=>event.type==='item-received')).toEqual([expect.objectContaining({
+    actor:bob.id,target:alice.id,item:coffee.id,inventoryItem:coffee.id,witnesses:[],
+  })]);
   game.act(bob,{kind:'drop',item:coffee.id},world);
   game.act(alice,{kind:'collect',item:coffee.id},world);
   game.act(watcher,{kind:'collect',item:coffee.id},world);

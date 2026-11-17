@@ -1587,3 +1587,46 @@ test('the Agenda keeps the active last Raio X scan but stops assigning inspectio
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(politics().progression.xp).toBe(missionReward('fiscalizacaoParalela').xp);
 });
+
+test('the Agenda shows a completed exchange only after both different items change hands',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...npcs.credentialsVendor.interaction,
+  }));
+  const [owner,peer] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(owner.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = match.gameplayWorld(players,1,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(owner.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['amizadeInstitucional','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(owner.id,ids,world.now).politics!;
+  const active = view().missions.active.find(mission=>mission.kind==='amizadeInstitucional')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('receba dele um item diferente');
+
+  Object.assign(peer,stations.secretary);
+  game.act(peer,{kind:'supply',place:'secretary',target:'queue'},world);
+  const document = game.view(peer,world).inventory.find(item=>item.kind==='document')!;
+  Object.assign(peer,npcs.credentialsVendor.interaction);
+  game.act(owner,{kind:'open-shop',target:'credentialsVendor'},world);
+  game.act(owner,{kind:'shop-buy',target:'portrait',token:game.view(owner,world).dialogue?.token},world);
+  const portrait = game.view(owner,world).inventory.find(item=>item.kind==='portrait')!;
+  function offer(from:Player,to:Player,item:number) {
+    world.now++;
+    expect(game.act(from,{kind:'offer',item,target:to.id},world)).toBe('Pedido enviado.');
+    return {kind:'accept',item:game.view(to,world).requests.at(-1)!.id} as const;
+  }
+
+  expect(game.act(peer,offer(owner,peer,portrait.id),world)).toBe('Objeto recebido.');
+  const accept = offer(peer,owner,document.id);
+  expect(view().missions.completed).toEqual([]);
+  expect(view().progression.xp).toBe(0);
+  expect(game.act(owner,accept,world)).toBe('Objeto recebido.');
+  expect(game.act(owner,accept,world)).toBe('Pedido indisponível.');
+  const completed = view().missions.completed.find(mission=>mission.kind==='amizadeInstitucional')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});

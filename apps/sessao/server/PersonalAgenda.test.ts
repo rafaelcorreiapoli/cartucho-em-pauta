@@ -1342,7 +1342,6 @@ test('an exchange counts accepted different items with the same human and reward
   expect(agenda.hasActive('amizadeInstitucional')).toBe(true);
   const game = new Gameplay();
   const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-    hasMission:(id,kind)=>id===owner.id && agenda.hasActive(kind),
     publish:entry=>{if (entry.actor===owner.id) recordAgendaEvent(agenda,entry);}};
   const give = (from:Player,to:Player,kind:'portrait'|'document',reply:'accept'|'decline'='accept')=>{
     world.now++;

@@ -632,6 +632,12 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(alice)[0].quantity).toBe(2);
   expect(inventory(bob)).toHaveLength(1);
   expect(inventory(bob)[0].quantity).toBe(3);
+  const received = events.filter(event=>event.type==='item-received');
+  expect(received).toEqual([expect.objectContaining({
+    actor:bob.id,target:alice.id,kind:'coxinha',inventoryItem:inventory(bob)[0].id,witnesses:[],
+  })]);
+  expect(received[0].item).not.toBe(inventory(bob)[0].id);
+
 
   expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
   expect(inventory(alice)[0].quantity).toBe(1);

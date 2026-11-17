@@ -1686,13 +1686,13 @@ export class Gameplay {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
         if (this.transfers.length>16) this.transfers.shift();
       }
-      this.addToInventory(transferred,player.id);
+      const received = this.addToInventory(transferred,player.id);
       const amount = cashAmount(transferred.data);
       if (amount) this.expose(player.id,transferred.data.id);
       this.event(world,owner,'transferred',transferred.data,player.id,
         amount && !owner.npc && !player.npc ? {amount} : undefined);
-      if (!amount && !owner.npc && !player.npc && world.hasMission?.(player.id,'amizadeInstitucional')) {
-        this.event(world,player,'item-received',transferred.data,owner.id,{witnesses:[]});
+      if (!amount && !owner.npc && !player.npc) {
+        this.event(world,player,'item-received',transferred.data,owner.id,{inventoryItem:received.id,witnesses:[]});
       }
       if (amount && !owner.npc && !player.npc) {
         this.event(world,player,'cash-received',transferred.data,owner.id,{amount,witnesses:[]});
