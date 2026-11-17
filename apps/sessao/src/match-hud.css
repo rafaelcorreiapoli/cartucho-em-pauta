@@ -1011,27 +1011,6 @@ button.item-tile:active { transform: translateY(3px); }
 .album-tabs { display: flex; gap: .45rem; width: 100%; }
 .album-tabs button[aria-pressed="true"] { color: #f5e2ff; background: #31243d; border-color: #a990c4; }
 
-.snake-launch {
-  display: flex;
-  align-items: center;
-  gap: .65rem;
-  width: 100%;
-  padding: .7rem;
-  border: 1px solid #486452;
-  border-radius: 12px;
-  background: #121d18;
-  color: #e5f7de;
-  font: 750 1rem/1.1 system-ui,sans-serif;
-  cursor: pointer;
-}
-.snake-launch .hud-glyph {
-  width: 38px;
-  height: 38px;
-  padding: 7px;
-  border-radius: 9px;
-  background: #aaf498;
-  color: #143c26;
-}
 .phone-snake { display: grid; gap: .45rem; width: 100%; }
 .phone-snake canvas { width: min(100%,240px); justify-self: center; border: 1px solid #53765b; border-radius: 6px; }
 .snake-readout { display: flex; justify-content: space-between; gap: .45rem; font: 650 .74rem/1.2 system-ui,sans-serif; color: #aef49b; }
@@ -1058,8 +1037,20 @@ button.item-tile:active { transform: translateY(3px); }
   background: transparent;
   border: 0;
 }
-#phone-apps .phone-app { font-size: .72rem; }
-#phone-apps .phone-app-icon { width: min(100%, 56px); }
+:is(#phone-apps,.phone-games-menu) .phone-app { font-size: .72rem; }
+:is(#phone-apps,.phone-games-menu) .phone-app-icon { width: min(100%, 56px); }
+.phone-games-menu {
+  display: grid;
+  width: 100%;
+  align-self: flex-start;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: .8rem;
+  padding: .8rem;
+}
+.phone-games-menu .phone-app-icon { font-size: 1.4rem; }
+.phone-games-menu .action-key { font-size: .65rem; }
+.phone-app[data-app="candy"] .phone-app-icon { background: linear-gradient(145deg,#ffb9d7,#b83476); }
+.phone-app[data-app="bets"] .phone-app-icon { background: linear-gradient(145deg,#af9af5,#593a9f); }
 .phone-app[data-app="document"] .phone-app-icon { background: linear-gradient(145deg,#93cdff,#255aab); }
 .phone-app[data-app="wallet"] .phone-app-icon { background: linear-gradient(145deg,#6cdbd0,#146d6b); }
 .phone-camera { width: 100%; display: grid; gap: .8rem; align-self: center; }
@@ -1074,8 +1065,9 @@ button.item-tile:active { transform: translateY(3px); }
 .phone-camera-controls button { color: #f7f7f7; background: #202124; cursor: pointer; }
 .phone-camera-controls button:disabled { opacity: .45; cursor: default; }
 .camera-gallery,.camera-selfie { display: grid; place-items: center; gap: 3px; min-width: 46px; padding: 5px; border: 0; border-radius: 9px; }
-.camera-shutter { display: grid; place-items: center; width: 54px; height: 54px; border: 2px solid #fff; border-radius: 50%; }
+.camera-shutter { position: relative; display: grid; place-items: center; width: 54px; height: 54px; border: 2px solid #fff; border-radius: 50%; }
 .camera-shutter span { width: 40px; height: 40px; border-radius: 50%; background: #f04449; }
+.camera-shutter .action-key { position: absolute; margin: 0; }
 .camera-shutter:active span { transform: scale(.85); }
 .phone-pix { display: grid; align-content: start; width: 100%; gap: .55rem; }
 .phone-pix h4,.phone-pix p { margin: 0; }
@@ -1091,7 +1083,6 @@ button.item-tile:active { transform: translateY(3px); }
 .camera-selfie-portrait .phone-contact-face { --portrait-size: clamp(86px, 18vh, 150px); background-color: transparent; }
 .mail-attachment-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .4rem; margin-block: .5rem; }
 .mail-attachment-grid button { display: grid; justify-items: center; gap: .35rem; white-space: normal; overflow-wrap: anywhere; }
-#gameplay-dialog .snake-launch:hover { background: #223b2c; color: #f3f8ed; }
 .phone-minigame { display: grid; width: 100%; align-content: start; gap: .65rem; }
 .phone-minigame header { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
 .phone-minigame p { margin: 0; }
