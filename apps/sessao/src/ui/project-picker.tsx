@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { DialogDismiss } from './dialog-dismiss';
 import { documentRules } from '../internal-mail';
 import { flushSync } from 'react-dom';
@@ -10,7 +10,7 @@ import './project-picker.css';
 type Project = (typeof bills)[number];
 
 function budgetImpact(value:number) {
-  return value<0 ? `−${money(-value)}` : money(0);
+  return {value:Math.min(0,value),label:value<0 ? `−${money(-value)}` : money(0)};
 }
 
 function stabilityImpact(value:number) {
@@ -20,8 +20,8 @@ function stabilityImpact(value:number) {
 
 function approvalBudget(bill:Project) {
   const effect = bill.effect;
-  if (effect?.kind==='allowance') return `até ${budgetImpact(-effect.perMandate)} por mandato`;
-  if (effect?.kind==='pinga-distribution') return `${budgetImpact(-pingaProgram.doseCost)} por mandato`;
+  if (effect?.kind==='allowance') return {value:-effect.perMandate,label:`até −${money(effect.perMandate)} por mandato`};
+  if (effect?.kind==='pinga-distribution') return {value:-pingaProgram.doseCost,label:`−${money(pingaProgram.doseCost)} por mandato`};
   return budgetImpact(bill.yes.budget);
 }
 
@@ -36,10 +36,14 @@ function extraEffect(bill:Project) {
   }
 }
 
-function ImpactSummary({impact,budget}:{impact:Impact;budget:string}) {
+function effectTone(value:number) {
+  return value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
+}
+
+function ImpactSummary({impact,budget}:{impact:Impact;budget:ReturnType<typeof budgetImpact>}) {
   return <span className="project-picker-impact">
-    <span>Orçamento <b>{budget}</b></span>
-    <span>Estabilidade <b>{stabilityImpact(impact.stability)}</b></span>
+    <span>Orçamento <b data-effect={effectTone(budget.value)}>{budget.label}</b></span>
+    <span>Estabilidade <b data-effect={effectTone(impact.stability)}>{stabilityImpact(impact.stability)}</b></span>
   </span>;
 }
 
@@ -47,31 +51,69 @@ function ProjectPicker({title,current,unavailable,confirm}:{
   title:string;current?:number;unavailable:ReadonlySet<number>;confirm:(project:number)=>void;
 }) {
   const [selected,setSelected] = useState<number>();
+  const list = useRef<HTMLDivElement>(null);
+  const detail = useRef<HTMLDivElement>(null);
+  const choices = bills.flatMap((_,index)=>index!==current && !unavailable.has(index) ? [index] : []);
+  function select(index:number) {
+    setSelected(index);
+    if (detail.current) detail.current.scrollTop = 0;
+  }
+  function submit() {
+    if (selected!==undefined && !unavailable.has(selected)) confirm(selected);
+  }
+  function onKeyDown(event:KeyboardEvent<HTMLDivElement>) {
+    if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key==='Enter') {
+      if (event.target instanceof HTMLButtonElement) return;
+      event.preventDefault();
+      if (!event.repeat) submit();
+      return;
+    }
+    const position = selected===undefined ? -1 : choices.indexOf(selected);
+    let index:number|undefined;
+    if (/^[1-9]$/.test(event.key)) index = choices[Number(event.key)-1];
+    else if (event.key==='ArrowDown') index = choices[Math.min(position+1,choices.length-1)];
+    else if (event.key==='ArrowUp') index = choices[position<0 ? choices.length-1 : Math.max(position-1,0)];
+    else return;
+    event.preventDefault();
+    if (index===undefined) return;
+    select(index);
+    const radio = list.current?.querySelector<HTMLInputElement>(`input[value="${index}"]`);
+    radio?.focus({preventScroll:true});
+    radio?.closest('label')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
   const bill = selected===undefined ? undefined : bills[selected];
   const effect = bill && extraEffect(bill);
-  return <>
+  return <div className="project-picker-content" onKeyDown={onKeyDown}>
     <header><h2 className="hud-title" id="project-picker-title">{title}</h2>
       <DialogDismiss label="Fechar"/>
     </header>
     <form className="project-picker-form" onSubmit={event=>{
       event.preventDefault();
-      if (selected!==undefined && !unavailable.has(selected)) confirm(selected);
+      submit();
     }}>
-      <div className="project-picker-list" role="radiogroup" aria-labelledby="project-picker-title">
-        {bills.map((project,index)=>index!==current && <label key={project.id} className="project-picker-option">
-          <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/documento-legislativo.webp'} alt=""/>
-          <span className="project-picker-copy">
-            <strong id={`project-picker-name-${index}`}>{project.name}{unavailable.has(index) && ' · Já votado'}</strong>
-            <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary impact={project.yes} budget={approvalBudget(project)}/></span>
-          </span>
-          <input type="radio" name="project" value={index} checked={selected===index}
-            disabled={unavailable.has(index)} onChange={()=>setSelected(index)}
-            aria-labelledby={`project-picker-name-${index}`} aria-describedby={`project-picker-impact-${index}`}/>
-        </label>)}
+      <div ref={list} className="project-picker-list" role="radiogroup" aria-labelledby="project-picker-title">
+        {bills.map((project,index)=>{
+          if (index===current) return null;
+          const position = choices.indexOf(index);
+          const shortcut = position>=0 && position<9 ? String(position+1) : undefined;
+          return <label key={project.id} className="project-picker-option">
+            <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/documento-legislativo.webp'} alt=""/>
+            <span className="project-picker-copy">
+              <strong id={`project-picker-name-${index}`}>{project.name}{unavailable.has(index) && ' · Já votado'}</strong>
+              <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary impact={project.yes} budget={approvalBudget(project)}/></span>
+            </span>
+            <input type="radio" name="project" value={index} checked={selected===index}
+              disabled={unavailable.has(index)} onChange={()=>select(index)} aria-keyshortcuts={shortcut}
+              aria-labelledby={`project-picker-name-${index}`} aria-describedby={`project-picker-impact-${index}`}/>
+            {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
+          </label>;
+        })}
       </div>
       <section className="project-picker-details" aria-label="Detalhes do projeto">
-        <div className="project-picker-detail-content">
+        <div ref={detail} className="project-picker-detail-content">
           {bill ? <>
+            <img className="project-picker-banner" src={import.meta.env.BASE_URL+'assets/'+(bill.banner ?? 'documento-legislativo.webp')} alt=""/>
             <h3>{bill.name}</h3>
             <p>{bill.description}</p>
             {effect && <div><h4>Efeito extra se aprovado</h4><p>{effect}</p></div>}
@@ -85,7 +127,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
         </footer>
       </section>
     </form>
-  </>;
+  </div>;
 }
 
 export function mountProjectPicker() {
@@ -98,6 +140,7 @@ export function mountProjectPicker() {
       flushSync(()=>root.render(<ProjectPicker key={++opened} title={title} current={current} unavailable={unavailable}
         confirm={project=>{select(project);dialog.close();}}/>));
       dialog.showModal();
+      dialog.querySelector<HTMLInputElement>('input[name="project"]:enabled')?.focus({preventScroll:true});
     },
     destroy() { dialog.close(); root.unmount(); },
   };
