@@ -599,7 +599,7 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   now = 1;
   match.gameplayWorld(players,now,()=>false).publish({
     type:'filed',actor:buyer.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N07'),
-    position:stations.amendment,at:now,witnesses:[],
+    position:terminals.protocol.point,at:now,witnesses:[],
   });
   now += NEGOTIATION_MS;
   match.advance(now);
@@ -1722,7 +1722,7 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   expect(draw()).toBeUndefined();
   match.gameplayWorld([player],now,()=>false).publish({
     type:'filed',actor:player.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N02'),
-    position:stations.amendment,at:now,witnesses:[],
+    position:terminals.protocol.point,at:now,witnesses:[],
   });
   now += NEGOTIATION_MS;
   match.advance(now);
@@ -2258,7 +2258,7 @@ test('the reading mission follows the last project available to study',()=>{
   expect(match.roomActivity(player,'library',filingAt)?.text).toBe('Nenhum projeto em pauta.');
   expect(view(filingAt).progression.xp).toBe(0);
   expect(match.gameplayWorld([player],filingAt,()=>false).publish({
-    type:'filed',actor:player.id,item:1,project:0,at:filingAt,position:stations.amendment,witnesses:[],
+    type:'filed',actor:player.id,item:1,project:0,at:filingAt,position:terminals.protocol.point,witnesses:[],
   })).toBe(true);
   const study = match.gameplayWorld([player],filingAt+1,()=>false);
   const events:Parameters<typeof study.publish>[0][] = [];

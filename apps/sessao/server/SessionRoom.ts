@@ -310,7 +310,7 @@ export class SessionRoom extends Room {
       if (!raw || typeof raw!=='object' || !('action' in raw)) return;
       const {action} = raw;
       const player = this.players.get(client.sessionId)?.player;
-      if (player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying && (action==='amendment' || action==='audit' || action==='panel' || action==='fraud')) {
+      if (player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying && (action==='audit' || action==='panel' || action==='fraud')) {
         const result = this.match.act(player,action,this.clock.currentTime);
         if (result) client.send('audit-result',result);
       }

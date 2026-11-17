@@ -11,7 +11,7 @@ import { applyFacts, photoMissions } from './photo-missions';
 
 export type MissionSwapResult = 'swapped'|'used'|'unavailable';
 
-export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'emendaFutura'|'votoNpc'|'leitura'|'responderCrise';
+export type AgendaAction = 'propaganda'|'discurso'|'votoNpc'|'leitura'|'responderCrise';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; hasFutureAdvertising?:()=>boolean; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
@@ -51,7 +51,6 @@ const activityMissions = {
   socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-parliamentarian-'),
   fiscalCafe:drankCoffee,
   almocoPlenario:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza' && inPlenary(event.position),
-  emenda:(event:GameplayEvent) => event.type==='amendment-filed',
   cafe:drankCoffee,
   leitura:(event:GameplayEvent) => event.type==='bill-studied',
   propaganda:(event:GameplayEvent) => event.type==='advertisement-aired',
@@ -278,7 +277,6 @@ export class PersonalAgenda {
         if (documents && [...documents.values()].some(signed=>new Set([...possible,...signed]).size>=mission.target)) return true;
       } else if ((this.availableInMatch(mission.kind,mission.target-mission.current) ||
           mission.kind==='publicouSelfie' && this.canPublishSavedSelfie(metrics)) &&
-          (mission.kind!=='emenda' || metrics.canAgendaAction?.('emendaFutura')!==false) &&
           (mission.kind!=='votoNpc' || metrics.canAgendaAction?.('votoNpc')!==false) &&
           (mission.kind!=='retratacaoOficial' || this.hasNewReport(metrics)) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
@@ -299,7 +297,7 @@ export class PersonalAgenda {
     if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='flagraGabinete' && !this.hasOffice?.() && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='votoNpc' && (this.ballotsLeft===0 || metrics?.canAgendaAction?.('votoNpc')===false)) return false;
-    if (kind==='presidenteFoto' || kind==='emenda' && this.ballotsLeft===0) return false;
+    if (kind==='presidenteFoto') return false;
     if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
     if (kind==='amizadeInstitucional' && !this.targets.some(person=>!this.visitedTargets.has(kind+':'+person.id) &&
         (!drawing || this.targetAvailable(kind,person.id)))) return false;
@@ -322,7 +320,7 @@ export class PersonalAgenda {
       const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
       return !this.cannotVote && this.ballotsLeft-Number(consumed)>=remaining;
     }
-    return !this.cannotVote || !['campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
+    return !this.cannotVote || !['campanhaUltimaHora','protocolo','propaganda','discurso','auditoria'].includes(kind);
   }
 
   private hasNewReport(metrics:AgendaMetrics) {
@@ -521,7 +519,7 @@ export class PersonalAgenda {
       if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;
     }
     const action = kind==='campanhaUltimaHora' ? 'propaganda' : kind;
-    if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
+    if ((action==='propaganda' || action==='discurso') && metrics.canAgendaAction?.(action)===false) return false;
     if (kind==='bandejaGourmet') {
       // Coffee can be collected at the station and carried back to the office.
       const prices = marketKinds.food.map(food=>food==='coffee' || metrics.owns?.(food)

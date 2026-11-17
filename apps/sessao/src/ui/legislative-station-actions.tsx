@@ -5,7 +5,6 @@ import {type Action,type PlenaryView,type Station} from '../plenary';
 type StationAction = Exclude<Action,'audit'> | 'denounce';
 
 export const legislativeButtons = {
-  amendment:{station:'amendment',label:'Propor emenda',icon:'document'},
   denounce:{station:'audit',label:'Denunciar',icon:'alert'},
   panel:{station:'panel',label:'Corrigir',icon:'check'},
   fraud:{station:'panel',label:'Fraudar',icon:'alert'},
@@ -16,7 +15,6 @@ export function legislativeStationActions(view:PlenaryView|undefined,station:Sta
   if (station==='audit') return ['denounce'];
   if (view.mandate===false) return [];
   if (view.project===undefined || view.projectVoteExpired) return [];
-  if (station==='amendment') return view.amended ? [] : ['amendment'];
   if (station!=='panel') return [];
   const actions:StationAction[] = [];
   if (view.audit==='fraud' && !view.reportedFraud) actions.push('panel');

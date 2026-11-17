@@ -1,3 +1,4 @@
+import {terminals} from '../gameplay';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -52,7 +53,7 @@ test('the panel projects valid targets and the enacted hearing fee',()=>{
   expect(withoutCassation).not.toContain('Convocar cassação');
   match.gameplayWorld(players,2,()=>false).publish({
     type:'filed',project:bills.findIndex(bill=>bill.id==='PROJ-N06'),
-    actor:rafa.id,item:1,position:stations.amendment,at:0,witnesses:[],
+    actor:rafa.id,item:1,position:terminals.protocol.point,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   expect(institutionalActions(view(NEGOTIATION_MS),panel).hearing).toBeUndefined();

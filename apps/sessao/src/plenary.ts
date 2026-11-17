@@ -31,7 +31,6 @@ export const stations = {
   cabinet:treasurer.interaction,
   secretary:npcs.secretary.interaction,
   archive:{x:128,y:364},
-  amendment:npcs.protocol.interaction,
   audit: {x:808,y:93},
   panel: {x:548,y:620},
   press: {x:863,y:245},
@@ -129,7 +128,7 @@ export type BillVote = Vote | 'abstain';
 export type BillVoter = Omit<SessionParticipant,'role'> & {vote?:BillVote};
 export type CassationView = {candidates:Omit<SessionParticipant,'role'>[]; eligible:boolean; voted:number; electorate:number; quorum:number; choice?:string|null};
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
-export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
+export type Action = 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; abstentions?:number; absences?:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
@@ -141,7 +140,7 @@ export type PlenaryView = {
   phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean; botsToFill?:number;
   botMessages?:readonly {name:string; text:string}[];
-  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
+  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;

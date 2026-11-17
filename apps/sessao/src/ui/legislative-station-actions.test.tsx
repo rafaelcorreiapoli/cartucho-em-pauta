@@ -1,3 +1,4 @@
+import {terminals} from '../gameplay';
 import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -6,7 +7,7 @@ import {BALLOT_MS,bankAuditFee,bills,NEGOTIATION_MS,stations,type Station} from 
 import type {Player} from '../map';
 import {LegislativeStationActions,legislativeStationActions} from './legislative-station-actions';
 
-test('station controls show complaints and follow the amendment and correction state without exposing the infiltrator',()=>{
+test('station controls show complaints and follow the correction state without exposing the infiltrator',()=>{
   const people:Player[] = ['Rafa','Bia','Caio'].map((id,character)=>({
     id,nick:id,character,x:0,y:0,direction:0,moving:false,
   }));
@@ -20,9 +21,6 @@ test('station controls show complaints and follow the amendment and correction s
   );
 
   expect(render(host)).toBe('');
-  expect(render(host,'amendment')).toContain('data-action="amendment"');
-  match.act({...host,...stations.amendment},'amendment',1);
-  expect(render(host,'amendment')).toBe('');
   expect(render(host,'panel')).toBe('');
   expect(render(traitor,'panel')).toContain('data-action="fraud"');
   match.act({...traitor,...stations.panel},'fraud',2);
@@ -49,7 +47,7 @@ test.each([true,false])('audit server fees still follow the approved policy, app
   expect(match.start(host.id,players,0,()=>.9)).toBe(true);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N08');
   match.gameplayWorld(players,0,()=>false).publish({
-    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
+    type:'filed',project,actor:host.id,item:1,position:terminals.protocol.point,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   if (approved) for (const player of [host,recipient]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
