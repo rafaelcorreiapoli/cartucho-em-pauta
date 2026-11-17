@@ -506,6 +506,11 @@ export class PlenaryMatch {
       paymentsLeft:id=>current() ? this.economy.paymentsLeft(id,this.round) : 0,
       payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
+      missionSwapUsed:id=>current() && this.economy.missionSwapUsed(id),
+      swapMissions:id=>{
+        if (!current() || this.phase!=='negotiation' || !this.canHandleObjects(id,now)) return 'unavailable';
+        return this.economy.swapMissions(id);
+      },
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>{ if (current()) this.economy.earn(id,amount); },
       // An obsolete world must not mint an ID the next match would accept.
       nextEventId:()=>current() ? ++this.eventSequence : this.eventSequenceAtStart,

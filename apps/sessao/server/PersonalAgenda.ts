@@ -9,6 +9,8 @@ import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind}
 import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
+export type MissionSwapResult = 'swapped'|'used'|'unavailable';
+
 export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'emendaFutura'|'votoNpc'|'leitura'|'responderCrise';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
@@ -140,6 +142,7 @@ export class PersonalAgenda {
   private completed:Mission[] = [];
   private missionDeck:Agenda[];
   private nextMissionId = 0;
+  private swappedMissions = false;
   private savingsStartingWallet = 0;
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
@@ -172,9 +175,9 @@ export class PersonalAgenda {
   private visitedTargets = new Set<string>();
   private readonly rewardedSelfieIds = new Set<number>();
   private readonly rewardedItemIds = new Set<number>();
-  private pickTarget(kind:Agenda) {
+  private pickTarget(kind:Agenda, missions:readonly Mission[]=this.missions) {
     const targets = this.targets.filter(person=>this.targetAvailable(kind,person.id));
-    return targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !this.missions.some(mission=>mission.person?.id===person.id)) ??
+    return targets.find(person=>!this.visitedTargets.has(kind+':'+person.id) && !missions.some(mission=>mission.person?.id===person.id)) ??
       targets.find(person=>!this.visitedTargets.has(kind+':'+person.id));
   }
 
@@ -600,25 +603,58 @@ export class PersonalAgenda {
       (kind!=='equipamento' || !!metrics.owns || !this.acquired.has('binoculars'));
   }
 
-  private fillMissions(metrics:AgendaMetrics, initial=false) {
-    while (this.missions.length<activeMissionCount) {
-      const recent = this.completed.at(-1)?.kind;
-      const canDraw = (kind:Agenda) => this.eligible(kind,metrics) && !this.hasActive(kind);
-      const foodActive = this.missions.some(mission=>foodMissions.has(mission.kind));
-      const diverse = initial ? -1 : this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind) &&
+  private drawMissions(metrics:AgendaMetrics, keep:readonly Mission[], initial:boolean, exclude:readonly Mission[] = []) {
+    const deck = [...this.missionDeck];
+    const missions = [...keep];
+    let nextId = this.nextMissionId;
+    const recent = this.completed.at(-1)?.kind;
+    const excludedKinds = new Set(exclude.map(({kind})=>kind));
+    while (missions.length<activeMissionCount) {
+      const canDraw = (kind:Agenda) => !excludedKinds.has(kind) && !missions.some(mission=>mission.kind===kind) && this.eligible(kind,metrics);
+      const foodActive = missions.some(mission=>foodMissions.has(mission.kind));
+      const diverse = initial ? -1 : deck.findIndex(kind=>kind!==recent && canDraw(kind) &&
         (!foodMissions.has(kind) || !foodActive && (!recent || !foodMissions.has(recent))));
-      const fresh = this.missionDeck.findIndex(kind=>kind!==recent && canDraw(kind));
-      const index = diverse>=0 ? diverse : fresh>=0 ? fresh : this.missionDeck.findIndex(canDraw);
-      if (index<0) return;
-      const [kind] = this.missionDeck.splice(index,1);
-      this.missionDeck.push(kind);
+      const fresh = deck.findIndex(kind=>kind!==recent && canDraw(kind));
+      const index = diverse>=0 ? diverse : fresh>=0 ? fresh : deck.findIndex(canDraw);
+      if (index<0) break;
+      const [kind] = deck.splice(index,1);
+      deck.push(kind);
       let target = photoMissions[kind as keyof typeof photoMissions]?.target ?? missionTargets[kind] ?? 1;
-      if (kind==='poupancaInstitucional') this.savingsStartingWallet = metrics.wallet;
       if (kind==='fortuna') target = Math.max(target,metrics.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,metrics.popularity+15));
-      const person = Object.hasOwn(targetedAgendas,kind) ? this.pickTarget(kind) : undefined;
-      this.missions.push({id:++this.nextMissionId,kind,current:0,target,person});
+      const person = Object.hasOwn(targetedAgendas,kind) ? this.pickTarget(kind,missions) : undefined;
+      missions.push({id:++nextId,kind,current:0,target,person});
     }
+    return {deck,missions,nextId};
+  }
+
+  private applyDraw(metrics:AgendaMetrics,{deck,missions,nextId}:ReturnType<PersonalAgenda['drawMissions']>) {
+    if (missions.some(mission=>mission.id>this.nextMissionId && mission.kind==='poupancaInstitucional')) {
+      this.savingsStartingWallet = metrics.wallet;
+    }
+    this.nextMissionId = nextId;
+    this.missions = missions;
+    this.missionDeck = deck;
+  }
+
+  private fillMissions(metrics:AgendaMetrics, initial=false) {
+    if (this.missions.length<activeMissionCount) this.applyDraw(metrics,this.drawMissions(metrics,this.missions,initial));
+  }
+
+  get missionSwapUsed() { return this.swappedMissions; }
+
+  swapMissions(metrics:AgendaMetrics):MissionSwapResult {
+    if (this.swappedMissions) return 'used';
+    if (this.missions.length!==activeMissionCount) return 'unavailable';
+    const draw = this.drawMissions(metrics,[],false,this.missions);
+    if (draw.missions.length!==activeMissionCount) return 'unavailable';
+    for (const {id} of this.missions) {
+      this.factsByMission.delete(id);
+      this.callSamples.delete(id);
+    }
+    this.applyDraw(metrics,draw);
+    this.swappedMissions = true;
+    return 'swapped';
   }
 
   private missionProgress(metrics:AgendaMetrics, mission:Mission) {

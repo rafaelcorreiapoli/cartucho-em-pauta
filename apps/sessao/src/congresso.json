@@ -10,7 +10,7 @@
   "width": 1136,
   "height": 759,
   "nextlayerid": 10,
-  "nextobjectid": 188,
+  "nextobjectid": 191,
   "layers": [
     {
       "id": 1,
@@ -421,7 +421,7 @@
         },
         {
           "id": 23,
-          "name": "Sala de Reprografia",
+          "name": "Central de Expediente",
           "x": 602,
           "y": 403,
           "width": 204,
@@ -1187,7 +1187,7 @@
         },
         {
           "id": 89,
-          "name": "Reprografia",
+          "name": "Central de Expediente",
           "x": 780,
           "y": 392,
           "width": 26,
@@ -1330,6 +1330,18 @@
       "x": 0,
       "y": 0,
       "objects": [
+        {
+          "id": 188,
+          "name": "Balcão do Topa ou Não Topa",
+          "x": 628,
+          "y": 456,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
         {
           "id": 101,
           "name": "",
@@ -2065,6 +2077,30 @@
       "x": 0,
       "y": 0,
       "objects": [
+        {
+          "id": 189,
+          "name": "Silvio Santos",
+          "x": 650,
+          "y": 456,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
+        {
+          "id": 190,
+          "name": "Balcão do Topa ou Não Topa: atendimento",
+          "x": 650,
+          "y": 488,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
         {
           "id": 142,
           "name": "Terminal de segurança",

@@ -120,6 +120,15 @@ export class PoliticalEconomy {
     return [...(known ?? []),...this.published].some(key=>this.records.get(key)?.kind===kind);
   }
 
+  missionSwapUsed(id:string) {
+    return this.accounts.get(id)?.agenda.missionSwapUsed ?? false;
+  }
+
+  swapMissions(id:string) {
+    const account = this.accounts.get(id);
+    return account ? account.agenda.swapMissions(account) : 'unavailable';
+  }
+
   hasMission(id:string,mission:Agenda) {
     return this.accounts.get(id)?.agenda.hasActive(mission) ?? false;
   }

@@ -115,7 +115,7 @@ Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica
 
 Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
 
-A Enfermaria fica no lado direito da Sala de Reprografia. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
+A Enfermaria fica no lado direito da Central de Expediente. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
 
 ## Voz da sala
 
@@ -249,6 +249,11 @@ muda. Como as salas ficam em memória, é preciso criar outra sala após
 esse reinício.
 
 ## Objetos e celular
+
+Na Central de Expediente, fale com **Silvio Santos** no **Balcão do Topa ou Não Topa**
+para trocar as três missões ativas de uma vez. A troca é gratuita e pode ser feita
+uma vez por partida. O progresso das missões trocadas é descartado e as recompensas
+já recebidas ficam com o jogador. A copiadora continua funcionando na mesma sala.
 
 No Cafezinho, na Secretaria e no Credenciamento, use **Objetos próximos**
 para recolher café, formulários e presentes. Maletas, cuecas e maços podem

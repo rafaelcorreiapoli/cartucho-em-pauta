@@ -27,6 +27,22 @@ function event(type:GameplayEvent['type'], extra:Partial<GameplayEvent> = {}):Ga
   return {type,actor:'a',at:1,position:{x:0,y:0},witnesses:[],...extra};
 }
 
+test('a swap with too few eligible replacements preserves the agenda and the free swap',()=>{
+  const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
+  agenda.progress(metrics,{cafe:1});
+  const before = agenda.view(metrics);
+  const deck = Reflect.get(agenda,'missionDeck');
+  Reflect.set(agenda,'missionDeck',[...before.active.map(({kind})=>kind),'selfieSolo']);
+  expect(agenda.swapMissions(metrics)).toBe('unavailable');
+  expect(agenda.view(metrics)).toEqual(before);
+  expect(agenda.missionSwapUsed).toBe(false);
+
+  Reflect.set(agenda,'missionDeck',deck);
+  expect(agenda.swapMissions(metrics)).toBe('swapped');
+  expect(agenda.view(metrics).completed).toEqual(before.completed);
+  expect(agenda.swapMissions(metrics)).toBe('used');
+});
+
 test('two different signers must sign the same document after assignment',()=>{
   const economy = new PoliticalEconomy();
   const players:Player[] = ['a','b','c'].map((id,index)=>({
