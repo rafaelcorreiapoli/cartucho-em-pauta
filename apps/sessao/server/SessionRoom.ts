@@ -197,6 +197,7 @@ export class SessionRoom extends Room {
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
+        this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.clock.currentTime));
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
           id=>{
@@ -362,7 +363,7 @@ export class SessionRoom extends Room {
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
           !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
       const text = this.gameplay.act(player,action,this.gameplayWorld());
-      if (action.kind==='photo-delete') this.match.refreshAgendaEligibility();
+      if (action.kind==='photo-delete' || action.kind==='scan-xray') this.match.refreshAgendaEligibility();
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
@@ -476,7 +477,8 @@ export class SessionRoom extends Room {
       const world = this.gameplayWorld();
       if (!freeze || this.match.phase!=='negotiation') {
         const exploring = this.match.phase==='negotiation';
-        this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+        const endedXray = this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+        if (endedXray) this.match.refreshAgendaEligibility(now);
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }

@@ -229,6 +229,13 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
+  canUseAgendaXray(id:string,wallet:number,now:number) {
+    const item = this.wearing(id,'xray') ?? this.inventory(id).find(({data})=>data.kind==='xray')?.data;
+    if (!item) return false;
+    const scan = this.scanning.get(id);
+    return (item.charges ?? 0)>0 || (scan?.item===item.id && scan.ends>now) || wallet>=xray.rechargePrice;
+  }
+
   hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false, now?:number) {
     if (kind==='freshForeignPortrait') return [...this.installations].some(([site,item])=>{
       const installedAt = this.portraitInstalledAt.get(site);
@@ -523,7 +530,7 @@ export class Gameplay {
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
-    this.tickXray(world,exploring);
+    const endedXray = this.tickXray(world,exploring);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
@@ -555,6 +562,7 @@ export class Gameplay {
       if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (player.knockedOut) this.stopModulator(player.id);
     }
+    return endedXray;
   }
 
   private stopModulator(id:string) {
@@ -1230,11 +1238,13 @@ export class Gameplay {
   }
 
   private tickXray(world:GameplayWorld, exploring:boolean) {
+    let ended = false;
     for (const [id,scan] of this.scanning) {
       const player = world.players.find(player=>player.id===id);
       if (!exploring || scan.ends<=world.now || !player || world.present?.(id)===false ||
           player.knockedOut || player.carried || this.wearing(id,'xray')?.id!==scan.item) {
         this.scanning.delete(id);
+        ended = true;
         continue;
       }
       const safeMission = world.hasMission?.(id,'fiscalizacaoParalela');
@@ -1248,6 +1258,7 @@ export class Gameplay {
         publishGameplay(world,player,'xray-target-revealed',{target:target.id,place,witnesses:[]});
       }
     }
+    return ended;
   }
 
   private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {

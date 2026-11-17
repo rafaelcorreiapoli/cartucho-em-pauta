@@ -11,7 +11,7 @@ import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, ar
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
+  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -116,6 +116,7 @@ function agendaEquipmentPrice(item:ObjectKind,metrics:AgendaMetrics) {
 }
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
+  if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && metrics.canUseXray?.()===false) return false;
   if (kind==='manutencaoEmergencia') return metrics.powerOut?.()===true;
   if (kind==='escutaAtiva') {
     return !!metrics.ownsWiretap?.() || (!!metrics.canInstallSpy?.('wiretap') &&
@@ -284,7 +285,7 @@ export class PersonalAgenda {
       if (this.spyAvailability?.(device)===false) return false;
     }
     if (kind==='presidenteFoto') return false;
-    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc') && !this.npcCount) return false;
+    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
     if (kind==='amizadeInstitucional' && !this.targets.some(person=>!this.visitedTargets.has(kind+':'+person.id) &&
         (!drawing || this.targetAvailable(kind,person.id)))) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
@@ -529,7 +530,6 @@ export class PersonalAgenda {
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
-    if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaEquipmentPrice('bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
     if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<2) return false;

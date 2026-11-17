@@ -9,6 +9,9 @@ import {internalMailRules} from '../internal-mail';
 import {Gameplay} from '../../server/Gameplay';
 import {npcs} from '../npcs';
 import {spyRules} from '../surveillance';
+import {xray} from '../equipment';
+import {privateOffices} from '../private-offices';
+
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
@@ -1525,4 +1528,62 @@ test('an attached photo can only credit mail missions active at publication',()=
   const completed = second.missions.completed.find(mission=>mission.kind==='jornalismo')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(second.progression.xp-first.progression.xp).toBe(missionReward('jornalismo').xp);
+});
+
+test('the Agenda keeps the active last Raio X scan but stops assigning inspections without a charge or recharge funds',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const other:Player = {...player,id:'bia',nick:'Bia',character:1};
+  const players = [player,other];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(player,{kind:'open-shop',target:'vendor'},world);
+  game.act(player,{kind:'shop-buy',target:'xray',token:game.view(player,world).dialogue?.token},world);
+  const inventory = game.view(player,world);
+  const item = [...inventory.inventory,...(inventory.equipped ?? [])].find(item=>item.kind==='xray')!;
+  game.act(player,{kind:'equip',item:item.id},world);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const politics = ()=>match.view(player.id,ids,world.now).politics!;
+  expect(economy.spend(player.id,politics().wallet)).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  match.setAgendaXrayAvailability((id,wallet)=>game.canUseAgendaXray(id,wallet,world.now));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  const renderAgenda = ()=>politics().missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  const scan = ()=>game.act(player,{kind:'scan-xray'},world);
+
+  match.refreshAgendaEligibility();
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  for (let charge=1; charge<xray.capacity; charge++) {
+    expect(scan()).toBe('Raio X ativado.');
+    expect(scan()).toBe('Raio X desativado.');
+  }
+  expect(scan()).toBe('Raio X ativado.');
+  match.refreshAgendaEligibility();
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+
+  world.now += xray.duration;
+  expect(game.tick(world,true)).toBe(true);
+  match.refreshAgendaEligibility(world.now);
+  expect(renderAgenda()).not.toContain('cofre de outro parlamentar');
+  expect(politics().missions.active).toHaveLength(3);
+  expect(politics().progression.xp).toBe(0);
+
+  economy.earn(player.id,xray.rechargePrice);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility(world.now);
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  expect(game.act(player,{kind:'recharge-xray'},world)).toContain('3/3');
+  const office = privateOffices.find(office=>office.id===game.view(other,world).ownOffice)!;
+  Object.assign(player,office.safe);
+  expect(scan()).toBe('Raio X ativado.');
+  game.tick(world,true);
+  const completed = politics().missions.completed.find(mission=>mission.kind==='fiscalizacaoParalela')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(politics().progression.xp).toBe(missionReward('fiscalizacaoParalela').xp);
 });
