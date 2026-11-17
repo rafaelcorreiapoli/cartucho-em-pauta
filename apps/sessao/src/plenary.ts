@@ -13,7 +13,7 @@ import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
-export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
+export const projectRules = {debateMs:90_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
 export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
@@ -143,7 +143,7 @@ export type PlenaryView = {
   projectWarning?: number;
   projectVoteExpired?: boolean;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; stability:number; budget:number; host?:string;
+  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;

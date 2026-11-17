@@ -3,6 +3,7 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
+import {decorationPopularity} from '../src/gameplay';
 import { CABINET_GRANT, canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
@@ -31,6 +32,7 @@ export class PoliticalEconomy {
   private transferred = 0;
   private reserveFees = 0;
   private npcIds = new Set<string>();
+  private readonly creditedDecorations = new Set<number>();
   private officialScandal = false;
   private scandalPizzas = new Set<number>();
 
@@ -49,6 +51,7 @@ export class PoliticalEconomy {
     this.serial = 0;
     this.scandalPizzas.clear();
     this.officialScandal = false;
+    this.creditedDecorations.clear();
     for (const contact of contacts) {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
@@ -393,6 +396,11 @@ export class PoliticalEconomy {
   recordGameplay(event:GameplayEvent) {
     const account = this.accounts.get(event.actor);
     if (!account || !account.agenda.acceptGameplayEvent(event)) return;
+    if (event.type==='installed' && event.item!==undefined && (event.kind==='portrait' || event.kind==='vip') &&
+        !this.creditedDecorations.has(event.item)) {
+      this.creditedDecorations.add(event.item);
+      this.changePopularity(event.actor,decorationPopularity[event.kind]);
+    }
     if (event.kind==='pizza' && event.item!==undefined) {
       if (event.type==='installed' && this.hasPublicScandal()) {
         this.scandalPizzas.add(event.item);
@@ -456,7 +464,7 @@ export class PoliticalEconomy {
     for (const account of this.accounts.values()) account.agenda.interruptPlenaryVisit();
   }
 
-  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set(),remainingAdvertisements?:(id:string)=>number) {
+  updateAgendaEligibility(players:ReadonlySet<string>, ballotsLeft:number,hasMandate:(id:string)=>boolean = ()=>true,round=0,disconnected:ReadonlySet<string> = new Set(),hasFutureAdvertising?:(id:string)=>boolean) {
     if (this.agendaRound!==round) for (const account of this.accounts.values()) account.agenda.resetBallot();
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
@@ -469,7 +477,7 @@ export class PoliticalEconomy {
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
       Object.assign(account,{
-        remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),
+        hasFutureAdvertising:hasFutureAdvertising && (()=>hasFutureAdvertising(id)),
         canReceivePayments:(required:number)=>availableTargets.has(id) &&
           eligiblePayers().filter(payer=>payer!==id).length>=required,
       });

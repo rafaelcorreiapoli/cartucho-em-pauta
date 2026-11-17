@@ -87,6 +87,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  expect(match.view(host.id,[host.id],0).sessionRemaining).toBe(600);
   let now = 0;
   for (let round=0;round<3;round++) {
     publishProjectFiling(match,host,round===0 ? 0 : round+2,now);
@@ -303,7 +304,7 @@ test('only an accepted filing schedules a ballot, with a cooldown and no repeat 
   expect(view(NEGOTIATION_MS).project).toBeUndefined();
   file(2,NEGOTIATION_MS,1);
   file(0,NEGOTIATION_MS,2);
-  expect(view(NEGOTIATION_MS)).toMatchObject({project:2,proposer:host.nick,remaining:120});
+  expect(view(NEGOTIATION_MS)).toMatchObject({project:2,proposer:host.nick,remaining:NEGOTIATION_MS/1_000});
   match.advance(2*NEGOTIATION_MS-1);
   expect(view(2*NEGOTIATION_MS-1).phase).toBe('negotiation');
   match.advance(2*NEGOTIATION_MS);
@@ -546,6 +547,9 @@ test.each([0,2,3])('the deadline counts rejected projects toward the three-vote 
     const project = index+3; // Rejection leaves stability intact.
     match.gameplayWorld([host],now,()=>false).publish({type:'filed',actor:host.id,project,at:now,position:host,witnesses:[]});
     match.advance(now+=NEGOTIATION_MS);
+    const ballot = match.view(host.id,[host.id],now);
+    expect(ballot.remaining).toBe(BALLOT_MS/1_000);
+    expect(ballot.sessionRemaining).toBe(600-now/1_000);
     match.vote(host.id,'no',now+1);
     match.advance(now+=BALLOT_MS);
     now+=60_000;
@@ -557,7 +561,7 @@ test.each([0,2,3])('the deadline counts rejected projects toward the three-vote 
   expect(result.congressDestroyed).toBe(count<3 ? true : undefined);
 });
 
-test('campaign missions return to the draw after renewal resets used actions',()=>{
+test('the speech mission returns after renewal and propaganda stays available',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
@@ -570,11 +574,11 @@ test('campaign missions return to the draw after renewal resets used actions',()
   expect(match.electionAction(at(host,'panel'),{kind:'advertise'},1,false)).toBeUndefined();
   const ad = match.electionAction(at(host,'press'),{kind:'advertise'},1,false);
   expect(ad).toEqual({name:host.nick,character:host.character,number:100});
-  expect(match.electionAction(at(host,'press'),{kind:'advertise'},2,false)).toBeUndefined();
+  expect(match.electionAction(at(host,'press'),{kind:'advertise'},2,false)).toEqual(ad);
   match.electionAction(at(host,'panel'),{kind:'speech'},2,false);
   resetDraw();
   match.refreshAgendaEligibility();
-  expect(active()).toEqual(['cafe','passeio','selfieSolo']);
+  expect(active()).toEqual(['propaganda','cafe','passeio']);
 
   resetDraw();
   Reflect.set(match,'ends',ELECTION_RULES.interval+100);
@@ -724,7 +728,7 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   match.castCassation(traitor.id,null,open);
   expect(view(open).cassation?.voted).toBe(3);
   match.advance(open+HEARING_MS);
-  expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:55,
+  expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:Math.ceil((NEGOTIATION_MS-open-HEARING_MS)/1_000),
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
@@ -998,9 +1002,9 @@ test('Investimento Político counts paid advertisements after assignment across 
   expect(progress(0)).toBe(0);
   expect(match.electionAction(host,{kind:'advertise'},1,false)).toBeUndefined();
   expect(announce(2)).toBeDefined();
-  expect(announce(3)).toBeUndefined();
-  expect(progress(3)).toBe(2);
-  expect(view(3).politics!.wallet).toBe(8-ELECTION_RULES.advertisementCost);
+  expect(announce(3)).toBeDefined();
+  expect(progress(3)).toBe(4);
+  expect(view(3).politics).toMatchObject({wallet:8-ELECTION_RULES.advertisementCost*2,popularity:50});
 
   publishProjectFiling(match,host);
   match.advance(NEGOTIATION_MS);
@@ -1008,13 +1012,9 @@ test('Investimento Político counts paid advertisements after assignment across 
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   match.advance(ELECTION_RULES.interval);
   expect(announce(ELECTION_RULES.interval+1)).toBeDefined();
-  expect(progress(ELECTION_RULES.interval+1)).toBe(4);
-  match.advance(ELECTION_RULES.interval*2);
-  expect(announce(ELECTION_RULES.interval*2+1)).toBeDefined();
-  const result = view(ELECTION_RULES.interval*2+1).politics!;
+  const result = view(ELECTION_RULES.interval+1).politics!;
   expect(result.missions.completed).toContainEqual(expect.objectContaining({kind:'investimentoPolitico',current:5}));
   expect(result.progression.xp).toBeGreaterThanOrEqual(50);
-  expect(announce(ELECTION_RULES.interval*2+2)).toBeUndefined();
   expect(match.economySummary(0).discrepancy).toBe(0);
 });
 
@@ -1024,12 +1024,12 @@ test('PEC da Reeleição Infinita increases the paid ad weight in polling and th
     expect(match.start(host.id,people,0,()=>.5)).toBe(true);
     const project = bills.findIndex(bill=>bill.id==='PROJ-N09');
     match.gameplayWorld(people,1,()=>false).publish({
-      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:60_000,witnesses:[],
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
     });
     expect(match.electionAction(at(host,'press'),{kind:'advertise'},2,false)).toBeDefined();
-    match.advance(60_000+NEGOTIATION_MS);
-    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',60_000+NEGOTIATION_MS+1);
-    const close = 60_000+NEGOTIATION_MS+BALLOT_MS;
+    match.advance(NEGOTIATION_MS);
+    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+    const close = NEGOTIATION_MS+BALLOT_MS;
     match.advance(close);
     const view = (now:number)=>match.view(host.id,ids,now);
     const estimate = (now:number)=>view(now).election?.polls.find(poll=>poll.id===host.id)?.estimate;

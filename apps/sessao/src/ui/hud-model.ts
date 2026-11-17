@@ -6,7 +6,7 @@ import { stabilityRules, type PlenaryView } from '../plenary';
 import { ELECTION_RULES } from '../elections';
 import { missionTitle, type Mission } from '../politics';
 
-type Congress = {stability:number;budget:number};
+type Congress = {stability:number;budget:number;sessionRemaining?:number};
 type Agenda = {active:Mission[]; recent:Mission[]; announcement:string};
 type Profile = {hp?:number; maxHp?:number; xp:number; start:number; next?:number; level:number};
 type Stamina = {current:number; max:number};
@@ -63,7 +63,7 @@ export function createHudModel() {
       outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;
       television.update(interview && {name:interview.name,remaining:interview.remaining});
-      congress.update({stability:view.stability,budget:view.budget});
+      congress.update({stability:view.stability,budget:view.budget,sessionRemaining:view.sessionRemaining});
       countdown.update(view.phase!=='negotiation' ? undefined : view.cassationIn ?
         {kind:'cassation',seconds:view.cassationIn} : view.projectWarning ?
           {kind:'bill',seconds:view.projectWarning} : undefined);

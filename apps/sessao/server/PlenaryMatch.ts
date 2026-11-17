@@ -146,7 +146,7 @@ export class PlenaryMatch {
     const agendaPlayers = this.expelled.size
       ? new Set([...this.electorate].filter(id=>!this.expelled.has(id)))
       : this.electorate;
-    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id,this.agendaNow));
+    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.hasFutureAdvertising(id,this.agendaNow));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -715,10 +715,11 @@ export class PlenaryMatch {
     switch (action.kind) {
       case 'advertise': {
         if (!this.at(player,'press')) return;
-        const advertisement = this.election.advertise(id,spend);
+        const advertisement = this.election.advertise(id,spend,action.advertisement);
         if (!advertisement) return;
-        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now),amount:rules.advertisementCost});
-        return {...advertisement,character:player.character};
+        this.economy.changePopularity(id,advertisement.offer.popularity);
+        this.publishActivity(player,'advertisement-aired',now,{duration:this.election.timeUntilRenewal(now),amount:advertisement.offer.cost});
+        return {...advertisement.broadcast,character:player.character};
       }
       case 'speech':
         if (this.at(player,'panel') && this.election.speech(id)) {
@@ -1101,6 +1102,7 @@ export class PlenaryMatch {
       projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
       remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt) : this.ends)-now)/1000)) : 0,
+      sessionRemaining:this.running ? Math.max(0,Math.ceil((this.sessionEndsAt-now)/1000)) : undefined,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
       billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>

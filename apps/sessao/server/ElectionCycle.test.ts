@@ -33,11 +33,11 @@ test('one human loses their mandate, payroll excludes them, and the floor is pre
   expect(payroll.at(-1)).toEqual(['3','4','5','npc']);
 });
 
-test('advertising costs R$ 20 mil and adds five electoral strength until renewal',()=>{
+test('advertising supports repeated purchases with different costs and a temporary policy bonus',()=>{
   const election = new ElectionCycle();
   election.reset(people.slice(0,2),0,()=>.5);
   const popularity = (id:string)=>id==='a' ? 10 : 12;
-  const lead = (now:number)=>election.view('a',now,popularity,true).polls[0];
+  const lead = (now:number)=>election.view('a',now,popularity,true,undefined,2).polls[0];
   let wallet = 1;
   const spend = (amount:number)=>{
     if (amount>wallet) return false;
@@ -47,14 +47,15 @@ test('advertising costs R$ 20 mil and adds five electoral strength until renewal
 
   expect(lead(0)).toMatchObject({id:'b',estimate:55});
   expect(election.advertise('a',spend)).toBeUndefined();
-  wallet = 4;
-  expect(election.advertise('a',spend)).toBeDefined();
+  wallet = 8;
+  expect(election.advertise('a',spend)?.offer.popularity).toBe(5);
   expect(lead(1)).toMatchObject({id:'a',estimate:56});
-  expect(election.advertise('a',spend)).toBeUndefined();
+  expect(election.advertise('a',spend,'feature')?.offer.popularity).toBe(8);
+  expect(election.advertise('a',spend,'feature')).toBeUndefined();
   expect(wallet).toBe(2);
 
-  election.advance(rules.interval,popularity,()=>new Map());
-  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:56});
+  election.advance(rules.interval,popularity,()=>new Map(),2);
+  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:66});
   expect(lead(rules.interval)).toMatchObject({id:'b',estimate:55});
   expect(election.advertise('a',spend)).toBeDefined();
   expect(wallet).toBe(0);

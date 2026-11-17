@@ -646,7 +646,7 @@ test('the HUD replaces mail objectives if the next publication falls at the sess
   expect(view(last).completed).toHaveLength(0);
 });
 
-test.each([true,false])('the final campaign slot is consumed once and only the last minute earns XP (%s)',isLastMinute=>{
+test.each([true,false])('only the last minute of the final campaign cycle earns XP (%s)',isLastMinute=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -667,7 +667,7 @@ test.each([true,false])('the final campaign slot is consumed once and only the l
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain(`nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos`);
   expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeDefined();
   const after = view();
-  expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(false);
+  expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(!isLastMinute);
   expect(after.missions.active).toHaveLength(3);
   const completed = after.missions.completed.find(mission=>mission.kind==='campanhaUltimaHora');
   expect(!!completed).toBe(isLastMinute);
@@ -742,14 +742,16 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(view(5).progression.xp).toBe(65);
 });
 
-test('campaign spending leaves the HUD when a project vote closes an unused advertisement slot',()=>{
+test('campaign spending leaves the HUD when the final advertising cycle ends during a vote',()=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  for (let cycle=1;cycle<ELECTION_RULES.cycles;cycle++) match.advance(ELECTION_RULES.interval*cycle);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
-  const deadline = ELECTION_RULES.interval;
+  match.refreshAgendaEligibility();
+  const deadline = ELECTION_RULES.cycles*ELECTION_RULES.interval;
   const opens = deadline-10_000;
   publishProjectFiling(match,player,0,opens-NEGOTIATION_MS);
   const active = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active;

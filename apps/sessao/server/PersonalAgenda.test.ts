@@ -1408,9 +1408,9 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   expect(rewards).toEqual([30]);
 });
 
-test('campaign spending is offered only when enough remaining broadcasts can reach the target',()=>{
-  let slots = 2;
-  const options = {...metrics,remainingAdvertisements:()=>slots};
+test('campaign spending is offered only when a future advertising cycle is available',()=>{
+  let advertising = false;
+  const options = {...metrics,hasFutureAdvertising:()=>advertising};
   const agenda = new PersonalAgenda(options,1,()=>0,()=>{});
   const draw = ()=>{
     Reflect.set(agenda,'missions',[]);
@@ -1419,9 +1419,9 @@ test('campaign spending is offered only when enough remaining broadcasts can rea
     return agenda.hasActive('investimentoPolitico');
   };
   expect(draw()).toBe(false);
-  slots = 3;
+  advertising = true;
   expect(draw()).toBe(true);
-  slots = 2;
+  advertising = false;
   agenda.updateEligibility(options,1,true,3);
   expect(agenda.hasActive('investimentoPolitico')).toBe(false);
   expect(agenda.view(options).active).toHaveLength(3);

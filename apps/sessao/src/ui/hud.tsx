@@ -38,7 +38,7 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
-export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({stability,budget,sessionRemaining}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -57,6 +57,11 @@ export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congre
       help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
     </HudHelpButton>
+    {sessionRemaining!==undefined && <div className="congress-session-clock" role="timer"
+      aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
+      <HudIcon name="clock"/><span>Fim da sessão</span>
+      <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
+    </div>}
   </section>;
 }
 
