@@ -571,7 +571,8 @@
   #election-timer { font-size: 1.22rem; }
 }
 
-.station-key {
+#stations button[aria-keyshortcuts]::after {
+  content: attr(aria-keyshortcuts) / "";
   position: absolute;
   pointer-events: none;
   top: .45rem;
@@ -587,7 +588,6 @@
   color: var(--party-gold);
   font: 850 .82rem/1 var(--party-display);
 }
-.station-key:empty { display: none; }
 
 .poll-label { align-items: baseline; }
 .poll-label span { flex: 1; overflow-wrap: anywhere; }
@@ -773,7 +773,7 @@ button.item-tile:active { transform: translateY(3px); }
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-#nearby-items .station-key { top: .24rem; right: .24rem; }
+#nearby-items button[aria-keyshortcuts]::after { top: .24rem; right: .24rem; }
 #stations #nearby-objects { min-width: 150px; }
 #stations #nearby-objects[aria-expanded="true"] { border-color: #9bca98; }
 @media (prefers-reduced-motion: reduce) {

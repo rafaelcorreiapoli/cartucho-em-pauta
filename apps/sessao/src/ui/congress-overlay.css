@@ -422,7 +422,7 @@
 }
 #stations .hud-button:disabled { opacity: .45; }
 #stations .hud-button .hud-glyph { width: 17px; height: 17px; color: #e9d49a; }
-#stations .station-key {
+#stations button[aria-keyshortcuts]::after {
   position: absolute;
   inset: -5px -4px auto auto;
   min-width: 17px;
