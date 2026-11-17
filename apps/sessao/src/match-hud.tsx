@@ -8,7 +8,6 @@ import { documentRules } from './internal-mail';
 import { mountElectionStationActions } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
 import { mountLegislativeStationActions } from './ui/legislative-station-actions';
-import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -38,7 +37,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
-  const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
   const shortcuts = mountStationShortcuts(element('station-shortcuts'),kind=>{
     switch (kind) {
@@ -296,13 +294,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     showReward:rewards.show,
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
-      if ((activity==='secretary' || activity==='archive') && previous?.phase==='negotiation') {
-        legislativeBrief.open(activity,previous);
-      }
       if (text) notify(info.title,text);
     },
     render(view:PlenaryView) {
-      if (view.phase!=='negotiation') legislativeBrief.close();
       const politics = view.politics;
 
       if (previous) {
@@ -345,7 +339,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     destroy() {
       gear.destroy();
       notices.destroy();
-      legislativeBrief.destroy();
       legislative.destroy();
       electoral.destroy();
       rewards.destroy();
