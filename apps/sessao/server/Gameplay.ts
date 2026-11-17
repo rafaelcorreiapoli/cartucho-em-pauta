@@ -579,6 +579,18 @@ export class Gameplay {
   }
 
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
+    // Count stable room attendance before replacing any previous samples.
+    const meetingAttendance = new Map<string,number>();
+    if (exploring && world.players.some(player=>world.hasMission?.(player.id,'reuniaoGabinete') ||
+        world.hasMission?.(player.id,'reuniaoPublica'))) {
+      for (const player of world.players) {
+        if (player.npc || player.knockedOut || player.carried || world.present?.(player.id)===false) continue;
+        const previous = this.roomSamples.get(player.id);
+        if (!previous?.active || roomAt(player)!==previous.room) continue;
+        const key = previous.room+':'+previous.at;
+        meetingAttendance.set(key,(meetingAttendance.get(key) ?? 0)+1);
+      }
+    }
     for (const player of world.players) {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
@@ -619,14 +631,15 @@ export class Gameplay {
       if (previous.active && previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
         publishGameplay(world,player,'room-left',{place:previous.room});
       }
-      if (previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento' &&
-          (world.hasMission?.(player.id,'reuniaoGabinete') || world.hasMission?.(player.id,'reuniaoPublica'))) {
+      if (meetingAttendance.size && !player.npc && previous.active && previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento') {
+        const peers = (meetingAttendance.get(room+':'+previous.at) ?? 0)-1;
         const inOffice = privateOffices.some(office=>office.name===room);
-        const peers = world.players.filter(other=>other.id!==player.id && !other.npc && !other.knockedOut &&
-          world.present?.(other.id)!==false && roomAt(other)===room).length;
-        const type = inOffice && peers>=1 ? 'office-meeting-time' : !inOffice && peers>=PUBLIC_MEETING_PEERS ? 'public-meeting-time' : undefined;
+        const officeMeeting = inOffice && peers>=1 && world.hasMission?.(player.id,'reuniaoGabinete');
+        const publicMeeting = !inOffice && peers>=PUBLIC_MEETING_PEERS && world.hasMission?.(player.id,'reuniaoPublica');
         const duration = Math.min(100,world.now-previous.at);
-        if (type && duration>0) publishGameplay(world,player,type,{duration,place:room});
+        if ((officeMeeting || publicMeeting) && duration>0) {
+          publishGameplay(world,player,officeMeeting ? 'office-meeting-time' : 'public-meeting-time',{duration,place:room});
+        }
       }
       if (previous.room!==room && room!=='Corredor' && (room!=='Plenário' || previous.active)) {
         const office = [...this.privateOffices.offices.values()].find(entry=>entry.layout.name===room &&
