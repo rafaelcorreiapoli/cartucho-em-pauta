@@ -1,3 +1,4 @@
+import {usePhoneKeys} from './use-phone-keys';
 import {MINIGAME_FRUIT_XP} from '../progression';
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
 
@@ -14,6 +15,8 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
   const [motion,setMotion] = useState<Swap>();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(()=>()=>clearTimeout(timer.current),[]);
+  const restart = ()=>{if (!motion) {setSelected(undefined);send({kind:'candy-start'});}};
+  const panel = usePhoneKeys(key=>key==='1' && round ? restart : undefined);
   if (!round) return <section className="phone-minigame candy-game" aria-label="Combina Doces">
     <button className="hud-button" type="button" onClick={()=>send({kind:'candy-start'})}>Iniciar tabuleiro</button>
   </section>;
@@ -34,7 +37,7 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
       timer.current = setTimeout(()=>setMotion(undefined),move.matches.size ? CANDY_BURST_MS : CANDY_SWAP_MS);
     },CANDY_SWAP_MS);
   }
-  return <section className="phone-minigame candy-game" aria-label="Combina Doces">
+  return <section ref={panel} className="phone-minigame candy-game" aria-label="Combina Doces">
     <header><p>Alinhe três frutas iguais</p><strong role="status">{round.score} pontos</strong></header>
     <div className="phone-candy-board">{board.map((kind,index)=>{
       const destination = index===motion?.from ? motion.to : index===motion?.to ? motion.from : undefined;
@@ -57,7 +60,7 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
     })}</div>
     <p className="game-reward">{MINIGAME_FRUIT_XP} XP por fruta eliminada</p>
     <button className="hud-button" type="button" disabled={!!motion} aria-keyshortcuts="1"
-      onClick={()=>{setSelected(undefined);send({kind:'candy-start'});}}>Novo tabuleiro <kbd className="action-key" aria-hidden="true">1</kbd></button>
+      onClick={restart}>Novo tabuleiro <kbd className="action-key" aria-hidden="true">1</kbd></button>
   </section>;
 }
 
@@ -75,7 +78,10 @@ export function Bets({wallet,round,send}:{wallet:number;round?:BetsRound;send:(a
   const reels = shown?.reels ?? initialReels;
   const balance = Math.round(wallet*10);
   const result = shown && (shown.payout ? `Trinca! +${money(shown.payout-shown.stake)}` : `Sem trinca · −${money(shown.stake)}`);
-  return <section className="phone-minigame bets-game" aria-label="Bets">
+  const disabled = spinning || stake>balance;
+  const spin = ()=>{if (!disabled) send({kind:'bets-spin',quantity:stake,token:round?.id ?? 0});};
+  const panel = usePhoneKeys(key=>key==='1' ? spin : undefined);
+  return <section ref={panel} className="phone-minigame bets-game" aria-label="Bets">
     <header><p>Saldo do personagem</p><strong>{money(wallet)}</strong></header>
     <p>Três símbolos iguais pagam {BET_PAYOUT}× a aposta.</p>
     <div className="bets-reels" aria-label={spinning ? 'Girando' : reels.map(symbol=>BET_SYMBOLS[symbol]).join(' ')}>
@@ -92,8 +98,8 @@ export function Bets({wallet,round,send}:{wallet:number;round?:BetsRound;send:(a
         {money(amount/10)}
       </button>)}
     </div>
-    <button type="button" className="hud-button" aria-keyshortcuts="1" disabled={spinning || stake>balance}
-      onClick={()=>send({kind:'bets-spin',quantity:stake,token:round?.id ?? 0})}>
+    <button type="button" className="hud-button" aria-keyshortcuts="1" disabled={disabled}
+      onClick={spin}>
       Apostar {money(stake/10)} <kbd className="action-key" aria-hidden="true">1</kbd>
     </button>
   </section>;

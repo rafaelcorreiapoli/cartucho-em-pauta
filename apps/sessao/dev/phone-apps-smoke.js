@@ -45,9 +45,11 @@ async page => {
   await page.keyboard.press('2');
   await dialog.getByRole('heading',{name:'Joguinhos',exact:true}).waitFor();
   const games = dialog.locator('.phone-games-menu');
+  const removeKey = button=>button.evaluate(node=>node.removeAttribute('aria-keyshortcuts'));
   for (const name of ['Snake','Combina Doces','Bets']) {
     await games.getByRole('button',{name,exact:true}).locator('.phone-app-icon').waitFor();
   }
+  await removeKey(games.getByRole('button',{name:'Snake',exact:true}));
   await page.keyboard.press('1');
   await dialog.locator('.phone-snake canvas').waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
@@ -59,6 +61,7 @@ async page => {
   if (!board || !replay || Math.abs(board.x-replay.x)>1 || Math.abs(board.width-replay.width)>1 || replay.y<=board.y+board.height) {
     throw Error('Botão de reinício desalinhado com o tabuleiro');
   }
+  await removeKey(dialog.getByRole('button',{name:'Jogar de novo'}));
   await page.keyboard.press('1');
   await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
   await home();
@@ -78,7 +81,11 @@ async page => {
   const candy = dialog.getByRole('region',{name:'Combina Doces'});
   await candy.getByRole('button',{name:/Fruta 25/}).waitFor();
   await candy.getByRole('button',{name:'Novo tabuleiro'}).locator('kbd',{hasText:/^1$/}).waitFor();
+  const previousFruit = await candy.locator('.candy-fruit').allTextContents();
+  await removeKey(candy.getByRole('button',{name:'Novo tabuleiro'}));
   await page.keyboard.press('1');
+  await page.waitForFunction(previous=>[...document.querySelectorAll('.candy-fruit')]
+    .some((fruit,index)=>fruit.textContent!==previous[index]),previousFruit);
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
   await home();
   await page.keyboard.press('2');
@@ -88,6 +95,7 @@ async page => {
   await bets.getByText('R$ 80 mil',{exact:true}).waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
   await bets.getByRole('button',{name:'R$ 2 mil',exact:true}).click();
+  await removeKey(bets.getByRole('button',{name:/^Apostar/}));
   await page.keyboard.press('1');
   if (await bets.locator('.bets-reel').count()!==3) throw Error('Quantidade de rolos');
   const result = bets.getByRole('status');
