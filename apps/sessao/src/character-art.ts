@@ -12,7 +12,7 @@ const combatCharacters:Record<(typeof NAMES)[number],string> = {
   Bolsonaro:'bolsonaro',
   Clodovil:'clodovil',
   Tiririca:'tiririca',
-  'Eduardo Cunha':'eduardo-cunha',
+  'Sikêra Jr.':'sikera-jr',
   'Alexandre Frota':'alexandre-frota',
   'Sergio Moro':'sergio-moro',
   'Inês Brasil':'ines-brasil',
