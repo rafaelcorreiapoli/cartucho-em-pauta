@@ -2,11 +2,10 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { CSSProperties } from 'react';
-import { characterStats } from './character-stats';
 import type { Player } from './map';
 import type { PlenaryView } from './plenary';
 import { missionReward, money } from './politics';
-import { attributeUpgrades, baseAttribute, baseDefense, baseStamina, type Attribute, type AttributeRequest, type Progression } from './progression';
+import { attributeUpgrades, baseStamina, type Attribute, type AttributeRequest, type Progression } from './progression';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos`;
@@ -51,16 +50,12 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   function renderAttributes() {
     if (!latest || !player) return;
     const {xp,level,nextLevelXp,available,invested,revision} = latest;
-    const stats = characterStats[player.character];
     const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
-    const maxHp = stats.hp+invested.hp*attributeUpgrades.hp.bonus;
-    const values = {hp:maxHp,stamina:staminaMax,attack:stats.attack+invested.attack*attributeUpgrades.attack.bonus,
-      defense:baseDefense+invested.defense*attributeUpgrades.defense.bonus};
-    const hp = view?.gameplay?.vitality?.hp ?? maxHp;
+    const agility = 100+invested.agility*attributeUpgrades.agility.bonus;
     const stamina = Math.floor(player.stamina ?? staminaMax);
     const canSpend = !!available && requested!==revision && view?.phase==='negotiation' &&
       !player.knockedOut && !player.carrying && !!view.gameplay;
-    const key = JSON.stringify([xp,level,nextLevelXp,available,invested,values,hp,stamina,selected,canSpend]);
+    const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
     flushSync(()=>attributesRoot.render(<>
@@ -71,23 +66,22 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       <div className="attribute-columns">
         <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
           {keys.map((attribute,index)=>{
-            const {label,resource,bonus} = attributeUpgrades[attribute];
+            const {label,bonus} = attributeUpgrades[attribute];
             const preview = attribute===selected && !!available;
             return <section key={attribute} data-attribute={attribute} className={preview ? 'attribute-selected' : undefined}>
-              <div><strong>{label}</strong><small>+1 dá +{bonus} {attribute==='hp' ? 'PV máximos' : attribute==='stamina' ? 'stamina máxima' : resource}</small></div>
-              <span>{baseAttribute+invested[attribute]}</span>
+              <div><strong>{label}</strong><small>+1 dá +{bonus}{attribute==='stamina' ? ' de stamina máxima' : '% da velocidade base de interação'}</small></div>
+              <span>{invested[attribute]}</span>
               <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
                 aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
                 onClick={()=>{ selected = attribute; renderAttributes(); }}>+1</button>
             </section>;
           })}
         </div></section>
-        <section className="attribute-panel" aria-label="Estatísticas de combate"><div id="attribute-resources">
+        <section className="attribute-panel" aria-label="Efeitos dos atributos"><div id="attribute-resources">
           {keys.map(attribute=>{
-            const max = values[attribute];
             const {resource,bonus} = attributeUpgrades[attribute];
-            const current = attribute==='hp' ? `${hp}/${max}` : attribute==='stamina' ? `${stamina}/${max}` : String(max);
-            const next = attribute==='hp' ? `${hp+bonus}/${max+bonus}` : attribute==='stamina' ? `${stamina+bonus}/${max+bonus}` : String(max+bonus);
+            const current = attribute==='stamina' ? `${stamina}/${staminaMax}` : `${agility}%`;
+            const next = attribute==='stamina' ? `${stamina+bonus}/${staminaMax+bonus}` : `${agility+bonus}%`;
             const preview = attribute===selected && !!available;
             return <section key={attribute}><strong>{resource}</strong><span className={preview ? 'attribute-preview' : undefined}>
               {preview ? current+' → '+next : current}</span></section>;
@@ -95,7 +89,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         </div></section>
       </div>
       <div className="progression-buttons"><button id="confirm-attribute" type="button" className="hud-button"
-        aria-keyshortcuts="5" disabled={!canSpend || !selected} onClick={confirmAttribute}>Confirmar +1</button></div>
+        aria-keyshortcuts="3" disabled={!canSpend || !selected} onClick={confirmAttribute}>Confirmar +1</button></div>
     </>));
   }
 

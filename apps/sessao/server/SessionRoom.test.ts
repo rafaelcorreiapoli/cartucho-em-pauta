@@ -466,7 +466,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('allocate-attribute',request);
     await wait(()=>progression()?.revision===1);
     expect(progression()).toMatchObject({available:2,invested:{stamina:1}});
-    expect(snapshots.get(passenger.sessionId)?.staminaMax).toBe(110);
+    expect(snapshots.get(passenger.sessionId)?.staminaMax).toBe(150);
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});

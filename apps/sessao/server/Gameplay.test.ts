@@ -11,7 +11,7 @@ import { canStand, HEIGHT, rooms, WIDTH, type Player } from '../src/map';
 import { photoMissions } from './photo-missions';
 import { findRoute } from '../src/navigation';
 import { installationBounds, overlaps } from '../src/map-props';
-import { decorationActions, installationSites } from '../src/installations';
+import { decorationActions, decorationInstallMs, installationSites } from '../src/installations';
 
 function buyCredentialGood(game:Gameplay,player:Player,kind:'portrait'|'vip',world:GameplayWorld) {
   game.act(player,{kind:'open-shop',target:'credentialsVendor'},world);
@@ -289,10 +289,14 @@ test('installations validate location, keep one occupant and serve each diner on
   Object.assign(alice,installationSites.hall.point);
   Object.assign(bob,alice,{id:'Bob',nick:'Bob'});
   game.act(alice,{kind:'install',place:'hall',item:first.id},world);
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(game.view(watcher,world).decorations.map(item=>item.kind)).toEqual(['pizza']);
   game.act(bob,{kind:'mark',item:first.id},world);
   expect(game.view(alice,world).decorations[0].marked).toBe(true);
   game.act(bob,{kind:'install',place:'hall',item:second.id},world);
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(game.view(alice,world).interactive.map(item=>item.owner.id)).toEqual([bob.id]);
   expect(game.act(alice,{kind:'uninstall',item:first.id},world)).toBe('Aproxime-se do local.');
   expect(game.act(alice,{kind:'uninstall',item:second.id},world)).toBe('Retrato arrancado e destruído.');
@@ -305,6 +309,8 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   const {alice,bob,game,world,events} = setup();
   world.spend = ()=>true;
   alice.character = 4;
+  game.applyAttribute(alice,'agility');
+  const duration = decorationInstallMs/1.25;
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
     Object.assign(alice,npcs.credentialsVendor.interaction);
@@ -323,7 +329,19 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     Object.assign(bob,approach);
     const [install] = decorationActions(alice.id,game.view(alice,world));
     expect(install.action).toEqual({kind:'install',place,item:item.id});
-    expect(game.act(alice,install.action,world)).toBe('Objeto instalado.');
+    expect(game.act(alice,install.action,world)).toBe('Instalando decoração…');
+    expect(game.view(alice,world).installationProgress).toEqual({elapsed:0,duration});
+    alice.x++;
+    game.tick(world,true);
+    expect(game.view(alice,world).installationProgress).toBeUndefined();
+    expect(game.view(alice,world).inventory).toContainEqual(item);
+    Object.assign(alice,approach);
+    expect(game.act(alice,install.action,world)).toBe('Instalando decoração…');
+    world.now += duration-1;
+    game.tick(world,true);
+    expect(game.view(bob,world).decorations).toEqual([]);
+    world.now++;
+    game.tick(world,true);
     if (site.kind==='vip') expect(photoMissions.reserva.facts(events.at(-1)!)).toHaveLength(1);
     expect(game.view(bob,world).decorations).toContainEqual(expect.objectContaining({
       ...site.point, id:item.id,kind:site.kind,character:4,owner:{id:alice.id,name:alice.nick},

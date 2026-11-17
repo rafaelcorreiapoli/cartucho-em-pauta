@@ -1,9 +1,7 @@
 export const levelThresholds = [0,100,240,420,650,950] as const;
 export const attributeUpgrades = {
-  hp:{label:'Vitalidade',resource:'PV',bonus:4},
-  attack:{label:'Força',resource:'ATK',bonus:1},
-  defense:{label:'Fortitude',resource:'DEF',bonus:1},
-  stamina:{label:'Fôlego',resource:'Stamina',bonus:10},
+  agility:{label:'Agilidade',resource:'Velocidade de interação',bonus:25},
+  stamina:{label:'Fôlego',resource:'Stamina',bonus:50},
 } as const;
 
 export type Attribute = keyof typeof attributeUpgrades;
@@ -20,9 +18,7 @@ export type Progression = {
 };
 export type AttributeRequest = {attribute:Attribute; revision:number; matchId:number};
 
-export const baseAttribute = 10;
 export const baseStamina = 100;
-export const baseDefense = 0;
 
 export function readAttributeRequest(raw:unknown):AttributeRequest|undefined {
   if (!raw || typeof raw!=='object' || !('attribute' in raw) || !('revision' in raw) || !('matchId' in raw)) return;

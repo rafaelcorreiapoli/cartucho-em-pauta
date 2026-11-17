@@ -6,7 +6,7 @@ import { canReachDownedPlayer } from '../src/interactions';
 import { recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
-type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'|'hpBonus'|'attackBonus'|'defenseBonus'>;
+type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
 
@@ -38,7 +38,7 @@ export class Combat {
     player.swing = undefined;
   }
 
-  private max(player:Combatant) { return characterStats[player.character].hp+(player.hpBonus ?? 0); }
+  private max(player:Combatant) { return characterStats[player.character].hp; }
 
   private state(player:Combatant) {
     let state = this.vitality.get(player.id);
@@ -130,8 +130,8 @@ export class Combat {
   private damage(attacker:Combatant, target:Combatant, armor:boolean, now:number, weapon:WeaponKind) {
     const profile = weapons[weapon];
     const base = characterStats[attacker.character].attack;
-    const strike = (profile.damage+base*profile.strengthScale+(attacker.attackBonus ?? 0))*(armor ? 1-equipment.vest.damageReduction : 1);
-    const damage = Math.max(1,Math.round(strike)-(target.defenseBonus ?? 0));
+    const strike = (profile.damage+base*profile.strengthScale)*(armor ? 1-equipment.vest.damageReduction : 1);
+    const damage = Math.max(1,Math.round(strike));
     const victim = this.state(target);
     victim.hp = Math.max(0,victim.hp-damage);
     target.hit = now+recoveryRules.hitStunMs;
@@ -158,12 +158,6 @@ export class Combat {
   heal(player:Combatant, amount:number|'full') {
     const state = this.state(player);
     state.hp = amount==='full' ? this.max(player) : Math.min(this.max(player),state.hp+amount);
-  }
-
-  increaseMaxHp(player:Combatant, amount:number) {
-    this.state(player);
-    player.hpBonus = (player.hpBonus ?? 0)+amount;
-    this.heal(player,amount);
   }
 
   weaponRecharge(player:Combatant, now:number) {

@@ -38,7 +38,7 @@ export const objects = {
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
-  runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},
+  runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:`Aumenta em ${equipment.runningShoes.speedBonus}% a velocidade ao andar e correr.`},
   baton:{name:'Porrete',portrait:'retrato-porrete.webp',description:'Golpeia um jogador próximo.'},
 } as const satisfies Record<string,{name:string; portrait:string; description:string; exposable?:boolean; use?:'consume'; amount?:number; destructible?:boolean; price?:number; attack?:number}>;
 
@@ -131,6 +131,7 @@ export type GameplayView = {
   vitality?:{hp:number; max:number; recovery:number};
   offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
+  installationProgress?:{elapsed:number;duration:number};
   officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
   concealmentSeconds?:number;
   binocularSeconds?:number;
