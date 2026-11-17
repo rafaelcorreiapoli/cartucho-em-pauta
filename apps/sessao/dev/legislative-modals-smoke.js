@@ -49,6 +49,37 @@ async page => {
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 
   await page.reload();
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Projetos QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.getByRole('button',{name:'Secretaria · Falar com Dona Sílvia'}).click();
+  await page.getByRole('button',{name:'Solicitar documento'}).click();
+  const picker = page.getByRole('dialog',{name:'Solicitar documento'});
+  const confirm = picker.getByRole('button',{name:'Confirmar',exact:true});
+  for (const [width,height] of [[800,360],[620,360]]) {
+    await page.setViewportSize({width,height});
+    await centered(picker,width,height);
+    const box = await confirm.boundingBox();
+    if (!box || box.y+box.height>height || box.x+box.width>width) throw Error('Confirmação fora da tela');
+  }
+  if (await confirm.isEnabled()) throw Error('Confirmação sem projeto');
+  await page.keyboard.press('ArrowUp');
+  const selected = picker.getByRole('radio',{checked:true});
+  await selected.waitFor();
+  const title = await picker.locator('.project-picker-detail-content h3').textContent();
+  const getScroll = selector=>picker.locator(selector).evaluate(node=>node.scrollTop);
+  if (!await getScroll('.project-picker-list')) throw Error('Projeto selecionado fora da área de rolagem');
+  await page.keyboard.press('PageDown');
+  if (!await getScroll('.project-picker-detail-content')) throw Error('PageDown não rolou os detalhes');
+  await page.keyboard.press('PageUp');
+  if (await getScroll('.project-picker-detail-content')) throw Error('PageUp não voltou ao topo');
+  await page.keyboard.press('Enter');
+  await picker.waitFor({state:'hidden'});
+  await page.locator('#market-dialog').waitFor({state:'hidden'});
+  await page.keyboard.press('o');
+  await page.getByRole('button',{name:new RegExp(title)}).waitFor();
+  await page.setViewportSize({width:1280,height:720});
+  await page.reload();
   const guest = await page.context().newPage();
   try {
     await page.getByRole('textbox',{name:'Seu nick'}).fill('Rafa');
@@ -79,7 +110,7 @@ async page => {
     await page.locator('#ballot').getByRole('button',{name:'Afastar',exact:true}).click();
     await guest.locator('#ballot').getByText(/1\/2 votaram/).waitFor();
     if (await guest.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
-    return {resolutions:3,clients:2,hearingVoteReplicated:true};
+    return {resolutions:3,projectPickerResolutions:2,clients:2,hearingVoteReplicated:true};
   } finally {
     await guest.close();
   }

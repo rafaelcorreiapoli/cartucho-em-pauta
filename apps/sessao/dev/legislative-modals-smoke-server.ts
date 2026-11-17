@@ -17,7 +17,7 @@ class LegislativeModalsRoom extends SessionRoom {
       for (const {player} of players.values()) {
         if (!positioned.has(player.id)) {
           positioned.add(player.id);
-          Object.assign(player,hearingTest ? stations.panel : stations.cabinet);
+          Object.assign(player,hearingTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
           if (hearingTest) Reflect.get(match,'economy').changePopularity(player.id,20);
         }
         const now = this.clock.currentTime;

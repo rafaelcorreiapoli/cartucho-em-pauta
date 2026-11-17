@@ -63,6 +63,12 @@ function ProjectPicker({title,current,unavailable,confirm}:{
   }
   function onKeyDown(event:KeyboardEvent<HTMLDivElement>) {
     if (event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key==='PageDown' || event.key==='PageUp') {
+      if (!detail.current) return;
+      event.preventDefault();
+      detail.current.scrollBy({top:detail.current.clientHeight*(event.key==='PageDown' ? 1 : -1)});
+      return;
+    }
     if (event.key==='Enter') {
       if (event.target instanceof HTMLButtonElement) return;
       event.preventDefault();
