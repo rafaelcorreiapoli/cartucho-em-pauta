@@ -1,4 +1,7 @@
 import {expect,test} from 'bun:test';
+import {terminals,type GameplayEvent} from '../src/gameplay';
+import {privateOffices} from '../src/private-offices';
+import {characterStats} from '../src/character-stats';
 import {ELECTION_RULES} from '../src/elections';
 import {characterVisible,inPlenary,PLENARY_SEATS,roomAt,type Player} from '../src/map';
 import {STEP_MS,type ControlState} from '../src/movement';
@@ -27,11 +30,19 @@ function gameWithBots(random:()=>number) {
   const view = (id:string,now:number)=>match.view(id,ids,now);
   let now = 0;
   let previousPhase = match.phase;
-  return {human,controls,bots,players,match,view,
+  const events:GameplayEvent[] = [];
+  const worldAt = (at:number) => {
+    const world = match.gameplayWorld(players,at,()=>false);
+    return {...world,vision:(id:string)=>gameplay.vision(id,at),present:()=>true,
+      publish:(event:GameplayEvent)=>{
+        if (world.publish(event)) events.push(event);
+      }};
+  };
+  return {human,controls,bots,players,match,view,gameplay,worldAt,events,
     advance(until:number) {
       for (;now<=until && match.running;now+=STEP_MS) {
         if (match.ballotCountdown(now)===undefined) {
-          for (const state of controls.values()) if (state.player.bot) bots.move(state);
+          for (const state of controls.values()) if (state.player.bot) bots.move(state,gameplay.phoneActivity(state.player.id));
         }
         match.advance(now);
         if (match.phase!==previousPhase) {
@@ -42,7 +53,7 @@ function gameWithBots(random:()=>number) {
             if (control.plenary) Object.assign(control.player,PLENARY_SEATS[index]);
           });
         }
-        const world = {...match.gameplayWorld(players,now,()=>false),vision:(id:string)=>gameplay.vision(id,now),present:()=>true};
+        const world = worldAt(now);
         gameplay.tick(world,match.phase==='negotiation',match.phase==='ballot');
         bots.tick(match,gameplay,world,(state,peer)=>
           (!state.plenary || inPlenary(peer)) &&
@@ -149,3 +160,45 @@ test('bots complete private agenda tasks and spread out around the map',()=>{
   expect(bots.some(bot=>view(bot.id,95_000).politics?.missions.completed.some(mission=>mission.kind==='pizza'))).toBe(true);
   expect(mostRoomsOccupied).toBeGreaterThanOrEqual(3);
 });
+
+test('bots walk below their character’s normal speed and stay still during phone activity',()=>{
+  const {bots,controls,players} = gameWithBots(()=>0);
+  const player = players[1];
+  const state = controls.get(player.id)!;
+  Object.assign(player,{x:140,y:146});
+  state.route = [{x:160,y:146}];
+  bots.move(state,undefined);
+  const distance = player.x-140;
+  expect(distance).toBeGreaterThan(0);
+  expect(distance).toBeLessThan(characterStats[player.character].speed*STEP_MS/1000);
+  const position = {x:player.x,y:player.y};
+  for (const activity of ['call','open','game'] as const) {
+    state.route = [{x:160,y:146}];
+    bots.move(state,activity);
+    expect(player).toMatchObject({...position,moving:false});
+    expect(state.route).toEqual([]);
+  }
+  state.route = [{x:160,y:146}];
+  bots.move(state,undefined);
+  expect(player.x).toBeGreaterThan(position.x);
+});
+
+test.each([{roll:0,expected:'money-pocketed'}, {roll:.9,expected:'delivered'}])(
+  'a bot collects a visible briefcase and completes its $expected plan',
+  ({roll,expected})=>{
+    const {advance,events,gameplay,human,players,worldAt} = gameWithBots(()=>roll);
+    const bot = players[3];
+    const office = privateOffices.find(office=>office.id===gameplay.view(bot,worldAt(0)).ownOffice)!;
+    const point = expected==='money-pocketed' ? office.safe : terminals.treasury.point;
+    Object.assign(human,point);
+    Object.assign(bot,point);
+    const world = {...worldAt(0),takeWallet:()=>3};
+    gameplay.robNpc(human,{...human,id:'cash-source',npc:true},world);
+    const item = gameplay.view(human,world).inventory.find(item=>item.kind==='briefcase')!;
+    gameplay.act(human,{kind:'drop',item:item.id},world);
+    advance(3_000);
+    expect(gameplay.hasVisibleCash(bot.id,3_000,human.id)).toBe(true);
+    advance(32_000);
+    expect(events).toContainEqual(expect.objectContaining({actor:bot.id,item:item.id,type:expected}));
+    expect(gameplay.hasVisibleCash(bot.id,32_000,human.id)).toBe(false);
+  });

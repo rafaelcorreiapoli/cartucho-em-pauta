@@ -1,6 +1,7 @@
-import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type GameplayView} from '../src/gameplay';
+import {characterStats} from '../src/character-stats';
+import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type GameplayView,type PhoneActivity} from '../src/gameplay';
 import {canStand,NAMES,type Motion,type Player} from '../src/map';
-import {applyInput,type ControlState} from '../src/movement';
+import {applyInput,restMovement,type ControlState} from '../src/movement';
 import {nickKey} from '../src/nick';
 import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
@@ -10,6 +11,7 @@ import type {GameplayWorld} from './gameplay-world';
 import type {PlenaryMatch} from './PlenaryMatch';
 
 const thinkMs = 650;
+const walkingSpeedFactor = .8;
 const safeDifference = 6;
 
 type Bot = {
@@ -52,7 +54,8 @@ export class PlayerBots {
       if (nicknames.has(nickKey(nick))) continue;
       const character = NAMES.findIndex((_,index)=>!occupied.has(index));
       occupied.add(character);
-      const player:Player = {id:`bot-${number}`,bot:true,nick,character,x:140,y:146,direction:0,moving:false};
+      const player:Player = {id:`bot-${number}`,bot:true,nick,character,x:140,y:146,direction:0,moving:false,
+        speed:characterStats[character].speed*walkingSpeedFactor};
       const control:ControlState = {player,ack:0,route:[]};
       const index = this.bots.size;
       const tempo = Math.floor(random()*350);
@@ -68,8 +71,13 @@ export class PlayerBots {
     this.messages = [];
   }
 
-  move(state:ControlState) {
+  move(state:ControlState,phone:PhoneActivity|undefined) {
     const bot = this.bots.get(state.player.id)!;
+    if (phone) {
+      this.stop(bot);
+      restMovement(state.player);
+      return;
+    }
     applyInput(state,{seq:state.ack+1,destination:state.plenary || state.isolated ? undefined : bot.routeRequest});
     bot.routeRequest = undefined;
   }
@@ -105,6 +113,10 @@ export class PlayerBots {
         continue;
       }
       this.explore(bot,match,gameplay,world,view,visible);
+      const phone = gameplay.phoneActivity(id);
+      if (bot.routeRequest && (phone==='open' || phone==='game')) {
+        gameplay.act(player,{kind:'phone-close'},world);
+      }
     }
   }
 
@@ -138,6 +150,10 @@ export class PlayerBots {
     const {player} = bot.control;
     const {now} = world;
     const game = gameplay.view(player,world);
+    if (game.officeChannel?.kind==='office-cash') {
+      this.stop(bot);
+      return;
+    }
     const act = (action:GameplayAction)=> {
       if (canUseGameplayAction(action,true,false)) gameplay.act(player,action,world);
     };
