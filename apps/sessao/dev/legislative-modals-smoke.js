@@ -82,7 +82,9 @@ async page => {
   if (!await getScroll('.project-picker-detail-content')) throw Error('PageDown não rolou os detalhes');
   await page.keyboard.press('PageUp');
   if (await getScroll('.project-picker-detail-content')) throw Error('PageUp não voltou ao topo');
-  await page.keyboard.press('Enter');
+  await confirm.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
+  await page.keyboard.press('F2');
+  await page.locator('#action-shortcuts').getByRole('button',{name:/Confirmar/}).click();
   await picker.waitFor({state:'hidden'});
   await page.locator('#market-dialog').waitFor({state:'hidden'});
   await page.keyboard.press('o');

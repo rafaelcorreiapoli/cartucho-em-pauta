@@ -88,7 +88,13 @@ async page => {
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('k');
   await settings.waitFor();
-  await page.keyboard.press('Escape');
+  const effectsInput = settings.locator('#effects-volume');
+  await effectsInput.evaluate(input=>input.setAttribute('aria-label','Rótulo original alterado'));
+  await page.keyboard.press('F2');
+  await page.locator('#action-shortcuts').getByRole('button',{name:/Efeitos e passos/}).click();
+  await page.waitForFunction(()=>document.activeElement?.id==='effects-volume');
+  await page.keyboard.press('F2');
+  await page.locator('#action-shortcuts').getByRole('button',{name:/Fechar configurações/}).click();
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('p');
   const attributes = page.getByRole('dialog',{name:/Atributos/i});

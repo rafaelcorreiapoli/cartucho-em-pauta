@@ -1,5 +1,6 @@
 import {formatImpact,impactTone} from './impact-value';
 import {DialogHeader} from './dialog-header';
+import {useDialogKeys} from './use-dialog-keys';
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { documentRules } from '../internal-mail';
 import { flushSync } from 'react-dom';
@@ -51,6 +52,12 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     setSelected(index);
     if (detail.current) detail.current.scrollTop = 0;
   }
+  function selectAndReveal(index:number) {
+    select(index);
+    const radio = list.current?.querySelector<HTMLInputElement>(`input[value="${index}"]`);
+    radio?.focus({preventScroll:true});
+    radio?.closest('label')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
   function submit() {
     if (selected!==undefined && !unavailable.has(selected)) confirm(selected);
   }
@@ -76,14 +83,16 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     else return;
     event.preventDefault();
     if (index===undefined) return;
-    select(index);
-    const radio = list.current?.querySelector<HTMLInputElement>(`input[value="${index}"]`);
-    radio?.focus({preventScroll:true});
-    radio?.closest('label')?.scrollIntoView({block:'nearest',inline:'nearest'});
+    selectAndReveal(index);
   }
+  const picker = useDialogKeys<HTMLDivElement>(()=>undefined,[
+    {name:'Fechar',activate:()=>picker.current?.closest('dialog')?.close()},
+    ...(selected===undefined ? [] : [{name:'Confirmar',activate:submit}]),
+    ...choices.map(index=>({name:bills[index]!.name,activate:()=>selectAndReveal(index)})),
+  ]);
   const bill = selected===undefined ? undefined : bills[selected];
   const effect = bill && extraEffect(bill);
-  return <div className="project-picker-content" onKeyDown={onKeyDown}>
+  return <div ref={picker} className="project-picker-content" onKeyDown={onKeyDown}>
     <DialogHeader id="project-picker-title" title={title} dismissLabel="Fechar" titleClass="hud-title"/>
     <form className="project-picker-form" onSubmit={event=>{
       event.preventDefault();
