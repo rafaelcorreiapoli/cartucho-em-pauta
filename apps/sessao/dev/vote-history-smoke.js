@@ -183,33 +183,29 @@ async page => {
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});
     await page.evaluate(()=>window.ballotGuests[0].send('bill-vote',{vote:'abstain',token:1}));
-    await sheet.getByRole('region',{name:'Abstenções',exact:true}).locator('[data-vote-state="abstain"]').waitFor();
-    const pendingGroup = sheet.getByRole('region',{name:'Pendentes',exact:true});
-    if (await pendingGroup.locator('[data-vote-state="abstain"]').count()) throw Error('Abstenção apareceu entre os pendentes');
+    await sheet.locator('[data-vote-state="abstain"]').waitFor();
+    if (await pending.count()!==5) throw Error('Abstenção apareceu entre os pendentes');
     await page.evaluate(()=>window.ballotGuests.forEach(room=>room.send('bill-vote',{vote:'yes',token:2})));
     await page.keyboard.press('y');
     await sheet.locator('[data-vote-state="yes"]').nth(5).waitFor({state:'attached'});
-    const board = sheet.locator('.project-ballot-score');
-    for (const [width,height] of [[1280,720],[800,600]]) {
+    const roster = sheet.getByRole('list',{name:'Votos dos parlamentares'});
+    for (const [width,height] of [[1280,720],[800,600],[360,640]]) {
       await page.setViewportSize({width,height});
-      const layout = await board.evaluate(score=>{
-        const group = score.querySelector('[data-choice="yes"]');
-        const list = group.querySelector('ul');
+      const layout = await roster.evaluate(list=>{
+        const bounds = list.getBoundingClientRect();
+        const cards = [...list.children].map(card=>card.getBoundingClientRect());
         const labels = [...list.querySelectorAll('.project-voter-name')];
-        const bounds = score.getBoundingClientRect();
-        const groupBounds = group.getBoundingClientRect();
-        const canScroll = list.scrollHeight>list.clientHeight;
-        list.scrollTop = list.scrollHeight;
-        const last = list.lastElementChild.getBoundingClientRect();
+        const panel = list.closest('.project-ballot').getBoundingClientRect();
         return {
-          inside:groupBounds.bottom<=bounds.bottom && groupBounds.right<=bounds.right,
-          lastVisible:last.bottom<=list.getBoundingClientRect().bottom+1,
-          noWrap:labels.every(label=>getComputedStyle(label).whiteSpace==='nowrap'),
+          count:cards.length,
+          singleRow:cards.every(card=>Math.abs(card.top-cards[0].top)<1),
+          allVisible:cards.every(card=>card.width>0 && card.left>=bounds.left && card.right<=bounds.right+1),
+          noOverflow:list.scrollWidth<=list.clientWidth+1 && list.scrollHeight<=list.clientHeight+1,
           ellipsis:labels.some(label=>label.scrollWidth>label.clientWidth && getComputedStyle(label).textOverflow==='ellipsis'),
-          canScroll,
+          compact:panel.height<innerHeight*.65,
         };
       });
-      if (!layout.inside || !layout.lastVisible || !layout.noWrap || !layout.ellipsis) {
+      if (layout.count!==6 || !layout.singleRow || !layout.allVisible || !layout.noOverflow || !layout.ellipsis || !layout.compact) {
         throw Error(`Cédula lotada em ${width}×${height}: ${JSON.stringify(layout)}`);
       }
       await page.screenshot({path:`/tmp/sessao-ballot-${width}x${height}.png`,animations:'disabled'});
