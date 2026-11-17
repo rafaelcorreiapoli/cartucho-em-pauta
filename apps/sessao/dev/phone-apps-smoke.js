@@ -27,8 +27,17 @@ async page => {
     }
   }
   const pixApp = dialog.getByRole('button',{name:'Pix',exact:true});
-  await page.keyboard.press(await pixApp.getAttribute('aria-keyshortcuts'));
+  const pixKey = await pixApp.getAttribute('aria-keyshortcuts');
+  await pixApp.evaluate(button=>{
+    window.syntheticPhoneClicks = 0;
+    button.addEventListener('click',event=>{
+      if (!event.isTrusted) window.syntheticPhoneClicks++;
+    });
+    button.removeAttribute('aria-keyshortcuts');
+  });
+  await page.keyboard.press(pixKey);
   await dialog.getByRole('heading',{name:'Pix',exact:true}).waitFor();
+  if (await page.evaluate(()=>window.syntheticPhoneClicks)!==0) throw Error('O atalho do Pix simulou clique');
   await home();
   await page.setViewportSize(viewport);
   if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');

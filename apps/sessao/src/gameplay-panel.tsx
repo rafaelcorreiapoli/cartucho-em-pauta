@@ -7,7 +7,7 @@ import { PhoneCamera } from './ui/phone-camera';
 import { PhoneSnake } from './ui/phone-snake';
 import { PhoneCalls } from './ui/phone-call';
 import {ProjectCatalog} from './ui/project-catalog';
-import { PhoneApps, type PhoneApp } from './ui/phone-apps';
+import { PhoneApps, phoneAppForKey, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import type { ReactNode } from 'react';
@@ -462,6 +462,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   const onSlotKey = (event:KeyboardEvent) => {
     if (event.isComposing) return;
+    if (dialog.open && dialog.dataset.mode==='phone' && !app &&
+        !event.defaultPrevented && !event.repeat && !event.shiftKey && !event.ctrlKey && !event.altKey &&
+        !event.metaKey && !isEditingText(event.target) &&
+        (dialog.contains(document.activeElement) || !document.querySelector('dialog:modal:not(#gameplay-dialog)'))) {
+      const destination = phoneAppForKey(event.key);
+      if (destination) {
+        event.preventDefault();
+        selectApp(destination);
+        return;
+      }
+    }
     if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
         !event.ctrlKey && !event.altKey && !event.metaKey && !isEditingText(event.target) &&
         (event.key==='ArrowLeft' || event.key==='ArrowRight')) {

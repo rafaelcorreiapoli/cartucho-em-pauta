@@ -11,6 +11,11 @@ const apps = {
 } as const;
 
 export type PhoneApp = keyof typeof apps;
+const appOrder = Object.keys(apps) as PhoneApp[];
+
+export function phoneAppForKey(key:string) {
+  if (/^[1-9]$/.test(key)) return appOrder[Number(key)-1];
+}
 
 export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children}:{
   name:string; icon:string; shortcut:string; pressed?:boolean; onClick:()=>void; children?:ReactNode;
@@ -26,6 +31,6 @@ export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children}:{
 }
 
 export function PhoneApps({active,select}:{active?:PhoneApp;select:(app:PhoneApp)=>void}) {
-  return (Object.keys(apps) as PhoneApp[]).map((app,index)=><PhoneAppButton key={app} name={app} icon={apps[app]} shortcut={String(index+1)}
+  return appOrder.map((app,index)=><PhoneAppButton key={app} name={app} icon={apps[app]} shortcut={String(index+1)}
     pressed={app===active} onClick={()=>select(app)}/>);
 }
