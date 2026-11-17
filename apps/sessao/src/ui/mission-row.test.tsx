@@ -532,15 +532,18 @@ test.each([false,true])('coffee missions count consumption at the station and fr
   Reflect.set(account.agenda,'missionDeck',['selfieSolo','visitaArquivo','passeio']);
   for (let cup=0;cup<3;cup++) {
     const now = 1+cup*stationRecharge.coffee.duration;
+    const world = match.gameplayWorld([player],now,()=>false);
+    player.stamina = 25;
+    player.staminaMax = 120;
     if (station && !cup) {
-      expect(match.roomActivity(player,'coffee',now)).toMatchObject({activity:'coffee',text:'Cafezinho tomado. De volta à articulação!'});
-      expect(match.roomActivity(player,'coffee',now)).toMatchObject({unavailable:true});
+      expect(game.drinkStationCoffee(player,world)).toBe('Café bebido.');
+      expect(game.drinkStationCoffee(player,world)).toBe(stationRecharge.coffee.feedback);
     } else {
-      const world = match.gameplayWorld([player],now,()=>false);
       expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
       const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
-      expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+      expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Café bebido.');
     }
+    expect(player.stamina).toBe(55);
     if (!cup) {
       expect(find(now,'cafeEstrategico',true)).toContain('data-done="true"');
       expect(find(now,'fiscalCafe')).toContain('1 / 3');

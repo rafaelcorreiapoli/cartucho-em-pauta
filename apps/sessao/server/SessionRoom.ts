@@ -16,7 +16,7 @@ import { consumableAction, canUseGameplayAction, readGameplayAction, type Intera
 import { StationCooldowns } from './StationCooldowns';
 import { Gameplay } from './Gameplay';
 import { isGear } from '../src/equipment';
-import { roomActivities, type RoomActivity } from '../src/room-activities';
+import { roomActivities } from '../src/room-activities';
 import { readElectionAction, type CampaignBroadcast } from '../src/elections';
 import { readVoiceSignal } from '../src/voice-protocol';
 import { Room, ServerError, type Client } from 'colyseus';
@@ -84,8 +84,8 @@ export class SessionRoom extends Room {
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
-        if (event.type==='coffee-drunk' || event.type==='used' && isFood(event.kind)) {
-          const drink = event.type==='coffee-drunk' || isDrink(event.kind);
+        if (event.type==='used' && isFood(event.kind)) {
+          const drink = isDrink(event.kind);
           this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
@@ -312,7 +312,14 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const world = this.gameplayWorld();
-      const result = this.match.roomActivity(player,activity as RoomActivity,world.now,world.publish);
+      if (activity==='coffee') {
+        if (!this.match.canHandleObjects(player.id,world.now)) return;
+        const text = this.gameplay.drinkStationCoffee(player,world);
+        if (text) client.send('room-activity-result',{activity,text});
+        return;
+      }
+      if (activity!=='library') return;
+      const result = this.match.roomActivity(player,activity,world.now,world.publish);
       if (result) client.send('room-activity-result',result);
     });
     this.onMessage('voice-activity',client=>{

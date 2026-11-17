@@ -47,7 +47,7 @@ test('a server mission completion updates agenda and XP without repainting publi
   hud.congress.subscribe(()=>updates.push('congress'));
   hud.profile.subscribe(()=>updates.push('profile'));
   hud.agenda.subscribe(()=>updates.push('agenda'));
-  expect(match.roomActivity(player,'coffee',1)?.activity).toBe('coffee');
+  expect(new Gameplay().drinkStationCoffee({...player},match.gameplayWorld([player],1,()=>false))).toBe('Café bebido.');
   hud.render(view());
   hud.render(view());
   expect(updates).toEqual(['profile','agenda']);
@@ -291,7 +291,7 @@ test('delayed gameplay from the previous match cannot affect the new HUD',()=>{
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
   const previousWorld = match.gameplayWorld([player],1,()=>false);
   const coffee = {
-    type:'coffee-drunk',actor:player.id,position:terminals.coffee.point,at:1,witnesses:[],
+    type:'used',kind:'coffee',actor:player.id,position:terminals.coffee.point,at:1,witnesses:[],
     eventId:previousWorld.nextEventId!(),
   } as const;
   const previousEvent = {...coffee,witnesses:[]};
@@ -321,7 +321,7 @@ test('delayed gameplay from the previous match cannot affect the new HUD',()=>{
   expect(hud.congress.get()).toBe(initialCongress);
   expect(hud.profile.get()?.xp).toBe(0);
 
-  expect(match.roomActivity(player,'coffee',4)?.text).toContain('Cafezinho tomado');
+  expect(new Gameplay().drinkStationCoffee({...player},match.gameplayWorld([player],4,()=>false))).toBe('Café bebido.');
   render();
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'cafe'}));
   expect(hud.profile.get()?.xp).toBe(missionReward('cafe').xp);
@@ -547,7 +547,7 @@ test('delayed work cannot change the final Agenda, XP, wallet or budget',()=>{
   const deadline = ELECTION_RULES.matchDuration;
   const pending = match.gameplayWorld([player],deadline-1,()=>false);
   const coffee = {
-    type:'coffee-drunk',actor:player.id,at:deadline-1,position:player,witnesses:[],eventId:pending.nextEventId!(),
+    type:'used',kind:'coffee',actor:player.id,at:deadline-1,position:player,witnesses:[],eventId:pending.nextEventId!(),
   } as const;
   match.advance(deadline);
   expect(match.phase).toBe('finished');

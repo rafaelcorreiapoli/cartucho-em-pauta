@@ -261,21 +261,6 @@ test('pizza earns XP only on consumption after assignment', () => {
   expect(view().missions.active.some(mission=>mission.kind==='pizza')).toBe(false);
 });
 
-test('room activities require proximity, and a cafezinho completes its mission', () => {
-  const match = new PlenaryMatch(1);
-  match.start(host.id,[host],0,() => .4);
-  const missions = () => match.view(host.id,[host.id],1).politics!.missions;
-  expect(missions().active.some(mission => mission.kind==='cafe')).toBe(true);
-  expect(match.roomActivity(host,'coffee',1)).toBeUndefined();
-  const cafe = at(host,'coffee');
-  expect(match.roomActivity(cafe,'coffee',2)?.text).toContain('Cafezinho tomado');
-  expect(missions().completed.map(mission => mission.kind)).toEqual(['cafe']);
-  expect(missions().active).toHaveLength(3);
-  expect(match.roomActivity(cafe,'coffee',3)?.unavailable).toBe(true);
-  expect(missions().completed).toHaveLength(1);
-  expect(missions().active.some(mission => mission.kind==='cafe')).toBe(false);
-});
-
 test('the coffee machine shares its recharge between players and both coffee actions',()=>{
   const cooldowns = new StationCooldowns();
   const match = new PlenaryMatch(1,cooldowns);
@@ -288,13 +273,13 @@ test('the coffee machine shares its recharge between players and both coffee act
   const supply = {kind:'supply',place:'coffee'} as const;
   const {duration,feedback} = stationRecharge.coffee;
 
-  expect(match.roomActivity(cafe,'coffee',1)?.unavailable).toBeUndefined();
+  expect(game.drinkStationCoffee(cafe,world(1))).toBe('Café bebido.');
   expect(game.act(visitor,supply,world(1))).toBe(feedback);
   expect(game.view(visitor,world(2)).stationCooldowns).toEqual({coffee:duration-1});
   expect(game.view(visitor,world(1+duration)).stationCooldowns).toEqual({});
   expect(game.act(visitor,supply,world(1+duration))).toBe('Objeto guardado no inventário.');
-  expect(match.roomActivity(cafe,'coffee',1+duration)).toMatchObject({unavailable:true,text:feedback});
-  expect(match.roomActivity(cafe,'coffee',1+2*duration)?.text).toContain('Cafezinho tomado');
+  expect(game.drinkStationCoffee(cafe,world(1+duration))).toBe(feedback);
+  expect(game.drinkStationCoffee(cafe,world(1+2*duration))).toBe('Café bebido.');
 });
 
 test('the Corregedoria returns feedback for each audit, even without new records', () => {
@@ -629,9 +614,12 @@ test('a station rejects a nearby player blocked by a barrier or carrying someone
   match.start(host.id,people,0,()=>.9);
   const {x,y} = stations.coffee;
   const nearby:Player = {...host,x:x+8,y};
-  expect(match.roomActivity({...nearby,barriers:[[x+3,y-2,2,4]]},'coffee',1)).toBeUndefined();
-  expect(match.roomActivity({...nearby,carrying:true},'coffee',2)).toBeUndefined();
-  expect(match.roomActivity(nearby,'coffee',3)?.activity).toBe('coffee');
+  const game = new Gameplay();
+  const world = match.gameplayWorld(people,1,()=>false);
+  expect(game.drinkStationCoffee(host,world)).toBeUndefined();
+  expect(game.drinkStationCoffee({...nearby,barriers:[[x+3,y-2,2,4]]},world)).toBeUndefined();
+  expect(game.drinkStationCoffee({...nearby,carrying:true},world)).toBeUndefined();
+  expect(game.drinkStationCoffee(nearby,world)).toBe('Café bebido.');
 });
 
 test('an approved project with a fractional deficit applies the same rounded penalty shown by the client',()=>{

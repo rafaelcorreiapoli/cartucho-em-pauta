@@ -493,7 +493,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     let coffeeEvent:GameplayEvent|undefined;
     Reflect.set(match,'recordGameplay',(event:GameplayEvent)=>{
       const accepted = record(event);
-      if (accepted && event.type==='coffee-drunk') coffeeEvent = event;
+      if (accepted && event.type==='used' && event.kind==='coffee') coffeeEvent = event;
       return accepted;
     });
     passenger.send('room-activity',{activity:'coffee',token:3270});

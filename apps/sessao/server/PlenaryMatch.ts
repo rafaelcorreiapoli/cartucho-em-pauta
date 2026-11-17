@@ -1,5 +1,4 @@
 import { StationCooldowns } from './StationCooldowns';
-import { stationRecharge } from '../src/station-recharge';
 import type {SessionParticipant} from '../src/plenary';
 import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
@@ -451,23 +450,15 @@ export class PlenaryMatch {
     if (action==='panel' && this.audits.get(player.id)==='fraud') this.reportedFraud = true;
   }
 
-  roomActivity(player:Player, activity:RoomActivity, now:number,publish?:GameplayWorld['publish']):RoomActivityResult | undefined {
+  roomActivity(player:Player, activity:Exclude<RoomActivity,'coffee'>, now:number,publish?:GameplayWorld['publish']):RoomActivityResult | undefined {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
-    switch (activity) {
-      case 'coffee':
-        if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
-        this.publishActivity(player,'coffee-drunk',now,{place:roomAt(player)},publish);
-        return {activity,text:'Cafezinho tomado. De volta à articulação!'};
-      case 'library': {
-        const project = this.proposal?.project;
-        if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
-        if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
-        this.publishActivity(player,'bill-studied',now,{project},publish);
-        this.refreshAgendaEligibility(now);
-        return {activity,text:`Você estudou o projeto ${bills[project].name}.`};
-      }
-    }
+    const project = this.proposal?.project;
+    if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
+    if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
+    this.publishActivity(player,'bill-studied',now,{project},publish);
+    this.refreshAgendaEligibility(now);
+    return {activity,text:`Você estudou o projeto ${bills[project].name}.`};
   }
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {

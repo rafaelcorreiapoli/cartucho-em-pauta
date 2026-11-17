@@ -18,13 +18,8 @@ test('the contextual shortcuts reflect room activities and consumed public grant
   );
 
   expect(render()).toBe('');
-  expect(render('coffee')).toContain('Tomar um cafezinho');
+  expect(render('coffee')).toContain('Beber café');
   expect(render('coffee')).not.toContain('Aplicar verba');
-  expect(match.roomActivity(player,'coffee',1)).toBeUndefined();
-  expect(match.roomActivity({...player,...stations.coffee},'coffee',2)?.text).toContain('Cafezinho tomado');
-  expect(view(2).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'cafe'}));
-  expect(match.roomActivity({...player,...stations.coffee},'coffee',3)?.unavailable).toBe(true);
-
   expect(render('cabinet')).toContain('Aplicar verba');
   expect(render('cabinet')).not.toContain('Consultar orçamento');
   match.politics({...player,...stations.cabinet},{kind:'grant',diverted:0},[player],4);
