@@ -1,16 +1,23 @@
-import { blockedBy, canStand, NAMES, type Player } from '../src/map';
+import { blockedBy, canStand, NAMES, roomAt, type Player } from '../src/map';
 import { findRoute, followRoute } from '../src/navigation';
 import { npcRules } from '../src/parliamentarians';
+import { npcs } from '../src/npcs';
+import { reprography } from '../src/room-activities';
 import type { GameplayEvent } from '../src/gameplay';
 import { bills, stations, type Vote } from '../src/plenary';
 
-const destinations = [stations.coffee,stations.archive,stations.secretary,stations.library,stations.press,{x:140,y:146}];
+const destinations = [
+  stations.coffee,stations.archive,stations.secretary,stations.library,stations.press,
+  stations.cabinet,stations.audit,reprography,npcs.furnitureVendor.interaction,
+  npcs.snackVendor.interaction,npcs.credentialsVendor.interaction,{x:620,y:227},{x:140,y:146},
+];
+const destinationRooms = new Map(destinations.map(point=>[point,roomAt(point)]));
 const profiles = [
   {signature:0,price:2,conviction:1, preferences:['yes','no',undefined]},
   {signature:2,price:2,conviction:2, preferences:['no',undefined,'yes']},
   {signature:3,price:3,conviction:2, preferences:[undefined,'yes','no']},
 ] as const;
-type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number;
+type Member = {player:Player; profile:typeof profiles[number]; route:ReturnType<typeof findRoute>; next:number; destination?:string;
   promises:Map<number,{round:number;vote:Vote;amount:number;buyer?:string}>; trusted:Set<string>; aggressors:Set<string>};
 
 export class Parliamentarians {
@@ -23,14 +30,16 @@ export class Parliamentarians {
     const roster = NAMES.map((_,index)=>index);
     const available = roster.filter(character=>!occupied.has(character));
     const reserved = roster.filter(character=>occupied.has(character));
-    profiles.slice(0,count).forEach((profile,index)=>{
+    const size = Math.min(count,npcRules.maxCount,roster.length);
+    for (let index=0;index<size;index++) {
+      const profile = profiles[index%profiles.length];
       const pool = available.length ? available : reserved;
       const [character] = pool.splice(Math.floor(random()*pool.length),1);
       const id = `npc-parliamentarian-${index+1}`;
-      this.members.set(id,{profile,promises:new Map(),trusted:new Set(),aggressors:new Set(),route:[],next:now+index*500,player:{
+      this.members.set(id,{profile,promises:new Map(),trusted:new Set(),aggressors:new Set(),route:[],next:now+index*500,destination:destinationRooms.get(destinations[index]),player:{
         ...destinations[index],id,nick:NAMES[character],character,npc:true,direction:0,moving:false,speed:npcRules.speed,
       }});
-    });
+    }
   }
 
   private adjustment(member:Member,buyer?:string) {
@@ -102,9 +111,19 @@ export class Parliamentarians {
         continue;
       }
       if (!route.length && now>=member.next) {
-        const destination = destinations[Math.floor(Math.random()*destinations.length)];
-        member.route = findRoute(player,destination);
+        const occupied = new Set([roomAt(player)]);
+        for (const other of this.members.values()) {
+          if (other===member) continue;
+          occupied.add(roomAt(other.player));
+          if (other.destination) occupied.add(other.destination);
+        }
+        const available = destinations.filter(point=>!occupied.has(destinationRooms.get(point)!));
+        const destination = available[Math.floor(Math.random()*available.length)];
         member.next = now+npcRules.pauseMs;
+        if (destination) {
+          member.route = findRoute(player,destination);
+          member.destination = member.route.length ? destinationRooms.get(destination) : undefined;
+        }
       }
       if (!member.route.length) {
         player.moving = false;
@@ -116,6 +135,6 @@ export class Parliamentarians {
   }
 
   stopRoutes() {
-    for (const member of this.members.values()) { member.route = []; member.player.moving = false; }
+    for (const member of this.members.values()) { member.route = []; member.destination = undefined; member.player.moving = false; }
   }
 }

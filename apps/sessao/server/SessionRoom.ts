@@ -32,7 +32,7 @@ import { PlenaryMatch } from './PlenaryMatch';
 function countFromStart(request:unknown,lobbyCount:number) {
   if (!request || typeof request!=='object') return 0;
   if (!('npcs' in request)) return lobbyCount;
-  return typeof request.npcs==='number' && Number.isInteger(request.npcs) ? Math.max(0,Math.min(3,request.npcs)) : npcRules.count;
+  return typeof request.npcs==='number' && Number.isInteger(request.npcs) ? Math.max(0,Math.min(npcRules.maxCount,request.npcs)) : npcRules.count;
 }
 
 export class SessionRoom extends Room {
@@ -184,7 +184,7 @@ export class SessionRoom extends Room {
       if (!raw || typeof raw!=='object' || !('count' in raw) || !this.consumeRoomCommand(client.sessionId,raw)) return;
       const value = raw.count;
       if (this.match.running || this.players.keys().next().value!==client.sessionId ||
-          typeof value!=='number' || !Number.isInteger(value) || value<0 || value>3) return;
+          typeof value!=='number' || !Number.isInteger(value) || value<0 || value>npcRules.maxCount) return;
       this.lobbyNpcCount = value;
     });
     this.onMessage('start-match', (client, countRequest:unknown) => {
@@ -199,7 +199,6 @@ export class SessionRoom extends Room {
         this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
         const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
-        this.lobbyNpcCount = count;
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);

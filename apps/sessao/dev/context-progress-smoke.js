@@ -37,7 +37,12 @@ async page => {
     .getByRole('progressbar',{name:'Instalando decoração'}).waitFor({state:'hidden'});
   const removeFromMap = page.getByRole('button',{name:'Retirar retrato',exact:true});
   await removeFromMap.waitFor();
+  const extinguisher = page.getByRole('button',{name:'Pegar extintor',exact:true});
+  await extinguisher.waitFor();
   await page.getByRole('button',{name:'Objetos próximos',exact:true}).click();
+  if (await page.locator('#nearby-items [data-kind="extinguisher"]').count()) {
+    throw Error('O extintor aparece na lista e no botão direto');
+  }
   await page.getByRole('button',{name:'Inspecionar Retrato de Progresso QA',exact:true}).click();
   const dialog = page.getByRole('dialog',{name:'Objeto',exact:true});
   await dialog.getByRole('button',{name:'Retirar',exact:true}).evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
@@ -48,6 +53,9 @@ async page => {
   await page.keyboard.press(await remove.getAttribute('aria-keyshortcuts'));
   await dialog.waitFor({state:'hidden'});
   await removeFromMap.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Objetos próximos',exact:true}).waitFor({state:'hidden'});
+  await extinguisher.click();
+  await extinguisher.waitFor({state:'hidden'});
   await page.keyboard.press('o');
   await page.getByRole('dialog',{name:'Inventário',exact:true}).getByRole('button',{name:'Retrato oficial',exact:true}).waitFor();
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');

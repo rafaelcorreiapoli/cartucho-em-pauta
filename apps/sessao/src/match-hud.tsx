@@ -26,7 +26,7 @@ const noNearbyItems:readonly NearbyItem[] = [];
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  nearby:{render:(player:Motion | undefined,exploring:boolean,directCollections:readonly number[])=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
@@ -141,7 +141,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    nearby.render(player,canInteract);
+    const directCollections = field.flatMap(({action})=>action.kind==='collect' && action.item!==undefined ? [action.item] : []);
+    nearby.render(player,canInteract,directCollections);
     const items = canInteract ? nearby.get() : noNearbyItems;
     if (!items.length || (nearbyOpen && document.querySelector('dialog:modal:not(#action-shortcuts)'))) nearbyOpen = false;
     if (!exploring || !canInteract) overflowExpanded = false;
