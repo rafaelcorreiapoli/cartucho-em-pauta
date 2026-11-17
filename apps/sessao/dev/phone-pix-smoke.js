@@ -30,7 +30,9 @@ async page => {
     await bia.and(polls.locator('[aria-pressed="true"]')).waitFor();
     await page.keyboard.press('0');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor();
+    await polls.getByText('Apoia Bia',{exact:true}).waitFor();
     await page.keyboard.press('9');
+    await polls.getByRole('button',{name:'Retirar apoio',exact:true}).and(polls.locator(':enabled')).waitFor();
     await page.keyboard.press('0');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor({state:'hidden'});
     for (const client of [page,receiver]) {
