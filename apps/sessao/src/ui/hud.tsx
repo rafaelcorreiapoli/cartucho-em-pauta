@@ -107,12 +107,12 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
       <div className="react-mission-meta">
-        {!done && progress && <small>{progress}</small>}
         <div className="react-mission-rewards" role="group" aria-label="Prêmios da missão">
-          <span data-reward="xp"><HudIcon name="star"/>{reward.xp} XP</span>
+          <span data-reward="xp">{reward.xp} XP</span>
           {!!reward.cash && <span data-reward="cash"><HudIcon name="wallet"/>{money(reward.cash)}</span>}
           {!!reward.popularity && <span data-reward="popularity"><HudIcon name="chart"/>+{reward.popularity} Pop<span className="sr-only">ularidade</span></span>}
         </div>
+        {!done && progress && <small>{progress}</small>}
       </div>
     </div>
   </li>;

@@ -52,7 +52,8 @@
 .react-missions strong { display:block; font-weight:600; overflow-wrap:anywhere; }
 .react-missions [data-done="true"] strong { color:var(--color-hud-muted); text-decoration:line-through; }
 .react-mission-meta, .react-mission-rewards { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
-.react-mission-meta { margin-top:3px; justify-content:space-between; }
+.react-mission-meta { margin-top:3px; }
+.react-mission-meta > small { margin-inline-start:auto; text-align:end; }
 .react-mission-rewards > span {
   display:inline-flex;
   align-items:center;
