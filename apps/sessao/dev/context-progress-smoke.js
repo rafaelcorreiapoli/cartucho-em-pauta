@@ -35,6 +35,20 @@ async page => {
   await page.waitForFunction(()=>window.sawInstallationProgress===true);
   await page.getByRole('region',{name:'Ações próximas'})
     .getByRole('progressbar',{name:'Instalando decoração'}).waitFor({state:'hidden'});
-  await page.getByRole('button',{name:'Retirar retrato',exact:true}).waitFor();
+  const removeFromMap = page.getByRole('button',{name:'Retirar retrato',exact:true});
+  await removeFromMap.waitFor();
+  await page.getByRole('button',{name:'Objetos próximos',exact:true}).click();
+  await page.getByRole('button',{name:'Inspecionar Retrato de Progresso QA',exact:true}).click();
+  const dialog = page.getByRole('dialog',{name:'Objeto',exact:true});
+  await dialog.getByRole('button',{name:'Retirar',exact:true}).evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
+  await page.keyboard.press('F2');
+  const shortcuts = page.locator('#action-shortcuts');
+  const remove = shortcuts.getByRole('button',{name:'Retirar',exact:true});
+  await remove.waitFor();
+  await page.keyboard.press(await remove.getAttribute('aria-keyshortcuts'));
+  await dialog.waitFor({state:'hidden'});
+  await removeFromMap.waitFor({state:'hidden'});
+  await page.keyboard.press('o');
+  await page.getByRole('dialog',{name:'Inventário',exact:true}).getByRole('button',{name:'Retrato oficial',exact:true}).waitFor();
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }

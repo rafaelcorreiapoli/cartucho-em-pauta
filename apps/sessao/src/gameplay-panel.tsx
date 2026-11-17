@@ -410,7 +410,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     if (decoration) {
       content = <DecorationCard decoration={decoration} ownId={ownId}
-        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send}/>;
+        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send} close={()=>dialog.close()}/>;
     }
     const showMail = phone && app==='Correio';
     if (phone && app && !showMail) {

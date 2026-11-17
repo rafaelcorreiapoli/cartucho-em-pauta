@@ -3,6 +3,8 @@ import type {GameplayAction} from '../gameplay';
 import type {Decoration} from '../photography';
 import {decorationLabel} from '../photo-renderer';
 import {DialogDismiss} from './dialog-dismiss';
+import {useDialogKeys} from './use-dialog-keys';
+import type {ShortcutEntry} from '../action-shortcuts';
 import {PhoneContactFace} from './phone-call';
 
 export function GameplayDialogHeader({title,bag,back}:{title:string;bag?:boolean;back?:()=>void}) {
@@ -18,13 +20,18 @@ export function GameplayDialogHeader({title,bag,back}:{title:string;bag?:boolean
   </>;
 }
 
-export function DecorationCard({decoration,ownId,exploring,canRemove,send}:{
-  decoration:Decoration; ownId:string; exploring:boolean; canRemove:boolean; send:(action:GameplayAction)=>void;
+export function DecorationCard({decoration,ownId,exploring,canRemove,send,close}:{
+  decoration:Decoration; ownId:string; exploring:boolean; canRemove:boolean; send:(action:GameplayAction)=>void; close?:()=>void;
 }) {
   const {id,kind,owner,character,marked,privateOffice} = decoration;
-  const control = (label:string,action:GameplayAction['kind'],disabled=false)=>
-    <button type="button" className="hud-button hud-button--secondary" disabled={disabled} onClick={()=>send({kind:action,item:id})}>{label}</button>;
-  return <article className="object-card">
+  const entries:ShortcutEntry[] = close ? [{name:'Fechar',activate:close}] : [];
+  const panel = useDialogKeys<HTMLElement>(()=>undefined,entries);
+  const control = (label:string,action:GameplayAction['kind'],disabled=false)=>{
+    const activate = ()=>send({kind:action,item:id});
+    if (!disabled) entries.push({name:label,activate});
+    return <button type="button" className="hud-button hud-button--secondary" disabled={disabled} onClick={activate}>{label}</button>;
+  };
+  return <article ref={panel} className="object-card">
     <h3>{decorationLabel(decoration)}</h3>
     {kind==='portrait' && <PhoneContactFace person={{...owner,character}}/>}
     {marked && <p>Retrato rabiscado</p>}
