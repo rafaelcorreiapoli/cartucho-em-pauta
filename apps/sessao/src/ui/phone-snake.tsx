@@ -21,7 +21,7 @@ export function PhoneSnake({game,bets,candy,wallet,available,board,send}:{
   const startCandy = ()=>{setMini('candy');send({kind:'candy-start'});};
   const openBets = ()=>setMini('bets');
   const finished = game?.status==='won' || game?.status==='lost';
-  const panel = usePhoneKeys(key=>{
+  const panel = usePhoneKeys<HTMLDivElement>(key=>{
     if (!available || mini) return;
     if (key==='1' && (!game || finished)) return start;
     if (!game && key==='2') return startCandy;
