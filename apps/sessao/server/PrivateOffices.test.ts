@@ -202,7 +202,7 @@ test('a visitor can tear down a portrait inside an office without collecting it'
   const {players:[owner,visitor],game,world,act,buy} = setup();
   const [home] = privateOffices;
   const point = decorPoint(home,'portrait');
-  Object.assign(owner,terminals.credentials.point);
+  Object.assign(owner,npcs.credentialsVendor.interaction);
   game.act(owner,{kind:'open-shop',target:'credentialsVendor'},world);
   const token = game.view(owner,world).dialogue?.token;
   expect(game.act(owner,{kind:'shop-buy',target:'portrait',token},world)).toBe('Compra guardada no inventário.');
