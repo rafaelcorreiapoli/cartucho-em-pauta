@@ -49,13 +49,13 @@ export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
   secretary:{
     start:{
-      text:'Escolha um projeto. Depois de reunir os carimbos e a assinatura exigida, leve o documento ao Protocolo.',
+      text:'Escolha um projeto. Confira no inventário quantas assinaturas você precisa pedir a outros jogadores antes de levar o documento ao Protocolo.',
       options:[{id:'projects',label:'Solicitar documento'},{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
   protocol:{
     start:{
-      text:'Qual documento você quer protocolar? Traga o documento no inventário com os carimbos e a assinatura exigida.',
+      text:'Qual documento você quer protocolar? Projetos só precisam das assinaturas exigidas.',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
