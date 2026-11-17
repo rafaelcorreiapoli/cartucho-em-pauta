@@ -1,6 +1,7 @@
+import {money} from '../politics';
 import {formatImpact,impactTone} from './impact-value';
 import {useState} from 'react';
-import {agendaProject,deficitStabilityLoss,type Outcome} from '../plenary';
+import {agendaProject,type Outcome} from '../plenary';
 
 function voteParticipation({abstentions=0,absences=0}:Outcome) {
   return [
@@ -21,7 +22,7 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
   const threshold = `${outcome.needed} ${outcome.needed===1 ? 'voto' : 'votos'} a favor para passar`;
   const details = [
     `Estabilidade ${formatImpact(outcome.applied.stability)} · Orçamento ${formatImpact(outcome.applied.budget,true)}`,
-    outcome.deficit ? `Déficit: −${deficitStabilityLoss(outcome.deficit)} de estabilidade` : '',
+    outcome.deficit ? `Dívida após a votação de ${money(outcome.deficit)}` : '',
     outcome.fraud ? 'O painel foi fraudado' : '',
   ].filter(Boolean).join(' · ');
   return <>

@@ -21,6 +21,8 @@ import { snakeDirections, type SnakeDirection, type SnakeView } from './snake';
 import type { SecurityView } from "./security";
 import { spyProducts, type SpyView } from "./surveillance";
 
+export const decorationPopularity = {portrait:4,vip:2} as const;
+
 export const objects = {
   firstAidKit,
   incendiary,
@@ -35,8 +37,8 @@ export const objects = {
   xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
   document:{exposable:true,name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
-  portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
-  vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:'Uma reserva que os outros podem ignorar.'},
+  portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:`Na primeira instalação, +${decorationPopularity.portrait} de popularidade. Um lugar na parede para a sua própria cara.`},
+  vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:`Na primeira instalação, +${decorationPopularity.vip} de popularidade. Uma reserva que os outros podem ignorar.`},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},

@@ -655,24 +655,7 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
-#support-form {
-  display: grid;
-  gap: .55rem;
-  margin-top: .65rem;
-  padding: .8rem;
-  border-radius: 8px;
-  background: #142522;
-}
 #election-indicator-mount { display: contents; }
-.support-candidates {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
-  gap: .45rem;
-}
-.support-candidates > button { display: flex; align-items: center; gap: .4rem; min-width: 0; text-align: left; }
-.support-candidates > button[aria-pressed="true"] { border-color: var(--party-gold); }
-.support-candidates > button > span:not(.portrait) { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.support-candidates .portrait { --portrait-size: 30px; flex: none; }
 
 #result-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 #result-title, #result-dialog h3, #result-dialog h4 { margin: 0 0 .55rem; font-family: var(--party-display); }
@@ -1140,3 +1123,32 @@ button.item-tile:active { transform: translateY(3px); }
 .phone-pix { display: flex; flex-direction: column; min-height: 100%; gap: .85rem; }
 .phone-pix footer { display: grid; gap: .75rem; margin-top: auto; padding-block: .75rem .25rem; border-top: 1px solid #ffffff20; }
 .phone-pix footer .hud-button { min-height: 45px; border-radius: 12px; }
+
+#campaign-picker {
+  width: min(440px, calc(100vw - 32px));
+}
+.campaign-picker {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.campaign-picker header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.campaign-picker > .hud-button {
+  white-space: normal;
+  text-align: left;
+}
+
+.investment-preview {
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  border: 1px solid var(--color-hud-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-block: 8px;
+}
+.market-supplies { color: var(--color-hud-budget); margin: 0; }

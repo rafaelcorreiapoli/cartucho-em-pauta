@@ -2,7 +2,7 @@ import {billVoteKeys,projectVoteLabels} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
-import {agendaProject,bills,BALLOT_MS,fundedProjectStability,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {agendaProject,bills,BALLOT_MS,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
 import {money} from '../politics';
 import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
@@ -19,22 +19,21 @@ function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
 }
 
 export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;budget:number;approved:boolean;detail?:string}) {
-  const balance = budget+Math.min(0,impact.budget);
-  const stability = fundedProjectStability(impact,budget,balance);
+  const balance = Math.round((budget+Math.min(0,impact.budget))*10)/10;
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><HudIcon name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><HudIcon name="shield"/><ImpactValue value={stability}/> Estabilidade</span>
+    <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
     <span><HudIcon name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
-    {balance<0 && <small className="project-ballot-deficit">Déficit de {money(-balance)}</small>}
+    {balance<0 && <small className="project-ballot-deficit">Dívida após a votação de {money(-balance)}</small>}
     {detail && <small>{detail}</small>}
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
+type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'|'botMessages'> & {
   ownId:string; eligible:boolean; onExpansion?:(expanded:boolean)=>void; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,botMessages,ownId,eligible,cast,onExpansion}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -104,6 +103,9 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
         <span data-choice="pending">Pendentes <strong>{count(undefined)}</strong></span>
         <span>Total <strong>{billVoters.length}</strong></span><span>{billQuorum} para aprovar</span>
       </div>
+      {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
+        {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
+      </ul> : null}
       <footer className="project-ballot-footer">
         <div className="project-ballot-self">{self && <PhoneContactFace person={self}/>}
           <div>Seu voto<strong role="status">{vote ? vote==='abstain'?'Abstenção':vote==='yes'?'SIM':'NÃO' : eligible?'Aguardando…':'Sem direito a voto'}</strong></div>

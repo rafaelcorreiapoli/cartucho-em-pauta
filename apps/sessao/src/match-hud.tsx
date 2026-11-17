@@ -9,6 +9,7 @@ import {contextActionKeys,type ContextKey} from './ui/context-action-keys';
 import {StationShortcuts,stationShortcuts,type Shortcut} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
 import { ElectionStationActions,electionStationActions,electionButtons } from './ui/election-station-actions';
+import {mountCampaignPicker} from './ui/campaign-picker';
 import type { ElectionAction } from './elections';
 import { LegislativeStationActions,legislativeStationActions,legislativeButtons } from './ui/legislative-station-actions';
 import { mountNotices } from './ui/notices';
@@ -32,6 +33,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
   const stations = element('stations');
+  const campaign = mountCampaignPicker(advertisement=>election.send({kind:'advertise',advertisement}));
+  function selectElection(kind:keyof typeof electionButtons) {
+    if (kind==='advertise') campaign.open();
+    else election.send({kind});
+  }
   const contextRoot = createRoot(element('context-actions-mount'));
   let nearbyOpen = false;
   let overflowExpanded = false;
@@ -148,6 +154,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (!exploring || !canInteract) overflowExpanded = false;
     const legislative = legislativeStationActions(view,context);
     const electoral = electionStationActions(view,context,election.hasVoice());
+    campaign.update(electoral.actions.includes('advertise') ? view?.politics?.wallet : undefined);
     const shortcuts = stationShortcuts(view,player,context);
     const key = JSON.stringify([legislative,electoral,shortcuts,field,meter,nearbyOpen,overflowExpanded]);
     stations.hidden = !exploring || !(items.length || legislative.length || electoral.actions.length || electoral.voiceHint ||
@@ -158,13 +165,21 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
     const groups = [
       legislative.map(action=>({...legislativeButtons[action],action,activate:()=>sendLegislative(action)})),
-      electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>election.send({kind})})),
+      electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>selectElection(kind)})),
       shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
       field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
     ] as const;
+    const targetActions = new Map<string,number[]>();
+    for (const [index,button] of groups[3].entries()) {
+      if (!button.target) continue;
+      const members = targetActions.get(button.target.id) ?? [];
+      members.push(index);
+      targetActions.set(button.target.id,members);
+    }
     const groupIds = [legislative,electoral.actions,shortcuts.map(action=>action.kind),field.map(({action})=>JSON.stringify(action))];
     const normal = groups.map((group,groupIndex)=>group.map((button,index)=>({
       id:groupIndex+':'+groupIds[groupIndex][index], name:button.label,
+      group:'target' in button ? button.target?.id : undefined,
       kind:'action' as const,visible:true,enabled:!('blocked' in button && button.blocked) && !('disabled' in button && button.disabled),
       activate:button.activate,station:'station' in button ? button.station : undefined,
     })));
@@ -191,17 +206,34 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     const keysFor = (index:number)=>normal[index].map(control=>presentation.get(control)!);
 
+    const fieldButton = (index:number,shortLabel?:string)=>{
+      const {target,...button} = groups[3][index];
+      return <ContextActionButton key={groupIds[3][index]} {...button}
+        label={shortLabel ?? button.label} accessibleLabel={shortLabel ? button.label : undefined}
+        presentation={presentation.get(normal[3][index])}/>;
+    };
+
     flushSync(()=>contextRoot.render(<>
       <div id="legislative-station-actions" className="station-grid"><LegislativeStationActions actions={legislative} send={sendLegislative} keys={keysFor(0)}/></div>
       <div id="station-election-actions" className="station-grid">
-        <ElectionStationActions {...electoral} send={election.send} keys={keysFor(1)}/>
+        <ElectionStationActions {...electoral} send={selectElection} keys={keysFor(1)}/>
       </div>
       <div id="office-progress-mount">{meter && <ContextProgress meter={meter}/>}</div>
       <div id="nearby-actions" className="context-nearby"><NearbyActions items={items} expanded={nearbyOpen}
         trigger={presentation.get(trigger)} keys={tiles.map(tile=>presentation.get(tile)!)} toggle={toggleNearby}/></div>
       <div id="station-shortcuts"><StationShortcuts actions={shortcuts} select={selectShortcut} keys={keysFor(2)}/></div>
-      <div id="field-actions">{groups[3].map((button,index)=><ContextActionButton key={JSON.stringify(field[index].action)}
-        {...button} presentation={presentation.get(normal[3][index])}/>)}</div>
+      <div id="field-actions">{groups[3].map(({target},index)=>{
+        const members = target && targetActions.get(target.id);
+        if (!target || !members || members.length===1) return fieldButton(index);
+        if (members[0]!==index) return null;
+        const overflow = presentation.get(normal[3][index])?.overflow;
+        return <div key={target.id} className="context-target" role="group" aria-label={target.name} data-context-overflow={overflow}>
+          <span className="context-target-name">{target.name}</span>
+          <div className="context-target-buttons">
+            {members.map(member=>fieldButton(member,groups[3][member].target?.verb))}
+          </div>
+        </div>;
+      })}</div>
       <div id="context-overflow"><ContextOverflow visible={model.hasMore} expanded={model.showOverflow}
         shortcut={presentation.get(more)?.key} toggle={toggleOverflow}/></div>
     </>));
@@ -263,6 +295,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       gear.destroy();
       notices.destroy();
       rewards.destroy();
+      campaign.destroy();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;

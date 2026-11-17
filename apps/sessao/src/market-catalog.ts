@@ -1,3 +1,4 @@
+import {investmentRules} from './public-investments';
 import { credentialGoods } from './installations';
 import { incendiary } from './fire';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
@@ -34,7 +35,7 @@ export const marketKinds = {
   furniture:Object.keys(furniture) as (keyof typeof furniture)[],
 };
 
-export const discountedPrice = (price:number) => Math.max(.1,Math.round(price*(100-policyDiscountPercent)/10)/10);
+export const discountedPrice = (price:number,discount:number=policyDiscountPercent) => Math.max(.1,Math.round(price*(100-discount)/10)/10);
 
 export const mailPublicationFee = (policies?:BillPolicies) => policies?.mail ? discountedPrice(internalMailRules.fee) : internalMailRules.fee;
 
@@ -46,7 +47,15 @@ export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:B
     catalog==='furniture' && policies?.furniture ||
     catalog==='equipment' && (policies?.equipment && (Object.hasOwn(equipment,kind) || Object.hasOwn(spyProducts,kind)) ||
       kind==='forensicKit' && policies?.mail);
-  return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods|keyof typeof credentialGoods,price:subsidized && Math.round(publicBudget*10)>=Math.round((price-discountedPrice(price))*10) ? discountedPrice(price) : price};
+  const subsidy = Math.round((price-discountedPrice(price))*10)/10;
+  const policyPrice = subsidized && Math.round(publicBudget*10)>=Math.round(subsidy*10) ? discountedPrice(price) : price;
+  const suppliesPrice = catalog==='food' && policies?.supplies ? discountedPrice(price,investmentRules.suppliesDiscount) : price;
+  const useSubsidy = policyPrice<suppliesPrice;
+  return {
+    kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods|keyof typeof credentialGoods,
+    price:Math.min(policyPrice,suppliesPrice),
+    ...(useSubsidy ? {subsidy} : {}),
+  };
 }
 
 export function marketPurchaseSlot(kind:ObjectKind,inventory:readonly Pick<WorldItem,'kind'>[],

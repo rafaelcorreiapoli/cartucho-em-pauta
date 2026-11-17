@@ -17,7 +17,7 @@ export function stationShortcuts(view?:PlenaryView,player?:Player,station?:Stati
   if (!station || view?.phase!=='negotiation' || view.ballotCountdown!==undefined) return [];
   const actions:Shortcut[] = [];
   const {grant,hearing,cassation} = station==='cabinet' || station==='panel' ? institutionalActions(view,player) : {};
-  if (station==='cabinet' && grant?.affordable) actions.push({kind:'grant',station,label:'Aplicar verba',icon:'wallet'});
+  if (station==='cabinet' && grant) actions.push({kind:'grant',station,label:'Aplicar verba',icon:'wallet'});
   if (station==='panel' && hearing?.candidates.length) actions.push({kind:'hearing',station,label:'Pedir afastamento',icon:'ballot'});
   if (station==='panel' && cassation?.affordable) actions.push({kind:'cassation',station,label:cassationLabel(cassation.fee),icon:'ballot'});
   if (station==='press' && canPublishEvidence(view,player)) actions.push({kind:'publish',station,label:'Divulgar evidência',icon:'document'});

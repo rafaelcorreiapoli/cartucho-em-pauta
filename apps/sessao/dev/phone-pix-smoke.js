@@ -42,58 +42,25 @@ async page => {
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
     await page.getByLabel('Link da sala').waitFor({state:'hidden'});
     const polls = page.locator('#election-poll-dialog');
-    const receiverPolls = receiver.locator('#election-poll-dialog');
     const originalViewport = page.viewportSize();
-    await page.setViewportSize({width:800,height:360});
+    await page.setViewportSize({width:640,height:360});
     await page.keyboard.press('l');
-    await receiver.keyboard.press('l');
-    const bia = polls.getByRole('button',{name:'Bia',exact:true});
-    await bia.locator('.portrait[data-skin]').waitFor();
+    await polls.getByRole('progressbar',{name:'Intenção de voto de Bia'}).waitFor();
     const layout = await polls.evaluate(dialog=>{
       const body = dialog.querySelector('.election-poll-content');
       const header = dialog.querySelector('header');
       const start = header.getBoundingClientRect().top;
       body.scrollTop = body.scrollHeight;
-      const bottom = dialog.getBoundingClientRect().bottom;
-      const confirmBottom = dialog.querySelector('#support-form button[type=submit]').getBoundingClientRect().bottom;
-      return {scroll:body.scrollTop,headerTop:header.getBoundingClientRect().top,headerPinned:start===header.getBoundingClientRect().top,bottom,confirmBottom};
+      return {headerTop:header.getBoundingClientRect().top,headerPinned:start===header.getBoundingClientRect().top,
+        bottom:dialog.getBoundingClientRect().bottom,lastPollBottom:body.querySelector('li:last-child').getBoundingClientRect().bottom};
     });
-    if (!layout.scroll || !layout.headerPinned || layout.headerTop<0 || layout.bottom>360 || layout.confirmBottom>layout.bottom) {
+    if (!layout.headerPinned || layout.headerTop<0 || layout.bottom>360 || layout.lastPollBottom>layout.bottom) {
       throw Error('Pesquisa eleitoral cortada: '+JSON.stringify(layout));
     }
-    const directKey = async key=>{
-      const button = polls.locator(`button[aria-keyshortcuts="${key}"]`);
-      await button.evaluate(control=>control.removeAttribute('aria-keyshortcuts'));
-      await page.keyboard.press(key);
-    };
     const palette = page.locator('#action-shortcuts');
-    async function sendSupportThroughPalette(label) {
-      const original = polls.getByRole('button',{name:label,exact:true});
-      await original.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
-      await page.keyboard.press('F2');
-      await palette.getByRole('button',{name:new RegExp(label)}).click();
-      await palette.waitFor({state:'hidden'});
-    }
     await page.keyboard.press('F2');
-    await palette.waitFor();
-    if (await palette.getByRole('button',{name:/Declarar apoio|Retirar apoio/}).count()) {
-      throw Error('O F2 ofereceu confirmação antes de mudar o apoio');
-    }
-    await page.keyboard.press('Escape');
-    await palette.waitFor({state:'hidden'});
-    await directKey('1');
-    await bia.and(polls.locator('[aria-pressed="true"]')).waitFor();
-    await sendSupportThroughPalette('Declarar apoio');
-    await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor();
-    await polls.getByText('Apoia Bia',{exact:true}).waitFor();
-    await directKey('9');
-    await polls.getByRole('button',{name:'Retirar apoio',exact:true}).and(polls.locator(':enabled')).waitFor();
-    await sendSupportThroughPalette('Retirar apoio');
-    await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor({state:'hidden'});
-    for (const client of [page,receiver]) {
-      await client.keyboard.press('Escape');
-      await client.locator('#election-poll-dialog').waitFor({state:'hidden'});
-    }
+    await palette.getByRole('button',{name:'Fechar pesquisa eleitoral'}).click();
+    await polls.waitFor({state:'hidden'});
     if (originalViewport) await page.setViewportSize(originalViewport);
     const nearby = page.getByRole('button',{name:'Objetos próximos',exact:true});
     await nearby.waitFor();
@@ -288,5 +255,5 @@ async page => {
   } finally {
     await receiver.close();
   }
-  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true,itemOfferAcceptedViaF2:true,photoCopyAcceptedViaF2:true};
+  return {electionPollClosedViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true,itemOfferAcceptedViaF2:true,photoCopyAcceptedViaF2:true};
 }

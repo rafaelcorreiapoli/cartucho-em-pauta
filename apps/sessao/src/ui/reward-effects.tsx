@@ -2,15 +2,16 @@ import {createRoot} from 'react-dom/client';
 import type {PlenaryView} from '../plenary';
 import {money} from '../politics';
 
-type RewardKind = 'income' | 'xp';
+type RewardKind = 'income' | 'xp' | 'popularity';
 type ScreenPoint = {x:number;y:number};
 type RewardEffect = {kind:RewardKind;amount:number;sequence:number;head?:ScreenPoint};
 
 export function rewardGains(previous:PlenaryView|undefined, current:PlenaryView, suppressXp:boolean) {
   const before = previous?.politics;
   const after = current.politics;
-  if (!before || !after || before.progression.matchId!==after.progression.matchId) return {income:0,xp:0};
+  if (!before || !after || before.progression.matchId!==after.progression.matchId) return {income:0,xp:0,popularity:0};
   return {
+    popularity:suppressXp ? 0 : Math.max(0,after.popularity-before.popularity),
     income:Math.max(0,after.walletIncome-before.walletIncome),
     xp:suppressXp ? 0 : Math.max(0,after.progression.xp-before.progression.xp),
   };
@@ -21,6 +22,10 @@ export function RewardEffects({effects,finish}:{effects:RewardEffect[];finish:(e
     const {kind,amount,head,sequence} = effect;
     const style = head && {left:head.x,top:head.y};
     const onAnimationEnd = ()=>finish(effect);
+    if (kind==='popularity') {
+      return <strong key={sequence} className="wallet-gain popularity-gain" style={style}
+        onAnimationEnd={onAnimationEnd}>+{amount} Popularidade</strong>;
+    }
     if (kind==='xp') {
       return <strong key={sequence} className="wallet-gain xp-gain" aria-hidden="true" style={style}
         onAnimationEnd={onAnimationEnd}>+{amount} XP</strong>;
@@ -47,7 +52,7 @@ export function mountRewardEffects(host:HTMLElement) {
 
   return {
     show(kind:RewardKind,amount:number,head?:ScreenPoint) {
-      if (kind==='xp' && !head) return;
+      if (kind!=='income' && !head) return;
       const total = kind==='income' ? amount+(effects.get(kind)?.amount ?? 0) : amount;
       effects.set(kind,{kind,amount:total,sequence:++sequence,head});
       render();

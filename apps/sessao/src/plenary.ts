@@ -13,22 +13,17 @@ import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
-export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
+export const projectRules = {debateMs:90_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
 export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
 export const CASSATION_NOTICE_MS = 30_000;
 
-export const stabilityRules = {initial:48,target:45,maximum:100,deficitRate:2} as const;
+export const stabilityRules = {initial:48,target:45,maximum:100} as const;
+export const publicDebtRules = {interval:30_000, maximumLoss:4} as const;
 
-export function deficitStabilityLoss(deficit:number) {
-  return -Math.round(-Math.max(0,deficit)*stabilityRules.deficitRate) || 0;
-}
-
-export function fundedProjectStability(impact:Impact,budget:number,balance:number) {
-  const funding = impact.budget<0 ? Math.min(1,budget/-impact.budget) : 1;
-  const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
-  return benefit-deficitStabilityLoss(-balance);
+export function publicDebtStabilityLoss(budget:number) {
+  return Math.min(publicDebtRules.maximumLoss,Math.ceil(Math.max(0,-budget)));
 }
 
 export const stations = {
@@ -47,7 +42,7 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
+export type BillPolicy = 'supplies'|'transport'|'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
 export const hearingPolicyFee = 2;
 export const bankAuditFee = 1;
 export const campaignPolicyMultiplier = 2;
@@ -56,7 +51,7 @@ export const recoveryPolicy = {hpPerTick:2,tickMs:1_000} as const;
 export const treasuryPolicy = {duration:90_000,bonus:2} as const;
 export const pingaProgram = {
   doseCost:.5,
-  detail:'Uma dose por mandato ativo e conectado, se houver orçamento para toda a distribuição',
+  detail:'Uma dose por mandato ativo e conectado',
 } as const;
 export const energySavings = {
   duration:ELECTION_RULES.interval, publicDutyDiscount:2, sabotageCooldown:powerRules.cooldownMs/3,
@@ -89,7 +84,7 @@ export const bills:readonly Bill[] = [
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',...treasuryPolicy}},
   {id:'PROJ-N03',name:'Bolsa Churrasco',banner:'retrato-picanha.webp',
     description:'Uma rodada de churrasco para recompor as forças parlamentares.',
-    yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:`Parlamentares ativos recuperam ${recoveryPolicy.hpPerTick} PV a cada ${recoveryPolicy.tickMs/1_000} s durante ${policySeconds} s, se houver verba`}},
+    yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:`Parlamentares ativos recuperam ${recoveryPolicy.hpPerTick} PV a cada ${recoveryPolicy.tickMs/1_000} s durante ${policySeconds} s`}},
   {id:'PROJ-N05',name:'Lei do Cafezinho Ininterrupto',banner:'retrato-cafezinho.webp',
     description:'O cafezinho ganhou desconto na Lanchonete.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:`Café com ${policyDiscountPercent}% de desconto na Lanchonete por ${policySeconds} s, enquanto houver orçamento`}},
@@ -143,8 +138,9 @@ export type PlenaryView = {
   projectWarning?: number;
   projectVoteExpired?: boolean;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; stability:number; budget:number; host?:string;
-  canStartAsInfiltrator?:boolean;
+  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
+  canStartAsInfiltrator?:boolean; botsToFill?:number;
+  botMessages?:readonly {name:string; text:string}[];
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;

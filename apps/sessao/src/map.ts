@@ -1,3 +1,4 @@
+import {investmentRules} from './public-investments';
 import { equipment } from './equipment';
 import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
@@ -41,7 +42,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; interactionSpeedBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; interactionSpeedBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 
@@ -76,7 +77,8 @@ export function canStandInPlenary(x:number,y:number) {
 export const sprintMultiplier = 1.5;
 
 export function movementSpeed(player:Player) {
-  return (player.speed ?? SPEED)*(player.runningShoes ? 1+equipment.runningShoes.speedBonus/100 : 1)*(player.speedModifier?.factor ?? 1)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
+  const transport = player.publicTransport && !player.sprinting ? 1+investmentRules.transportSpeedBonus/100 : 1;
+  return transport*(player.speed ?? SPEED)*(player.runningShoes ? 1+equipment.runningShoes.speedBonus/100 : 1)*(player.speedModifier?.factor ?? 1)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
 }
 
 export function move(player: Player, input: Motion, seconds: number, stand = canStand) {

@@ -1,3 +1,4 @@
+import { roomBounds } from './congress-layout';
 import { canInteract } from './interactions';
 import { securityRoom, type Motion, type Player, type Rect } from './map';
 import { snackBar } from './npcs';
@@ -5,7 +6,7 @@ import { cameraSees } from './surveillance';
 
 export const securityCameras = [
   {id:'corridor',label:'Corredor central',x:650,y:144,area:[480,125,223,36]},
-  {id:'coffee',label:'Cafezinho',x:217,y:204,area:[196,172,86,87]},
+  {id:'coffee',label:'Cafezinho',x:265,y:204,area:roomBounds('Cafezinho')},
   {id:'press',label:'Sala de Imprensa',x:870,y:193,area:[713,172,237,87]},
   {id:'library',label:'Biblioteca',x:461,y:351,area:[326,270,266,122]},
   {id:'protocol',label:'Protocolo',x:174,y:345,area:[10,270,306,122]},

@@ -25,7 +25,7 @@ async page => {
     await page.keyboard.press('Escape');
     await tooltip.waitFor({state:'hidden'});
     await budget.focus();
-    await tooltip.filter({hasText:'Cada ponto de déficit'}).waitFor();
+    await tooltip.filter({hasText:'Depósitos na Tesouraria abatem a dívida'}).waitFor();
     if (await budget.getAttribute('aria-describedby')!==await tooltip.getAttribute('id')) throw Error('Descrição não vinculada ao botão');
     await page.mouse.click(width-1,height-1);
     await tooltip.waitFor({state:'hidden'});
