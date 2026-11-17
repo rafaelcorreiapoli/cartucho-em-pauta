@@ -1,13 +1,25 @@
 export type ContextKey = {key?:string;overflow?:'false'|'expanded'|'true'};
-type ContextButton = {kind:'action'|'nearby'|'item'|'more';visible:boolean;enabled:boolean};
+type ContextButton = {kind:'action'|'nearby'|'item'|'more';visible:boolean;enabled:boolean;group?:string};
 type ContextPlacement = 'primary'|'overflow'|'hidden';
 
 export function contextActionKeys(buttons:readonly ContextButton[],expanded:boolean,nearbyOpen:boolean) {
   const primary = buttons.filter(button=>button.visible && button.kind!=='item' && button.kind!=='more');
   const nearby = primary.find(button=>button.kind==='nearby');
-  const firstRow = primary.slice(0,3);
-  if (nearbyOpen && nearby && !firstRow.includes(nearby)) firstRow[2] = nearby;
-  const overflow = primary.filter(button=>!firstRow.includes(button));
+  const grouped = new Map<string,ContextButton[]>();
+  const units:ContextButton[][] = [];
+  for (const button of primary) {
+    const unit = button.group===undefined ? undefined : grouped.get(button.group);
+    if (unit) unit.push(button);
+    else {
+      const next = [button];
+      units.push(next);
+      if (button.group!==undefined) grouped.set(button.group,next);
+    }
+  }
+  const firstUnits = units.slice(0,3);
+  if (nearbyOpen && nearby && !firstUnits.some(unit=>unit.includes(nearby))) firstUnits[2] = [nearby];
+  const firstRow = firstUnits.flat();
+  const overflow = units.flat().filter(button=>!firstRow.includes(button));
   const hasMore = overflow.length>0;
   const showOverflow = hasMore && expanded && !nearbyOpen;
   const placement = new Map<ContextButton,ContextPlacement>();
