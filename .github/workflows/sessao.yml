@@ -87,11 +87,26 @@ jobs:
           if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then
             url="$url/?captureVoice=1"
           fi
+          diagnostics=/tmp/sessao-smoke-failures
+          mkdir -p "$diagnostics"
           for flow in "${flows[@]}"; do
             browser open "$url" --browser chrome-for-testing --config dev/private-call-chrome.json
-            browser run-code --filename "dev/$flow-smoke.js" --json
+            log="$diagnostics/$flow.json"
+            if browser run-code --filename "dev/$flow-smoke.js" --json 2>&1 | tee "$log"; then
+              rm "$log"
+            else
+              status=$?
+              browser screenshot --filename "$diagnostics/$flow.png" || true
+              exit "$status"
+            fi
             browser close
           done
+      - name: Keep browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-${{ matrix.flow }}
+          path: /tmp/sessao-smoke-failures/
       - name: Keep exploration HUD screenshots
         if: matrix.flow == 'exploration-hud'
         uses: actions/upload-artifact@v4
