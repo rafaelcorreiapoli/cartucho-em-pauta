@@ -105,13 +105,14 @@ test('urgent calls show the minimum per call and progress by distinct contact',(
 });
 
 test('coffee delivery shows distinct recipient progress and the completion check',()=>{
-  const mission = {id:9,kind:'entrega',current:2,target:3} as const;
+  const mission = {id:9,kind:'entrega',current:2,target:COFFEE_DELIVERY_RECIPIENTS} as const;
+  const progress = `2 / ${COFFEE_DELIVERY_RECIPIENTS}`;
   const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
-  expect(active).toContain('Entregue cafezinho a três jogadores diferentes.');
-  expect(active).toContain('2 / 3');
-  const done = renderToStaticMarkup(<MissionRow mission={{...mission,current:3}} done/>);
+  expect(active).toContain(`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`);
+  expect(active).toContain(progress);
+  const done = renderToStaticMarkup(<MissionRow mission={{...mission,current:mission.target}} done/>);
   expect(done).toContain('data-done="true"');
-  expect(done).not.toContain('2 / 3');
+  expect(done).not.toContain(progress);
 });
 
 test('phone call missions show time in seconds',()=>{
@@ -1382,10 +1383,7 @@ test('the agenda displays emergency maintenance only while the outage can be rep
 });
 
 
-test('mission cards use the configured Pix amount and coffee delivery count',()=>{
+test('the Pix mission card displays the configured amount',()=>{
   const pix = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'pixVinte',current:0,target:1}}/>);
   expect(pix).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
-  const delivery = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'entrega',current:1,target:COFFEE_DELIVERY_RECIPIENTS}}/>);
-  expect(delivery).toContain(`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`);
-  expect(delivery).toContain('1 / '+COFFEE_DELIVERY_RECIPIENTS);
 });
