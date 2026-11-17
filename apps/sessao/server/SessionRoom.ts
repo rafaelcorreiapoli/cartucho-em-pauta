@@ -1,4 +1,5 @@
 import { fireSites, type FireExtinguished } from '../src/fire';
+import type { SpyCameraFrame } from '../src/surveillance';
 import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
 import { publishGameplay } from './gameplay-world';
 import { gameplayMetrics } from './gameplay-metrics';
@@ -551,13 +552,6 @@ export class SessionRoom extends Room {
         }
         if (view.gameplay && this.match.phase==='negotiation') {
           view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
-          if (sendSpyFrame) {
-            const frame = this.gameplay.spyFrame(state.player,world);
-            if (frame) {
-              client.send('spy-frame',frame);
-              this.gameplay.confirmSpyFrame(state.player,world);
-            }
-          }
           view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,now);
@@ -568,6 +562,14 @@ export class SessionRoom extends Room {
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
           this.lastMatchView.set(id,key);
+        }
+        const spyChannel = view.gameplay?.surveillance?.selected;
+        if (sendSpyFrame && spyChannel!==undefined) {
+          const frame = this.gameplay.spyFrame(state.player,world);
+          if (frame) {
+            client.send('spy-frame',{...frame,channel:spyChannel} satisfies SpyCameraFrame);
+            this.gameplay.confirmSpyFrame(state.player,world);
+          }
         }
         if (sendSpyFrame && securityFeed) {
           const {camera} = securityFeed;

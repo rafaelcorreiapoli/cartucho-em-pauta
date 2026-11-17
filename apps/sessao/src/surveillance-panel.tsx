@@ -3,8 +3,7 @@ import { SurveillanceDialogContent } from './ui/surveillance-dialog';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
-import type { PhotoScene } from './photography';
-import { monitoredChannel, type SpyDevice, type SpyView } from './surveillance';
+import { acceptsSpyCameraFrame, monitoredChannel, type SpyCameraFrame, type SpyDevice, type SpyView } from './surveillance';
 
 export function createSurveillancePanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
@@ -127,8 +126,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       if (!view && dialog.open) dialog.close();
       update();
     },
-    frame(frame:PhotoScene) {
-      if (!dialog.open || view?.selected===undefined) return;
+    frame(frame:SpyCameraFrame) {
+      if (!dialog.open || !acceptsSpyCameraFrame(view,frame)) return;
       live ??= createSurveillanceViewport(viewport);
       live.receive(frame);
     },

@@ -4,6 +4,7 @@ import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
+import type { SpyCameraFrame } from '../src/surveillance';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
 import { expect, test } from 'bun:test';
@@ -372,14 +373,18 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const interactionCues = new Map<string,InteractionCue[]>();
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
-    const spyFrames = new Map<string,PhotoScene>();
+    const spyFrames = new Map<string,SpyCameraFrame>();
+    const unconfirmedSpyFrames:SpyCameraFrame[] = [];
     const securityFrames = new Map<string,{camera:string;scene:PhotoScene}>();
     const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
-      peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
+      peer.onMessage('spy-frame',(frame:SpyCameraFrame)=>{
+        if (views.get(peer.sessionId)?.gameplay?.surveillance?.selected!==frame.channel) unconfirmedSpyFrames.push(frame);
+        spyFrames.set(peer.sessionId,frame);
+      });
       peer.onMessage('security-frame',(frame:{camera:string;scene:PhotoScene})=>securityFrames.set(peer.sessionId,frame));
       const cues:string[] = [];
       foodCues.set(peer.sessionId,cues);
@@ -528,7 +533,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('spy',{kind:'open',channel,token:3520});
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>spyFrames.get(carrier.sessionId)?.people.some(person=>person.id===passenger.sessionId)===true);
-    await wait(()=>gameplay()?.surveillance?.selected===channel);
+    expect(spyFrames.get(carrier.sessionId)?.channel).toBe(channel);
+    expect(unconfirmedSpyFrames).toEqual([]);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
     carrier.send('spy',{kind:'close',token:3580});
