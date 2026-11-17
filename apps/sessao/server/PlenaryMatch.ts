@@ -16,7 +16,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
+  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
@@ -465,7 +465,7 @@ export class PlenaryMatch {
       const target = this.cassationVotes.get(id);
       if (target && electorate.includes(target)) tally.set(target,(tally.get(target) ?? 0)+1);
     }
-    const majority = Math.floor(electorate.length/2)+1;
+    const majority = majorityQuorum(electorate.length);
     const result = [...tally].find(([,votes])=>votes>=majority);
     this.cassationOpen = false;
     this.cassationVotes.clear();
@@ -848,7 +848,7 @@ export class PlenaryMatch {
   }
 
   private votingPlayers() { return [...this.electorate].filter(id => this.canVote(id)).length; }
-  private quorum() { return Math.floor(this.votingPlayers()/2)+1; }
+  private quorum() { return majorityQuorum(this.votingPlayers()); }
 
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
@@ -884,7 +884,7 @@ export class PlenaryMatch {
       canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
-        quorum:Math.floor(candidates.length/2)+1,voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
+        quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
         choice:this.cassationVotes.get(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
@@ -907,7 +907,7 @@ export class PlenaryMatch {
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.hearingVote(id)} : undefined,
+      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,quorum:this.quorum(),vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,

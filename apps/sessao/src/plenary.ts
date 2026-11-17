@@ -14,6 +14,7 @@ export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
 export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, requiredVotes:3} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
+export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
 export const CASSATION_NOTICE_MS = 30_000;
 
@@ -135,7 +136,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
-  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
+  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 

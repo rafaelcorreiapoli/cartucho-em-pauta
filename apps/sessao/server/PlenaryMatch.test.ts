@@ -1247,3 +1247,21 @@ test('a project waits for an overlapping hearing and keeps the original proposer
     phase:'ballot',project:4,proposer:host.nick,remaining:BALLOT_MS/1000,
   });
 });
+
+test.each([1,2])('the hearing resolves with the published threshold when %i voters support removal',yesVotes=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,20);
+  match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
+  const initial = match.view(host.id,ids,10);
+  expect(initial.hearing).toMatchObject({voted:0,quorum:2});
+  match.vote(host.id,'yes',11);
+  match.vote(traitor.id,yesVotes===2 ? 'yes' : 'no',12);
+  const during = match.view(host.id,ids,12);
+  expect(during.hearing).toMatchObject({voted:2,quorum:2,vote:'yes'});
+  match.advance(10+HEARING_MS);
+  const after = match.view(honest.id,ids,10+HEARING_MS);
+  expect(after.hearing).toBeUndefined();
+  expect(after.hearingResult).toContain(yesVotes===2 ? 'aprovado' : 'rejeitado');
+});
