@@ -7,14 +7,7 @@ export const characterSheets = [
   {key:'players-expansion',path:'assets/sprites-expansao.png'},
 ] as const;
 
-export const phoneSheet = {key:'lula-phone',path:'assets/lula-phone.webp'} as const;
-
-export function phoneArt(character:number,time:number,reducedMotion:boolean) {
-  if (NAMES[character]!=='Lula') return;
-  return {key:phoneSheet.key,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
-}
-
-const combatCharacters:Record<(typeof NAMES)[number],string> = {
+const characterSlugs:Record<(typeof NAMES)[number],string> = {
   Lula:'lula',
   Bolsonaro:'bolsonaro',
   Clodovil:'clodovil',
@@ -28,7 +21,18 @@ const combatActions = ['attack','hit','fall'] as const;
 const hitFrameMs = 55;
 const fallFrameMs = 100;
 
-export const combatSheets = Object.values(combatCharacters).flatMap(character=>
+export const phoneSheets = Object.values(characterSlugs).map(character=>{
+  const key = `${character}-phone`;
+  return {key,path:`assets/${key}.webp`};
+});
+
+export function phoneArt(character:number,time:number,reducedMotion:boolean) {
+  const skin = characterSlugs[NAMES[character]];
+  if (!skin) return;
+  return {key:`${skin}-phone`,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
+}
+
+export const combatSheets = Object.values(characterSlugs).flatMap(character=>
   combatActions.map(action=>{
     const key = combatSheet(character,action);
     return {key,path:`assets/${key}.webp`};
@@ -47,7 +51,7 @@ export function characterArt(character:number) {
 }
 
 export function attackArt(character:number, row:number, progress:number, impactProgress:number) {
-  const skin = combatCharacters[NAMES[character]];
+  const skin = characterSlugs[NAMES[character]];
   if (!skin) return;
   // The third frame shows the arm fully extended at the moment of impact.
   const frame = progress<impactProgress*.55 ? 0 :
@@ -56,7 +60,7 @@ export function attackArt(character:number, row:number, progress:number, impactP
 }
 
 export function hitArt(character:number, direction:number, elapsed:number) {
-  const skin = combatCharacters[NAMES[character]];
+  const skin = characterSlugs[NAMES[character]];
   const frame = Math.floor(elapsed/hitFrameMs);
   if (!skin || frame>=4) return;
   const row = direction===3 ? 1 : direction;
@@ -66,7 +70,7 @@ export function hitArt(character:number, direction:number, elapsed:number) {
 export function downedArt(character:number, direction:number, elapsed = Infinity) {
   const row = direction===3 ? 1 : direction;
   const flipX = direction===3;
-  const skin = combatCharacters[NAMES[character]];
+  const skin = characterSlugs[NAMES[character]];
   if (skin) {
     const frame = Math.min(3,Math.floor(elapsed/fallFrameMs));
     return {key:combatSheet(skin,'fall'),frame:row*4+frame,flipX,rotation:0,originY:frame===3 ? .85 : 1};
