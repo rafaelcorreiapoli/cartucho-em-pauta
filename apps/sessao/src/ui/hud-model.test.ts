@@ -3,7 +3,7 @@ import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
-import {AGENDA_TRANSFER_MIN,HEARING_MS,missionReward} from '../politics';
+import {AGENDA_TRANSFER_MIN,HEARING_MS,PAYMENTS_PER_ROUND,SUSPENSION_MS,missionReward} from '../politics';
 import {ELECTION_RULES} from '../elections';
 import type {Player} from '../map';
 import {BALLOT_MS,CASSATION_NOTICE_MS,NEGOTIATION_MS,projectRules,stations} from '../plenary';
@@ -378,6 +378,46 @@ test('a paid NPC deal uses the transfer quota without completing the human trans
   hud.render(view(2));
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pagamento'}));
   expect(hud.profile.get()?.xp).toBe(missionReward('pagamento').xp);
+});
+
+test('transfer mission eligibility follows isolation and the remaining quota of distinct senders',()=>{
+  const players = [player,...['bia','caio'].map(id=>({...player,id,nick:id}))];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const hud = createHudModel();
+  const draw = (now:number)=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pagamento','doisPix','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility(now);
+    hud.render(match.view(player.id,ids,now));
+    return hud.agenda.get()?.active.map(mission=>mission.kind);
+  };
+  expect(draw(0)).toContain('pagamento');
+  expect(hud.agenda.get()?.active.some(mission=>mission.kind==='doisPix')).toBe(true);
+
+  economy.suspend(player.id,SUSPENSION_MS);
+  expect(draw(1)).toEqual(['cafe','passeio','selfieSolo']);
+  expect(match.politics(players[1],{kind:'transfer',to:player.id,amount:1},players,1)).toBe(false);
+  expect(match.politics(player,{kind:'transfer',to:players[1].id,amount:AGENDA_TRANSFER_MIN},players,1)).toBe(false);
+
+  match.advance(SUSPENSION_MS);
+  expect(draw(SUSPENSION_MS)).toContain('doisPix');
+  for (const sender of players.slice(1)) {
+    expect(match.politics(sender,{kind:'transfer',to:player.id,amount:1},players,SUSPENSION_MS+1)).toBe(true);
+  }
+  hud.render(match.view(player.id,ids,SUSPENSION_MS+1));
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'doisPix'}));
+  expect(hud.profile.get()?.xp).toBe(missionReward('doisPix').xp);
+
+  const [,bia,caio] = players;
+  for (let payment=1;payment<PAYMENTS_PER_ROUND;payment++) {
+    expect(match.politics(bia,{kind:'transfer',to:caio.id,amount:1},players,SUSPENSION_MS+2)).toBe(true);
+  }
+  expect(match.view(bia.id,ids,SUSPENSION_MS+2).politics).toMatchObject({wallet:2,paymentsLeft:0});
+  expect(draw(SUSPENSION_MS+2)).not.toContain('doisPix');
 });
 
 test('the HUD starts a replacement Pix mission at zero after a transfer completes its predecessor',()=>{

@@ -54,7 +54,7 @@ export class PoliticalEconomy {
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
         isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
         npcHasCash:(minimum=0.1)=>[...this.npcIds].some(id=>this.wallet(id)>=minimum),
-        canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
+        canPay:()=>!this.suspended(contact.id) && this.paymentsLeft(contact.id,this.agendaRound)>0,
         canAgendaAction:canAgendaAction && ((kind:AgendaAction)=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
@@ -459,7 +459,11 @@ export class PoliticalEconomy {
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
-      Object.assign(account,{remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
+      Object.assign(account,{
+        remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),
+        canReceivePayments:(required:number)=>availableTargets.has(id) &&
+          eligiblePayers().filter(payer=>payer!==id).length>=required,
+      });
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets,availableTargets,this.npcIds);
     }
