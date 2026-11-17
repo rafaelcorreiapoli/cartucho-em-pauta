@@ -1413,7 +1413,7 @@ test('the Agenda can offer selfie publication from the album while the photograp
   expect(view(103).missions.active.some(row=>row.kind==='publicouSelfie')).toBe(false);
 });
 
-test('the agenda displays emergency maintenance only while the outage can be repaired',()=>{
+test.each([false,true])('the agenda offers outage missions only while repairs are possible (critical=%s)',critical=>{
   const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
     nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
   }));
@@ -1421,9 +1421,10 @@ test('the agenda displays emergency maintenance only while the outage can be rep
   const ids = players.map(({id})=>id);
   const match = new PlenaryMatch(1);
   expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  if (critical) Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(rafa.id);
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio']);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe']);
   match.refreshAgendaEligibility();
   const render = (now:number) => {
     const {active,completed} = match.view(rafa.id,ids,now).politics!.missions;
@@ -1433,18 +1434,23 @@ test('the agenda displays emergency maintenance only while the outage can be rep
     </ul>);
   };
   const title = 'Conclua o reparo de uma pane elétrica junto a outro jogador';
+  const heroTitle = 'Ajude a resolver uma crise';
   expect(render(0)).not.toContain(title);
+  expect(render(0)).not.toContain(heroTitle);
   expect(match.actOnPower(caio,{kind:'sabotage',panel:0},10)).toBe('Energia cortada.');
   expect(render(10)).toContain(title);
   expect(render(10)).not.toContain('data-done="true"');
+  expect(render(10).includes(heroTitle)).toBe(critical);
   match.setPlayerConnected(bia.id,false);
   expect(render(10)).toContain(title);
   match.setPlayerConnected(caio.id,false);
   expect(match.powerOut).toBe(true);
   expect(render(10)).not.toContain(title);
+  expect(render(10)).not.toContain(heroTitle);
   expect(match.view(rafa.id,ids,10).politics?.progression.xp).toBe(0);
   match.setPlayerConnected(bia.id,true);
   expect(render(10)).toContain(title);
+  expect(render(10).includes(heroTitle)).toBe(critical);
 
   match.actOnPower(rafa,{kind:'repair',panel:0},11);
   match.actOnPower(bia,{kind:'repair',panel:1},11);
@@ -1452,7 +1458,9 @@ test('the agenda displays emergency maintenance only while the outage can be rep
   match.advancePower(end,id=>players.find(player=>player.id===id));
   expect(render(end)).toContain('data-done="true"');
   expect(render(end)).toContain(title);
-  expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(45);
+  expect(render(end).includes(heroTitle)).toBe(critical);
+  const expectedXp = missionReward('manutencaoEmergencia').xp + (critical ? missionReward('heroiInesperado').xp : 0);
+  expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(expectedXp);
 });
 
 
@@ -2036,7 +2044,6 @@ test.each([false,true])('the crisis mission follows fire eligibility and rewards
   const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
   for (const {id} of players) {
     const account = accounts.get(id);
-    account.canFightCrisis = ()=>match.canFightCrisis();
     const {agenda} = account;
     Reflect.set(agenda,'missions',[]);
     Reflect.set(agenda,'missionDeck',['heroiInesperado','cafe','passeio']);

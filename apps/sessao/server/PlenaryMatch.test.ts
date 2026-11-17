@@ -1250,7 +1250,6 @@ test('Herói Inesperado requires an active crisis below the shared stability thr
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   const account = Reflect.get(economy,'accounts').get(honest.id);
-  account.canFightCrisis = ()=>match.canFightCrisis();
   Reflect.set(account.agenda,'missions',[]);
   Reflect.set(account.agenda,'missionDeck',['heroiInesperado']);
   const now = fireRules.firstAfter;

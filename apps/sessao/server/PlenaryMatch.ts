@@ -71,7 +71,11 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
+  private get criticalStability() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
+
+  private canFightCrisis(id:string) {
+    return this.criticalStability && (this.fire.burning || this.canRepairOutage(id));
+  }
 
   setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1],agendaReportNotices?:(id:string)=>readonly number[]) {
     this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(id,nextPublicationAt(id)),agendaSelfies,agendaReportNotices);
@@ -275,7 +279,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       return this.election.canCampaignAction(id,kind);
     });
-    this.economy.setAgendaPowerAvailability(id=>this.canRepairOutage(id));
+    this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
@@ -612,10 +616,10 @@ export class PlenaryMatch {
         this.budget -= result.budget;
         this.cash.diverted += action.diverted;
         this.cash.projects += result.budget-action.diverted;
-        const couldFightCrisis = this.canFightCrisis();
+        const wasCritical = this.criticalStability;
         this.stability = clamp(this.stability+result.stability);
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
-        else if (couldFightCrisis!==this.canFightCrisis()) this.refreshAgendaEligibility(now);
+        else if (wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
         break;
       }
       case 'share':
@@ -857,7 +861,8 @@ export class PlenaryMatch {
     if (!this.running) return;
     const electionWasOpen = this.election.open(this.agendaNow);
     this.agendaNow = Math.max(this.agendaNow,now);
-    const couldFightCrisis = this.canFightCrisis();
+    const wasCritical = this.criticalStability;
+    const wasBurning = this.fire.burning;
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
       this.stability = clamp(this.stability-damage);
@@ -867,7 +872,7 @@ export class PlenaryMatch {
       }
     }
     const expiredSuspensions = this.economy.expireSuspensions(now);
-    if (expiredSuspensions || couldFightCrisis!==this.canFightCrisis()) this.refreshAgendaEligibility();
+    if (expiredSuspensions || wasCritical!==this.criticalStability || wasBurning!==this.fire.burning) this.refreshAgendaEligibility();
     if (now>=this.sessionEndsAt && !(this.phase==='ballot' && this.ends<=this.sessionEndsAt)) {
       this.finishAtDeadline();
       return;
