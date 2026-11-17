@@ -332,9 +332,13 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
-    server.kill();
-    await Promise.allSettled(rooms.map(room => room.leave(false)));
-    await server.exited;
+    try {
+      // A consented leave stops the SDK from reconnecting during cleanup.
+      await Promise.allSettled(rooms.map(room => room.leave()));
+    } finally {
+      server.kill();
+      await server.exited;
+    }
   }
 },65_000);
 
