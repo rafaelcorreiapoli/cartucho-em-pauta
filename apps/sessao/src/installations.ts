@@ -30,14 +30,12 @@ export function canReachInstallation(actor:InteractionActor,point:Motion,kind:In
 
 export function decorationActions(playerId:string, state:Pick<GameplayView,'interactive'|'installable'|'inventory'>) {
   const actions:{label:string; action:GameplayAction}[] = [];
-  for (const place of state.installable) {
-    if (!Object.hasOwn(installationSites,place)) continue;
-    const {kind,point} = installationSites[place as keyof typeof installationSites];
+  for (const [place,{kind,point}] of Object.entries(installationSites)) {
     if (kind==='pizza') continue;
     const placed = state.interactive.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
     const item = state.inventory.find(item=>item.kind===kind);
     const portrait = kind==='portrait';
-    if (item && placed?.owner.id!==playerId) {
+    if (item && state.installable.includes(place) && placed?.owner.id!==playerId) {
       const label = placed ? (portrait ? 'Substituir retrato' : 'Substituir placa VIP') :
         (portrait ? 'Pendurar retrato' : 'Reservar cadeira');
       actions.push({label,action:{kind:'install',item:item.id,place}});

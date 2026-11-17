@@ -274,7 +274,9 @@ test('installations validate location, keep one occupant and serve each diner on
   Object.assign(alice,coffeeRoom);
   const [pizza] = game.view(alice,world).inventory;
   expect(game.act(alice,{kind:'install',place:'hall',item:pizza.id},world)).toBe('Aproxime-se do local.');
+  expect(game.view(alice,world).installable).toContain('pizza');
   game.act(alice,{kind:'install',place:'pizza',item:pizza.id},world);
+  expect(game.view(bob,world).installable).not.toContain('pizza');
   game.act(bob,{kind:'slice',item:pizza.id},world);
   game.act(bob,{kind:'slice',item:pizza.id},world);
   expect(game.view(bob,world).interactive[0].slices).toBe(5);
@@ -340,6 +342,36 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     }
     expect(decorationActions(alice.id,game.view(alice,world))).toEqual([]);
   }
+});
+
+test('occupied installation sites expose only the actions the server accepts',()=>{
+  const {alice,bob,game,world} = setup();
+  world.spend = ()=>true;
+  const place = 'technicalVip';
+  const {point} = installationSites[place];
+  const buy = (player:Player)=>{
+    Object.assign(player,terminals.credentials.point);
+    expect(buyCredentialGood(game,player,'vip',world)).toBe('Compra guardada no inventário.');
+    const item = game.view(player,world).inventory.find(({kind})=>kind==='vip')!;
+    Object.assign(player,point);
+    return {kind:'install',place,item:item.id} as const;
+  };
+
+  const first = buy(alice);
+  expect(game.act(alice,first,world)).toBe('Objeto instalado.');
+  const spare = buy(alice);
+  const own = game.view(alice,world);
+  expect(own.installable).not.toContain(place);
+  expect(decorationActions(alice.id,own)).toEqual([{label:'Retirar placa VIP',action:{kind:'uninstall',item:first.item}}]);
+  expect(game.act(alice,spare,world)).toBe('Você já ocupou este lugar.');
+  expect(game.view(alice,world).inventory).toContainEqual(expect.objectContaining({id:spare.item}));
+
+  const rival = buy(bob);
+  const rivalView = game.view(bob,world);
+  expect(rivalView.installable).toContain(place);
+  expect(decorationActions(bob.id,rivalView)).toContainEqual({label:'Substituir placa VIP',action:rival});
+  expect(game.act(bob,rival,world)).toBe('Objeto substituído.');
+  expect(game.view(alice,world).installable).toContain(place);
 });
 
 test('surveillance shops, races, discoveries, reconnection, audio and photo evidence stay private', () => {
