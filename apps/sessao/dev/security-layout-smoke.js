@@ -49,8 +49,19 @@ async page => {
   const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});
   const viewport = surveillance.getByLabel('Visão ao vivo da câmera');
   const canvas = viewport.locator('canvas');
+  async function useShortcut(button) {
+    await button.waitFor();
+    await button.focus();
+    const key = await button.evaluate(control=>{
+      const shortcut = control.getAttribute('aria-keyshortcuts') ?? control.querySelector('kbd')?.textContent;
+      control.removeAttribute('aria-keyshortcuts');
+      return shortcut;
+    });
+    if (!key) throw Error('Controle da vigilância sem atalho');
+    await page.keyboard.press(key);
+  }
   async function openCamera(name,previousCanvas) {
-    await surveillance.getByRole('button',{name:new RegExp(name)}).click();
+    await useShortcut(surveillance.getByRole('button',{name:new RegExp(name)}));
     await surveillance.getByRole('heading',{name,exact:true}).waitFor();
     if (previousCanvas) await page.waitForFunction(node=>!node.isConnected,previousCanvas);
     await page.waitForFunction(()=>{
@@ -66,7 +77,7 @@ async page => {
   await openCamera('Câmera Cafezinho');
   const first = await canvas.elementHandle();
   await openCamera('Câmera Biblioteca',first);
-  await surveillance.getByRole('button',{name:'Fechar canal'}).click();
+  await useShortcut(surveillance.getByRole('button',{name:'Fechar canal'}));
   await viewport.waitFor({state:'detached'});
   await openCamera('Câmera Cafezinho');
   const reopened = await canvas.elementHandle();

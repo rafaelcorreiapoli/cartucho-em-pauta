@@ -54,6 +54,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const last = Math.max(0,Math.ceil(channels.length/pageSize)-1);
     page = Math.min(page,last);
     let shortcut = 0;
+    const actions = new Map<string,()=>void>();
     const channelList = <>
       <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
         {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
@@ -65,13 +66,12 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       {!channels.length && <p>{device==='spyCamera' ? 'Nenhuma câmera instalada.' : 'Nenhuma escuta instalada.'}</p>}
       {channels.slice(page*pageSize,(page+1)*pageSize).map(channel=>{
         const key = channel.removed ? undefined : String(++shortcut);
+        const openChannel = () => send({kind:'open',channel:channel.id});
+        if (key) actions.set(key,openChannel);
         const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
-          aria-keyshortcuts={key} onClick={()=>{
-            send({kind:'open',channel:channel.id});
-            update();
-          }}>
+          aria-keyshortcuts={key} onClick={openChannel}>
           <svg className="hud-glyph" aria-hidden="true"><use href={channel.kind==='wiretap' ? '#icon-mic' : '#icon-camera'}/></svg>
           <span className="flex-1"><strong>{channel.name}</strong><small>{channel.room} · {label}</small></span>
           {key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}
@@ -89,6 +89,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const closeEditor = () => { editing = undefined; update(); };
     const action = (label:string,run:()=>void) => {
       const key = String(++shortcut);
+      actions.set(key,run);
       return <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
         {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
       </button>;
@@ -117,7 +118,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
         </form>}
       </>}
     </>;
-    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor}
+    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
       camera={selected && {name:selected.name,attach:attachViewport}}/>);
   }
 
