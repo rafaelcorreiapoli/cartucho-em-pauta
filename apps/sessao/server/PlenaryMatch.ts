@@ -219,6 +219,7 @@ export class PlenaryMatch {
     this.filedDocuments.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
+    this.economy.setAgendaPowerAvailability(()=>this.powerOut);
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
@@ -667,7 +668,10 @@ export class PlenaryMatch {
   actOnPower(player:Player,action:PowerAction,now:number) {
     if (!this.canOperatePower(player,action.panel,now)) return;
     if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
-    return this.power.act(player.id,action,now,this.powerCooldown(now));
+    const wasOut = this.powerOut;
+    const result = this.power.act(player.id,action,now,this.powerCooldown(now));
+    if (this.powerOut!==wasOut) this.refreshAgendaEligibility();
+    return result;
   }
 
   advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
@@ -683,6 +687,7 @@ export class PlenaryMatch {
         amount:this.stability,place:roomAt(player)===powerPanels[panel].name ? 'inside-crisis-room' : undefined,
       });
     }
+    this.refreshAgendaEligibility();
   }
 
   private canUseFire(player:Player,now:number) {

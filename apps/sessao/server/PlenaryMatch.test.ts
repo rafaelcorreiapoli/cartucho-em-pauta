@@ -1247,3 +1247,31 @@ test('a project waits for an overlapping hearing and keeps the original proposer
     phase:'ballot',project:4,proposer:host.nick,remaining:BALLOT_MS/1000,
   });
 });
+
+test('emergency maintenance is assigned during an outage and rewards both repair operators',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const player of people) {
+    const {agenda} = accounts.get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio']);
+  }
+  const missions = (id:string,now:number)=>match.view(id,ids,now).politics!.missions;
+  const isMaintenance = ({kind}:{kind:string})=>kind==='manutencaoEmergencia';
+  match.refreshAgendaEligibility();
+  expect(missions(host.id,0).active.some(isMaintenance)).toBe(false);
+  const operators = [{...host,...powerPanels[0]},{...honest,...powerPanels[1]}];
+  expect(match.actOnPower({...traitor,...powerPanels[0]},{kind:'sabotage',panel:0},10)).toBe('Energia cortada.');
+  for (const player of people) expect(missions(player.id,10).active.some(isMaintenance)).toBe(true);
+  match.actOnPower(operators[0],{kind:'repair',panel:0},11);
+  match.actOnPower(operators[1],{kind:'repair',panel:1},11);
+  const end = 11+powerRules.repairMs;
+  const findOperator = (id:string)=>operators.find(player=>player.id===id);
+  match.advancePower(end-1,findOperator);
+  expect(missions(host.id,end-1).completed.some(isMaintenance)).toBe(false);
+  match.advancePower(end,findOperator);
+  for (const player of operators) expect(missions(player.id,end).completed.filter(isMaintenance)).toHaveLength(1);
+  expect(missions(traitor.id,end).active.some(isMaintenance)).toBe(false);
+  expect(missions(traitor.id,end).completed.some(isMaintenance)).toBe(false);
+});
