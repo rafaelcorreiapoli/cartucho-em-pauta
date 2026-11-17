@@ -1,3 +1,4 @@
+import {contextCommand} from './ui/context-command';
 import {fieldActions,type FieldAction} from './ui/field-actions';
 import {ContextActionButton} from './ui/context-action-button';
 import {ContextProgress,contextProgress} from './ui/context-progress';
@@ -71,6 +72,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const overflowRoot = createRoot(overflowHost);
   let overflowExpanded = false;
   let overflowKey = '';
+  const keyboardActions = new Map<string,HTMLButtonElement>();
   const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button:not(.context-more)')];
   function toggleOverflow() {
     overflowExpanded = !overflowExpanded;
@@ -92,19 +94,25 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       overflowKey = nextOverflowKey;
       flushSync(()=>overflowRoot.render(<ContextOverflow {...overflow} toggle={toggleOverflow}/>));
     }
+    keyboardActions.clear();
+    const more = overflowHost.querySelector<HTMLButtonElement>('.context-more');
+    if (more && overflow.shortcut) keyboardActions.set(overflow.shortcut,more);
     for (const [index,button] of buttons.entries()) {
       const {placement,key:shortcut} = model.buttons[index];
       if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
       else delete button.dataset.contextOverflow;
+      if (shortcut) keyboardActions.set(shortcut,button);
       if (button.getAttribute('aria-keyshortcuts')===(shortcut ?? null)) continue;
       if (shortcut) button.setAttribute('aria-keyshortcuts',shortcut);
       else button.removeAttribute('aria-keyshortcuts');
     }
   }
-  function onContextClick(event:MouseEvent) {
-    if (event.target instanceof Element && event.target.closest('#nearby-objects') &&
-      nearby.expanded()) overflowExpanded = false;
+  function afterContextAction(target:Element) {
+    if (target.closest('#nearby-objects') && nearby.expanded()) overflowExpanded = false;
     refreshActionKeys();
+  }
+  function onContextClick(event:MouseEvent) {
+    if (event.target instanceof Element) afterContextAction(event.target);
   }
   stations.addEventListener('click',onContextClick);
   function onActionKey(event:KeyboardEvent) {
@@ -128,17 +136,24 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       return;
     }
     if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
-    const key = event.key;
-    const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`);
+    const button = keyboardActions.get(event.key);
     if (!button || button.disabled || button.closest(unavailable) || button.dataset.contextOverflow==='true') return;
+    const activate = contextCommand(button);
+    if (!activate) return;
     event.preventDefault();
-    button.click();
+    if (button.dataset.station) playStationFeedback(button);
+    activate();
+    afterContextAction(button);
   }
   document.addEventListener('keydown',onActionKey);
 
   function onStationClick(event:MouseEvent) {
     const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
     if (!button || button.disabled || button.closest(unavailable)) return;
+    playStationFeedback(button);
+  }
+
+  function playStationFeedback(button:HTMLButtonElement) {
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       button.animate([
         {filter:'brightness(1.55)',transform:'translateY(4px)'},

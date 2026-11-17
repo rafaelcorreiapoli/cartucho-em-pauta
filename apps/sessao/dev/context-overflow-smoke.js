@@ -28,6 +28,10 @@ async page => {
     throw Error('Os badges não acompanham os atalhos acessíveis');
   }
   const baseRow = await more.boundingBox();
+  await page.evaluate(()=>{
+    window.contextClicks = 0;
+    document.querySelector('#stations').addEventListener('click',()=>{ window.contextClicks++; });
+  });
   await page.keyboard.press(moreKey);
   await overflow.first().waitFor();
   if (JSON.stringify(await keys())!==initialKeys) throw Error('Expandir mudou os atalhos principais');
@@ -76,5 +80,10 @@ async page => {
   await shortcuts.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
+  await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
+  await coffee.waitFor();
+  await page.keyboard.press(await coffee.getAttribute('aria-keyshortcuts'));
+  await coffee.waitFor({state:'hidden'});
+  if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }

@@ -1,3 +1,4 @@
+import {bindContextCommand} from './context-command';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import {isGear} from '../equipment';
@@ -16,7 +17,7 @@ export function NearbyItems({items}:{items:readonly NearbyItem[]}) {
   return items.map(({key,kind,name,verb,activate})=>{
     const symbol = !isGear(kind) ? itemSymbols[kind] : undefined;
     return <button key={key} type="button" className="item-tile context-item" data-kind={kind}
-      title={`${verb} · ${name}`} aria-label={`${verb} ${name}`} onClick={activate}>
+      title={`${verb} · ${name}`} aria-label={`${verb} ${name}`} ref={bindContextCommand(activate)} onClick={activate}>
       {symbol ? <span className="item-art-symbol" aria-hidden="true">{symbol}</span> :
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[kind].portrait} alt="" draggable={false}/>}
       <span className="item-caption">{name}</span>
@@ -28,7 +29,7 @@ export function NearbyItems({items}:{items:readonly NearbyItem[]}) {
 export function NearbyActions({items,expanded,toggle}:{items:readonly NearbyItem[];expanded:boolean;toggle:()=>void}) {
   return <>
     <button className="hud-button" id="nearby-objects" type="button" aria-controls="nearby-items"
-      aria-expanded={expanded} hidden={!items.length} onClick={toggle}>
+      aria-expanded={expanded} hidden={!items.length} ref={bindContextCommand(toggle)} onClick={toggle}>
       <svg className="hud-glyph" aria-hidden="true"><use href="#icon-search"/></svg>Objetos próximos
     </button>
     <div id="nearby-items" role="group" aria-label="Itens ao alcance" hidden={!expanded}>
