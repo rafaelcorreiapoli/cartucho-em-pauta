@@ -221,6 +221,7 @@ export class PlenaryMatch {
   private matchGeneration = 0;
   private readonly receivedEvents = new Set<number>();
   private readonly filedDocuments = new Set<number>();
+  private readonly studiedBills = new Map<number,Set<string>>();
   private hearingTarget?: string;
   private cassationAt?:number;
   private cassationOpen = false;
@@ -272,12 +273,17 @@ export class PlenaryMatch {
     this.eventSequenceAtStart = this.eventSequence;
     this.receivedEvents.clear();
     this.filedDocuments.clear();
+    this.studiedBills.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>{
       if (!campaignReady) return true;
       if (kind==='emenda') return !this.amended && this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='emendaFutura') return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || this.amended);
-      if (kind==='leitura') return this.phase!=='ballot' && !!this.proposal || this.hasFutureVoteNegotiation(this.agendaNow);
+      if (kind==='leitura') {
+        const project = this.proposal?.project;
+        if (this.phase!=='ballot' && project!==undefined && !this.studiedBills.get(project)?.has(id)) return true;
+        return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || project!==undefined);
+      }
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       return this.election.canCampaignAction(id,kind);
     });
@@ -341,7 +347,7 @@ export class PlenaryMatch {
   }
 
   private publishActivity(player:Player,type:GameplayEvent['type'],now:number,
-    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'>,publish:GameplayWorld['publish']=event=>this.recordGameplay(event)) {
+    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'|'project'>,publish:GameplayWorld['publish']=event=>this.recordGameplay(event)) {
     publishGameplay({players:[],now,nextEventId:()=>++this.eventSequence,publish},
       player,type,{...details,witnesses:[]});
   }
@@ -354,6 +360,14 @@ export class PlenaryMatch {
     if (event.eventId!==undefined) {
       if (event.eventId<=this.eventSequenceAtStart || this.receivedEvents.has(event.eventId)) return false;
       this.receivedEvents.add(event.eventId);
+    }
+    if (event.type==='bill-studied') {
+      const studied = event.project;
+      if (studied===undefined || this.phase!=='negotiation' || this.proposal?.project!==studied) return false;
+      const readers = this.studiedBills.get(studied) ?? new Set<string>();
+      if (readers.has(event.actor)) return false;
+      readers.add(event.actor);
+      this.studiedBills.set(studied,readers);
     }
     if (event.type==='filed' && event.item!==undefined) {
       if (this.filedDocuments.has(event.item)) return false;
@@ -431,10 +445,14 @@ export class PlenaryMatch {
         if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
         this.publishActivity(player,'coffee-drunk',now,{place:roomAt(player)},publish);
         return {activity,text:'Cafezinho tomado. De volta à articulação!'};
-      case 'library':
-        if (!this.proposal) return {activity,text:'Nenhum projeto em pauta.'};
-        this.publishActivity(player,'bill-studied',now,undefined,publish);
-        return {activity,text:`Você estudou o projeto ${bills[this.proposal.project].name}.`};
+      case 'library': {
+        const project = this.proposal?.project;
+        if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
+        if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
+        this.publishActivity(player,'bill-studied',now,{project},publish);
+        this.refreshAgendaEligibility(now);
+        return {activity,text:`Você estudou o projeto ${bills[project].name}.`};
+      }
     }
   }
 

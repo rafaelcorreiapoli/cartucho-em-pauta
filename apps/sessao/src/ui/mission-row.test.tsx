@@ -2240,7 +2240,18 @@ test('the reading mission follows the last project available to study',()=>{
   expect(match.gameplayWorld([player],filingAt,()=>false).publish({
     type:'filed',actor:player.id,item:1,project:0,at:filingAt,position:stations.amendment,witnesses:[],
   })).toBe(true);
-  expect(match.roomActivity(player,'library',filingAt+1)?.text).toContain('Auxílio Churrasco');
+  const study = match.gameplayWorld([player],filingAt+1,()=>false);
+  const events:Parameters<typeof study.publish>[0][] = [];
+  const recordStudy = (event:Parameters<typeof study.publish>[0])=>{
+    events.push(event);
+    study.publish(event);
+  };
+  expect(match.roomActivity(player,'library',filingAt+1,recordStudy)?.text).toContain('Auxílio Churrasco');
+  expect(match.roomActivity(player,'library',filingAt+2,recordStudy)?.text).toContain('Você já estudou');
+  expect(events).toHaveLength(1);
+  expect(events[0]).toMatchObject({type:'bill-studied',actor:player.id,project:0});
+  expect(study.publish({...events[0],eventId:study.nextEventId!()})).toBe(false);
+  expect(active(filingAt+2)).toBeUndefined();
   const completed = view(filingAt+1).missions.completed.find(mission=>mission.kind==='leitura')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(filingAt+1).progression.xp).toBe(missionReward('leitura').xp);
@@ -2345,4 +2356,32 @@ test.each(['waiting','running','interrupted'] as const)('outage missions respect
   expect(renderToStaticMarkup(<ul>{completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}</ul>))
     .toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
   expect(view(deadline-1).progression.xp).toBe(100);
+});
+
+test('the next bill can complete another library mission for the same reader',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.library};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['leitura','cafe','passeio']);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  publishProjectFiling(match,player,0,1);
+  match.roomActivity(player,'library',2);
+  const replacement = view(2).missions.active.find(mission=>mission.kind==='leitura')!;
+  expect(renderToStaticMarkup(<MissionRow mission={replacement}/>)).toContain('Estude o projeto na Biblioteca');
+  match.roomActivity(player,'library',3);
+  expect(view(3).missions.active.find(mission=>mission.id===replacement.id)?.current).toBe(0);
+  expect(view(3).progression.xp).toBe(missionReward('leitura').xp);
+
+  const voteAt = 1+projectRules.debateMs;
+  match.advance(voteAt);
+  match.vote(player.id,'yes',voteAt);
+  const nextFilingAt = voteAt+BALLOT_MS+projectRules.cooldownMs+1;
+  match.advance(voteAt+BALLOT_MS);
+  publishProjectFiling(match,player,1,nextFilingAt);
+  match.roomActivity(player,'library',nextFilingAt+1);
+  const updated = view(nextFilingAt+1);
+  expect(updated.missions.completed.find(mission=>mission.id===replacement.id)?.current).toBe(1);
+  expect(updated.progression.xp).toBe(2*missionReward('leitura').xp);
 });
