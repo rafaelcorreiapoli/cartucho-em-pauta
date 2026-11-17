@@ -197,6 +197,8 @@ async page => {
         const labels = [...list.querySelectorAll('.project-voter-name')];
         const panel = list.closest('.project-ballot');
         const panelBounds = panel.getBoundingClientRect();
+        const project = panel.querySelector('.project-ballot-banner').getBoundingClientRect();
+        const score = panel.querySelector('.project-ballot-content').getBoundingClientRect();
         const buttons = [...panel.querySelectorAll('[data-vote]')].map(button=>button.getBoundingClientRect());
         return {
           count:cards.length,
@@ -204,11 +206,12 @@ async page => {
           allVisible:cards.every(card=>card.width>0 && card.left>=bounds.left && card.right<=bounds.right+1),
           noOverflow:list.scrollWidth<=list.clientWidth+1 && list.scrollHeight<=list.clientHeight+1,
           ellipsis:labels.some(label=>label.scrollWidth>label.clientWidth && getComputedStyle(label).textOverflow==='ellipsis'),
-          compact:panelBounds.height<innerHeight*.65,
+          compact:panelBounds.height<(innerWidth>=800 ? 220 : innerHeight*.65),
+          sideBySide:project.right<=score.left && Math.abs(project.top-score.top)<1 && buttons.every(button=>button.left>=score.left),
           controlsVisible:buttons.length===3 && buttons.every(button=>button.top>=0 && button.bottom<=innerHeight),
         };
       });
-      if (layout.count!==6 || !layout.singleRow || !layout.allVisible || !layout.noOverflow || !layout.ellipsis || !layout.compact || !layout.controlsVisible) {
+      if (layout.count!==6 || !layout.singleRow || !layout.allVisible || !layout.noOverflow || !layout.ellipsis || !layout.compact || !layout.controlsVisible || (width>=800 && !layout.sideBySide)) {
         throw Error(`Cédula lotada em ${width}×${height}: ${JSON.stringify(layout)}`);
       }
       await page.screenshot({path:`/tmp/sessao-ballot-${width}x${height}.png`,animations:'disabled'});

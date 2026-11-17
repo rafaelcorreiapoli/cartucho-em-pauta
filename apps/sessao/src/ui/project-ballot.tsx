@@ -50,7 +50,7 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
       {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
     </button>
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
-      <div className="project-ballot-content">
+      <div className="project-ballot-project">
         <header className="project-ballot-banner" data-project={index}>
           <div className="project-ballot-art" aria-hidden="true">
             {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
@@ -61,6 +61,11 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
             bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
           <ProjectImpact impact={no} budget={budget} approved={false}/>
         </header>
+        {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
+          {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
+        </ul> : null}
+      </div>
+      <div className="project-ballot-content">
         <div className="project-ballot-timer">
           <HudIcon name="ballot"/><strong>Votação em andamento</strong>
           <progress className="animated-progress" aria-label="Tempo restante" value={remaining} max={BALLOT_MS/1000}
@@ -84,9 +89,6 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
             })}
           </ul>}
         </div>
-        {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
-          {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
-        </ul> : null}
       </div>
       <footer className="project-ballot-footer">
         <div className="project-ballot-self">{self && <PhoneContactFace person={self}/>}

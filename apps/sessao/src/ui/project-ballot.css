@@ -1,7 +1,7 @@
 #session[data-phase="ballot"][data-in-plenary="true"] #command-deck #legislative-dock {
   position: fixed;
   inset: auto 0 0;
-  width: min(calc(100% - 2 * var(--hud-edge)), 820px);
+  width: min(calc(100% - 2 * var(--hud-edge)), 1000px);
   max-height: none;
   padding: 0;
   overflow: visible;
@@ -61,12 +61,48 @@
   display: grid;
   gap: 6px;
   max-height: 60dvh;
-  grid-template-rows: minmax(0,1fr) auto;
+  grid-template-areas: "project" "score" "actions";
+  grid-template-rows: minmax(0, auto) minmax(0, auto) auto;
   padding: 4px 8px 8px;
 }
 #legislative-dock:has(#vote-history:not([hidden])) .project-ballot-body { padding-bottom: 36px; }
 .project-ballot-body[hidden] { display: none; }
-.project-ballot-content { display: grid; gap: 6px; overflow: auto; scrollbar-width: thin; }
+.project-ballot-project, .project-ballot-content {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.project-ballot-project { grid-area: project; }
+.project-ballot-content { grid-area: score; }
+
+@container (min-width: 720px) {
+  .project-ballot-body {
+    grid-template-areas: "project score" "project actions";
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    grid-template-rows: minmax(0,1fr) auto;
+    column-gap: 12px;
+  }
+  .project-ballot-project .project-ballot-banner {
+    grid-template-columns: 56px minmax(0,1fr) minmax(0,1fr) 56px;
+    gap: 0;
+  }
+  .project-ballot-project .project-ballot-title {
+    grid-column: 2 / -1;
+    padding-inline: 8px;
+  }
+  .project-ballot-project .project-ballot-impact {
+    align-self: stretch;
+    align-content: start;
+    grid-column: span 2;
+    border-top: 1px solid #33574b;
+  }
+  .project-ballot-project .project-ballot-impact[data-choice="yes"] {
+    grid-column: 1 / 3;
+    border-inline-start: 0;
+  }
+}
 .project-ballot-banner {
   display: grid;
   grid-template-columns: 72px minmax(0,1fr) repeat(2,minmax(0,132px));
@@ -168,7 +204,7 @@
   font-size: 12px;
 }
 .project-ballot-discussion strong { color: #f7da90; }
-.project-ballot-footer { display: grid; grid-template-columns: minmax(0,1.15fr) repeat(3,minmax(0,1fr)); gap: 5px; align-items: stretch; }
+.project-ballot-footer { grid-area: actions; display: grid; grid-template-columns: minmax(0,1.15fr) repeat(3,minmax(0,1fr)); gap: 5px; align-items: stretch; }
 .project-ballot-self { display: flex; gap: 5px; align-items: center; color: #e5dcc0; font-size: 11px; }
 .project-ballot-self .portrait { --portrait-size: 26px; flex: none; border-radius: 4px; }
 .project-ballot-self strong { display: block; color: #fff3d5; }
