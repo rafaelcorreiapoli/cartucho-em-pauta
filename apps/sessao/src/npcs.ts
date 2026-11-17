@@ -15,8 +15,8 @@ export const npcs = {
     interaction:{x:149,y:493},dialogue:'credentials',label:'Credenciamento',catalog:'credentials'},
   secretary:{name:'Dona Sílvia',sprite:'silvia-secretaria.webp',x:85,y:221,direction:0,
     interaction:{x:83,y:247},dialogue:'secretary',label:'Secretaria',catalog:undefined},
-  protocol:{name:'Seu Mauro',sprite:'mauro-protocolo.webp',x:127,y:338,direction:0,
-    interaction:{x:129,y:365},dialogue:'protocol',label:'Protocolo',catalog:undefined},
+  protocol:{name:'Seu Mauro',sprite:'mauro-protocolo.webp',x:548,y:64,direction:0,
+    interaction:{x:550,y:91},dialogue:'protocol',label:'Protocolo',catalog:undefined},
   silvio:{name:'Silvio Santos',sprite:'silvio-santos.webp',...mapPoint('Silvio Santos'),direction:0,
     interaction:mapPoint('Balcão do Topa ou Não Topa: atendimento'),dialogue:'topa',label:'Topa ou Não Topa',catalog:undefined},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
@@ -26,7 +26,7 @@ export const npcs = {
 const treasuryCounter = mapPoint('Balcão da tesouraria');
 export const treasurer = {
   name:'Eduardo Cunha', sprite:'eduardo-cunha-tesoureiro.webp', x:treasuryCounter.x+23, y:treasuryCounter.y+13, direction:0,
-  counter:treasuryCounter, interaction:{x:403,y:486}, label:'Tesouraria',
+  counter:treasuryCounter, interaction:{x:treasuryCounter.x+23,y:treasuryCounter.y+30}, label:'Tesouraria',
 } as const;
 
 export const mapNpcs = {...npcs,treasurer};

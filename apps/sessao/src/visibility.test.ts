@@ -1,4 +1,7 @@
 import {expect,test} from 'bun:test';
+import {findRoute} from './navigation';
+import {npcs,treasurer} from './npcs';
+import {stations} from './plenary';
 import {shadowOutline,wallVision} from './visibility';
 import {canStand,obstacleBetween,wallBetween,characterVisible,roomAt} from './map';
 
@@ -72,8 +75,9 @@ test('the reprography entrance opens south without leaking into the infirmary co
 });
 
 
-test('the Treasury and luxury shop have separate entrances and a continuous dividing wall',()=>{
-  expect(roomAt({x:403,y:486})).toBe('Tesouraria');
+test('the library and luxury shop have separate entrances and a continuous dividing wall',()=>{
+  expect(roomAt({x:403,y:486})).toBe('Biblioteca');
+  expect(roomAt({x:427,y:361})).toBe('Tesouraria');
   expect(roomAt({x:530,y:466})).toBe('Gabinete de Luxo');
   expect(canStand(423,396)).toBe(true);
   expect(canStand(506,396)).toBe(true);
@@ -86,4 +90,17 @@ test('the lower luxury shop doorway is centered inside the room',()=>{
   expect(canStand(530,535)).toBe(true);
   expect(canStand(455,535)).toBe(false);
   expect(wallBetween({x:530,y:519},{x:530,y:548})).toBe(false);
+});
+
+
+test('the relocated services can all be reached from the Secretariat',()=>{
+  for (const [point,room] of [
+    [npcs.protocol.interaction,'Protocolo'],
+    [stations.archive,'Arquivo'],
+    [treasurer.interaction,'Tesouraria'],
+    [stations.library,'Biblioteca'],
+  ] as const) {
+    expect(roomAt(point)).toBe(room);
+    expect(findRoute(stations.secretary,point).at(-1)).toEqual(point);
+  }
 });

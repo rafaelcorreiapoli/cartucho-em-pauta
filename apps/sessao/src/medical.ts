@@ -5,8 +5,6 @@ export const infirmary = {
   doctor:{name:'Drauzio Varella',x:928,y:475},
   name:'Enfermaria',
   bounds:roomBounds('Enfermaria'),
-  price:1,
-  healing:35,
 } as const;
 
 export const recoveryRules = {

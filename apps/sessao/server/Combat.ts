@@ -149,10 +149,10 @@ export class Combat {
     return true;
   }
 
-  treat(player:Combatant, amount:number, now:number) {
+  treat(player:Combatant, now:number) {
     const state = this.state(player);
     if (state.recoverAt) this.recover(player,state,now);
-    this.heal(player,amount);
+    this.heal(player,'full');
   }
 
   heal(player:Combatant, amount:number|'full') {

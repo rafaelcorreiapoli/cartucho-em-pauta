@@ -301,37 +301,45 @@ test('transport ends on disconnect, natural recovery and plenary transition', ()
   }
 });
 
-test('the infirmary can treat a passenger and heals only after a valid payment', () => {
+test('Drauzio fully heals a carried player for free when in reach', () => {
   const match = setup();
   const {alice,bob,game,world,balance,events} = match;
   knockOut(match);
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
-  expect(findRoute({x:140,y:146},{x:infirmary.x,y:infirmary.y}).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
+  expect(findRoute({x:140,y:146},infirmary).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
   game.act(alice,{kind:'carry',target:bob.id},world);
   Object.assign(alice,{x:803,y:461});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   Object.assign(alice,{x:infirmary.x,y:infirmary.y});
   game.tick(world,true);
   balance.set(alice.id,0);
-  expect(game.view(alice,world).treatment).toEqual({target:bob.id,price:infirmary.price,affordable:false});
-  expect(game.act(alice,{kind:'treat'},world)).toBe('Saldo insuficiente para o atendimento.');
-  expect(game.view(bob,world).vitality?.hp).toBe(0);
-  expect(bob.carried).toBe(true);
-
-  balance.set(alice.id,infirmary.price);
-  expect(game.view(alice,world).treatment).toEqual({target:bob.id,price:infirmary.price,affordable:true});
+  expect(game.view(alice,world).treatment).toEqual({target:bob.id});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento concluído.');
-  expect(game.view(bob,world).vitality?.hp).toBe(80);
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
   expect(bob.carried).toBeUndefined();
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
   expect(balance.get(alice.id)).toBe(0);
-  expect(game.view(bob,world).treatment).toEqual({target:undefined,price:infirmary.price,affordable:true});
-  expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento concluído.');
   expect(game.view(bob,world).treatment).toBeUndefined();
-  expect(game.view(bob,world).vitality?.hp).toBe(100);
   expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento indisponível.');
-  expect(balance.get(bob.id)).toBe(4);
-  expect(events.filter(event=>event.type==='treated')).toHaveLength(2);
+  expect(balance.get(bob.id)).toBe(5);
+  expect(events.filter(event=>event.type==='treated')).toHaveLength(1);
+});
+
+
+test('a wounded player with no money can consult Drauzio for a full heal', () => {
+  const {alice,bob,game,world,balance,buyGear} = setup();
+  buyGear(alice,'baton');
+  game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
+  game.act(alice,{kind:'attack'},world);
+  world.now += weapons.baton.impactMs;
+  game.tick(world,true);
+  expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
+  balance.set(bob.id,0);
+  Object.assign(bob,{x:infirmary.x,y:infirmary.y});
+  expect(game.view(bob,world).treatment).toEqual({});
+  expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento concluído.');
+  expect(game.view(bob,world).vitality?.hp).toBe(100);
+  expect(balance.get(bob.id)).toBe(0);
 });
 
 
