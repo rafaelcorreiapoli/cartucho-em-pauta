@@ -1,4 +1,4 @@
-import {terminals,type GameplayEvent} from '../gameplay';
+import {minimumPartialDepositLot,terminals,treasuryDeliveries,type GameplayEvent} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
@@ -1783,15 +1783,17 @@ test('the Agenda offers extraordinary collection only when a robbery can fund a 
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['recolhimentoExtraordinario','rouboNpc','cafe','passeio','selfieSolo']);
 
+  const belowMinimum = Math.round(minimumPartialDepositLot*10-1)/10;
   const view = ()=>match.view(player.id,[player.id],world.now).politics!;
   const active = ()=>view().missions.active.find(mission=>mission.kind==='recolhimentoExtraordinario');
   world.takeWallet!(npc.id);
-  world.earn!(npc.id,0.1);
+  world.earn!(npc.id,belowMinimum);
   match.refreshAgendaEligibility();
   expect(active()).toBeUndefined();
   expect(view().missions.active.some(mission=>mission.kind==='rouboNpc')).toBe(true);
+  expect(treasuryDeliveries([{id:123,kind:'briefcase',cash:belowMinimum}])).toHaveLength(1);
 
-  world.earn!(npc.id,0.1);
+  world.earn!(npc.id,minimumPartialDepositLot-belowMinimum);
   Reflect.set(agenda,'missions',[]);
   match.refreshAgendaEligibility();
   expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('0 / 2');
@@ -1804,14 +1806,15 @@ test('the Agenda offers extraordinary collection only when a robbery can fund a 
   expect(active()).toBeUndefined();
   expect(view().missions.completed.some(mission=>mission.kind==='recolhimentoExtraordinario')).toBe(false);
 
-  world.earn!(npc.id,0.2);
+  world.earn!(npc.id,minimumPartialDepositLot);
   Reflect.set(agenda,'missions',[]);
   match.refreshAgendaEligibility();
   expect(active()?.current).toBe(0);
   expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
-  const briefcase = game.view(player,world).inventory.find(item=>item.kind==='briefcase')!;
+  const delivery = treasuryDeliveries(game.view(player,world).inventory).find(option=>option.action.target==='partial');
+  if (!delivery) throw Error('Expected a partial delivery action at the minimum lot size');
   const before = view().progression.xp;
-  expect(game.act(player,{kind:'deliver',place:'treasury',item:briefcase.id,target:'partial'},world))
+  expect(game.act(player,delivery.action,world))
     .toContain('entregues à Tesouraria');
   const completed = view().missions.completed.find(mission=>mission.kind==='recolhimentoExtraordinario')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');

@@ -65,7 +65,9 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
-export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/2)/10;
+const treasuryPartialDivisor = 2;
+export const minimumPartialDepositLot = treasuryPartialDivisor/10;
+export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/treasuryPartialDivisor)/10;
 
 export function treasuryDeliveries(inventory:readonly WorldItem[]) {
   return inventory.flatMap(item=>{
