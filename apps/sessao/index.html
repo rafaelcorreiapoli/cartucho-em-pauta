@@ -22,18 +22,7 @@
   </svg>
   <main>
     <section id="landing">
-      <div class="hud-panel entrance lobby-card">
-        <h1 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h1>
-        <form id="lobby">
-          <label class="nick-field">Seu nick <input id="nick" maxlength="20" autocomplete="nickname" placeholder="Como vão chamar você?" required></label>
-          <button class="hud-button" id="create" type="button">Criar sala</button>
-          <div class="join-fields">
-            <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
-            <button class="hud-button hud-button--secondary" type="submit">Entrar</button>
-          </div>
-        </form>
-        <p id="connection" role="status"></p>
-      </div>
+      <div id="room-entrance" class="hud-panel entrance lobby-card"></div>
     </section>
     <details id="voice-test" hidden>
       <summary>Testar filtro de voz</summary>

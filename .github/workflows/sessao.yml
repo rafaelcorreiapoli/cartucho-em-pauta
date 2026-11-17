@@ -77,7 +77,7 @@ jobs:
           flows=("$SMOKE_FLOW")
           if [[ "$SMOKE_FLOW" == exploration-hud ]]; then
             server_entry=server/index.ts
-            flows=(action-shortcuts floor-plan phone-apps)
+            flows=(room-entrance action-shortcuts floor-plan phone-apps)
           fi
           PORT=26874 SESSAO_LOCAL_SOLO=1 bun "$server_entry" &
           pids+=("$!")

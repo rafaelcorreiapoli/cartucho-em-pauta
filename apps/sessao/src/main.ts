@@ -36,13 +36,14 @@ import { createGame } from './game';
 import { createRoomCommandSender } from './room-commands';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
+import {mountRoomEntrance} from './ui/room-entrance';
 import {mountLobbyInvite} from './ui/lobby-invite';
 import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
 import {voiceModulatorDisguise} from './live-disguise';
-import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
+import { INVALID_NICK, NICK_TAKEN, nickHint } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
@@ -54,20 +55,15 @@ const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:
 const client = new Client(server);
 const audio = new GameAudio();
 installHudHelp(document.querySelector('main')!);
-const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
 const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
 const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status')!;
 const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
-const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
-const code = document.querySelector<HTMLInputElement>('#room-id')!;
-const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
-const create = document.querySelector<HTMLButtonElement>('#create')!;
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
@@ -80,9 +76,15 @@ let matchRunning = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
-try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
-nickInput.oninput = () => nickInput.setCustomValidity('');
-code.value = new URL(location.href).searchParams.get('sala') || '';
+let initialNick = '';
+try { initialNick = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
+const entrance = mountRoomEntrance(document.querySelector<HTMLElement>('#room-entrance')!,initialNick,
+  new URL(location.href).searchParams.get('sala') ?? '',(nick,roomId)=>{
+    try { localStorage.setItem(nicknameStorage,nick); } catch {}
+    audio.unlock();
+    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick}));
+  });
+let connecting = false;
 
 const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#room-settings')!,audio.preferences,{
   leave:()=>void room?.leave(),
@@ -137,13 +139,13 @@ function showLobby(message: string) {
   session.hidden = true;
   loadingScreen.hidden = true;
   landing.hidden = false;
-  status.textContent = message;
+  entrance.update({message});
 }
 
 async function connect(join: () => Promise<Room>) {
-  if (room || create.disabled) return;
-  create.disabled = true;
-  status.textContent = 'Conectando…';
+  if (room || connecting) return;
+  connecting = true;
+  entrance.update({busy:true,message:'Conectando…'});
   try {
     const joined = await join();
     room = joined;
@@ -155,7 +157,7 @@ async function connect(join: () => Promise<Room>) {
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
     });
-    code.value = joined.roomId;
+    entrance.setRoomCode(joined.roomId);
     landing.hidden = true;
     session.dataset.phase = 'lobby';
     delete session.dataset.inPlenary;
@@ -433,31 +435,13 @@ async function connect(join: () => Promise<Room>) {
     const reason = error && typeof error==='object' && 'code' in error ? error.code : undefined;
     showLobby(reason===NICK_TAKEN ? 'Esse nick já está em uso nesta sala. Escolha outro.' :
       reason===INVALID_NICK ? nickHint : 'Não foi possível conectar. Confira o código e se o servidor está rodando.');
-    if (reason===NICK_TAKEN || reason===INVALID_NICK) nickInput.focus();
+    if (reason===NICK_TAKEN || reason===INVALID_NICK) entrance.focusNick();
   } finally {
-    create.disabled = false;
+    connecting = false;
+    entrance.update({busy:false});
   }
 }
 
-function nickname() {
-  const nick = readNick(nickInput.value);
-  nickInput.setCustomValidity(nick ? '' : nickHint);
-  if (!nickInput.reportValidity() || !nick) return;
-  nickInput.value = nick;
-  try { localStorage.setItem(nicknameStorage,nick); } catch {}
-  return nick;
-}
-
-create.onclick = () => {
-  const nick = nickname();
-  if (nick) { audio.unlock(); void connect(() => client.create('plenary',{nick})); }
-};
-lobby.onsubmit = event => {
-  event.preventDefault();
-  const roomId = code.value.trim();
-  const nick = nickname();
-  if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
-};
 loadingBack.onclick = () => void room?.leave();
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());
