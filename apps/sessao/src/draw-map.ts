@@ -80,7 +80,7 @@ export function drawMap(scene: Phaser.Scene,
 
   for (const {name,x,y} of desks) {
     if (name==='Terminal de segurança') {
-      const terminal = scene.add.image(x,y-14,'furniture-officeTv')
+      const terminal = scene.add.image(x,y-14,'security-terminal')
         .setOrigin(0).setDisplaySize(45,34).setDepth(y+20);
       securityTerminal?.(terminal);
       continue;

@@ -32,6 +32,7 @@ export function createSurveillanceViewport(parent:HTMLElement) {
       this.load.image('technical-shelf',assets+'estante-apoio-tecnico.webp');
       this.load.image('snack-counter',assets+'balcao-lanchonete.webp');
       this.load.image('coffee-maker',assets+'cafeteira.webp');
+      this.load.image('security-terminal',assets+'terminal-seguranca.webp');
       this.load.spritesheet('office',assets+'office-hd.png',{frameWidth:192,frameHeight:112});
     }
 
