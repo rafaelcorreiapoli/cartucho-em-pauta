@@ -341,10 +341,13 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
-    // Consented leaves cancel retries while the test server can still acknowledge them.
-    await Promise.allSettled(rooms.map(room=>room.leave()));
-    server.kill();
-    await server.exited;
+    try {
+      // A consented leave stops the SDK from reconnecting during cleanup.
+      await Promise.allSettled(rooms.map(room => room.leave()));
+    } finally {
+      server.kill();
+      await server.exited;
+    }
   }
 },65_000);
 
