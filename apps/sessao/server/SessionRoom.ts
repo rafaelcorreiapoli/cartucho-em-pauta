@@ -195,7 +195,8 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
-        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id),
+          id=>this.internalMail.reportsFor(id).map(report=>report.notice));
         this.match.setAgendaCashAvailability(itemId=>this.gameplay.canPartiallyDepositCash(itemId));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.clock.currentTime));
@@ -207,7 +208,7 @@ export class SessionRoom extends Room {
           },
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
+          ()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
@@ -254,7 +255,10 @@ export class SessionRoom extends Room {
       if (!player || !this.consumeRoomCommand(id,raw) || player.knockedOut || player.carried || this.match.phase!=='negotiation' || this.match.isolated(id)) return;
       const error = this.internalMail.examine(id,raw.notice,()=>this.gameplay.consumeForensicKit(id));
       if (error) client.send('gameplay-feedback',error);
-      else client.send('mail-reports',this.internalMail.reportsFor(id));
+      else {
+        this.match.refreshAgendaEligibility(this.clock.currentTime);
+        client.send('mail-reports',this.internalMail.reportsFor(id));
+      }
     });
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;

@@ -73,8 +73,8 @@ export class PlenaryMatch {
 
   canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
 
-  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
-    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(id,nextPublicationAt(id)),agendaSelfies);
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1],agendaReportNotices?:(id:string)=>readonly number[]) {
+    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(id,nextPublicationAt(id)),agendaSelfies,agendaReportNotices);
   }
 
   private canPublishBeforeDeadline(id:string,nextPublicationAt:number) {

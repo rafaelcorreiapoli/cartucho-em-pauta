@@ -72,7 +72,7 @@ export class InternalMail {
     if (!source && resolved) {
       const {attachment} = resolved;
       const photo = attachment.kind==='photo' && attachment.photo.author.id===player.id ? attachment.photo : undefined;
-      publishGameplay(world,player,'mail-published',{item:id,place:attachment.kind,photo,witnesses:[]});
+      publishGameplay(world,player,'mail-published',{item:id,place:attachment.kind,photo,reportNotice:attachment.kind==='report' ? attachment.report.notice : undefined,witnesses:[]});
     }
   }
 }

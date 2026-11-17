@@ -11,7 +11,7 @@ import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'votoNpc';
 
-export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -31,7 +31,6 @@ const activityMissions = {
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
   instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
   mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published',
-  retratacaoOficial:(event:GameplayEvent) => event.type==='mail-published' && event.place==='report',
   fotoOstentacao:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.decorations.some(item=>isOfficeFurniture(item.kind)),
   fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
     person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),
@@ -138,6 +137,7 @@ export class PersonalAgenda {
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
   private seenEvents = new Set<string>();
+  private rewardedReportNotices = new Set<number>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
   private npcCount = 0;
   private cannotVote = false;
@@ -271,6 +271,7 @@ export class PersonalAgenda {
       } else if ((this.availableInMatch(mission.kind,mission.target-mission.current) ||
           mission.kind==='publicouSelfie' && this.canPublishSavedSelfie(metrics)) &&
           (mission.kind!=='votoNpc' || metrics.canAgendaAction?.('votoNpc')!==false) &&
+          (mission.kind!=='retratacaoOficial' || this.hasNewReport(metrics)) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
           canCompleteMissionNow(mission.kind,metrics) &&
           (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
@@ -319,6 +320,10 @@ export class PersonalAgenda {
     return !this.cannotVote || !['campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
   }
 
+  private hasNewReport(metrics:AgendaMetrics) {
+    return metrics.agendaReportNotices?.().some(notice=>!this.rewardedReportNotices.has(notice)) ?? false;
+  }
+
   private canPublishSavedSelfie(metrics:AgendaMetrics) {
     const canMail = metrics.canPublishMail?.()!==false &&
       metrics.wallet>=mailPublicationFee(metrics.commerce?.().policies);
@@ -352,6 +357,11 @@ export class PersonalAgenda {
         publishedMailPhoto = {...event,type:'photo-published',place:'internal-mail'};
         gains.jornalismo = 1;
       }
+    }
+    if (event.type==='mail-published' && event.place==='report' && event.reportNotice!==undefined &&
+        this.hasActive('retratacaoOficial') && !this.rewardedReportNotices.has(event.reportNotice)) {
+      this.rewardedReportNotices.add(event.reportNotice);
+      gains.retratacaoOficial = 1;
     }
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
@@ -538,7 +548,7 @@ export class PersonalAgenda {
     if (decoration && metrics.wallet<agendaProductPrice('credentials',decoration,metrics) && !metrics.owns?.(decoration)) return false;
     if (!canCompleteMissionNow(kind,metrics)) return false;
     if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
-    if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
+    if (kind==='retratacaoOficial' && !this.hasNewReport(metrics)) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaProductPrice('equipment','bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;

@@ -2066,3 +2066,59 @@ test.each([false,true])('the crisis mission follows fire eligibility and rewards
     }
   }
 });
+
+test('Republishing a forensic report cannot complete another Retratação Oficial',()=>{
+  const inspector:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const author:Player = {...inspector,id:'bia',nick:'Bia',character:1};
+  const players = [inspector,author];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(inspector.id,players,0,()=>.9)).toBe(true);
+  const mail = new InternalMail();
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id),undefined,id=>mail.reportsFor(id).map(report=>report.notice));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(inspector.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['retratacaoOficial','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(inspector.id,ids,now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='retratacaoOficial');
+  const publishDocument = (now:number,id:number) => {
+    expect(mail.publish(author,{subject:'Proposta',body:'Documento em anexo',attachment:{kind:'document',id}},world(now),
+      ()=>({attachment:{kind:'document',document:{id,title:'Proposta',signatures:[]}},authentic:true}))).toBeUndefined();
+    return mail.view()[0].id;
+  };
+  const examine = (now:number,notice:number) => {
+    expect(mail.examine(inspector.id,notice,()=>true)).toBeUndefined();
+    match.refreshAgendaEligibility(now);
+  };
+  const publishReport = (now:number,id:number) => {
+    const report = mail.reportsFor(inspector.id).find(report=>report.notice===id)!;
+    expect(mail.publish(inspector,{subject:'Laudo',body:'Resultado da perícia',attachment:{kind:'report',id}},world(now),
+      ()=>({attachment:{kind:'report',report}}))).toBeUndefined();
+    match.refreshAgendaEligibility(now);
+  };
+  expect(active(0)).toBeUndefined();
+  const first = publishDocument(1,1);
+  examine(2,first);
+  expect(renderToStaticMarkup(<MissionRow mission={active(2)!}/>)).toContain('Publique um Laudo de Perícia');
+  publishReport(3,first);
+  expect(active(3)).toBeUndefined();
+  expect(view(3).progression.xp).toBe(45);
+
+  const next = mail.nextPublicationAt(inspector.id);
+  const second = publishDocument(next,2);
+  examine(next,second);
+  const current = active(next)!;
+  expect(current).toBeDefined();
+  publishReport(next,first);
+  expect(active(next)).toEqual(current);
+  expect(view(next).progression.xp).toBe(45);
+
+  const finish = mail.nextPublicationAt(inspector.id);
+  publishReport(finish,second);
+  const completed = view(finish).missions.completed.find(mission=>mission.id===current.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(active(finish)).toBeUndefined();
+  expect(view(finish).progression.xp).toBe(90);
+});

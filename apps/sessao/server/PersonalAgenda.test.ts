@@ -987,7 +987,7 @@ test.each([
   ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
   ['campanhaUltimaHora',event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS}),event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS+1,at:2})],
   ['mensagemComAnexo',event('mail-published',{place:'document'}),event('photo-published')],
-  ['retratacaoOficial',event('mail-published',{place:'report'}),event('mail-published',{place:'document'})],
+  ['retratacaoOficial',event('mail-published',{place:'report',reportNotice:1}),event('mail-published',{place:'document'})],
   ['instalarGrampo',event('spy-installed',{kind:'wiretap'}),event('spy-installed',{kind:'spyCamera'})],
   ['instalarCamera',event('spy-installed',{kind:'spyCamera'}),event('spy-installed',{kind:'wiretap'})],
   ['reuniaoGabinete',event('office-meeting-time',{duration:15_000}),event('public-meeting-time',{duration:15_000})],
@@ -995,7 +995,7 @@ test.each([
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
 ] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
   const rewards:number[] = [];
-  const options = {...metrics,owns:()=>true,hasOffice:()=>true,hasForensicReport:()=>true,hasKnownForeignSpy:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const options = {...metrics,owns:()=>true,hasOffice:()=>true,agendaReportNotices:()=>[1],hasKnownForeignSpy:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);
