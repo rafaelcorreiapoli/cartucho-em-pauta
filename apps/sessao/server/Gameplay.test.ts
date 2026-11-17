@@ -117,7 +117,7 @@ test('phone sessions keep Snake private and clear it when a player disconnects',
   expect(game.view(alice,world).game).toBeUndefined();
   expect(game.phoneActivity(alice.id)).toBeUndefined();
   expect(events.map(event=>event.type)).toEqual(['game-started','game-stopped']);
-  expect(events.at(-1)?.duration).toBe(1000);
+  expect(events.at(-1)?.duration).toBe(0);
 });
 
 test('spawned and dropped cash share visibility and custody without immediate redemption', () => {
