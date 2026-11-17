@@ -162,9 +162,17 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
       field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
     ] as const;
+    const targetActions = new Map<string,number[]>();
+    for (const [index,button] of groups[3].entries()) {
+      if (!button.target) continue;
+      const members = targetActions.get(button.target.id) ?? [];
+      members.push(index);
+      targetActions.set(button.target.id,members);
+    }
     const groupIds = [legislative,electoral.actions,shortcuts.map(action=>action.kind),field.map(({action})=>JSON.stringify(action))];
     const normal = groups.map((group,groupIndex)=>group.map((button,index)=>({
       id:groupIndex+':'+groupIds[groupIndex][index], name:button.label,
+      group:'target' in button ? button.target?.id : undefined,
       kind:'action' as const,visible:true,enabled:!('blocked' in button && button.blocked) && !('disabled' in button && button.disabled),
       activate:button.activate,station:'station' in button ? button.station : undefined,
     })));
@@ -191,6 +199,13 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     }
     const keysFor = (index:number)=>normal[index].map(control=>presentation.get(control)!);
 
+    const fieldButton = (index:number,shortLabel?:string)=>{
+      const {target,...button} = groups[3][index];
+      return <ContextActionButton key={groupIds[3][index]} {...button}
+        label={shortLabel ?? button.label} accessibleLabel={shortLabel ? button.label : undefined}
+        presentation={presentation.get(normal[3][index])}/>;
+    };
+
     flushSync(()=>contextRoot.render(<>
       <div id="legislative-station-actions" className="station-grid"><LegislativeStationActions actions={legislative} send={sendLegislative} keys={keysFor(0)}/></div>
       <div id="station-election-actions" className="station-grid">
@@ -200,8 +215,18 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       <div id="nearby-actions" className="context-nearby"><NearbyActions items={items} expanded={nearbyOpen}
         trigger={presentation.get(trigger)} keys={tiles.map(tile=>presentation.get(tile)!)} toggle={toggleNearby}/></div>
       <div id="station-shortcuts"><StationShortcuts actions={shortcuts} select={selectShortcut} keys={keysFor(2)}/></div>
-      <div id="field-actions">{groups[3].map((button,index)=><ContextActionButton key={JSON.stringify(field[index].action)}
-        {...button} presentation={presentation.get(normal[3][index])}/>)}</div>
+      <div id="field-actions">{groups[3].map(({target},index)=>{
+        const members = target && targetActions.get(target.id);
+        if (!target || !members || members.length===1) return fieldButton(index);
+        if (members[0]!==index) return null;
+        const overflow = presentation.get(normal[3][index])?.overflow;
+        return <div key={target.id} className="context-target" role="group" aria-label={target.name} data-context-overflow={overflow}>
+          <span className="context-target-name">{target.name}</span>
+          <div className="context-target-buttons">
+            {members.map(member=>fieldButton(member,groups[3][member].target?.verb))}
+          </div>
+        </div>;
+      })}</div>
       <div id="context-overflow"><ContextOverflow visible={model.hasMore} expanded={model.showOverflow}
         shortcut={presentation.get(more)?.key} toggle={toggleOverflow}/></div>
     </>));

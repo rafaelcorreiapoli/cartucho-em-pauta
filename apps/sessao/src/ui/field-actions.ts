@@ -22,7 +22,7 @@ export type FieldAction = GameplayAction
   | {kind:'open-security'};
 
 export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[]) {
-  const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean}[] = [];
+  const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean;target?:{id:string;name:string;verb:string}}[] = [];
   const state = view?.gameplay;
   if (state && player) {
     const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
@@ -57,6 +57,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
     for (const npc of state.parliamentarians ?? []) {
       actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
+        target:{id:npc.id,name:npc.name,verb:npc.down ? 'Roubar dinheiro' : 'Conversar'},
         action:{kind:'npc-deal',request:{kind:npc.down ? 'rob' : 'talk',target:npc.id}}});
     }
     if (state.locations.includes('treasury')) {
@@ -84,9 +85,9 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
       }
       for (const target of roster) {
         if (canReachDownedPlayer(player,target)) {
-          actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
-          if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
-          actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
+          actions.push({label:`Socorrer ${target.nick}`,icon:'shield',target:{id:target.id,name:target.nick,verb:'Socorrer'},action:{kind:'aid',target:target.id}});
+          if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',target:{id:target.id,name:target.nick,verb:'Carregar'},action:{kind:'carry',target:target.id}});
+          actions.push({label:`Inspecionar ${target.nick}`,icon:'search',target:{id:target.id,name:target.nick,verb:'Inspecionar'},action:{kind:'inspect-down',target:target.id}});
         }
       }
     }

@@ -32,3 +32,13 @@ test('disabled and hidden controls never claim a key and assignments are capped 
   const keys = open.buttons.flatMap(button=>button.key ?? []);
   expect(keys).toEqual(['1','2','3','4','5','6','7','8','9']);
 });
+
+test('actions for the same target stay together and get consecutive shortcuts',()=>{
+  const target = {...action,group:'target-a'};
+  const other = {...action,group:'target-b'};
+  const buttons = [target,other,{...target},{...target},{...target},nearby,{...action},more];
+  const layout = contextActionKeys(buttons,true,false);
+  expect(layout.buttons.map(button=>button.key)).toEqual(['1','5','2','3','4','6','8','7']);
+  expect(layout.buttons.slice(0,5).every(button=>button.placement==='primary')).toBe(true);
+  expect(layout.buttons[6].placement).toBe('overflow');
+});
