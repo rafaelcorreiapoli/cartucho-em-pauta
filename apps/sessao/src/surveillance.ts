@@ -1,3 +1,4 @@
+import type { PhotoScene } from './photography';
 import { privateOffices } from './private-offices';
 import { obstacleBetween, securityRoom, type Motion } from './map';
 
@@ -27,6 +28,13 @@ export function cameraSees(origin:Motion,subject:Motion) {
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
 export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number};
 export type SpyView = {channels:SpyChannel[]; options:SpyOption[]; selected?:number; audio?:number; muted:boolean; progress?:number};
+
+export type SpyCameraFrame = PhotoScene & {channel:number};
+
+export function acceptsSpyCameraFrame(view:SpyView|undefined,frame:SpyCameraFrame) {
+  const channel = monitoredChannel(view);
+  return channel?.kind==='spyCamera' && channel.id===frame.channel;
+}
 
 export function monitoredChannel(view?:SpyView) {
   return view?.channels.find(channel=>!channel.removed &&

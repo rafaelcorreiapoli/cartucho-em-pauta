@@ -21,7 +21,7 @@ import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createSecurityPanel } from './security-panel';
 import { createSurveillancePanel } from './surveillance-panel';
-import type { PhotoScene } from './photography';
+import type { SpyCameraFrame } from './surveillance';
 import { createGameplayPanel } from './gameplay-panel';
 import { mountResults } from './results';
 import { mountCharacterPicker } from './ui/character-picker';
@@ -216,7 +216,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('security-frame',security.frame);
     joined.onDrop(()=>security.render());
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
-    joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
+    joined.onMessage('spy-frame',(frame:SpyCameraFrame)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
