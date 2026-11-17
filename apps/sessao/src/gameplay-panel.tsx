@@ -1,3 +1,4 @@
+import type {ComplaintProof} from './complaints';
 import {mountNearbyActions,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
@@ -47,7 +48,7 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
-export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void) {
+export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void, submitComplaint:(proof:ComplaintProof)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
   const headerRoot = createRoot(dialog.querySelector('header')!);
@@ -70,7 +71,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
-  let app:PhoneApp|undefined;
+  let app:PhoneApp|'Denunciar'|undefined;
   let decorationId:number | undefined;
   let equipmentOpen = false;
   let stashOpen = false;
@@ -135,16 +136,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </label>}
         {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
           <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
-            disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd>←</kbd></button>
+            disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd className="action-key" aria-hidden="true">←</kbd></button>
           <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
           <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar quantidade" aria-keyshortcuts="ArrowRight"
-            disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd>→</kbd></button>
+            disabled={selectedItemQuantity(item,quantity)===itemQuantity(item)} onClick={()=>changeQuantity(item,1)}>+ <kbd className="action-key" aria-hidden="true">→</kbd></button>
         </div>}
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
         {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
           disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
-          <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd>⇧1–6</kbd>
+          <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
         {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
@@ -175,7 +176,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const title = mode==='phone' ? app ?? 'Celular' : mode==='bag' ? 'Inventário' :
       stashOpen ? 'Armário particular' : mode==='equipment' ? 'Equipamentos' : 'Objeto';
     flushSync(()=>headerRoot.render(<GameplayDialogHeader title={title} bag={mode==='bag'}
-      back={mode==='phone' && app ? ()=>selectApp() : undefined}/>));
+      back={mode==='phone' && app && app!=='Denunciar' ? ()=>selectApp() : undefined}/>));
   }
 
   function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
@@ -245,6 +246,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const phase = view.phase;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.length);
     const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? [decoration,canRemoveDecoration] :
+      app==='Denunciar' ? photos.complaintKey(view.complaints) :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Projetos' ? [view.project,view.outcomes] :
@@ -397,6 +399,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics}/>;
       if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes}/>;
+      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint);
       if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
@@ -494,6 +497,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   dialog.addEventListener('close',closed);
 
   return {
+    openComplaint() {
+      app = 'Denunciar';
+      photos.resetSelection();
+      open();
+    },
     openPhone() { app = undefined; open(); },
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },

@@ -195,17 +195,17 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
-        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id));
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
-          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
+          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
           id=>{
             const project = this.match.projectIndex;
             return project===undefined ? undefined : this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,project);
           },
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),id=>this.gameplay.ownsSpyCameras(id),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
+          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
@@ -222,8 +222,10 @@ export class SessionRoom extends Room {
     });
     this.onMessage('complaint-submit',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || !raw || typeof raw!=='object' || !('id' in raw) || typeof raw.id!=='number' || !Number.isSafeInteger(raw.id)) return;
-      if (!this.consumeRoomCommand(player.id,raw)) return;
+      if (!player || !raw || typeof raw!=='object') return;
+      const id = 'id' in raw && typeof raw.id==='number' && Number.isSafeInteger(raw.id) ? raw.id :
+        'target' in raw && typeof raw.target==='string' ? raw.target : undefined;
+      if (id===undefined || !this.consumeRoomCommand(player.id,raw)) return;
       const photoId = 'photo' in raw ? raw.photo : undefined;
       const photo = photoId===undefined ? undefined :
         this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===photoId)?.photo;
@@ -231,8 +233,13 @@ export class SessionRoom extends Room {
         client.send('gameplay-feedback','Fotografia indisponível no seu álbum.');
         return;
       }
-      const error = this.match.submitComplaint(player,raw.id,this.clock.currentTime,photo);
+      const error = this.match.submitComplaint(player,id,this.clock.currentTime,photo);
       if (error) client.send('gameplay-feedback',error);
+      else {
+        const [decision] = this.match.complaintView(player.id).history;
+        this.internalMail.publishComplaint(decision);
+        this.broadcast('mail-state',this.internalMail.view());
+      }
     });
     this.onMessage('mail-read',client=>{
       client.send('mail-state',this.internalMail.view());
@@ -355,6 +362,7 @@ export class SessionRoom extends Room {
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
           !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
       const text = this.gameplay.act(player,action,this.gameplayWorld());
+      if (action.kind==='photo-delete') this.match.refreshAgendaEligibility();
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
@@ -472,6 +480,7 @@ export class SessionRoom extends Room {
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }
+      if (this.gameplay.expireRecentPortraits(now)) this.match.refreshAgendaEligibility();
       const project = this.match.projectIndex;
       if (project!==undefined && this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();

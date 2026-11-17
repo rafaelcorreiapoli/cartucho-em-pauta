@@ -70,13 +70,11 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     for (const peer of [first,second,infiltrator]) {
       const agenda = agendaOf(peer);
       Reflect.set(agenda,'missions',[]);
-      Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio','selfieSolo']);
+      Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio']);
     }
     match.refreshAgendaEligibility();
     const finished = (peer:Room)=>view(peer)?.politics?.missions.completed
       .filter(mission=>mission.kind==='manutencaoEmergencia');
-    await wait(()=>[first,second,infiltrator].every(peer=>view(peer)?.politics?.missions.active.some(
-      mission=>mission.kind==='manutencaoEmergencia' && mission.current===0)));
     const xpBefore = view(first)!.politics!.progression.xp;
     const nearA = {x:a.x+49,y:a.y};
     expect(view(infiltrator)?.canSabotagePower).toBe(true);
@@ -93,6 +91,8 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
     await wait(()=>sees(first,infiltrator) && sees(infiltrator,first));
     await act(infiltrator,{kind:'sabotage',panel:0});
     await wait(()=>rooms.every(peer=>!!view(peer)?.outage) && !sees(first,infiltrator) && !sees(infiltrator,first));
+    await wait(()=>[first,second,infiltrator].every(peer=>view(peer)?.politics?.missions.active.some(
+      mission=>mission.kind==='manutencaoEmergencia' && mission.current===0)));
 
     move(first,a);
     await act(first,{kind:'repair',panel:0});

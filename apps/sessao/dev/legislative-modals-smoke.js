@@ -1,5 +1,5 @@
 async page => {
-  await page.addInitScript(()=>{
+  await page.context().addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
     window.micAttempts = 0;
     navigator.mediaDevices.getUserMedia = async ()=>{
@@ -47,4 +47,40 @@ async page => {
   if (await dossier.isVisible()) throw Error('Dossiê abriu durante a votação');
   if (await page.locator('#social-docks, #politics-dock, #institutional-dock').count()) throw Error('Contêiner legado ainda existe');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
+
+  await page.reload();
+  const guest = await page.context().newPage();
+  try {
+    await page.getByRole('textbox',{name:'Seu nick'}).fill('Rafa');
+    await page.getByRole('button',{name:'Criar sala'}).click();
+    await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
+    const roomCode = (await page.locator('#room-label').textContent()).trim().split(' ')[1];
+
+    await guest.goto(page.url());
+    await guest.getByRole('textbox',{name:'Seu nick'}).fill('Bia');
+    await guest.getByRole('textbox',{name:'Código da sala'}).fill(roomCode);
+    await guest.getByRole('button',{name:'Entrar',exact:true}).click();
+    await guest.locator('#lobby-back').waitFor();
+    await page.locator('#parliamentarian-count [data-count="0"]').click();
+    await page.getByRole('button',{name:'Iniciar sessão'}).click();
+
+    await page.getByRole('button',{name:'Pedir afastamento',exact:true}).click();
+    const submit = institution.getByRole('button',{name:'Convocar votação',exact:true});
+    await submit.waitFor();
+    if (await submit.isEnabled()) throw Error('É possível convocar votação sem escolher um alvo');
+    await institution.getByRole('button',{name:/^Bia ·/}).click();
+    await submit.click();
+    await institution.waitFor({state:'hidden'});
+
+    for (const client of [page,guest]) {
+      await client.locator('#session[data-phase="hearing"]').waitFor();
+      await client.locator('#ballot').getByText(/0\/2 votaram/).waitFor();
+    }
+    await page.locator('#ballot').getByRole('button',{name:'Afastar',exact:true}).click();
+    await guest.locator('#ballot').getByText(/1\/2 votaram/).waitFor();
+    if (await guest.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
+    return {resolutions:3,clients:2,hearingVoteReplicated:true};
+  } finally {
+    await guest.close();
+  }
 }

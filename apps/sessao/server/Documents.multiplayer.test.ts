@@ -194,6 +194,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
     caio.send('mail-publish',{token:1590,subject:'Mesma foto',body:'Publicada novamente',attachment:{kind:'photo',id:photo.id}});
     await wait(()=>inboxes.get(alice.sessionId)?.find(entry=>entry.subject==='Mesma foto'));
+    move(caio,stations.press);
+    feedback.delete(caio.sessionId);
+    caio.send('gameplay',{action:{kind:'photo-publish',item:photo.id},token:1600});
+    await wait(()=>feedback.get(caio.sessionId)==='Fotografia publicada no álbum público.');
 
     Reflect.get(Reflect.get(room,'internalMail'),'cooldowns').delete(caio.sessionId);
     caio.send('mail-publish',{token:2,subject:'Reenvio',body:'Não deve publicar'});

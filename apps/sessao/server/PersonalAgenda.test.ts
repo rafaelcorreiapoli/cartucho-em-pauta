@@ -1364,8 +1364,15 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   expect(install()).toBe('Instalando decoração…');
   world.now += decorationInstallMs;
   game.tick(world,true);
+  expect(game.hasAgendaDecoration(visitor.id,'freshForeignPortrait',false,world.now)).toBe(true);
+  expect(game.hasAgendaDecoration(owner.id,'freshForeignPortrait',false,world.now)).toBe(false);
   expect(game.act(owner,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
-  world.now += 60_001;
+  world.now += 60_000;
+  expect(game.expireRecentPortraits(world.now)).toBe(false);
+  world.now++;
+  expect(game.expireRecentPortraits(world.now)).toBe(true);
+  expect(game.expireRecentPortraits(world.now)).toBe(false);
+  expect(game.hasAgendaDecoration(visitor.id,'freshForeignPortrait',false,world.now)).toBe(false);
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
   expect(rewards).toEqual([]);
   expect(game.act(owner,{kind:'uninstall',item:portrait.id},world)).toBe('Objeto retirado.');
@@ -1557,4 +1564,129 @@ test('phone time from separate calls cannot complete Debate Democrático',()=>{
   expect(rewards).toEqual([35]);
   elapse(1);
   expect(rewards).toEqual([35]);
+});
+
+test('Bandeja Gourmet needs access to a second distinct food beyond free coffee',()=>{
+  const draw = (wallet:number,owned?:'coffee'|'coxinha',hasOffice=true)=>{
+    const state = {...metrics,wallet,owns:(kind:string)=>kind===owned,hasOffice:()=>hasOffice};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3,0);
+    return agenda.hasActive('bandejaGourmet');
+  };
+  expect(draw(0)).toBe(false);
+  expect(draw(0,'coffee')).toBe(false);
+  expect(draw(0,'coxinha')).toBe(true);
+  expect(draw(.5)).toBe(true);
+  expect(draw(.5,undefined,false)).toBe(false);
+});
+
+test('a pizza-serving mission preserves credited guests and requires enough new guests',()=>{
+  const guests = ['b','c','d'].map(id=>({id,name:id}));
+  const agenda = new PersonalAgenda(metrics,4,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fatias','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,4,true,3,0,guests);
+  expect(agenda.hasActive('fatias')).toBe(true);
+  recordAgendaEvent(agenda,event('slice',{kind:'pizza',target:'b',item:1}));
+  agenda.updateEligibility(metrics,2,true,3,0,[guests[1]]);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='fatias')?.current).toBe(1);
+  agenda.updateEligibility(metrics,1,true,3,0,[]);
+  expect(agenda.hasActive('fatias')).toBe(false);
+  expect(agenda.view(metrics).completed).toEqual([]);
+});
+
+test('one selfie cannot repeatedly pay the publication mission across channels',()=>{
+  const contacts = ['b','c'].map(id=>({id,name:id}));
+  const payouts:number[] = [];
+  const agenda = new PersonalAgenda(metrics,3,()=>0,reward=>payouts.push(reward.xp));
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','jornalismo','cafe']);
+    agenda.updateEligibility(metrics,3,true,3,0,contacts);
+  };
+  const photo = {...missionPhoto,people:contacts.map(contact=>({...contact,x:480,y:650,character:0,direction:0 as const}))};
+  draw();
+  recordAgendaEvent(agenda,event('photo-published',{photo}));
+  expect(payouts).toEqual([30]);
+  draw();
+  recordAgendaEvent(agenda,event('photo-published',{photo,place:'internal-mail'}));
+  expect(agenda.view(metrics).completed.map(row=>row.kind)).toEqual(['publicouSelfie','jornalismo']);
+  expect(agenda.hasActive('publicouSelfie')).toBe(true);
+  recordAgendaEvent(agenda,event('photo-published',{photo:{...photo,id:photo.id+1}}));
+  expect(agenda.view(metrics).completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(2);
+});
+
+test('Escuta Ativa keeps its progress only while the player can still use or reinstall a wiretap',()=>{
+  let installed = true;
+  let owned = false;
+  let available = true;
+  const state = {wallet:0,popularity:40,ownsWiretap:()=>installed,owns:()=>owned,canInstallSpy:()=>available};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio','selfieSolo']);
+  const refresh = ()=>agenda.updateEligibility(state,1,true,3);
+  const listening = ()=>agenda.view(state).active.find(mission=>mission.kind==='escutaAtiva');
+  refresh();
+  recordAgendaEvent(agenda,event('wiretap-time',{duration:6_000}));
+  expect(listening()?.current).toBe(6_000);
+
+  installed = false;
+  owned = true;
+  refresh();
+  expect(listening()?.current).toBe(6_000);
+  owned = false;
+  state.wallet = 2;
+  refresh();
+  expect(listening()?.current).toBe(6_000);
+  available = false;
+  refresh();
+  expect(listening()).toBeUndefined();
+  expect(agenda.view(state).completed).toEqual([]);
+});
+
+test('the camera mission keeps credit when the remaining distinct camera can be installed or bought',()=>{
+  const options = {installed:2,uncredited:2,slots:0,portable:0};
+  const state = {wallet:0,popularity:40,agendaCameras:()=>options};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
+  const refresh = ()=>agenda.updateEligibility(state,1,true,3);
+  const mission = ()=>agenda.view(state).active.find(row=>row.kind==='duasCameras');
+  refresh();
+  recordAgendaEvent(agenda,event('spy-viewed',{kind:'spyCamera',item:1}));
+  expect(mission()?.current).toBe(1);
+
+  Object.assign(options,{installed:1,uncredited:0,slots:1,portable:1});
+  refresh();
+  expect(mission()?.current).toBe(1);
+  options.portable = 0;
+  state.wallet = 3;
+  refresh();
+  expect(mission()?.current).toBe(1);
+  state.wallet = 2.9;
+  refresh();
+  expect(mission()).toBeUndefined();
+  expect(agenda.view(state).completed).toEqual([]);
+});
+
+test('a saved group selfie only opens a mission if a publication channel is still available',()=>{
+  const photos = [{id:1,public:true}];
+  let canMail = false;
+  const state = {...metrics,agendaSelfies:()=>photos,canPublishMail:()=>canMail};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    return agenda.hasActive('publicouSelfie');
+  };
+  expect(draw()).toBe(false);
+  canMail = true;
+  expect(draw()).toBe(true);
+  state.wallet = 0;
+  expect(draw()).toBe(false);
+  photos[0].public = false;
+  expect(draw()).toBe(true);
 });

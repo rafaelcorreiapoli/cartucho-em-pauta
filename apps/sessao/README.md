@@ -149,7 +149,7 @@ Abra a página no Playwright CLI com `dev/private-call-chrome.json` e execute
 
 ## Teste do histórico de votações no Chrome
 
-Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-server.ts`
+Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-smoke-server.ts`
 e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
 Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
 `dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
@@ -304,14 +304,16 @@ substitui a captura de microfone antes de iniciar o VoIP.
 
 ### Smoke test do filtro de Megafone no Chrome
 
-Com o Vite e a sessão Chrome silenciosa da seção anterior, prepare uma fala
-sintética no macOS com a voz Luciana instalada e execute:
+Com o Vite e a sessão Chrome silenciosa da seção anterior, execute a partir de
+`apps/sessao`:
 
 ```sh
-say -v Luciana -r 155 -o /tmp/sessao-megaphone-speech.aiff "Atenção, parlamentares. A sessão começa em cinco minutos. O projeto será votado no plenário."
-ffmpeg -y -i /tmp/sessao-megaphone-speech.aiff -ac 1 -ar 24000 /tmp/sessao-megaphone-speech.wav
 playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
 ```
+
+A gravação `dev/fixtures/megaphone-pt-br.flac` foi sintetizada no macOS com a
+voz Luciana, a 155 palavras por minuto, e convertida para FLAC mono a 24 kHz.
+O workflow também executa o teste em Chrome headless.
 
 O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
 no receptor. Compara a relação entre graves e médios com e sem Megafone,

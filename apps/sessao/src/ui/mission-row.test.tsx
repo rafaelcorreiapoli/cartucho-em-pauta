@@ -1,3 +1,4 @@
+import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
 
@@ -295,7 +296,7 @@ test('the solo security mission displays distinct institutional cameras from the
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });
 
-test('electrical repair is a multiplayer mission and shows authoritative completion',()=>{
+test('electrical repair is unavailable in a solo session',()=>{
   const draw = (players:Player[])=>{
     const match = new PlenaryMatch(1);
     const [player] = players;
@@ -308,11 +309,6 @@ test('electrical repair is a multiplayer mission and shows authoritative complet
   };
   const rafa:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
   expect(draw([rafa]).some(mission=>mission.kind==='manutencaoEmergencia')).toBe(false);
-  const mission = draw([rafa,{...rafa,id:'bia',nick:'Bia'}]).find(mission=>mission.kind==='manutencaoEmergencia')!;
-  const pending = renderToStaticMarkup(<MissionRow mission={mission}/>);
-  expect(pending).toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
-  expect(pending).not.toContain('data-done="true"');
-  expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>)).toContain('data-done="true"');
 });
 
 test('cleanup requires a private discovery, works without the detector and expires on removal',()=>{
@@ -425,7 +421,7 @@ test('cleanup requires a private discovery, works without the detector and expir
   expect(missions(peer,removed).completed.some(mission=>mission.kind==='limpeza')).toBe(false);
 });
 
-test('Investigação Particular counts two physical cameras across reinstallation',()=>{
+test.each([false,true])('Investigação Particular tracks reachable distinct cameras, lost second=%s',loseSecond=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
   const ids = [player.id];
   const match = new PlenaryMatch(1);
@@ -433,7 +429,7 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   const game = new Gameplay();
   game.reset(0,()=>.9,[player]);
   const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
-  account.ownsSpyCameras = ()=>game.ownsSpyCameras(player.id);
+  account.agendaCameras = (credited:ReadonlySet<string>)=>game.agendaCameras(player.id,credited);
   Reflect.set(account.agenda,'missions',[]);
   Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
@@ -471,6 +467,23 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   const recoveredAt = secondInstalledAt+10+spyRules.remove;
   game.tick(at(recoveredAt),true);
   const recovered = game.view(player,at(recoveredAt)).inventory.find(item=>item.kind==='spyCamera')!;
+  expect(progress(recoveredAt).current).toBe(1);
+  if (loseSecond) {
+    const economy = Reflect.get(match,'economy');
+    expect(economy.spend(player.id,view(recoveredAt).wallet)).toBe(true);
+    Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
+    Object.assign(player,{x:933,y:244});
+    game.spyAction(player,{kind:'remove',site:'press'},at(recoveredAt));
+    const removedAt = recoveredAt+spyRules.remove;
+    game.tick(at(removedAt),true);
+    const remaining = view(removedAt).missions;
+    const hud = remaining.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+    expect(hud).not.toContain('Consulte duas câmeras escondidas próprias');
+    expect(remaining.active).toHaveLength(3);
+    expect(remaining.completed).toEqual([]);
+    expect(view(removedAt).progression.xp).toBe(0);
+    return;
+  }
   game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},at(recoveredAt));
   const reinstalledAt = recoveredAt+spyRules.install;
   game.tick(at(reinstalledAt),true);
@@ -819,6 +832,8 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   const {agenda} = account;
   account.ownsWiretap = ()=>game.ownsWiretap(player.id);
+  account.canInstallSpy = (kind:'wiretap'|'spyCamera')=>game.canInstallSpy(player.id,kind);
+  account.owns = (kind:'wiretap')=>game.owns(player.id,kind);
   const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
   Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(player,{kind:'open-shop',target:'vendor'},world(1));
@@ -856,6 +871,31 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   tick(1);
   const completed = view().missions.completed.find(({kind})=>kind==='escutaAtiva')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+
+  const economy = Reflect.get(match,'economy');
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const retry = active();
+  expect(retry).toBeDefined();
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio','selfieSolo']);
+  game.spyAction(player,{kind:'recover',site:'coffee'},world(now));
+  tick(spyRules.remove);
+  expect(game.ownsWiretap(player.id)).toBe(false);
+  expect(game.owns(player.id,'wiretap')).toBe(true);
+  expect(game.canInstallSpy(player.id,'wiretap')).toBe(true);
+  expect(active().id).toBe(retry.id);
+  const recovered = game.view(player,world(now)).inventory.find(item=>item.kind==='wiretap')!;
+  game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},world(now));
+  tick(spyRules.install);
+  expect(active().id).toBe(retry.id);
+  game.spyAction(player,{kind:'remove',site:'coffee'},world(now));
+  tick(spyRules.remove);
+  expect(game.owns(player.id,'wiretap')).toBe(false);
+  expect(active()).toBeUndefined();
+  expect(view().missions.active).toHaveLength(3);
   expect(view().progression.xp).toBe(35);
 });
 
@@ -1046,4 +1086,291 @@ test.each([true,false])('transfer progress follows the number of remaining disti
     expect(view(3).missions.completed).toEqual([]);
     expect(view(3).progression.xp).toBe(0);
   }
+});
+
+test('Bandeja Gourmet appears with two obtainable foods and counts consumption in the office',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...npcs.snackVendor.interaction};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world = match.gameplayWorld([player],1,()=>false);
+  const view = ()=>match.view(player.id,[player.id],1).politics!;
+  const render = (done=false)=>view().missions[done ? 'completed' : 'active'].map(mission=>
+    renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  draw();
+  expect(render()).not.toContain('Consuma dois alimentos diferentes');
+  economy.earn(player.id,1);
+  game.act(player,{kind:'open-shop',target:'snackVendor'},world);
+  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
+  expect(view().wallet).toBe(0);
+  expect(game.owns(player.id,'coxinha')).toBe(true);
+  draw();
+  expect(render()).toContain('Consuma dois alimentos diferentes');
+  expect(render()).toContain('0 / 2');
+
+  const snack = game.view(player,world).inventory.find(item=>item.kind==='coxinha')!;
+  expect(game.act(player,{kind:'use',item:snack.id},world)).toBe('Objeto utilizado.');
+  expect(render()).toContain('0 / 2');
+
+  Object.assign(player,stations.coffee);
+  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  Object.assign(player,game.officeSpawn(player.id)!);
+  let xpAfterCoffee = 0;
+  for (const kind of ['coffee','coxinha'] as const) {
+    const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
+    expect(game.act(player,{kind:'use',item:item.id},world)).toBe('Objeto utilizado.');
+    if (kind==='coffee') {
+      expect(render()).toContain('1 / 2');
+      xpAfterCoffee = view().progression.xp;
+    }
+  }
+  expect(render(true)).toContain('Consuma dois alimentos diferentes');
+  expect(view().progression.xp).toBe(xpAfterCoffee+35);
+});
+
+test.each([true,false])('selfies retain distinct colleagues who already counted, credited departure=%s',creditedDeparture=>{
+  const photographer:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const [bia,caio,duda] = ['bia','caio','duda'].map(id=>({...photographer,id,nick:id}));
+  let players = [photographer,bia,caio,duda];
+  const match = new PlenaryMatch(1);
+  expect(match.start(photographer.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(photographer.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','cafe','passeio','visitaArquivo']);
+  match.refreshAgendaEligibility();
+
+  const view = (now:number)=>match.view(photographer.id,players.map(({id})=>id),now).politics!;
+  const render = (now:number,done=false)=>view(now).missions[done ? 'completed' : 'active'].filter(mission=>mission.kind==='selfie').map(mission=>
+    renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const capture = (now:number)=>game.act(photographer,{kind:'selfie'},match.gameplayWorld(players,now,()=>false));
+  Object.assign(bia,{x:photographer.x+8});
+  Object.assign(caio,npcs.furnitureVendor.interaction);
+  Object.assign(duda,npcs.credentialsVendor.interaction);
+  capture(100);
+  expect(render(100)).toContain('1 / 3');
+  capture(3_000);
+  expect(render(3_000)).toContain('1 / 3');
+
+  const departing = creditedDeparture ? bia : duda;
+  match.leave(departing.id,4_000);
+  players = players.filter(person=>person!==departing);
+  if (!creditedDeparture) {
+    expect(render(4_000)).not.toContain('Tire selfies com três parlamentares diferentes');
+    expect(view(4_000).progression.xp).toBe(0);
+    return;
+  }
+  expect(render(4_000)).toContain('1 / 3');
+  Object.assign(caio,{x:photographer.x+8,y:photographer.y});
+  Object.assign(duda,{x:photographer.x-8,y:photographer.y});
+  capture(6_000);
+  expect(render(6_000,true)).toContain('Tire selfies com três parlamentares diferentes');
+  expect(view(6_000).progression.xp).toBe(35);
+});
+
+test('the pizza mission keeps its first slice after that guest leaves',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...npcs.snackVendor.interaction,
+  }));
+  const [host,bia,caio] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fatias','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  game.act(host,{kind:'open-shop',target:'snackVendor'},world(1));
+  game.act(host,{kind:'shop-buy',target:'pizza',token:game.view(host,world(1)).dialogue?.token},world(1));
+  const pizza = game.view(host,world(1)).inventory.find(item=>item.kind==='pizza')!;
+  players.forEach(player=>Object.assign(player,installationSites.pizza.point));
+  expect(game.act(host,{kind:'install',place:'pizza',item:pizza.id},world(2))).toBe('Objeto instalado.');
+
+  const view = (now:number)=>match.view(host.id,players.map(({id})=>id),now).politics!;
+  const render = (now:number,done=false)=>{
+    const mission = view(now).missions[done ? 'completed' : 'active'].find(row=>row.kind==='fatias')!;
+    expect(mission).toBeDefined();
+    return renderToStaticMarkup(<MissionRow mission={mission} done={done}/>);
+  };
+  expect(game.act(bia,{kind:'slice',item:pizza.id},world(3))).toBe('Fatia servida.');
+  match.leave(bia.id,4);
+  players.splice(players.indexOf(bia),1);
+  expect(render(4)).toContain('1 / 2');
+  expect(game.act(caio,{kind:'slice',item:pizza.id},world(5))).toBe('Fatia servida.');
+  expect(render(5,true)).toContain('data-done="true"');
+});
+
+test('Solenidade appears with a fresh rival portrait and disappears once another visitor marks it',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction,
+  }));
+  const [owner,visitor,rival] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(owner.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  let now = 1;
+  const world = ()=>match.gameplayWorld(players,now,()=>false);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,
+    (id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement,now));
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const player of players) {
+    const {agenda} = accounts.get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['solenidadeInauguracao','cafe','passeio','selfieSolo']);
+  }
+  const view = (player:Player)=>match.view(player.id,players.map(({id})=>id),now).politics!;
+  const render = (player:Player,done=false)=>view(player).missions[done ? 'completed' : 'active']
+    .map(mission=>renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const label = 'Rabisque um Retrato Oficial';
+  match.refreshAgendaEligibility();
+  expect(render(visitor)).not.toContain(label);
+
+  game.act(owner,{kind:'open-shop',target:'credentialsVendor'},world());
+  expect(game.act(owner,{kind:'shop-buy',target:'portrait',token:game.view(owner,world()).dialogue?.token},world()))
+    .toBe('Compra guardada no inventário.');
+  const portrait = game.view(owner,world()).inventory.find(item=>item.kind==='portrait')!;
+  players.forEach(player=>Object.assign(player,installationSites.hall.point));
+  expect(game.act(owner,{kind:'install',place:'hall',item:portrait.id},world())).toBe('Instalando decoração…');
+  now += decorationInstallMs;
+  game.tick(world(),true);
+  // Eligibility is applied on the next draw when the Agenda already has three missions.
+  for (const player of [visitor,rival]) Reflect.set(accounts.get(player.id).agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(render(owner)).not.toContain(label);
+  expect(render(visitor)).toContain(label);
+  expect(render(rival)).toContain(label);
+
+  expect(game.act(rival,{kind:'mark',item:portrait.id},world())).toBe('Retrato rabiscado.');
+  expect(render(rival,true)).toContain(label);
+  expect(view(rival).progression.xp).toBe(30);
+  expect(render(visitor)).not.toContain(label);
+  expect(view(visitor).progression.xp).toBe(0);
+});
+
+test('the Agenda credits a published selfie once even when both channels publish it',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...stations.press,
+  }));
+  const [author] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const mail = new InternalMail();
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','jornalismo','cafe','passeio']);
+    match.refreshAgendaEligibility();
+  };
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(author.id,players.map(({id})=>id),now).politics!;
+  const capture = (now:number)=>{
+    game.act(author,{kind:'selfie'},world(now));
+    return game.photoView(author.id,now).album.at(-1)!.photo;
+  };
+  draw();
+  const photo = capture(100);
+  expect(game.act(author,{kind:'photo-publish',item:photo.id},world(101))).toBe('Fotografia publicada no álbum público.');
+  expect(view(101).progression.xp).toBe(30);
+  draw();
+  expect(mail.publish(author,{subject:'Selfie',body:'Foto no álbum',attachment:{kind:'photo',id:photo.id}},world(102),
+    ()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  const {active,completed} = view(102).missions;
+  const pending = active.find(row=>row.kind==='publicouSelfie')!;
+  expect(renderToStaticMarkup(<MissionRow mission={pending}/>)).toContain('data-done="false"');
+  expect(completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(1);
+  expect(completed.some(row=>row.kind==='jornalismo')).toBe(true);
+
+  const newPhoto = capture(3_000);
+  expect(newPhoto.id).not.toBe(photo.id);
+  expect(game.act(author,{kind:'photo-publish',item:newPhoto.id},world(3_001))).toBe('Fotografia publicada no álbum público.');
+  const latest = view(3_001).missions.completed.at(-1)!;
+  expect(latest).toMatchObject({id:pending.id,kind:'publicouSelfie'});
+  expect(renderToStaticMarkup(<MissionRow mission={latest} done/>)).toContain('data-done="true"');
+});
+
+test('the Agenda can offer selfie publication from the album while the photographed players are offline',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...stations.press,
+  }));
+  const [author,bia,caio] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const mail = new InternalMail();
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id),id=>game.agendaSelfies(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(author.id,players.map(({id})=>id),now).politics!;
+  game.act(author,{kind:'selfie'},world(100));
+  const photo = game.photoView(author.id,100).album[0].photo;
+  match.setPlayerConnected(bia.id,false);
+  match.setPlayerConnected(caio.id,false);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  draw();
+  const props = view(101).missions.active.find(row=>row.kind==='publicouSelfie')!;
+  expect(renderToStaticMarkup(<MissionRow mission={props}/>)).toContain('Publique uma selfie sua');
+  expect(game.act(author,{kind:'photo-publish',item:photo.id},world(102))).toBe('Fotografia publicada no álbum público.');
+  const published = view(102);
+  expect(published.missions.completed).toContainEqual(expect.objectContaining({id:props.id,kind:'publicouSelfie'}));
+  expect(published.progression.xp).toBe(30);
+  expect(published.popularity).toBe(44);
+  draw();
+  expect(view(103).missions.active.some(row=>row.kind==='publicouSelfie')).toBe(false);
+});
+
+test('the agenda displays emergency maintenance only while the outage can be repaired',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
+  }));
+  const [rafa,bia,caio] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(rafa.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const render = (now:number) => {
+    const {active,completed} = match.view(rafa.id,ids,now).politics!.missions;
+    return renderToStaticMarkup(<ul>
+      {active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
+      {completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}
+    </ul>);
+  };
+  const title = 'Conclua o reparo de uma pane elétrica junto a outro jogador';
+  expect(render(0)).not.toContain(title);
+  expect(match.actOnPower(caio,{kind:'sabotage',panel:0},10)).toBe('Energia cortada.');
+  expect(render(10)).toContain(title);
+  expect(render(10)).not.toContain('data-done="true"');
+  match.actOnPower(rafa,{kind:'repair',panel:0},11);
+  match.actOnPower(bia,{kind:'repair',panel:1},11);
+  const end = 11+powerRules.repairMs;
+  match.advancePower(end,id=>players.find(player=>player.id===id));
+  expect(render(end)).toContain('data-done="true"');
+  expect(render(end)).toContain(title);
+  expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(45);
 });
