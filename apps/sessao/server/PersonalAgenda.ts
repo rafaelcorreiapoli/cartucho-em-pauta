@@ -6,14 +6,13 @@ import { isFood } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'votoNpc';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
-const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const minimumPartialDepositLot = 0.2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -85,8 +84,8 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
   recebido:2, pagamento:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,vigilanciaInstitucional:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:urgentCallMission.contacts,doisPix:2,bandejaGourmet:2,fiscalCafe:3, contribuinte:5, reservaCofre:5, turismo:3, entrega:COFFEE_DELIVERY_RECIPIENTS, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:signatureTarget, passeio:3, ostentacao:furnitureSpendingTarget, ...agendaDurationMs,
+  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,vigilanciaInstitucional:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:urgentCallMission.contacts,doisPix:2,bandejaGourmet:2,fiscalCafe:3, turismo:3, entrega:COFFEE_DELIVERY_RECIPIENTS, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
+  assinaturas:signatureTarget, passeio:3, ...agendaCashTargets, ...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
@@ -575,7 +574,7 @@ export class PersonalAgenda {
       if (kind==='doisMoveis' || kind==='ostentacao') {
         const alreadyOwned = kind==='doisMoveis' ? furnitureKinds.filter(item=>metrics.owns?.(item)) : [];
         function viable(remaining:readonly OfficeFurniture[],count:number,spent:number,budget:number):boolean {
-          if (kind==='doisMoveis' ? count>=2 : spent>=furnitureSpendingTarget*10) return true;
+          if (kind==='doisMoveis' ? count>=2 : spent>=agendaCashTargets.ostentacao*10) return true;
           return remaining.some(item=>{
             const quoted = price(item,budget);
             const total = spent+Math.round(quoted*10);
@@ -626,7 +625,7 @@ export class PersonalAgenda {
     const completed:Mission[] = [];
     for (const mission of this.missions) {
       const total = this.missionProgress(metrics,mission)+(gains[mission.kind] ?? 0);
-      const current = mission.kind==='ostentacao' ? Math.round(total*10)/10 : total;
+      const current = Object.hasOwn(agendaCashTargets,mission.kind) ? Math.round(total*10)/10 : total;
       mission.current = Math.min(current,mission.target);
       if (current>=mission.target) {
         this.factsByMission.delete(mission.id);

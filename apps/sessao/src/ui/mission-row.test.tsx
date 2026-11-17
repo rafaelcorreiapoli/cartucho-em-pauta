@@ -23,7 +23,7 @@ import {BALLOT_MS,CASSATION_NOTICE_MS,bills,NEGOTIATION_MS,projectRules,policyDu
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {PhonePix} from './phone-pix';
-import {HEARING_MS,SUSPENSION_MS,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {HEARING_MS,SUSPENSION_MS,agendaCashTargets,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -1922,4 +1922,39 @@ test.each(['vote starts','vote expires'])('the Agenda drops NPC vote buying when
   expect(view(now).paymentsLeft).toBe(paymentsLeft);
   expect(view(now).wallet).toBe(wallet);
   expect(view(now).progression.xp).toBe(xp);
+});
+
+test.each([
+  ['contribuinte','delivered','treasury'],
+  ['reservaCofre','money-pocketed','office-1'],
+] as const)('%s completes at the cash amount shown on the HUD',(kind,type,place)=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const target = agendaCashTargets[kind];
+  const publish = (amount:number,at:number)=>{
+    const world = match.gameplayWorld([player],at,()=>false);
+    world.publish({eventId:world.nextEventId?.(),type,actor:player.id,kind:'briefcase',place,amount,at,position:player,witnesses:[]});
+  };
+  publish(target-.3,1);
+  publish(.1,2);
+  publish(.1,3);
+  const before = view(3);
+  const mission = before.missions.active.find(mission=>mission.kind===kind)!;
+  expect(mission.target).toBe(target);
+  const markup = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(markup.match(/<strong>([^<]+)<\/strong>/)?.[1]).toContain(money(target));
+  expect(markup).toContain(money(target-.1)+' / '+money(target));
+  expect(before.progression.xp).toBe(0);
+  publish(.1,4);
+  const after = view(4);
+  const completed = after.missions.completed.find(entry=>entry.id===mission.id)!;
+  expect(completed).toEqual({...mission,current:target});
+  expect(after.progression.xp).toBe(missionReward(kind).xp);
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });

@@ -24,6 +24,9 @@ export const COFFEE_DELIVERY_RECIPIENTS = 3;
 export const PUBLIC_MEETING_PEERS = 3;
 export const LATE_CAMPAIGN_WINDOW_MS = 60_000;
 export const SAVINGS_MISSION_AMOUNT = 10;
+export const agendaCashTargets = {
+  ostentacao:5, contribuinte:5, reservaCofre:5,
+} as const;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export const targetedAgendas = {
@@ -64,7 +67,7 @@ export const agendas = {
   selfieSolo:'Tire uma selfie',
   retratoGabinete:'Instale seu retrato no gabinete',
   poltrona:'Compre uma poltrona',
-  ostentacao:'Gaste R$ 50 mil em móveis',
+  ostentacao:`Gaste ${money(agendaCashTargets.ostentacao)} em móveis`,
   visitaGabinete:'Visite o gabinete de um colega',
   passeio:'Visite três salas públicas diferentes',
   pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
@@ -113,7 +116,7 @@ export const agendas = {
   produtividade:`Jogue no celular por ${agendaDurationMs.produtividade/1000} segundos no seu gabinete`,
   cafeEstrategico:'Beba um café no Cafezinho',
   contasTesouraria:'Entregue uma maleta à Tesouraria',
-  contribuinte:'Contribua com R$ 50 mil à Tesouraria',
+  contribuinte:`Contribua com ${money(agendaCashTargets.contribuinte)} à Tesouraria`,
   registroHistorico:'Tire uma selfie no Plenário',
   jornalismo:'Publique uma foto pelo Correio Interno',
   manutencaoEmergencia:'Conclua o reparo de uma pane elétrica junto a outro jogador',
@@ -124,7 +127,7 @@ export const agendas = {
   almocoPlenario:'Coma uma pizza no Plenário',
   nadaADeclarar:`Transporte dinheiro oculto por ${agendaDurationMs.nadaADeclarar/1000} segundos`,
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
-  reservaCofre:'Embolse R$ 50 mil no seu cofre',
+  reservaCofre:`Embolse ${money(agendaCashTargets.reservaCofre)} no seu cofre`,
   turismo:'Tire fotos em três salas diferentes',
   comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
   flagraGabinete:'Fotografe um visitante dentro de um gabinete',
