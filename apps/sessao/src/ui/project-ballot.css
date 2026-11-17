@@ -55,7 +55,8 @@
   color: #f7da90;
   cursor: pointer;
 }
-.project-ballot-handle > span { font-size: 20px; line-height: 1; }
+.project-ballot-chevron { width: 12px; height: 12px; }
+.project-ballot-handle[aria-expanded="false"] .project-ballot-chevron { rotate: 180deg; }
 .project-ballot:has(.project-ballot-body[hidden]) { padding-bottom: 12px; }
 .project-ballot-body {
   display: grid;
@@ -87,20 +88,7 @@
   border-radius: 10px;
   overflow: hidden;
 }
-.project-ballot-art {
-  position: relative;
-  align-self: stretch;
-  display: grid;
-  place-items: center;
-  min-height: 54px;
-  color: #d9fff6;
-  background: radial-gradient(ellipse at 40% 85%,#ffbe4a,#be471f 50%,#32242a 82%,#19221b);
-}
-.project-ballot-banner[data-project="1"] .project-ballot-art { background: radial-gradient(ellipse at 35% 85%,#1187aa,#104f68 50%,#14272a); }
-.project-ballot-banner[data-project="2"] .project-ballot-art { background: radial-gradient(ellipse at 40% 85%,#eac185,#84432d 54%,#28251e); }
-.project-ballot-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.project-ballot-art img[data-banner] { object-fit: cover; }
-.project-ballot-art .hud-glyph { width: 32px; height: 32px; }
+.project-ballot-art { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
 .project-ballot-title { padding-block: 5px; overflow-wrap: anywhere; }
 .project-ballot-title small { color: #eed18c; font-weight: 750; }
 .project-ballot-title h2 { margin: 1px 0; font-size: clamp(14px,2.5cqw,20px); line-height: 1.1; }

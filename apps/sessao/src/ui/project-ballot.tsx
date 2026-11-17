@@ -37,7 +37,6 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
-  const art = bill.banner;
   const counts = {yes:0,no:0,abstain:0,pending:0};
   for (const person of billVoters) counts[person.vote ?? 'pending']++;
 
@@ -46,15 +45,15 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
   return <section className="project-ballot" aria-label="Votação de projeto">
     <button className="project-ballot-handle" type="button" aria-expanded={expanded} aria-controls="project-ballot-body"
       aria-label={expanded?'Recolher votação':'Expandir votação'} onClick={()=>{ setExpanded(!expanded); onExpansion?.(!expanded); }}>
-      <span aria-hidden="true">{expanded?'⌄':'⌃'}</span>
+      <svg className="hud-glyph project-ballot-chevron" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M2 4l4 4 4-4"/>
+      </svg>
       {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
     </button>
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <div className="project-ballot-project">
-        <header className="project-ballot-banner" data-project={index}>
-          <div className="project-ballot-art" aria-hidden="true">
-            {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
-          </div>
+        <header className="project-ballot-banner">
+          <img className="project-ballot-art" src={import.meta.env.BASE_URL+'assets/'+bill.icon} width="72" height="72" alt=""/>
           <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
           <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
             bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :

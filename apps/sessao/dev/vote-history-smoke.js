@@ -85,6 +85,21 @@ async page => {
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
   await sheet.getByRole('heading',{name:'Auxílio Churrasco'}).waitFor();
   await sheet.getByText('Protocolado por Histórico QA').waitFor();
+  await sheet.locator('.project-ballot-art').evaluate(async image=>{
+    await image.decode();
+    const {width,height} = image.getBoundingClientRect();
+    if (!width || image.naturalWidth!==image.naturalHeight || Math.abs(width-height)>1) {
+      throw Error('O ícone do projeto precisa aparecer em formato quadrado');
+    }
+  });
+  await sheet.getByRole('button',{name:'Recolher votação'}).evaluate(button=>{
+    const handle = button.getBoundingClientRect();
+    const icon = button.querySelector('.project-ballot-chevron').getBoundingClientRect();
+    if (Math.abs((handle.left+handle.right)-(icon.left+icon.right))>1 ||
+        Math.abs((handle.top+handle.bottom)-(icon.top+icon.bottom))>1) {
+      throw Error('A seta não está centralizada no botão');
+    }
+  });
   const impactColors = await sheet.evaluate(dialog=>Object.fromEntries(['gain','loss','neutral'].map(tone=>[
     tone,getComputedStyle(dialog.querySelector(`.project-impact-value[data-effect="${tone}"]`)).color,
   ])));
