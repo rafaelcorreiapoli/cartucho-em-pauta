@@ -319,7 +319,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           });
         } else {
           const target = id as NpcId;
-          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'open-shop',target}));
+          this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'catalog' in npc && npc.catalog ? 'open-shop' : 'talk',target}));
         }
         return {sprite,label};
       });

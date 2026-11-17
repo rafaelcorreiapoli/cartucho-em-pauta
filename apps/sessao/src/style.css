@@ -187,7 +187,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
   #electoral-notice { top:auto; bottom:max(163px,calc(155px + env(safe-area-inset-bottom))); }
 }
 @media (max-width:740px) {
-  #session:has(#social-docks details[open]) #election-dock:not([open]) { visibility:hidden; }
 }
 
 .hud-symbols { position:absolute; width:0; height:0; pointer-events:none; }

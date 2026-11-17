@@ -1,3 +1,4 @@
+import { infractionLabels, type ComplaintCase } from '../src/complaints';
 import { mailPublicationFee } from '../src/market-catalog';
 import { internalMailRules, type InternalNotice, type MailAttachment, type ForensicReport } from '../src/internal-mail';
 import type { Player } from '../src/map';
@@ -32,6 +33,18 @@ export class InternalMail {
 
   view() { return this.notices; }
 
+  publishComplaint(caseFile:ComplaintCase) {
+    const infraction = infractionLabels[caseFile.kind];
+    this.addNotice({id:++this.sequence,author:'Corregedoria',subject:`Infração confirmada · ${infraction}`,
+      body:`${caseFile.accused} perdeu popularidade após a confirmação de uma denúncia de ${infraction.toLowerCase()}.`});
+  }
+
+  private addNotice(notice:InternalNotice) {
+    const expired = this.notices[internalMailRules.history-1];
+    if (expired) this.authenticity.delete(expired.id);
+    this.notices = [notice,...this.notices].slice(0,internalMailRules.history);
+  }
+
   nextPublicationAt(id:string) { return this.cooldowns.get(id) ?? 0; }
 
   publish(player:Player, raw:unknown, world:GameplayWorld,resolve?:(ref:unknown)=>{attachment:MailAttachment;authentic?:boolean}|undefined) {
@@ -55,10 +68,7 @@ export class InternalMail {
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
-    const expired = this.notices[internalMailRules.history-1];
-    if (expired) this.authenticity.delete(expired.id);
-    this.notices = [{id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)},
-      ...this.notices].slice(0,internalMailRules.history);
+    this.addNotice({id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)});
     if (!source && resolved) publishGameplay(world,player,'mail-published',{item:id,place:resolved.attachment.kind,witnesses:[]});
     if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
       const {photo} = resolved.attachment;

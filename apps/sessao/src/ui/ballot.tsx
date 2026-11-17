@@ -2,7 +2,7 @@ import type {CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 import {PhoneContactFace} from './phone-call';
 import {ProjectBallot} from './project-ballot';
-import type {BillVote,CassationView,PlenaryView,Vote} from '../plenary';
+import {majorityQuorum,type BillVote,type CassationView,type PlenaryView,type Vote} from '../plenary';
 
 type BallotState = {
   hearing:boolean; eligible:boolean; mandate:boolean; voted:number;
@@ -34,19 +34,30 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
 export function CassationBallot({state,ownId,cast}:{
   state:CassationView; ownId:string; cast:(candidate:string|null)=>void;
 }) {
+  const candidates = state.candidates.filter(person=>person.id!==ownId);
+  const skipKey = candidates.length<9 ? String(candidates.length+1) : '0';
   return <section className="cassation-ballot" aria-label="Votação de cassação">
     <p>{state.voted}/{state.electorate} votaram · {state.quorum} votos para cassar</p>
     <div className="cassation-candidates">
-      {state.candidates.filter(person=>person.id!==ownId).map((person,index)=><button key={person.id}
+      {candidates.map((person,index)=><button key={person.id}
         type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
         aria-keyshortcuts={index<9 ? String(index+1) : undefined} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
-        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd>{index+1}</kbd>}
+        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
       </button>)}
     </div>
     <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-      aria-keyshortcuts="0" aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto</button>
+      aria-keyshortcuts={skipKey} aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto <kbd className="action-key" aria-hidden="true">{skipKey}</kbd></button>
     {!state.eligible && <p>Você pode acompanhar a votação.</p>}
   </section>;
+}
+
+export function hearingBallotState(view:PlenaryView):BallotState|null {
+  const {hearing,mandate,politics,electorate} = view;
+  if (!hearing) return null;
+  return {
+    hearing:true, eligible:!!mandate && !politics?.suspended, mandate:!!mandate,
+    electorate,voted:hearing.voted,quorum:hearing.quorum ?? majorityQuorum(electorate),vote:hearing.vote,
+  };
 }
 
 export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCassation:(candidate:string|null)=>void,ownId:string) {
@@ -75,15 +86,8 @@ export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCass
         }
         return;
       }
-      const hearing = view.hearing;
-      const visible = !!hearing;
-      host.hidden = !visible;
-      const state:BallotState|null = visible ? {
-        hearing:!!hearing, eligible:!!view.mandate && !view.politics?.suspended, mandate:!!view.mandate,
-        voted:view.voted, electorate:view.electorate,
-        quorum:hearing ? Math.floor(view.electorate/2)+1 : view.billQuorum,
-        vote:hearing?.vote,
-      } : null;
+      const state = hearingBallotState(view);
+      host.hidden = !state;
       const next = JSON.stringify(state);
       if (next===key) return;
       key = next;
