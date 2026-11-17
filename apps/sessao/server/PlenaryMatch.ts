@@ -424,7 +424,7 @@ export class PlenaryMatch {
     switch (activity) {
       case 'coffee':
         if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
-        this.publishActivity(player,'coffee-drunk',now);
+        this.publishActivity(player,'coffee-drunk',now,{place:roomAt(player)});
         return {activity,text:'Cafezinho tomado. De volta à articulação!'};
       case 'library':
         if (!this.proposal) return {activity,text:'Nenhum projeto em pauta.'};

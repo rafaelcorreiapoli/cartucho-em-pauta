@@ -16,6 +16,8 @@ export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;pub
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
+const drankCoffee = (event:GameplayEvent) => event.type==='coffee-drunk' || event.type==='used' && event.kind==='coffee';
+
 const activityMissions = {
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
   privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
@@ -38,7 +40,7 @@ const activityMissions = {
   cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
   provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
     (event.photo.ground.some(item=>item.kind==='document') || event.photo.people.some(person=>person.exposed?.some(item=>item.kind==='document'))),
-  cafeEstrategico:(event:GameplayEvent) => event.type==='used' && event.kind==='coffee' && event.place==='Cafezinho',
+  cafeEstrategico:(event:GameplayEvent) => drankCoffee(event) && event.place==='Cafezinho',
   contasTesouraria:(event:GameplayEvent) => event.type==='delivered' && event.kind==='briefcase' && event.place==='treasury',
   registroHistorico:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie && inPlenary(event.position),
   jornalismo:(event:GameplayEvent) => event.type==='photo-published' && !!event.photo && event.place==='internal-mail',
@@ -46,10 +48,10 @@ const activityMissions = {
   apagarIncendio:(event:GameplayEvent) => event.type==='fire-extinguished',
   primeirosSocorros:(event:GameplayEvent) => event.type==='used' && event.kind==='firstAidKit',
   socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-parliamentarian-'),
-  fiscalCafe:(event:GameplayEvent) => event.type==='used' && event.kind==='coffee',
+  fiscalCafe:drankCoffee,
   almocoPlenario:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza' && inPlenary(event.position),
   emenda:(event:GameplayEvent) => event.type==='amendment-filed',
-  cafe:(event:GameplayEvent) => event.type==='coffee-drunk',
+  cafe:drankCoffee,
   leitura:(event:GameplayEvent) => event.type==='bill-studied',
   propaganda:(event:GameplayEvent) => event.type==='advertisement-aired',
   discurso:(event:GameplayEvent) => event.type==='speech-given',
@@ -497,7 +499,6 @@ export class PersonalAgenda {
           kind==='produtividade' && event.place==='own-office')) ||
           (event.type==='room-time' && event.place==='Cafezinho' && kind==='pausaCafe')) gains[kind] = event.duration ?? 0;
     }
-    if (event.kind==='coffee' && event.type==='used') gains.cafe = 1;
     this.progress(metrics,gains);
   }
 

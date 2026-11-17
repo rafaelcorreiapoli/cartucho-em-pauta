@@ -512,7 +512,7 @@ test.each([false,true])('Investigação Particular tracks reachable distinct cam
   expect(view(reinstalledAt+2).progression.xp).toBe(30);
 });
 
-test('free coffee missions can be drawn and completed with an empty wallet',()=>{
+test.each([false,true])('coffee missions count consumption at the station and from inventory without money (station=%s)',station=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -535,10 +535,15 @@ test('free coffee missions can be drawn and completed with an empty wallet',()=>
   Reflect.set(account.agenda,'missionDeck',['selfieSolo','visitaArquivo','passeio']);
   for (let cup=0;cup<3;cup++) {
     const now = 1+cup*stationRecharge.coffee.duration;
-    const world = match.gameplayWorld([player],now,()=>false);
-    expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
-    const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
-    expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+    if (station && !cup) {
+      expect(match.roomActivity(player,'coffee',now)).toMatchObject({activity:'coffee',text:'Cafezinho tomado. De volta à articulação!'});
+      expect(match.roomActivity(player,'coffee',now)).toMatchObject({unavailable:true});
+    } else {
+      const world = match.gameplayWorld([player],now,()=>false);
+      expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+      const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
+      expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+    }
     if (!cup) {
       expect(find(now,'cafeEstrategico',true)).toContain('data-done="true"');
       expect(find(now,'fiscalCafe')).toContain('1 / 3');
