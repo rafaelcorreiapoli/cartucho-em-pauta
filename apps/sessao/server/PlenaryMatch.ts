@@ -548,7 +548,7 @@ export class PlenaryMatch {
         break;
       }
       case 'transfer':
-        return this.canReceivePix(action.to) && this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round,'pix');
+        return this.canReceivePix(action.to) && this.economy.transfer(id,action.to,action.amount,true,this.round,'pix');
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
         break;

@@ -3,7 +3,7 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { CABINET_GRANT, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+import { CABINET_GRANT, canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
@@ -201,7 +201,7 @@ export class PoliticalEconomy {
 
   transfer(from:string, to:string, amount:number, clandestine:boolean, round:number, channel:TransferChannel='transfer') {
     const source = this.accounts.get(from), recipient = this.accounts.get(to);
-    if (!source || !recipient || from===to || !Number.isSafeInteger(amount) || amount<1 || amount>source.wallet) return false;
+    if (!source || !recipient || from===to || !canTransferAmount(amount,source.wallet)) return false;
     if (source.paymentRound!==round) {
       source.paymentRound = round;
       source.payments = 0;
@@ -211,7 +211,7 @@ export class PoliticalEconomy {
     this.transferred += amount;
     source.wallet -= amount;
     this.credit(recipient,amount);
-    const evidence = this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
+    const evidence = this.record((channel==='pix' || clandestine) ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
     this.recordTransferCompleted({id:evidence.id,from,to,amount,channel});
     return true;
   }
@@ -439,7 +439,7 @@ export class PoliticalEconomy {
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
     const eligiblePayers = () => [...availableTargets].filter(id=>
-      !this.npcIds.has(id) && this.wallet(id)>=1 && this.paymentsLeft(id,round)>0);
+      !this.npcIds.has(id) && canTransferAmount(1,this.wallet(id)) && this.paymentsLeft(id,round)>0);
     for (const id of players) {
       if (disconnected.has(id)) continue;
       const account = this.accounts.get(id);

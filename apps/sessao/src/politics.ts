@@ -206,7 +206,7 @@ export type PoliticsView = {
 };
 export type PoliticsAction =
   | {kind:'grant'; diverted:Split}
-  | {kind:'transfer'; to:string; amount:number; clandestine?:boolean}
+  | {kind:'transfer'; to:string; amount:number}
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
   | {kind:'accept' | 'cancel'; offer:number}
@@ -222,8 +222,8 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
       if ('diverted' in data && splits.includes(data.diverted as Split)) return {kind:'grant',diverted:data.diverted as Split};
       break;
     case 'transfer':
-      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount)) {
-        return {kind:'transfer',to:data.to,amount:data.amount as number};
+      if ('to' in data && typeof data.to==='string' && 'amount' in data && canTransferAmount(data.amount)) {
+        return {kind:'transfer',to:data.to,amount:data.amount};
       }
       break;
     case 'share':
@@ -243,8 +243,12 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   }
 }
 
-export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
-  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
+export function canTransferAmount(amount:unknown,wallet=Infinity):amount is number {
+  return typeof amount==='number' && Number.isSafeInteger(amount) && amount>0 && amount<=wallet;
+}
+
+export function manualTransfer(to:string,amount:number,wallet=Infinity,paymentsLeft=1):Extract<PoliticsAction,{kind:'transfer'}>|undefined {
+  if (to && canTransferAmount(amount,wallet) && paymentsLeft>0) return {kind:'transfer',to,amount};
 }
 
 

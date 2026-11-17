@@ -132,14 +132,15 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,3);
   expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11,walletIncome:3}});
   expect(view(honest).politics?.evidence).toEqual([]);
-  match.politics(host,{kind:'transfer',to:honest.id,amount:2,clandestine:true},people,4);
-  match.politics(host,{kind:'transfer',to:traitor.id,amount:0,clandestine:false},people,5); // Invalid amount.
-  match.politics(host,{kind:'transfer',to:honest.id,amount:100,clandestine:false},people,6);
+  match.politics(host,{kind:'transfer',to:honest.id,amount:2},people,4);
+  match.politics(host,{kind:'transfer',to:traitor.id,amount:0},people,5); // Invalid amount.
+  match.politics(host,{kind:'transfer',to:honest.id,amount:100},people,6);
   expect(view(host).politics?.wallet).toBe(9);
   expect(view(honest).politics?.wallet).toBe(10);
   expect(view(traitor).politics?.ledger).toEqual([]);
-  match.politics(honest,{kind:'transfer',to:traitor.id,amount:1,clandestine:false},people,7);
-  expect(view(host).politics?.ledger.at(-1)?.kind).toBe('public-transfer');
+  match.politics(honest,{kind:'transfer',to:traitor.id,amount:1},people,7);
+  expect(view(host).politics?.ledger).toEqual([]);
+  expect(view(traitor).politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
 
   match.act(at(honest,'audit'),'audit',8);
   const proof = view(honest).politics!.evidence.find(record => record.kind==='diversion')!;
@@ -190,7 +191,7 @@ test('popularity unlocks a hearing, then a wrong removal costs stability and iso
   expect(view(host)).toMatchObject({phase:'negotiation',stability:36,electorate:2});
   expect(view(honest).politics?.suspended).toBe(true);
   expect(view(honest).role).toBe('Parlamentar');
-  match.politics(honest,{kind:'transfer',to:host.id,amount:1,clandestine:false},people,resumed+1);
+  match.politics(honest,{kind:'transfer',to:host.id,amount:1},people,resumed+1);
   expect(view(host).politics?.wallet).toBe(8);
   expect(match.view(honest.id,ids,resumed).isolationSeconds).toBe(60);
   expect(match.canHandleObjects(honest.id,resumed)).toBe(false);
@@ -352,11 +353,11 @@ test('an informal loan and a later manual repayment conserve both wallets',()=>{
   const borrower = {...honest,x:148,y:146};
   const group = [lender,borrower,traitor];
   const wallet = (player:Player) => match.view(player.id,ids,0).politics!.wallet;
-  match.politics(lender,{kind:'transfer',to:borrower.id,amount:3,clandestine:true},group,1);
+  match.politics(lender,{kind:'transfer',to:borrower.id,amount:3},group,1);
   expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
   match.advance(10_000);
   expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
-  match.politics(borrower,{kind:'transfer',to:lender.id,amount:3,clandestine:true},group,10_001);
+  match.politics(borrower,{kind:'transfer',to:lender.id,amount:3},group,10_001);
   expect([wallet(lender),wallet(borrower)]).toEqual([8,8]);
 });
 
@@ -455,7 +456,7 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   const [item] = game.view(player,world).nearby;
   expect(match.economySummary(game.physicalCash())).toMatchObject({spawned:3,physical:3,discrepancy:0});
   game.act(player,{kind:'collect',item:item.id},world);
-  match.politics(player,{kind:'transfer',to:receiver.id,amount:3,clandestine:true},group,4001);
+  match.politics(player,{kind:'transfer',to:receiver.id,amount:3},group,4001);
   expect(world.spend!(player.id,1.5)).toBe(true);
   expect(match.economySummary(game.physicalCash())).toMatchObject({transferred:3,reserveFees:1.5,discrepancy:0});
   Object.assign(player,terminals.treasury.point);
@@ -530,7 +531,7 @@ test('failed mail payments and expired cash preserve the ledger across retries',
   expect(mail.view()).toEqual([]);
   expect(summary()).toEqual(before);
   expect(world.payNpc!(player.id,'missing',1)).toBe(false);
-  match.politics({...honest,x:player.x+8,y:player.y},{kind:'transfer',to:player.id,amount:1,clandestine:false},[player],world.now);
+  match.politics({...honest,x:player.x+8,y:player.y},{kind:'transfer',to:player.id,amount:1},[player],world.now);
   expect(mail.publish(player,message,world)).toBeUndefined();
   expect(mail.publish(player,message,world)).toContain('Aguarde');
   expect(mail.view()).toHaveLength(1);

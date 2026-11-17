@@ -7,7 +7,7 @@ export function PhonePix({politics,ownId,send}:{politics:PoliticsView;ownId:stri
   const [amount,setAmount] = useState(1);
   const recipients = politics.directory.filter(person=>person.id!==ownId && person.pixAvailable);
   const target = recipients.find(person=>person.id===recipient);
-  const transfer = manualTransfer(target?.id ?? '',amount,true,politics.wallet,politics.paymentsLeft);
+  const transfer = manualTransfer(target?.id ?? '',amount,politics.wallet,politics.paymentsLeft);
   return <section className="phone-pix" aria-label="Transferência Pix">
     <div className="pix-balance"><small>Saldo disponível</small><strong>{money(politics.wallet)}</strong></div>
     <h4>Para quem?</h4>
@@ -25,7 +25,7 @@ export function PhonePix({politics,ownId,send}:{politics:PoliticsView;ownId:stri
         <button type="button" className="hud-icon-button" aria-label="Aumentar valor" disabled={amount+1>politics.wallet} onClick={()=>setAmount(amount+1)}>+</button>
       </div>
       <button type="button" className="hud-button" aria-keyshortcuts="1" disabled={!transfer}
-        onClick={()=>{if (transfer?.kind==='transfer') send({kind:'transfer',to:transfer.to,amount:transfer.amount});}}>{politics.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido'} <kbd className="action-key" aria-hidden="true">1</kbd></button>
+        onClick={()=>{if (transfer) send(transfer);}}>{politics.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido'} <kbd className="action-key" aria-hidden="true">1</kbd></button>
     </footer>
   </section>;
 }
