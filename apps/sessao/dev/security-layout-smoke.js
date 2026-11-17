@@ -76,6 +76,8 @@ async page => {
   await openCamera('Câmera Cafezinho');
   const first = await canvas.elementHandle();
   await openCamera('Câmera Biblioteca',first);
+  await useShortcut(surveillance.getByRole('button',{name:'Fotografar',exact:true}));
+  await page.getByText('Foto guardada no álbum.',{exact:true}).waitFor();
   await useShortcut(surveillance.getByRole('button',{name:'Fechar canal'}));
   await viewport.waitFor({state:'detached'});
   await openCamera('Câmera Cafezinho');

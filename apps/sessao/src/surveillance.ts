@@ -27,6 +27,10 @@ export function cameraSees(origin:Motion,subject:Motion) {
 }
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
 export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number; blocked?:string};
+export type SpyCommand = SpyOption
+  | {kind:'close'}
+  | {kind:'open'|'close-channel'|'mute'|'alerts'|'capture';channel:number}
+  | {kind:'rename';channel:number;name:string};
 export type SpyView = {channels:SpyChannel[]; options:SpyOption[]; selected?:number; audio?:number; muted:boolean; progress?:number};
 
 export type SpyCameraFrame = PhotoScene & {channel:number};

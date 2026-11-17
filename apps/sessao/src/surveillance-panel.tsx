@@ -2,9 +2,9 @@ import { flushSync } from 'react-dom';
 import { SurveillanceDialogContent } from './ui/surveillance-dialog';
 import { createRoot } from 'react-dom/client';
 import { createSurveillanceViewport } from './surveillance-viewport';
-import { acceptsSpyCameraFrame, monitoredChannel, type SpyCameraFrame, type SpyDevice, type SpyView } from './surveillance';
+import { acceptsSpyCameraFrame, monitoredChannel, type SpyCommand, type SpyCameraFrame, type SpyDevice, type SpyView } from './surveillance';
 
-export function createSurveillancePanel(send:(action:object)=>void) {
+export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
   const root = createRoot(dialog);
   let viewport:HTMLDivElement|null = null;
@@ -97,7 +97,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const monitor = <>
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
-        {selected && action('Fotografar',()=>send({kind:'capture'}))}
+        {selected && action('Fotografar',()=>send({kind:'capture',channel:selected.id}))}
         {audio && action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo',()=>send({kind:'mute',channel:audio.id}))}
         {action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas',()=>send({kind:'alerts',channel:channel.id}))}
         {action('Renomear',()=>{ editing = channel.id; update(); })}

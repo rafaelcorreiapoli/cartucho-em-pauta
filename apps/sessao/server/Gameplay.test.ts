@@ -462,7 +462,9 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   alice.barriers = [[241,248,12,2]];
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(bob.id);
   alice.barriers = undefined;
-  game.spyAction(alice,{kind:'capture'},world);
+  expect(game.spyAction(alice,{kind:'capture',channel:channel.id+1},world)).toBe('O canal da câmera mudou.');
+  expect(game.photoView(alice.id,world.now).album).toEqual([]);
+  game.spyAction(alice,{kind:'capture',channel:channel.id},world);
   expect(game.photoView(alice.id,world.now).album[0]?.photo.source).toEqual({kind:'surveillance',channel:channel.name});
   expect(game.photoView(bob.id,world.now).album).toEqual([]);
   game.leave(alice,world,false);

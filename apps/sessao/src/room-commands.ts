@@ -8,6 +8,7 @@ import type { Action, BillVote, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
 import type { ParliamentarianAction } from './parliamentarians';
+import type { SpyCommand } from './surveillance';
 import type { SecurityAction } from './security';
 
 type RoomActions = {
@@ -15,7 +16,7 @@ type RoomActions = {
   'lobby-npc-count':{count:number};
   'start-match':{infiltrators?:number;npcs?:number};
   gameplay:{action:GameplayAction};
-  spy:object;
+  spy:SpyCommand;
   'security-camera':SecurityAction;
   'npc-deal':ParliamentarianAction;
   'fire-action':FireCommand;

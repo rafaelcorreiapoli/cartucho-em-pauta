@@ -815,8 +815,9 @@ export class Gameplay {
     if (player.knockedOut || player.carried || player.carrying || this.hasOfficeChannel(player.id)) return;
     if (raw.kind!=='capture') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
     const device = this.surveillance.channel(player.id,'spyCamera');
+    if (!device || !('channel' in raw) || raw.channel!==device.id) return 'O canal da câmera mudou.';
     const frame = this.spyFrame(player,world);
-    if (!device || !frame) return;
+    if (!frame) return;
     const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
       Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
     const result = this.album.capture(player.id,world.now,id=>({
