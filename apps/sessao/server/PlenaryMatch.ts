@@ -622,20 +622,27 @@ export class PlenaryMatch {
   }
 
   complaintView(id:string,photos?:readonly Photo[]) {
-    return {available:this.complaints.available(id,actor=>this.economy.name(actor),photos),history:this.complaints.history()};
+    const name = (actor:string)=>this.economy.name(actor);
+    return {available:this.complaints.available(id,name,photos),history:this.complaints.history(),
+      proofs:photos && this.complaints.proofs(id,photos,actor=>this.electorate.has(actor),name)};
   }
 
   canFileComplaint(player:Player,now:number) {
-    return this.phase==='negotiation' && this.canHandleObjects(player.id,now) && this.at(player,'audit');
+    return this.phase==='negotiation' && !player.knockedOut && !player.carried && !player.carrying &&
+      this.canHandleObjects(player.id,now) && this.at(player,'audit');
   }
 
-  submitComplaint(player:Player,id:number,now:number,photo?:Photo) {
+  submitComplaint(player:Player,id:number|string,now:number,photo?:Photo) {
     if (!this.canFileComplaint(player,now)) {
       return 'Vá ao balcão da Corregedoria durante a articulação.';
     }
-    const result = this.complaints.submit(player.id,id,actor=>this.economy.name(actor),photo);
+    const name = (actor:string)=>this.economy.name(actor);
+    const result = typeof id==='number' ? this.complaints.submit(player.id,id,name,photo) :
+      photo && this.complaints.submitGame(player.id,photo,id,actor=>this.electorate.has(actor),name);
     if (!result) return 'Caso indisponível ou fotografia incompatível.';
     this.economy.rewardFromReserve(player.id,complaintRules.reward);
+    this.economy.changePopularity(player.id,complaintRules.popularityGain);
+    this.economy.earnXp(player.id,complaintRules.xp);
     this.economy.changePopularity(result.actor,-complaintRules.popularityLoss);
     this.election.scandal(result.actor);
     this.economy.recordOfficialScandal();
