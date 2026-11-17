@@ -99,6 +99,13 @@ jobs:
           name: exploration-hud-screenshots
           path: /tmp/sessao-exploration-*.png
           if-no-files-found: error
+      - name: Keep full ballot screenshots
+        if: matrix.flow == 'vote-history'
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-ballot-screenshots
+          path: /tmp/sessao-ballot-*.png
+          if-no-files-found: error
       - name: Keep the received megaphone clips
         if: matrix.flow == 'megaphone-speech'
         uses: actions/upload-artifact@v4
