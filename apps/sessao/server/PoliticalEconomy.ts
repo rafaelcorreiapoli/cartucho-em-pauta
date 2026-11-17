@@ -172,8 +172,12 @@ export class PoliticalEconomy {
   }
 
   settleBet(id:string,stake:number,payout:number,maxPayout:number) {
-    if (Math.round((this.rewardReserve+stake)*10)<Math.round(maxPayout*10) || !this.spend(id,stake)) return false;
-    if (payout) this.rewardFromReserve(id,payout);
+    const stakeThousands = Math.round(stake*10);
+    const reserveThousands = Math.round(this.rewardReserve*10);
+    if (Math.round(this.wallet(id)*10)<stakeThousands ||
+        reserveThousands+stakeThousands<Math.round(maxPayout*10)) return false;
+    if (!payout) return this.spend(id,stake);
+    this.rewardFromReserve(id,(Math.round(payout*10)-stakeThousands)/10);
     return true;
   }
 

@@ -146,3 +146,14 @@ test('Combina Doces awards XP for each matched fruit and rejects replayed swaps'
   expect(rewards).toEqual([3*MINIGAME_FRUIT_XP]);
   expect(phone.view('b',world.players).candy).toBeUndefined();
 });
+
+test('a winning bet credits only the profit and conserves the match reserve',()=>{
+  const economy = new PoliticalEconomy();
+  economy.reset([{id:'a',name:'Alice'}],()=>0.5);
+  expect(economy.settleBet('a',0.5,4.5,4.5)).toBe(true);
+  expect(economy.view('a',[],0,false,()=>true)).toMatchObject({wallet:12,walletIncome:4});
+  expect(economy.settleBet('a',0.5,4.5,4.5)).toBe(true);
+  expect(economy.wallet('a')).toBe(16);
+  expect(economy.settleBet('a',0.5,0,4.5)).toBe(false);
+  expect(economy.wallet('a')).toBe(16);
+});
