@@ -202,7 +202,7 @@ test('shop purchases furnish the correct office slots even when the inventory is
 });
 
 test('a visitor can tear down a portrait inside an office without collecting it',()=>{
-  const {players:[owner,visitor],game,world,act,buy,tick} = setup();
+  const {players:[owner,visitor],game,world,act,buy,tick,events} = setup();
   const [home] = privateOffices;
   const point = decorPoint(home,'portrait');
   Object.assign(owner,npcs.credentialsVendor.interaction);
@@ -210,9 +210,13 @@ test('a visitor can tear down a portrait inside an office without collecting it'
   const token = game.view(owner,world).dialogue?.token;
   expect(game.act(owner,{kind:'shop-buy',target:'portrait',token},world)).toBe('Compra guardada no inventário.');
   const [portrait] = game.view(owner,world).inventory;
-  Object.assign(owner,point);
-  expect(act(owner,'office-install',home.id,portrait.id)).toBe('Instalando decoração…');
+  expect(game.view(owner,world).officeOptions?.some(option=>option.kind==='office-install')).toBe(false);
+  Object.assign(owner,{x:point.x,y:point.y+15});
+  const install = game.view(owner,world).officeOptions?.find(option=>option.kind==='office-install');
+  expect(install).toEqual({kind:'office-install',label:'Pendurar retrato',item:portrait.id,place:home.id});
+  expect(game.act(owner,install!,world)).toBe('Instalando decoração…');
   tick(decorationInstallMs);
+  expect(events).toContainEqual(expect.objectContaining({type:'installed',kind:'portrait',actor:owner.id,place:home.id}));
   for (let i=0;i<INVENTORY_SLOTS;i++) buy(visitor,'lockpick');
   Object.assign(visitor,atDoor(home,false));
   expect(game.view(visitor,world).officeOptions?.some(option=>option.label==='Arrancar retrato')).toBe(false);
