@@ -136,21 +136,12 @@ export class SessionRoom extends Room {
       this.match.canHandleObjects(player.id,now) && canUseSecurityTerminal(player);
   }
 
-  private lastMegaphone = new Map<string,boolean>();
-
-  private routeVoice(speaker:string|undefined) {
+  private routeVoice(speaker:string|undefined,broadcaster:string|undefined) {
     const participants = [...this.voice].flatMap(id=>{
       const player = this.players.get(id)?.player;
       return player ? [player] : [];
     });
     const spatial = this.match.phase==='negotiation';
-    const broadcaster = spatial ? this.gameplay.megaphoneSpeaker() : undefined;
-    for (const client of this.clients) {
-      const active = !!broadcaster && client.sessionId!==broadcaster;
-      if ((this.lastMegaphone.get(client.sessionId) ?? false)===active) continue;
-      client.send('megaphone-active',active);
-      this.lastMegaphone.set(client.sessionId,active);
-    }
     const localVolume = (listener:Player, talker:Player) =>
       !spatial || talker.id===speaker || this.gameplay.callPeer(listener.id)===talker.id
         ? 1 : localPerception(listener,talker).volume;
@@ -516,7 +507,8 @@ export class SessionRoom extends Room {
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,now) : undefined;
       }
-      this.routeVoice(this.match.speaker(now));
+      const broadcaster = this.match.phase==='negotiation' ? this.gameplay.megaphoneSpeaker() : undefined;
+      this.routeVoice(this.match.speaker(now),broadcaster);
       const ids = players.map(({id}) => id);
       const projectWorld = sendPlayerSnapshot || projectedPhase!==this.match.phase;
       projectedPhase = this.match.phase;
@@ -533,6 +525,7 @@ export class SessionRoom extends Room {
           continue;
         }
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
+        if (broadcaster && broadcaster!==id) view.megaphoneActive = true;
         if (this.match.running) {
           view.complaints = this.match.complaintView(id);
           if (this.match.canFileComplaint(state.player,now)) view.complaints.atDesk = true;
@@ -625,7 +618,6 @@ export class SessionRoom extends Room {
   onReconnect(client:Client) {
     gameplayMetrics.increment('reconnects');
     this.match.setPlayerConnected(client.sessionId,true);
-    this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
   }
@@ -633,7 +625,6 @@ export class SessionRoom extends Room {
   onLeave(client: Client) {
     this.securityFeeds.delete(client.sessionId);
     this.leaveVoice(client.sessionId);
-    this.lastMegaphone.delete(client.sessionId);
     this.lastMatchView.delete(client.sessionId);
     this.lastPhotos.delete(client.sessionId);
     this.npcTalk.leave(client.sessionId);
