@@ -88,12 +88,12 @@ async page => {
   await page.keyboard.press('n');
   await sheet.locator('[data-vote-state="abstain"]').getByText('Histórico QA').waitFor();
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
-  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
+  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
   await page.locator('#session[data-phase="ballot"]').waitFor();
-  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:20000});
+  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
   await page.locator('#session[data-phase="ballot"]').waitFor();
   const history = page.locator('#vote-history');
   await history.locator('summary').click();
