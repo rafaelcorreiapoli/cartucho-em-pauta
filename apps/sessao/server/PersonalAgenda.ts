@@ -453,6 +453,12 @@ export class PersonalAgenda {
     }
     const action = kind==='campanhaUltimaHora' ? 'propaganda' : kind;
     if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
+    if (kind==='bandejaGourmet') {
+      // Coffee can be collected at the station and carried back to the office.
+      const hasSecondFood = (Object.keys(foods) as (keyof typeof foods)[]).some(food=>
+        food!=='coffee' && (metrics.owns?.(food) || foods[food].price<=metrics.wallet));
+      if (!hasSecondFood) return false;
+    }
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<(food==='firstAidKit' ? firstAidKit.price : foods[food].price) && !metrics.owns?.(food)) {
       const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;
