@@ -693,7 +693,11 @@ test('the HUD replaces Fiscalização Paralela when the last foreign safe leaves
   expect(match.start(inspector.id,players,0,()=>.9)).toBe(true);
   const game = new Gameplay();
   game.reset(0,()=>.9,[inspector,owner]);
-  game.create('xray',{holder:inspector.id});
+  Object.assign(inspector,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(inspector,{kind:'open-shop',target:'vendor'},world);
+  game.act(inspector,{kind:'shop-buy',target:'xray',token:game.view(inspector,world).dialogue?.token},world);
+  expect(game.owns(inspector.id,'xray')).toBe(true);
   match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(inspector.id);
   Reflect.set(agenda,'missions',[]);
