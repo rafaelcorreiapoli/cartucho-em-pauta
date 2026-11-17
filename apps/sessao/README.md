@@ -297,14 +297,16 @@ substitui a captura de microfone antes de iniciar o VoIP.
 
 ### Smoke test do filtro de Megafone no Chrome
 
-Com o Vite e a sessão Chrome silenciosa da seção anterior, prepare uma fala
-sintética no macOS com a voz Luciana instalada e execute:
+Com o Vite e a sessão Chrome silenciosa da seção anterior, execute a partir de
+`apps/sessao`:
 
 ```sh
-say -v Luciana -r 155 -o /tmp/sessao-megaphone-speech.aiff "Atenção, parlamentares. A sessão começa em cinco minutos. O projeto será votado no plenário."
-ffmpeg -y -i /tmp/sessao-megaphone-speech.aiff -ac 1 -ar 24000 /tmp/sessao-megaphone-speech.wav
 playwright-cli -s=sessao-call run-code --filename=dev/megaphone-speech-smoke.js
 ```
+
+A gravação `dev/fixtures/megaphone-pt-br.flac` foi sintetizada no macOS com a
+voz Luciana, a 155 palavras por minuto, e convertida para FLAC mono a 24 kHz.
+O workflow também executa o teste em Chrome headless.
 
 O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
 no receptor. Compara a relação entre graves e médios com e sem Megafone,
