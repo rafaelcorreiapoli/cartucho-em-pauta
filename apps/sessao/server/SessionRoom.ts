@@ -84,8 +84,8 @@ export class SessionRoom extends Room {
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
-        if (event.type==='used' && isFood(event.kind)) {
-          const drink = isDrink(event.kind);
+        if (event.type==='coffee-drunk' || event.type==='used' && isFood(event.kind)) {
+          const drink = event.type==='coffee-drunk' || isDrink(event.kind);
           this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
@@ -303,11 +303,9 @@ export class SessionRoom extends Room {
       const {activity} = raw;
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
-      const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
-      if (result) {
-        client.send('room-activity-result',result);
-        if (result.activity==='coffee' && !result.unavailable) client.send('food-consumed','drink');
-      }
+      const world = this.gameplayWorld();
+      const result = this.match.roomActivity(player,activity as RoomActivity,world.now,world.publish);
+      if (result) client.send('room-activity-result',result);
     });
     this.onMessage('voice-activity',client=>{
       if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.clock.currentTime);

@@ -489,8 +489,20 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
+    const record = Reflect.get(match,'recordGameplay').bind(match);
+    let coffeeEvent:GameplayEvent|undefined;
+    Reflect.set(match,'recordGameplay',(event:GameplayEvent)=>{
+      const accepted = record(event);
+      if (accepted && event.type==='coffee-drunk') coffeeEvent = event;
+      return accepted;
+    });
     passenger.send('room-activity',{activity:'coffee',token:3270});
+    passenger.send('room-activity',{activity:'coffee',token:3270});
+    passenger.send('room-activity',{activity:'coffee',token:3271});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
+    expect(coffeeEvent?.eventId).toBeDefined();
+    Reflect.set(match,'recordGameplay',record);
+    Reflect.get(room,'gameplayWorld').call(room).publish({...coffeeEvent});
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
     const gameplaySystem = Reflect.get(room,'gameplay');
     const snack = gameplaySystem.create('coxinha',{holder:passenger.sessionId});
