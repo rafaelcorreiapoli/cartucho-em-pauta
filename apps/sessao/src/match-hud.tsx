@@ -1,15 +1,15 @@
-import {contextCommand} from './ui/context-command';
 import {fieldActions,type FieldAction} from './ui/field-actions';
 import {ContextActionButton} from './ui/context-action-button';
 import {ContextProgress,contextProgress} from './ui/context-progress';
 import {mountRewardEffects} from './ui/reward-effects';
 import {ContextOverflow} from './ui/context-overflow';
-import {contextActionKeys} from './ui/context-action-keys';
-import {mountStationShortcuts} from './ui/station-shortcuts';
+import {NearbyActions,type NearbyItem} from './ui/nearby-items';
+import {contextActionKeys,type ContextKey} from './ui/context-action-keys';
+import {StationShortcuts,stationShortcuts,type Shortcut} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
-import { mountElectionStationActions } from './ui/election-station-actions';
+import { ElectionStationActions,electionStationActions,electionButtons } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
-import { mountLegislativeStationActions } from './ui/legislative-station-actions';
+import { LegislativeStationActions,legislativeStationActions,legislativeButtons } from './ui/legislative-station-actions';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -21,16 +21,24 @@ import { projectRules, stations as stationPoints, canReachStation, stabilityRule
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 
+const noNearbyItems:readonly NearbyItem[] = [];
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;expanded:()=>boolean;visible:()=>boolean;close:()=>void}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
   const stations = element('stations');
-  const shortcuts = mountStationShortcuts(element('station-shortcuts'),kind=>{
+  const contextRoot = createRoot(element('context-actions-mount'));
+  let nearbyOpen = false;
+  let overflowExpanded = false;
+  let contextKey = '';
+  let lastItems:readonly NearbyItem[] = [];
+  const keyboardActions = new Map<string,{activate:()=>void;station?:Station}>();
+
+  function selectShortcut(kind:Shortcut['kind']) {
     switch (kind) {
       case 'grant':
       case 'hearing': institutional.openInstitutional(); return;
@@ -38,10 +46,18 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       case 'publish': institutional.openDossier(); return;
       default: sendActivity(kind);
     }
-  });
-  const fieldHost = element('field-actions');
-  const progressRoot = createRoot(element('office-progress-mount'));
-  let progressKey = '';
+  }
+  function toggleOverflow() {
+    overflowExpanded = !overflowExpanded;
+    if (overflowExpanded) nearbyOpen = false;
+    actions();
+  }
+  function toggleNearby() {
+    nearbyOpen = !nearbyOpen;
+    if (nearbyOpen) overflowExpanded = false;
+    actions();
+    if (nearbyOpen) element('nearby-items')?.scrollTo(0,0);
+  }
   const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
   function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
@@ -53,68 +69,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return true;
   }
 
-  const fieldRoot = createRoot(fieldHost);
-  let fieldKey = '';
   let roster:Player[] = [];
   let own:Player | undefined;
-  function renderField(view:PlenaryView|undefined, player:Player|undefined) {
-    const actions = fieldActions(view,player,roster);
-    const key = JSON.stringify(actions);
-    if (key===fieldKey) return actions.length>0;
-    fieldKey = key;
-    flushSync(()=>fieldRoot.render(actions.map(({action,...button})=>
-      <ContextActionButton key={JSON.stringify(action)} {...button} activate={()=>sendField(action)}/>)));
-    return actions.length>0;
-  }
-  const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
-  const electoral = mountElectionStationActions(element('station-election-actions'),election.send);
-  const overflowHost = element('context-overflow');
-  const overflowRoot = createRoot(overflowHost);
-  let overflowExpanded = false;
-  let overflowKey = '';
-  const keyboardActions = new Map<string,HTMLButtonElement>();
-  const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button:not(.context-more)')];
-  function toggleOverflow() {
-    overflowExpanded = !overflowExpanded;
-    if (overflowExpanded) nearby.close();
-    refreshActionKeys();
-  }
-  const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
-  function refreshActionKeys() {
-    const buttons = actionButtons();
-    const controls = buttons.map(button=>({
-      kind:button.id==='nearby-objects' ? 'nearby' as const : button.closest('#nearby-items') ? 'item' as const : 'action' as const,
-      visible:!button.closest(unavailable),enabled:!button.disabled,
-    }));
-    const model = contextActionKeys([...controls,{kind:'more',visible:false,enabled:true}],overflowExpanded,nearby.expanded());
-    if (!model.hasMore) overflowExpanded = false;
-    const overflow = {visible:model.hasMore,expanded:model.showOverflow,shortcut:model.buttons.at(-1)?.key};
-    const nextOverflowKey = JSON.stringify(overflow);
-    if (nextOverflowKey!==overflowKey) {
-      overflowKey = nextOverflowKey;
-      flushSync(()=>overflowRoot.render(<ContextOverflow {...overflow} toggle={toggleOverflow}/>));
-    }
-    keyboardActions.clear();
-    const more = overflowHost.querySelector<HTMLButtonElement>('.context-more');
-    if (more && overflow.shortcut) keyboardActions.set(overflow.shortcut,more);
-    for (const [index,button] of buttons.entries()) {
-      const {placement,key:shortcut} = model.buttons[index];
-      if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
-      else delete button.dataset.contextOverflow;
-      if (shortcut) keyboardActions.set(shortcut,button);
-      if (button.getAttribute('aria-keyshortcuts')===(shortcut ?? null)) continue;
-      if (shortcut) button.setAttribute('aria-keyshortcuts',shortcut);
-      else button.removeAttribute('aria-keyshortcuts');
-    }
-  }
-  function afterContextAction(target:Element) {
-    if (target.closest('#nearby-objects') && nearby.expanded()) overflowExpanded = false;
-    refreshActionKeys();
-  }
-  function onContextClick(event:MouseEvent) {
-    if (event.target instanceof Element) afterContextAction(event.target);
-  }
-  stations.addEventListener('click',onContextClick);
+
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || hudConsumesKeys(event.target)) return;
@@ -125,42 +82,40 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       return;
     }
     if (event.key==='Escape') {
-      if (!stations.hidden && nearby.expanded()) {
+      if (!stations.hidden && (nearbyOpen || overflowExpanded)) {
         event.preventDefault();
-        nearby.close();
-        refreshActionKeys();
-      } else if (!stations.hidden && overflowExpanded) {
-        event.preventDefault();
-        toggleOverflow();
+        nearbyOpen = overflowExpanded = false;
+        actions();
       }
       return;
     }
-    if (stations.hidden || event.shiftKey || !/^[1-9]$/.test(event.key)) return;
-    const button = keyboardActions.get(event.key);
-    if (!button || button.disabled || button.closest(unavailable) || button.dataset.contextOverflow==='true') return;
-    const activate = contextCommand(button);
-    if (!activate) return;
+    if (stations.hidden || event.shiftKey) return;
+    const command = keyboardActions.get(event.key);
+    if (!command) return;
     event.preventDefault();
-    if (button.dataset.station) playStationFeedback(button);
-    activate();
-    afterContextAction(button);
+    if (command.station) {
+      const button = stations.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
+      if (button) animateStation(button);
+      stationFeedback(command.station);
+    }
+    command.activate();
   }
   document.addEventListener('keydown',onActionKey);
 
   function onStationClick(event:MouseEvent) {
     const button = (event.target as Element).closest<HTMLButtonElement>('button[data-station]');
-    if (!button || button.disabled || button.closest(unavailable)) return;
-    playStationFeedback(button);
+    if (!button || button.disabled) return;
+    animateStation(button);
+    stationFeedback(button.dataset.station as Station);
   }
 
-  function playStationFeedback(button:HTMLButtonElement) {
+  function animateStation(button:HTMLButtonElement) {
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       button.animate([
         {filter:'brightness(1.55)',transform:'translateY(4px)'},
         {filter:'brightness(1)',transform:'translateY(0)'},
       ],{duration:230,easing:'ease-out'});
     }
-    stationFeedback(button.dataset.station as Station);
   }
   stations.addEventListener('click',onStationClick,true);
   let previous:PlenaryView | undefined;
@@ -170,13 +125,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     const interactionView = exploring ? view : undefined;
     const installing = !!interactionView?.gameplay?.installationProgress;
-    const hasFieldAction = renderField(installing ? undefined : interactionView,player);
+    const field = fieldActions(installing ? undefined : interactionView,player,roster);
     const meter = contextProgress(interactionView);
-    const meterKey = JSON.stringify(meter) ?? '';
-    if (progressKey!==meterKey) {
-      progressKey = meterKey;
-      progressRoot.render(meter ? <ContextProgress meter={meter}/> : null);
-    }
     const canInteract = exploring && !installing && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
     let best = STATION_RADIUS;
@@ -190,18 +140,64 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       }
     }
     nearby.render(player,canInteract);
-    const hasLegislativeAction = legislative.render(view,context);
-    const hasElectionAction = electoral.render(view,context,election.hasVoice());
-    const hasShortcut = shortcuts.render(view,player,context);
-    const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
+    const items = canInteract ? nearby.get() : noNearbyItems;
+    if (!items.length || document.querySelector('dialog:modal')) nearbyOpen = false;
     if (!exploring || !canInteract) overflowExpanded = false;
-    stations.hidden = !exploring || (!nearby.visible() && !hasAction && !meter && !hasFieldAction);
-    refreshActionKeys();
+    const legislative = legislativeStationActions(view,context);
+    const electoral = electionStationActions(view,context,election.hasVoice());
+    const shortcuts = stationShortcuts(view,player,context);
+    const key = JSON.stringify([legislative,electoral,shortcuts,field,meter,nearbyOpen,overflowExpanded]);
+    stations.hidden = !exploring || !(items.length || legislative.length || electoral.actions.length || electoral.voiceHint ||
+      shortcuts.length || meter || field.length);
+    if (key===contextKey && items===lastItems) return;
+    contextKey = key;
+    lastItems = items;
+
+    const groups = [
+      legislative.map(action=>({...legislativeButtons[action],action,activate:()=>sendLegislative(action)})),
+      electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>election.send({kind})})),
+      shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
+      field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
+    ] as const;
+    const normal = groups.map(group=>group.map(button=>({
+      kind:'action' as const,visible:true,enabled:!('blocked' in button && button.blocked) && !('disabled' in button && button.disabled),
+      activate:button.activate,station:'station' in button ? button.station : undefined,
+    })));
+    const trigger = {kind:'nearby' as const,visible:items.length>0,enabled:true,activate:toggleNearby,station:undefined};
+    const tiles = items.map(item=>({kind:'item' as const,visible:nearbyOpen,enabled:true,activate:item.activate,station:undefined}));
+    const more = {kind:'more' as const,visible:false,enabled:true,activate:toggleOverflow,station:undefined};
+    const controls = [...normal[0],...normal[1],trigger,...tiles,...normal[2],...normal[3],more];
+    const model = contextActionKeys(controls,overflowExpanded,nearbyOpen);
+    if (!model.hasMore) overflowExpanded = false;
+    keyboardActions.clear();
+    const presentation = new Map<typeof controls[number],ContextKey>();
+    for (const [index,control] of controls.entries()) {
+      const {key,placement} = model.buttons[index];
+      if (key) keyboardActions.set(key,control);
+      presentation.set(control,{key,overflow:placement==='primary'?'false':placement==='overflow'?'expanded':placement==='hidden'?'true':undefined});
+    }
+    const keysFor = (index:number)=>normal[index].map(control=>presentation.get(control)!);
+
+    flushSync(()=>contextRoot.render(<>
+      <div id="legislative-station-actions" className="station-grid"><LegislativeStationActions actions={legislative} send={sendLegislative} keys={keysFor(0)}/></div>
+      <div id="station-election-actions" className="station-grid">
+        <ElectionStationActions {...electoral} send={election.send} keys={keysFor(1)}/>
+      </div>
+      <div id="office-progress-mount">{meter && <ContextProgress meter={meter}/>}</div>
+      <div id="nearby-actions" className="context-nearby"><NearbyActions items={items} expanded={nearbyOpen}
+        trigger={presentation.get(trigger)} keys={tiles.map(tile=>presentation.get(tile)!)} toggle={toggleNearby}/></div>
+      <div id="station-shortcuts"><StationShortcuts actions={shortcuts} select={selectShortcut} keys={keysFor(2)}/></div>
+      <div id="field-actions">{groups[3].map((button,index)=><ContextActionButton key={JSON.stringify(field[index].action)}
+        {...button} presentation={presentation.get(normal[3][index])}/>)}</div>
+      <div id="context-overflow"><ContextOverflow visible={model.hasMore} expanded={model.showOverflow}
+        shortcut={presentation.get(more)?.key} toggle={toggleOverflow}/></div>
+    </>));
   }
 
   return {
     notify,
     showReward:rewards.show,
+    refreshActions:()=>actions(),
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
       if (text) notify(info.title,text);
@@ -249,20 +245,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     destroy() {
       gear.destroy();
       notices.destroy();
-      legislative.destroy();
-      electoral.destroy();
       rewards.destroy();
       document.removeEventListener('keydown',onActionKey);
-      stations.removeEventListener('click',onContextClick);
-      for (const button of actionButtons()) {
-        button.removeAttribute('aria-keyshortcuts');
-      }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
-      progressRoot.unmount();
-      shortcuts.destroy();
-      overflowRoot.unmount();
-      fieldRoot.unmount();
+      contextRoot.unmount();
     },
   };
 }

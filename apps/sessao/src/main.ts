@@ -265,6 +265,7 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
+      if (pickup) hud.refreshActions();
       audio.cue('pickup');
     });
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));

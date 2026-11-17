@@ -1,5 +1,5 @@
 import type {ComplaintProof} from './complaints';
-import {mountNearbyActions,type NearbyItem} from './ui/nearby-items';
+import {createNearbyActions,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
 import type { PoliticsAction } from './politics';
@@ -61,7 +61,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const slotsRoot = createRoot(slots);
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
-  const nearbyActions = mountNearbyActions(element('nearby-actions'));
+  const nearbyActions = createNearbyActions();
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
@@ -565,9 +565,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.close(); }
-      if (document.querySelector('dialog:modal')) nearbyActions.close();
-      if (!view.gameplay && dialog.open) dialog.close();
+      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.update([]); nearbyKey = ''; }
+        if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory);
       if (call?.state==='connected' && old?.call?.state!=='connected' && dialog.dataset.mode==='phone' && app==='Telefone') dialog.close();
@@ -629,7 +628,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       slots.hidden = true;
       slotsRoot.unmount();
       requestRoot.unmount();
-      nearbyActions.destroy();
     },
   };
 }

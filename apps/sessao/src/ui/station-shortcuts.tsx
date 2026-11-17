@@ -1,5 +1,4 @@
-import {createRoot} from 'react-dom/client';
-import {flushSync} from 'react-dom';
+import type {ContextKey} from './context-action-keys';
 import type {Player} from '../map';
 import type {PlenaryView,Station} from '../plenary';
 import {roomActivities,type RoomActivity} from '../room-activities';
@@ -7,7 +6,7 @@ import {canPublishEvidence} from './dossier';
 import {cassationLabel,institutionalActions} from './institutional-actions';
 import {ContextActionButton} from './context-action-button';
 
-type Shortcut = {
+export type Shortcut = {
   kind:RoomActivity|'grant'|'hearing'|'cassation'|'publish';
   station:Station;
   label:string;
@@ -30,23 +29,6 @@ export function stationShortcuts(view?:PlenaryView,player?:Player,station?:Stati
   return actions;
 }
 
-export function StationShortcuts({actions,select}:{actions:readonly Shortcut[];select:(kind:Shortcut['kind'])=>void}) {
-  return actions.map(({kind,...button})=><ContextActionButton key={kind} {...button} activate={()=>select(kind)}/>);
-}
-
-export function mountStationShortcuts(element:HTMLElement,select:(kind:Shortcut['kind'])=>void) {
-  const root = createRoot(element);
-  let current = '';
-  return {
-    render(view?:PlenaryView,player?:Player,station?:Station) {
-      const actions = stationShortcuts(view,player,station);
-      const key = JSON.stringify(actions);
-      if (current!==key) {
-        current = key;
-        flushSync(()=>root.render(<StationShortcuts actions={actions} select={select}/>));
-      }
-      return actions.length>0;
-    },
-    destroy:()=>root.unmount(),
-  };
+export function StationShortcuts({actions,select,keys}:{keys?:readonly ContextKey[];actions:readonly Shortcut[];select:(kind:Shortcut['kind'])=>void}) {
+  return actions.map(({kind,...button},index)=><ContextActionButton key={kind} {...button} presentation={keys?.[index]} activate={()=>select(kind)}/>);
 }

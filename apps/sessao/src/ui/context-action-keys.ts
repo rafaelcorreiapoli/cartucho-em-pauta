@@ -1,3 +1,4 @@
+export type ContextKey = {key?:string;overflow?:'false'|'expanded'|'true'};
 type ContextButton = {kind:'action'|'nearby'|'item'|'more';visible:boolean;enabled:boolean};
 type ContextPlacement = 'primary'|'overflow'|'hidden';
 
