@@ -146,15 +146,22 @@ async page => {
     const transfer = pix.getByRole('button',{name:'Transferir',exact:true});
     if (!await transfer.isDisabled()) throw Error('O Pix deve exigir um destinatário');
     await page.keyboard.press('1');
-    await pix.getByRole('button',{name:'Bia',exact:true}).click();
+    await page.keyboard.press('2');
+    await pix.getByRole('button',{name:'Bia',exact:true,pressed:true}).waitFor();
+    await page.keyboard.press('ArrowRight');
+    await pix.getByText('R$ 20 mil',{exact:true}).waitFor();
+    await page.keyboard.press('ArrowLeft');
+    await pix.getByText('R$ 10 mil',{exact:true}).waitFor();
     await transfer.evaluate(button=>{
       window.syntheticPixClicks = 0;
       button.addEventListener('click',event=>{
         if (!event.isTrusted) window.syntheticPixClicks++;
       });
       button.removeAttribute('aria-keyshortcuts');
+      button.setAttribute('aria-label','Transferência original oculta do F2');
     });
-    await page.keyboard.press('1');
+    await page.keyboard.press('F2');
+    await palette.getByRole('button',{name:/Transferir/}).click();
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
     if (await page.evaluate(()=>window.syntheticPixClicks)!==0) throw Error('O atalho simulou clique para transferir');
 
