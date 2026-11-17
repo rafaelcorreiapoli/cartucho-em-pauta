@@ -239,6 +239,8 @@ export class PersonalAgenda {
     if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
     if (kind==='visitaDoisGabinetes' && this.targets.filter(person=>this.hasOffice?.(person.id)!==false).length<remaining) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
+    if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
+    if (kind==='flagraGabinete' && !this.hasOffice?.() && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
       if (this.spyAvailability?.(device)===false) return false;
@@ -467,9 +469,7 @@ export class PersonalAgenda {
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
-    if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
-    if (kind==='flagraGabinete' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<equipmentPrice('bugDetector')) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
