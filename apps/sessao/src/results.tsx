@@ -78,7 +78,7 @@ export function CassationResult({text}:{text:string}) {
   return <section><h3>Resultado da cassação</h3><p>{text}</p></section>;
 }
 
-export function mountResults() {
+export function mountResults(closeGameplay:()=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
   const finaleRoot = createRoot(finale);
@@ -100,7 +100,7 @@ export function mountResults() {
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
         flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));
-        document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
+        closeGameplay();
         if (!dialog.open) dialog.showModal();
       }
       return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged || cassation ? 'election' : undefined;

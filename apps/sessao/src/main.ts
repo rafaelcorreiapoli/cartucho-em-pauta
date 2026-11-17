@@ -131,8 +131,6 @@ function showLobby(message: string) {
   game = undefined;
   room = undefined;
   settings.close();
-  document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
-  document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
   renderLoading();
   landing.hidden = false;
@@ -302,7 +300,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
     const projectPicker = mountProjectPicker();
-    const results = mountResults();
+    const results = mountResults(gameplay.close);
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
@@ -379,7 +377,7 @@ async function connect(join: () => Promise<Room>) {
       const negotiating = phase==='negotiation';
       settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
         phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
-      if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
+      if (phase==='ballot' || phase==='hearing') gameplay.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       setup.hidden = matchRunning;

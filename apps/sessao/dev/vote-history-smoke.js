@@ -57,12 +57,16 @@ async page => {
 
   for (const [width,height] of [[1280,720],[1024,600],[800,600]]) await measureHud(width,height);
   await page.setViewportSize({width:1280,height:720});
+  await page.keyboard.press('c');
+  const phone = page.locator('#gameplay-dialog[data-mode="phone"]');
+  await phone.waitFor({state:'visible'});
   const countdown = page.locator('#ballot-countdown');
   await countdown.getByRole('status').getByText(/Votação começando em [1-5]…/).waitFor();
   await page.keyboard.press('Escape');
   if (!await countdown.isVisible()) throw Error('The countdown closed before the vote');
   await page.locator('#session[data-phase="ballot"]').waitFor();
   await countdown.waitFor({state:'hidden'});
+  await phone.waitFor({state:'hidden'});
   const exploring = ['.character-dock','#agenda-dock','.deck-tools','#election-dock','#context-hud'];
   for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
   await page.locator('#congress-dock').waitFor({state:'visible'});
