@@ -146,10 +146,18 @@ async page => {
       await client.locator('#session[data-phase="hearing"]').waitFor();
       await client.locator('#ballot').getByText(/0\/2 votaram/).waitFor();
     }
-    await page.locator('#ballot').getByRole('button',{name:'Afastar',exact:true}).click();
+    const originalVote = page.locator('#ballot').getByRole('button',{name:'Afastar',exact:true});
+    await originalVote.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
+    await page.keyboard.press('F2');
+    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+    const vote = palette.getByRole('button',{name:'Afastar',exact:true});
+    await vote.waitFor();
+    await page.keyboard.press(await vote.getAttribute('aria-keyshortcuts'));
+    await palette.waitFor({state:'hidden'});
+    await page.locator('#ballot').getByText('Seu voto: afastar',{exact:true}).waitFor();
     await guest.locator('#ballot').getByText(/1\/2 votaram/).waitFor();
     if (await guest.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
-    return {resolutions:3,projectPickerResolutions:2,clients:2,hearingVoteReplicated:true};
+    return {resolutions:3,projectPickerResolutions:2,clients:2,hearingVoteReplicatedViaF2:true};
   } finally {
     await guest.close();
   }
