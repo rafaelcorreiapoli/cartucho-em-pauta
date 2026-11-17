@@ -5,7 +5,7 @@ import type {PlenaryView,Station} from '../plenary';
 import {roomActivities,type RoomActivity} from '../room-activities';
 import {canPublishEvidence} from './dossier';
 import {cassationLabel,institutionalActions} from './institutional-actions';
-import {StationActionButton} from './station-action-button';
+import {ContextActionButton} from './context-action-button';
 
 type Shortcut = {
   kind:RoomActivity|'grant'|'hearing'|'cassation'|'publish';
@@ -31,7 +31,7 @@ export function stationShortcuts(view?:PlenaryView,player?:Player,station?:Stati
 }
 
 export function StationShortcuts({actions,select}:{actions:readonly Shortcut[];select:(kind:Shortcut['kind'])=>void}) {
-  return actions.map(({kind,...button})=><StationActionButton key={kind} {...button} activate={()=>select(kind)}/>);
+  return actions.map(({kind,...button})=><ContextActionButton key={kind} {...button} activate={()=>select(kind)}/>);
 }
 
 export function mountStationShortcuts(element:HTMLElement,select:(kind:Shortcut['kind'])=>void) {

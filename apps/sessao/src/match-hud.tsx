@@ -1,12 +1,11 @@
-import {xrayRechargeAction} from './ui/xray-recharge-action';
+import {fieldActions,type FieldAction} from './ui/field-actions';
+import {ContextActionButton} from './ui/context-action-button';
 import {ContextProgress,contextProgress} from './ui/context-progress';
 import {mountRewardEffects} from './ui/reward-effects';
 import {ContextOverflow} from './ui/context-overflow';
 import {contextActionKeys} from './ui/context-action-keys';
 import {mountStationShortcuts} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
-import type {FireOption} from './fire';
-import {powerOption,type PowerAction} from './power';
 import { mountElectionStationActions } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
 import { mountLegislativeStationActions } from './ui/legislative-station-actions';
@@ -14,20 +13,12 @@ import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { equippedWeapon } from './equipment';
-import { canReachDownedPlayer, doorDestination } from './interactions';
-import {treatmentAction} from './ui/treatment-action';
-import { decorationActions } from './installations';
-import { npcs } from './npcs';
 import { hudConsumesKeys } from './game-keys';
-import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
-import { PLENARY_DOORS, type Motion, type Player } from './map';
+import type { Motion, Player } from './map';
 import { money, type PoliticsAction } from './politics';
 import { projectRules, stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
-import type { SpyOption } from "./surveillance";
-
-type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'open-security'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -47,7 +38,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       default: sendActivity(kind);
     }
   });
-  const fieldActions = element('field-actions');
+  const fieldHost = element('field-actions');
   const progressRoot = createRoot(element('office-progress-mount'));
   let progressKey = '';
   const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
@@ -61,87 +52,18 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     return true;
   }
 
-  const fieldRoot = createRoot(fieldActions);
+  const fieldRoot = createRoot(fieldHost);
   let fieldKey = '';
   let roster:Player[] = [];
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
-    const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean}[] = [];
-    const state = view?.gameplay;
-    if (state && player) {
-      const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
-      if (extinguisher && !player.knockedOut && !player.carrying) {
-        actions.push({label:'Pegar extintor',icon:'alert',action:{kind:'collect',item:extinguisher.id}});
-      }
-      if (view?.ballotCountdown===undefined) {
-        for (const panel of [0,1] as const) {
-          const option = powerOption(player,panel,view?.outage,view?.canSabotagePower);
-          if (option) actions.push({label:option.label,icon:'alert',action:{kind:'power',option}});
-        }
-      }
-    }
-    const fire = view?.fireInteraction;
-    if (fire?.option) actions.push({label:fire.option.label,icon:'alert',action:{kind:'fire',option:fire.option}});
-    const channel = state?.officeChannel;
-    const robbery = state?.robberyProgress;
-    const spy = state?.surveillance;
-    for (const option of spy?.options ?? []) actions.push({
-      label:option.label,blocked:option.blocked,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
-    });
-    if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
-    for (const {label,...action} of state?.officeOptions ?? []) {
-      actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
-    }
-    if (state?.security) actions.push({label:'Consultar câmeras',icon:'camera',action:{kind:'open-security'}});
-    if (state?.locations.includes('reprography')) {
-      for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {
-        actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id,project:item.document.project}});
-      }
-    }
-    if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
-      for (const npc of state.parliamentarians ?? []) {
-        actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
-          action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
-      }
-      if (state.locations.includes('treasury')) {
-        for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});
-      }
-      const recharge = xrayRechargeAction(state,view?.politics?.wallet);
-      if (recharge) actions.push({...recharge,icon:'wallet',action:{kind:'recharge-xray'}});
-      if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
-      const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
-      if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
-      const treatment = treatmentAction(state.treatment,view?.politics?.wallet);
-      if (treatment) actions.push({...treatment,icon:'shield',action:{kind:'treat'}});
-      if (player.carrying) {
-        actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
-      } else {
-        if (view?.phase==='negotiation' && view.ballotCountdown===undefined && !player.knockedOut && !player.carried) {
-          for (const option of decorationActions(id,state)) {
-            actions.push({...option,icon:option.action.kind==='uninstall' ? 'inventory' : 'map'});
-          }
-        }
-        for (const target of state.npcNearby ?? []) {
-          const npc = npcs[target];
-          if (npc.catalog) actions.push({label:`Abrir loja · ${npc.name}`,icon:'inventory',action:{kind:'open-shop',target}});
-          else actions.push({label:`${npc.label} · Falar com ${npc.name}`,icon:'document',action:{kind:'talk',target}});
-        }
-        for (const target of roster) {
-          if (canReachDownedPlayer(player,target)) {
-            actions.push({label:`Socorrer ${target.nick}`,icon:'shield',action:{kind:'aid',target:target.id}});
-            if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',action:{kind:'carry',target:target.id}});
-            actions.push({label:`Inspecionar ${target.nick}`,icon:'search',action:{kind:'inspect-down',target:target.id}});
-          }
-        }
-      }
-    }
+    const actions = fieldActions(view,player,roster);
     const key = JSON.stringify(actions);
-    if (key===fieldKey) return;
+    if (key===fieldKey) return actions.length>0;
     fieldKey = key;
-    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action,blocked,disabled})=>
-      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" disabled={disabled || !!blocked} onClick={()=>sendField(action)}>
-        <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{blocked ? <span>{label}<small> · {blocked}</small></span> : label}
-      </button>)));
+    flushSync(()=>fieldRoot.render(actions.map(({action,...button})=>
+      <ContextActionButton key={JSON.stringify(action)} {...button} activate={()=>sendField(action)}/>)));
+    return actions.length>0;
   }
   const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
   const electoral = mountElectionStationActions(element('station-election-actions'),election.send);
@@ -246,7 +168,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     const interactionView = exploring ? view : undefined;
     const installing = !!interactionView?.gameplay?.installationProgress;
-    renderField(installing ? undefined : interactionView,player);
+    const hasFieldAction = renderField(installing ? undefined : interactionView,player);
     const meter = contextProgress(interactionView);
     const meterKey = JSON.stringify(meter) ?? '';
     if (progressKey!==meterKey) {
@@ -271,7 +193,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hasShortcut = shortcuts.render(view,player,context);
     const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
     if (!exploring || !canInteract) overflowExpanded = false;
-    stations.hidden = !exploring || (!nearby.visible() && !hasAction && !meter && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (!nearby.visible() && !hasAction && !meter && !hasFieldAction);
     refreshActionKeys();
   }
 
