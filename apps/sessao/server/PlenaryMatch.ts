@@ -378,8 +378,7 @@ export class PlenaryMatch {
       plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
       office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
       projectFilingError:(id,project)=>this.projectFilingError(id,project,now),
-      projectSignatures:this.initialPlayers===1 ? 0 : 1,
-      canSignProject:id=>this.canVote(id),
+      projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
       hasMandate:id=>this.npcIds.has(id) || !!this.election.office(id),
       cashFlow:(kind,amount)=>{ this.cash[kind] += amount; },
       deposit:(id,amount)=>{
