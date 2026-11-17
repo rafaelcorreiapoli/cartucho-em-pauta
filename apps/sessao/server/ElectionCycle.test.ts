@@ -127,7 +127,7 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
 });
 
-test('a short budget pays equal fractional salaries and preserves the rounding remainder',()=>{
+test('a short budget pays full salaries to remaining mandates and NPCs by borrowing',()=>{
   const match = new PlenaryMatch();
   const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
   const ids = humans.map(player=>player.id);
@@ -143,9 +143,10 @@ test('a short budget pays equal fractional salaries and preserves the rounding r
   match.advance(rules.interval);
   const next = match.view('0',ids,rules.interval);
   expect(budget).toBe(4);
-  expect(next.election?.result?.salary).toBe(.2);
-  expect(next.budget).toBe(.4);
-  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+.2);
+  expect(next.election?.result?.salary).toBe(rules.salary);
+  expect(next).toMatchObject({budget:-20,debtPenaltyIn:30});
+  expect(match.economySummary(0).discrepancy).toBe(0);
+  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+rules.salary);
   expect(match.view('5',ids,rules.interval).election?.result?.salary).toBe(0);
   const paid = world.wallet!('npc');
   match.advance(rules.interval);

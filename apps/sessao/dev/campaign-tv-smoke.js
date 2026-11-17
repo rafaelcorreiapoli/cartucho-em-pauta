@@ -25,17 +25,20 @@ async page => {
         if (!element || element===previous) return;
         previous = element;
         const keyframes = element.getAnimations()[0]?.effect.getKeyframes();
-        window.campaignAds.push({
+        const artwork = element.querySelector('img');
+        const sample = {
           at:performance.now(),
           title:element.querySelector('.campaign-tv-caption span').textContent,
           side:element.dataset.side,
           opening:keyframes?.[0]?.transform,
           onScreen:keyframes?.[1]?.transform,
-          image:element.querySelector('img').naturalWidth,
+          image:undefined,
           number:element.querySelector('strong').textContent,
           skin:element.querySelector('[data-skin]').dataset.skin,
           announcement:host.querySelector('.campaign-tv-announcement').textContent.trim(),
-        });
+        };
+        window.campaignAds.push(sample);
+        artwork.decode().then(()=>{ sample.image = artwork.naturalWidth; },()=>{ sample.image = 0; });
         if (window.campaignAds.length===2) observer.disconnect();
       });
       observer.observe(host,{childList:true,subtree:true});
@@ -96,7 +99,7 @@ async page => {
     await advertiser(guest).click();
     await spot(guest).click();
     const broadcasts = await Promise.all([page,guest].map(async client=>{
-      await client.waitForFunction(()=>window.campaignAds.length===2);
+      await client.waitForFunction(()=>window.campaignAds.length===2 && window.campaignAds.every(ad=>ad.image!==undefined));
       return client.evaluate(()=>window.campaignAds);
     }));
     for (const [first,second] of broadcasts) {
