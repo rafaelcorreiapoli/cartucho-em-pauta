@@ -1,3 +1,4 @@
+import {terminals} from '../gameplay';
 import {publishProjectFiling} from '../../server/project-test-fixture';
 
 import {expect,test} from 'bun:test';
@@ -5,7 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {ProjectImpact} from './project-impact';
 import {ProjectBallot} from './project-ballot';
 import {SessionBallot,sessionBallotState} from './ballot';
-import {BALLOT_MS,bills,NEGOTIATION_MS,pingaProgram,policyDiscountPercent,policyDuration,recoveryPolicy,stations} from '../plenary';
+import {BALLOT_MS,bills,NEGOTIATION_MS,pingaProgram,policyDiscountPercent,policyDuration,recoveryPolicy} from '../plenary';
 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
@@ -37,7 +38,7 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     expect(match.start(player.id,[player],0,()=>0)).toBe(true);
     const project = bills.indexOf(bill);
     match.gameplayWorld([player],1,()=>false).publish({
-      type:'filed',actor:player.id,item:1,project,position:stations.amendment,at:0,witnesses:[],
+      type:'filed',actor:player.id,item:1,project,position:terminals.protocol.point,at:0,witnesses:[],
     });
     match.advance(NEGOTIATION_MS);
     const view = match.view(player.id,[player.id],NEGOTIATION_MS);

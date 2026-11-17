@@ -113,7 +113,6 @@ export const agendas = {
   cafe: 'Beba um café',
   leitura: 'Estude o projeto na Biblioteca',
   auditoria: 'Faça uma auditoria na Corregedoria',
-  emenda: 'Apresente uma emenda no Protocolo',
   votacao: 'Vote em um projeto',
   escandalo: 'Divulgue uma prova de desvio ou pagamento clandestino',
   solenidadeInauguracao:`Rabisque um Retrato Oficial de outro jogador instalado há até ${NEW_PORTRAIT_MS/1000} segundos`,

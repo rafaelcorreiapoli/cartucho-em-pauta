@@ -252,7 +252,6 @@ export class PlenaryMatch {
   private hearingResult?: string;
   private auditNotes = new Map<string,string>();
   private infiltratorName?: string;
-  private amended = false;
   private fraud = false;
   private reportedFraud = false;
   private audits = new Map<string,'clean' | 'fraud'>();
@@ -301,8 +300,6 @@ export class PlenaryMatch {
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>{
       if (!campaignReady) return true;
-      if (kind==='emenda') return !this.amended && this.hasFutureVoteNegotiation(this.agendaNow);
-      if (kind==='emendaFutura') return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || this.amended);
       if (kind==='leitura') {
         const project = this.proposal?.project;
         if (this.phase!=='ballot' && project!==undefined && !this.studiedBills.get(project)?.has(id)) return true;
@@ -353,7 +350,6 @@ export class PlenaryMatch {
     this.npcVotes.clear();
     this.audits.clear();
     this.auditNotes.clear();
-    this.amended = false;
     this.objector = undefined;
     this.fraud = this.reportedFraud = false;
   }
@@ -440,11 +436,6 @@ export class PlenaryMatch {
     if (!this.at(player,action==='fraud' ? 'panel' : action)) {
       if (action==='audit') return {text:'Chegue mais perto do ponto da Corregedoria.',critical:false};
       return;
-    }
-    if (action==='amendment' && !this.amended) {
-      this.amended = true;
-      this.publishActivity(player,'amendment-filed',now);
-      this.refreshAgendaEligibility(now);
     }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
@@ -771,8 +762,8 @@ export class PlenaryMatch {
     }
     if (vote==='no') return {...impact,budget:Math.min(0,impact.budget)};
     return {
-      stability:impact.stability-(this.amended ? 8 : 0),
-      budget:Math.min(0,impact.budget+(this.amended ? 16 : 0)+(misleading ? 24 : 0)),
+      ...impact,
+      budget:Math.min(0,impact.budget+(misleading ? 24 : 0)),
     };
   }
 
@@ -1118,7 +1109,7 @@ export class PlenaryMatch {
       billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>
         this.canVote(id) ? [{id,name,character,vote:this.votes.get(id)}] : []) : undefined,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
-      amended:this.amended,canFraud:!!this.proposal && !projectVoteExpired && role==='Infiltrado' && !this.fraud && this.canVote(id),
+      canFraud:!!this.proposal && !projectVoteExpired && role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),

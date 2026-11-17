@@ -55,9 +55,9 @@ no histórico. Sem projeto protocolado, o relógio da sessão continua correndo.
 
 No mapa, a visão de outros
 jogadores é local e a voz perde volume com distância e paredes. Os pontos dourados
-permitem protocolar uma emenda que troca estabilidade por economia, auditar os
-valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer no
-painel uma vez por projeto para que o custo aparente de aprovar seja menor.
+permitem auditar os valores e corrigir o painel após descobrir uma fraude. O
+infiltrado pode mexer no painel uma vez por projeto para que o custo aparente de
+aprovar seja menor.
 
 A convocação aparece quando faltam 30 segundos. Ao abrir a votação, o servidor
 reúne os jogadores nos doze pontos de chegada do Plenário, limpa as rotas anteriores

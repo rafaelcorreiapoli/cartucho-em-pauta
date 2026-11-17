@@ -23,7 +23,6 @@ export function projectDetailsState(view:PlenaryView) {
   const objection = !hearing && (phase==='negotiation' || phase==='ballot') ? view.election?.objection : undefined;
   const clue = hearing ? '' : [
     view.auditNote,
-    view.amended && 'Emenda protocolada. Os efeitos já estão atualizados.',
     view.reportedFraud ? 'Fraude denunciada. O painel mostra os números reais.' :
       view.audit==='fraud' ? 'Fraude encontrada. Vá ao Painel para corrigir os números.' :
       view.audit==='clean' ? 'A auditoria conferiu os valores do painel.' : '',
