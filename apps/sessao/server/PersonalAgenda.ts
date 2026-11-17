@@ -337,6 +337,7 @@ export class PersonalAgenda {
         }
         if (event.type==='cash-part-deposited' && this.factsByMission.get(mission.id)?.get('')?.has(item)) gains[kind] = 1;
       }
+      if (kind==='presencaPlenario' && event.type==='plenary-visit-interrupted') this.factsByMission.delete(mission.id);
       if (kind==='presencaPlenario' && event.place==='Plenário') {
         if (event.type==='room-entered') this.countFacts(mission,[{value:'entrada'}]);
         if (event.type==='room-left' && this.factsByMission.has(mission.id)) gains[kind] = 1;
@@ -369,16 +370,16 @@ export class PersonalAgenda {
       }
       if (kind==='nadaADeclarar' && event.type==='concealed-cash-time') gains[kind] = event.duration ?? 0;
       if (kind==='escutaAtiva' && event.type==='wiretap-time') gains[kind] = event.duration ?? 0;
-      if (kind==='debateTelefonico' && event.type==='call-time' || kind==='discursoMegafone' && event.type==='megaphone-time') {
-        gains[kind] = event.duration ?? 0;
-      }
-      if (kind==='chamadasUrgentes' && event.type==='call-time' && event.target && event.item!==undefined) {
+      if (kind==='discursoMegafone' && event.type==='megaphone-time') gains[kind] = event.duration ?? 0;
+      if ((kind==='debateTelefonico' || kind==='chamadasUrgentes') &&
+          event.type==='call-time' && event.target && event.item!==undefined) {
         const call = `${event.item}:${event.target}`;
         let samples = this.callSamples.get(mission.id);
         if (!samples) this.callSamples.set(mission.id,samples=new Map());
         const elapsed = (samples.get(call) ?? 0)+(event.duration ?? 0);
         samples.set(call,elapsed);
-        if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
+        if (kind==='debateTelefonico') gains[kind] = Math.max(0,elapsed-mission.current);
+        else if (elapsed>=10_000) gains[kind] = this.countFacts(mission,[{value:event.target}]);
       }
       if (kind==='amizadeInstitucional' && event.target && event.kind && !cashAmount(event.kind) &&
           this.targets.some(person=>person.id===event.target) && !this.visitedTargets.has(kind+':'+event.target) &&

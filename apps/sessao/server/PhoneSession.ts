@@ -3,11 +3,12 @@ import { worldVisible, type Player } from '../src/map';
 import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
 
-type Call = {from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
+type Call = {id:number; from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
 type PhoneRound = {snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
 type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'>;
 
 export class PhoneSession {
+  private nextCallId = 0;
   private calls = new Map<string,Call>();
   private games = new Map<string,PhoneRound>();
 
@@ -28,7 +29,7 @@ export class PhoneSession {
           if (!world.hasMission?.(id,'debateTelefonico') && !world.hasMission?.(id,'chamadasUrgentes')) continue;
           const player = world.players.find(person=>person.id===id);
           if (player && !player.knockedOut && world.present?.(id)!==false && world.present?.(target)!==false) {
-            publishGameplay(world,player,'call-time',{target,duration,item:call.expires,witnesses:[]});
+            publishGameplay(world,player,'call-time',{target,duration,item:call.id,witnesses:[]});
           }
         }
       }
@@ -116,7 +117,7 @@ export class PhoneSession {
         const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
         if (!target || !world.voice(id) || !world.voice(target.id)) return 'Os dois jogadores precisam ativar a voz.';
         if (call || this.calls.has(target.id)) return 'Linha ocupada.';
-        const next = {from:id,to:target.id,connected:false,expires:world.now+20_000};
+        const next = {id:++this.nextCallId,from:id,to:target.id,connected:false,expires:world.now+20_000};
         this.calls.set(id,next);
         this.calls.set(target.id,next);
         return 'Chamando…';

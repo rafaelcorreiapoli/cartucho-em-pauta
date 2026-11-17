@@ -1136,3 +1136,34 @@ test.each([true,false])('selective transparency only charges eligible private au
   }
   expect(match.economySummary(0).discrepancy).toBe(0);
 });
+
+test('successive shop and mail policies keep their own deadlines and public costs',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const view = (at:number)=>match.view(host.id,ids,at);
+  const first = NEGOTIATION_MS+BALLOT_MS;
+  const second = first+BALLOT_MS;
+  const world = match.gameplayWorld(people,1,()=>false);
+  for (const [item,id] of ['PROJ-N05','PROJ-N16'].entries()) {
+    const project = bills.findIndex(bill=>bill.id===id);
+    world.publish({type:'filed',project,actor:host.id,item:item+1,position:stations.amendment,at:1,witnesses:[]});
+  }
+
+  const initialBudget = view(1).budget;
+  match.advance(NEGOTIATION_MS);
+  const coffeeCost = view(NEGOTIATION_MS).yes.budget;
+  for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+  match.advance(first);
+  const mailCost = view(first).yes.budget;
+  expect(view(first).outcome?.passed).toBe(true);
+  expect(view(first).policies).toEqual({coffee:first+policyDuration});
+
+  for (const voter of [host,honest]) match.vote(voter.id,'yes',first+1);
+  match.advance(second);
+  expect(view(second).outcomes.map(result=>result.passed)).toEqual([true,true]);
+  expect(view(second).budget).toBe(initialBudget+coffeeCost+mailCost);
+  expect(view(second).policies).toEqual({coffee:first+policyDuration,mail:second+policyDuration});
+  expect(match.gameplayWorld(people,first+policyDuration,()=>false).policies).toEqual({mail:second+policyDuration});
+  expect(view(second+policyDuration).policies).toEqual({});
+  expect(match.economySummary(0).discrepancy).toBe(0);
+});

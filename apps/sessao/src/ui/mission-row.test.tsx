@@ -105,6 +105,7 @@ test('coffee delivery shows distinct recipient progress and the completion check
 test('phone call missions show time in seconds',()=>{
   const phone = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'debateTelefonico',current:12_500,target:20_000}}/>);
   expect(phone).toContain('12 / 20 s');
+  expect(phone).toContain('20 segundos na mesma chamada durante a articulação');
 });
 
 test('the surveillance mission renders sampled progress without exposing any channel',()=>{
@@ -682,4 +683,13 @@ test('the signature mission keeps the signed document visible after a signer lea
   const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
+});
+
+test('Presença Parlamentar shows the full visit objective and completion check',()=>{
+  const mission = {id:1,kind:'presencaPlenario',current:0,target:1} as const;
+  const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(active).toContain('Entre e saia do Plenário durante a articulação');
+  expect(active).not.toContain('data-done="true"');
+  const completed = renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>);
+  expect(completed).toContain('data-done="true"');
 });

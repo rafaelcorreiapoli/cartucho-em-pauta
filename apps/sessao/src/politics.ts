@@ -152,7 +152,7 @@ export const agendas = {
   caixaDois:'Receba dinheiro em espécie de outro jogador',
   pixVinte:'Envie um Pix de R$ 20 mil',
   doisPix:'Receba Pix de dois jogadores distintos',
-  debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
+  debateTelefonico:'Fique 20 segundos na mesma chamada durante a articulação',
   chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
   discursoMegafone:'Use o Megafone por 10 segundos',
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,

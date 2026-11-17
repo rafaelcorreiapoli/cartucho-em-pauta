@@ -7,7 +7,7 @@ import { Parliamentarians } from './Parliamentarians';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
-import type { Player } from '../src/map';
+import { rooms, type Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
 import { agendaDurationMs } from '../src/politics';
@@ -904,7 +904,7 @@ test('calls need ten seconds on each of two distinct lines after the mission sta
 
 test.each([
   ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
-  ['debateTelefonico',event('call-time',{duration:20_000,target:'b'}),event('called',{target:'b'})],
+  ['debateTelefonico',event('call-time',{duration:20_000,target:'b',item:1}),event('called',{target:'b'})],
   ['nadaADeclarar',event('concealed-cash-time',{duration:15_000}),event('concealment-started',{amount:1})],
   ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
   ['varredura',event('spy-discovered',{item:3}),event('spy-discovered')],
@@ -1464,4 +1464,86 @@ test('a signature objective replaces itself if its only remaining signers alread
   agenda.updateEligibility(metrics,2,true,3,1,humans.slice(0,1),undefined,npcs);
   expect(agenda.hasActive('comissaoImprovisada')).toBe(false);
   expect(agenda.view(metrics).active).toHaveLength(3);
+});
+
+test('a plenary visit requires entering and leaving during the same articulation',()=>{
+  const rewards:number[] = [];
+  const agenda = new PersonalAgenda(metrics,2,()=>0,reward=>rewards.push(reward.xp));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['presencaPlenario','cafe','credencial']);
+  agenda.updateEligibility(metrics,2,true,3);
+
+  const player:Player = {id:'a',nick:'A',x:0,y:0,moving:false,direction:0,character:0};
+  const game = new Gameplay();
+  const world:GameplayWorld = {players:[player],now:0,voice:()=>false,office:()=>undefined,earn:()=>{},
+    hasMission:(_,kind)=>agenda.hasActive(kind),publish:sample=>recordAgendaEvent(agenda,sample)};
+  const [x,y,width,height] = rooms.find(room=>room.name==='Plenário')!.bounds;
+  function tick(inside:boolean,exploring=true) {
+    player.x = inside ? x+width/2 : 0;
+    player.y = inside ? y+height/2 : 0;
+    world.now += 50;
+    game.tick(world,exploring);
+  }
+
+  tick(false);
+  tick(true);
+  tick(true,false);
+  tick(false);
+  expect(rewards).toEqual([]);
+
+  tick(true);
+  game.leave(player,world,false);
+  tick(true);
+  tick(false);
+  expect(rewards).toEqual([]);
+
+  tick(true);
+  tick(false);
+  expect(rewards).toEqual([25]);
+  recordAgendaEvent(agenda,event('room-left',{at:world.now,place:'Plenário'}));
+  expect(rewards).toEqual([25]);
+});
+
+test('phone time from separate calls cannot complete Debate Democrático',()=>{
+  const rewards:number[] = [];
+  const agenda = new PersonalAgenda(metrics,2,()=>0,reward=>rewards.push(reward.xp));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['debateTelefonico','cafe','credencial']);
+  agenda.updateEligibility(metrics,2,true,3,0,[{id:'b',name:'B'}]);
+
+  const caller:Player = {id:'a',nick:'A',x:240,y:250,moving:false,direction:0,character:0};
+  const peer = {...caller,id:'b',nick:'B'};
+  const game = new Gameplay();
+  const world:GameplayWorld = {players:[caller,peer],now:0,voice:()=>true,office:()=>undefined,earn:()=>{},
+    hasMission:(id,kind)=>id===caller.id && agenda.hasActive(kind),publish:sample=>{
+      if (sample.actor===caller.id) recordAgendaEvent(agenda,sample);
+    }};
+  function connect() {
+    game.act(caller,{kind:'call',target:peer.id},world);
+    expect(game.act(peer,{kind:'answer'},world)).toBe('Ligação atendida.');
+  }
+  function elapse(ticks:number,exploring=true) {
+    for (let tick=0;tick<ticks;tick++) {
+      world.now += 100;
+      game.tick(world,exploring);
+    }
+  }
+
+  connect();
+  elapse(110);
+  game.act(caller,{kind:'hangup'},world);
+  connect();
+  elapse(100);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='debateTelefonico')?.current).toBe(11_000);
+  elapse(1,false);
+  elapse(100);
+  expect(rewards).toEqual([]);
+
+  connect();
+  elapse(199);
+  expect(rewards).toEqual([]);
+  elapse(1);
+  expect(rewards).toEqual([35]);
+  elapse(1);
+  expect(rewards).toEqual([35]);
 });
