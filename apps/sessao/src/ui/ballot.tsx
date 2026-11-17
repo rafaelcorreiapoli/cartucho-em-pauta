@@ -42,11 +42,11 @@ export function CassationBallot({state,ownId,cast}:{
       {candidates.map((person,index)=><button key={person.id}
         type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
         aria-keyshortcuts={index<9 ? String(index+1) : undefined} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
-        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd>{index+1}</kbd>}
+        <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
       </button>)}
     </div>
     <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-      aria-keyshortcuts={skipKey} aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto <kbd aria-hidden="true">{skipKey}</kbd></button>
+      aria-keyshortcuts={skipKey} aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto <kbd className="action-key" aria-hidden="true">{skipKey}</kbd></button>
     {!state.eligible && <p>Você pode acompanhar a votação.</p>}
   </section>;
 }

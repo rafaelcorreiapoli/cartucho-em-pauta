@@ -23,6 +23,17 @@ async page => {
   const attributes = page.locator('#attributes-dialog[open]');
   await attributes.getByText('2 pontos para distribuir').waitFor();
   const stamina = attributes.getByRole('button',{name:'Investir em Fôlego'});
+  for (const [button,label] of [[stamina,'+1'],[attributes.getByRole('button',{name:'Confirmar +1'}),'Confirmar +1']]) {
+    const bounds = await button.boundingBox();
+    const badge = await button.locator('kbd').boundingBox();
+    const text = await button.getByText(label,{exact:true}).boundingBox();
+    if (!bounds || !badge || !text || badge.x+badge.width/2<bounds.x+bounds.width-8 ||
+        badge.y+badge.height/2>bounds.y+8 ||
+        Math.abs(text.x+text.width/2-(bounds.x+bounds.width/2))>1 ||
+        Math.abs(text.y+text.height/2-(bounds.y+bounds.height/2))>1) {
+      throw Error('Badge de atalho deslocou o rótulo ou saiu do canto superior direito.');
+    }
+  }
   await page.keyboard.press('2');
   if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('A tecla 2 não selecionou Fôlego.');
   await attributes.getByText('100/100 → 150/150',{exact:true}).waitFor();
