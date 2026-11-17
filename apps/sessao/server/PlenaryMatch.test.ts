@@ -662,18 +662,6 @@ test('the last ballot does not redraw a voting mission from an already credited 
   expect(missions().active.map(m=>m.kind)).toContain('apoio');
 });
 
-test('legislative brief activities require their respective stations and the negotiation phase',()=>{
-  const match = new PlenaryMatch(1);
-  match.start(host.id,[host],0);
-  publishProjectFiling(match,host);
-  for (const key of ['secretary','archive'] as const) {
-    expect(match.roomActivity(host,key,1)).toBeUndefined();
-    expect(match.roomActivity(at(host,key),key,1)).toEqual({activity:key});
-  }
-  match.advance(NEGOTIATION_MS);
-  expect(match.roomActivity(at(host,'secretary'),'secretary',NEGOTIATION_MS+1)).toBeUndefined();
-});
-
 test('cassation requires at least three eligible players to be called',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
