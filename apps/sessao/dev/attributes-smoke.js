@@ -34,6 +34,9 @@ async page => {
       throw Error('Badge de atalho deslocou o rótulo ou saiu do canto superior direito.');
     }
   }
+  await attributes.locator('button[aria-keyshortcuts]').evaluateAll(buttons=>{
+    for (const button of buttons) button.removeAttribute('aria-keyshortcuts');
+  });
   await page.keyboard.press('2');
   if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('A tecla 2 não selecionou Fôlego.');
   await attributes.getByText('100/100 → 150/150',{exact:true}).waitFor();

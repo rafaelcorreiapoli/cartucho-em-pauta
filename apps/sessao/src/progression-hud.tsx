@@ -1,3 +1,4 @@
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -19,6 +20,13 @@ export function attributePlayerView(player:Player) {
 export function canSelectAttribute(view:PlenaryView|undefined, player:ReturnType<typeof attributePlayerView>|undefined) {
   return !!player && !player.unavailable && !!view?.gameplay && view.phase==='negotiation' &&
     view.ballotCountdown===undefined && view.isolationSeconds===undefined;
+}
+
+function AvailablePoints({points, actionForKey}:{
+  points:number; actionForKey:(key:string)=>(()=>void)|undefined;
+}) {
+  const label = useDialogKeys<HTMLParagraphElement>(actionForKey);
+  return <p ref={label} id="attributes-available" role="status">{pointLabel(points)} para distribuir</p>;
 }
 
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void,reward:(text:string)=>void) {
@@ -67,11 +75,22 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
+    const select = (attribute:Attribute) => {
+      if (!canSpend) return;
+      selected = attribute;
+      renderAttributes();
+    };
+    const actionForKey = (key:string) => {
+      if (!canSpend) return;
+      if (key==='3') return selected ? confirmAttribute : undefined;
+      const attribute = /^[12]$/.test(key) ? keys[Number(key)-1] : undefined;
+      if (attribute) return ()=>select(attribute);
+    };
     flushSync(()=>attributesRoot.render(<>
       <header><div><h2 id="attributes-title" className="sr-only">Atributos</h2>
         <p id="attributes-xp">Nível {level} · {xp} XP totais · {nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}</p>
       </div><DialogDismiss className="hud-button hud-button--secondary">Fechar</DialogDismiss></header>
-      <p id="attributes-available" role="status">{pointLabel(available)} para distribuir</p>
+      <AvailablePoints points={available} actionForKey={actionForKey}/>
       <div className="attribute-columns">
         <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
           {keys.map((attribute,index)=>{
@@ -82,7 +101,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
               <span>{invested[attribute]}</span>
               <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
                 aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
-                onClick={()=>{ selected = attribute; renderAttributes(); }}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
+                onClick={()=>select(attribute)}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
             </section>;
           })}
         </div></section>
