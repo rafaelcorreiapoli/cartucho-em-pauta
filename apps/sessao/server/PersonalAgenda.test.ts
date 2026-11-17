@@ -346,7 +346,7 @@ test('furniture spending is not drawn when no affordable basket reaches the targ
 });
 
 test('decoration missions require enough money or an item already in the inventory',()=>{
-  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...terminals.credentials.point};
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction};
   const game = new Gameplay();
   const economy = new PoliticalEconomy();
   economy.reset([{id:player.id,name:player.nick}],()=>0);
@@ -396,7 +396,7 @@ test('collective missions wait for enough available players while office visits 
 });
 
 test('photo missions use live portrait and VIP installations when drawing',()=>{
-  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction}));
   const [owner,colleague,visitor] = players;
   const game = new Gameplay();
   const economy = new PoliticalEconomy();
@@ -592,7 +592,7 @@ test('NPC robbery returns to the mission deck when an empty wallet is funded aga
 });
 
 test('players without one of the six offices can visit a colleague but cannot draw own-office missions',()=>{
-  const players:Player[] = Array.from({length:8},(_,i)=>({id:String(i),nick:String(i),character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const players:Player[] = Array.from({length:8},(_,i)=>({id:String(i),nick:String(i),character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction}));
   const visitor = players[6];
   const game = new Gameplay();
   game.reset(0,()=>0,players,()=>0);
@@ -862,7 +862,7 @@ test.each([
   const options = {...metrics,owns:()=>true};
   const agenda = new PersonalAgenda(options,2,()=>0,reward=>totals.push(reward.xp));
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',[kind,'passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',[kind,'passeio','jogar']);
   agenda.updateEligibility(options,2,true,3,0,[{id:'b',name:'B'}]);
   expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
   for (const entry of [invalid,valid,valid]) {
@@ -879,7 +879,7 @@ test('photo tourism counts distinct locations after assignment',()=>{
   const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
   recordAgendaEvent(agenda,event('photo',{photo:missionPhoto}));
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['turismo','cafe','credencial']);
+  Reflect.set(agenda,'missionDeck',['turismo','cafe','selfieSolo']);
   agenda.updateEligibility(metrics,1,true,3);
   for (const [index,location] of ['Arquivo','Arquivo','Biblioteca','Cafezinho'].entries()) {
     recordAgendaEvent(agenda,event('photo',{at:index+2,photo:{...missionPhoto,id:index+20,location,selfie:false}}));
@@ -891,7 +891,7 @@ test('photo tourism counts distinct locations after assignment',()=>{
 test('calls need ten seconds on each of two distinct lines after the mission starts',()=>{
   const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','credencial']);
+  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','selfieSolo']);
   agenda.updateEligibility(metrics,3,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'}]);
   for (const [at,target,item,duration] of [[1,'b',1,9_900],[2,'b',2,100],[3,'b',1,100],[4,'b',3,10_000],[5,'c',4,10_000]] as const) {
     const sample = event('call-time',{at,target,item,duration});
@@ -927,7 +927,7 @@ test.each([
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
   agenda.updateEligibility(options,4,true,3,1,[{id:'b',name:'B'},{id:'c',name:'C'},{id:'d',name:'D'}]);
   recordAgendaEvent(agenda,wrong);
   expect(agenda.view(options).active.find(mission=>mission.kind===kind)?.current).toBe(0);
@@ -1005,7 +1005,7 @@ test('Raio X missions require the equipment and the corresponding targets',()=>{
     const options = {...metrics,owns:()=>owns,hasOffice:()=>hasOffice};
     const agenda = new PersonalAgenda(options,2,()=>0,()=>{});
     Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','patrimonioSuspeito','cafe','passeio','credencial']);
+    Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','patrimonioSuspeito','cafe','passeio','selfieSolo']);
     agenda.updateEligibility(options,2,true,3,npcs,contacts);
     return agenda.view(options).active.map(mission=>mission.kind);
   };
@@ -1080,33 +1080,6 @@ test('savings tracks the net increase after assignment, including spending and f
   expect(view().completed).toContainEqual(expect.objectContaining({kind:'poupancaInstitucional',current:10}));
 });
 
-test('Pauta Prioritária uses the phase when the recipient accepts the gift',()=>{
-  const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
-  const [sender,recipient] = players;
-  const agenda = new PersonalAgenda(metrics,2,()=>0,()=>{});
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['pautaPrioritaria','cafe','passeio','selfieSolo']);
-  agenda.updateEligibility(metrics,2,true,3,0,[{id:recipient.id,name:recipient.nick}]);
-  const game = new Gameplay();
-  const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-    publish:event=>recordAgendaEvent(agenda,event)};
-  const offer = ()=>{
-    expect(game.act(sender,{kind:'supply',place:'credentials'},world)).toContain('inventário');
-    const item = game.view(sender,world).inventory.find(item=>item.kind==='gift')!;
-    expect(game.act(sender,{kind:'offer',item:item.id,target:recipient.id},world)).toBe('Pedido enviado.');
-    return game.view(recipient,world).requests.at(-1)!.id;
-  };
-  const accept = (item:number)=>game.act(recipient,{kind:'accept',item},world);
-  const first = offer();
-  world.plenary = true;
-  expect(accept(first)).toBe('Objeto recebido.');
-  expect(agenda.view(metrics).active.find(mission=>mission.kind==='pautaPrioritaria')?.current).toBe(0);
-  world.plenary = false;
-  world.now++;
-  expect(accept(offer())).toBe('Objeto recebido.');
-  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'pautaPrioritaria',current:1}));
-});
-
 test('Segurança Parlamentar requires an uninterrupted watch next to the same parliamentarian',()=>{
   const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11}));
   const [guard,first,second] = players;
@@ -1155,7 +1128,7 @@ test('Segurança Parlamentar requires an uninterrupted watch next to the same pa
 });
 
 test('Reunião de Alto Nível needs a live VIP plaque and both players inside its area',()=>{
-  const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...terminals.credentials.point}));
+  const players:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction}));
   const [host,guest] = players;
   const game = new Gameplay();
   const options = {...metrics,hasAgendaDecoration:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip')=>game.hasAgendaDecoration(host.id,kind)};
@@ -1216,7 +1189,7 @@ test('archive duty requires continuous time and restarts on disconnect',()=>{
   const progress = ()=>agenda.view(metrics).active.find(mission=>mission.kind==='plantaoArquivo')?.current;
   tick(310);
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['plantaoArquivo','cafe','passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',['plantaoArquivo','cafe','passeio','selfieSolo']);
   agenda.updateEligibility(metrics,1,true,3);
   expect(progress()).toBe(0);
   tick(11);
@@ -1237,12 +1210,12 @@ test('archive duty requires continuous time and restarts on disconnect',()=>{
 });
 
 test('the VIP mission requires an installed plaque rather than just buying it',()=>{
-  const player:Player = {id:'a',nick:'A',...terminals.credentials.point,moving:false,direction:0,character:0};
+  const player:Player = {id:'a',nick:'A',...npcs.credentialsVendor.interaction,moving:false,direction:0,character:0};
   const rewards:number[] = [];
   const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>rewards.push(reward.xp));
   const draw = (options:typeof metrics)=>{
     Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['privilegioAdquirido','cafe','passeio','credencial']);
+    Reflect.set(agenda,'missionDeck',['privilegioAdquirido','cafe','passeio','selfieSolo']);
     agenda.updateEligibility(options,1,true,3);
     return agenda.hasActive('privilegioAdquirido');
   };
@@ -1270,12 +1243,12 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
 });
 
 test('an exchange counts accepted different items with the same human and rewards each peer once',()=>{
-  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...terminals.credentials.point}));
+  const players:Player[] = ['a','b','c'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...npcs.credentialsVendor.interaction}));
   const [owner,peer,other] = players;
   const rewards:number[] = [];
   const agenda = new PersonalAgenda(metrics,1,()=>0,reward=>rewards.push(reward.xp));
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['amizadeInstitucional','cafe','passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',['amizadeInstitucional','cafe','passeio','selfieSolo']);
   const contacts = players.slice(1).map(({id,nick:name})=>({id,name}));
   agenda.updateEligibility(metrics,1,true,3);
   expect(agenda.hasActive('amizadeInstitucional')).toBe(false);
@@ -1286,7 +1259,7 @@ test('an exchange counts accepted different items with the same human and reward
   const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
     hasMission:(id,kind)=>id===owner.id && agenda.hasActive(kind),
     publish:entry=>{if (entry.actor===owner.id) recordAgendaEvent(agenda,entry);}};
-  const give = (from:Player,to:Player,kind:'gift'|'document',reply:'accept'|'decline'='accept')=>{
+  const give = (from:Player,to:Player,kind:'portrait'|'document',reply:'accept'|'decline'='accept')=>{
     world.now++;
     const item = game.view(from,world).inventory.find(item=>item.kind===kind)!;
     expect(game.act(from,{kind:'offer',item:item.id,target:to.id},world)).toBe('Pedido enviado.');
@@ -1297,11 +1270,12 @@ test('an exchange counts accepted different items with the same human and reward
   for (const player of [peer,other]) {
     Object.assign(player,terminals.secretary.point);
     game.act(player,{kind:'supply',place:'secretary',target:'queue'},world);
-    Object.assign(player,terminals.credentials.point);
+    Object.assign(player,npcs.credentialsVendor.interaction);
   }
-  game.act(owner,{kind:'supply',place:'credentials'},world);
-  give(owner,peer,'gift');
-  give(peer,owner,'gift');
+  world.spend = ()=>true;
+  expect(buyCredentialGood(game,owner,'portrait',world)).toBe('Compra guardada no inventário.');
+  give(owner,peer,'portrait');
+  give(peer,owner,'portrait');
   give(other,owner,'document');
   give(peer,owner,'document','decline');
   expect(rewards).toEqual([]);
@@ -1316,7 +1290,7 @@ test('Cafezinho counts only articulation and public tours exclude isolated and p
   const player:Player = {id:'a',nick:'A',x:240,y:210,moving:false,direction:0,character:0};
   const agenda = new PersonalAgenda(metrics,1,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['pausaCafe','passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',['pausaCafe','passeio','selfieSolo']);
   agenda.updateEligibility(metrics,1,true,3);
   const game = new Gameplay();
   const world:GameplayWorld = {players:[player],now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
@@ -1339,12 +1313,12 @@ test('Cafezinho counts only articulation and public tours exclude isolated and p
 });
 
 test('Solenidade de Inauguração credits only a newly installed portrait marked by another player',()=>{
-  const players:Player[] = ['a','b'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...terminals.credentials.point}));
+  const players:Player[] = ['a','b'].map(id=>({id,nick:id,moving:false,direction:0,character:0,...npcs.credentialsVendor.interaction}));
   const [visitor,owner] = players;
   const rewards:number[] = [];
   const agenda = new PersonalAgenda(metrics,2,()=>0,reward=>rewards.push(reward.xp));
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['solenidadeInauguracao','cafe','passeio','credencial']);
+  Reflect.set(agenda,'missionDeck',['solenidadeInauguracao','cafe','passeio','selfieSolo']);
   agenda.updateEligibility(metrics,2,true,3,0,[{id:owner.id,name:owner.nick}]);
   expect(agenda.hasActive('solenidadeInauguracao')).toBe(true);
   const game = new Gameplay();
@@ -1373,7 +1347,7 @@ test('campaign spending is offered only when enough remaining broadcasts can rea
   const agenda = new PersonalAgenda(options,1,()=>0,()=>{});
   const draw = ()=>{
     Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','credencial']);
+    Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
     agenda.updateEligibility(options,1,true,3);
     return agenda.hasActive('investimentoPolitico');
   };
