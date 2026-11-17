@@ -515,7 +515,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     selection = undefined;
     assigningSlot = undefined;
     highlightSlot();
-    if (previous?.gameplay?.game) send({kind:'game-stop'});
     photos.closePresentation();
   };
   dialog.addEventListener('close',closed);

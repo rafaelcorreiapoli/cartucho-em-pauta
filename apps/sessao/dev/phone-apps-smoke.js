@@ -64,6 +64,12 @@ async page => {
   await removeKey(dialog.getByRole('button',{name:'Jogar de novo'}));
   await page.keyboard.press('1');
   await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await dialog.waitFor({state:'hidden'});
+  await page.keyboard.press('c');
+  await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
+  await page.keyboard.press('2');
+  await games.getByRole('button',{name:'Snake',exact:true}).waitFor();
   await home();
   await page.keyboard.press('1');
   await dialog.getByRole('heading',{name:'Telefone',exact:true}).waitFor();

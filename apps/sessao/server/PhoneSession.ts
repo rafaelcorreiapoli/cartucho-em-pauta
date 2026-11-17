@@ -170,6 +170,7 @@ export class PhoneSession {
         this.openScreens.delete(id);
         this.miniGames.delete(id);
         this.candy.delete(id);
+        this.stopPhoneGame(player,world);
         return;
       case 'call': {
         const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
@@ -226,7 +227,7 @@ export class PhoneSession {
         return;
       }
       case 'game-start':
-        if (this.playingPhoneGame(this.games.get(id))) return;
+        if (!this.canPlayMiniGame(player,world)) return;
         this.games.set(id,{id:++this.nextGameId,snake:createSnake(world.now),start:world.now,sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
         publishGameplay(world,player,'game-started');
         return;

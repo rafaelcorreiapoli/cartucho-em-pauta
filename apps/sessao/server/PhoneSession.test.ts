@@ -111,6 +111,7 @@ test('Snake awards XP once when a fruit is collected',()=>{
   const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
   const rewards:number[] = [];
   const world = {players:[player],now:0,voice:()=>false,publish:()=>{},earnXp:(_:string,xp:number)=>rewards.push(xp)};
+  phone.act(player,{kind:'phone-open'},world);
   phone.act(player,{kind:'game-start'},world);
   phone.act(player,{kind:'game-turn',direction:'right'},world);
   for (let tick=1;tick<=3;tick++) {
@@ -156,4 +157,31 @@ test('a winning bet credits only the profit and conserves the match reserve',()=
   expect(economy.wallet('a')).toBe(16);
   expect(economy.settleBet('a',0.5,0,4.5)).toBe(false);
   expect(economy.wallet('a')).toBe(16);
+});
+
+test('closing the phone ends Snake exactly once and blocks delayed play time and XP',()=>{
+  const phone = new PhoneSession();
+  const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
+  const events:GameplayEvent[] = [];
+  const rewards:number[] = [];
+  const world = {players:[player],now:0,voice:()=>false,publish:(event:GameplayEvent)=>events.push(event),
+    hasMission:()=>true,earnXp:(_:string,xp:number)=>rewards.push(xp)};
+  phone.act(player,{kind:'game-start'},world);
+  expect(phone.view(player.id,world.players).game).toBeUndefined();
+  phone.act(player,{kind:'phone-open'},world);
+  phone.act(player,{kind:'game-start'},world);
+  phone.act(player,{kind:'game-turn',direction:'right'},world);
+  world.now = 50;
+  phone.tick(world,true);
+  expect(events.filter(event=>event.type==='game-played').map(event=>event.duration)).toEqual([50]);
+  phone.act(player,{kind:'phone-close'},world);
+  phone.act(player,{kind:'phone-close'},world);
+  phone.act(player,{kind:'game-turn',direction:'right'},world);
+  world.now = SNAKE_STEP_MS*3;
+  phone.tick(world,true);
+  expect(phone.view(player.id,world.players).game).toBeUndefined();
+  expect(phone.activity(player.id)).toBeUndefined();
+  expect(events.filter(event=>event.type==='game-stopped')).toHaveLength(1);
+  expect(events.filter(event=>event.type==='game-played')).toHaveLength(1);
+  expect(rewards).toEqual([]);
 });

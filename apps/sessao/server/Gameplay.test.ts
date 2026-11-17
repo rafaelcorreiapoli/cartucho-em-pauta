@@ -105,6 +105,7 @@ test('calls require consent and photos only list visible players', () => {
 
 test('phone sessions keep Snake private and clear it when a player disconnects', () => {
   const {alice,bob,events,game,world} = setup();
+  game.act(alice,{kind:'phone-open'},world);
   game.act(alice,{kind:'game-start'},world);
   game.act(alice,{kind:'game-start'},world);
   expect(game.phoneActivity(alice.id)).toBe('game');

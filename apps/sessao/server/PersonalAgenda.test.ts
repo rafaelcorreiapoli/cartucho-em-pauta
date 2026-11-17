@@ -114,6 +114,7 @@ test('the phone only emits play time after input and uses observer visibility th
   const world:GameplayWorld = {players:[player,observer],now:0,voice:()=>true,office:()=>undefined,
     earn:()=>{},hasMission:()=>true,publish:entry=>{if (entry.type==='game-played') samples.push(entry);}};
   const game = new Gameplay();
+  game.act(player,{kind:'phone-open'},world);
   game.act(player,{kind:'game-start'},world);
   world.now = 100;
   game.tick(world,true);
