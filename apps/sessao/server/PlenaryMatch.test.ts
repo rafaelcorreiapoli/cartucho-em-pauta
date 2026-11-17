@@ -25,6 +25,20 @@ const people = ids.map((id,character):Player => ({id,nick:['Lula','Bolsonaro','C
 const [host,honest,traitor] = people;
 const at = (player:Player, station:keyof typeof stations) => ({...player,...stations[station]});
 
+test('only the local host can opt into playing infiltrator and trigger a solo outage',()=>{
+  const normal = new PlenaryMatch(1);
+  expect(normal.start(host.id,[host],0,()=>.9,1,true)).toBe(true);
+  expect(normal.view(host.id,[host.id],0)).toMatchObject({role:'Parlamentar'});
+  expect(normal.view(host.id,[host.id],0).canSabotagePower).toBeUndefined();
+
+  const local = new PlenaryMatch(1,undefined,true);
+  expect(local.start(honest.id,people,0,()=>.9,1,true)).toBe(false);
+  expect(local.start(host.id,[host],0,()=>.9,1,true)).toBe(true);
+  expect(local.view(host.id,[host.id],0)).toMatchObject({role:'Infiltrado',canSabotagePower:true});
+  expect(local.actOnPower({...host,...powerPanels[0]},{kind:'sabotage',panel:0},1)).toBe('Energia cortada.');
+  expect(local.powerOut).toBe(true);
+});
+
 test('project ballot countdown is published during the final five seconds of negotiation',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);

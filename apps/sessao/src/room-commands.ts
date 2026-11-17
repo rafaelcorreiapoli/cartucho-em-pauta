@@ -12,7 +12,7 @@ import type { SecurityAction } from './security';
 type RoomActions = {
   character:{character:number};
   'lobby-npc-count':{count:number};
-  'start-match':{infiltrators?:number;npcs?:number};
+  'start-match':{infiltrators?:number;npcs?:number;asInfiltrator?:boolean};
   gameplay:{action:GameplayAction};
   spy:object;
   'security-camera':SecurityAction;
