@@ -235,7 +235,7 @@ async function connect(join: () => Promise<Room>) {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
+    },activity => sendCommand('room-activity',{activity}),{...gameplay.nearbyActions,render:gameplay.nearby},action=>{
       if (action.kind!=='attack' && action.kind!=='install' && action.kind!=='uninstall') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='power') { sendCommand('power-action',action.option); return; }
