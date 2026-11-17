@@ -18,6 +18,7 @@ async page => {
     const {voiceModulatorDisguise} = await import('/src/live-disguise.ts');
     const NativeAudio = AudioContext;
     const devices = [];
+    const inputs = [];
     navigator.mediaDevices.getUserMedia = async () => {
       const context = new NativeAudio();
       await context.resume();
@@ -28,11 +29,13 @@ async page => {
       const input = context.createGain();
       input.gain.value = devices.length ? 0 : 1;
       devices.push(context);
+      inputs.push(input);
       signal.connect(input).connect(output);
       signal.start();
       return output.stream;
     };
     const meters = [];
+    const playbackContexts = [];
     const receivedTracks = new Map();
     const NativePeer = RTCPeerConnection;
     window.RTCPeerConnection = class extends NativePeer { constructor(options) { super({...options,iceServers:[]});
@@ -45,6 +48,10 @@ async page => {
         void audio.play();
       }); } };
     window.AudioContext = class extends NativeAudio {
+      constructor(...args) {
+        super(...args);
+        playbackContexts.push(this);
+      }
       createGain() {
         const gain = super.createGain();
         const connect = gain.connect.bind(gain);
@@ -115,8 +122,10 @@ async page => {
       await buyAndEquip('voiceModulator');
       for (const peer of peers) await peer.start();
       await waitFor(()=>route?.[2]===true,'Rota de proximidade indisponível');
-      await waitFor(()=>meters.some(m=>amplitude(m)>.01),'Áudio WebRTC inaudível');
-      const receiver = meters.find(m=>amplitude(m)>.01);
+      const [hostAudio,listenerAudio,observerAudio] = playbackContexts;
+      const receivingSpeech = context=>meters.find(m=>m.context===context && amplitude(m)>.01);
+      await waitFor(()=>receivingSpeech(listenerAudio),'Áudio WebRTC inaudível');
+      const receiver = receivingSpeech(listenerAudio);
       if (!receiver) throw Error('No WebRTC playback received');
       async function sample(name,broadcast) {
         await waitFor(()=>!!route && (broadcast ? route[3]===true && route[2]===false : route[2]===true && !route[3]),'Rota de áudio inesperada: '+name);
@@ -179,10 +188,28 @@ async page => {
       act({kind:'toggle-megaphone'});
       await waitFor(()=>observerRoutes?.some(([id,volume,local,filtered])=>id===host.sessionId && volume>0 && !local && filtered),
         'Observador distante não recebeu rota global');
-      await waitFor(()=>meters.filter(m=>amplitude(m)>.01).length===2,'Áudio global não chegou ao terceiro cliente');
+      await waitFor(()=>receivingSpeech(observerAudio),'Áudio global não chegou ao terceiro cliente');
       if (observerRoutes.length!==1 || listenerRecipients.includes(observer.sessionId) || observedSpeakers.has(host.sessionId)) {
         throw Error('Megafone expôs a chamada ou a identidade do emissor');
       }
+      const distantRoute = observerRoutes.find(([id])=>id===host.sessionId);
+      if (route[1]!==distantRoute[1]) throw Error('Volume global depende da distância');
+      peers[0].toggleMute();
+      await waitFor(()=>meters.every(m=>amplitude(m)<.003),'O mute não silenciou a transmissão');
+      inputs[1].gain.value = 1;
+      const activePlayback = ()=>meters.filter(m=>amplitude(m)>.01);
+      await waitFor(()=>receivingSpeech(hostAudio),'O interlocutor não chegou ao emissor');
+      let privateAudioWindows = 0;
+      for (let i=0;i<8;i++) {
+        const audible = activePlayback();
+        if (audible.some(m=>m.context!==hostAudio)) throw Error('O áudio privado do interlocutor vazou');
+        if (audible.length===1) privateAudioWindows++;
+        await pause(50);
+      }
+      if (!privateAudioWindows) throw Error('O teste não detectou áudio privado');
+      inputs[1].gain.value = 0;
+      peers[0].toggleMute();
+      await waitFor(()=>receivingSpeech(listenerAudio) && receivingSpeech(observerAudio),'A transmissão não voltou após o mute');
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
       act({kind:'toggle-modulator'});
@@ -191,6 +218,7 @@ async page => {
       const combined = await sample('megafone-com-modulador',true);
       act({kind:'toggle-megaphone'});
       await waitFor(()=>observerRoutes?.length===0,'Rota global permaneceu após desligar o megafone');
+      if (!gear()?.modulator?.active) throw Error('Desligar o megafone desligou também o Modulador');
       if (gear()?.call?.state!=='connected') throw Error('Desligar o megafone encerrou a chamada');
       const disguiseOnly = await sample('modulador',false);
       if (combined.bassToMid>=disguiseOnly.bassToMid*.65) throw Error(JSON.stringify({disguiseOnly,combined}));
@@ -198,7 +226,7 @@ async page => {
       if (meters.length!==6 || devices.length!==3 || tracksPerConnection.length!==6 || tracksPerConnection.some(count=>count!==1)) {
         throw Error(JSON.stringify({streams:meters.length,microphoneSources:devices.length,tracksPerConnection}));
       }
-      return {normal,filtered,combined,disguiseOnly,streams:meters.length,microphoneSources:devices.length,tracksPerConnection,recordings};
+      return {normal,filtered,combined,disguiseOnly,privateAudioWindows,streams:meters.length,microphoneSources:devices.length,tracksPerConnection,recordings};
     } finally {
       peers.forEach(peer=>peer.stop());
       await Promise.all(rooms.map(room=>room.leave()));
