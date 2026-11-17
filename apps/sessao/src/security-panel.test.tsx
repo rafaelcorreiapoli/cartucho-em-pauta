@@ -6,8 +6,12 @@ import {securityCameras} from './security';
 test('the security dialog shows the selected camera and leaves the viewport mounted while it connects',()=>{
   const render = (ready:boolean)=>renderToStaticMarkup(<SecurityDialogContent camera="coffee" ready={ready} send={()=>{}}/>);
   const waiting = render(false);
-  for (const {label} of securityCameras) expect(waiting).toContain(label);
-  expect(waiting).toContain('aria-pressed="true">Cafezinho');
+  securityCameras.forEach(({id,label},index)=>{
+    const key = index+1;
+    expect(waiting).toContain(
+      `aria-pressed="${id==='coffee'}" aria-keyshortcuts="${key}"><span class="flex-1">${label}</span><kbd class="action-key" aria-hidden="true">${key}</kbd>`,
+    );
+  });
   expect(waiting).toContain('spy-viewport waiting-for-feed');
   expect(waiting).toContain('role="status">Conectando à câmera…');
   expect(waiting).toContain('method="dialog"');
