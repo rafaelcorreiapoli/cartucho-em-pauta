@@ -294,7 +294,7 @@ async function connect(join: () => Promise<Room>) {
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      (id,photo)=>sendCommand('complaint-submit',{id,photo}));
+      (id,photo)=>sendCommand('complaint-submit',{id,photo}),gameplay.closePhoneApp);
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
     joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));

@@ -181,14 +181,14 @@ async page => {
   await page.keyboard.press('6');
   await dialog.getByRole('heading',{name:'Correio',exact:true}).waitFor();
   await dialog.getByRole('button',{name:'Novo comunicado'}).click();
-  await dialog.getByRole('button',{name:'Selecionar anexo'}).click();
+  await viaPalette(dialog.getByRole('button',{name:'Selecionar anexo',exact:true}),'Selecionar anexo');
   await dialog.getByRole('textbox',{name:'Buscar anexo'}).fill('inexistente');
   if (await dialog.locator('.mail-attachment-grid button').count()) throw Error('Attachment search did not filter');
   await dialog.getByRole('textbox',{name:'Buscar anexo'}).fill('fotografia');
-  await dialog.getByRole('button',{name:/Fotografia #/}).click();
+  await viaPalette(dialog.getByRole('button',{name:/Fotografia #/}),'Fotografia #');
   await dialog.getByLabel('Assunto').fill('Selfie de teste');
   await dialog.getByLabel('Mensagem').fill('Segue a foto');
-  await dialog.getByRole('button',{name:/^Publicar/}).click();
+  await viaPalette(dialog.getByRole('button',{name:/^Publicar/}),'Publicar');
   await dialog.getByRole('heading',{name:'Selfie de teste'}).waitFor();
   await dialog.locator('#phone-mail canvas').waitFor();
   await home();

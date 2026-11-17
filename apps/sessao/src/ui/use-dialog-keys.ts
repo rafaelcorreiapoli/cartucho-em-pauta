@@ -3,12 +3,14 @@ import {isEditingText} from '../game-keys';
 
 import type {ShortcutEntry} from '../action-shortcuts';
 
-const paletteEntries = new WeakMap<Element,readonly ShortcutEntry[]>();
+const paletteEntries = new WeakMap<Element,{entries:readonly ShortcutEntry[];owner:HTMLElement}>();
 
 export function dialogKeyActions(dialog:HTMLElement) {
-  const entries = paletteEntries.get(dialog);
-  return entries?.map(entry=>({name:entry.name,activate:()=>{
-    if (dialog.matches('dialog:modal') && paletteEntries.get(dialog)===entries) entry.activate();
+  const registration = paletteEntries.get(dialog);
+  if (!registration || !registration.owner.isConnected || registration.owner.closest('[hidden]')) return;
+  return registration.entries.map(entry=>({name:entry.name,activate:()=>{
+    if (dialog.matches('dialog:modal') && paletteEntries.get(dialog)===registration &&
+        registration.owner.isConnected && !registration.owner.closest('[hidden]')) entry.activate();
   }}));
 }
 
@@ -16,17 +18,20 @@ export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=>
   const panel = useRef<T>(null);
   const currentAction = useEffectEvent(actionForKey);
   useLayoutEffect(()=>{
-    const dialog = panel.current?.closest('dialog');
-    if (!dialog || !entries) return;
-    paletteEntries.set(dialog,entries);
-    return ()=>{ if (paletteEntries.get(dialog)===entries) paletteEntries.delete(dialog); };
+    const owner = panel.current;
+    const dialog = owner?.closest('dialog');
+    if (!owner || !dialog || !entries) return;
+    const registration = {entries,owner};
+    paletteEntries.set(dialog,registration);
+    return ()=>{ if (paletteEntries.get(dialog)===registration) paletteEntries.delete(dialog); };
   },[entries]);
   useEffect(()=>{
     function keydown(event:KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing || event.shiftKey ||
           event.ctrlKey || event.altKey || event.metaKey || isEditingText(event.target)) return;
-      const dialog = panel.current?.closest('dialog:modal');
-      if (!dialog) return;
+      const owner = panel.current;
+      const dialog = owner?.closest('dialog:modal');
+      if (!dialog || owner?.closest('[hidden]')) return;
       const active = document.activeElement?.closest('dialog:modal');
       if (active ? active!==dialog : [...document.querySelectorAll('dialog:modal')].some(open=>open!==dialog)) return;
       const action = currentAction(event.key);

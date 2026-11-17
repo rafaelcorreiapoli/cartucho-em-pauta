@@ -189,7 +189,12 @@ async page => {
     await mail.getByRole('button',{name:'Novo comunicado'}).click();
     await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
     await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
-    await mail.getByRole('button',{name:/^Publicar/}).click();
+    const publish = mail.getByRole('button',{name:/^Publicar/});
+    await publish.evaluate(button=>{
+      button.removeAttribute('aria-keyshortcuts');
+      button.focus();
+    });
+    await page.keyboard.press('1');
     await receiver.locator(dialog).getByRole('heading',{name:'Aviso do Cafezinho'}).waitFor();
   } finally {
     await receiver.close();

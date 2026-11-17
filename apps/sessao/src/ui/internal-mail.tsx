@@ -1,4 +1,6 @@
 import {useState} from 'react';
+import {useDialogKeys} from './use-dialog-keys';
+import type {ShortcutEntry} from '../action-shortcuts';
 import {infractionLabels,type ComplaintView} from '../complaints';
 import { useLayoutEffect, useRef } from 'react';
 import type { Photo } from '../photography';
@@ -9,24 +11,61 @@ import { money } from '../politics';
 
 export type AttachmentChoice = AttachmentRef & {label:string};
 
-function AttachmentPicker({choices}:{choices:readonly AttachmentChoice[]}) {
+type Draft = {subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};
+
+function MailComposer({choices,source,pending,error,fee,publish,back,close}:{choices:readonly AttachmentChoice[];
+  source?:InternalNotice;pending:boolean;error:string|null;fee:number;publish:(draft:Draft)=>void;back:()=>void;close:()=>void;
+}) {
   const [open,setOpen] = useState(false);
   const [query,setQuery] = useState('');
-  const [selected,setSelected] = useState<AttachmentChoice>();
-  return <div className="mail-attachments">
-    <input type="hidden" name="attachment" value={selected ? selected.kind+'-'+selected.id : ''}/>
-    <button type="button" className="hud-button" aria-expanded={open} onClick={()=>setOpen(!open)}>{selected?.label ?? 'Selecionar anexo'}</button>
-    {open && <section className="mail-entry" aria-label="Inventário de anexos">
-      <input aria-label="Buscar anexo" placeholder="Buscar pelo nome" value={query} onChange={event=>setQuery(event.target.value)}/>
-      <div className="mail-attachment-grid">
-        {choices.filter(choice=>choice.label.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR'))).map(choice=>
-          <button type="button" className="hud-button hud-button--secondary" key={choice.kind+'-'+choice.id} onClick={()=>{setSelected(choice);setOpen(false);}}>
+  const [selection,setSelection] = useState<AttachmentRef>();
+  const subject = useRef<HTMLInputElement>(null);
+  const body = useRef<HTMLTextAreaElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const selected = choices.find(choice=>choice.kind===selection?.kind && choice.id===selection?.id);
+  const visible = open ? choices.filter(choice=>choice.label.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR'))) : [];
+  const toggle = ()=>setOpen(!open);
+  const pick = (choice?:AttachmentChoice)=>{
+    setSelection(choice && {kind:choice.kind,id:choice.id});
+    setOpen(false);
+  };
+  const submit = ()=>form.current?.requestSubmit();
+  const entries:ShortcutEntry[] = [{name:'Fechar aplicativo',activate:close}];
+  if (!pending) entries.push({name:'Voltar ao Correio',activate:back},{name:'Publicar · '+money(fee),activate:submit});
+  entries.push({name:'Assunto',activate:()=>subject.current?.focus()},{name:'Mensagem',activate:()=>body.current?.focus()});
+  if (!source) {
+    entries.push({name:selected?.label ?? 'Selecionar anexo',activate:toggle});
+    if (open) {
+      entries.push({name:'Buscar anexo',activate:()=>search.current?.focus()},{name:'Sem anexo',activate:()=>pick()});
+      entries.push(...visible.map(choice=>({name:choice.label,activate:()=>pick(choice)})));
+    }
+  }
+  const form = useDialogKeys<HTMLFormElement>(key=>key==='1' && !pending ? submit : undefined,entries);
+  return <form ref={form} className="grid gap-3" onSubmit={event=>{
+    event.preventDefault();
+    if (pending) return;
+    const data = new FormData(event.currentTarget);
+    publish({subject:String(data.get('subject')),body:String(data.get('body')),
+      attachment:selected && {kind:selected.kind,id:selected.id},forwardedFrom:source?.id});
+  }}>
+    <label>Assunto<input ref={subject} name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
+    <label>Mensagem<textarea ref={body} name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
+    {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <div className="mail-attachments">
+      <button type="button" className="hud-button" aria-expanded={open} onClick={toggle}>{selected?.label ?? 'Selecionar anexo'}</button>
+      {open && <section className="mail-entry" aria-label="Inventário de anexos">
+        <input ref={search} aria-label="Buscar anexo" placeholder="Buscar pelo nome" value={query} onChange={event=>setQuery(event.target.value)}/>
+        <div className="mail-attachment-grid">
+          {visible.map(choice=><button type="button" className="hud-button hud-button--secondary" key={choice.kind+'-'+choice.id} onClick={()=>pick(choice)}>
             <svg className="hud-glyph" aria-hidden="true"><use href={choice.kind==='photo' ? '#icon-app-photos' : '#icon-document'}/></svg>{choice.label}
           </button>)}
-      </div>
-      <button type="button" className="hud-button hud-button--secondary" onClick={()=>{setSelected(undefined);setOpen(false);}}>Sem anexo</button>
-    </section>}
-  </div>;
+        </div>
+        <button type="button" className="hud-button hud-button--secondary" onClick={()=>pick()}>Sem anexo</button>
+      </section>}
+    </div>}
+    <p role="status">{error}</p>
+    <button className="hud-button" disabled={pending} aria-keyshortcuts="1">Publicar · {money(fee)} <kbd className="action-key" aria-hidden="true">1</kbd></button>
+    <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={back}>Voltar ao Correio</button>
+  </form>;
 }
 
 function MailPhoto({photo,draw}:{photo:Photo;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void}) {
@@ -75,8 +114,8 @@ export function ComplaintDesk({view,submit}:{view:ComplaintView;submit?:(id:numb
   </section>;
 }
 
-export function mountInternalMail(publish:(message:{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number})=>void,
-  notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void,submit:(id:number,photo?:number)=>void) {
+export function mountInternalMail(publish:(message:Draft)=>void,
+  notify:(title:string,text:string)=>void,examine:(id:number)=>void,draw:(canvas:HTMLCanvasElement,photo:Photo)=>void,submit:(id:number,photo?:number)=>void,close:()=>void) {
   const host = document.querySelector<HTMLElement>('#phone-mail')!;
   const root = createRoot(host);
   let choices:readonly AttachmentChoice[] = [];
@@ -96,28 +135,19 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
     const attachments = [...choices,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
     root.render(<>
       {composing && <h3>Publicar comunicado</h3>}
-      {composing ? <form className="grid gap-3" onSubmit={event=>{
-        event.preventDefault();
-        if (pending) return;
-        const data = new FormData(event.currentTarget);
-        pending = true;
-        error = null;
-        const choice = attachments.find(choice=>choice.kind+'-'+choice.id===data.get('attachment'));
-        const attachment = choice && {kind:choice.kind,id:choice.id};
-        publish({subject:String(data.get('subject')),body:String(data.get('body')),attachment,forwardedFrom:source?.id});
-        render();
-      }}>
-        <label>Assunto<input name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
-        <label>Mensagem<textarea name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
-        {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <AttachmentPicker choices={attachments}/>}
-        <p role="status">{error}</p>
-        <button className="hud-button" disabled={pending}>Publicar · {money(fee)}</button>
-        <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={()=>{
+      {composing ? <MailComposer choices={attachments} source={source} pending={pending} error={error} fee={fee} close={close}
+        publish={draft=>{
+          if (pending) return;
+          pending = true;
+          error = null;
+          publish(draft);
+          render();
+        }}
+        back={()=>{
           composing = false;
           source = undefined;
           render();
-        }}>Voltar ao Correio</button>
-      </form> : <div className="grid gap-3">
+        }}/> : <div className="grid gap-3">
         <button type="button" className="hud-button" disabled={!exploring} onClick={()=>{
           composing = true;
           source = undefined;

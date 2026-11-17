@@ -507,6 +507,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       open();
     },
     openPhone() { app = undefined; open(); },
+    closePhoneApp,
     close() { dialog.close(); },
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
