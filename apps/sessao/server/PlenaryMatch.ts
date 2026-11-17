@@ -17,7 +17,7 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, NEGOTIATION_MS, stations, canReachStation, stabilityRules, deficitStabilityLoss,
-  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditFee, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
 import { CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
@@ -320,7 +320,7 @@ export class PlenaryMatch {
     if (action==='audit') {
       this.audits.set(player.id,this.fraud ? 'fraud' : 'clean');
       this.publishActivity(player,'audit-performed',now);
-      const fee = (this.policies.get('bankAudit') ?? 0)>now ? bankAuditFee : 0;
+      const fee = bankAuditCost(this.activePolicies(now));
       const note = this.economy.audit(player.id,this.round,1,fee);
       if (note) this.auditNotes.set(player.id,note);
       const finding = this.reportedFraud ? 'O Painel já mostra os números corrigidos.' :
