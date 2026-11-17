@@ -1,7 +1,11 @@
 async page => {
   await page.addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
-    navigator.mediaDevices.getUserMedia = async ()=>{ throw new DOMException('QA sem microfone','NotAllowedError'); };
+    window.micAttempts = 0;
+    navigator.mediaDevices.getUserMedia = async ()=>{
+      window.micAttempts++;
+      throw new DOMException('QA sem microfone','NotAllowedError');
+    };
   });
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.reload();
@@ -71,6 +75,8 @@ async page => {
   await sheet.getByRole('button',{name:'Expandir votação'}).click();
   await page.keyboard.press('y');
   await sheet.locator('[data-vote-state="yes"]').getByText('Histórico QA').waitFor();
+  await page.keyboard.press('r');
+  await sheet.locator('[data-vote-state="no"]').getByText('Histórico QA').waitFor();
   await page.keyboard.press('n');
   await sheet.locator('[data-vote-state="abstain"]').getByText('Histórico QA').waitFor();
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
@@ -92,4 +98,5 @@ async page => {
   if (!await history.getByRole('button',{name:'Votação anterior'}).isDisabled()) throw Error('Previous arrow exceeded bounds');
   await history.getByRole('button',{name:'Próxima votação'}).click();
   if (!await history.getByRole('button',{name:'Próxima votação'}).isDisabled()) throw Error('Next arrow exceeded bounds');
+  if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('Voting attempted to access the microphone');
 }

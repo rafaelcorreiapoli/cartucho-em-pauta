@@ -140,7 +140,7 @@ Abra a página no Playwright CLI com `dev/private-call-chrome.json` e execute
 
 ## Teste do histórico de votações no Chrome
 
-Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-server.ts`
+Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-smoke-server.ts`
 e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
 Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
 `dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
