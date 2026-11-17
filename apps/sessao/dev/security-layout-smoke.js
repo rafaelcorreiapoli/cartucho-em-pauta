@@ -14,13 +14,23 @@ async page => {
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
 
   const results = [];
+  const shortcuts = page.locator('#action-shortcuts');
   for (const [width,height] of [[1280,720],[1024,600],[800,600],[800,360]]) {
     await page.setViewportSize({width,height});
     await page.getByRole('button',{name:'Consultar câmeras'}).click();
     const terminal = page.getByRole('dialog',{name:'Sala de Segurança'});
     await terminal.getByText('Ao vivo',{exact:true}).waitFor();
-    await terminal.getByRole('button',{name:'Lanchonete',exact:true}).click();
-    await terminal.getByRole('button',{name:'Lanchonete',exact:true,pressed:true}).waitFor();
+    const snacks = terminal.getByRole('button',{name:'Lanchonete',exact:true});
+    if (height===360) {
+      await snacks.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
+      await page.keyboard.press('F2');
+      await shortcuts.getByRole('button',{name:'Lanchonete',exact:true}).click();
+      await terminal.getByRole('button',{name:'Rótulo original alterado',pressed:true}).waitFor();
+    } else {
+      await snacks.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+      await page.keyboard.press('6');
+      await terminal.getByRole('button',{name:'Lanchonete',exact:true,pressed:true}).waitFor();
+    }
     await terminal.getByText('Ao vivo',{exact:true}).waitFor();
     const bounds = await terminal.evaluate(dialog=>{
       const outer = dialog.getBoundingClientRect();
@@ -34,7 +44,14 @@ async page => {
         bounds.headerTop<bounds.top || bounds.dialogOverflow>1 || (height===360 && bounds.scroll===0)) {
       throw Error(`Terminal em ${width}×${height}: ${JSON.stringify(bounds)}`);
     }
-    await terminal.getByRole('button',{name:'Fechar terminal'}).click();
+    const closeTerminal = terminal.getByRole('button',{name:'Fechar terminal'});
+    if (height===360) {
+      await closeTerminal.evaluate(button=>button.setAttribute('aria-label','Fechamento original alterado'));
+      await page.keyboard.press('F2');
+      await shortcuts.getByRole('button',{name:'Fechar terminal',exact:true}).click();
+    } else {
+      await closeTerminal.click();
+    }
     await terminal.waitFor({state:'hidden'});
     await page.keyboard.press('v');
     const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});

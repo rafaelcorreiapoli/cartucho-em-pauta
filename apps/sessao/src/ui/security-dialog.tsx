@@ -1,15 +1,24 @@
 import {DialogHeader} from './dialog-header';
+import {useDialogKeys} from './use-dialog-keys';
 import {securityCameras, type SecurityAction, type SecurityCameraId} from '../security';
 
-export function SecurityDialogContent({camera,ready,send}:{
-  camera?:SecurityCameraId; ready:boolean; send:(action:SecurityAction)=>void;
+export function SecurityDialogContent({camera,ready,send,close}:{
+  camera?:SecurityCameraId; ready:boolean; send:(action:SecurityAction)=>void;close:()=>void;
 }) {
+  const select = (id:SecurityCameraId)=>send({kind:'select',camera:id});
+  const console = useDialogKeys<HTMLDivElement>(key=>{
+    const channel = /^[1-9]$/.test(key) ? securityCameras[Number(key)-1] : undefined;
+    return channel ? ()=>select(channel.id) : undefined;
+  },[
+    {name:'Fechar terminal',activate:close},
+    ...securityCameras.map(({id,label})=>({name:label,activate:()=>select(id)})),
+  ]);
   return <>
-    <DialogHeader id="security-title" title="Sala de Segurança" dismissLabel="Fechar terminal" dismissClass="hud-button hud-button--secondary"/>
-    <div className="security-console">
+    <DialogHeader id="security-title" title="Sala de Segurança" dismissLabel="Fechar terminal" dismissClass="hud-button hud-button--secondary" onDismiss={close}/>
+    <div ref={console} className="security-console">
       <div className="security-channels" role="group" aria-label="Câmeras">
         {securityCameras.map(({id,label},index)=><button key={id} type="button" className="hud-button hud-button--secondary spy-channel"
-          aria-pressed={id===camera} aria-keyshortcuts={String(index+1)} onClick={()=>send({kind:'select',camera:id})}>
+          aria-pressed={id===camera} aria-keyshortcuts={String(index+1)} onClick={()=>select(id)}>
           <span className="flex-1">{label}</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd>
         </button>)}
       </div>
