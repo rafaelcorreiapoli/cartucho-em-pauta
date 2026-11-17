@@ -13,6 +13,7 @@ class ContextOverflowRoom extends SessionRoom {
         if (positioned.has(player.id)) continue;
         positioned.add(player.id);
         Object.assign(player,stations.coffee);
+        for (let i=0;i<3;i++) Reflect.get(this,'gameplay').distributePinga(player,this.clock.currentTime);
       }
       for (const player of Reflect.get(this,'parliamentarians').players) {
         Object.assign(player,{x:stations.coffee.x+8,y:stations.coffee.y});

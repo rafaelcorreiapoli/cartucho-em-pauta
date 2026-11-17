@@ -165,7 +165,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     </article>;
   }
   function changeQuantity(item:WorldItem,delta:number) {
-    quantity = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    const next = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    if (next===quantity) return;
+    quantity = next;
     render();
   }
 
@@ -423,6 +425,18 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     highlightSlot();
   }
 
+  function activateHotbar(index:number) {
+    const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
+    if (!item) {
+      assigningSlot = index;
+      open(undefined,undefined,false,false,true);
+      return;
+    }
+    const use = consumableAction(item);
+    if (use) send(use.action);
+    else open({id:item.id,source:'inventory'});
+  }
+
   function highlightSlot() {
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
       const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
@@ -430,7 +444,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
         aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
-        onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
+        onClick={()=>activateHotbar(index)}>
         {badge}<span className="slot-plus" aria-hidden="true">+</span>
       </button>;
       const name = itemName(item);
@@ -439,7 +453,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
         aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
-        onClick={()=>use ? send(use.action) : open({id:item.id,source:'inventory'})}>
+        onClick={()=>activateHotbar(index)}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
         {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </button>;
@@ -447,22 +461,21 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   const onSlotKey = (event:KeyboardEvent) => {
+    if (event.isComposing) return;
     if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
         !event.ctrlKey && !event.altKey && !event.metaKey && !isEditingText(event.target) &&
         (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
-      const control = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
-      if (control) {
+      const item = inventoryItems.find(entry=>entry.id===selection?.id);
+      if (item && itemQuantity(item)>1) {
         event.preventDefault();
-        control.click();
+        changeQuantity(item,event.key==='ArrowLeft' ? -1 : 1);
         return;
       }
     }
     if (dialog.open || slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
-    const slot = slots.children[Number(event.code.at(-1))-1];
-    if (!(slot instanceof HTMLButtonElement)) return;
     event.preventDefault();
-    slot.click();
+    activateHotbar(Number(event.code.at(-1))-1);
   };
   document.addEventListener('keydown',onSlotKey);
   const onSnakeKey = (event:KeyboardEvent) => {

@@ -110,8 +110,28 @@ async page => {
   }
   await drop.click();
   await bagCoffee.waitFor({state:'hidden'});
+  await bag.getByRole('button',{name:'Pinga ×3',exact:true}).click();
+  const quantity = bag.getByLabel('Quantidade selecionada');
+  await quantity.filter({hasText:'1 / 3'}).waitFor();
+  await bag.getByRole('button',{name:'Aumentar quantidade'}).evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('ArrowRight');
+  await quantity.filter({hasText:'2 / 3'}).waitFor();
+  await page.keyboard.press('Shift+1');
+  await drop.click();
+  await bag.getByRole('button',{name:'Pinga',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await bag.waitFor({state:'hidden'});
+  const hotbarDrink = page.locator('#item-slots [data-kind="pinga"]');
+  await hotbarDrink.waitFor();
+  await hotbarDrink.evaluate(button=>{
+    window.hotbarClicks = 0;
+    button.addEventListener('click',()=>{ window.hotbarClicks++; });
+  });
+  await page.keyboard.press('Shift+1');
+  await hotbarDrink.waitFor({state:'hidden'});
+  if (await bag.isVisible() || await page.evaluate(()=>window.hotbarClicks)!==0) {
+    throw Error('Hotbar abriu o inventário ou simulou clique ao consumir');
+  }
   if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }
