@@ -90,8 +90,8 @@ export function drawMap(scene: Phaser.Scene,
   }
   for (const furnishing of furnishings) {
     const [x,y,w,h] = furnishing.area;
-    if (furnishing.texture) scene.add.image(x,y,furnishing.texture).setOrigin(0).setDisplaySize(w,h).setDepth(y+h);
-    else if (furnishing.frame!==undefined) prop(furnishing.frame,x,y,w,h,y+h);
+    if ('texture' in furnishing) scene.add.image(x,y,furnishing.texture).setOrigin(0).setDisplaySize(w,h).setDepth(y+h);
+    else prop(furnishing.frame,x,y,w,h,y+h);
   }
 
   const tribune = scene.add.text(570,591,'TRIBUNA',{
