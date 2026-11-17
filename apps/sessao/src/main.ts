@@ -231,7 +231,8 @@ async function connect(join: () => Promise<Room>) {
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
         ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
-      ]),width=>game?.setPhoneInset(width));
+      ]),width=>game?.setPhoneInset(width),
+      proof=>sendCommand('complaint-submit',proof.kind==='phone-game' ? {target:proof.target,photo:proof.photo} : {id:proof.id,photo:proof.photo}));
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
@@ -252,7 +253,7 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
-    },political,action=>sendCommand('plenary-action',{action}),{
+    },political,action=>action==='denounce' ? gameplay.openComplaint() : sendCommand('plenary-action',{action}),{
       send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
     const reactHud = mountReactHud();

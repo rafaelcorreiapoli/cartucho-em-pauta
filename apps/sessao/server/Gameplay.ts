@@ -810,7 +810,7 @@ export class Gameplay {
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
         direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
-        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),
+        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
       decorations:[...this.installations.values()].filter(visible).map(item=>({...item})),
@@ -822,7 +822,7 @@ export class Gameplay {
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({

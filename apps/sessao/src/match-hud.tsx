@@ -33,7 +33,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   renderNearby:(player:Motion | undefined,exploring:boolean) => void, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
-  sendLegislative:(action:Action)=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
+  sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
