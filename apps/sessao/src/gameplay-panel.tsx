@@ -459,19 +459,38 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     else open({id:item.id,source:'inventory'});
   }
 
+  function hotbarControl(index:number) {
+    const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
+    const shortcut = index+1;
+    const use = item && consumableAction(item);
+    const name = item && itemName(item);
+    const label = item ? use ? `${use.label} · ${name}` : `Abrir ${name}` : `Escolher item para o slot ${shortcut}`;
+    return {item,shortcut,use,label};
+  }
+
+  function hotbarVisible() {
+    return !slots.hidden && slots.parentElement?.checkVisibility({visibilityProperty:true,opacityProperty:true});
+  }
+
+  function hotbarShortcuts():ShortcutEntry[] {
+    if (!hotbarVisible()) return [];
+    return Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+      const {item,label} = hotbarControl(index);
+      return {name:label,activate:()=>{
+        if (hotbarVisible() && hotbar[index]===item?.id) activateHotbar(index);
+      }};
+    });
+  }
+
   function highlightSlot() {
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
-      const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
-      const shortcut = index+1;
+      const {item,shortcut,use,label} = hotbarControl(index);
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
-        aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
+        aria-label={label} title={`Vincular item (Shift+${shortcut})`}
         onClick={()=>activateHotbar(index)}>
         {badge}<span className="slot-plus" aria-hidden="true">+</span>
       </button>;
-      const name = itemName(item);
-      const use = consumableAction(item);
-      const label = use ? `${use.label} · ${name}` : `Abrir ${name}`;
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
         aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
@@ -558,6 +577,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     },
     nearbyActions,
     requestShortcuts:()=>requestEntries,
+    hotbarShortcuts,
     nearby(player:Motion | undefined, exploring:boolean) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;

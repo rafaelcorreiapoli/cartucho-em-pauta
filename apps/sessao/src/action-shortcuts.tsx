@@ -58,7 +58,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
   function render() {
     const registered = dialogKeyActions(scope) ?? shortcuts.dialog(scope);
     const otherActions = registered ? [] : [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
-      .filter(control=>!palette.contains(control) && !control.closest('#congress-apps, #object-request, #context-actions-mount, #ballot-host [data-vote], #ballot-host .cassation-ballot button') && available(control))
+      .filter(control=>!palette.contains(control) && !control.closest('#congress-apps, #item-slots, #object-request, #context-actions-mount, #ballot-host [data-vote], #ballot-host .cassation-ballot button') && available(control))
       .map(control=>({control,name:actionName(control)})).filter(({name})=>name);
     const actions:ShortcutEntry[] = [
       ...(scope===root ? shortcuts.context() : registered ?? []),

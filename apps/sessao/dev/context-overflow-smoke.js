@@ -160,10 +160,16 @@ async page => {
   const hotbarDrink = page.locator('#item-slots [data-kind="pinga"]');
   await hotbarDrink.waitFor();
   await hotbarDrink.evaluate(button=>{
+    button.setAttribute('aria-label','Rótulo original alterado');
     window.hotbarClicks = 0;
     button.addEventListener('click',()=>{ window.hotbarClicks++; });
   });
-  await page.keyboard.press('Shift+1');
+  await page.keyboard.press('F2');
+  const drink = shortcuts.getByRole('button',{name:'Beber · Pinga',exact:true});
+  const nextPage = shortcuts.getByRole('button',{name:'Próxima página'});
+  while (!await drink.count() && !await nextPage.isDisabled()) await page.keyboard.press('ArrowRight');
+  await drink.waitFor();
+  await page.keyboard.press(await drink.getAttribute('aria-keyshortcuts'));
   await hotbarDrink.waitFor({state:'hidden'});
   if (await bag.isVisible() || await page.evaluate(()=>window.hotbarClicks)!==0) {
     throw Error('Hotbar abriu o inventário ou simulou clique ao consumir');
