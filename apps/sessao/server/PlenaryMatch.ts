@@ -74,12 +74,12 @@ export class PlenaryMatch {
   canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
 
   setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
-    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(nextPublicationAt(id)),agendaSelfies);
+    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(id,nextPublicationAt(id)),agendaSelfies);
   }
 
-  private canPublishBeforeDeadline(nextPublicationAt:number) {
-    if (!this.running) return false;
-    let availableAt = Math.max(this.agendaNow,nextPublicationAt);
+  private canPublishBeforeDeadline(id:string,nextPublicationAt:number) {
+    if (!this.running || this.expelled.has(id)) return false;
+    let availableAt = Math.max(this.agendaNow,nextPublicationAt,this.economy.suspensionEndsAt(id) ?? 0);
     const sessionOpensAt = this.phase==='negotiation' ? this.agendaNow : this.ends;
     availableAt = Math.max(availableAt,sessionOpensAt);
     const cassationEnd = this.cassationAt===undefined ? sessionOpensAt : this.cassationAt+HEARING_MS;
@@ -854,7 +854,6 @@ export class PlenaryMatch {
         this.voteIntents.delete(target);
         this.economy.suspend(target,now+SUSPENSION_MS);
         this.hearingImmunity.set(target,now+SUSPENSION_MS+HEARING_IMMUNITY_MS);
-        this.refreshAgendaEligibility();
         if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
       }
       this.hearingResult = `${this.economy.name(target)}: afastamento ${removed ? 'aprovado' : 'rejeitado'} (${yes} votos pelo afastamento).`;
@@ -864,6 +863,7 @@ export class PlenaryMatch {
       else {
         this.phase = 'negotiation';
         this.ends = this.sessionEndsAt;
+        if (removed) this.refreshAgendaEligibility(now);
       }
       return;
     }

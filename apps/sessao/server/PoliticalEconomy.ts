@@ -361,8 +361,10 @@ export class PoliticalEconomy {
     return changed;
   }
 
+  suspensionEndsAt(id:string) { return this.accounts.get(id)?.suspendedUntil; }
+
   suspensionRemaining(id:string,now:number) {
-    return Math.max(0,Math.ceil(((this.accounts.get(id)?.suspendedUntil ?? now)-now)/1000));
+    return Math.max(0,Math.ceil(((this.suspensionEndsAt(id) ?? now)-now)/1000));
   }
 
   suspend(id:string,until:number) {

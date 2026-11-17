@@ -19,7 +19,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {HEARING_MS,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {HEARING_MS,SUSPENSION_MS,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -1722,4 +1722,45 @@ test.each([0,1])('a full final hearing removes mail missions only if it leaves n
   const completed = view(resumeAt).missions.completed.find(mission=>mission.kind==='mensagemComAnexo')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(resumeAt).progression.xp).toBe(35);
+});
+
+test.each([0,1])('mail missions respect the exact end of an approved isolation (%s ms)',remaining=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target,peer] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  const mail = new InternalMail();
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id));
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  for (const player of [host,target]) {
+    const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','selfieSolo']);
+  }
+  match.refreshAgendaEligibility();
+  const resultAt = ELECTION_RULES.matchDuration-SUSPENSION_MS-remaining;
+  match.politics(host,{kind:'hearing',target:target.id},players,resultAt-HEARING_MS);
+  const snapshots = (player:Player,now=resultAt)=>match.view(player.id,ids,now).politics!;
+  const mailMission = (player:Player,now?:number)=>snapshots(player,now).missions.active.find(mission=>mission.kind==='mensagemComAnexo');
+  expect(mailMission(target,resultAt-1)).toBeDefined();
+  match.vote(host.id,'yes',resultAt-1);
+  match.vote(peer.id,'yes',resultAt-1);
+  match.advance(resultAt);
+  expect(match.isolated(target.id)).toBe(true);
+  expect(mailMission(host)).toBeDefined();
+  expect(!!mailMission(target)).toBe(remaining>0);
+  expect(snapshots(target).missions.active).toHaveLength(3);
+  expect(snapshots(target).progression.xp).toBe(0);
+
+  if (!remaining) return;
+  const releaseAt = resultAt+SUSPENSION_MS;
+  expect(match.canHandleObjects(target.id,releaseAt-1)).toBe(false);
+  match.advance(releaseAt);
+  expect(match.canHandleObjects(target.id,releaseAt)).toBe(true);
+  const mission = mailMission(target,releaseAt)!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Publique um comunicado com anexo');
 });
