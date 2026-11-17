@@ -115,7 +115,7 @@ async page => {
     await page.keyboard.press(shortcut);
     await sign.waitFor({state:'hidden'});
     await page.keyboard.press('Escape');
-    await npcDeal.locator('#parliamentarian-title').waitFor({state:'detached'});
+    await npcDeal.waitFor({state:'hidden'});
   }
   await page.locator('#agenda-dock [data-done="true"]').getByText(signatureMission,{exact:true}).waitFor();
   await page.reload();

@@ -9,7 +9,7 @@ test('a refreshed NPC vote quote respects the new minimum and clears payment for
 });
 
 test('the React negotiation modal shows private quotes and disables unaffordable signatures',()=>{
-  const deal = {id:'npc1',name:'Sarney',wallet:2,paymentsLeft:1,project:'Auxílio Churrasco',projectIndex:0,expiresIn:20,
+  const deal = {session:1,id:'npc1',name:'Sarney',wallet:2,paymentsLeft:1,project:'Auxílio Churrasco',projectIndex:0,expiresIn:20,
     documents:[{id:1,title:'Pedido de assinatura',price:3}],minimum:{yes:0,no:4}};
   const markup = renderToStaticMarkup(<ParliamentarianDealPanel deal={deal} round={1} send={()=>{}}/>);
   expect(markup).toContain('<h2 id="parliamentarian-title">Sarney</h2>');
@@ -20,7 +20,7 @@ test('the React negotiation modal shows private quotes and disables unaffordable
 });
 
 test('exhausted payment quota only disables paid offers even with money in the wallet',()=>{
-  const deal = {id:'npc1',name:'Sarney',wallet:8,paymentsLeft:0,project:'Auxílio Churrasco',projectIndex:0,expiresIn:20,
+  const deal = {session:1,id:'npc1',name:'Sarney',wallet:8,paymentsLeft:0,project:'Auxílio Churrasco',projectIndex:0,expiresIn:20,
     documents:[{id:1,title:'Pedido pago',price:2},{id:2,title:'Pedido gratuito',price:0}],minimum:{yes:0,no:4}};
   const markup = renderToStaticMarkup(<ParliamentarianDealPanel deal={deal} round={1} send={()=>{}}/>);
   expect(markup).toContain('Limite de pagamentos atingido');

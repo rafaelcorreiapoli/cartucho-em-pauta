@@ -209,3 +209,18 @@ test('NPC negotiation exposes the live payment quota and still accepts a free vo
   expect(talk.act(buyer,{...vote,vote:'yes',amount:minimum.yes},active)).toBe('Pagamento indisponível.');
   expect(talk.act(buyer,{...vote,vote:'no',amount:0},active)).toBe('Voto comprometido.');
 });
+
+test('a delayed close only affects the negotiation it belongs to',()=>{
+  const {humans:[buyer],npcs:[first,second],talk,world} = fixture();
+  Object.assign(first,{x:buyer.x+8,y:buyer.y});
+  Object.assign(second,{x:buyer.x-8,y:buyer.y});
+  const state = world(1);
+  talk.act(buyer,{kind:'talk',target:first.id},state);
+  const previous = talk.view(buyer,state)!;
+  talk.act(buyer,{kind:'talk',target:second.id},state);
+  const current = talk.view(buyer,state)!;
+  talk.act(buyer,{kind:'close',session:previous.session},state);
+  expect(talk.view(buyer,state)).toEqual(current);
+  talk.act(buyer,{kind:'close',session:current.session},state);
+  expect(talk.view(buyer,state)).toBeUndefined();
+});

@@ -60,18 +60,20 @@ export function createParliamentarianPanel(send:Send) {
   const dialog = document.querySelector<HTMLDialogElement>('#parliamentarian-dialog')!;
   const root = createRoot(dialog);
   let key = '';
-  let dismissed = false;
+  let opened:number|undefined;
+  let dismissed:number|undefined;
   const close = () => {
-    if (!key || dialog.open) return;
-    dismissed = true;
-    send({kind:'close'});
+    if (opened===undefined || dialog.open) return;
+    dismissed = opened;
+    opened = undefined;
+    send({kind:'close',session:dismissed});
   };
   dialog.addEventListener('close',close);
   return {
     update(view:PlenaryView) {
       const deal = view.gameplay?.parliamentarianDeal;
       if (!deal) {
-        dismissed = false;
+        opened = dismissed = undefined;
         if (key) {
           key = '';
           dialog.close();
@@ -79,14 +81,16 @@ export function createParliamentarianPanel(send:Send) {
         }
         return;
       }
-      if (dismissed) return;
-      const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.id]);
+      close();
+      if (dismissed===deal.session) return;
+      const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.session]);
       const next = JSON.stringify([projectKey,deal.name,deal.project,deal.documents,deal.minimum,deal.wallet,deal.paymentsLeft]);
       if (key!==next) {
         key = next;
         flushSync(()=>root.render(<ParliamentarianDealPanel key={projectKey} deal={deal} round={view.round} send={send}/>));
       }
       if (!dialog.open && !document.querySelector('dialog:modal')) dialog.showModal();
+      if (dialog.open) opened = deal.session;
     },
     destroy() {
       dialog.removeEventListener('close',close);
