@@ -214,7 +214,8 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' || mission.kind==='chamadasUrgentes') {
+      if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' ||
+          mission.kind==='chamadasUrgentes' || mission.kind==='selfie' || mission.kind==='fatias') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&

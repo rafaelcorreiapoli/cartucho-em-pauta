@@ -1572,3 +1572,18 @@ test('Bandeja Gourmet needs access to a second distinct food beyond free coffee'
   expect(draw(.5)).toBe(true);
   expect(draw(.5,undefined,false)).toBe(false);
 });
+
+test('a pizza-serving mission preserves credited guests and requires enough new guests',()=>{
+  const guests = ['b','c','d'].map(id=>({id,name:id}));
+  const agenda = new PersonalAgenda(metrics,4,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fatias','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,4,true,3,0,guests);
+  expect(agenda.hasActive('fatias')).toBe(true);
+  recordAgendaEvent(agenda,event('slice',{kind:'pizza',target:'b',item:1}));
+  agenda.updateEligibility(metrics,2,true,3,0,[guests[1]]);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='fatias')?.current).toBe(1);
+  agenda.updateEligibility(metrics,1,true,3,0,[]);
+  expect(agenda.hasActive('fatias')).toBe(false);
+  expect(agenda.view(metrics).completed).toEqual([]);
+});

@@ -1099,3 +1099,78 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(render(true)).toContain('Consuma dois alimentos diferentes');
   expect(view().progression.xp).toBe(xpAfterCoffee+35);
 });
+
+test.each([true,false])('selfies retain distinct colleagues who already counted, credited departure=%s',creditedDeparture=>{
+  const photographer:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const [bia,caio,duda] = ['bia','caio','duda'].map(id=>({...photographer,id,nick:id}));
+  let players = [photographer,bia,caio,duda];
+  const match = new PlenaryMatch(1);
+  expect(match.start(photographer.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(photographer.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['selfie','cafe','passeio','visitaArquivo']);
+  match.refreshAgendaEligibility();
+
+  const view = (now:number)=>match.view(photographer.id,players.map(({id})=>id),now).politics!;
+  const render = (now:number,done=false)=>view(now).missions[done ? 'completed' : 'active'].filter(mission=>mission.kind==='selfie').map(mission=>
+    renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const capture = (now:number)=>game.act(photographer,{kind:'selfie'},match.gameplayWorld(players,now,()=>false));
+  Object.assign(bia,{x:photographer.x+8});
+  Object.assign(caio,npcs.furnitureVendor.interaction);
+  Object.assign(duda,npcs.credentialsVendor.interaction);
+  capture(100);
+  expect(render(100)).toContain('1 / 3');
+  capture(3_000);
+  expect(render(3_000)).toContain('1 / 3');
+
+  const departing = creditedDeparture ? bia : duda;
+  match.leave(departing.id,4_000);
+  players = players.filter(person=>person!==departing);
+  if (!creditedDeparture) {
+    expect(render(4_000)).not.toContain('Tire selfies com três parlamentares diferentes');
+    expect(view(4_000).progression.xp).toBe(0);
+    return;
+  }
+  expect(render(4_000)).toContain('1 / 3');
+  Object.assign(caio,{x:photographer.x+8,y:photographer.y});
+  Object.assign(duda,{x:photographer.x-8,y:photographer.y});
+  capture(6_000);
+  expect(render(6_000,true)).toContain('Tire selfies com três parlamentares diferentes');
+  expect(view(6_000).progression.xp).toBe(35);
+});
+
+test('the pizza mission keeps its first slice after that guest leaves',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...npcs.snackVendor.interaction,
+  }));
+  const [host,bia,caio] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fatias','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  game.act(host,{kind:'open-shop',target:'snackVendor'},world(1));
+  game.act(host,{kind:'shop-buy',target:'pizza',token:game.view(host,world(1)).dialogue?.token},world(1));
+  const pizza = game.view(host,world(1)).inventory.find(item=>item.kind==='pizza')!;
+  players.forEach(player=>Object.assign(player,installationSites.pizza.point));
+  expect(game.act(host,{kind:'install',place:'pizza',item:pizza.id},world(2))).toBe('Objeto instalado.');
+
+  const view = (now:number)=>match.view(host.id,players.map(({id})=>id),now).politics!;
+  const render = (now:number,done=false)=>{
+    const mission = view(now).missions[done ? 'completed' : 'active'].find(row=>row.kind==='fatias')!;
+    expect(mission).toBeDefined();
+    return renderToStaticMarkup(<MissionRow mission={mission} done={done}/>);
+  };
+  expect(game.act(bia,{kind:'slice',item:pizza.id},world(3))).toBe('Fatia servida.');
+  match.leave(bia.id,4);
+  players.splice(players.indexOf(bia),1);
+  expect(render(4)).toContain('1 / 2');
+  expect(game.act(caio,{kind:'slice',item:pizza.id},world(5))).toBe('Fatia servida.');
+  expect(render(5,true)).toContain('data-done="true"');
+});
