@@ -1,0 +1,325 @@
+import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type GameplayView} from '../src/gameplay';
+import {NAMES,type Motion,type Player} from '../src/map';
+import {applyInput,type ControlState} from '../src/movement';
+import {nickKey} from '../src/nick';
+import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
+import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
+import type {Gameplay} from './Gameplay';
+import type {GameplayWorld} from './gameplay-world';
+import type {PlenaryMatch} from './PlenaryMatch';
+
+const thinkMs = 650;
+const safeDifference = 6;
+
+type Bot = {
+  control:ControlState;
+  index:number;
+  nextThink:number;
+  destination?:Motion;
+  retryRouteAt:number;
+  routeRequest?:Motion;
+  round?:number;
+  seenAtPanel?:{name:string;at:number};
+  suspicion?:string;
+  foundFraud?:true;
+  lastSignRequest?:{id:string;at:number};
+  boughtEvidence?:true;
+  cutPower?:true;
+  voteReason?:string;
+};
+
+function impactScore(impact:Impact,budget:number) {
+  const balance = budget+impact.budget;
+  const extraDebtLoss = publicDebtStabilityLoss(balance)-publicDebtStabilityLoss(budget);
+  return impact.stability-extraDebtLoss+impact.budget/8;
+}
+
+export class PlayerBots {
+  private bots = new Map<string,Bot>();
+  private started = 0;
+  private filingSince?:number;
+  messages:NonNullable<PlenaryView['botMessages']> = [];
+
+  addTo(players:Map<string,ControlState>,now:number) {
+    this.started = now;
+    const occupied = new Set([...players.values()].map(({player})=>player.character));
+    const nicknames = new Set([...players.values()].map(({player})=>nickKey(player.nick)));
+    for (let number=1;players.size<MIN_PLAYERS;number++) {
+      const nick = `Bot ${number}`;
+      if (nicknames.has(nickKey(nick))) continue;
+      const character = NAMES.findIndex((_,index)=>!occupied.has(index));
+      occupied.add(character);
+      const player:Player = {id:`bot-${number}`,bot:true,nick,character,x:140,y:146,direction:0,moving:false};
+      const control:ControlState = {player,ack:0,route:[]};
+      const index = this.bots.size;
+      this.bots.set(player.id,{control,index,nextThink:now+index*125,retryRouteAt:now});
+      players.set(player.id,control);
+    }
+  }
+
+  clear(players:Map<string,ControlState>) {
+    for (const id of this.bots.keys()) players.delete(id);
+    this.bots.clear();
+    this.filingSince = undefined;
+    this.messages = [];
+  }
+
+  move(state:ControlState) {
+    const bot = this.bots.get(state.player.id)!;
+    applyInput(state,{seq:state.ack+1,destination:state.plenary || state.isolated ? undefined : bot.routeRequest});
+    bot.routeRequest = undefined;
+  }
+
+  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean) {
+    if (!this.bots.size) return;
+    const {now} = world;
+    if (match.phase!=='ballot') this.messages = [];
+    if (match.phase!=='ballot' && match.phase!=='negotiation' || match.ballotCountdown(now)!==undefined) return;
+    const players = world.players.filter(player=>!player.npc);
+    const ids = players.map(player=>player.id);
+    for (const [id,bot] of this.bots) {
+      if (now<bot.nextThink) continue;
+      bot.nextThink = now+thinkMs;
+      const {player} = bot.control;
+      if (player.knockedOut || player.carried || player.carrying || !match.canHandleObjects(id,now)) continue;
+      const visible = world.players.filter(peer=>peer!==player && world.present?.(peer.id)!==false && canSee(bot.control,peer));
+      const view = match.view(id,ids,now,match.contacts(player,visible));
+      const canFile = view.phase==='negotiation' && view.project===undefined && !view.protocolCooldown &&
+        !view.projectFilingClosed && view.cassationIn===undefined;
+      this.filingSince = canFile ? this.filingSince ?? now : undefined;
+      if (bot.round!==view.round) {
+        bot.round = view.round;
+        bot.seenAtPanel = undefined;
+        bot.suspicion = undefined;
+        bot.foundFraud = undefined;
+        bot.boughtEvidence = undefined;
+        bot.cutPower = undefined;
+        bot.voteReason = undefined;
+      }
+      if (view.phase==='ballot') {
+        this.vote(bot,match,view,players,now);
+        continue;
+      }
+      this.explore(bot,match,gameplay,world,view,visible);
+    }
+  }
+
+  private stop(bot:Bot) {
+    bot.control.route = [];
+    bot.destination = undefined;
+    bot.routeRequest = undefined;
+  }
+
+  private go(bot:Bot,point:Motion,now:number) {
+    const {control} = bot;
+    const same = bot.destination?.x===point.x && bot.destination.y===point.y;
+    if (same && (control.route.length || now<bot.retryRouteAt)) return;
+    bot.destination = {x:point.x,y:point.y};
+    bot.retryRouteAt = now+2_000;
+    bot.routeRequest = point;
+    control.route = [];
+  }
+
+  private explore(bot:Bot,match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,view:PlenaryView,visible:Player[]) {
+    const {player} = bot.control;
+    const {now} = world;
+    const game = gameplay.view(player,world);
+    const act = (action:GameplayAction)=> {
+      if (canUseGameplayAction(action,true,false)) gameplay.act(player,action,world);
+    };
+    const infiltrator = view.role==='Infiltrado';
+    const witness = visible.find(peer=>!peer.npc && canReachStation(peer,'panel'));
+    if (view.project!==undefined && witness && view.audit!=='fraud' && !view.reportedFraud) {
+      bot.seenAtPanel = {name:witness.nick,at:now};
+    }
+    const request = game.requests.find(entry=>entry.kind==='signature' && entry.item.document?.project!==undefined &&
+      visible.some(peer=>peer.id===entry.from.id && canReachObject(player,peer)));
+    if (request) {
+      this.stop(bot);
+      act({kind:'accept',item:request.id});
+      return;
+    }
+    if (view.outage?.operating!==undefined) {
+      this.stop(bot);
+      return;
+    }
+    if (view.outage && !view.outage.paused && (!infiltrator || now-this.started<45_000)) {
+      const preferred = (bot.index%2) as PowerPanel;
+      const panel = ([preferred,(1-preferred) as PowerPanel]).find(index=>!view.outage!.occupied[index]);
+      if (panel!==undefined) {
+        if (canOperatePanel(player,panel)) {
+          this.stop(bot);
+          match.actOnPower(player,{kind:'repair',panel},now);
+        } else this.go(bot,powerPanels[panel],now);
+        return;
+      }
+    }
+    if (!view.mandate || view.politics?.suspended) {
+      this.stop(bot);
+      return;
+    }
+    if (view.project!==undefined && !view.projectVoteExpired) {
+      this.workOnBill(bot,match,view,visible,now);
+      return;
+    }
+    const document = game.inventory.find(item=>item.document?.project!==undefined);
+    if (document && view.outcomes.some(outcome=>outcome.project===document.document?.project)) {
+      act({kind:'destroy',item:document.id});
+      return;
+    }
+    const filingElapsed = this.filingSince===undefined ? -Infinity : now-this.filingSince;
+    const first = (view.round+this.bots.size-1)%this.bots.size;
+    const filingOrder = (bot.index-first+this.bots.size)%this.bots.size;
+    if (filingElapsed>=8_000 && (document || filingElapsed>=8_000+filingOrder*22_000)) {
+      this.file(bot,view,game,visible,now,act);
+      return;
+    }
+    if (canReachObject(player,stations.secretary)) this.stop(bot);
+    else this.go(bot,stations.secretary,now);
+  }
+
+  private workOnBill(bot:Bot,match:PlenaryMatch,view:PlenaryView,visible:Player[],now:number) {
+    const {player} = bot.control;
+    const infiltrator = view.role==='Infiltrado';
+    const elapsed = projectRules.debateMs/1000-view.remaining;
+    const desired = this.votePreference(bot,view).vote;
+    if (infiltrator && view.canFraud && view.yes.budget<0 && (desired==='yes' || view.yes.budget<=-view.budget) && elapsed>=8 && elapsed<65) {
+      if (canReachStation(player,'panel')) {
+        this.stop(bot);
+        if (!visible.some(peer=>canReachObject(player,peer,{radius:48}))) match.act(player,'fraud',now);
+      } else this.go(bot,stations.panel,now);
+      return;
+    }
+    if (infiltrator && !bot.cutPower && view.canSabotagePower && elapsed>=22 && elapsed<85) {
+      if (canOperatePanel(player,0)) {
+        this.stop(bot);
+        if (!visible.some(peer=>canReachObject(player,peer,{radius:48})) &&
+            match.actOnPower(player,{kind:'sabotage',panel:0},now)) bot.cutPower = true;
+      } else this.go(bot,powerPanels[0],now);
+      return;
+    }
+    if (view.audit==='fraud' && !view.reportedFraud && !infiltrator) {
+      if (canReachStation(player,'panel')) {
+        this.stop(bot);
+        match.act(player,'panel',now);
+      } else this.go(bot,stations.panel,now);
+      return;
+    }
+    if (view.audit===undefined && !view.reportedFraud && elapsed>=32+bot.index*7 && view.remaining>7) {
+      if (canReachStation(player,'audit')) {
+        this.stop(bot);
+        const result = match.act(player,'audit',now);
+        if (result?.critical) {
+          bot.foundFraud = true;
+          const seen = bot.seenAtPanel;
+          if (seen && now-seen.at<35_000) bot.suspicion = seen.name;
+        }
+      } else this.go(bot,stations.audit,now);
+      return;
+    }
+    if (canReachStation(player,'library')) this.stop(bot);
+    else this.go(bot,stations.library,now);
+  }
+
+  private file(bot:Bot,view:PlenaryView,game:GameplayView,visible:Player[],now:number,act:(action:GameplayAction)=>void) {
+    const {player} = bot.control;
+    const document = game.inventory.find(item=>item.document?.project!==undefined);
+    if (!document?.document) {
+      if (!game.locations.includes('secretary')) {
+        this.go(bot,stations.secretary,now);
+        return;
+      }
+      this.stop(bot);
+      const used = new Set(view.outcomes.map(outcome=>outcome.project));
+      const choices = bills.flatMap((bill,index)=>used.has(index) ? [] : [{bill,index}]);
+      const project = choices.sort((a,b)=>
+        Math.max(impactScore(b.bill.yes,view.budget),impactScore(b.bill.no,view.budget))-
+        Math.max(impactScore(a.bill.yes,view.budget),impactScore(a.bill.no,view.budget)))[0]?.index;
+      if (project!==undefined) act({kind:'supply',place:'secretary',target:`project-${project}`});
+      return;
+    }
+    const {signatures,requiredSignatures} = document.document;
+    if (signatures.length>=requiredSignatures) {
+      if (!game.locations.includes('protocol')) {
+        this.go(bot,terminals.protocol.point,now);
+        return;
+      }
+      this.stop(bot);
+      if (game.dialogue?.npc==='protocol') act({kind:'dialogue-choice',target:`file-${document.id}`,token:game.dialogue.token});
+      else act({kind:'talk',target:'protocol'});
+      return;
+    }
+    const last = bot.lastSignRequest;
+    if (last && now-last.at<2_000 && !signatures.some(person=>person.id===last.id)) return;
+    const candidates = visible.filter(other=>!other.npc && !other.knockedOut &&
+      !signatures.some(person=>person.id===other.id) && !(last?.id===other.id && now-last.at<8_000));
+    const peer = candidates.find(other=>canReachObject(player,other));
+    if (peer) {
+      this.stop(bot);
+      bot.lastSignRequest = {id:peer.id,at:now};
+      act({kind:'sign-request',target:peer.id,item:document.id});
+    } else if (candidates.length) {
+      if (now>=bot.retryRouteAt || !bot.control.route.length) this.go(bot,candidates[0],now);
+    } else if (canReachObject(player,stations.secretary)) this.stop(bot);
+    else this.go(bot,stations.secretary,now);
+  }
+
+  private votePreference(bot:Bot,view:PlenaryView):{vote:Vote;reason:string} {
+    const {budget,yes,no,stability,politics} = view;
+    const yesStability = stability+yes.stability;
+    const noStability = stability+no.stability;
+    const difference = impactScore(yes,budget)-impactScore(no,budget);
+    const threshold = view.outcomes.length+1>=projectRules.requiredVotes ? stabilityRules.target : 0;
+    const decisive = (yesStability>=threshold)!==(noStability>=threshold) || (yesStability<=0)!==(noStability<=0);
+    const infiltrator = view.role==='Infiltrado';
+    if (decisive || Math.abs(difference)>safeDifference) {
+      const safer = decisive ? yesStability>noStability : difference>0;
+      const approve = safer!==infiltrator;
+      const choice = approve ? yes : no;
+      const other = approve ? no : yes;
+      const reason = !infiltrator ? 'Os números que tenho favorecem essa opção para o Congresso.' :
+        choice.budget>other.budget ? 'Quero preservar o orçamento.' :
+        choice.stability>other.stability ? 'O efeito previsto na estabilidade pesa para mim.' :
+        'O custo previsto não justifica mudar minha posição.';
+      return {vote:approve?'yes':'no',reason};
+    }
+    const proposer = politics?.directory.find(person=>person.name===view.proposer);
+    const diversion = [...(politics?.evidence ?? []),...(politics?.ledger ?? [])]
+      .find(proof=>proof.kind==='diversion' && proof.from===proposer?.id && proof.from!==bot.control.player.id);
+    if (diversion) return {vote:'no',reason:'O dossiê comprova um desvio de verba de quem protocolou. Isso pesou no meu voto.'};
+    const mission = politics?.missions.active.find(mission=>mission.kind==='projetos' || mission.kind==='oposicao');
+    const approve = mission ? mission.kind==='projetos' : difference===0 ? bot.index%2===0 : difference>0;
+    return {vote:approve?'yes':'no',reason:'As opções têm consequências parecidas. Já tenho uma preferência.'};
+  }
+
+  private say(bot:Bot,text:string) {
+    const name = bot.control.player.nick;
+    this.messages = [...this.messages.filter(message=>message.name!==name),{name,text}];
+  }
+
+  private vote(bot:Bot,match:PlenaryMatch,view:PlenaryView,players:Player[],now:number) {
+    if (!view.mandate || view.politics?.suspended) return;
+    const {player} = bot.control;
+    const politics = view.politics;
+    if (politics?.paymentsLeft && !bot.boughtEvidence) {
+      const offer = politics.incoming.find(entry=>entry.price<=Math.min(2,politics.wallet) &&
+        politics.contacts.some(contact=>contact.id===entry.from));
+      if (offer) {
+        match.politics(player,{kind:'accept',offer:offer.id},players,now);
+        bot.boughtEvidence = true;
+        return;
+      }
+    }
+    if (view.remaining>27-bot.index*2) return;
+    const decision = this.votePreference(bot,view);
+    if (view.vote===decision.vote && bot.voteReason===decision.reason) return;
+    if (view.vote!==decision.vote) match.vote(player.id,decision.vote,now);
+    bot.voteReason = decision.reason;
+    const choice = decision.vote==='yes' ? 'a favor' : 'contra';
+    const intro = view.vote===decision.vote ? `Mantenho meu voto ${choice}.` :
+      view.vote ? `Mudei meu voto. Agora voto ${choice}.` : `Voto ${choice}.`;
+    const proof = bot.foundFraud ? ' A auditoria encontrou fraude no painel.' : '';
+    const suspicion = proof && bot.suspicion ? ` Vi ${bot.suspicion} perto do painel. É só um indício.` : '';
+    this.say(bot,`${intro} ${decision.reason}${proof}${suspicion}`);
+  }
+}

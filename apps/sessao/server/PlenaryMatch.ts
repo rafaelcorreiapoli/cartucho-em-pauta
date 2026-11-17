@@ -218,7 +218,7 @@ export class PlenaryMatch {
   }
 
   constructor(
-    private readonly minimumPlayers = MIN_PLAYERS,
+    readonly minimumPlayers = MIN_PLAYERS,
     private readonly stationCooldowns = new StationCooldowns(),
     private readonly localSolo = false,
   ) {}
