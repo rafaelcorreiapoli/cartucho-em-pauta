@@ -10,23 +10,41 @@ async page => {
   const guest = await page.context().newPage();
   const advertiser = client=>client.getByRole('button',{name:'Veicular propaganda'});
   const tv = client=>client.locator('.campaign-tv');
-  const caption = client=>tv(client).locator('.campaign-tv-caption');
   const announcement = client=>client.locator('.campaign-tv-announcement');
-  async function checkAd(client,nick,side,motion) {
-    await caption(client).getByText('Vote '+nick,{exact:true}).waitFor();
-    const ad = await tv(client).evaluate(element=>{
-      const animation = element.getAnimations()[0];
-      const keyframes = animation?.effect.getKeyframes();
-      return {
-        side:element.dataset.side,
-        opening:keyframes?.[0]?.transform,
-        onScreen:keyframes?.[1]?.transform,
-        image:element.querySelector('img').naturalWidth,
-        number:element.querySelector('strong').textContent,
-        skin:element.querySelector('[data-skin]').dataset.skin,
-        announcement:element.parentElement.querySelector('.campaign-tv-announcement').textContent.trim(),
-      };
-    });
+
+  async function observeBroadcasts(client,reply) {
+    await client.evaluate(async replyButton=>{
+      const image = new Image();
+      image.src = '/assets/campaign-tv.webp';
+      await image.decode();
+      const host = document.querySelector('.campaign-tv-host');
+      window.campaignAds = [];
+      let previous;
+      const observer = new MutationObserver(()=>{
+        const element = host.querySelector('.campaign-tv');
+        if (!element || element===previous) return;
+        previous = element;
+        const keyframes = element.getAnimations()[0]?.effect.getKeyframes();
+        window.campaignAds.push({
+          at:performance.now(),
+          title:element.querySelector('.campaign-tv-caption span').textContent,
+          side:element.dataset.side,
+          opening:keyframes?.[0]?.transform,
+          onScreen:keyframes?.[1]?.transform,
+          image:element.querySelector('img').naturalWidth,
+          number:element.querySelector('strong').textContent,
+          skin:element.querySelector('[data-skin]').dataset.skin,
+          announcement:host.querySelector('.campaign-tv-announcement').textContent.trim(),
+        });
+        if (window.campaignAds.length===1) replyButton?.click();
+        if (window.campaignAds.length===2) observer.disconnect();
+      });
+      observer.observe(host,{childList:true,subtree:true});
+    },reply);
+  }
+
+  function checkAd(ad,nick,side,motion) {
+    if (ad.title!=='Vote '+nick) throw Error('Propaganda fora de ordem: '+JSON.stringify(ad));
     if (ad.side!==side || (motion && (!ad.opening?.startsWith(side==='left' ? 'translateX(calc(-' : 'translateX(calc(100%') ||
         ad.onScreen!=='none')) || (!motion && ad.opening) || ad.image===0 || !/^\d+$/.test(ad.number)) {
       throw Error('Propaganda incorreta: '+JSON.stringify(ad));
@@ -56,33 +74,23 @@ async page => {
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
 
-    // Keep both airtime timers paused until the second purchase is acknowledged.
-    for (const client of [page,guest]) {
-      await advertiser(client).waitFor();
-      await client.evaluate(async ()=>{
-        const image = new Image();
-        image.src = '/assets/campaign-tv.webp';
-        await image.decode();
-      });
-      await client.clock.install();
-      // Give the remote browser room to receive the clock command under CI load.
-      await client.clock.pauseAt(new Date(Date.now()+10_000));
+    await Promise.all([advertiser(page).waitFor(),advertiser(guest).waitFor()]);
+    await Promise.all([observeBroadcasts(page,null),observeBroadcasts(guest,await advertiser(guest).elementHandle())]);
+    await advertiser(page).click();
+    const broadcasts = await Promise.all([page,guest].map(async client=>{
+      await client.waitForFunction(()=>window.campaignAds.length===2);
+      return client.evaluate(()=>window.campaignAds);
+    }));
+    for (const [first,second] of broadcasts) {
+      if (second.at-first.at<3_900) throw Error('A segunda propaganda interrompeu a primeira.');
     }
-    await advertiser(page).dispatchEvent('click');
-    const rafa = await Promise.all([checkAd(page,'Rafa','left',true),checkAd(guest,'Rafa','right',false)]);
+    const rafa = [checkAd(broadcasts[0][0],'Rafa','left',true),checkAd(broadcasts[1][0],'Rafa','right',false)];
+    const bia = [checkAd(broadcasts[0][1],'Bia','right',true),checkAd(broadcasts[1][1],'Bia','left',false)];
     if (rafa[0].number!==rafa[1].number || rafa[0].skin!==rafa[1].skin) throw Error('Clientes receberam propagandas diferentes.');
-    await advertiser(guest).dispatchEvent('click');
-    await advertiser(guest).waitFor({state:'hidden'});
-    for (const client of [page,guest]) {
-      if (await caption(client).locator('span').textContent()!=='Vote Rafa') throw Error('A segunda propaganda interrompeu a primeira.');
-    }
-    await Promise.all([page,guest].map(client=>client.clock.fastForward(4_600)));
-    const bia = await Promise.all([checkAd(page,'Bia','right',true),checkAd(guest,'Bia','left',false)]);
     if (bia[0].number!==bia[1].number || bia[0].skin!==bia[1].skin || bia[0].number===rafa[0].number) {
       throw Error('Identidade da segunda propaganda incorreta.');
     }
     for (const client of [page,guest]) {
-      await client.clock.resume();
       await tv(client).waitFor({state:'detached'});
       if ((await announcement(client).textContent()).trim() || await client.evaluate(()=>window.micAttempts)!==0) {
         throw Error('O anúncio não foi limpo ou o microfone foi solicitado.');
