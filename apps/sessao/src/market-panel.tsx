@@ -1,3 +1,4 @@
+import type {ShortcutEntry} from './action-shortcuts';
 import {isEditingText} from './game-keys';
 import {DialogHeader} from './ui/dialog-header';
 import type { ReactNode } from 'react';
@@ -32,8 +33,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   const promptRoot = createRoot(prompt);
   let replacement:number|undefined;
   let purchase:Pick<WorldItem,'id'|'kind'>|undefined;
-  const marketKeys = new Map<string,()=>void>();
-  const replacementKeys = new Map<string,()=>void>();
+  const marketKeys = new Map<string,ShortcutEntry>();
+  const replacementKeys = new Map<string,ShortcutEntry>();
   const dismissPurchase = () => {
     purchase = undefined;
     replacement = undefined;
@@ -54,11 +55,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   };
   dialog.addEventListener('cancel',close);
   dialog.addEventListener('submit',close);
-  function runShortcut(event:KeyboardEvent,keys:Map<string,()=>void>) {
+  function runShortcut(event:KeyboardEvent,keys:Map<string,ShortcutEntry>) {
     if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey ||
         event.metaKey || event.shiftKey || isEditingText(event.target)) return;
     if (event.repeat && event.key!=='ArrowLeft' && event.key!=='ArrowRight') return;
-    const activate = keys.get(event.key);
+    const activate = keys.get(event.key)?.activate;
     if (!activate) return;
     event.preventDefault();
     activate();
@@ -102,10 +103,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     const previousPage = ()=>goTo(page-1);
     const nextPage = ()=>goTo(page+1);
     marketKeys.clear();
-    stock.forEach((_product,index)=>marketKeys.set(String(index+1),()=>select(index)));
-    marketKeys.set('Enter',buy);
-    marketKeys.set('ArrowLeft',previousPage);
-    marketKeys.set('ArrowRight',nextPage);
+    stock.forEach(({item,price},index)=>marketKeys.set(String(index+1),{name:item.name+' · '+money(price),activate:()=>select(index)}));
+    if (product && !product.status) marketKeys.set('Enter',{name:'Comprar',activate:buy});
+    if (page>0) marketKeys.set('ArrowLeft',{name:'Página anterior',activate:previousPage});
+    for (let index=0;index<pageCount;index++) {
+      marketKeys.set('page:'+index,{name:'Página '+(index+1),activate:()=>goTo(index)});
+    }
+    if (page<pageCount-1) marketKeys.set('ArrowRight',{name:'Próxima página',activate:nextPage});
     const food = product && isFood(product.kind) ? foodDefinition(product.kind) : undefined;
     const vendor = npcs[npc];
     flushSync(()=>root.render(<MarketDialogContent title={vendor.label}>
@@ -163,6 +167,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   }
 
   return {
+    shortcuts(scope:HTMLElement):ShortcutEntry[]|undefined {
+      const entries = scope===dialog ? marketKeys : scope===prompt ? replacementKeys : undefined;
+      if (!entries) return;
+      const actions = [...entries].map(([key,entry])=>({name:entry.name,activate:()=>{
+        if (scope instanceof HTMLDialogElement && scope.open && entries.get(key)===entry) entry.activate();
+      }}));
+      if (scope===dialog) actions.unshift({name:'Fechar',activate:()=>{ if (dialog.open) { close(); dialog.close(); } }});
+      return actions;
+    },
     render(view:PlenaryView) {
       const inventory = view.gameplay?.inventory ?? [];
       const equipped = view.gameplay?.equipped ?? [];
@@ -180,8 +193,8 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
           send({kind:'replace-gear',item,token:conflict.id});
         };
         const cancel = ()=>prompt.close();
-        replacementKeys.set('1',confirm);
-        replacementKeys.set('2',cancel);
+        replacementKeys.set('1',{name:'Sim',activate:confirm});
+        replacementKeys.set('2',{name:'Não',activate:cancel});
         flushSync(()=>promptRoot.render(<EquipmentReplacement equipped={objects[conflict.kind].name} purchased={objects[kind].name}
           confirm={confirm} cancel={cancel}/>));
         prompt.showModal();
@@ -228,7 +241,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
           send({kind:'dialogue-choice',target:option.id,token:state.token});
         }}));
         marketKeys.clear();
-        choices.forEach((choice,index)=>marketKeys.set(String(index+1),choice.activate));
+        choices.forEach((choice,index)=>marketKeys.set(String(index+1),{name:choice.label,activate:choice.activate}));
         flushSync(()=>root.render(<MarketDialogContent title={npc.catalog ? npc.name : `${npc.label} · ${npc.name}`}>
           <div className="market-line">
             <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>

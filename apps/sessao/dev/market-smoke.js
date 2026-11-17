@@ -81,7 +81,19 @@ async page => {
   await page.keyboard.press(binocularsKey);
   await detail.getByRole('heading',{name:'Binóculo',exact:true}).waitFor();
   if (await bounds()!==initial) throw Error('Selection moved catalog');
-  await page.keyboard.press('Enter');
+  const buy = dialog.locator('.market-buy');
+  await buy.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
+  async function chooseFromPalette(name) {
+    await page.keyboard.press('F2');
+    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+    const option = palette.getByRole('button',{name,exact:true});
+    if (!await option.count()) await page.keyboard.press('ArrowRight');
+    await option.waitFor();
+    await page.keyboard.press(await option.getAttribute('aria-keyshortcuts'));
+    await palette.waitFor({state:'hidden'});
+  }
+  await chooseFromPalette('Comprar');
+  await buy.evaluate(button=>button.removeAttribute('aria-label'));
   const equip = page.locator('#equip-purchase-dialog');
   const acquired = detail.getByRole('button',{name:'Adquirido'});
   await acquired.waitFor();
@@ -97,7 +109,7 @@ async page => {
   const keep = equip.getByRole('button',{name:'Não',exact:true});
   if (!await keep.evaluate(button=>button===document.activeElement)) throw Error('A opção segura deve receber foco');
   if (await keep.getAttribute('aria-keyshortcuts')!=='2') throw Error('Atalho de recusa ausente');
-  await page.keyboard.press('1');
+  await chooseFromPalette('Sim');
   await equip.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
   await page.locator('#equipped-gear').locator('[aria-label*="Megafone" i]').waitFor();
