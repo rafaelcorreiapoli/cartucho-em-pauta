@@ -38,10 +38,24 @@ async page => {
     await page.getByLabel('Link da sala').waitFor({state:'hidden'});
     const polls = page.locator('#election-poll-dialog');
     const receiverPolls = receiver.locator('#election-poll-dialog');
+    const originalViewport = page.viewportSize();
+    await page.setViewportSize({width:800,height:360});
     await page.keyboard.press('l');
     await receiver.keyboard.press('l');
     const bia = polls.getByRole('button',{name:'Bia',exact:true});
     await bia.locator('.portrait[data-skin]').waitFor();
+    const layout = await polls.evaluate(dialog=>{
+      const body = dialog.querySelector('.election-poll-content');
+      const header = dialog.querySelector('header');
+      const start = header.getBoundingClientRect().top;
+      body.scrollTop = body.scrollHeight;
+      const bottom = dialog.getBoundingClientRect().bottom;
+      const confirmBottom = dialog.querySelector('#support-form button[type=submit]').getBoundingClientRect().bottom;
+      return {scroll:body.scrollTop,headerTop:header.getBoundingClientRect().top,headerPinned:start===header.getBoundingClientRect().top,bottom,confirmBottom};
+    });
+    if (!layout.scroll || !layout.headerPinned || layout.headerTop<0 || layout.bottom>360 || layout.confirmBottom>layout.bottom) {
+      throw Error('Pesquisa eleitoral cortada: '+JSON.stringify(layout));
+    }
     const directKey = async key=>{
       const button = polls.locator(`button[aria-keyshortcuts="${key}"]`);
       await button.evaluate(control=>control.removeAttribute('aria-keyshortcuts'));
@@ -60,6 +74,7 @@ async page => {
       await client.keyboard.press('Escape');
       await client.locator('#election-poll-dialog').waitFor({state:'hidden'});
     }
+    if (originalViewport) await page.setViewportSize(originalViewport);
     const nearby = page.getByRole('button',{name:'Objetos próximos',exact:true});
     await nearby.waitFor();
     const nearbyKey = await nearby.getAttribute('aria-keyshortcuts');

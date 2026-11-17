@@ -636,6 +636,25 @@
   color: var(--hud-paper);
 }
 #result-dialog::backdrop { background: #081510b8; }
+#election-poll-dialog {
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+}
+#election-poll-dialog[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+#election-poll-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.election-poll-content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
 #support-form {
   display: grid;
   gap: .55rem;

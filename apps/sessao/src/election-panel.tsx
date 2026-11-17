@@ -41,29 +41,31 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
   const current = election.polls.find(candidate=>candidate.id===id)?.supports ?? '';
   return <>
     <DialogHeader id="election-poll-title" title="Pesquisa eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
-    <div id="election-cycle"><ElectionCycle result={election.result}/></div>
-    <section aria-label="Pesquisa eleitoral"><div id="election-polls">
-      <section><h4>Classificação projetada</h4><ol role="list">
-        {election.polls.map((candidate,index)=>{
-          const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
-          return <li key={candidate.id}><div className="poll-card">
-            <span className="poll-avatar"><CharacterPortrait character={candidate.character}/>
-              <span className="poll-rank" data-rank={index+1}>{index+1}º</span></span>
-            <div className="poll-details"><div className="poll-label">
-              <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
-              <strong data-effect={tone}>{candidate.estimate}%</strong>
-              {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{candidate.trend} pp</small>}
-            </div><div className="react-meter" data-tone="budget" role="progressbar" aria-label={'Intenção de voto de '+candidate.name}
-              aria-valuenow={candidate.estimate} aria-valuemin={0} aria-valuemax={100}>
-              <span style={{transform:`scaleX(${candidate.estimate/100})`}}/></div>
-            {candidate.supports && <small>Apoia {name(candidate.supports)}</small>}</div>
-          </div></li>;
-        })}
-      </ol></section>
-    </div></section>
-    <div id="election-support">
-      {election.canCampaign && election.remaining>0 && candidates.length>0 &&
-        <ElectionSupport key={current} candidates={candidates} current={current} onSupport={onSupport}/>}
+    <div className="election-poll-content">
+      <div id="election-cycle"><ElectionCycle result={election.result}/></div>
+      <section aria-label="Pesquisa eleitoral"><div id="election-polls">
+        <section><h4>Classificação projetada</h4><ol role="list">
+          {election.polls.map((candidate,index)=>{
+            const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
+            return <li key={candidate.id}><div className="poll-card">
+              <span className="poll-avatar"><CharacterPortrait character={candidate.character}/>
+                <span className="poll-rank" data-rank={index+1}>{index+1}º</span></span>
+              <div className="poll-details"><div className="poll-label">
+                <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
+                <strong data-effect={tone}>{candidate.estimate}%</strong>
+                {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{candidate.trend} pp</small>}
+              </div><div className="react-meter" data-tone="budget" role="progressbar" aria-label={'Intenção de voto de '+candidate.name}
+                aria-valuenow={candidate.estimate} aria-valuemin={0} aria-valuemax={100}>
+                <span style={{transform:`scaleX(${candidate.estimate/100})`}}/></div>
+              {candidate.supports && <small>Apoia {name(candidate.supports)}</small>}</div>
+            </div></li>;
+          })}
+        </ol></section>
+      </div></section>
+      <div id="election-support">
+        {election.canCampaign && election.remaining>0 && candidates.length>0 &&
+          <ElectionSupport key={current} candidates={candidates} current={current} onSupport={onSupport}/>}
+      </div>
     </div>
   </>;
 }
