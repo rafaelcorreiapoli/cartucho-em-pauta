@@ -250,7 +250,7 @@
 #session #electoral-notice { top: auto; left: auto; right: var(--hud-edge); bottom: calc(var(--hud-edge) + 52px); }
 #movement-hint { display: none; }
 
-#election-dock[open], #politics-dock[open],
+#election-dock[open],
 #voice-dock:has(details[open]) { z-index: 5; }
 #session[data-phase="lobby"] #voice-dock { top: auto; bottom: var(--hud-edge); }
 #session[data-phase="lobby"] #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
@@ -279,16 +279,6 @@
   }
 }
 
-#social-docks {
-  position: absolute;
-  right: var(--hud-edge);
-  bottom: var(--hud-edge);
-  display: flex;
-  gap: .35rem;
-  z-index: 3;
-}
-#social-docks:has(details[open]) { z-index: 5; }
-#social-docks .politics-content { inset: auto 0 calc(100% + 6px) auto; }
 .choice-grid { display: flex; flex-wrap: wrap; gap: .35rem; }
 .game-choice { display: inline-flex; align-items: center; gap: .45rem; max-width: 100%; overflow-wrap: anywhere; }
 .game-choice .portrait { --portrait-size: 34px; flex: none; background-color: #111f1c; border-radius: 4px; }
@@ -308,18 +298,10 @@
 }
 .choice-empty { color: #d6cfb5; font-size: .78rem; }
 
-#social-docks .social-panel {
-  width: min(350px, calc(100vw - 2 * var(--hud-edge)));
-  padding: .8rem;
-  background: #172824fa;
-  border: 1px solid #9b8b62;
-  border-radius: 8px;
-  box-shadow: 0 10px 28px #06110e80;
-}
 .social-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .65rem; }
 .social-header h2 { margin: 0; font-size: 1.1rem; line-height: 1.15; }
 .social-header p { margin: .25rem 0 0; color: #d6cfb5; font-size: .75rem; }
-#social-docks h3 { margin: 0 0 .4rem; font-size: .8rem; color: #e5d2a8; }
+.legislative-modal h3 { margin: 0 0 .4rem; font-size: .8rem; color: #e5d2a8; }
 .social-empty {
   display: grid;
   justify-items: center;
@@ -333,8 +315,8 @@
 }
 .social-empty > svg { width: 22px; height: 22px; color: #c3ac75; }
 .social-empty p { margin: 0; color: #d6cfb5; font-size: .75rem; line-height: 1.35; }
-#social-docks section[aria-label="Provas privadas"] { margin-top: .75rem; }
-#social-docks .game-choice[aria-pressed="true"] {
+.legislative-modal section[aria-label="Provas privadas"] { margin-top: .75rem; }
+.legislative-modal .game-choice[aria-pressed="true"] {
   background: #384231;
   border-color: #d7b574;
   color: #fae0a2;
@@ -613,8 +595,7 @@
 .poll-label small { font-size: .7rem; white-space: nowrap; }
 
 @media (min-width: 921px) {
-  #social-docks { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; width: var(--hud-side); }
-  #social-docks .social-panel, #session #election-dock .politics-content {
+  #session #election-dock .politics-content {
     width: var(--hud-side);
     padding: 1rem;
     background: #193329fa;
@@ -626,8 +607,8 @@
   #election-polls section { padding: .65rem .75rem; border-radius: 8px; }
   #election-polls section { margin: .55rem 0; background: #142522; }
   #election-polls h4 { margin: 0 0 .4rem; }
-  #social-docks h3 { font-size: .95rem; }
-  #social-docks .social-empty { padding: 1rem .65rem; gap: .45rem; }
+  .legislative-modal h3 { font-size: .95rem; }
+  .legislative-modal .social-empty { padding: 1rem .65rem; gap: .45rem; }
 }
 
 #election-polls ol { list-style: none; padding-left: 0; }

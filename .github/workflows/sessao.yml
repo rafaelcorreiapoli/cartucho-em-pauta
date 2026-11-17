@@ -42,6 +42,7 @@ jobs:
           - attributes
           - reward
           - phone-pix
+          - legislative-modals
     env:
       SMOKE_FLOW: ${{ matrix.flow }}
     defaults:

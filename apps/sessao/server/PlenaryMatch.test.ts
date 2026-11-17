@@ -724,6 +724,29 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
+test('cassation counts the same connected votes in the HUD and the final tally',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const openedAt = 50+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  match.castCassation(host.id,traitor.id,openedAt);
+  match.castCassation(honest.id,null,openedAt);
+  match.castCassation(traitor.id,host.id,openedAt);
+  const ballot = (id=host.id)=>match.view(id,ids,openedAt).cassation!;
+  expect(ballot()).toMatchObject({electorate:3,quorum:2,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  expect(ballot()).toMatchObject({electorate:2,quorum:2,voted:1});
+  expect(ballot().choice).toBeUndefined();
+  expect(ballot(honest.id).choice).toBeNull();
+  expect(ballot(traitor.id).choice).toBeUndefined();
+  match.setPlayerConnected(traitor.id,true);
+  expect(ballot()).toMatchObject({electorate:3,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  match.advance(openedAt+HEARING_MS);
+  expect(match.view(host.id,ids,openedAt+HEARING_MS).cassationResult?.text).toContain('Ninguém foi cassado');
+});
+
 test('project votes expose portraits and current choices without roles; abstentions do not count as no',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
@@ -1234,6 +1257,24 @@ test('a project waits for an overlapping hearing and keeps the original proposer
   expect(match.view(honest.id,ids,hearingEnds+1)).toMatchObject({
     phase:'ballot',project:4,proposer:host.nick,remaining:BALLOT_MS/1000,
   });
+});
+
+test.each([1,2])('the hearing resolves with the published threshold when %i voters support removal',yesVotes=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,20);
+  match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
+  const initial = match.view(host.id,ids,10);
+  expect(initial.hearing).toMatchObject({voted:0,quorum:2});
+  match.vote(host.id,'yes',11);
+  match.vote(traitor.id,yesVotes===2 ? 'yes' : 'no',12);
+  const during = match.view(host.id,ids,12);
+  expect(during.hearing).toMatchObject({voted:2,quorum:2,vote:'yes'});
+  match.advance(10+HEARING_MS);
+  const after = match.view(honest.id,ids,10+HEARING_MS);
+  expect(after.hearing).toBeUndefined();
+  expect(after.hearingResult).toContain(yesVotes===2 ? 'aprovado' : 'rejeitado');
 });
 
 test('a captured phone game can be reported once with a photo and pays the reporter',()=>{

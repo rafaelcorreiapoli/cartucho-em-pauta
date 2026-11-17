@@ -1047,3 +1047,55 @@ test.each([true,false])('transfer progress follows the number of remaining disti
     expect(view(3).progression.xp).toBe(0);
   }
 });
+
+test('Bandeja Gourmet appears with two obtainable foods and counts consumption in the office',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...npcs.snackVendor.interaction};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const world = match.gameplayWorld([player],1,()=>false);
+  const view = ()=>match.view(player.id,[player.id],1).politics!;
+  const render = (done=false)=>view().missions[done ? 'completed' : 'active'].map(mission=>
+    renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  draw();
+  expect(render()).not.toContain('Consuma dois alimentos diferentes');
+  economy.earn(player.id,1);
+  game.act(player,{kind:'open-shop',target:'snackVendor'},world);
+  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
+  expect(view().wallet).toBe(0);
+  expect(game.owns(player.id,'coxinha')).toBe(true);
+  draw();
+  expect(render()).toContain('Consuma dois alimentos diferentes');
+  expect(render()).toContain('0 / 2');
+
+  const snack = game.view(player,world).inventory.find(item=>item.kind==='coxinha')!;
+  expect(game.act(player,{kind:'use',item:snack.id},world)).toBe('Objeto utilizado.');
+  expect(render()).toContain('0 / 2');
+
+  Object.assign(player,stations.coffee);
+  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  Object.assign(player,game.officeSpawn(player.id)!);
+  let xpAfterCoffee = 0;
+  for (const kind of ['coffee','coxinha'] as const) {
+    const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
+    expect(game.act(player,{kind:'use',item:item.id},world)).toBe('Objeto utilizado.');
+    if (kind==='coffee') {
+      expect(render()).toContain('1 / 2');
+      xpAfterCoffee = view().progression.xp;
+    }
+  }
+  expect(render(true)).toContain('Consuma dois alimentos diferentes');
+  expect(view().progression.xp).toBe(xpAfterCoffee+35);
+});
