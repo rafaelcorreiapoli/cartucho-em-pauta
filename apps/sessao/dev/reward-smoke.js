@@ -22,7 +22,7 @@ async page => {
     await page.locator('#session[data-phase="negotiation"]').waitFor();
 
     const animation = reducedMotion==='reduce' ? 'wallet-fade' : 'wallet-rise';
-    async function observeGain(selector,text,trigger) {
+    async function observeGain(selector,expected,trigger) {
       await page.evaluate(selector=>{
         const effects = document.querySelector('#wallet-effects');
         window.pendingReward = new Promise((resolve,reject)=>{
@@ -68,7 +68,8 @@ async page => {
       await trigger();
       const gain = await page.evaluate(()=>window.pendingReward);
       const movedCorrectly = reducedMotion==='reduce' ? gain.lift===0 : gain.lift>0;
-      if (gain.text!==text || gain.animationName!==animation || !gain.anchored || !gain.inMap ||
+      const validText = typeof expected==='string' ? gain.text===expected : expected.test(gain.text);
+      if (!validText || gain.animationName!==animation || !gain.anchored || !gain.inMap ||
           !movedCorrectly || !(gain.fade>0 && gain.fade<1)) {
         throw Error('Efeito incorreto: '+JSON.stringify(gain));
       }
@@ -76,12 +77,13 @@ async page => {
       return gain;
     }
 
-    const xp = await observeGain('.xp-gain','+20 XP',()=>
+    // The same coffee can also complete Café Estratégico for 25 XP.
+    const xp = await observeGain('.xp-gain',/^\+(20|45) XP$/,()=>
       page.getByRole('button',{name:'Beber café'}).click());
 
     await page.getByRole('button',{name:'Aplicar verba',exact:true}).click();
     await page.getByRole('button',{name:'Desviar R$ 30 mil',exact:true}).click();
-    const income = await observeGain('.wallet-gain:not(.xp-gain)','+R$ 30 mil',()=>
+    const income = await observeGain('.wallet-gain:not(.xp-gain,.popularity-gain)','+R$ 30 mil',()=>
       page.getByRole('button',{name:'Aplicar verba de R$ 40 mil',exact:true}).click());
     if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
     results.push({width,height,reducedMotion,xp,income});
