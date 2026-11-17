@@ -681,3 +681,39 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
 });
+
+test('the plenary visit objective requires entry and exit within the same articulation',()=>{
+  const outside = {x:445,y:143};
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...outside};
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  game.reset(0,()=>.9,[player]);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['presencaPlenario','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const tick = (now:number)=>game.tick(match.gameplayWorld([player],now,()=>false),match.phase==='negotiation');
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='presencaPlenario')!;
+  tick(1);
+  Object.assign(player,{x:480,y:665});
+  tick(2);
+  match.advance(NEGOTIATION_MS);
+  tick(NEGOTIATION_MS);
+  const resumedAt = NEGOTIATION_MS+BALLOT_MS;
+  match.advance(resumedAt);
+  tick(resumedAt);
+  Object.assign(player,outside);
+  tick(resumedAt+1);
+  expect(active(resumedAt+1).current).toBe(0);
+  expect(renderToStaticMarkup(<MissionRow mission={active(resumedAt+1)}/>)).not.toContain('data-done="true"');
+
+  Object.assign(player,{x:480,y:665});
+  tick(resumedAt+2);
+  Object.assign(player,outside);
+  tick(resumedAt+3);
+  const completed = view(resumedAt+3).missions.completed.find(mission=>mission.kind==='presencaPlenario')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(resumedAt+3).progression.xp).toBe(25);
+});
