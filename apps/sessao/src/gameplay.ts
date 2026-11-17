@@ -35,7 +35,7 @@ export const objects = {
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:'Uma reserva que os outros podem ignorar.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
-  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s.`},
+  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:'Equipe para correr segurando Shift.'},

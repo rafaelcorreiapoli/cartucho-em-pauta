@@ -1,3 +1,5 @@
+import {megaphone} from './equipment';
+import {describeFood,pinga} from './food';
 import { marketKinds, marketProduct } from './market-catalog';
 import { canReachDownedPlayer } from './interactions';
 import {expect,test} from 'bun:test';
@@ -146,6 +148,15 @@ test('catalog prices reflect only the applicable public policies',()=>{
 test('Pinga has a drink action and enters circulation through the bill, outside the snack shop',()=>{
   expect(consumableAction({id:12,kind:'pinga'})).toMatchObject({label:'Beber',action:{kind:'use',item:12}});
   expect(objects.pinga.portrait).toBe('retrato-pinga.webp');
+  const {hp,speed} = pinga.effect;
+  expect(objects.pinga.description).toContain(`${hp} PV`);
+  expect(objects.pinga.description).toContain(`${speed.durationMs/1000} segundos`);
+  expect(describeFood(pinga.effect)).toBe('+15 PV · −20% velocidade por 8 s');
   expect(marketKinds.food).not.toContain('pinga');
   expect(marketProduct('food','pinga')).toBeUndefined();
+});
+
+test('the megaphone catalog describes the broadcast limit and the recharge after it ends',()=>{
+  expect(objects.megaphone.description).toContain(`até ${megaphone.duration/1000} s`);
+  expect(objects.megaphone.description).toContain(`Recarga de ${megaphone.cooldown/1000} s após encerrar`);
 });
