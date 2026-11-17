@@ -86,6 +86,32 @@ async page => {
   await page.keyboard.press('1');
   await page.waitForFunction(previous=>[...document.querySelectorAll('.candy-fruit')]
     .some((fruit,index)=>fruit.textContent!==previous[index]),previousFruit);
+  const findMove = () => candy.evaluate(async panel=>{
+    const {candyFruit,candyWidth,swapCandy} = await import('/src/candy.ts');
+    const board = [...panel.querySelectorAll('.candy-fruit')].map(node=>candyFruit.indexOf(node.textContent));
+    for (let from=0;from<board.length;from++) {
+      for (const to of [from+1,from+candyWidth]) {
+        const move = swapCandy(board,from,to);
+        if (move?.matches.size) return {from,to,points:move.matches.size,width:candyWidth};
+      }
+    }
+  });
+  let move = await findMove();
+  for (let attempt=0;!move && attempt<4;attempt++) {
+    const previous = await candy.locator('.candy-fruit').allTextContents();
+    await page.keyboard.press('1');
+    await page.waitForFunction(previous=>[...document.querySelectorAll('.candy-fruit')]
+      .some((fruit,index)=>fruit.textContent!==previous[index]),previous);
+    move = await findMove();
+  }
+  if (!move) throw Error('Nenhum tabuleiro de teste apresentou troca válida');
+  for (let row=0;row<Math.floor(move.from/move.width);row++) await page.keyboard.press('ArrowDown');
+  for (let col=0;col<move.from%move.width;col++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await candy.getByRole('button',{name:new RegExp('^Fruta '+(move.from+1)+' '),pressed:true}).waitFor();
+  await page.keyboard.press(move.to===move.from+1 ? 'ArrowRight' : 'ArrowDown');
+  await page.keyboard.press('Enter');
+  await candy.getByRole('status').getByText(move.points+' pontos',{exact:true}).waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
   await home();
   await page.keyboard.press('2');

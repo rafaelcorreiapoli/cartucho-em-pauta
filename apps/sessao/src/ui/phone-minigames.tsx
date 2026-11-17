@@ -14,6 +14,11 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
   const [selected,setSelected] = useState<number>();
   const [motion,setMotion] = useState<Swap>();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const cells = useRef<(HTMLButtonElement|null)[]>([]);
+  const hasBoard = !!round;
+  useEffect(()=>{
+    if (hasBoard) cells.current[0]?.focus({preventScroll:true});
+  },[hasBoard]);
   useEffect(()=>()=>clearTimeout(timer.current),[]);
   const restart = ()=>{if (!motion) {setSelected(undefined);send({kind:'candy-start'});}};
   const panel = usePhoneKeys(key=>key==='1' && round ? restart : undefined);
@@ -44,13 +49,14 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
       const moving = (motion?.stage==='swap' || motion?.stage==='return') && destination!==undefined;
       const burst = motion?.stage==='burst' && motion.matches.has(index);
       return <button key={index} type="button" aria-pressed={selected===index} data-burst={burst}
+        ref={node=>{cells.current[index] = node;}}
         aria-label={`Fruta ${index+1} ${fruit[kind]}`} onKeyDown={event=>{
           const column = index%width;
           const next = {ArrowLeft:column>0 ? index-1 : index,ArrowRight:column<width-1 ? index+1 : index,
             ArrowUp:index>=width ? index-width : index,ArrowDown:index<width*(width-1) ? index+width : index}[event.key];
           if (next===undefined) return;
           event.preventDefault();
-          event.currentTarget.parentElement?.querySelectorAll('button')[next]?.focus();
+          cells.current[next]?.focus({preventScroll:true});
         }} onClick={()=>swap(index)}>
         <span className="candy-fruit" data-moving={moving ? motion.stage : undefined} style={moving ? {
           '--fruit-x':`${(destination%width-index%width)*100}%`,
