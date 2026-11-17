@@ -23,6 +23,10 @@ async page => {
   const overflow = page.locator('#stations [data-context-overflow="expanded"]');
   const moreKey = await more.getAttribute('aria-keyshortcuts');
   if (moreKey!=='4') throw Error('Mais ações deve usar o quarto atalho');
+  const badge = button=>button.evaluate(element=>getComputedStyle(element,'::after').content);
+  if (!(await badge(more)).includes('"4"') || !(await badge(ordinary.first())).includes('"1"')) {
+    throw Error('Os badges não acompanham os atalhos acessíveis');
+  }
   const baseRow = await more.boundingBox();
   await page.keyboard.press(moreKey);
   await overflow.first().waitFor();
@@ -37,6 +41,8 @@ async page => {
   await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
   const coffee = page.getByRole('button',{name:'Pegar Café',exact:true});
   await coffee.waitFor();
+  await coffee.and(page.locator('[aria-keyshortcuts="2"]')).waitFor();
+  if (!(await badge(coffee)).includes('"2"')) throw Error('O item não exibe o atalho do submenu');
   await overflow.first().waitFor({state:'hidden'});
   if (await more.getAttribute('aria-expanded')!=='false') throw Error('Mais ações ficou aberto junto com Objetos próximos');
   await page.keyboard.press('Escape');
@@ -48,7 +54,7 @@ async page => {
   await page.keyboard.press(await more.getAttribute('aria-keyshortcuts'));
   const npc = overflow.filter({hasText:'Conversar ·'}).first();
   await npc.waitFor();
-  const name = (await npc.textContent()).match(/Conversar · (.+?)[1-9]$/)?.[1];
+  const name = (await npc.textContent()).trim().match(/^Conversar · (.+)$/)?.[1];
   if (!name) throw Error('Ação de conversa sem nome ou atalho');
   await page.keyboard.press(await npc.getAttribute('aria-keyshortcuts'));
   const deal = page.getByRole('dialog',{name});

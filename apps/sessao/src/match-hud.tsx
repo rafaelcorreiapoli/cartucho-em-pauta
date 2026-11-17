@@ -96,22 +96,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       const {placement,key:shortcut} = model.buttons[index];
       if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
       else delete button.dataset.contextOverflow;
-      const key = shortcut ?? null;
-      if (button.getAttribute('aria-keyshortcuts')===key) continue;
-      if (!key) {
-        button.querySelector('.station-key')?.remove();
-        button.removeAttribute('aria-keyshortcuts');
-        continue;
-      }
-      let badge = button.querySelector('kbd');
-      if (!badge) {
-        badge = document.createElement('kbd');
-        badge.className = 'station-key';
-        badge.setAttribute('aria-hidden','true');
-        button.append(badge);
-      }
-      badge.textContent = key;
-      button.setAttribute('aria-keyshortcuts',key);
+      if (button.getAttribute('aria-keyshortcuts')===(shortcut ?? null)) continue;
+      if (shortcut) button.setAttribute('aria-keyshortcuts',shortcut);
+      else button.removeAttribute('aria-keyshortcuts');
     }
   }
   function onContextClick(event:MouseEvent) {
@@ -254,7 +241,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       stations.removeEventListener('click',onContextClick);
       for (const button of actionButtons()) {
         button.removeAttribute('aria-keyshortcuts');
-        button.querySelector('.station-key')?.remove();
       }
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;
