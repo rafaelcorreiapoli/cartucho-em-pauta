@@ -49,8 +49,8 @@ test.each([true,false])('audit advertises only the public conditional fee, appro
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,players,0,()=>.9)).toBe(true);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N08');
-  match.gameplayWorld(players,1,()=>false).publish({
-    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+  match.gameplayWorld(players,0,()=>false).publish({
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   if (approved) for (const player of [host,recipient]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
