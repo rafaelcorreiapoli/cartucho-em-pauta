@@ -30,11 +30,11 @@ export function ProjectImpact({impact,approved,detail}:{impact:Impact;approved:b
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'remaining'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
+type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
   ownId:string; eligible:boolean; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -51,14 +51,14 @@ export function ProjectBallot({round,project,remaining,yes,no,billQuorum,billVot
     <button className="project-ballot-handle" type="button" aria-expanded={expanded} aria-controls="project-ballot-body"
       aria-label={expanded?'Recolher votação':'Expandir votação'} onClick={()=>setExpanded(!expanded)}>
       <span aria-hidden="true">{expanded?'⌄':'⌃'}</span>
-      {!expanded && <><strong>{bill.name}</strong><time>{clock}</time></>}
+      {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
     </button>
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <header className="project-ballot-banner" data-project={index}>
         <div className="project-ballot-art" aria-hidden="true">
           {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <Glyph name="wifi"/>}
         </div>
-        <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2><p>{bill.description}</p></div>
+        <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
         <ProjectImpact impact={yes} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
           bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
           bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>

@@ -1,3 +1,4 @@
+import {publishProjectFiling} from './project-test-fixture';
 import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
@@ -635,7 +636,9 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>snapshots.get(passenger.sessionId)?.carried===true);
     const carrierControl = positions.get(carrier.sessionId)! as ControlState;
     const oldRevision = carrierControl.revision;
-    Reflect.set(match,'ends',room.clock.currentTime+5000);
+    const filingAt = room.clock.currentTime;
+    publishProjectFiling(match,carrierControl.player,0,filingAt);
+    Reflect.get(match,'proposal').voteAt = filingAt+5000;
     await wait(()=>views.get(carrier.sessionId)?.ballotCountdown===5 && carrierControl.revision!==oldRevision);
     const {x,y} = carrierControl.player;
     const ack = carrierControl.ack;
@@ -647,7 +650,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(carrierControl.player).toMatchObject({x,y,moving:false});
     expect(carrierControl.ack).toBe(ack);
     expect(views.get(carrier.sessionId)?.voteIntents).toEqual(intents);
-    Reflect.set(match,'ends',room.clock.currentTime);
+    Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
     await wait(()=>views.get(passenger.sessionId)?.phase==='ballot' &&
       snapshots.get(passenger.sessionId)?.x===PLENARY_SEATS[1].x &&
       snapshots.get(passenger.sessionId)?.y===PLENARY_SEATS[1].y);
@@ -728,7 +731,9 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     Object.assign(observer,{x:30,y:146});
     await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===false);
     walkingNpc.knockedOut = undefined;
-    Reflect.set(Reflect.get(room,'match'),'ends',room.clock.currentTime);
+    const match: import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');
+    publishProjectFiling(match,observer,0,room.clock.currentTime);
+    Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===9));
     const expected = [...PLENARY_SEATS.slice(0,6),...PLENARY_SEATS.slice(-3)].map(({x,y})=>`${x},${y}`).sort();
     for (const peer of rooms) {

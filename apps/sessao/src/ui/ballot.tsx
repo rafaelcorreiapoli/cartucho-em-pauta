@@ -56,8 +56,8 @@ export function mountBallot(host:HTMLElement,cast:(vote:BillVote)=>void,castCass
     render(view:PlenaryView) {
       if (view.phase==='ballot') {
         host.hidden = false;
-        const {round,project,remaining,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
-        const state = {round,project,remaining,yes,no,billQuorum,billVoters,vote,eligible:!!mandate && !politics?.suspended};
+        const {round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
+        const state = {round,project,proposer,remaining,yes,no,billQuorum,billVoters,vote,eligible:!!mandate && !politics?.suspended};
         const next = JSON.stringify(state);
         if (next!==key) {
           key = next;

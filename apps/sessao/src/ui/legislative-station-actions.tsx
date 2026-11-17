@@ -12,8 +12,9 @@ const definitions = {
 
 export function legislativeStationActions(view:PlenaryView|undefined,station:Station|undefined):Action[] {
   if (view?.phase!=='negotiation' || view.mandate===false || view.isolationSeconds || view.ballotCountdown!==undefined) return [];
-  if (station==='amendment') return view.amended ? [] : ['amendment'];
   if (station==='audit') return ['audit'];
+  if (view.project===undefined) return [];
+  if (station==='amendment') return view.amended ? [] : ['amendment'];
   if (station!=='panel') return [];
   const actions:Action[] = [];
   if (view.audit==='fraud' && !view.reportedFraud) actions.push('panel');

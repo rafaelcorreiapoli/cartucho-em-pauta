@@ -1,3 +1,4 @@
+import {publishProjectFiling} from './project-test-fixture';
 import { stationRecharge } from '../src/station-recharge';
 import { StationCooldowns } from './StationCooldowns';
 import { InternalMail } from './InternalMail';
@@ -24,6 +25,7 @@ const at = (player:Player, station:keyof typeof stations) => ({...player,...stat
 test('project ballot countdown is published during the final five seconds of negotiation',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  publishProjectFiling(match,host);
   const countdown = (now:number) => match.view(host.id,ids,now).ballotCountdown;
   expect(countdown(NEGOTIATION_MS-5001)).toBeUndefined();
   expect(countdown(NEGOTIATION_MS-5000)).toBe(5);
@@ -38,6 +40,7 @@ test('fraud shows different figures until a player audits and reports it', () =>
   expect(match.start(honest.id,people,0)).toBe(false);
   expect(match.start(host.id,[],0)).toBe(false);
   expect(match.start(host.id,people,0,() => .9)).toBe(true);
+  publishProjectFiling(match,host);
   const view = (player:Player) => match.view(player.id,ids,0);
   expect(view(host).role).toBe('Parlamentar');
   expect(view(host).infiltratorName).toBeUndefined();
@@ -66,8 +69,10 @@ test('fraud shows different figures until a player audits and reports it', () =>
 test('the vote uses actual costs, requires a majority and reveals the infiltrator at the end', () => {
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
   let now = 0;
   for (let round=0;round<3;round++) {
+    publishProjectFiling(match,host,round===0 ? 0 : round+2,now);
     if (round===0) {
       match.act(at(host,'amendment'),'amendment',now+1);
       match.act(at(traitor,'panel'),'fraud',now+2);
@@ -86,6 +91,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
       expect(view.budget).toBe(20);
       expect(view.outcome?.applied).toEqual({budget:-12,stability:14});
     }
+    now+=60_000;
   }
   match.advance(ELECTION_RULES.matchDuration);
   expect(match.view(host.id,ids,now)).toMatchObject({phase:'finished',winner:'Parlamentar',infiltratorName:'Clodovil'});
@@ -112,6 +118,7 @@ test.each([...Object.values(stations),{x:860,y:506},{x:449,y:504}])(
 test('diversion, transfers, and evidence sales affect balances without binding votes', () => {
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
+  publishProjectFiling(match,host);
   const view = (player:Player) => match.view(player.id,ids,0);
   const accounts = [host,honest,traitor].map(player => view(player).politics!);
   for (const account of accounts) expect(account.missions.active).toHaveLength(3);
@@ -189,7 +196,8 @@ test('popularity unlocks a hearing, then a wrong removal costs stability and iso
   match.advance(resumed+60_000);
   expect(match.view(honest.id,ids,resumed+60_000).isolationSeconds).toBeUndefined();
   expect(match.canHandleObjects(honest.id,resumed+60_000)).toBe(true);
-  match.advance(resumed+NEGOTIATION_MS-50);
+  publishProjectFiling(match,host,0,resumed);
+  match.advance(resumed+NEGOTIATION_MS);
   match.vote(honest.id,'yes',resumed+NEGOTIATION_MS);
   expect(view(honest).vote).toBe('yes');
 });
@@ -281,33 +289,31 @@ test('the Corregedoria returns feedback for each audit, even without new records
   expect(match.act(player,'audit',3)).toEqual(first);
 });
 
-test('validated filings schedule distinct successive ballots, with the standard bill as fallback',()=>{
-  const match = new PlenaryMatch(1);
+test('only an accepted filing schedules a ballot, with a cooldown and no repeat votes',()=>{
+  const match = new PlenaryMatch(2);
   match.start(host.id,people,0,()=>.9);
-  const world = match.gameplayWorld(people,10,()=>false);
-  const file = (project:number)=>world.publish({
-    type:'filed',actor:host.id,kind:'document',item:project+1,project,position:stations.amendment,at:10,witnesses:[],
+  const file = (project:number,at:number,item:number)=> match.gameplayWorld(people,at,()=>false).publish({
+    type:'filed',actor:host.id,item,project,position:host,at,witnesses:[],
   });
-  file(2);
-  file(2);
-  file(0);
-  const view = (now:number)=>match.view(host.id,ids,now);
-  expect(view(10)).toMatchObject({project:2,queuedProjects:[2,0]});
+  const view = (now:number) => match.view(honest.id,ids,now);
   match.advance(NEGOTIATION_MS);
-  expect(view(NEGOTIATION_MS)).toMatchObject({phase:'ballot',project:2,queuedProjects:[0]});
-  match.vote(host.id,'yes',NEGOTIATION_MS+1);
-  match.advance(NEGOTIATION_MS+BALLOT_MS);
-  expect(view(NEGOTIATION_MS+BALLOT_MS)).toMatchObject({phase:'ballot',project:0,outcome:{project:2}});
-  expect(view(NEGOTIATION_MS+BALLOT_MS).vote).toBeUndefined();
-  match.advance(NEGOTIATION_MS+BALLOT_MS*2);
-  expect(view(NEGOTIATION_MS+BALLOT_MS*2).outcomes.map(result=>result.project)).toEqual([2,0]);
-  const replayAt = NEGOTIATION_MS+BALLOT_MS*2+1;
-  match.gameplayWorld(people,replayAt,()=>false).publish({
-    type:'filed',actor:host.id,kind:'document',item:1,project:0,position:stations.amendment,at:replayAt,witnesses:[],
-  });
-  expect(view(replayAt).queuedProjects).toEqual([]);
-  match.advance(NEGOTIATION_MS*2+BALLOT_MS*2);
-  expect(view(NEGOTIATION_MS*2+BALLOT_MS*2)).toMatchObject({phase:'ballot',project:2});
+  expect(view(NEGOTIATION_MS).project).toBeUndefined();
+  file(2,NEGOTIATION_MS,1);
+  file(0,NEGOTIATION_MS,2);
+  expect(view(NEGOTIATION_MS)).toMatchObject({project:2,proposer:host.nick,remaining:120});
+  match.advance(2*NEGOTIATION_MS-1);
+  expect(view(2*NEGOTIATION_MS-1).phase).toBe('negotiation');
+  match.advance(2*NEGOTIATION_MS);
+  expect(view(2*NEGOTIATION_MS)).toMatchObject({phase:'ballot',project:2,proposer:host.nick});
+  const closed = 2*NEGOTIATION_MS+BALLOT_MS;
+  match.advance(closed);
+  expect(view(closed)).toMatchObject({phase:'negotiation',protocolCooldown:60,outcome:{project:2,proposer:host.nick}});
+  expect(view(closed).project).toBeUndefined();
+  const blocked = match.gameplayWorld(people,closed+59_999,()=>false);
+  expect(blocked.projectFilingError?.(host.id,0)).toContain('1 s');
+  const open = match.gameplayWorld(people,closed+60_000,()=>false);
+  expect(open.projectFilingError?.(host.id,2)).toContain('já foi votado');
+  expect(open.projectFilingError?.(host.id,0)).toBeUndefined();
 });
 
 test('parliamentarians can install a device and the fire still requires an extinguisher',()=>{
@@ -354,6 +360,7 @@ test('an informal loan and a later manual repayment conserve both wallets',()=>{
 test('a public intention can be withdrawn or contradicted by the actual vote',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   match.declareVote(host.id,'yes',1);
   expect(match.view(honest.id,ids,1).voteIntents).toEqual([{id:host.id,name:host.nick,vote:'yes'}]);
   match.declareVote(host.id,null,2);
@@ -433,6 +440,7 @@ test('only a victim or direct witness can report an infraction, once, at the des
 test('the monetary summary reconciles physical issuance, trade, treasury and project spending',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   const game = new Gameplay();
   const player = {...host,x:140,y:146};
   const receiver = {...honest,x:148,y:146};
@@ -526,37 +534,23 @@ test('failed mail payments and expired cash preserve the ledger across retries',
   expect(summary()).toMatchObject({reserveFees:8.5,transferred:1,expired:3,discrepancy:0});
 });
 
-test('the agenda counts queued ballots even at the end of the standard project rotation',()=>{
+test.each([0,2,3])('the deadline counts rejected projects toward the three-vote goal (%i)',count=>{
   const match = new PlenaryMatch(1);
-  match.start(host.id,people,0,()=>.9);
-  Reflect.set(match,'round',bills.length-1);
-  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
-  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
-  const prepareDraw = () => {
-    Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['oposicao','cafe','passeio','selfieSolo']);
-  };
-  const active = () => match.view(host.id,ids,10).politics!.missions.active;
-  prepareDraw();
-  match.refreshAgendaEligibility();
-  expect(active().some(mission=>mission.kind==='oposicao')).toBe(false);
-
-  const world = match.gameplayWorld(people,10,()=>false);
-  const file = (project:number) => world.publish({
-    type:'filed',actor:host.id,kind:'document',project,position:stations.amendment,at:10,witnesses:[],
-  });
-  file(2);
-  prepareDraw();
-  file(0);
-  expect(active().find(mission=>mission.kind==='oposicao')).toMatchObject({current:0,target:2});
-
-  match.advance(NEGOTIATION_MS);
-  match.vote(host.id,'no',NEGOTIATION_MS+1);
-  match.advance(NEGOTIATION_MS+BALLOT_MS);
-  expect(active().find(mission=>mission.kind==='oposicao')).toMatchObject({current:1,target:2});
-  match.vote(host.id,'no',NEGOTIATION_MS+BALLOT_MS+1);
-  match.advance(NEGOTIATION_MS+2*BALLOT_MS);
-  expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'oposicao'}));
+  match.start(host.id,[host],0,()=>.9);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  let now = 0;
+  for (let index=0; index<count; index++) {
+    const project = index+3; // Rejection leaves stability intact.
+    match.gameplayWorld([host],now,()=>false).publish({type:'filed',actor:host.id,project,at:now,position:host,witnesses:[]});
+    match.advance(now+=NEGOTIATION_MS);
+    match.vote(host.id,'no',now+1);
+    match.advance(now+=BALLOT_MS);
+    now+=60_000;
+  }
+  match.advance(ELECTION_RULES.matchDuration);
+  const result = match.view(host.id,[host.id],ELECTION_RULES.matchDuration);
+  expect(result.outcomes.map(outcome=>outcome.passed)).toEqual(Array(count).fill(false));
+  expect(result.winner).toBe(count===3 ? 'Parlamentar' : 'Infiltrado');
 });
 
 test('campaign missions return to the draw after renewal resets used actions',()=>{
@@ -589,6 +583,7 @@ test('campaign missions return to the draw after renewal resets used actions',()
 test('a used amendment stays out of the mission draw until the next negotiation',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   const {agenda} = Reflect.get(economy,'accounts').get(host.id);
   const resetDraw = () => {
@@ -604,7 +599,9 @@ test('a used amendment stays out of the mission draw until the next negotiation'
   match.advance(NEGOTIATION_MS);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(active()).toContain('emenda');
-  match.act(at(host,'amendment'),'amendment',NEGOTIATION_MS+BALLOT_MS+1);
+  const second = NEGOTIATION_MS+BALLOT_MS+60_000;
+  publishProjectFiling(match,host,1,second);
+  match.act(at(host,'amendment'),'amendment',second+1);
   expect(match.view(host.id,ids,0).politics?.missions.completed).toContainEqual(expect.objectContaining({kind:'emenda'}));
 });
 
@@ -621,6 +618,7 @@ test('a station rejects a nearby player blocked by a barrier or carrying someone
 test('an approved project with a fractional deficit applies the same rounded penalty shown by the client',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,[host],0,()=>0)).toBe(true);
+  publishProjectFiling(match,host);
   expect(match.view(host.id,[host.id],0).stability).toBe(stabilityRules.initial);
   Reflect.set(match,'budget',24.7);
   match.advance(NEGOTIATION_MS);
@@ -636,6 +634,7 @@ test('an approved project with a fractional deficit applies the same rounded pen
 test('the last ballot does not redraw a voting mission from an already credited vote',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   Reflect.set(match,'round',bills.length-1);
   const economy:PoliticalEconomy = Reflect.get(match,'economy');
   const {agenda} = Reflect.get(economy,'accounts').get(host.id);
@@ -663,6 +662,7 @@ test('the last ballot does not redraw a voting mission from an already credited 
 test('legislative brief activities require their respective stations and the negotiation phase',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,[host],0);
+  publishProjectFiling(match,host);
   for (const key of ['secretary','archive'] as const) {
     expect(match.roomActivity(host,key,1)).toBeUndefined();
     expect(match.roomActivity(at(host,key),key,1)).toEqual({activity:key});
@@ -714,6 +714,7 @@ test('cassation can be called at 40 popularity',()=>{
 test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
   match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
@@ -728,13 +729,14 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   match.castCassation(traitor.id,null,open);
   expect(view(open).cassation?.voted).toBe(3);
   match.advance(open+HEARING_MS);
-  expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:175,
+  expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:55,
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
 test('project votes expose portraits and current choices without roles; abstentions do not count as no',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host);
   match.advance(NEGOTIATION_MS);
   match.vote(host.id,'yes',NEGOTIATION_MS+1);
   match.vote(honest.id,'abstain',NEGOTIATION_MS+2);
@@ -758,7 +760,7 @@ test.each(['PROJ-N04','PROJ-N12','PROJ-N13'])('%s pays only on approval with a b
     const view = (now:number)=>match.view(host.id,ids,now);
     const before = view(0);
     match.gameplayWorld(people,1,()=>false).publish({
-      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
     });
     match.advance(NEGOTIATION_MS);
     const cost = -view(NEGOTIATION_MS).yes.budget;
@@ -778,7 +780,7 @@ test.each([true,false])('treasury deposits respect the vote and bonus deadline, 
   match.start(host.id,people,0,()=>.9);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N17');
   match.gameplayWorld(people,1,()=>false).publish({
-    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   for (const voter of [host,honest]) match.vote(voter.id,approved ? 'yes' : 'no',NEGOTIATION_MS+1);
@@ -801,7 +803,7 @@ test('the extintor bill delays the next ignition only when approved and funded',
     const match = new PlenaryMatch(1);
     match.start(host.id,people,0,()=>.9);
     match.gameplayWorld(people,1,()=>false).publish({
-      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
     });
     match.advance(NEGOTIATION_MS);
     if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
@@ -819,7 +821,7 @@ test.each(['recovery','coffee','hearing','furniture','equipment','mail','campaig
     const match = new PlenaryMatch(1);
     match.start(host.id,people,0,()=>.9);
     match.gameplayWorld(people,1,()=>false).publish({
-      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
     });
     match.advance(NEGOTIATION_MS);
     if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
@@ -928,14 +930,13 @@ test('Investimento Político counts paid advertisements after assignment across 
   expect(progress(3)).toBe(2);
   expect(view(3).politics!.wallet).toBe(8-ELECTION_RULES.advertisementCost);
 
+  publishProjectFiling(match,host);
   match.advance(NEGOTIATION_MS);
   match.vote(host.id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   match.advance(ELECTION_RULES.interval);
   expect(announce(ELECTION_RULES.interval+1)).toBeDefined();
   expect(progress(ELECTION_RULES.interval+1)).toBe(4);
-  match.advance(2*(NEGOTIATION_MS+BALLOT_MS)-BALLOT_MS);
-  match.advance(2*(NEGOTIATION_MS+BALLOT_MS));
   match.advance(ELECTION_RULES.interval*2);
   expect(announce(ELECTION_RULES.interval*2+1)).toBeDefined();
   const result = view(ELECTION_RULES.interval*2+1).politics!;
@@ -951,12 +952,12 @@ test('PEC da Reeleição Infinita increases the paid ad weight in polling and th
     expect(match.start(host.id,people,0,()=>.5)).toBe(true);
     const project = bills.findIndex(bill=>bill.id==='PROJ-N09');
     match.gameplayWorld(people,1,()=>false).publish({
-      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+      type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:60_000,witnesses:[],
     });
     expect(match.electionAction(at(host,'press'),{kind:'advertise'},2,false)).toBeDefined();
-    match.advance(NEGOTIATION_MS);
-    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
-    const close = NEGOTIATION_MS+BALLOT_MS;
+    match.advance(60_000+NEGOTIATION_MS);
+    if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',60_000+NEGOTIATION_MS+1);
+    const close = 60_000+NEGOTIATION_MS+BALLOT_MS;
     match.advance(close);
     const view = (now:number)=>match.view(host.id,ids,now);
     const estimate = (now:number)=>view(now).election?.polls.find(poll=>poll.id===host.id)?.estimate;
@@ -1030,7 +1031,7 @@ test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida:
   const inventory = (player:Player,now:number)=>game.view(player,match.gameplayWorld(players,now,()=>false)).inventory;
   const project = bills.findIndex(bill=>bill.id==='PROJ-N02');
   match.gameplayWorld(players,1,()=>false).publish({
-    type:'filed',project,actor:rafa.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    type:'filed',project,actor:rafa.id,item:1,position:stations.amendment,at:0,witnesses:[],
   });
   // A full backpack leaves the allocated dose on the map.
   const create = Reflect.get(game,'create').bind(game);
@@ -1074,7 +1075,7 @@ test.each([true,false])('energy savings applies to actual maintenance and sabota
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N11');
   match.gameplayWorld(people,1,()=>false).publish({
-    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   if (approved) for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
@@ -1107,7 +1108,7 @@ test.each([true,false])('selective transparency only charges eligible private au
   match.start(host.id,people,0,()=>.9);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N08');
   match.gameplayWorld(people,1,()=>false).publish({
-    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:1,witnesses:[],
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
   });
   match.advance(NEGOTIATION_MS);
   if (approved) for (const player of [host,honest]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
@@ -1135,4 +1136,21 @@ test.each([true,false])('selective transparency only charges eligible private au
     expect(view(now+policyDuration).policies?.bankAudit).toBeUndefined();
   }
   expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('a project waits for an overlapping hearing and keeps the original proposer',()=>{
+  const match = new PlenaryMatch(2);
+  match.start(host.id,people,0,()=>.9);
+  publishProjectFiling(match,host,4);
+  (Reflect.get(match,'economy') as PoliticalEconomy).changePopularity(honest.id,20);
+  const startHearing = NEGOTIATION_MS-10_000;
+  match.politics(at(honest,'panel'),{kind:'hearing',target:traitor.id},people,startHearing);
+  match.advance(NEGOTIATION_MS);
+  expect(match.phase).toBe('hearing');
+  const hearingEnds = startHearing+HEARING_MS;
+  match.advance(hearingEnds);
+  match.advance(hearingEnds+1);
+  expect(match.view(honest.id,ids,hearingEnds+1)).toMatchObject({
+    phase:'ballot',project:4,proposer:host.nick,remaining:BALLOT_MS/1000,
+  });
 });

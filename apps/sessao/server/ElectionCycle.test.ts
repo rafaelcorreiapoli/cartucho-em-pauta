@@ -1,3 +1,4 @@
+import {publishProjectFiling} from './project-test-fixture';
 import {fireRules,fireSites} from '../src/fire';
 import { expect, test } from 'bun:test';
 import { ELECTION_RULES as rules } from '../src/elections';
@@ -111,9 +112,6 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   match.advance(fireRules.firstAfter);
   const site = view('2',fireRules.firstAfter).fire!.site;
   expect(match.actOnFire({...humans[2],...fireSites[site]},'extinguish',site,fireRules.firstAfter,true)).toBe('Incêndio apagado.');
-  match.advance(NEGOTIATION_MS);
-  match.vote('2','yes',NEGOTIATION_MS+1);
-  match.advance(NEGOTIATION_MS+BALLOT_MS);
   match.advance(rules.interval-1);
   const before = view('2',rules.interval);
   match.advance(rules.interval);
@@ -123,12 +121,7 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   expect(after.stability).toBe(before.stability);
   expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty-rules.salary*5);
   expect(after.election?.result?.salary).toBe(rules.salary);
-  match.advance(NEGOTIATION_MS*2+BALLOT_MS);
-  match.vote('0','yes',NEGOTIATION_MS*2+BALLOT_MS+1);
-  expect(view('0',NEGOTIATION_MS*2+BALLOT_MS+1).vote).toBeUndefined();
-  expect(match.canHandleObjects('0',NEGOTIATION_MS*2+BALLOT_MS+1)).toBe(true);
-  expect(match.gameplayWorld(humans,0,()=>false).hasMandate!('0')).toBe(false);
-  match.advance((NEGOTIATION_MS+BALLOT_MS)*2);
+  expect(match.gameplayWorld(humans,rules.interval,()=>false).projectFilingError?.('0',1)).toContain('mandato');
   match.advance(rules.interval*2);
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
 });
@@ -139,6 +132,7 @@ test('a short budget pays equal fractional salaries and preserves the rounding r
   const ids = humans.map(player=>player.id);
   match.start('0',humans,0,()=>0);
   match.addParliamentarian({...players[0],id:'npc',npc:true});
+  publishProjectFiling(match,humans[0]);
   match.advance(NEGOTIATION_MS);
   for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);

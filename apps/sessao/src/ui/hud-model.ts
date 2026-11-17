@@ -2,7 +2,7 @@ import type {FireView} from '../fire';
 import type {PowerView} from '../power';
 import type { Player } from '../map';
 import { MAX_STAMINA } from '../movement';
-import { stabilityRules, type PlenaryView } from '../plenary';
+import { projectRules, stabilityRules, type PlenaryView } from '../plenary';
 import { ELECTION_RULES } from '../elections';
 import { missionTitle, type Mission } from '../politics';
 
@@ -64,7 +64,7 @@ export function createHudModel() {
       television.update(interview && {name:interview.name,remaining:interview.remaining});
       congress.update({stability:view.stability,budget:view.budget});
       countdown.update(view.phase!=='negotiation' ? undefined : view.cassationIn ?
-        {kind:'cassation',seconds:view.cassationIn} : view.remaining>0 && view.remaining<=30 ?
+        {kind:'cassation',seconds:view.cassationIn} : view.project!==undefined && view.remaining>0 && view.remaining<=projectRules.warningSeconds ?
           {kind:'bill',seconds:view.remaining} : undefined);
       const progress = view.phase==='lobby' ? undefined : view.politics?.progression;
       const previous = matchId===progress?.matchId ? agenda.get() : undefined;
