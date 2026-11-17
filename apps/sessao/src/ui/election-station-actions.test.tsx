@@ -20,7 +20,7 @@ test('campaign controls match the current station, voice state and completed act
   expect(render('press')).toContain(money(ELECTION_RULES.advertisementCost));
   expect(render('press')).not.toContain('Discursar');
   expect(match.electionAction({...player,...stations.press},{kind:'advertise'},1,false)).toBeDefined();
-  expect(render('press')).toBe('');
+  expect(render('press')).toContain('Veicular propaganda');
   expect(render('panel')).toContain('Discursar');
   match.electionAction({...player,...stations.panel},{kind:'speech'},2,false);
   expect(render('panel')).not.toContain('Discursar');

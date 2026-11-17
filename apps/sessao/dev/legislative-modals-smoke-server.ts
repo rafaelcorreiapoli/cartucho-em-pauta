@@ -53,11 +53,11 @@ class LegislativeModalsRoom extends SessionRoom {
           shortenedCassation = true;
           Reflect.set(match,'cassationAt',now+500);
         }
-        if (filed || !match.view(player.id,[player.id],now).politics?.grantUsed) continue;
+        if (filed || !match.view(player.id,[player.id],now).politics?.grantCooldown) continue;
         publishProjectFiling(match,player,0,now);
         const proposal = Reflect.get(match,'proposal');
         if (proposal) {
-          proposal.voteAt = now+8_000;
+          proposal.voteAt = now+12_000;
           filed = true;
         }
       }

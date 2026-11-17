@@ -33,11 +33,11 @@ test('one human loses their mandate, payroll excludes them, and the floor is pre
   expect(payroll.at(-1)).toEqual(['3','4','5','npc']);
 });
 
-test('advertising costs R$ 20 mil and adds five electoral strength until renewal',()=>{
+test('advertising supports repeated purchases with different costs and a temporary policy bonus',()=>{
   const election = new ElectionCycle();
   election.reset(people.slice(0,2),0,()=>.5);
   const popularity = (id:string)=>id==='a' ? 10 : 12;
-  const lead = (now:number)=>election.view('a',now,popularity,true).polls[0];
+  const lead = (now:number)=>election.view('a',now,popularity,true,undefined,2).polls[0];
   let wallet = 1;
   const spend = (amount:number)=>{
     if (amount>wallet) return false;
@@ -47,14 +47,15 @@ test('advertising costs R$ 20 mil and adds five electoral strength until renewal
 
   expect(lead(0)).toMatchObject({id:'b',estimate:55});
   expect(election.advertise('a',spend)).toBeUndefined();
-  wallet = 4;
-  expect(election.advertise('a',spend)).toBeDefined();
+  wallet = 8;
+  expect(election.advertise('a',spend)?.offer.popularity).toBe(5);
   expect(lead(1)).toMatchObject({id:'a',estimate:56});
-  expect(election.advertise('a',spend)).toBeUndefined();
+  expect(election.advertise('a',spend,'feature')?.offer.popularity).toBe(8);
+  expect(election.advertise('a',spend,'feature')).toBeUndefined();
   expect(wallet).toBe(2);
 
-  election.advance(rules.interval,popularity,()=>new Map());
-  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:56});
+  election.advance(rules.interval,popularity,()=>new Map(),2);
+  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:66});
   expect(lead(rules.interval)).toMatchObject({id:'b',estimate:55});
   expect(election.advertise('a',spend)).toBeDefined();
   expect(wallet).toBe(0);
@@ -89,7 +90,7 @@ test('private discovery leaves the race intact until the evidence is published',
   match.start('a',players,0,() => .9);
   const estimate = () => match.view('c',ids,0).election!.polls.find(p => p.id==='a')!.estimate;
   const before = estimate();
-  match.politics(at(players[0],'cabinet'),{kind:'grant',diverted:3},players,2);
+  match.politics(at(players[0],'cabinet'),{kind:'grant',area:'health',amount:6,diversion:50},players,2);
   match.act(at(players[1],'audit'),'audit',3);
   expect(estimate()).toBe(before);
   const record = match.view('b',ids,0).politics!.evidence[0];
@@ -126,7 +127,7 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
 });
 
-test('a short budget pays equal fractional salaries and preserves the rounding remainder',()=>{
+test('a short budget pays full salaries to remaining mandates and NPCs by borrowing',()=>{
   const match = new PlenaryMatch();
   const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
   const ids = humans.map(player=>player.id);
@@ -142,9 +143,10 @@ test('a short budget pays equal fractional salaries and preserves the rounding r
   match.advance(rules.interval);
   const next = match.view('0',ids,rules.interval);
   expect(budget).toBe(4);
-  expect(next.election?.result?.salary).toBe(.2);
-  expect(next.budget).toBe(.4);
-  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+.2);
+  expect(next.election?.result?.salary).toBe(rules.salary);
+  expect(next).toMatchObject({budget:-20,debtPenaltyIn:30});
+  expect(match.economySummary(0).discrepancy).toBe(0);
+  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+rules.salary);
   expect(match.view('5',ids,rules.interval).election?.result?.salary).toBe(0);
   const paid = world.wallet!('npc');
   match.advance(rules.interval);

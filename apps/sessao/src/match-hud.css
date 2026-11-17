@@ -1123,3 +1123,32 @@ button.item-tile:active { transform: translateY(3px); }
 .phone-pix { display: flex; flex-direction: column; min-height: 100%; gap: .85rem; }
 .phone-pix footer { display: grid; gap: .75rem; margin-top: auto; padding-block: .75rem .25rem; border-top: 1px solid #ffffff20; }
 .phone-pix footer .hud-button { min-height: 45px; border-radius: 12px; }
+
+#campaign-picker {
+  width: min(440px, calc(100vw - 32px));
+}
+.campaign-picker {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.campaign-picker header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.campaign-picker > .hud-button {
+  white-space: normal;
+  text-align: left;
+}
+
+.investment-preview {
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  border: 1px solid var(--color-hud-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-block: 8px;
+}
+.market-supplies { color: var(--color-hud-budget); margin: 0; }

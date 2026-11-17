@@ -50,7 +50,25 @@
 .react-missions { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
 .react-missions.completed { border-bottom:1px solid var(--color-hud-border); padding-bottom:8px; }
 .react-missions strong { display:block; font-weight:600; overflow-wrap:anywhere; }
-.react-missions [data-done="true"] { color:var(--color-hud-muted); text-decoration:line-through; }
+.react-missions [data-done="true"] strong { color:var(--color-hud-muted); text-decoration:line-through; }
+.react-mission-meta, .react-mission-rewards { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+.react-mission-meta { margin-top:3px; justify-content:space-between; }
+.react-mission-rewards > span {
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  border:1px solid var(--color-hud-border);
+  border-radius:4px;
+  padding:1px 4px;
+  background:#101e18;
+  color:#e7dcff;
+  font:600 10px/1.25 system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.react-mission-rewards .hud-glyph { width:11px; height:11px; }
+.react-mission-rewards [data-reward="cash"] { color:#b6ffd8; }
+.react-mission-rewards [data-reward="popularity"] { color:#ffe29c; }
 .react-mission-check { flex:none; display:grid; place-items:center; width:13px; height:13px; margin-top:2px; border:1px solid var(--color-hud-muted); border-radius:3px; }
 .react-mission-check .hud-glyph { width:10px; height:10px; color:var(--color-hud-stability); }
 #world #hud-notices { inset-block-start:auto; inset-block-end:calc(var(--deck-height, 134px) + 12px); }

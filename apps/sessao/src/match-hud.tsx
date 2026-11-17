@@ -9,6 +9,7 @@ import {contextActionKeys,type ContextKey} from './ui/context-action-keys';
 import {StationShortcuts,stationShortcuts,type Shortcut} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
 import { ElectionStationActions,electionStationActions,electionButtons } from './ui/election-station-actions';
+import {mountCampaignPicker} from './ui/campaign-picker';
 import type { ElectionAction } from './elections';
 import { LegislativeStationActions,legislativeStationActions,legislativeButtons } from './ui/legislative-station-actions';
 import { mountNotices } from './ui/notices';
@@ -32,6 +33,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
   const stations = element('stations');
+  const campaign = mountCampaignPicker(advertisement=>election.send({kind:'advertise',advertisement}));
+  function selectElection(kind:keyof typeof electionButtons) {
+    if (kind==='advertise') campaign.open();
+    else election.send({kind});
+  }
   const contextRoot = createRoot(element('context-actions-mount'));
   let nearbyOpen = false;
   let overflowExpanded = false;
@@ -148,6 +154,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     if (!exploring || !canInteract) overflowExpanded = false;
     const legislative = legislativeStationActions(view,context);
     const electoral = electionStationActions(view,context,election.hasVoice());
+    campaign.update(electoral.actions.includes('advertise') ? view?.politics?.wallet : undefined);
     const shortcuts = stationShortcuts(view,player,context);
     const key = JSON.stringify([legislative,electoral,shortcuts,field,meter,nearbyOpen,overflowExpanded]);
     stations.hidden = !exploring || !(items.length || legislative.length || electoral.actions.length || electoral.voiceHint ||
@@ -158,7 +165,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
     const groups = [
       legislative.map(action=>({...legislativeButtons[action],action,activate:()=>sendLegislative(action)})),
-      electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>election.send({kind})})),
+      electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>selectElection(kind)})),
       shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
       field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
     ] as const;
@@ -209,7 +216,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     flushSync(()=>contextRoot.render(<>
       <div id="legislative-station-actions" className="station-grid"><LegislativeStationActions actions={legislative} send={sendLegislative} keys={keysFor(0)}/></div>
       <div id="station-election-actions" className="station-grid">
-        <ElectionStationActions {...electoral} send={election.send} keys={keysFor(1)}/>
+        <ElectionStationActions {...electoral} send={selectElection} keys={keysFor(1)}/>
       </div>
       <div id="office-progress-mount">{meter && <ContextProgress meter={meter}/>}</div>
       <div id="nearby-actions" className="context-nearby"><NearbyActions items={items} expanded={nearbyOpen}
@@ -288,6 +295,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       gear.destroy();
       notices.destroy();
       rewards.destroy();
+      campaign.destroy();
       document.removeEventListener('keydown',onActionKey);
       stations.removeEventListener('click',onStationClick,true);
       stations.hidden = true;

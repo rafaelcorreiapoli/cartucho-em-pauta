@@ -1,3 +1,4 @@
+import {investmentRules} from './public-investments';
 import type {ShortcutEntry} from './action-shortcuts';
 import {isEditingText} from './game-keys';
 import {DialogHeader} from './ui/dialog-header';
@@ -69,7 +70,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   dialog.addEventListener('keydown',onMarketKey);
   prompt.addEventListener('keydown',onReplacementKey);
 
-  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number,direct:boolean) {
+  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number,direct:boolean,suppliesSeconds?:number) {
     const catalog = npcs[npc].catalog;
     if (!catalog) return;
     const kinds = marketKinds[catalog];
@@ -80,7 +81,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
       selected = 0;
-      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct,suppliesSeconds);
     };
     const stock = visible.map(kind=>{
       const item = objects[kind];
@@ -95,7 +96,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     const product = stock[selected];
     const select = (index:number) => {
       selected = index;
-      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct,suppliesSeconds);
     };
     const buy = () => {
       if (product && !product.status) send({kind:'shop-buy',target:product.kind,token});
@@ -122,6 +123,9 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
         </div>
         <p className="market-wallet tabular-nums"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(wallet)}</p>
       </div>
+      {catalog==='food' && suppliesSeconds!==undefined && <p className="market-supplies">
+        Abastecimento · {investmentRules.suppliesDiscount}% de desconto por mais {suppliesSeconds} s
+      </p>}
       <div className="market-catalog-label"><span><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Comprar</span></div>
       <div className="market-catalog-layout">
         <div className="market-products" aria-label="Produtos">
@@ -221,10 +225,11 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       }
       const wallet = view.politics?.wallet ?? 0;
       const {policies,budget} = view;
+      const suppliesSeconds = npcs[state.npc].catalog==='food' ? view.suppliesSeconds : undefined;
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget,suppliesSeconds]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -255,7 +260,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
         dialog.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
-      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget,state.direct!==false);
+      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget,state.direct!==false,suppliesSeconds);
       if (!dialog.open) dialog.showModal();
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {

@@ -16,6 +16,7 @@ export class Fire {
   private clock = 0;
   private last = 0;
   private delay = 0;
+  private fundedDelay = 0;
 
   reset(now:number,random=Math.random) {
     this.active = this.installation = this.armed = undefined;
@@ -24,14 +25,14 @@ export class Fire {
     this.random = random;
     this.clock = 0;
     this.last = now;
-    this.delay = 0;
+    this.delay = this.fundedDelay = 0;
   }
 
   get burning() { return this.active!==undefined; }
 
   get installer() { return this.installation?.actor; }
   get smoke() {
-    return this.armed && this.armed.ignites-this.clock<=fireRules.smoke ? this.armed.site : undefined;
+    return this.armed && this.armed.ignites+this.fundedDelay-this.clock<=fireRules.smoke ? this.armed.site : undefined;
   }
 
   handlingSite(actor:string) {
@@ -95,6 +96,8 @@ export class Fire {
     return true;
   }
 
+  delayNextFire(duration:number) { this.fundedDelay += duration; }
+
   increaseSafety() {
     if (this.delay) return;
     this.delay = fireRules.safetyDelay;
@@ -108,13 +111,14 @@ export class Fire {
     this.clock += elapsed;
     const active = this.active;
     if (!active) {
-      if (this.armed && this.clock>=this.armed.ignites) {
+      if (this.armed && this.clock>=this.armed.ignites+this.fundedDelay) {
         this.active = {site:this.armed.site,elapsed:0,losses:0};
         this.armed = undefined;
-      } else if (!this.armed && !this.installation && this.clock>=this.next) {
+      } else if (!this.armed && !this.installation && this.clock>=this.next+this.fundedDelay) {
         const site = this.nextSite ?? Math.floor(this.random()*fireSites.length);
         this.active = {site,elapsed:0,losses:0};
       }
+      if (this.active) this.fundedDelay = 0;
       return 0;
     }
     active.elapsed = Math.min(fireRules.duration,active.elapsed+elapsed);

@@ -81,10 +81,10 @@ test('the ballot projects the stability applied by the gameserver when a project
   const state = sessionBallotState(view)!;
   expect(state.kind).toBe('project');
   const markup = renderToStaticMarkup(<SessionBallot state={state} ownId={player.id} cast={()=>{}} castCassation={()=>{}}/>);
-  expect(markup).toContain('Déficit de R$ 33 mil');
-  expect(markup).toContain('data-effect="gain">+12</b>');
+  expect(markup).toContain('Dívida após a votação de R$ 33 mil');
+  expect(markup).toContain('data-effect="gain">+22</b>');
 
   match.vote(player.id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
-  expect(match.view(player.id,[player.id],NEGOTIATION_MS+BALLOT_MS).outcome?.applied.stability).toBe(12);
+  expect(match.view(player.id,[player.id],NEGOTIATION_MS+BALLOT_MS).outcome?.applied.stability).toBe(22);
 });

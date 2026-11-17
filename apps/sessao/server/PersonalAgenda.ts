@@ -14,7 +14,7 @@ export type MissionSwapResult = 'swapped'|'used'|'unavailable';
 export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'emendaFutura'|'votoNpc'|'leitura'|'responderCrise';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
+  canUseXray?:()=>boolean; hasFutureAdvertising?:()=>boolean; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const drankCoffee = (event:GameplayEvent) => event.type==='used' && event.kind==='coffee';
@@ -133,7 +133,7 @@ function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
   if (mailMissions.has(kind)) return metrics.canPublishMail?.()!==false;
-  if (kind==='propaganda' || kind==='campanhaUltimaHora') return (metrics.remainingAdvertisements?.() ?? 1)>0;
+  if (kind==='propaganda' || kind==='campanhaUltimaHora') return metrics.hasFutureAdvertising?.() ?? true;
   return true;
 }
 
@@ -283,7 +283,7 @@ export class PersonalAgenda {
           (mission.kind!=='retratacaoOficial' || this.hasNewReport(metrics)) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
           canCompleteMissionNow(mission.kind,metrics) &&
-          (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
+          (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       this.callSamples.delete(mission.id);
       return false;
@@ -498,12 +498,12 @@ export class PersonalAgenda {
     this.progress(metrics,gains);
   }
 
-  private canMeetCampaignTarget(metrics:AgendaMetrics, remaining:number) {
-    return !this.cannotVote && (metrics.remainingAdvertisements?.() ?? 0)*ELECTION_RULES.advertisementCost>=remaining;
+  private canMeetCampaignTarget(metrics:AgendaMetrics) {
+    return !this.cannotVote && metrics.hasFutureAdvertising?.()===true;
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
-    if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
+    if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics) ||
         metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao' || kind==='doisPix') {
       const requiredPayers = missionTargets[kind] ?? 1;

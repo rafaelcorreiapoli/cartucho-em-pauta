@@ -2,7 +2,7 @@ import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type G
 import {canStand,NAMES,type Motion,type Player} from '../src/map';
 import {applyInput,type ControlState} from '../src/movement';
 import {nickKey} from '../src/nick';
-import {bills,canReachStation,fundedProjectStability,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
+import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
 import {BotAgenda} from './BotAgenda';
 import type {Gameplay} from './Gameplay';
@@ -33,7 +33,8 @@ type Bot = {
 
 function impactScore(impact:Impact,budget:number) {
   const balance = budget+impact.budget;
-  return fundedProjectStability(impact,budget,balance)+impact.budget/8;
+  const extraDebtLoss = publicDebtStabilityLoss(balance)-publicDebtStabilityLoss(budget);
+  return impact.stability-extraDebtLoss+impact.budget/8;
 }
 
 export class PlayerBots {
@@ -281,9 +282,8 @@ export class PlayerBots {
 
   private votePreference(bot:Bot,view:PlenaryView):{vote:Vote;reason:string} {
     const {budget,yes,no,stability,politics} = view;
-    const delta = (impact:Impact)=>fundedProjectStability(impact,budget,budget+impact.budget);
-    const yesStability = stability+delta(yes);
-    const noStability = stability+delta(no);
+    const yesStability = stability+yes.stability;
+    const noStability = stability+no.stability;
     const difference = impactScore(yes,budget)-impactScore(no,budget);
     const threshold = view.outcomes.length+1>=projectRules.requiredVotes ? stabilityRules.target : 0;
     const decisive = (yesStability>=threshold)!==(noStability>=threshold) || (yesStability<=0)!==(noStability<=0);

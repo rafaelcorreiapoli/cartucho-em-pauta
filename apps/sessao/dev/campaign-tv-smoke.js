@@ -12,8 +12,8 @@ async page => {
   const tv = client=>client.locator('.campaign-tv');
   const announcement = client=>client.locator('.campaign-tv-announcement');
 
-  async function observeBroadcasts(client,reply) {
-    await client.evaluate(async replyButton=>{
+  async function observeBroadcasts(client) {
+    await client.evaluate(async ()=>{
       const image = new Image();
       image.src = '/assets/campaign-tv.webp';
       await image.decode();
@@ -25,22 +25,24 @@ async page => {
         if (!element || element===previous) return;
         previous = element;
         const keyframes = element.getAnimations()[0]?.effect.getKeyframes();
-        window.campaignAds.push({
+        const artwork = element.querySelector('img');
+        const sample = {
           at:performance.now(),
           title:element.querySelector('.campaign-tv-caption span').textContent,
           side:element.dataset.side,
           opening:keyframes?.[0]?.transform,
           onScreen:keyframes?.[1]?.transform,
-          image:element.querySelector('img').naturalWidth,
+          image:undefined,
           number:element.querySelector('strong').textContent,
           skin:element.querySelector('[data-skin]').dataset.skin,
           announcement:host.querySelector('.campaign-tv-announcement').textContent.trim(),
-        });
-        if (window.campaignAds.length===1) replyButton?.click();
+        };
+        window.campaignAds.push(sample);
+        artwork.decode().then(()=>{ sample.image = artwork.naturalWidth; },()=>{ sample.image = 0; });
         if (window.campaignAds.length===2) observer.disconnect();
       });
       observer.observe(host,{childList:true,subtree:true});
-    },reply);
+    });
   }
 
   function checkAd(ad,nick,side,motion) {
@@ -75,7 +77,10 @@ async page => {
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
 
     await Promise.all([advertiser(page).waitFor(),advertiser(guest).waitFor()]);
-    await Promise.all([observeBroadcasts(page,null),observeBroadcasts(guest,await advertiser(guest).elementHandle())]);
+    await Promise.all([observeBroadcasts(page),observeBroadcasts(guest)]);
+    const clock = page.getByRole('timer',{name:'Tempo restante da sessão'});
+    await clock.waitFor();
+    if (!/\d+:\d{2}/.test(await clock.textContent())) throw Error('Relógio da sessão invisível.');
     const originalAdvertise = advertiser(page);
     const actionMenu = page.getByRole('dialog',{name:'Atalhos de teclado'});
     await originalAdvertise.evaluate(button=>{
@@ -87,8 +92,14 @@ async page => {
     await campaignShortcut.waitFor();
     await page.keyboard.press(await campaignShortcut.getAttribute('aria-keyshortcuts'));
     await actionMenu.waitFor({state:'hidden'});
+    const picker = client=>client.getByRole('dialog',{name:'Veicular propaganda'});
+    const spot = client=>picker(client).getByRole('button',{name:/Spot eleitoral/});
+    await spot(page).click();
+    await guest.waitForFunction(()=>window.campaignAds.length===1);
+    await advertiser(guest).click();
+    await spot(guest).click();
     const broadcasts = await Promise.all([page,guest].map(async client=>{
-      await client.waitForFunction(()=>window.campaignAds.length===2);
+      await client.waitForFunction(()=>window.campaignAds.length===2 && window.campaignAds.every(ad=>ad.image!==undefined));
       return client.evaluate(()=>window.campaignAds);
     }));
     for (const [first,second] of broadcasts) {
@@ -108,9 +119,9 @@ async page => {
     }
     await page.keyboard.press('F2');
     await actionMenu.waitFor();
-    if (await campaignShortcut.count()) throw Error('O atalho voltou a oferecer propaganda no mesmo ciclo.');
+    if (!await campaignShortcut.count()) throw Error('O atalho deixou de oferecer propaganda no mesmo ciclo.');
     await page.keyboard.press('Escape');
-    return {rafa,bia,keyboardBroadcast:true,removedAfterUse:true};
+    return {rafa,bia,keyboardBroadcast:true,availableAfterUse:true};
   } finally {
     await guest.close();
   }

@@ -38,6 +38,20 @@ test('active and completed targeted missions render the public nickname',()=>{
   }
 });
 
+test('mission rows show XP, cash and popularity from the reward table',()=>{
+  const render = (kind:Mission['kind'],done=false)=>renderToStaticMarkup(
+    <MissionRow mission={{id:1,kind,current:Number(done),target:1}} done={done}/>,
+  );
+  for (const done of [false,true]) {
+    const protocol = render('protocolo',done);
+    expect(protocol).toContain(`${missionReward('protocolo').xp} XP`);
+    expect(protocol).toContain(`+${missionReward('protocolo').popularity} Pop`);
+    expect(protocol).not.toContain('data-reward="cash"');
+  }
+  expect(render('assinaturas')).toContain(money(missionReward('assinaturas').cash!));
+  expect(render('cafe')).not.toContain('data-reward="popularity"');
+});
+
 test('the furniture spending objective displays currency on both sides of its progress',()=>{
   const markup = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'ostentacao',current:3,target:5}}/>);
   expect(markup).toContain('R$ 30 mil / R$ 50 mil');
@@ -57,7 +71,10 @@ test('the parliament HUD uses the configured threshold and explains the budget p
   expect(atTarget).toContain('data-tone="stability"');
   expect(below).toContain('data-tone="danger"');
   expect(atTarget).toContain(`meta da sessão é ${stabilityRules.target}`);
-  expect(atTarget).toContain(`custa ${stabilityRules.deficitRate} pontos`);
+  expect(atTarget).toContain('Depósitos na Tesouraria abatem a dívida');
+  const inDebt = renderToStaticMarkup(<ParliamentMetrics stability={48} budget={-3} debtPenaltyIn={12}/>);
+  expect(inDebt).toContain('−R$ 30 mil');
+  expect(inDebt).toContain('−3 de estabilidade em 12 s');
 });
 
 
@@ -646,7 +663,7 @@ test('the HUD replaces mail objectives if the next publication falls at the sess
   expect(view(last).completed).toHaveLength(0);
 });
 
-test.each([true,false])('the final campaign slot is consumed once and only the last minute earns XP (%s)',isLastMinute=>{
+test.each([true,false])('only the last minute of the final campaign cycle earns XP (%s)',isLastMinute=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -667,7 +684,7 @@ test.each([true,false])('the final campaign slot is consumed once and only the l
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain(`nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos`);
   expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeDefined();
   const after = view();
-  expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(false);
+  expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(!isLastMinute);
   expect(after.missions.active).toHaveLength(3);
   const completed = after.missions.completed.find(mission=>mission.kind==='campanhaUltimaHora');
   expect(!!completed).toBe(isLastMinute);
@@ -742,14 +759,16 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(view(5).progression.xp).toBe(65);
 });
 
-test('campaign spending leaves the HUD when a project vote closes an unused advertisement slot',()=>{
+test('campaign spending leaves the HUD when the final advertising cycle ends during a vote',()=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  for (let cycle=1;cycle<ELECTION_RULES.cycles;cycle++) match.advance(ELECTION_RULES.interval*cycle);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
-  const deadline = ELECTION_RULES.interval;
+  match.refreshAgendaEligibility();
+  const deadline = ELECTION_RULES.cycles*ELECTION_RULES.interval;
   const opens = deadline-10_000;
   publishProjectFiling(match,player,0,opens-NEGOTIATION_MS);
   const active = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active;

@@ -4,11 +4,11 @@ import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
 import {settingsApp} from '../hud-apps';
-import { stabilityRules } from '../plenary';
+import { stabilityRules, publicDebtRules, publicDebtStabilityLoss } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
-import { missionTitle, money, timedAgendas, type Mission } from '../politics';
+import { missionReward, missionTitle, money, timedAgendas, type Mission } from '../politics';
 import './theme.css';
 
 function Meter({label,value,max,tone,target}:{label:string;value:number;max:number;tone:string;target?:number}) {
@@ -38,7 +38,7 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
-export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -54,9 +54,18 @@ export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congre
       <Laurel right/>
     </div>
     <HudHelpButton className="congress-budget flex items-center justify-center"
-      help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
-      <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
+      data-in-debt={budget<0}
+      help={`Projetos e despesas obrigatórias podem gerar dívida. A cada ${publicDebtRules.interval/1000} s, cada R$ 10 mil de dívida ou fração custa 1 ponto de estabilidade, até ${publicDebtRules.maximumLoss}. Depósitos na Tesouraria abatem a dívida.`}>
+      <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelpButton>
+    {debtPenaltyIn!==undefined && <div className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
+      <HudIcon name="alert"/><span>Dívida</span><strong>−{publicDebtStabilityLoss(budget)} de estabilidade em {debtPenaltyIn} s</strong>
+    </div>}
+    {sessionRemaining!==undefined && <div className="congress-session-clock" role="timer"
+      aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
+      <HudIcon name="clock"/><span>Fim da sessão</span>
+      <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
+    </div>}
   </section>;
 }
 
@@ -87,6 +96,7 @@ function AgendaPanel({state}:{state:HudModel['agenda']}) {
 }
 
 export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean}) {
+  const reward = missionReward(mission.kind);
   const timed = timedAgendas.has(mission.kind);
   const current = timed ? Math.floor(mission.current/1000) : mission.current;
   const target = timed ? mission.target/1000 : mission.target;
@@ -96,7 +106,14 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
     <span className="react-mission-check" aria-hidden="true">{done && <HudIcon name="check"/>}</span>
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
-      {!done && progress && <small>{progress}</small>}
+      <div className="react-mission-meta">
+        {!done && progress && <small>{progress}</small>}
+        <div className="react-mission-rewards" role="group" aria-label="Prêmios da missão">
+          <span data-reward="xp"><HudIcon name="star"/>{reward.xp} XP</span>
+          {!!reward.cash && <span data-reward="cash"><HudIcon name="wallet"/>{money(reward.cash)}</span>}
+          {!!reward.popularity && <span data-reward="popularity"><HudIcon name="chart"/>+{reward.popularity} Pop<span className="sr-only">ularidade</span></span>}
+        </div>
+      </div>
     </div>
   </li>;
 }

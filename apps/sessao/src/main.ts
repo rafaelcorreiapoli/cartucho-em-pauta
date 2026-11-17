@@ -1,9 +1,10 @@
+import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
 import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
-import { ELECTION_RULES, type CampaignBroadcast } from './elections';
+import { type CampaignBroadcast } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
@@ -269,6 +270,8 @@ async function connect(join: () => Promise<Room>) {
       if (pickup) hud.refreshActions();
       audio.cue('pickup');
     });
+    joined.onMessage('public-investment',({author,area,amount}:InvestmentAnnouncement)=>
+      hud.notify('Verba aplicada',`${author} aplicou ${money(amount)} em ${investmentAreas[area]}.`,true));
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
     joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
       hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
@@ -283,7 +286,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>{
       campaignTv.enqueue(ad);
       if (ad.advertiserId===joined.sessionId) {
-        hud.notify('Propaganda no ar',`+${ELECTION_RULES.advertisementStrength} de força eleitoral neste ciclo.`);
+        hud.notify('Propaganda no ar','Sua campanha está na TV do Congresso.');
       }
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
@@ -331,7 +334,7 @@ async function connect(join: () => Promise<Room>) {
       if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
       const gains = rewardGains(previousView,view,suppressXpEffect);
-      const rewardHead = gains.income || gains.xp ? game?.playerHead() : undefined;
+      const rewardHead = gains.income || gains.xp || gains.popularity ? game?.playerHead() : undefined;
       if (gains.income) {
         audio.cue('cash');
         hud.showReward('income',gains.income,rewardHead);
@@ -359,6 +362,7 @@ async function connect(join: () => Promise<Room>) {
       mail.price(mailPublicationFee(view.policies));
       mail.phase(view.phase==='negotiation');
       if (gains.xp) hud.showReward('xp',gains.xp,rewardHead);
+      if (gains.popularity) hud.showReward('popularity',gains.popularity,rewardHead);
       suppressXpEffect = false;
       progression.render(view);
       if (view.phase!==previousView?.phase && (view.phase==='ballot' || view.phase==='hearing')) appLauncher.close();

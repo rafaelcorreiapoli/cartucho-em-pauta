@@ -107,8 +107,17 @@
   color: #ffdf88;
   font-family: system-ui, sans-serif;
 }
-#wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain)) .xp-gain { transform: translate(5px,-100%); }
-#wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain) { transform: translate(calc(-100% - 5px),-100%); }
+#wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain,.popularity-gain)) .xp-gain { transform: translate(5px,-100%); }
+#wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain,.popularity-gain) { transform: translate(calc(-100% - 5px),-100%); }
+
+.wallet-gain.popularity-gain {
+  border-color: #bdabff;
+  background: #332653;
+  color: #e7dcff;
+}
+#wallet-effects:has(.xp-gain,.wallet-gain:not(.popularity-gain,.xp-gain)) .popularity-gain {
+  transform: translate(-50%,calc(-100% - 2.1em));
+}
 
 #attribute-list .attribute-selected { background: #e1ba601f; }
 #attribute-list [aria-pressed="true"], .attribute-preview { color: #ffda85; }

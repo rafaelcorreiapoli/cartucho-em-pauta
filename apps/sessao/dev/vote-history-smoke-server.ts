@@ -3,7 +3,7 @@ Bun.plugin({
   name:'short-vote-history-rounds',
   setup(build) {
     build.onLoad({filter:/\/sessao\/src\/plenary\.ts$/},async ({path})=>({
-      contents:(await Bun.file(path).text()).replace('debateMs:120_000','debateMs:12_000')
+      contents:(await Bun.file(path).text()).replace('debateMs:90_000','debateMs:12_000')
         .replace('cooldownMs:60_000','cooldownMs:3_000').replace('BALLOT_MS = 35_000','BALLOT_MS = 24_000'),
       loader:'ts',
     }));

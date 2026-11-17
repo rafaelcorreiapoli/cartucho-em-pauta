@@ -18,7 +18,7 @@ test('the dossier keeps evidence private until a nearby offer clears and the buy
     const model = dossierModel(player.id,view(player,now,people),visible)!;
     return renderToStaticMarkup(<Dossier model={model} send={()=>{}} close={()=>{}}/>);
   };
-  match.politics({...rafa,...stations.cabinet},{kind:'grant',diverted:3},players,1);
+  match.politics({...rafa,...stations.cabinet},{kind:'grant',area:'health',amount:6,diversion:50},players,1);
   match.act({...bia,...stations.audit},'audit',2);
   const proof = view(bia,2,players).politics!.evidence[0];
   expect(render(bia,2)).toContain('Rafa desviou R$ 30 mil');

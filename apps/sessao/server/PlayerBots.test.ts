@@ -123,7 +123,7 @@ test('a bot hides an expensive project’s cost and another bot audits and corre
 test('an affordable evidence offer can change a bot vote on a close project',()=>{
   const {advance,bots,human,match,players,view} = gameWithBots(()=>0.4);
   Object.assign(human,stations.cabinet);
-  match.politics(human,{kind:'grant',diverted:1},players,0);
+  match.politics(human,{kind:'grant',area:'health',amount:2,diversion:50},players,0);
   const proof = view(human.id,0).politics!.evidence.find(entry=>entry.kind==='diversion')!;
   publishProjectFiling(match,human,6);
   Reflect.get(match,'proposal').voteAt = 0;
