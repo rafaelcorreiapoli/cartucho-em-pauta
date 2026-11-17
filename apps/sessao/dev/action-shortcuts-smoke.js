@@ -38,7 +38,7 @@ async page => {
   if (await page.locator('#open-settings, #open-phone, #open-bag, #open-attributes, #open-surveillance, #open-equipment').count()) {
     throw Error('Comandos do HUD ainda dependem de botões duplicados');
   }
-  await page.screenshot({path:'/tmp/sessao-exploration-apps.png'});
+  await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-apps.png'});
   const gameplay = page.locator('#gameplay-dialog');
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
   await gameplay.getByRole('heading',{name:'Inventário',exact:true}).waitFor();

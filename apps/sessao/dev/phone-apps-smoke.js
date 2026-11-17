@@ -17,7 +17,7 @@ async page => {
   };
   await dialog.getByRole('button',{name:'Telefone',exact:true}).waitFor();
   if (await dialog.locator('#phone-apps').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length)!==3) throw Error('Grade de apps');
-  await page.screenshot({path:'/tmp/sessao-exploration-phone.png'});
+  await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-phone.png'});
   await page.keyboard.press('2');
   await dialog.getByRole('heading',{name:'Joguinhos',exact:true}).waitFor();
   const games = dialog.locator('.phone-games-menu');
