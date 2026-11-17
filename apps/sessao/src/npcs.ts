@@ -138,6 +138,7 @@ export type DialogueView = {
   text:string;
   options:readonly Pick<DialogueOption,'id'|'label'>[];
   shop:boolean;
+  direct?:boolean;
   feedback?:string;
   token:number;
 };

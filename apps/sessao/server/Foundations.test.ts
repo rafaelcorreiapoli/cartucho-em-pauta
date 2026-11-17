@@ -1,9 +1,11 @@
+import {marketPurchaseSlot} from '../src/market-catalog';
+
 import {megaphone} from '../src/equipment';
 import { expect, test } from 'bun:test';
 import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
-import type { GameplayEvent } from '../src/gameplay';
+import { INVENTORY_SLOTS, type GameplayEvent } from '../src/gameplay';
 import { canStand, movementSpeed, roomAt, worldVisible, PLENARY_DOORS, VISION_RADIUS, type Player } from '../src/map';
 import { infirmary, recoveryRules } from '../src/medical';
 import { findRoute } from '../src/navigation';
@@ -632,6 +634,12 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(alice)[0].quantity).toBe(2);
   expect(inventory(bob)).toHaveLength(1);
   expect(inventory(bob)[0].quantity).toBe(3);
+  const received = events.filter(event=>event.type==='item-received');
+  expect(received).toEqual([expect.objectContaining({
+    actor:bob.id,target:alice.id,kind:'coxinha',inventoryItem:inventory(bob)[0].id,witnesses:[],
+  })]);
+  expect(received[0].item).not.toBe(inventory(bob)[0].id);
+
 
   expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
   expect(inventory(alice)[0].quantity).toBe(1);
@@ -711,4 +719,43 @@ test('Bolsa Churrasco restores HP once per second while the policy is active',()
   world.now += recoveryPolicy.tickMs;
   game.tick(world,true);
   expect(game.view(bob,world).vitality?.hp).toBe(74+recoveryPolicy.hpPerTick);
+});
+
+test('the catalog and gameserver agree on purchases with a full inventory',()=>{
+  const {alice,game,balance,world,openShop} = setup();
+  balance.set(alice.id,50);
+  Object.assign(alice,npcs.snackVendor.interaction);
+  openShop(alice,'snackVendor');
+  const view = ()=>game.view(alice,world);
+  const buy = (target:string)=>game.act(alice,{kind:'shop-buy',target,token:view().dialogue?.token},world);
+  expect(buy('coxinha')).toBe('Compra guardada no inventário.');
+  for (let slot=1;slot<INVENTORY_SLOTS;slot++) expect(buy('pizza')).toBe('Compra guardada no inventário.');
+  const slotFor = (kind:'baton'|'coxinha'|'pizza'|'binoculars'|'xray'|'megaphone')=>{
+    const snapshot = view();
+    return marketPurchaseSlot(kind,snapshot.inventory,snapshot.equipped ?? [],snapshot.dialogue?.direct!==false);
+  };
+  expect(slotFor('coxinha')).toBe('inventory');
+  expect(buy('coxinha')).toBe('Compra guardada no inventário.');
+  expect(view().inventory.find(item=>item.kind==='coxinha')?.quantity).toBe(2);
+  expect(slotFor('pizza')).toBeUndefined();
+  expect(buy('pizza')).toBe('Inventário cheio.');
+
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  openShop(alice);
+  const before = balance.get(alice.id);
+  expect(view().dialogue?.direct).toBe(false);
+  expect(slotFor('baton')).toBeUndefined();
+  expect(buy('baton')).toBe('Inventário cheio.');
+  expect(balance.get(alice.id)).toBe(before);
+
+  game.act(alice,{kind:'open-shop',target:'vendor'},world);
+  expect(view().dialogue?.direct).toBe(true);
+  for (const item of ['baton','binoculars','xray'] as const) {
+    expect(slotFor(item)).toBe('equipped');
+    expect(buy(item)).toBe('Compra equipada.');
+    expect(view().equipped?.some(entry=>entry.kind===item)).toBe(true);
+  }
+  expect(view().inventory).toHaveLength(INVENTORY_SLOTS);
+  expect(slotFor('megaphone')).toBeUndefined();
+  expect(buy('megaphone')).toBe('Inventário cheio.');
 });

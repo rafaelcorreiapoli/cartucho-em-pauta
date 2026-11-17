@@ -130,10 +130,6 @@ p { margin:.5rem 0; }
   position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom));
   padding:.5rem .7rem; margin:0; font-size:.75rem; pointer-events:none;
 }
-#voice-dock {
-  position:absolute; left:max(12px,env(safe-area-inset-left)); bottom:max(12px,env(safe-area-inset-bottom));
-  padding:.4rem; max-width:calc(100% - 24px); font-size:.8rem;
-}
 #voice-status:not(:empty) { display:block; margin:.3rem .15rem .05rem; }
 #disguise-pitch-value { font-variant-numeric:tabular-nums; }
 #disguise-pitch { width:100%; }
@@ -224,8 +220,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .impact-card h3 { font-size:.73rem; margin:0 0 .3rem; color:#e6dfc8; }
 .impact-values { display:flex; flex-wrap:wrap; gap:.2rem .65rem; }
 .impact-values > span { color:#ced8d0; font-size:.78rem; }
-[data-effect="gain"] { color:#aee7b3; }
-[data-effect="loss"] { color:#ffc2b2; }
 .section-label { color:#d3c29d; font-weight:800; font-size:.7rem; margin-bottom:.25rem; }
 .station-grid > button { display:flex; align-items:center; gap:.4rem; min-height:34px; padding:.3rem .4rem; text-align:left; }
 .station-grid small { display:block; font-size:.65rem; font-weight:550; }
@@ -261,7 +255,7 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   border-radius:50%; width:22px; height:22px; padding:0; font:800 .72rem/1 system-ui,sans-serif;
   flex:none;
 }
-.hud-help-popover { position:fixed; z-index:20; padding:.55rem .7rem; width:max-content; max-width:min(290px,calc(100vw - 16px)); font-size:.8rem; line-height:1.45; pointer-events:none; }
+.hud-help-popover { position:fixed; inset:0 auto auto 0; z-index:20; padding:.55rem .7rem; width:max-content; max-width:min(290px,calc(100vw - 16px)); font-size:.8rem; line-height:1.45; pointer-events:none; }
 [data-office="president"] { color:#ffdb83; --bar-color:#ffdb83; }
 [data-office="senator"] { color:#a8d8ff; --bar-color:#a8d8ff; }
 [data-office="deputy"] { color:#a9efb5; --bar-color:#a9efb5; }
@@ -271,8 +265,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 #registration-hint:empty { display:none; }
 #election-result { border-left:2px solid var(--hud-gold); padding-left:.4rem; margin:.35rem 0 .65rem; }
 #election-result summary { color:var(--hud-gold); }
-#voice-dock { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
-#voice-status:not(:empty) { flex-basis:100%; }
 .sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
 .sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }
 .mute-option { display:flex; align-items:center; gap:.35rem; }

@@ -1,11 +1,12 @@
 import { credentialGoods } from './installations';
 import { incendiary } from './fire';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
-import { concealment, equipment } from './equipment';
+import { concealment, equipment, gearConflict, isGear } from './equipment';
+import {canStackItem,hasInventorySpace,type ObjectKind,type WorldItem} from './gameplay';
 import { foods } from './food';
 import { documentRules,internalMailRules } from './internal-mail';
 import { firstAidKit } from './medical';
-import { officeGoods } from './private-offices';
+import { isOfficeFurniture, officeGoods } from './private-offices';
 import { spyProducts } from './surveillance';
 
 const supplies = {
@@ -46,4 +47,11 @@ export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:B
     catalog==='equipment' && (policies?.equipment && (Object.hasOwn(equipment,kind) || Object.hasOwn(spyProducts,kind)) ||
       kind==='forensicKit' && policies?.mail);
   return {kind:kind as TechnicalProduct|keyof typeof foods|keyof typeof officeGoods|keyof typeof credentialGoods,price:subsidized && Math.round(publicBudget*10)>=Math.round((price-discountedPrice(price))*10) ? discountedPrice(price) : price};
+}
+
+export function marketPurchaseSlot(kind:ObjectKind,inventory:readonly Pick<WorldItem,'kind'>[],
+  equipped:readonly Pick<WorldItem,'kind'>[],direct:boolean) {
+  if (isOfficeFurniture(kind)) return 'office';
+  if (direct && isGear(kind) && !gearConflict(kind,equipped)) return 'equipped';
+  if (hasInventorySpace(inventory.length) || canStackItem(kind) && inventory.some(item=>item.kind===kind)) return 'inventory';
 }

@@ -1,4 +1,5 @@
 import {createRoot} from 'react-dom/client';
+import type {ShortcutEntry} from '../action-shortcuts';
 import {Hand,Shirt,Footprints,Cpu} from 'lucide';
 import {equippedWeapon,equipmentSlots,xray} from '../equipment';
 import {objects,type GameplayView,type ObjectKind} from '../gameplay';
@@ -99,14 +100,24 @@ export function EquippedGear({state,activate}:{state:GearState;activate:(action:
 export function mountEquippedGear(element:HTMLElement,activate:(action:EquipmentAction)=>void) {
   const root = createRoot(element);
   let current: string|undefined;
+  let state:GearState|undefined;
+  const visible = ()=>element.checkVisibility({visibilityProperty:true,opacityProperty:true});
   return {
     render(view?:GameplayView) {
-      const state = equippedGearState(view);
-      const key = JSON.stringify(state);
-      element.hidden = !state;
+      const next = equippedGearState(view);
+      const key = JSON.stringify(next);
+      element.hidden = !next;
       if (key===current) return;
       current = key;
+      state = next;
       root.render(state ? <EquippedGear state={state} activate={activate}/> : null);
+    },
+    shortcuts():ShortcutEntry[] {
+      if (!visible()) return [];
+      return state?.slots.flatMap(item=>{
+        const action = item?.control?.action;
+        return action ? [{name:item.label,activate:()=>{if (visible()) activate(action);}}] : [];
+      }) ?? [];
     },
     destroy:()=>{element.hidden = true; root.unmount();},
   };

@@ -12,8 +12,28 @@
   --color-hud-budget: #f6cb80;
   --color-hud-danger: #ff9a8c;
   --color-hud-track: #0a130f;
+  --color-hud-impact-gain: #a8e796;
+  --color-hud-impact-loss: #ff9a8b;
+  --color-hud-impact-neutral: #e0d8c6;
   --radius-hud: .7rem;
 }
+
+:root {
+  --hud-item-tile-border: #6d92747d;
+  --hud-item-tile-radius: 12px;
+  --hud-item-selection: #f2ce78;
+  --hud-item-selection-shadow: inset 0 0 0 1px #e9c77c, 0 0 9px #d9b66146;
+  --hud-item-detail-border: #4c6e5999;
+  --hud-item-detail-radius: 14px;
+  --hud-item-detail-surface: radial-gradient(ellipse at top right,#29433885,#12241c);
+  --hud-item-primary-surface: linear-gradient(#f0d68b,#d5ad59);
+  --hud-item-primary-ink: #171b12;
+}
+
+[data-effect="gain"] { color: var(--color-hud-impact-gain); }
+[data-effect="loss"] { color: var(--color-hud-impact-loss); }
+[data-effect="neutral"] { color: var(--color-hud-impact-neutral); }
+
 .react-resource { font-size: 11px; white-space: nowrap; }
 .react-resource strong { color:var(--meter-tone); font-size: 14px; padding-left: 3px; }
 [data-tone="stability"] { --meter-tone:var(--color-hud-stability); }

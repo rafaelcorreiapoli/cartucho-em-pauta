@@ -69,10 +69,10 @@ export class InternalMail {
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
     this.addNotice({id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)});
-    if (!source && resolved) publishGameplay(world,player,'mail-published',{item:id,place:resolved.attachment.kind,witnesses:[]});
-    if (!source && resolved?.attachment.kind==='photo' && resolved.attachment.photo.author.id===player.id) {
-      const {photo} = resolved.attachment;
-      publishGameplay(world,player,'photo-published',{item:photo.id,photo,place:'internal-mail',witnesses:[]});
+    if (!source && resolved) {
+      const {attachment} = resolved;
+      const photo = attachment.kind==='photo' && attachment.photo.author.id===player.id ? attachment.photo : undefined;
+      publishGameplay(world,player,'mail-published',{item:id,place:attachment.kind,photo,reportNotice:attachment.kind==='report' ? attachment.report.notice : undefined,witnesses:[]});
     }
   }
 }

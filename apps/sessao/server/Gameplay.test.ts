@@ -45,7 +45,10 @@ test('custody moves exactly once and requests are private', () => {
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(bob,world).inventory).toEqual([coffee]);
   expect(events.filter(event=>event.type==='transferred')).toHaveLength(1);
-  expect(events.at(-1)?.witnesses).toEqual([watcher.id]);
+  expect(events.find(event=>event.type==='transferred')?.witnesses).toEqual([watcher.id]);
+  expect(events.filter(event=>event.type==='item-received')).toEqual([expect.objectContaining({
+    actor:bob.id,target:alice.id,item:coffee.id,inventoryItem:coffee.id,witnesses:[],
+  })]);
   game.act(bob,{kind:'drop',item:coffee.id},world);
   game.act(alice,{kind:'collect',item:coffee.id},world);
   game.act(watcher,{kind:'collect',item:coffee.id},world);
@@ -102,6 +105,7 @@ test('calls require consent and photos only list visible players', () => {
 
 test('phone sessions keep Snake private and clear it when a player disconnects', () => {
   const {alice,bob,events,game,world} = setup();
+  game.act(alice,{kind:'phone-open'},world);
   game.act(alice,{kind:'game-start'},world);
   game.act(alice,{kind:'game-start'},world);
   expect(game.phoneActivity(alice.id)).toBe('game');
@@ -113,7 +117,7 @@ test('phone sessions keep Snake private and clear it when a player disconnects',
   expect(game.view(alice,world).game).toBeUndefined();
   expect(game.phoneActivity(alice.id)).toBeUndefined();
   expect(events.map(event=>event.type)).toEqual(['game-started','game-stopped']);
-  expect(events.at(-1)?.duration).toBe(1000);
+  expect(events.at(-1)?.duration).toBe(0);
 });
 
 test('spawned and dropped cash share visibility and custody without immediate redemption', () => {
@@ -458,7 +462,9 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   alice.barriers = [[241,248,12,2]];
   expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(bob.id);
   alice.barriers = undefined;
-  game.spyAction(alice,{kind:'capture'},world);
+  expect(game.spyAction(alice,{kind:'capture',channel:channel.id+1},world)).toBe('O canal da câmera mudou.');
+  expect(game.photoView(alice.id,world.now).album).toEqual([]);
+  game.spyAction(alice,{kind:'capture',channel:channel.id},world);
   expect(game.photoView(alice.id,world.now).album[0]?.photo.source).toEqual({kind:'surveillance',channel:channel.name});
   expect(game.photoView(bob.id,world.now).album).toEqual([]);
   game.leave(alice,world,false);

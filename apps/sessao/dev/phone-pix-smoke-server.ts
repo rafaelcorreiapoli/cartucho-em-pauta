@@ -1,17 +1,37 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
+import type {WorldItem} from '../src/gameplay';
 import {stations} from '../src/plenary';
 class TestRoom extends SessionRoom {
   onCreate() {
     super.onCreate();
     const positioned = new WeakSet();
+    const voice:Set<string> = Reflect.get(this,'voice');
     this.clock.setInterval(()=>{
       if (Reflect.get(this,'match').phase!=='negotiation') return;
       for (const state of Reflect.get(this,'players').values()) {
         if (positioned.has(state)) continue;
         positioned.add(state);
+        // Permit the call UI to exercise signaling without capturing audio.
+        voice.add(state.player.id);
+        if (state.player.nick==='Denúncia QA' || state.player.nick==='Jogo QA') {
+          Object.assign(state.player,stations.audit);
+          if (state.player.nick==='Jogo QA') state.player.x += 12;
+          continue;
+        }
         Object.assign(state.player,stations.coffee);
+        const game = Reflect.get(this,'gameplay');
+        const holder = state.player.id;
+        if (state.player.nick==='Alice') {
+          const document:WorldItem = Reflect.get(game,'create').call(game,'document',{holder});
+          document.document = {
+            author:holder,title:'Projeto de teste',description:'Anexo de teste',edited:false,project:0,
+            signatures:[],stamps:[],requiredStamps:[],requiredSignatures:0,
+          };
+        } else {
+          Reflect.get(game,'create').call(game,'forensicKit',{holder});
+        }
       }
     },100);
   }

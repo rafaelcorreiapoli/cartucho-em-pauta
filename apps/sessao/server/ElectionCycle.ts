@@ -67,9 +67,11 @@ export class ElectionCycle {
     return !!person && (kind==='propaganda' ? this.cycle<=rules.cycles && !person.advertised : !person.spoke);
   }
 
-  remainingAdvertisements(id:string) {
+  remainingAdvertisements(id:string,now:number) {
     const person = this.people.get(id);
-    return person ? Math.max(0,rules.cycles-this.cycle+1-Number(person.advertised)) : 0;
+    if (!person) return 0;
+    const expired = Math.max(0,1+Math.floor((now-this.due)/rules.interval));
+    return Math.max(0,rules.cycles-this.cycle+1-Math.max(expired,Number(person.advertised)));
   }
 
   advertise(id:string, spend:(amount:number)=>boolean):CampaignAdvertisement | undefined {

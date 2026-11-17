@@ -10,12 +10,14 @@ class AttributesSmokeRoom extends SessionRoom {
     const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts') as Map<string,{
       progression:{earn:(amount:number)=>void; view:()=>Progression};
     }>;
+    const lastViews:Map<string,string> = Reflect.get(this,'lastMatchView');
     const seeded = new WeakSet<object>();
     let countdown = false;
     this.clock.setInterval(()=>{
       if (match.phase!=='negotiation') return;
       for (const [player,account] of accounts) {
-        if (!seeded.has(account)) {
+        const snapshot = lastViews.get(player);
+        if (!seeded.has(account) && snapshot && JSON.parse(snapshot).phase==='negotiation') {
           account.progression.earn(levelThresholds[2]);
           seeded.add(account);
         }

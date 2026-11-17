@@ -1,17 +1,32 @@
+import {useRef} from 'react';
+import {useDialogKeys} from './use-dialog-keys';
 import {bills, pingaProgram, projectRules, type PlenaryView} from '../plenary';
 import {money} from '../politics';
 
 const signed = (value:number) => value>0 ? `+${value}` : String(value);
 
-export function ProjectCatalog({project,outcomes}:Pick<PlenaryView,'project'|'outcomes'>) {
+export function ProjectCatalog({project,outcomes,projectFilingClosed,projectVoteExpired,close}:Pick<PlenaryView,'project'|'outcomes'|'projectFilingClosed'|'projectVoteExpired'> & {close?:()=>void}) {
   const voted = new Map(outcomes.map(outcome=>[outcome.project,outcome]));
-  return <section aria-label="Catálogo de projetos" className="grid gap-3">
-    <p><strong>{outcomes.length}/{projectRules.requiredVotes} projetos votados.</strong> Solicite um documento na Secretaria e leve ao Protocolo.</p>
+  const details = useRef(new Map<string,HTMLDetailsElement>());
+  const panel = useDialogKeys<HTMLElement>(()=>undefined,[
+    ...(close ? [{name:'Fechar aplicativo',activate:close}] : []),
+    ...bills.map(bill=>({name:bill.name,activate:()=>{
+      const disclosure = details.current.get(bill.id);
+      if (!disclosure) return;
+      disclosure.open = !disclosure.open;
+      disclosure.scrollIntoView({block:'nearest'});
+    }})),
+  ]);
+  return <section ref={panel} aria-label="Catálogo de projetos" className="grid gap-3">
+    <p><strong>{outcomes.length}/{projectRules.requiredVotes} projetos votados.</strong> {projectFilingClosed ? 'Protocolo de projetos encerrado.' : 'Solicite um documento na Secretaria e leve ao Protocolo.'}</p>
     {bills.map((bill,index)=>{
       const result = voted.get(index);
       const effect = bill.effect;
-      return <details key={bill.id}>
-        <summary><strong>{bill.name}</strong> · {result ? (result.passed ? 'Votado: aprovado' : 'Votado: rejeitado') : project===index ? 'Em pauta' : 'Disponível'}</summary>
+      return <details key={bill.id} ref={element=>{
+        if (element) details.current.set(bill.id,element);
+        else details.current.delete(bill.id);
+      }}>
+        <summary><strong>{bill.name}</strong> · {result ? (result.passed ? 'Votado: aprovado' : 'Votado: rejeitado') : project===index ? (projectVoteExpired ? 'Sem votação nesta sessão' : 'Em pauta') : projectFilingClosed ? 'Fora do prazo' : 'Disponível'}</summary>
         <p>{bill.description}</p>
         <p>Aprovar: {signed(bill.yes.stability)} de estabilidade · {effect?.kind==='allowance' ? `${money(effect.perMandate)} por mandato` :
           effect?.kind==='pinga-distribution' ? pingaProgram.detail : `${signed(Math.min(0,bill.yes.budget))} de orçamento`}</p>

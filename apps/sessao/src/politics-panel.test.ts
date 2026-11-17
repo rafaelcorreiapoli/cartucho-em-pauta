@@ -1,23 +1,28 @@
 import {expect,test} from 'bun:test';
 import {createRoomCommandSender,readRoomCommandToken} from './room-commands';
 import {canBuyEvidence} from './ui/dossier';
-import {manualTransfer} from './politics';
+import {manualTransfer,readPoliticsAction} from './politics';
 
 test('informal loans and repayments are manual payments selected by the player',()=>{
-  expect(manualTransfer('borrower',3,true)).toEqual({kind:'transfer',to:'borrower',amount:3,clandestine:true});
-  expect(manualTransfer('lender',3,false)).toEqual({kind:'transfer',to:'lender',amount:3,clandestine:false});
-  expect(manualTransfer('',3,false)).toBeUndefined();
-  expect(manualTransfer('lender',0,false)).toBeUndefined();
-  expect(manualTransfer('lender',2,false,1.5)).toBeUndefined();
-  expect(manualTransfer('lender',1,false,.5)).toBeUndefined();
-  expect(manualTransfer('lender',1,false,1.5)?.kind).toBe('transfer');
-  expect(manualTransfer('lender',1,false,8,0)).toBeUndefined();
+  expect(manualTransfer('borrower',3)).toEqual({kind:'transfer',to:'borrower',amount:3});
+  expect(manualTransfer('lender',3)).toEqual({kind:'transfer',to:'lender',amount:3});
+  expect(manualTransfer('',3)).toBeUndefined();
+  expect(manualTransfer('lender',0)).toBeUndefined();
+  expect(manualTransfer('lender',2,1.5)).toBeUndefined();
+  expect(manualTransfer('lender',1,.5)).toBeUndefined();
+  expect(manualTransfer('lender',1,1.5)?.kind).toBe('transfer');
+  expect(manualTransfer('lender',1,8,0)).toBeUndefined();
+});
+
+test('the Pix command ignores a public visibility flag in the wire payload',()=>{
+  expect(readPoliticsAction({kind:'transfer',to:'lender',amount:2,clandestine:false})).toEqual(manualTransfer('lender',2));
+  expect(readPoliticsAction({kind:'transfer',to:'lender',amount:1.5})).toBeUndefined();
 });
 
 test('political, election and mail commands share a sequence on the room connection',()=>{
   const commands:unknown[] = [];
   const send = createRoomCommandSender((channel,command)=>commands.push([channel,command]));
-  const transfer = manualTransfer('borrower',3,true)!;
+  const transfer = manualTransfer('borrower',3)!;
   send('politics',transfer);
   send('election',{kind:'advertise'});
   send('mail-examine',{notice:7});

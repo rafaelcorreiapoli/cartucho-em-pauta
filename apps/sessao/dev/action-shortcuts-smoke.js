@@ -19,7 +19,14 @@ async page => {
   await settings.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
-  await page.getByRole('button',{name:'Aplicativos',exact:true}).click();
+  const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
+  const apps = page.locator('#congress-app-panel');
+  await launcher.waitFor();
+  await page.locator('#asset-loading').waitFor({state:'hidden'});
+  await page.waitForFunction(()=>document.querySelector('#congress-apps')
+    ?.checkVisibility({visibilityProperty:true,opacityProperty:true}));
+  await page.keyboard.press('u');
+  await apps.waitFor();
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await palette.waitFor();
@@ -35,22 +42,36 @@ async page => {
   if (await page.locator('#open-settings, #open-phone, #open-bag, #open-attributes, #open-surveillance, #open-equipment').count()) {
     throw Error('Comandos do HUD ainda dependem de botões duplicados');
   }
+  await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-apps.png'});
   const gameplay = page.locator('#gameplay-dialog');
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
   await gameplay.getByRole('heading',{name:'Inventário',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await gameplay.waitFor({state:'hidden'});
-  await page.keyboard.press('c');
+  await apps.waitFor({state:'hidden'});
+  await page.keyboard.press('F2');
+  const openPhone = palette.getByRole('button',{name:'Celular',exact:true});
+  while (!await openPhone.count() && !await next.isDisabled()) await page.keyboard.press('ArrowRight');
+  await openPhone.waitFor();
+  await page.keyboard.press(await openPhone.getAttribute('aria-keyshortcuts'));
   await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await gameplay.waitFor({state:'hidden'});
-  const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
-  if (await launcher.getAttribute('aria-expanded')==='false') await launcher.click();
+  await launcher.click();
+  await apps.waitFor();
   for (const [name,key] of [['Equipamentos','E'],['Personagem','P'],['Celular','C'],['Microfone','M'],['Configurações','K']]) {
     const app = page.locator('#congress-app-panel').getByRole('button',{name,exact:true});
     if (await app.getAttribute('aria-keyshortcuts')!==key) throw Error('Atalho ausente: '+name);
   }
+  await page.keyboard.press('c');
+  await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
+  await apps.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
+  await gameplay.waitFor({state:'hidden'});
+  await page.keyboard.press('u');
+  await apps.waitFor();
+  await page.keyboard.press('u');
+  await apps.waitFor({state:'hidden'});
   await page.keyboard.press('m');
   await page.keyboard.press('m');
   await page.keyboard.press('k');
@@ -72,7 +93,13 @@ async page => {
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('k');
   await settings.waitFor();
-  await page.keyboard.press('Escape');
+  const effectsInput = settings.locator('#effects-volume');
+  await effectsInput.evaluate(input=>input.setAttribute('aria-label','Rótulo original alterado'));
+  await page.keyboard.press('F2');
+  await page.locator('#action-shortcuts').getByRole('button',{name:/Efeitos e passos/}).click();
+  await page.waitForFunction(()=>document.activeElement?.id==='effects-volume');
+  await page.keyboard.press('F2');
+  await page.locator('#action-shortcuts').getByRole('button',{name:/Fechar configurações/}).click();
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('p');
   const attributes = page.getByRole('dialog',{name:/Atributos/i});
@@ -81,9 +108,17 @@ async page => {
   await palette.waitFor();
   const closeAction = palette.locator('.shortcut-list button').filter({hasText:'Fechar'});
   const key = await closeAction.getAttribute('aria-keyshortcuts');
+  await palette.evaluate(node=>{
+    window.syntheticPaletteClicks = 0;
+    node.addEventListener('click',event=>{
+      if (!event.isTrusted) window.syntheticPaletteClicks++;
+    });
+  });
+  await closeAction.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
+  if (await page.evaluate(()=>window.syntheticPaletteClicks)!==0) throw Error('O atalho simulou um clique no menu F2');
   const dossier = page.getByRole('dialog',{name:'Dossiê'});
   for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:800,height:600}]) {
     await page.setViewportSize(viewport);

@@ -1,12 +1,22 @@
-import type { ReactNode } from 'react';
-import { DialogDismiss } from './dialog-dismiss';
+import type {ShortcutEntry} from '../action-shortcuts';
+import {useDialogKeys} from './use-dialog-keys';
+import {DialogHeader} from './dialog-header';
+import type { ReactNode, Ref } from 'react';
 
-export function SurveillanceDialogContent({channels,monitor}:{channels:ReactNode; monitor:ReactNode}) {
+export function SurveillanceDialogContent({channels,monitor,camera,actionForKey,entries}:{
+  entries?:readonly ShortcutEntry[];
+  actionForKey?:(key:string)=>(()=>void)|undefined;
+  channels:ReactNode; monitor:ReactNode; camera?:{id:number;name:string;attach:Ref<HTMLDivElement>};
+}) {
+  const panel = useDialogKeys<HTMLDivElement>(key=>actionForKey?.(key),entries);
   return <>
-    <header>
-      <h2 id="surveillance-title">Central de Vigilância</h2>
-      <DialogDismiss className="hud-button hud-button--secondary" label="Fechar vigilância"/>
-    </header>
-    <div className="spy-console"><div id="spy-channels">{channels}</div><section id="spy-monitor">{monitor}</section></div>
+    <DialogHeader id="surveillance-title" title="Central de Vigilância" dismissLabel="Fechar vigilância" dismissClass="hud-button hud-button--secondary"/>
+    <div className="spy-console" ref={panel}>
+      <div id="spy-channels">{channels}</div>
+      <section id="spy-monitor">
+        {camera && <><h3>{camera.name}</h3><div key={camera.id} data-channel={camera.id} className="spy-viewport" aria-busy="true" aria-label="Visão ao vivo da câmera" ref={camera.attach}/></>}
+        {monitor}
+      </section>
+    </div>
   </>;
 }

@@ -61,9 +61,10 @@ test('the dossier lists public records separately from private evidence',()=>{
     const view = match.view(bia.id,players.map(({id})=>id),3);
     return renderToStaticMarkup(<Dossier model={dossierModel(bia.id,view,players)!} send={()=>{}}/>);
   };
-  match.politics(rafa,{kind:'transfer',to:bia.id,amount:2,clandestine:true},players,1);
+  match.politics(rafa,{kind:'transfer',to:bia.id,amount:2},players,1);
   expect(render()).toContain('Nenhum registro público.');
-  match.politics(rafa,{kind:'transfer',to:bia.id,amount:1,clandestine:false},players,2);
+  // A record published by the economy outside the Pix channel.
+  Reflect.get(match,'economy').transfer(rafa.id,bia.id,1,false,0);
   const [privateEvidence,publicRecords] = render().split('<summary>Registro público</summary>');
   expect(privateEvidence).toContain('R$ 20 mil · pagamento clandestino.');
   expect(publicRecords).toContain('Rafa → Bia · R$ 10 mil · pagamento público.');

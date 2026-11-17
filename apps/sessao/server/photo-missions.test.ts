@@ -2,6 +2,7 @@ import {PLENARY_BOUNDS} from '../src/map';
 import { expect, test } from 'bun:test';
 import type { GameplayEvent } from '../src/gameplay';
 import type { Photo } from '../src/photography';
+import {photoMissionCounts} from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 test('photo rules count distinct people and distinguish a visible briefcase from a floor item', () => {
@@ -37,4 +38,20 @@ test('the phone photo counts only the two rooms named in the mission',()=>{
   const [x,y,width,height] = PLENARY_BOUNDS;
   photo.people = [{...guest,x:x+width/2,y:y+height/2}];
   expect(photoMissions.celularFoto.facts(event)).toEqual([]);
+});
+
+
+test('a meeting photo requires the configured number of distinct colleagues in one eligible room',()=>{
+  const author = {id:'a',name:'A'};
+  const center = {x:240,y:79};
+  const guest = {id:'b',name:'B',character:0,direction:0,...center};
+  const photo:Photo = {id:1,at:0,author,center,selfie:false,location:'Antecâmara',
+    people:[guest,{...guest}],ground:[],decorations:[],transfers:[]};
+  const event:GameplayEvent = {type:'photo',actor:author.id,position:center,at:0,witnesses:[],photo};
+  expect(photoMissions.reuniaoFoto.players).toBe(photoMissionCounts.reuniaoFoto+1);
+  expect(photoMissions.reuniaoFoto.facts(event)).toEqual([]);
+  photo.people[1] = {...guest,id:'c',x:700,y:330};
+  expect(photoMissions.reuniaoFoto.facts(event)).toEqual([]);
+  photo.people = Array.from({length:photoMissionCounts.reuniaoFoto},(_,i)=>({...guest,id:'guest-'+i}));
+  expect(photoMissions.reuniaoFoto.facts(event)).toEqual([{value:String(photo.id),group:undefined}]);
 });

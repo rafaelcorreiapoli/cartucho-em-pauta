@@ -10,3 +10,13 @@ test('surveillance hosts the channel list and monitor together with native dismi
   expect(html).toContain('id="spy-channels"><button>Câmera 1</button>');
   expect(html).toContain('id="spy-monitor"><h3>Visão ao vivo</h3>');
 });
+
+test('only a selected camera renders a live viewport in the monitor',()=>{
+  const render = (camera?:{id:number;name:string;attach:null})=>renderToStaticMarkup(
+    <SurveillanceDialogContent channels={null} monitor={<button>Silenciar alertas</button>} camera={camera}/>,
+  );
+  expect(render()).not.toContain('spy-viewport');
+  expect(render({id:1,name:'Câmera do Arquivo',attach:null})).toContain(
+    '<h3>Câmera do Arquivo</h3><div data-channel="1" class="spy-viewport" aria-busy="true" aria-label="Visão ao vivo da câmera"></div>',
+  );
+});

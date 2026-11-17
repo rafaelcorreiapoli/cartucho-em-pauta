@@ -1,3 +1,5 @@
+import {fireRules,fireSites} from '../fire';
+import {minimumPartialDepositLot,terminals,treasuryDeliveries,type GameplayEvent} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
@@ -9,14 +11,20 @@ import {internalMailRules} from '../internal-mail';
 import {Gameplay} from '../../server/Gameplay';
 import {npcs} from '../npcs';
 import {spyRules} from '../surveillance';
+import {xray} from '../equipment';
+import {privateOffices} from '../private-offices';
+
 import {PlenaryMatch} from '../../server/PlenaryMatch';
+import {ParliamentarianTalk} from '../../server/ParliamentarianTalk';
+import {Parliamentarians} from '../../server/Parliamentarians';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
+import {BALLOT_MS,CASSATION_NOTICE_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {CRISIS_MISSION_STABILITY_LIMIT,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {PhonePix} from './phone-pix';
+import {HEARING_MS,SUSPENSION_MS,agendaCounts,agendaCashTargets,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -105,13 +113,14 @@ test('urgent calls show the minimum per call and progress by distinct contact',(
 });
 
 test('coffee delivery shows distinct recipient progress and the completion check',()=>{
-  const mission = {id:9,kind:'entrega',current:2,target:3} as const;
+  const mission = {id:9,kind:'entrega',current:2,target:COFFEE_DELIVERY_RECIPIENTS} as const;
+  const progress = `2 / ${COFFEE_DELIVERY_RECIPIENTS}`;
   const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
-  expect(active).toContain('Entregue cafezinho a três jogadores diferentes.');
-  expect(active).toContain('2 / 3');
-  const done = renderToStaticMarkup(<MissionRow mission={{...mission,current:3}} done/>);
+  expect(active).toContain(`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`);
+  expect(active).toContain(progress);
+  const done = renderToStaticMarkup(<MissionRow mission={{...mission,current:mission.target}} done/>);
   expect(done).toContain('data-done="true"');
-  expect(done).not.toContain('2 / 3');
+  expect(done).not.toContain(progress);
 });
 
 test('phone call missions show time in seconds',()=>{
@@ -503,7 +512,7 @@ test.each([false,true])('Investigação Particular tracks reachable distinct cam
   expect(view(reinstalledAt+2).progression.xp).toBe(30);
 });
 
-test('free coffee missions can be drawn and completed with an empty wallet',()=>{
+test.each([false,true])('coffee missions count consumption at the station and from inventory without money (station=%s)',station=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -526,10 +535,15 @@ test('free coffee missions can be drawn and completed with an empty wallet',()=>
   Reflect.set(account.agenda,'missionDeck',['selfieSolo','visitaArquivo','passeio']);
   for (let cup=0;cup<3;cup++) {
     const now = 1+cup*stationRecharge.coffee.duration;
-    const world = match.gameplayWorld([player],now,()=>false);
-    expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
-    const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
-    expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+    if (station && !cup) {
+      expect(match.roomActivity(player,'coffee',now)).toMatchObject({activity:'coffee',text:'Cafezinho tomado. De volta à articulação!'});
+      expect(match.roomActivity(player,'coffee',now)).toMatchObject({unavailable:true});
+    } else {
+      const world = match.gameplayWorld([player],now,()=>false);
+      expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+      const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
+      expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Objeto utilizado.');
+    }
     if (!cup) {
       expect(find(now,'cafeEstrategico',true)).toContain('data-done="true"');
       expect(find(now,'fiscalCafe')).toContain('1 / 3');
@@ -587,6 +601,22 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   const mission = after.politics!.missions.active.find(mission=>mission.kind==='ostentacao')!;
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('R$ 18 mil / R$ 50 mil');
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
+  const installTwo = draw(buyer,'doisMoveis')!;
+  expect(installTwo.target).toBe(agendaCounts.doisMoveis);
+  const xp = view(buyer).politics!.progression.xp;
+  const buy = (target:'officeRug'|'officeChair')=>{
+    const purchaseWorld = match.gameplayWorld(players,++now,()=>false);
+    game.act(buyer,{kind:'open-shop',target:'furnitureVendor'},purchaseWorld);
+    const quote = game.view(buyer,purchaseWorld).dialogue?.token;
+    expect(game.act(buyer,{kind:'shop-buy',target,token:quote},purchaseWorld)).toBe('Compra instalada no seu gabinete.');
+  };
+  buy('officeRug');
+  const progress = view(buyer).politics!.missions.active.find(entry=>entry.id===installTwo.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={progress}/>)).toContain('1 / 2');
+  buy('officeChair');
+  const complete = view(buyer).politics!.missions.completed.find(entry=>entry.id===installTwo.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
+  expect(view(buyer).politics!.progression.xp-xp).toBe(missionReward('doisMoveis').xp);
   now += policyDuration;
   expect(draw(limited,'doisMoveis')).toBeUndefined();
 });
@@ -629,10 +659,12 @@ test.each([true,false])('the final campaign slot is consumed once and only the l
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['campanhaUltimaHora','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
-  const now = ELECTION_RULES.interval*ELECTION_RULES.cycles-60_000-Number(!isLastMinute);
+  const now = ELECTION_RULES.interval*ELECTION_RULES.cycles-LATE_CAMPAIGN_WINDOW_MS-Number(!isLastMinute);
   const view = ()=>match.view(player.id,[player.id],now).politics!;
   const before = view();
-  expect(before.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(true);
+  const mission = before.missions.active.find(mission=>mission.kind==='campanhaUltimaHora')!;
+  expect(mission).toBeDefined();
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain(`nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos`);
   expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeDefined();
   const after = view();
   expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(false);
@@ -710,6 +742,53 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(view(5).progression.xp).toBe(65);
 });
 
+test('campaign spending leaves the HUD when a project vote closes an unused advertisement slot',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.interval;
+  const opens = deadline-10_000;
+  publishProjectFiling(match,player,0,opens-NEGOTIATION_MS);
+  const active = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active;
+  const title = 'em propaganda eleitoral';
+  const render = (now:number)=>active(now).map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  match.advance(opens);
+  expect(match.phase).toBe('ballot');
+  match.advance(deadline-1);
+  expect(render(deadline-1)).toContain(title);
+  match.advance(deadline);
+  expect(match.phase).toBe('ballot');
+  expect(render(deadline)).not.toContain(title);
+  expect(active(deadline)).toHaveLength(3);
+});
+
+test('the agenda removes two-vote missions when only one full ballot fits',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['projetos','votacao','cafe','passeio','selfieSolo']);
+  const lastTwoStart = ELECTION_RULES.matchDuration-2*(NEGOTIATION_MS+BALLOT_MS)-projectRules.cooldownMs;
+  const markup = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active
+    .map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  match.advance(lastTwoStart);
+  expect(markup(lastTwoStart)).toContain('0 / 2');
+  match.advance(lastTwoStart+1);
+  expect(markup(lastTwoStart+1)).not.toContain('0 / 2');
+  expect(match.view(player.id,[player.id],lastTwoStart+1).politics!.missions.active.map(mission=>mission.kind)).toContain('votacao');
+
+  publishProjectFiling(match,player,0,lastTwoStart+1);
+  const voteAt = lastTwoStart+1+NEGOTIATION_MS;
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  match.vote(player.id,'yes',voteAt);
+  expect(match.view(player.id,[player.id],voteAt).politics!.missions.completed.map(mission=>mission.kind)).toContain('votacao');
+});
+
 test('the plenary visit objective requires entry and exit within the same articulation',()=>{
   const outside = {x:445,y:143};
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...outside};
@@ -748,7 +827,7 @@ test('the plenary visit objective requires entry and exit within the same articu
 });
 
 test('urgent calls retain confirmed HUD progress after the first contact leaves',()=>{
-  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+  const players:Player[] = ['Rafa','Bia','Caio','Dani'].map((nick,character)=>({
     id:nick,nick,character,direction:0,moving:false,x:445,y:143,
   }));
   const [caller,first,second] = players;
@@ -838,6 +917,17 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   account.canInstallSpy = (kind:'wiretap'|'spyCamera')=>game.canInstallSpy(player.id,kind);
   account.owns = (kind:'wiretap')=>game.owns(player.id,kind);
   const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  let now = 1;
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(player.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
+  expect(active()).toBeDefined();
+  const missionId = active().id;
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('0 / 15 s');
+
   Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(player,{kind:'open-shop',target:'vendor'},world(1));
   const token = game.view(player,world(1)).dialogue?.token;
@@ -845,15 +935,11 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   const wiretap = game.view(player,world(1)).inventory.find(({kind})=>kind==='wiretap')!;
   Object.assign(player,{x:254,y:252});
   game.spyAction(player,{kind:'install',site:'coffee',item:wiretap.id},world(10));
-  let now = 10+spyRules.install;
+  now = 10+spyRules.install;
   game.tick(world(now),true);
   const channel = game.spyView(player,world(now)).channels[0].id;
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
-  match.refreshAgendaEligibility();
+  expect(active()).toMatchObject({id:missionId,current:0});
 
-  const view = ()=>match.view(player.id,ids,now).politics!;
-  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
   const tick = (elapsed:number)=>game.tick(world(now+=elapsed),true);
   game.spyAction(player,{kind:'open',channel},world(now+99));
   tick(100);
@@ -1116,7 +1202,14 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(economy.spend(player.id,view().wallet)).toBe(true);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
-  economy.earn(player.id,1);
+  economy.earn(player.id,.4);
+  draw();
+  expect(render()).not.toContain('Consuma dois alimentos diferentes');
+  economy.earn(player.id,.1);
+  draw();
+  expect(render()).toContain('Consuma dois alimentos diferentes');
+  expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.target).toBe(agendaCounts.bandejaGourmet);
+  economy.earn(player.id,.5);
   game.act(player,{kind:'open-shop',target:'snackVendor'},world);
   game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
   game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
@@ -1188,7 +1281,7 @@ test.each([true,false])('selfies retain distinct colleagues who already counted,
 });
 
 test('the pizza mission keeps its first slice after that guest leaves',()=>{
-  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+  const players:Player[] = ['rafa','bia','caio','dani'].map(id=>({
     id,nick:id,character:0,direction:0,moving:false,...npcs.snackVendor.interaction,
   }));
   const [host,bia,caio] = players;
@@ -1348,7 +1441,7 @@ test('the Agenda can offer selfie publication from the album while the photograp
   expect(view(103).missions.active.some(row=>row.kind==='publicouSelfie')).toBe(false);
 });
 
-test('the agenda displays emergency maintenance only while the outage can be repaired',()=>{
+test.each([false,true])('the agenda offers outage missions only while repairs are possible (critical=%s)',critical=>{
   const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
     nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
   }));
@@ -1356,9 +1449,10 @@ test('the agenda displays emergency maintenance only while the outage can be rep
   const ids = players.map(({id})=>id);
   const match = new PlenaryMatch(1);
   expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  if (critical) Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(rafa.id);
   Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','cafe','passeio']);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe']);
   match.refreshAgendaEligibility();
   const render = (now:number) => {
     const {active,completed} = match.view(rafa.id,ids,now).politics!.missions;
@@ -1368,15 +1462,1048 @@ test('the agenda displays emergency maintenance only while the outage can be rep
     </ul>);
   };
   const title = 'Conclua o reparo de uma pane elétrica junto a outro jogador';
+  const heroTitle = 'Ajude a resolver uma crise';
   expect(render(0)).not.toContain(title);
+  expect(render(0)).not.toContain(heroTitle);
   expect(match.actOnPower(caio,{kind:'sabotage',panel:0},10)).toBe('Energia cortada.');
   expect(render(10)).toContain(title);
   expect(render(10)).not.toContain('data-done="true"');
+  expect(render(10).includes(heroTitle)).toBe(critical);
+  match.setPlayerConnected(bia.id,false);
+  expect(render(10)).toContain(title);
+  match.setPlayerConnected(caio.id,false);
+  expect(match.powerOut).toBe(true);
+  expect(render(10)).not.toContain(title);
+  expect(render(10)).not.toContain(heroTitle);
+  expect(match.view(rafa.id,ids,10).politics?.progression.xp).toBe(0);
+  match.setPlayerConnected(bia.id,true);
+  expect(render(10)).toContain(title);
+  expect(render(10).includes(heroTitle)).toBe(critical);
+
   match.actOnPower(rafa,{kind:'repair',panel:0},11);
   match.actOnPower(bia,{kind:'repair',panel:1},11);
   const end = 11+powerRules.repairMs;
   match.advancePower(end,id=>players.find(player=>player.id===id));
   expect(render(end)).toContain('data-done="true"');
   expect(render(end)).toContain(title);
-  expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(45);
+  expect(render(end).includes(heroTitle)).toBe(critical);
+  const expectedXp = missionReward('manutencaoEmergencia').xp + (critical ? missionReward('heroiInesperado').xp : 0);
+  expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(expectedXp);
+});
+
+
+test('the Pix mission card displays the configured amount',()=>{
+  const pix = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'pixVinte',current:0,target:1}}/>);
+  expect(pix).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
+});
+
+
+test('public meeting uses the same group size for the agenda, room sampling and HUD',()=>{
+  const players:Player[] = Array.from({length:PUBLIC_MEETING_PEERS+1},(_,index)=>({
+    id:String(index),nick:'Parlamentar '+index,character:index,direction:0,moving:false,...stations.coffee,
+  }));
+  const [host,...peers] = players;
+  const ids = players.map(({id})=>id);
+  const game = new Gameplay();
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['reuniaoPublica','cafe','passeio','selfieSolo']);
+  const active = ()=>match.view(host.id,ids,0).politics!.missions.active.find(mission=>mission.kind==='reuniaoPublica');
+  const guest = peers.at(-1)!;
+  match.setPlayerConnected(guest.id,false);
+  expect(active()).toBeUndefined();
+  Reflect.set(agenda,'missions',[]);
+  match.setPlayerConnected(guest.id,true);
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain(`com outros ${PUBLIC_MEETING_PEERS} jogadores`);
+
+  const tick = (now:number,absent=false)=>game.tick({...match.gameplayWorld(players,now,()=>false),
+    present:id=>!absent || id!==guest.id},true);
+  tick(0,true);
+  tick(100,true);
+  expect(active()?.current).toBe(0);
+  tick(200);
+  expect(active()?.current).toBe(0);
+  tick(300);
+  expect(active()?.current).toBe(100);
+  tick(400,true);
+  tick(500);
+  expect(active()?.current).toBe(100);
+  Object.assign(guest,stations.press);
+  tick(600);
+  Object.assign(guest,stations.coffee);
+  tick(700);
+  expect(active()?.current).toBe(100);
+  const end = 700+agendaDurationMs.reuniaoPublica-100;
+  for (let now=800;now<=end;now+=100) tick(now);
+  const state = match.view(host.id,ids,end).politics!;
+  expect(state.missions.completed).toContainEqual(expect.objectContaining({kind:'reuniaoPublica',current:agendaDurationMs.reuniaoPublica}));
+  expect(state.progression.xp).toBe(45);
+});
+
+
+test('an attached photo can only credit mail missions active at publication',()=>{
+  const author:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const players = [author];
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  const mail = new InternalMail();
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','jornalismo','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(author.id,[author.id],now).politics!;
+  const publish = (now:number)=>{
+    const world = match.gameplayWorld(players,now,()=>false);
+    game.act(author,{kind:'photo'},world);
+    const photo = game.photoView(author.id,now).album.at(-1)!.photo;
+    expect(mail.publish(author,{subject:'Registro',body:'Foto em anexo',attachment:{kind:'photo',id:photo.id}},
+      world,()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  };
+
+  publish(1);
+  const first = view(1);
+  expect(first.missions.completed.map(mission=>mission.kind)).toEqual(['mensagemComAnexo']);
+  const next = first.missions.active.find(mission=>mission.kind==='jornalismo')!;
+  expect(next?.current).toBe(0);
+  expect(renderToStaticMarkup(<MissionRow mission={next}/>)).toContain('data-done="false"');
+  expect(first.progression.xp).toBe(missionReward('mensagemComAnexo').xp);
+
+  const afterCooldown = mail.nextPublicationAt(author.id);
+  publish(afterCooldown);
+  const second = view(afterCooldown);
+  const completed = second.missions.completed.find(mission=>mission.kind==='jornalismo')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(second.progression.xp-first.progression.xp).toBe(missionReward('jornalismo').xp);
+});
+
+test('the Agenda keeps the active last Raio X scan but stops assigning inspections without a charge or recharge funds',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const other:Player = {...player,id:'bia',nick:'Bia',character:1};
+  const players = [player,other];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(player,{kind:'open-shop',target:'vendor'},world);
+  game.act(player,{kind:'shop-buy',target:'xray',token:game.view(player,world).dialogue?.token},world);
+  const inventory = game.view(player,world);
+  const item = [...inventory.inventory,...(inventory.equipped ?? [])].find(item=>item.kind==='xray')!;
+  game.act(player,{kind:'equip',item:item.id},world);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const politics = ()=>match.view(player.id,ids,world.now).politics!;
+  expect(economy.spend(player.id,politics().wallet)).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  match.setAgendaXrayAvailability((id,wallet)=>game.canUseAgendaXray(id,wallet,world.now));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  const renderAgenda = ()=>politics().missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  const scan = ()=>game.act(player,{kind:'scan-xray'},world);
+
+  match.refreshAgendaEligibility();
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  for (let charge=1; charge<xray.capacity; charge++) {
+    expect(scan()).toBe('Raio X ativado.');
+    expect(scan()).toBe('Raio X desativado.');
+  }
+  expect(scan()).toBe('Raio X ativado.');
+  match.refreshAgendaEligibility();
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+
+  world.now += xray.duration;
+  expect(game.tick(world,true)).toBe(true);
+  match.refreshAgendaEligibility(world.now);
+  expect(renderAgenda()).not.toContain('cofre de outro parlamentar');
+  expect(politics().missions.active).toHaveLength(3);
+  expect(politics().progression.xp).toBe(0);
+
+  economy.earn(player.id,xray.rechargePrice);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility(world.now);
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  expect(game.act(player,{kind:'recharge-xray'},world)).toContain('3/3');
+  const office = privateOffices.find(office=>office.id===game.view(other,world).ownOffice)!;
+  Object.assign(player,office.safe);
+  expect(scan()).toBe('Raio X ativado.');
+  game.tick(world,true);
+  const completed = politics().missions.completed.find(mission=>mission.kind==='fiscalizacaoParalela')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(politics().progression.xp).toBe(missionReward('fiscalizacaoParalela').xp);
+});
+
+test('the Agenda shows a completed exchange only after both different items change hands',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...npcs.credentialsVendor.interaction,
+  }));
+  const [owner,peer] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(owner.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const world = match.gameplayWorld(players,1,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(owner.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['amizadeInstitucional','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(owner.id,ids,world.now).politics!;
+  const active = view().missions.active.find(mission=>mission.kind==='amizadeInstitucional')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('receba dele um item diferente');
+
+  Object.assign(peer,stations.secretary);
+  game.act(peer,{kind:'supply',place:'secretary',target:'queue'},world);
+  const document = game.view(peer,world).inventory.find(item=>item.kind==='document')!;
+  Object.assign(peer,npcs.credentialsVendor.interaction);
+  game.act(owner,{kind:'open-shop',target:'credentialsVendor'},world);
+  game.act(owner,{kind:'shop-buy',target:'portrait',token:game.view(owner,world).dialogue?.token},world);
+  const portrait = game.view(owner,world).inventory.find(item=>item.kind==='portrait')!;
+  function offer(from:Player,to:Player,item:number) {
+    world.now++;
+    expect(game.act(from,{kind:'offer',item,target:to.id},world)).toBe('Pedido enviado.');
+    return {kind:'accept',item:game.view(to,world).requests.at(-1)!.id} as const;
+  }
+
+  expect(game.act(peer,offer(owner,peer,portrait.id),world)).toBe('Objeto recebido.');
+  const accept = offer(peer,owner,document.id);
+  expect(view().missions.completed).toEqual([]);
+  expect(view().progression.xp).toBe(0);
+  expect(game.act(owner,accept,world)).toBe('Objeto recebido.');
+  expect(game.act(owner,accept,world)).toBe('Pedido indisponível.');
+  const completed = view().missions.completed.find(mission=>mission.kind==='amizadeInstitucional')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});
+
+test('Bandeja Gourmet accepts Pinga served by a project as the second consumable',()=>{
+  const player:Player = {id:'Rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  let now = 1;
+  const view = ()=>match.view(player.id,[player.id],now).politics!;
+  const economy = Reflect.get(match,'economy');
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    return view().missions.active.find(mission=>mission.kind==='bandejaGourmet');
+  };
+  expect(draw()).toBeUndefined();
+  match.gameplayWorld([player],now,()=>false).publish({
+    type:'filed',actor:player.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N02'),
+    position:stations.amendment,at:now,witnesses:[],
+  });
+  now += NEGOTIATION_MS;
+  match.advance(now);
+  match.vote(player.id,'yes',now+1);
+  now += BALLOT_MS;
+  match.advance(now,recipients=>{ for (const id of recipients) if (id===player.id) game.distributePinga(player,now); });
+  expect(view().wallet).toBe(0);
+  expect(draw()).toBeDefined();
+
+  const world = match.gameplayWorld([player],++now,()=>false);
+  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  const inventory = game.view(player,world).inventory;
+  Object.assign(player,game.officeSpawn(player.id)!);
+  const consume = (kind:'coffee'|'pinga')=>{
+    const {id:item} = inventory.find(entry=>entry.kind===kind)!;
+    expect(game.act(player,{kind:'use',item},world)).toBe('Objeto utilizado.');
+  };
+  consume('coffee');
+  expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.current).toBe(1);
+  const xpBefore = view().progression.xp;
+  consume('pinga');
+  const done = view().missions.completed.find(mission=>mission.kind==='bandejaGourmet')!;
+  expect(renderToStaticMarkup(<MissionRow mission={done} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp-xpBefore).toBe(35);
+});
+
+test.each([0,1])('a full final hearing removes mail missions only if it leaves no time (%s ms)',remaining=>{
+  const people:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target] = people;
+  const ids = people.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  const mail = new InternalMail();
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration;
+  const hearingAt = deadline-HEARING_MS-remaining;
+  const publishAt = deadline-internalMailRules.cooldownMs-2;
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','selfieSolo']);
+  expect(mail.publish(host,{subject:'Publicação',body:'Sem anexo'},match.gameplayWorld(people,publishAt,()=>false))).toBeUndefined();
+  match.refreshAgendaEligibility(publishAt);
+  const view = (now=hearingAt)=>match.view(host.id,ids,now).politics!;
+  const mailMission = ()=>view().missions.active.find(mission=>mission.kind==='mensagemComAnexo');
+  expect(mailMission()).toBeDefined();
+  match.politics(host,{kind:'hearing',target:target.id},people,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(renderToStaticMarkup(<ul>{view().missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}</ul>)
+    .includes('Publique um comunicado com anexo')).toBe(remaining>0);
+  expect(view().missions.active).toHaveLength(3);
+  expect(view().progression.xp).toBe(0);
+  if (!remaining) return;
+
+  const resumeAt = hearingAt+HEARING_MS;
+  match.advance(resumeAt);
+  expect(match.phase).toBe('negotiation');
+  const game = new Gameplay();
+  const world = match.gameplayWorld(people,resumeAt,()=>false);
+  game.act(host,{kind:'photo'},world);
+  const photo = game.photoView(host.id,resumeAt).album.at(-1)!.photo;
+  expect(mail.publish(host,{subject:'Último registro',body:'Foto em anexo',attachment:{kind:'photo',id:photo.id}},
+    world,()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  const completed = view(resumeAt).missions.completed.find(mission=>mission.kind==='mensagemComAnexo')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(resumeAt).progression.xp).toBe(35);
+});
+
+test.each([0,1])('mail missions respect the exact end of an approved isolation (%s ms)',remaining=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target,peer] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  const mail = new InternalMail();
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id));
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  for (const player of [host,target]) {
+    const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','selfieSolo']);
+  }
+  match.refreshAgendaEligibility();
+  const resultAt = ELECTION_RULES.matchDuration-SUSPENSION_MS-remaining;
+  match.politics(host,{kind:'hearing',target:target.id},players,resultAt-HEARING_MS);
+  const snapshots = (player:Player,now=resultAt)=>match.view(player.id,ids,now).politics!;
+  const mailMission = (player:Player,now?:number)=>snapshots(player,now).missions.active.find(mission=>mission.kind==='mensagemComAnexo');
+  expect(mailMission(target,resultAt-1)).toBeDefined();
+  match.vote(host.id,'yes',resultAt-1);
+  match.vote(peer.id,'yes',resultAt-1);
+  match.advance(resultAt);
+  expect(match.isolated(target.id)).toBe(true);
+  expect(mailMission(host)).toBeDefined();
+  expect(!!mailMission(target)).toBe(remaining>0);
+  expect(snapshots(target).missions.active).toHaveLength(3);
+  expect(snapshots(target).progression.xp).toBe(0);
+
+  if (!remaining) return;
+  const releaseAt = resultAt+SUSPENSION_MS;
+  expect(match.canHandleObjects(target.id,releaseAt-1)).toBe(false);
+  match.advance(releaseAt);
+  expect(match.canHandleObjects(target.id,releaseAt)).toBe(true);
+  const mission = mailMission(target,releaseAt)!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Publique um comunicado com anexo');
+});
+
+test('the Agenda offers extraordinary collection only when a robbery can fund a partial deposit',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...terminals.treasury.point};
+  const npc:Player = {...player,id:'npc-parliamentarian-1',nick:'Parlamentar',npc:true};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  match.setAgendaCashAvailability(itemId=>game.canPartiallyDepositCash(itemId));
+  const world = match.gameplayWorld([player,npc],1,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['recolhimentoExtraordinario','rouboNpc','cafe','passeio','selfieSolo']);
+
+  const belowMinimum = Math.round(minimumPartialDepositLot*10-1)/10;
+  const view = ()=>match.view(player.id,[player.id],world.now).politics!;
+  const active = ()=>view().missions.active.find(mission=>mission.kind==='recolhimentoExtraordinario');
+  world.takeWallet!(npc.id);
+  world.earn!(npc.id,belowMinimum);
+  match.refreshAgendaEligibility();
+  expect(active()).toBeUndefined();
+  expect(view().missions.active.some(mission=>mission.kind==='rouboNpc')).toBe(true);
+  expect(treasuryDeliveries([{id:123,kind:'briefcase',cash:belowMinimum}])).toHaveLength(1);
+
+  world.earn!(npc.id,minimumPartialDepositLot-belowMinimum);
+  Reflect.set(agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('0 / 2');
+  expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
+  match.refreshAgendaEligibility();
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('1 / 2');
+
+  const consumedLot = game.view(player,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(game.act(player,{kind:'deliver',place:'treasury',item:consumedLot.id},world)).toContain('entregues à Tesouraria');
+  expect(active()).toBeUndefined();
+  expect(view().missions.completed.some(mission=>mission.kind==='recolhimentoExtraordinario')).toBe(false);
+
+  world.earn!(npc.id,minimumPartialDepositLot);
+  Reflect.set(agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(active()?.current).toBe(0);
+  expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
+  const delivery = treasuryDeliveries(game.view(player,world).inventory).find(option=>option.action.target==='partial');
+  if (!delivery) throw Error('Expected a partial delivery action at the minimum lot size');
+  const before = view().progression.xp;
+  expect(game.act(player,delivery.action,world))
+    .toContain('entregues à Tesouraria');
+  const completed = view().missions.completed.find(mission=>mission.kind==='recolhimentoExtraordinario')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp-before).toBe(missionReward('recolhimentoExtraordinario').xp);
+});
+
+test.each([false,true])('Pix missions and recipients reflect cassation with prior credit: %s',(priorCredit)=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,x:140,y:146,character,direction:0,moving:false,
+  }));
+  const [host,candidate,remaining] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['doisPix','pixVinte','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const phone = (player:Player,now:number)=>renderToStaticMarkup(
+    <PhonePix politics={match.view(player.id,ids,now).politics!} ownId={player.id} send={()=>{}}/>
+  );
+  const render = (now:number)=>renderToStaticMarkup(<ul>
+    {view(now).politics!.missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
+  </ul>);
+  expect(render(1)).toContain('Receba Pix de dois jogadores distintos');
+  expect(phone(host,1)).toContain(candidate.nick);
+  const receive = (from:Player,now:number)=>match.politics(from,{kind:'transfer',to:host.id,amount:1},players,now);
+  if (priorCredit) {
+    expect(receive(candidate,2)).toBe(true);
+    expect(render(2)).toContain('1 / 2');
+  }
+
+  match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
+  const open = 50+CASSATION_NOTICE_MS;
+  match.advance(open);
+  expect(phone(host,open)).toContain('Nenhum destinatário disponível.');
+  const beforeHearingTransfer = match.view(remaining.id,ids,open).politics!.paymentsLeft;
+  expect(receive(remaining,open)).toBe(false);
+  expect(match.view(remaining.id,ids,open).politics!.paymentsLeft).toBe(beforeHearingTransfer);
+  match.castCassation(host.id,candidate.id,open);
+  match.castCassation(remaining.id,candidate.id,open);
+  const close = open+HEARING_MS;
+  match.advance(close);
+  expect(view(close).cassationResult?.text).toContain(candidate.nick+' perdeu o mandato');
+  expect(phone(host,close)).not.toContain(candidate.nick);
+  expect(phone(host,close)).toContain(remaining.nick);
+  expect(phone(candidate,close)).toContain('Nenhum destinatário disponível.');
+  expect(receive(candidate,close)).toBe(false);
+  if (priorCredit) {
+    expect(render(close)).toContain('1 / 2');
+    const before = view(close).politics!.progression.xp;
+    expect(receive(remaining,close+1)).toBe(true);
+    const politics = view(close+1).politics!;
+    const completed = politics.missions.completed.find(mission=>mission.kind==='doisPix')!;
+    expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+    expect(politics.progression.xp-before).toBe(missionReward('doisPix').xp);
+  } else {
+    expect(render(close)).not.toContain('Receba Pix de dois jogadores distintos');
+  }
+  expect(render(close)).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
+  const pay = (to:string,now:number)=>match.politics(host,{kind:'transfer',to,amount:PIX_MISSION_AMOUNT},players,now);
+  expect(pay(candidate.id,close+2)).toBe(false);
+  const before = view(close+2).politics!.progression.xp;
+  expect(pay(remaining.id,close+3)).toBe(true);
+  const politics = view(close+3).politics!;
+  expect(politics.missions.completed.some(mission=>mission.kind==='pixVinte')).toBe(true);
+  expect(politics.progression.xp-before).toBe(missionReward('pixVinte').xp);
+});
+
+test.each(['vote starts','vote expires'])('the Agenda drops NPC vote buying when the final %s', ending=>{
+  const player:Player = {id:'host',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  const members = new Parliamentarians();
+  members.reset(2,0);
+  const npc = members.players[1];
+  Object.assign(npc,{x:player.x+8,y:player.y});
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS;
+  const filingAt = voteAt-NEGOTIATION_MS;
+  publishProjectFiling(match,player,0,filingAt);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility(filingAt);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const hud = (now:number)=>renderToStaticMarkup(<>{view(now).missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}</>);
+  const talk = new ParliamentarianTalk(members,new Gameplay(),match);
+  const world = (now:number)=>match.gameplayWorld([player,npc],now,()=>false);
+  const open = (now:number)=>talk.act(player,{kind:'talk',target:npc.id},world(now));
+  open(filingAt);
+  const quote = talk.view(player,world(filingAt))!;
+  const offer = {kind:'vote',session:quote.session,target:npc.id,round:match.projectRound,project:quote.projectIndex,vote:'yes',amount:quote.minimum.yes};
+  expect(quote.minimum.yes).toBeGreaterThan(0);
+  expect(hud(filingAt)).toContain('Compre um voto de um parlamentar NPC');
+
+  const now = voteAt+Number(ending==='vote expires');
+  match.advance(now);
+  expect(match.phase).toBe(ending==='vote starts' ? 'ballot' : 'negotiation');
+  expect(hud(now)).not.toContain('Compre um voto de um parlamentar NPC');
+  expect(view(now).missions.active).toHaveLength(3);
+  const {wallet,paymentsLeft,progression:{xp}} = view(now);
+  open(now);
+  expect(talk.view(player,world(now))).toMatchObject({projectIndex:undefined});
+  talk.act(player,offer,world(now));
+  expect(view(now).paymentsLeft).toBe(paymentsLeft);
+  expect(view(now).wallet).toBe(wallet);
+  expect(view(now).progression.xp).toBe(xp);
+});
+
+test.each([
+  ['contribuinte','delivered','treasury'],
+  ['reservaCofre','money-pocketed','office-1'],
+] as const)('%s completes at the cash amount shown on the HUD',(kind,type,place)=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',[kind,'cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const target = agendaCashTargets[kind];
+  const publish = (amount:number,at:number)=>{
+    const world = match.gameplayWorld([player],at,()=>false);
+    world.publish({eventId:world.nextEventId?.(),type,actor:player.id,kind:'briefcase',place,amount,at,position:player,witnesses:[]});
+  };
+  publish(target-.3,1);
+  publish(.1,2);
+  publish(.1,3);
+  const before = view(3);
+  const mission = before.missions.active.find(mission=>mission.kind===kind)!;
+  expect(mission.target).toBe(target);
+  const markup = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(markup.match(/<strong>([^<]+)<\/strong>/)?.[1]).toContain(money(target));
+  expect(markup).toContain(money(target-.1)+' / '+money(target));
+  expect(before.progression.xp).toBe(0);
+  publish(.1,4);
+  const after = view(4);
+  const completed = after.missions.completed.find(entry=>entry.id===mission.id)!;
+  expect(completed).toEqual({...mission,current:target});
+  expect(after.progression.xp).toBe(missionReward(kind).xp);
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+});
+
+test('an NPC vote purchase advances the Agenda once despite a repeat offer and event replay',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const members = new Parliamentarians();
+  members.reset(2,0);
+  const npc = members.players[1];
+  match.addParliamentarian(npc);
+  Object.assign(npc,{x:player.x+8,y:player.y});
+  publishProjectFiling(match,player);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = () => match.view(player.id,[player.id],1).politics!;
+  const active = view().missions.active.find(mission=>mission.kind==='votoNpc')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Compre um voto de um parlamentar NPC');
+
+  const events:GameplayEvent[] = [];
+  const state = match.gameplayWorld([player,npc],1,()=>false);
+  const instrumentedWorld = {...state,publish:(event:GameplayEvent)=>{
+    events.push(event);
+    state.publish(event);
+  }};
+  const talk = new ParliamentarianTalk(members,new Gameplay(),match);
+  talk.act(player,{kind:'talk',target:npc.id},state);
+  const deal = talk.view(player,state)!;
+  const offer = {kind:'vote',target:npc.id,session:deal.session,round:match.projectRound,project:deal.projectIndex,vote:'yes',amount:deal.minimum.yes};
+  expect(offer.amount).toBeGreaterThan(0);
+  const before = view();
+  expect(talk.act(player,offer,instrumentedWorld)).toBe('Voto comprometido.');
+  expect(events).toEqual([expect.objectContaining({type:'npc-vote-bought',target:npc.id,project:0,amount:offer.amount,eventId:expect.any(Number)})]);
+  const after = view();
+  const completed = after.missions.completed.find(mission=>mission.id===active.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(after.wallet).toBe(before.wallet-offer.amount+(missionReward('votoNpc').cash ?? 0));
+  expect(after.paymentsLeft).toBe(before.paymentsLeft-1);
+  expect(after.progression.xp).toBe(before.progression.xp+missionReward('votoNpc').xp);
+
+  expect(talk.act(player,offer,instrumentedWorld)).toBe('Já aceita esse voto sem pagamento.');
+  expect(events).toHaveLength(1);
+  expect(view()).toEqual(after);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['cafe','passeio','votoNpc']);
+  match.refreshAgendaEligibility();
+  const redrawn = view();
+  expect(redrawn.missions.active).toContainEqual(expect.objectContaining({kind:'votoNpc',current:0}));
+  state.publish(events[0]);
+  expect(view()).toEqual(redrawn);
+});
+
+
+test.each([false,true])('the crisis mission follows fire eligibility and rewards only the player who resolves it (expire=%s)',expires=>{
+  const site = fireSites[0];
+  const host:Player = {id:'Rafa',nick:'Rafa',character:0,direction:0,moving:false,x:site.x,y:site.y+10};
+  const peer:Player = {...host,id:'Bia',nick:'Bia',character:1};
+  const players = [host,peer];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT);
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const {id} of players) {
+    const account = accounts.get(id);
+    const {agenda} = account;
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['heroiInesperado','cafe','passeio']);
+  }
+  const view = (id:string,now:number)=>match.view(id,ids,now).politics!;
+  const active = (id:string,now:number)=>view(id,now).missions.active.find(mission=>mission.kind==='heroiInesperado');
+  expect(match.actOnFire(host,'plant',0,1,false,1)).toBe('Instalando dispositivo…');
+  const installedAt = 1+fireRules.install;
+  match.advance(installedAt);
+  expect(match.updateFireInstallation(installedAt,id=>players.find(p=>p.id===id),()=>true,()=>true)?.feedback)
+    .toBe('Incendiário instalado.');
+  const ignitedAt = installedAt+fireRules.fuse;
+  match.advance(ignitedAt);
+  expect(active(host.id,ignitedAt)).toBeUndefined();
+  const criticalAt = ignitedAt+fireRules.tick;
+  match.advance(criticalAt);
+  expect(active(host.id,criticalAt)).toBeDefined();
+  const mission = active(host.id,criticalAt)!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Ajude a resolver uma crise');
+  expect(active(peer.id,criticalAt)).toBeDefined();
+  for (const {id} of players) Reflect.get(accounts.get(id).agenda,'missionDeck').push('selfieSolo');
+  const resolvedAt = expires ? ignitedAt+fireRules.duration : criticalAt+1;
+  if (expires) match.advance(resolvedAt);
+  else expect(match.actOnFire(host,'extinguish',0,resolvedAt,true)).toBe('Incêndio apagado.');
+
+  for (const {id} of players) {
+    const completed = view(id,resolvedAt).missions.completed.find(mission=>mission.kind==='heroiInesperado');
+    expect(active(id,resolvedAt)).toBeUndefined();
+    expect(view(id,resolvedAt).missions.active.some(mission=>mission.kind==='selfieSolo')).toBe(true);
+    if (!expires && id===host.id) {
+      expect(renderToStaticMarkup(<MissionRow mission={completed!} done/>)).toContain('data-done="true"');
+      expect(view(id,resolvedAt).progression.xp).toBe(55);
+    } else {
+      expect(completed).toBeUndefined();
+      expect(view(id,resolvedAt).progression.xp).toBe(0);
+    }
+  }
+});
+
+test('Republishing a forensic report cannot complete another Retratação Oficial',()=>{
+  const inspector:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const author:Player = {...inspector,id:'bia',nick:'Bia',character:1};
+  const players = [inspector,author];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(inspector.id,players,0,()=>.9)).toBe(true);
+  const mail = new InternalMail();
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id),undefined,id=>mail.reportsFor(id).map(report=>report.notice));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(inspector.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['retratacaoOficial','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(inspector.id,ids,now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='retratacaoOficial');
+  const publishDocument = (now:number,id:number) => {
+    expect(mail.publish(author,{subject:'Proposta',body:'Documento em anexo',attachment:{kind:'document',id}},world(now),
+      ()=>({attachment:{kind:'document',document:{id,title:'Proposta',signatures:[]}},authentic:true}))).toBeUndefined();
+    return mail.view()[0].id;
+  };
+  const examine = (now:number,notice:number) => {
+    expect(mail.examine(inspector.id,notice,()=>true)).toBeUndefined();
+    match.refreshAgendaEligibility(now);
+  };
+  const publishReport = (now:number,id:number) => {
+    const report = mail.reportsFor(inspector.id).find(report=>report.notice===id)!;
+    expect(mail.publish(inspector,{subject:'Laudo',body:'Resultado da perícia',attachment:{kind:'report',id}},world(now),
+      ()=>({attachment:{kind:'report',report}}))).toBeUndefined();
+    match.refreshAgendaEligibility(now);
+  };
+  expect(active(0)).toBeUndefined();
+  const first = publishDocument(1,1);
+  examine(2,first);
+  expect(renderToStaticMarkup(<MissionRow mission={active(2)!}/>)).toContain('Publique um Laudo de Perícia');
+  publishReport(3,first);
+  expect(active(3)).toBeUndefined();
+  expect(view(3).progression.xp).toBe(45);
+
+  const next = mail.nextPublicationAt(inspector.id);
+  const second = publishDocument(next,2);
+  examine(next,second);
+  const current = active(next)!;
+  expect(current).toBeDefined();
+  publishReport(next,first);
+  expect(active(next)).toEqual(current);
+  expect(view(next).progression.xp).toBe(45);
+
+  const finish = mail.nextPublicationAt(inspector.id);
+  publishReport(finish,second);
+  const completed = view(finish).missions.completed.find(mission=>mission.id===current.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(active(finish)).toBeUndefined();
+  expect(view(finish).progression.xp).toBe(90);
+});
+
+test('the cash handover mission tracks custody across stash, drop, collection and acceptance',()=>{
+  const sender:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const recipient:Player = {...sender,id:'bia',nick:'Bia',character:1};
+  const npc:Player = {...sender,id:'npc-parliamentarian-1',nick:'NPC',character:2,npc:true};
+  const players = [sender,recipient,npc];
+  const ids = [sender.id,recipient.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(sender.id,[sender,recipient],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[sender,recipient]);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(sender.id);
+  Reflect.get(economy,'accounts').get(sender.id).hasCashLot = (amount:number)=>game.hasCashLot(sender.id,amount);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['dinheiroPresencialVinte','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(sender.id,ids,1).politics!;
+  const active = ()=>view().missions.active.find(mission=>mission.kind==='dinheiroPresencialVinte');
+  expect(active()).toBeUndefined();
+  const world = match.gameplayWorld(players,1,()=>false);
+  world.takeWallet!(npc.id);
+  world.earn!(npc.id,2);
+  expect(game.robNpc(sender,npc,world)).toContain('Maleta roubada');
+  const mission = active()!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Entregue R$ 20 mil em espécie');
+  const inventory = ()=>game.view(sender,world).inventory;
+  const cash = inventory().find(item=>item.kind==='briefcase')!;
+  const home = privateOffices.find(office=>office.id===game.view(sender,world).ownOffice)!;
+  Object.assign(sender,home.cabinet);
+  expect(game.act(sender,{kind:'office-stash',place:home.id,item:cash.id},world)).toBe('Objeto guardado no armário.');
+  expect(inventory().some(item=>item.id===cash.id)).toBe(false);
+  expect(active()).toEqual(mission);
+  expect(game.act(sender,{kind:'office-take',place:home.id,item:cash.id},world)).toBe('Objeto retirado do armário.');
+  expect(active()).toEqual(mission);
+
+  Object.assign(sender,stations.coffee);
+  Object.assign(recipient,stations.coffee);
+  expect(game.act(sender,{kind:'drop',item:cash.id},world)).toBe('Objeto largado.');
+  expect(active()).toBeUndefined();
+  expect(view().progression.xp).toBe(0);
+  expect(game.act(sender,{kind:'collect',item:cash.id},world)).toBe('Objeto recolhido.');
+  const next = active()!;
+  expect(next.id).not.toBe(mission.id);
+  expect(game.act(sender,{kind:'offer',target:recipient.id,item:cash.id},world)).toBe('Pedido enviado.');
+  const request = game.view(recipient,world).requests[0];
+  expect(game.act(recipient,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
+  expect(active()).toBeUndefined();
+  const completed = view().missions.completed.find(entry=>entry.id===next.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});
+
+test('the reading mission follows the last project available to study',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.library};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['leitura','cafe','passeio']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const filingAt = deadline-BALLOT_MS-projectRules.debateMs;
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='leitura');
+
+  match.refreshAgendaEligibility(filingAt);
+  expect(active(filingAt)).toBeDefined();
+  expect(match.roomActivity(player,'library',filingAt)?.text).toBe('Nenhum projeto em pauta.');
+  expect(view(filingAt).progression.xp).toBe(0);
+  expect(match.gameplayWorld([player],filingAt,()=>false).publish({
+    type:'filed',actor:player.id,item:1,project:0,at:filingAt,position:stations.amendment,witnesses:[],
+  })).toBe(true);
+  const study = match.gameplayWorld([player],filingAt+1,()=>false);
+  const events:Parameters<typeof study.publish>[0][] = [];
+  const recordStudy = (event:Parameters<typeof study.publish>[0])=>{
+    events.push(event);
+    study.publish(event);
+  };
+  expect(match.roomActivity(player,'library',filingAt+1,recordStudy)?.text).toContain('Auxílio Churrasco');
+  expect(match.roomActivity(player,'library',filingAt+2,recordStudy)?.text).toContain('Você já estudou');
+  expect(events).toHaveLength(1);
+  expect(events[0]).toMatchObject({type:'bill-studied',actor:player.id,project:0});
+  expect(study.publish({...events[0],eventId:study.nextEventId!()})).toBe(false);
+  expect(active(filingAt+2)).toBeUndefined();
+  const completed = view(filingAt+1).missions.completed.find(mission=>mission.kind==='leitura')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(filingAt+1).progression.xp).toBe(missionReward('leitura').xp);
+
+  const voteAt = filingAt+projectRules.debateMs;
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  expect(active(voteAt)).toBeUndefined();
+  expect(match.roomActivity(player,'library',voteAt+1)).toBeUndefined();
+  const xp = view(voteAt+1).progression.xp;
+  match.advance(deadline);
+  expect(active(deadline)).toBeUndefined();
+  expect(view(deadline).progression.xp).toBe(xp);
+});
+
+test.each([
+  ['instalarGrampo','wiretap'],
+  ['instalarCamera','spyCamera'],
+] as const)('%s follows custody of the last affordable device', (kind,device)=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const economy = Reflect.get(match,'economy');
+  const account = Reflect.get(economy,'accounts').get(player.id);
+  account.owns = (item:string)=>item===device && game.owns(player.id,device);
+  account.canInstallSpy = (item:string)=>item===device && game.canInstallSpy(player.id,device);
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',[kind,'cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const at = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind===kind);
+  const original = active(0)!;
+  const label = renderToStaticMarkup(<MissionRow mission={original}/>);
+  expect(label).toContain(device==='wiretap' ? 'grampo' : 'câmera');
+
+  game.act(player,{kind:'open-shop',target:'vendor'},at(1));
+  const token = game.view(player,at(1)).dialogue?.token;
+  game.act(player,{kind:'shop-buy',target:device,token},at(1));
+  const item = game.view(player,at(1)).inventory.find(item=>item.kind===device)!;
+  expect(economy.spend(player.id,view(1).wallet)).toBe(true);
+  Object.assign(player,{x:254,y:252});
+  game.act(player,{kind:'drop',item:item.id},at(2));
+  expect(active(2)).toBeUndefined();
+  expect(view(2).progression.xp).toBe(0);
+
+  game.act(player,{kind:'collect',item:item.id},at(3));
+  const replacement = active(3)!;
+  expect(replacement.id).not.toBe(original.id);
+  expect(renderToStaticMarkup(<MissionRow mission={replacement}/>)).toContain(device==='wiretap' ? 'grampo' : 'câmera');
+  game.spyAction(player,{kind:'install',site:'coffee',item:item.id},at(4));
+  const finishedAt = 4+spyRules.install;
+  game.tick(at(finishedAt),true);
+  const complete = view(finishedAt).missions.completed.find(mission=>mission.id===replacement.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
+  expect(view(finishedAt).progression.xp).toBe(missionReward(kind).xp);
+});
+
+test.each(['waiting','running','interrupted'] as const)('outage missions respect the last possible repair (%s)', status=>{
+  const started = status!=='waiting';
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
+  }));
+  const [rafa,bia,caio] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(rafa.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const lastStart = deadline-powerRules.repairMs-1;
+  expect(match.actOnPower(caio,{kind:'sabotage',panel:0},lastStart)).toBe('Energia cortada.');
+  const view = (now:number)=>match.view(rafa.id,ids,now).politics!;
+  const active = ()=>view(lastStart).missions.active.map(mission=>mission.kind);
+  expect(active()).toContain('manutencaoEmergencia');
+  expect(active()).toContain('heroiInesperado');
+  if (started) {
+    match.actOnPower(rafa,{kind:'repair',panel:0},lastStart);
+    match.actOnPower(bia,{kind:'repair',panel:1},lastStart);
+  }
+  // Keep this fixture focused on the electrical outage.
+  const fire = Reflect.get(match,'fire');
+  Reflect.set(fire,'next',Infinity);
+  match.advance(lastStart+1);
+  expect(active().includes('manutencaoEmergencia')).toBe(started);
+  expect(active().includes('heroiInesperado')).toBe(started);
+  expect(view(lastStart+1).progression.xp).toBe(0);
+  if (!started) return;
+  if (status==='interrupted') {
+    match.actOnPower(bia,{kind:'cancel',panel:1},lastStart+1);
+    expect(active()).not.toContain('manutencaoEmergencia');
+    expect(active()).not.toContain('heroiInesperado');
+    expect(view(lastStart+1).progression.xp).toBe(0);
+    return;
+  }
+  match.advancePower(deadline-1,id=>players.find(player=>player.id===id));
+  const completed = view(deadline-1).missions.completed;
+  expect(renderToStaticMarkup(<ul>{completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}</ul>))
+    .toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
+  expect(view(deadline-1).progression.xp).toBe(100);
+});
+
+test('the next bill can complete another library mission for the same reader',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.library};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['leitura','cafe','passeio']);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  publishProjectFiling(match,player,0,1);
+  match.roomActivity(player,'library',2);
+  const replacement = view(2).missions.active.find(mission=>mission.kind==='leitura')!;
+  expect(renderToStaticMarkup(<MissionRow mission={replacement}/>)).toContain('Estude o projeto na Biblioteca');
+  match.roomActivity(player,'library',3);
+  expect(view(3).missions.active.find(mission=>mission.id===replacement.id)?.current).toBe(0);
+  expect(view(3).progression.xp).toBe(missionReward('leitura').xp);
+
+  const voteAt = 1+projectRules.debateMs;
+  match.advance(voteAt);
+  match.vote(player.id,'yes',voteAt);
+  const nextFilingAt = voteAt+BALLOT_MS+projectRules.cooldownMs+1;
+  match.advance(voteAt+BALLOT_MS);
+  publishProjectFiling(match,player,1,nextFilingAt);
+  match.roomActivity(player,'library',nextFilingAt+1);
+  const updated = view(nextFilingAt+1);
+  expect(updated.missions.completed.find(mission=>mission.id===replacement.id)?.current).toBe(1);
+  expect(updated.progression.xp).toBe(2*missionReward('leitura').xp);
+});
+
+test.each([0,1])('a final hearing preserves fire missions only if articulation resumes (%s ms)', remaining=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>0)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration;
+  const hearingAt = deadline-HEARING_MS-remaining;
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['apagarIncendio','plantaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  match.advance(hearingAt-1);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const crisis = ['apagarIncendio','plantaoEmergencia','heroiInesperado'] as const;
+  const active = (now:number)=>view(now).politics!.missions.active.filter(mission=>crisis.some(kind=>kind===mission.kind));
+  expect(active(hearingAt-1)).toHaveLength(3);
+
+  match.politics(host,{kind:'hearing',target:target.id},players,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(view(hearingAt).fire?.paused).toBe(true);
+  expect(active(hearingAt)).toHaveLength(remaining ? 3 : 0);
+  expect(view(hearingAt).politics!.progression.xp).toBe(0);
+  if (!remaining) return;
+
+  const resumeAt = hearingAt+HEARING_MS;
+  match.advance(resumeAt);
+  expect(match.phase).toBe('negotiation');
+  const site = view(resumeAt).fire!.site;
+  Object.assign(host,fireSites[site]);
+  expect(match.actOnFire(host,'extinguish',site,resumeAt,true)).toBe('Incêndio apagado.');
+  const {missions,progression} = view(resumeAt).politics!;
+  expect(missions.completed.map(mission=>mission.kind)).toEqual([...crisis]);
+  expect(renderToStaticMarkup(<MissionRow mission={missions.completed[0]} done/>)).toContain('data-done="true"');
+  expect(progression.xp).toBe(crisis.reduce((total,kind)=>total+missionReward(kind).xp,0));
+});
+
+test.each([0,1])('power missions account for the blocked repair window during the last hearing (%s ms)', spare=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
+  }));
+  const [host,peer,infiltrator] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const resumeAt = deadline-powerRules.repairMs-spare;
+  const hearingAt = resumeAt-HEARING_MS;
+  expect(match.actOnPower(infiltrator,{kind:'sabotage',panel:0},hearingAt-2)).toBe('Energia cortada.');
+  match.actOnPower(host,{kind:'repair',panel:0},hearingAt-1);
+  match.actOnPower(peer,{kind:'repair',panel:1},hearingAt-1);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const title = 'Conclua o reparo de uma pane elétrica junto a outro jogador';
+  const markup = (now:number)=>view(now).politics!.missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  expect(markup(hearingAt-1)).toContain(title);
+  Object.assign(host,stations.panel);
+  match.politics(host,{kind:'hearing',target:infiltrator.id},players,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(view(hearingAt).outage?.paused).toBe(true);
+  expect(markup(hearingAt).includes(title)).toBe(spare>0);
+  expect(markup(hearingAt).includes('Ajude a resolver uma crise')).toBe(spare>0);
+  match.advancePower(hearingAt,id=>players.find(player=>player.id===id));
+  expect(view(hearingAt).outage?.occupied).toEqual([false,false]);
+  expect(view(hearingAt).politics!.progression.xp).toBe(0);
+  if (!spare) return;
+
+  match.advance(resumeAt);
+  Object.assign(host,powerPanels[0]);
+  match.actOnPower(host,{kind:'repair',panel:0},resumeAt);
+  match.actOnPower(peer,{kind:'repair',panel:1},resumeAt);
+  match.advancePower(resumeAt+powerRules.repairMs,id=>players.find(player=>player.id===id));
+  const done = view(deadline-1).politics!;
+  expect(done.missions.completed.map(mission=>mission.kind)).toEqual(['manutencaoEmergencia','heroiInesperado']);
+  expect(done.progression.xp).toBe(100);
+});
+
+test('a project countdown removes outage missions before the ballot blocks the final repair window',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[0],
+  }));
+  const [host,,infiltrator] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS-powerRules.repairMs;
+  const countdownAt = voteAt-projectRules.countdownSeconds*1000;
+  const lastStart = countdownAt-powerRules.repairMs-1;
+  publishProjectFiling(match,host,0,voteAt-projectRules.debateMs);
+  Reflect.set(agenda,'missions',[]);
+  expect(match.actOnPower(infiltrator,{kind:'sabotage',panel:0},lastStart)).toBe('Energia cortada.');
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const actives = (now:number)=>view(now).politics!.missions.active.map(mission=>mission.kind);
+  expect(actives(lastStart)).toContain('manutencaoEmergencia');
+  match.advance(lastStart+1);
+  expect(actives(lastStart+1)).not.toContain('manutencaoEmergencia');
+  match.advance(countdownAt);
+  expect(view(countdownAt).ballotCountdown).toBe(projectRules.countdownSeconds);
+  expect(actives(countdownAt)).not.toContain('manutencaoEmergencia');
+  expect(actives(countdownAt)).not.toContain('heroiInesperado');
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  expect(view(voteAt).outage?.paused).toBe(true);
+  expect(view(voteAt).politics!.progression.xp).toBe(0);
 });

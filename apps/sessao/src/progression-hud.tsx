@@ -1,3 +1,5 @@
+import type { ShortcutEntry } from './action-shortcuts';
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -21,6 +23,24 @@ export function canSelectAttribute(view:PlenaryView|undefined, player:ReturnType
     view.ballotCountdown===undefined && view.isolationSeconds===undefined;
 }
 
+function AvailablePoints({points, actionForKey}:{
+  points:number; actionForKey:(key:string)=>(()=>void)|undefined;
+}) {
+  const label = useDialogKeys<HTMLParagraphElement>(actionForKey);
+  return <p ref={label} id="attributes-available" role="status">{pointLabel(points)} para distribuir</p>;
+}
+
+function CelebrationChoices({choose}:{choose:(choice:'allocate'|'later')=>void}) {
+  const form = useDialogKeys<HTMLFormElement>(key=>{
+    if (key==='1') return ()=>choose('allocate');
+    if (key==='2') return ()=>choose('later');
+  });
+  return <form ref={form} method="dialog" className="progression-buttons">
+    <button className="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
+    <button className="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autoFocus>Depois</button>
+  </form>;
+}
+
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void,reward:(text:string)=>void) {
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
@@ -42,8 +62,14 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let reconnecting = false;
   let completedCount = 0;
 
+  const canSpendPoint = () => !!latest?.available && requested!==latest.revision && canSelectAttribute(view,player);
+  function select(attribute:Attribute) {
+    if (!attributes.open || !canSpendPoint()) return;
+    selected = attribute;
+    renderAttributes();
+  }
   function confirmAttribute() {
-    if (!latest || !selected || requested===latest.revision || !latest.available || !canSelectAttribute(view,player)) return;
+    if (!attributes.open || !latest || !selected || !canSpendPoint()) return;
     requested = latest.revision;
     clearTimeout(requestTimer);
     requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
@@ -59,19 +85,25 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   function renderAttributes() {
     if (!latest || !player) return;
-    const {xp,level,nextLevelXp,available,invested,revision} = latest;
+    const {xp,level,nextLevelXp,available,invested} = latest;
     const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
     const agility = 100+invested.agility*attributeUpgrades.agility.bonus;
     const stamina = Math.floor(player.stamina ?? staminaMax);
-    const canSpend = !!available && requested!==revision && canSelectAttribute(view,player);
+    const canSpend = canSpendPoint();
     const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
+    const actionForKey = (key:string) => {
+      if (!canSpend) return;
+      if (key==='3') return selected ? confirmAttribute : undefined;
+      const attribute = /^[12]$/.test(key) ? keys[Number(key)-1] : undefined;
+      if (attribute) return ()=>select(attribute);
+    };
     flushSync(()=>attributesRoot.render(<>
       <header><div><h2 id="attributes-title" className="sr-only">Atributos</h2>
         <p id="attributes-xp">Nível {level} · {xp} XP totais · {nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}</p>
       </div><DialogDismiss className="hud-button hud-button--secondary">Fechar</DialogDismiss></header>
-      <p id="attributes-available" role="status">{pointLabel(available)} para distribuir</p>
+      <AvailablePoints points={available} actionForKey={actionForKey}/>
       <div className="attribute-columns">
         <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
           {keys.map((attribute,index)=>{
@@ -82,7 +114,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
               <span>{invested[attribute]}</span>
               <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
                 aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
-                onClick={()=>{ selected = attribute; renderAttributes(); }}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
+                onClick={()=>select(attribute)}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
             </section>;
           })}
         </div></section>
@@ -111,10 +143,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         <div className="level-up-number"><span>NÍVEL</span><strong id="level-up-level">{to-from>1 ? `${from} → ${to}` : to}</strong></div>
         <p id="level-up-points">+{pointLabel(to-from)} de atributo</p>
       </header>
-      <form method="dialog" className="progression-buttons">
-        <button className="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
-        <button className="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autoFocus>Depois</button>
-      </form>
+      <CelebrationChoices choose={choice=>celebration.close(choice)}/>
     </>));
   }
 
@@ -147,6 +176,19 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   return {
     open:openAttributes,
+    shortcuts(scope:HTMLElement):ShortcutEntry[]|undefined {
+      if (scope===celebration) return [
+        {name:'Distribuir ponto',activate:()=>{ if (celebration.open) celebration.close('allocate'); }},
+        {name:'Depois',activate:()=>{ if (celebration.open) celebration.close('later'); }},
+      ];
+      if (scope!==attributes) return;
+      const entries:ShortcutEntry[] = [{name:'Fechar',activate:()=>attributes.close()}];
+      if (canSpendPoint()) {
+        entries.push(...keys.map(attribute=>({name:'Investir em '+attributeUpgrades[attribute].label,activate:()=>select(attribute)})));
+        if (selected) entries.push({name:'Confirmar +1',activate:confirmAttribute});
+      }
+      return entries;
+    },
     render(next:PlenaryView) {
       view = next;
       const progress = next.politics?.progression;

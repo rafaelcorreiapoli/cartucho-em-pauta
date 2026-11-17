@@ -4,11 +4,11 @@ import { BET_PAYOUT, BET_SPIN_MS, BET_STAKES, BET_SYMBOLS, winningReels, type Be
 import { randomInt } from 'node:crypto';
 import type { GameplayView, PhoneAction, PhoneActivity } from '../src/gameplay';
 import { worldVisible, type Player } from '../src/map';
-import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
+import { SNAKE_ROUND_MS, createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake';
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type Call = {id:number; from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
-type PhoneRound = {id:number;snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
+type PhoneRound = {id:number;snake:SnakeRound; startedAt?:number; sampledAt:number; witnesses:Set<string>};
 type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'|'wallet'|'settleBet'|'earnXp'>;
 
 export class PhoneSession {
@@ -52,16 +52,18 @@ export class PhoneSession {
         continue;
       }
       if (!this.playingPhoneGame(game)) continue;
-      const duration = Math.min(100,world.now-game.sampledAt);
-      game.sampledAt = world.now;
       const witnesses = world.players.filter(other=>other.id!==id && world.present?.(other.id)!==false &&
         worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
       for (const witness of witnesses) game.witnesses.add(witness);
-      if (game.snake.status==='playing' && duration>0 &&
+      if (game.startedAt===undefined) continue;
+      const deadline = game.startedAt+SNAKE_ROUND_MS;
+      const duration = Math.min(100,Math.min(world.now,deadline)-game.sampledAt);
+      game.sampledAt = world.now;
+      if (duration>0 &&
           (world.hasMission?.(id,'jogar') || world.hasMission?.(id,'jogarOculto') || world.hasMission?.(id,'produtividade'))) {
         publishGameplay(world,player,'game-played',{duration,witnesses,place:inOwnOffice?.(player) ? 'own-office' : undefined});
       }
-      if (world.now-game.start>=60_000) game.snake.status = 'lost';
+      if (world.now>=deadline) game.snake.status = 'lost';
       else {
         const score = game.snake.score;
         stepSnake(game.snake,world.now);
@@ -70,7 +72,7 @@ export class PhoneSession {
       }
       if (!this.playingPhoneGame(game)) {
         publishGameplay(world,player,game.snake.status==='won' ? 'game-won' : 'game-stopped',
-          {duration:world.now-game.start,witnesses:game.witnesses});
+          {duration:Math.min(world.now,deadline)-game.startedAt,witnesses:game.witnesses});
       }
     }
   }
@@ -100,7 +102,7 @@ export class PhoneSession {
   private stopPhoneGame(player:Player, world:PhoneWorld) {
     const game = this.games.get(player.id);
     if (game && this.playingPhoneGame(game)) {
-      publishGameplay(world,player,'game-stopped',{duration:world.now-game.start,witnesses:game.witnesses});
+      publishGameplay(world,player,'game-stopped',{duration:game.startedAt===undefined ? 0 : Math.min(SNAKE_ROUND_MS,world.now-game.startedAt),witnesses:game.witnesses});
     }
     this.games.delete(player.id);
   }
@@ -170,6 +172,7 @@ export class PhoneSession {
         this.openScreens.delete(id);
         this.miniGames.delete(id);
         this.candy.delete(id);
+        this.stopPhoneGame(player,world);
         return;
       case 'call': {
         const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id);
@@ -226,8 +229,8 @@ export class PhoneSession {
         return;
       }
       case 'game-start':
-        if (this.playingPhoneGame(this.games.get(id))) return;
-        this.games.set(id,{id:++this.nextGameId,snake:createSnake(world.now),start:world.now,sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
+        if (!this.canPlayMiniGame(player,world)) return;
+        this.games.set(id,{id:++this.nextGameId,snake:createSnake(world.now),sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
         publishGameplay(world,player,'game-started');
         return;
       case 'game-stop':
@@ -238,8 +241,11 @@ export class PhoneSession {
       case 'game-turn': {
         const game = this.games.get(id);
         if (game && action.direction) {
-          if (game.snake.status==='ready') game.sampledAt = world.now;
           turnSnake(game.snake,action.direction,world.now);
+          if (game.startedAt===undefined && game.snake.status==='playing') {
+            game.startedAt = world.now;
+            game.sampledAt = world.now;
+          }
         }
         return;
       }

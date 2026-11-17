@@ -1,3 +1,6 @@
+import type {ShortcutEntry} from '../action-shortcuts';
+import {useDialogKeys} from './use-dialog-keys';
+import {HudIcon} from './hud-icon';
 import {CharacterPortrait} from './character-portrait';
 import type {GameplayAction,PhoneCall} from '../gameplay';
 import type {DirectoryContact} from '../politics';
@@ -8,36 +11,51 @@ export function PhoneContactFace({person}:{person:DirectoryContact}) {
   return <CharacterPortrait character={character} className="phone-contact-face"/>;
 }
 
-function Icon({name,className=''}:{name:string;className?:string}) {
-  return <svg className={`hud-glyph ${className}`} aria-hidden="true"><use href={`#icon-${name}`}/></svg>;
-}
-
-export function PhoneCalls({call,contacts,available,send}:{
-  call?:PhoneCall; contacts:readonly DirectoryContact[]; available:boolean; send:(action:GameplayAction)=>void;
+export function PhoneCalls({call,contacts,available,send,close}:{
+  call?:PhoneCall; contacts:readonly DirectoryContact[]; available:boolean; send:(action:GameplayAction)=>void; close?:()=>void;
 }) {
+  const incoming = call?.state==='incoming';
+  const dial = (id:string)=>send({kind:'call',target:id});
+  const answer = ()=>send({kind:'answer'});
+  const hangup = ()=>send({kind:'hangup'});
+  const options = available ? contacts.map((person,index)=>({
+    person,shortcut:index<9 ? String(index+1) : undefined,activate:()=>dial(person.id),
+  })) : [];
+  const entries:ShortcutEntry[] = close ? [{name:'Fechar aplicativo',activate:close}] : [];
+  if (call) {
+    if (incoming) entries.push({name:'Atender',activate:answer});
+    entries.push({name:incoming ? 'Recusar' : 'Encerrar',activate:hangup});
+  } else entries.push(...options.map(({person,activate})=>({name:`Ligar para ${person.name}`,activate})));
+  const panel = useDialogKeys<HTMLElement>(key=>{
+    if (call) {
+      if (key==='1') return incoming ? answer : hangup;
+      if (incoming && key==='2') return hangup;
+      return;
+    }
+    return options.find(option=>option.shortcut===key)?.activate;
+  },entries);
+  const attach = (element:HTMLElement|null)=>{panel.current = element;};
   if (call) {
     const person = contacts.find(contact=>contact.id===call.peer.id) ?? call.peer;
-    const incoming = call.state==='incoming';
     return <>
-      <div className="phone-caller">
+      <div ref={attach} className="phone-caller">
         <PhoneContactFace person={person}/><strong>{person.name}</strong>
         <span role="status">{incoming ? 'Chamada recebida' : call.state==='outgoing' ? 'Chamando…' : 'Em ligação'}</span>
       </div>
       {incoming && <button type="button" className="hud-button hud-button--secondary phone-answer" aria-keyshortcuts="1"
-        onClick={()=>send({kind:'answer'})}><Icon name="handset"/>Atender<kbd className="action-key" aria-hidden="true">1</kbd></button>}
+        onClick={answer}><HudIcon name="handset"/>Atender<kbd className="action-key" aria-hidden="true">1</kbd></button>}
       <button type="button" className="hud-button hud-button--secondary phone-hangup" aria-keyshortcuts={incoming ? '2' : '1'}
-        onClick={()=>send({kind:'hangup'})}><Icon name="cross"/>{incoming ? 'Recusar' : 'Encerrar'}
+        onClick={hangup}><HudIcon name="cross"/>{incoming ? 'Recusar' : 'Encerrar'}
         <kbd className="action-key" aria-hidden="true">{incoming ? '2' : '1'}</kbd></button>
     </>;
   }
-  if (!available) return <p>Ligações ficam disponíveis durante a articulação.</p>;
-  if (!contacts.length) return <p>Ninguém mais na sala.</p>;
-  return <div className="phone-contacts">
-    {contacts.map((person,index)=>{
-      const shortcut = index<9 ? String(index+1) : undefined;
+  if (!available) return <p ref={attach}>Ligações ficam disponíveis durante a articulação.</p>;
+  if (!contacts.length) return <p ref={attach}>Ninguém mais na sala.</p>;
+  return <div ref={attach} className="phone-contacts">
+    {options.map(({person,shortcut,activate})=>{
       return <button key={person.id} type="button" className="phone-contact" aria-label={`Ligar para ${person.name}`}
-        aria-keyshortcuts={shortcut} onClick={()=>send({kind:'call',target:person.id})}>
-        <PhoneContactFace person={person}/><strong>{person.name}</strong><Icon name="handset" className="phone-contact-dial"/>
+        aria-keyshortcuts={shortcut} onClick={activate}>
+        <PhoneContactFace person={person}/><strong>{person.name}</strong><HudIcon name="handset" className="phone-contact-dial"/>
         {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
       </button>;
     })}

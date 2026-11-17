@@ -84,8 +84,8 @@ export class SessionRoom extends Room {
         const pickup = event.type==='collected' || event.type==='recovered';
         const recipient = pickup ? event.actor : event.type==='transferred' ? event.target : event.type==='purchased' ? event.actor : undefined;
         if (recipient) this.clients.getById(recipient)?.send('item-obtained',pickup);
-        if (event.type==='used' && isFood(event.kind)) {
-          const drink = isDrink(event.kind);
+        if (event.type==='coffee-drunk' || event.type==='used' && isFood(event.kind)) {
+          const drink = event.type==='coffee-drunk' || isDrink(event.kind);
           this.clients.getById(event.actor)?.send('food-consumed',drink ? 'drink' : 'eat');
         }
         if (event.type==='purchased' && event.item!==undefined && isGear(event.kind)) {
@@ -195,8 +195,11 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
-        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id),
+          id=>this.internalMail.reportsFor(id).map(report=>report.notice));
+        this.match.setAgendaCashAvailability(itemId=>this.gameplay.canPartiallyDepositCash(itemId));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
+        this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.clock.currentTime));
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
           id=>{
@@ -205,7 +208,7 @@ export class SessionRoom extends Room {
           },
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          id=>this.internalMail.reportsFor(id).length>0,()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),()=>this.match.canFightCrisis(),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
+          ()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
@@ -252,7 +255,10 @@ export class SessionRoom extends Room {
       if (!player || !this.consumeRoomCommand(id,raw) || player.knockedOut || player.carried || this.match.phase!=='negotiation' || this.match.isolated(id)) return;
       const error = this.internalMail.examine(id,raw.notice,()=>this.gameplay.consumeForensicKit(id));
       if (error) client.send('gameplay-feedback',error);
-      else client.send('mail-reports',this.internalMail.reportsFor(id));
+      else {
+        this.match.refreshAgendaEligibility(this.clock.currentTime);
+        client.send('mail-reports',this.internalMail.reportsFor(id));
+      }
     });
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
@@ -297,11 +303,9 @@ export class SessionRoom extends Room {
       const {activity} = raw;
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
-      const result = this.match.roomActivity(player,activity as RoomActivity,this.clock.currentTime);
-      if (result) {
-        client.send('room-activity-result',result);
-        if (result.activity==='coffee' && !result.unavailable) client.send('food-consumed','drink');
-      }
+      const world = this.gameplayWorld();
+      const result = this.match.roomActivity(player,activity as RoomActivity,world.now,world.publish);
+      if (result) client.send('room-activity-result',result);
     });
     this.onMessage('voice-activity',client=>{
       if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.clock.currentTime);
@@ -362,7 +366,7 @@ export class SessionRoom extends Room {
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
           !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
       const text = this.gameplay.act(player,action,this.gameplayWorld());
-      if (action.kind==='photo-delete') this.match.refreshAgendaEligibility();
+      if (action.kind==='photo-delete' || action.kind==='scan-xray') this.match.refreshAgendaEligibility();
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
@@ -476,7 +480,8 @@ export class SessionRoom extends Room {
       const world = this.gameplayWorld();
       if (!freeze || this.match.phase!=='negotiation') {
         const exploring = this.match.phase==='negotiation';
-        this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+        const endedXray = this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+        if (endedXray) this.match.refreshAgendaEligibility(now);
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }

@@ -1,16 +1,15 @@
+import {HudHelpButton} from './hud-help';
+import {HudIcon} from './hud-icon';
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
+import {settingsApp} from '../hud-apps';
 import { stabilityRules } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
 import { missionTitle, money, timedAgendas, type Mission } from '../politics';
 import './theme.css';
-
-function Icon({name}:{name:string}) {
-  return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
-}
 
 function Meter({label,value,max,tone,target}:{label:string;value:number;max:number;tone:string;target?:number}) {
   const fraction = Math.max(0,Math.min(1,value/max));
@@ -36,7 +35,7 @@ function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudM
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   const remaining = useSyncExternalStore(state.subscribe,state.get);
   if (remaining===undefined) return null;
-  return <div className="plenary-countdown" data-kind={remaining.kind}><Icon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
+  return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
 export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
@@ -46,18 +45,18 @@ export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congre
         <path fill="currentColor" d="M2 16h26v3h-2v8h4v2H0v-2h4v-8H2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM68 16h26v3h-2v8h4v2H66v-2h4v-8h-2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM47 1h2v9l13 4v3h-3v10h4v2H33v-2h4V17h-3v-3l13-4zm-6 16v10h3V17zm6 0v10h3V17zm6 0v10h3V17z"/>
       </svg>
     </div>
-    <button type="button" className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      data-help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</button>
+    <HudHelpButton className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelpButton>
     <div className="congress-meter-track flex items-center">
       <Laurel/>
       <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
       <strong className="tabular-nums">{stability}</strong>
       <Laurel right/>
     </div>
-    <button type="button" className="congress-budget flex items-center justify-center"
-      data-help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
+    <HudHelpButton className="congress-budget flex items-center justify-center"
+      help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
-    </button>
+    </HudHelpButton>
   </section>;
 }
 
@@ -94,7 +93,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
   const progress = (mission.kind==='fortuna' || mission.kind==='poupancaInstitucional' || mission.kind==='investimentoPolitico' || mission.kind==='ostentacao' || mission.kind==='reservaCofre' || mission.kind==='contribuinte') ? money(current)+' / '+money(target) :
     target>1 ? current+' / '+target+(timed ? ' s' : '') : '';
   return <li className="flex items-start gap-2" data-done={done}>
-    <span className="react-mission-check" aria-hidden="true">{done && <Icon name="check"/>}</span>
+    <span className="react-mission-check" aria-hidden="true">{done && <HudIcon name="check"/>}</span>
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
       {!done && progress && <small>{progress}</small>}
@@ -129,8 +128,8 @@ function ProfileResources({state}:{state:HudModel['resources']}) {
   const resources = useSyncExternalStore(state.subscribe,state.get,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
-    <span title="Popularidade"><Icon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
-    <span title="Dinheiro na carteira"><Icon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
+    <span title="Popularidade"><HudIcon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
+    <span title="Dinheiro na carteira"><HudIcon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
   </div>;
 }
 
@@ -150,8 +149,8 @@ export function CharacterProfile({model}:{model:HudModel}) {
     <div className="deck-identity">
       <div className="profile-name-row">
         <strong id="hud-nick">{person?.nick}</strong>
-        {infiltrator ? <button id="profile-role" className="resource-help profile-help" type="button" aria-label="Infiltrado"
-          data-help="Infiltrado. Derrube a estabilidade."><Icon name="bug"/></button> : null}
+        {infiltrator ? <HudHelpButton id="profile-role" className="resource-help profile-help" aria-label="Infiltrado"
+          help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></HudHelpButton> : null}
         <span id="profile-level-mount"><Level state={model.profile}/></span>
       </div>
       <div className="profile-subtitle">
@@ -183,7 +182,7 @@ export function FireNotice({fire}:{fire:FireView}) {
       </svg>
       <div><strong id="fire-title">Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
-      {!fire.paused && <p><Icon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
+      {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
     </article>
   </aside>;
 }
@@ -195,7 +194,7 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
     outage.operating!==undefined ? 'Aguardando o outro painel. Permaneça no alcance.' : 'Dois jogadores devem operar os painéis juntos.';
   return <aside id="active-outage" className="incident-panel" aria-labelledby="outage-title" data-paused={outage.paused}>
     <article className="incident-fire">
-      <Icon name="alert"/>
+      <HudIcon name="alert"/>
       <div><strong id="outage-title">Pane elétrica</strong>
         {powerPanels.map(({name},index)=><small key={name}>{index===0 ? 'A' : 'B'} · {name} · {outage.occupied[index] ? 'Em uso' : 'Livre'}</small>)}
       </div>
@@ -220,7 +219,15 @@ function LiveTelevision({state}:{state:HudModel['television']}) {
   return interview && <TelevisionNotice {...interview}/>;
 }
 
-export function mountReactHud() {
+export function PlenarySettingsButton({open}:{open:()=>void}) {
+  const {label,key,icon} = settingsApp;
+  return <button id="plenary-settings" className="hud-icon-button" type="button" tabIndex={-1}
+    aria-label={label} aria-keyshortcuts={key} title={label+' ('+key+')'} onClick={open}>
+    <HudIcon name={icon}/>
+  </button>;
+}
+
+export function mountReactHud(openSettings:()=>void) {
   const model = createHudModel();
   const {broadcast,congress,agenda} = model;
   const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
@@ -235,7 +242,7 @@ export function mountReactHud() {
   profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
-  parliamentRoot.render(<Parliament state={congress} countdown={model.countdown}/>);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,

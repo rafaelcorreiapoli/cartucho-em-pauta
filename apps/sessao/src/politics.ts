@@ -7,6 +7,7 @@ export const CASSATION_POPULARITY = 40;
 export const HEARING_MS = 35_000;
 export const SUSPENSION_MS = 60_000;
 export const HEARING_IMMUNITY_MS = 120_000;
+export const HEARING_STABILITY_PENALTY = 12;
 export const TRADE_RADIUS = 44;
 export const PAYMENTS_PER_ROUND = 6;
 export const splits = [0,1,2,3] as const;
@@ -19,7 +20,14 @@ export const CAMPAIGN_SPENDING_TARGET = 5;
 export const CRISIS_MISSION_STABILITY_LIMIT = 30;
 export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
+export const PIX_MISSION_AMOUNT = 2;
+export const COFFEE_DELIVERY_RECIPIENTS = 3;
+export const PUBLIC_MEETING_PEERS = 3;
+export const LATE_CAMPAIGN_WINDOW_MS = 60_000;
 export const SAVINGS_MISSION_AMOUNT = 10;
+export const agendaCashTargets = {
+  ostentacao:5, contribuinte:5, reservaCofre:5,
+} as const;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
 export const targetedAgendas = {
@@ -35,6 +43,18 @@ export const archiveDutyRoom = 'Arquivo';
 export const urgentCallMission = {minCallMs:10_000,contacts:2} as const;
 export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,plantaoArquivo:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
+export const agendaCounts = {
+  assinaturas:2, comissaoImprovisada:3, passeio:3, articulacao:2, projetos:2, oposicao:2,
+  fiscalCafe:3, turismo:3, tresSelfies:3, vigilanciaInstitucional:2, duasCameras:2,
+  visitaDoisGabinetes:2, doisPix:2, doisMoveis:2, bandejaGourmet:2,
+} as const;
+
+export const photoMissionCounts = {
+  selfie:3, reuniaoFoto:2, dossieFoto:3, publicouSelfie:2, fatias:2, pizzada:3,
+} as const;
+
+const countWord = (count:number,feminine=false) => count===2 ? feminine ? 'duas' : 'dois' : count===3 ? 'três' : String(count);
+
 export const agendas = {
   ...targetedAgendas,
   protocolo:'Protocole um documento válido',
@@ -43,7 +63,7 @@ export const agendas = {
   embolso:'Embolse uma maleta no seu cofre',
   recebido:'Receba dinheiro de outro parlamentar',
   pagamento:'Faça uma transferência',
-  assinaturas:'Consiga duas assinaturas no mesmo documento',
+  assinaturas:`Consiga ${countWord(agendaCounts.assinaturas,true)} assinaturas no mesmo documento`,
   assinar:'Assine o documento de um colega',
   apoio:'Registre um voto a favor',
   propaganda:'Coloque propaganda no ar',
@@ -60,23 +80,23 @@ export const agendas = {
   selfieSolo:'Tire uma selfie',
   retratoGabinete:'Instale seu retrato no gabinete',
   poltrona:'Compre uma poltrona',
-  ostentacao:'Gaste R$ 50 mil em móveis',
+  ostentacao:`Gaste ${money(agendaCashTargets.ostentacao)} em móveis`,
   visitaGabinete:'Visite o gabinete de um colega',
-  passeio:'Visite três salas públicas diferentes',
+  passeio:`Visite ${countWord(agendaCounts.passeio,true)} salas públicas diferentes`,
   pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
-  entrega:'Entregue cafezinho a três jogadores diferentes.',
+  entrega:`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`,
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:`Vença uma partida de Snake coletando ${SNAKE_GOAL} frutas sem ser visto durante a partida.`,
   fotografia:'Tire uma foto com outro jogador visível.',
   flagra:'Peguei no flagra! Fotografe alguém com uma maleta exposta.',
-  selfie:'Tire selfies com três parlamentares diferentes.',
+  selfie:`Tire selfies com ${countWord(photoMissionCounts.selfie)} parlamentares diferentes.`,
   presidenteFoto:'Tire uma selfie com o presidente.',
   celularFoto:'Fotografe alguém jogando no celular na Antecâmara ou na Sala de Segurança.',
-  reuniaoFoto:'Fotografe dois colegas no mesmo gabinete ou na Antecâmara.',
-  dossieFoto:'Fotografe o mesmo parlamentar em três ambientes diferentes.',
+  reuniaoFoto:`Fotografe ${countWord(photoMissionCounts.reuniaoFoto)} colegas no mesmo gabinete ou na Antecâmara.`,
+  dossieFoto:`Fotografe o mesmo parlamentar em ${countWord(photoMissionCounts.dossieFoto)} ambientes diferentes.`,
   apresentarFoto:'Mostre a alguém uma fotografia com um objeto exposto.',
   entregaFoto:'Fotografe dois colegas durante a entrega de um objeto exposto.',
-  publicouSelfie:'Publique uma selfie sua com pelo menos dois colegas.',
+  publicouSelfie:`Publique uma selfie sua com pelo menos ${countWord(photoMissionCounts.publicouSelfie)} colegas.`,
   retrato:'Instale seu retrato no Congresso.',
   autorretrato:'Tire uma selfie ao lado do seu retrato.',
   cerimonialOficial:'Tire uma selfie perto de um Retrato Oficial instalado',
@@ -84,17 +104,17 @@ export const agendas = {
   reserva:'Reserve uma cadeira no Congresso com uma Placa VIP.',
   fiscalVip:'Fotografe um visitante na área VIP de outro parlamentar.',
   mandaVip:'Substitua a placa VIP de outro parlamentar pela sua.',
-  fatias:'Sirva fatias de pizza a dois parlamentares diferentes.',
-  pizzada:'Após um escândalo público, sirva uma pizza a três colegas.',
+  fatias:`Sirva fatias de pizza a ${countWord(photoMissionCounts.fatias)} parlamentares diferentes.`,
+  pizzada:`Após um escândalo público, sirva uma pizza a ${countWord(photoMissionCounts.pizzada)} colegas.`,
 
   gabinete: 'Instale um móvel de luxo no seu gabinete.',
   televisao:'Instale uma TV no seu gabinete',
   fortuna: 'Aumente sua carteira',
   poupancaInstitucional:`Aumente sua carteira em ${money(SAVINGS_MISSION_AMOUNT)}`,
   campanha: 'Aumente sua popularidade',
-  articulacao: 'Receba dinheiro de dois jogadores diferentes',
-  projetos: 'Vote a favor de dois projetos aprovados',
-  oposicao: 'Vote contra dois projetos rejeitados',
+  articulacao: `Receba dinheiro de ${countWord(agendaCounts.articulacao)} jogadores diferentes`,
+  projetos: `Vote a favor de ${countWord(agendaCounts.projetos)} projetos aprovados`,
+  oposicao: `Vote contra ${countWord(agendaCounts.oposicao)} projetos rejeitados`,
   cafe: 'Tome um cafezinho',
   leitura: 'Estude o projeto na Biblioteca',
   auditoria: 'Faça uma auditoria na Corregedoria',
@@ -109,25 +129,25 @@ export const agendas = {
   produtividade:`Jogue no celular por ${agendaDurationMs.produtividade/1000} segundos no seu gabinete`,
   cafeEstrategico:'Beba um café no Cafezinho',
   contasTesouraria:'Entregue uma maleta à Tesouraria',
-  contribuinte:'Contribua com R$ 50 mil à Tesouraria',
+  contribuinte:`Contribua com ${money(agendaCashTargets.contribuinte)} à Tesouraria`,
   registroHistorico:'Tire uma selfie no Plenário',
   jornalismo:'Publique uma foto pelo Correio Interno',
   manutencaoEmergencia:'Conclua o reparo de uma pane elétrica junto a outro jogador',
   apagarIncendio:'Apague um incêndio com o extintor',
   primeirosSocorros:'Recupere PV com um Kit Médico',
   socorro:'Socorra um jogador nocauteado',
-  fiscalCafe:'Beba três cafés',
+  fiscalCafe:`Beba ${countWord(agendaCounts.fiscalCafe)} cafés`,
   almocoPlenario:'Coma uma pizza no Plenário',
   nadaADeclarar:`Transporte dinheiro oculto por ${agendaDurationMs.nadaADeclarar/1000} segundos`,
   cuecaDinheiro:'Use a Cueca do Mensalão carregando dinheiro',
-  reservaCofre:'Embolse R$ 50 mil no seu cofre',
-  turismo:'Tire fotos em três salas diferentes',
-  comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
+  reservaCofre:`Embolse ${money(agendaCashTargets.reservaCofre)} no seu cofre`,
+  turismo:`Tire fotos em ${countWord(agendaCounts.turismo,true)} salas diferentes`,
+  comissaoImprovisada:`Consiga ${countWord(agendaCounts.comissaoImprovisada,true)} assinaturas no mesmo documento`,
   flagraGabinete:'Fotografe um visitante dentro de um gabinete',
   presencaPlenario:'Entre e saia do Plenário durante a articulação',
   reuniaoGabinete:`Passe ${agendaDurationMs.reuniaoGabinete/1000} segundos no mesmo gabinete que outro jogador`,
-  reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros três jogadores`,
-  tresSelfies:'Tire selfies em três salas públicas diferentes',
+  reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros ${PUBLIC_MEETING_PEERS} jogadores`,
+  tresSelfies:`Tire selfies em ${countWord(agendaCounts.tresSelfies,true)} salas públicas diferentes`,
   plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
   heroiInesperado:`Ajude a resolver uma crise com Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`,
   varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
@@ -138,26 +158,26 @@ export const agendas = {
   segurancaParlamentar:`Fique ${agendaDurationMs.segurancaParlamentar/1000} segundos perto do mesmo parlamentar com um Porrete equipado, sem atacar`,
   escutaAtiva:`Monitore um grampo por ${agendaDurationMs.escutaAtiva/1000} segundos`,
   instalarGrampo:'Instale um grampo em um esconderijo',
-  vigilanciaInstitucional:'Consulte duas câmeras diferentes na Sala de Segurança',
-  duasCameras:'Consulte duas câmeras escondidas próprias',
+  vigilanciaInstitucional:`Consulte ${countWord(agendaCounts.vigilanciaInstitucional,true)} câmeras diferentes na Sala de Segurança`,
+  duasCameras:`Consulte ${countWord(agendaCounts.duasCameras,true)} câmeras escondidas próprias`,
   instalarCamera:'Instale uma câmera escondida',
   mensagemComAnexo:'Publique um comunicado com anexo',
   retratacaoOficial:'Publique um Laudo de Perícia',
   fotoOstentacao:'Fotografe um móvel de luxo instalado',
   fotoDinheiro:'Fotografe alguém com dinheiro exposto',
-  doisMoveis:'Instale dois móveis diferentes no seu gabinete',
-  visitaDoisGabinetes:'Visite gabinetes de dois colegas diferentes',
+  doisMoveis:`Instale ${countWord(agendaCounts.doisMoveis)} móveis diferentes no seu gabinete`,
+  visitaDoisGabinetes:`Visite gabinetes de ${countWord(agendaCounts.visitaDoisGabinetes)} colegas diferentes`,
   recolhimentoExtraordinario:'Roube uma maleta de um NPC e entregue parte dela à Tesouraria',
   dinheiroPresencialVinte:`Entregue ${money(CASH_HANDOVER_MISSION_AMOUNT)} em espécie a outro jogador`,
   caixaDois:'Receba dinheiro em espécie de outro jogador',
-  pixVinte:'Envie um Pix de R$ 20 mil',
-  doisPix:'Receba Pix de dois jogadores distintos',
+  pixVinte:`Envie um Pix de ${money(PIX_MISSION_AMOUNT)}`,
+  doisPix:`Receba Pix de ${countWord(agendaCounts.doisPix)} jogadores distintos`,
   debateTelefonico:`Fique ${agendaDurationMs.debateTelefonico/1000} segundos na mesma chamada durante a articulação`,
   chamadasUrgentes:`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`,
   discursoMegafone:`Use o Megafone por ${agendaDurationMs.discursoMegafone/1000} segundos`,
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
-  campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',
-  bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
+  campanhaUltimaHora:`Veicule propaganda nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos antes da eleição`,
+  bandejaGourmet:`Consuma ${countWord(agendaCounts.bandejaGourmet)} alimentos diferentes no seu gabinete`,
   provaDocumental:'Fotografe um documento físico visível',
 } as const;
 export type Agenda = keyof typeof agendas;
@@ -202,7 +222,7 @@ export type PoliticsView = {
 };
 export type PoliticsAction =
   | {kind:'grant'; diverted:Split}
-  | {kind:'transfer'; to:string; amount:number; clandestine?:boolean}
+  | {kind:'transfer'; to:string; amount:number}
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
   | {kind:'accept' | 'cancel'; offer:number}
@@ -218,8 +238,8 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
       if ('diverted' in data && splits.includes(data.diverted as Split)) return {kind:'grant',diverted:data.diverted as Split};
       break;
     case 'transfer':
-      if ('to' in data && typeof data.to==='string' && 'amount' in data && integer(data.amount)) {
-        return {kind:'transfer',to:data.to,amount:data.amount as number};
+      if ('to' in data && typeof data.to==='string' && 'amount' in data && canTransferAmount(data.amount)) {
+        return {kind:'transfer',to:data.to,amount:data.amount};
       }
       break;
     case 'share':
@@ -239,8 +259,12 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
   }
 }
 
-export function manualTransfer(to:string,amount:number,clandestine:boolean,wallet=Infinity,paymentsLeft=1):PoliticsAction|undefined {
-  if (to && Number.isSafeInteger(amount) && amount>0 && amount<=wallet && paymentsLeft>0) return {kind:'transfer',to,amount,clandestine};
+export function canTransferAmount(amount:unknown,wallet=Infinity):amount is number {
+  return typeof amount==='number' && Number.isSafeInteger(amount) && amount>0 && amount<=wallet;
+}
+
+export function manualTransfer(to:string,amount:number,wallet=Infinity,paymentsLeft=1):Extract<PoliticsAction,{kind:'transfer'}>|undefined {
+  if (to && canTransferAmount(amount,wallet) && paymentsLeft>0) return {kind:'transfer',to,amount};
 }
 
 

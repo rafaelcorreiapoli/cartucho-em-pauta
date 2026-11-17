@@ -3,8 +3,9 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
 import type {Player} from '../map';
-import {bills,BALLOT_MS,hearingPolicyFee,NEGOTIATION_MS,stations} from '../plenary';
-import {CABINET_GRANT} from '../politics';
+import {bills,BALLOT_MS,CASSATION_NOTICE_MS,hearingPolicyFee,NEGOTIATION_MS,stations} from '../plenary';
+import {ELECTION_RULES} from '../elections';
+import {CABINET_GRANT,HEARING_MS,HEARING_STABILITY_PENALTY} from '../politics';
 import {InstitutionalActions,institutionalActions} from './institutional-actions';
 
 const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
@@ -71,4 +72,46 @@ test('the panel projects valid targets and the enacted hearing fee',()=>{
   expect(view(now+2).hearing?.target).toContain(bia.nick);
   expect(view(now+2).politics!.wallet).toBe(0);
   expect(paint(institutionalActions(view(now+2),panel))).not.toContain('id="hearing-form"');
+});
+
+
+test.each(['hearing','call-cassation'] as const)('the HUD and gameserver enforce the last full voting window for %s',kind=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(rafa.id,20);
+  const caller = {...rafa,...stations.panel};
+  const deadline = ELECTION_RULES.matchDuration;
+  const cassation = kind==='call-cassation';
+  const notice = cassation ? CASSATION_NOTICE_MS : 0;
+  const lastCall = deadline-notice-HEARING_MS;
+  const action = kind==='hearing' ? {kind,target:bia.id} : {kind};
+  const view = (now:number)=>match.view(rafa.id,ids,now);
+  const control = cassation ? 'Convocar cassação' : 'Afastamento temporário';
+  expect(paint(institutionalActions(view(lastCall+1),caller))).not.toContain(control);
+  match.politics(caller,action,players,lastCall+1);
+  expect(view(lastCall+1).phase).toBe('negotiation');
+  expect(view(lastCall+1).cassationIn).toBeUndefined();
+
+  expect(paint(institutionalActions(view(lastCall),caller))).toContain(control);
+  match.politics(caller,action,players,lastCall);
+  const opened = lastCall+notice;
+  const voters = players.filter(player=>player!==bia);
+  const before = view(opened).stability;
+  if (cassation) {
+    match.advance(opened+1);
+    expect(view(opened+1).cassation).toBeDefined();
+    for (const voter of voters) match.castCassation(voter.id,bia.id,opened+2);
+  } else {
+    expect(view(opened).hearing?.target).toBe(bia.nick);
+    for (const voter of voters) match.vote(voter.id,'yes',opened+1);
+  }
+  match.advance(deadline);
+  const finished = view(deadline);
+  expect(finished.phase).toBe('finished');
+  if (cassation) expect(finished.cassationResult?.text).toContain('Bia perdeu o mandato com 2 votos');
+  else {
+    expect(finished.hearingResult).toContain('Bia: afastamento aprovado');
+    expect(finished.stability).toBe(before-HEARING_STABILITY_PENALTY);
+  }
 });

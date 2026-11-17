@@ -3,12 +3,13 @@ import type { OfficeFurniture } from '../src/private-offices';
 import { CharacterProgression } from './CharacterProgression';
 import { attributeUpgrades, type AttributeRequest } from '../src/progression';
 import type { GameplayEvent, ObjectKind } from '../src/gameplay';
-import { CABINET_GRANT, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
+import { CABINET_GRANT, canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
-import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
+import { PersonalAgenda, type AgendaAction, type AgendaMetrics } from './PersonalAgenda';
 
-type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number}>;
+type TransferChannel = 'transfer'|'pix';
+type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number;channel:TransferChannel}>;
 
 type Account = AgendaMetrics & {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
@@ -34,7 +35,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canAgendaAction?:(id:string,kind:'propaganda'|'discurso'|'emenda')=>boolean) {
+    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean) {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -52,9 +53,9 @@ export class PoliticalEconomy {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
         isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
-        npcHasCash:()=>[...this.npcIds].some(id=>this.wallet(id)>0),
-        canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
-        canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
+        npcHasCash:(minimum=0.1)=>[...this.npcIds].some(id=>this.wallet(id)>=minimum),
+        canPay:()=>!this.suspended(contact.id) && this.paymentsLeft(contact.id,this.agendaRound)>0,
+        canAgendaAction:canAgendaAction && ((kind:AgendaAction)=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
@@ -198,9 +199,9 @@ export class PoliticalEconomy {
     return evidence;
   }
 
-  transfer(from:string, to:string, amount:number, clandestine:boolean, round:number) {
+  transfer(from:string, to:string, amount:number, clandestine:boolean, round:number, channel:TransferChannel='transfer') {
     const source = this.accounts.get(from), recipient = this.accounts.get(to);
-    if (!source || !recipient || from===to || !Number.isSafeInteger(amount) || amount<1 || amount>source.wallet) return false;
+    if (!source || !recipient || from===to || !canTransferAmount(amount,source.wallet)) return false;
     if (source.paymentRound!==round) {
       source.paymentRound = round;
       source.payments = 0;
@@ -210,18 +211,18 @@ export class PoliticalEconomy {
     this.transferred += amount;
     source.wallet -= amount;
     this.credit(recipient,amount);
-    const evidence = this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
-    this.recordTransferCompleted({id:evidence.id,from,to,amount});
+    const evidence = this.record((channel==='pix' || clandestine) ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
+    this.recordTransferCompleted({id:evidence.id,from,to,amount,channel});
     return true;
   }
 
   private recordTransferCompleted(event:TransferCompleted) {
-    const {from,to,amount} = event;
+    const {from,to,amount,channel} = event;
     const recipient = this.accounts.get(to);
     const source = this.accounts.get(from);
-    if (!source || !recipient) return;
-    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from,event.id);
-    source.agenda.recordTransfer(source,amount,to,event.id);
+    if (!source || !recipient || this.npcIds.has(from) || this.npcIds.has(to)) return;
+    recipient.agenda.recordPayment(recipient,from,event.id,channel==='pix');
+    source.agenda.recordTransfer(source,amount,to,event.id,channel==='pix');
   }
 
   grant(id:string, diverted:Split, budget:number, round:number) {
@@ -360,8 +361,10 @@ export class PoliticalEconomy {
     return changed;
   }
 
+  suspensionEndsAt(id:string) { return this.accounts.get(id)?.suspendedUntil; }
+
   suspensionRemaining(id:string,now:number) {
-    return Math.max(0,Math.ceil(((this.accounts.get(id)?.suspendedUntil ?? now)-now)/1000));
+    return Math.max(0,Math.ceil(((this.suspensionEndsAt(id) ?? now)-now)/1000));
   }
 
   suspend(id:string,until:number) {
@@ -387,7 +390,7 @@ export class PoliticalEconomy {
       }
       if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
     }
-    if (event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
+    if ((event.type==='photo-published' || event.type==='mail-published') && event.photo?.selfie && event.photo.author.id===event.actor &&
       event.photo.people.some(person=>person.id!==event.actor) && !account.selfieBonus) {
       account.selfieBonus = true;
       account.popularity = cap(account.popularity+4);
@@ -399,24 +402,35 @@ export class PoliticalEconomy {
     }
   }
 
-  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean,agendaSelfies?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['agendaSelfies']>>) {
+  setAgendaCashAvailability(canPartiallyDepositCash:(itemId:number)=>boolean) {
+    for (const account of this.accounts.values()) Object.assign(account,{canPartiallyDepositCash});
+  }
+
+  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean,agendaSelfies?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['agendaSelfies']>>,agendaReportNotices?:(id:string)=>readonly number[]) {
     for (const [id,account] of this.accounts) Object.assign(account,{
       canPublishMail:()=>canPublishMail(id),
       agendaSelfies:agendaSelfies && (()=>agendaSelfies(id)),
+      agendaReportNotices:agendaReportNotices && (()=>agendaReportNotices(id)),
     });
   }
 
-  setAgendaPowerAvailability(powerOut:()=>boolean) {
-    for (const account of this.accounts.values()) Object.assign(account,{powerOut});
+  setAgendaCrisisAvailability(canRepairOutage:(id:string)=>boolean,canFightCrisis:(id:string)=>boolean) {
+    for (const [id,account] of this.accounts) Object.assign(account,{
+      canRepairOutage:()=>canRepairOutage(id),canFightCrisis:()=>canFightCrisis(id),
+    });
   }
 
   setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
     for (const account of this.accounts.values()) Object.assign(account,{commerce});
   }
 
+  setAgendaXrayAvailability(canUse:(id:string,wallet:number)=>boolean) {
+    for (const [id,account] of this.accounts) Object.assign(account,{canUseXray:()=>canUse(id,account.wallet)});
+  }
+
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:AgendaDecoration,replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, agendaCameras?:(id:string,credited:ReadonlySet<string>)=>ReturnType<NonNullable<AgendaMetrics['agendaCameras']>>, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, agendaCameras?:(id:string,credited:ReadonlySet<string>)=>ReturnType<NonNullable<AgendaMetrics['agendaCameras']>>, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
     for (const [id,account] of this.accounts) {
       const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
         const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
@@ -424,7 +438,7 @@ export class PoliticalEconomy {
         return prices.length===needed && total<=account.wallet &&
           prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
       });
-      Object.assign(account,{canFightCrisis,hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,agendaCameras:agendaCameras && ((credited:ReadonlySet<string>)=>agendaCameras(id,credited)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,agendaCameras:agendaCameras && ((credited:ReadonlySet<string>)=>agendaCameras(id,credited)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:AgendaDecoration,replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }
@@ -438,20 +452,24 @@ export class PoliticalEconomy {
     this.agendaRound = round;
     const availableTargets = new Set([...players].filter(id=>!this.suspended(id) && !disconnected.has(id)));
     const eligiblePayers = () => [...availableTargets].filter(id=>
-      !this.npcIds.has(id) && this.wallet(id)>=1 && this.paymentsLeft(id,round)>0);
+      !this.npcIds.has(id) && canTransferAmount(1,this.wallet(id)) && this.paymentsLeft(id,round)>0);
     for (const id of players) {
       if (disconnected.has(id)) continue;
       const account = this.accounts.get(id);
       const targets = [...players].filter(other=>other!==id && !this.npcIds.has(other))
         .map(other=>({id:other,name:this.name(other)}));
       if (!account) continue;
-      Object.assign(account,{remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),canReceivePayments:(required:number)=>eligiblePayers().filter(payer=>payer!==id).length>=required});
+      Object.assign(account,{
+        remainingAdvertisements:remainingAdvertisements && (()=>remainingAdvertisements(id)),
+        canReceivePayments:(required:number)=>availableTargets.has(id) &&
+          eligiblePayers().filter(payer=>payer!==id).length>=required,
+      });
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
         ballotsLeft,this.npcIds.size,targets,availableTargets,this.npcIds);
     }
   }
 
-  private paymentsLeft(id:string,round:number) {
+  paymentsLeft(id:string,round:number) {
     const account = this.accounts.get(id);
     return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }

@@ -13,7 +13,7 @@ import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
-import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT } from '../src/politics';
 
 import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
@@ -132,14 +132,15 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,3);
   expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11,walletIncome:3}});
   expect(view(honest).politics?.evidence).toEqual([]);
-  match.politics(host,{kind:'transfer',to:honest.id,amount:2,clandestine:true},people,4);
-  match.politics(host,{kind:'transfer',to:traitor.id,amount:0,clandestine:false},people,5); // Invalid amount.
-  match.politics(host,{kind:'transfer',to:honest.id,amount:100,clandestine:false},people,6);
+  match.politics(host,{kind:'transfer',to:honest.id,amount:2},people,4);
+  match.politics(host,{kind:'transfer',to:traitor.id,amount:0},people,5); // Invalid amount.
+  match.politics(host,{kind:'transfer',to:honest.id,amount:100},people,6);
   expect(view(host).politics?.wallet).toBe(9);
   expect(view(honest).politics?.wallet).toBe(10);
   expect(view(traitor).politics?.ledger).toEqual([]);
-  match.politics(honest,{kind:'transfer',to:traitor.id,amount:1,clandestine:false},people,7);
-  expect(view(host).politics?.ledger.at(-1)?.kind).toBe('public-transfer');
+  match.politics(honest,{kind:'transfer',to:traitor.id,amount:1},people,7);
+  expect(view(host).politics?.ledger).toEqual([]);
+  expect(view(traitor).politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
 
   match.act(at(honest,'audit'),'audit',8);
   const proof = view(honest).politics!.evidence.find(record => record.kind==='diversion')!;
@@ -190,7 +191,7 @@ test('popularity unlocks a hearing, then a wrong removal costs stability and iso
   expect(view(host)).toMatchObject({phase:'negotiation',stability:36,electorate:2});
   expect(view(honest).politics?.suspended).toBe(true);
   expect(view(honest).role).toBe('Parlamentar');
-  match.politics(honest,{kind:'transfer',to:host.id,amount:1,clandestine:false},people,resumed+1);
+  match.politics(honest,{kind:'transfer',to:host.id,amount:1},people,resumed+1);
   expect(view(host).politics?.wallet).toBe(8);
   expect(match.view(honest.id,ids,resumed).isolationSeconds).toBe(60);
   expect(match.canHandleObjects(honest.id,resumed)).toBe(false);
@@ -352,11 +353,11 @@ test('an informal loan and a later manual repayment conserve both wallets',()=>{
   const borrower = {...honest,x:148,y:146};
   const group = [lender,borrower,traitor];
   const wallet = (player:Player) => match.view(player.id,ids,0).politics!.wallet;
-  match.politics(lender,{kind:'transfer',to:borrower.id,amount:3,clandestine:true},group,1);
+  match.politics(lender,{kind:'transfer',to:borrower.id,amount:3},group,1);
   expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
   match.advance(10_000);
   expect([wallet(lender),wallet(borrower)]).toEqual([5,11]);
-  match.politics(borrower,{kind:'transfer',to:lender.id,amount:3,clandestine:true},group,10_001);
+  match.politics(borrower,{kind:'transfer',to:lender.id,amount:3},group,10_001);
   expect([wallet(lender),wallet(borrower)]).toEqual([8,8]);
 });
 
@@ -455,7 +456,7 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   const [item] = game.view(player,world).nearby;
   expect(match.economySummary(game.physicalCash())).toMatchObject({spawned:3,physical:3,discrepancy:0});
   game.act(player,{kind:'collect',item:item.id},world);
-  match.politics(player,{kind:'transfer',to:receiver.id,amount:3,clandestine:true},group,4001);
+  match.politics(player,{kind:'transfer',to:receiver.id,amount:3},group,4001);
   expect(world.spend!(player.id,1.5)).toBe(true);
   expect(match.economySummary(game.physicalCash())).toMatchObject({transferred:3,reserveFees:1.5,discrepancy:0});
   Object.assign(player,terminals.treasury.point);
@@ -530,7 +531,7 @@ test('failed mail payments and expired cash preserve the ledger across retries',
   expect(mail.view()).toEqual([]);
   expect(summary()).toEqual(before);
   expect(world.payNpc!(player.id,'missing',1)).toBe(false);
-  match.politics({...honest,x:player.x+8,y:player.y},{kind:'transfer',to:player.id,amount:1,clandestine:false},[player],world.now);
+  match.politics({...honest,x:player.x+8,y:player.y},{kind:'transfer',to:player.id,amount:1},[player],world.now);
   expect(mail.publish(player,message,world)).toBeUndefined();
   expect(mail.publish(player,message,world)).toContain('Aguarde');
   expect(mail.view()).toHaveLength(1);
@@ -553,7 +554,8 @@ test.each([0,2,3])('the deadline counts rejected projects toward the three-vote 
   match.advance(ELECTION_RULES.matchDuration);
   const result = match.view(host.id,[host.id],ELECTION_RULES.matchDuration);
   expect(result.outcomes.map(outcome=>outcome.passed)).toEqual(Array(count).fill(false));
-  expect(result.winner).toBe(count===3 ? 'Parlamentar' : 'Infiltrado');
+  expect(result.winner).toBe(count===3 ? 'Parlamentar' : undefined);
+  expect(result.congressDestroyed).toBe(count<3 ? true : undefined);
 });
 
 test('campaign missions return to the draw after renewal resets used actions',()=>{
@@ -1248,7 +1250,6 @@ test('Herói Inesperado requires an active crisis below the shared stability thr
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   const account = Reflect.get(economy,'accounts').get(honest.id);
-  account.canFightCrisis = ()=>match.canFightCrisis();
   Reflect.set(account.agenda,'missions',[]);
   Reflect.set(account.agenda,'missionDeck',['heroiInesperado']);
   const now = fireRules.firstAfter;
@@ -1388,4 +1389,30 @@ test('election support and withdrawal are visible in observers’ polls',()=>{
   expect(position(4)?.supports).toBe(candidate.id);
   match.electionAction(voter,{kind:'support',to:''},3,false);
   expect(position(4)?.supports).toBeUndefined();
+});
+
+
+test('the Pix agenda uses the same amount for the wallet check and exact payment',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const agenda = Reflect.get(economy,'accounts').get(host.id).agenda;
+  expect(economy.spend(host.id,economy.wallet(host.id)-PIX_MISSION_AMOUNT+1)).toBe(true);
+  const missions = ()=>match.view(host.id,ids,10).politics!.missions;
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pixVinte','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  draw();
+  expect(missions().active.some(row=>row.kind==='pixVinte')).toBe(false);
+  economy.earn(host.id,2*PIX_MISSION_AMOUNT);
+  draw();
+  expect(missions().active).toContainEqual(expect.objectContaining({kind:'pixVinte',current:0}));
+  const pay = (amount:number,now:number)=>match.politics(host,{kind:'transfer',to:honest.id,amount},people,now);
+  expect(pay(PIX_MISSION_AMOUNT-1,1)).toBe(true);
+  expect(missions().active).toContainEqual(expect.objectContaining({kind:'pixVinte',current:0}));
+  expect(pay(PIX_MISSION_AMOUNT,2)).toBe(true);
+  expect(missions().completed).toContainEqual(expect.objectContaining({kind:'pixVinte',current:1}));
 });

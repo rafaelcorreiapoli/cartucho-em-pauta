@@ -2,12 +2,12 @@ import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
-import { isCredentialGood, marketProduct } from '../src/market-catalog';
+import { isCredentialGood, marketProduct, marketPurchaseSlot } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
-import { archiveDutyRoom, money, NEW_PORTRAIT_MS } from '../src/politics';
+import { archiveDutyRoom, money, NEW_PORTRAIT_MS, PUBLIC_MEETING_PEERS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
@@ -229,6 +229,13 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
+  canUseAgendaXray(id:string,wallet:number,now:number) {
+    const item = this.wearing(id,'xray') ?? this.inventory(id).find(({data})=>data.kind==='xray')?.data;
+    if (!item) return false;
+    const scan = this.scanning.get(id);
+    return (item.charges ?? 0)>0 || (scan?.item===item.id && scan.ends>now) || wallet>=xray.rechargePrice;
+  }
+
   hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false, now?:number) {
     if (kind==='freshForeignPortrait') return [...this.installations].some(([site,item])=>{
       const installedAt = this.portraitInstalledAt.get(site);
@@ -404,7 +411,14 @@ export class Gameplay {
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
 
   hasCashLot(id:string,amount:number) {
-    return this.inventory(id).some(({data})=>cashAmount(data)===amount);
+    if (this.inventory(id).some(({data})=>cashAmount(data)===amount)) return true;
+    const office = this.privateOffices.ownedBy(id);
+    return !!office && this.officeStash(office.id).some(({data})=>cashAmount(data)===amount);
+  }
+
+  canPartiallyDepositCash(itemId:number) {
+    const item = this.items.get(itemId);
+    return !!item && treasuryPartialAmount(cashAmount(item.data) ?? 0)>0;
   }
 
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
@@ -523,7 +537,7 @@ export class Gameplay {
     }
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
-    this.tickXray(world,exploring);
+    const endedXray = this.tickXray(world,exploring);
     this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
@@ -555,6 +569,7 @@ export class Gameplay {
       if (!exploring || player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (player.knockedOut) this.stopModulator(player.id);
     }
+    return endedXray;
   }
 
   private stopModulator(id:string) {
@@ -579,6 +594,18 @@ export class Gameplay {
   }
 
   private recordRoomVisits(world:GameplayWorld, exploring:boolean) {
+    // Count stable room attendance before replacing any previous samples.
+    const meetingAttendance = new Map<string,number>();
+    if (exploring && world.players.some(player=>world.hasMission?.(player.id,'reuniaoGabinete') ||
+        world.hasMission?.(player.id,'reuniaoPublica'))) {
+      for (const player of world.players) {
+        if (player.npc || player.knockedOut || player.carried || world.present?.(player.id)===false) continue;
+        const previous = this.roomSamples.get(player.id);
+        if (!previous?.active || roomAt(player)!==previous.room) continue;
+        const key = previous.room+':'+previous.at;
+        meetingAttendance.set(key,(meetingAttendance.get(key) ?? 0)+1);
+      }
+    }
     for (const player of world.players) {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
@@ -619,14 +646,15 @@ export class Gameplay {
       if (previous.active && previous.room!==room && previous.room==='Plenário' && world.hasMission?.(player.id,'presencaPlenario')) {
         publishGameplay(world,player,'room-left',{place:previous.room});
       }
-      if (previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento' &&
-          (world.hasMission?.(player.id,'reuniaoGabinete') || world.hasMission?.(player.id,'reuniaoPublica'))) {
+      if (meetingAttendance.size && !player.npc && previous.active && previous.room===room && room!=='Corredor' && room!=='Sala de Isolamento') {
+        const peers = (meetingAttendance.get(room+':'+previous.at) ?? 0)-1;
         const inOffice = privateOffices.some(office=>office.name===room);
-        const peers = world.players.filter(other=>other.id!==player.id && !other.npc && !other.knockedOut &&
-          world.present?.(other.id)!==false && roomAt(other)===room).length;
-        const type = inOffice && peers>=1 ? 'office-meeting-time' : !inOffice && peers>=3 ? 'public-meeting-time' : undefined;
+        const officeMeeting = inOffice && peers>=1 && world.hasMission?.(player.id,'reuniaoGabinete');
+        const publicMeeting = !inOffice && peers>=PUBLIC_MEETING_PEERS && world.hasMission?.(player.id,'reuniaoPublica');
         const duration = Math.min(100,world.now-previous.at);
-        if (type && duration>0) publishGameplay(world,player,type,{duration,place:room});
+        if ((officeMeeting || publicMeeting) && duration>0) {
+          publishGameplay(world,player,officeMeeting ? 'office-meeting-time' : 'public-meeting-time',{duration,place:room});
+        }
       }
       if (previous.room!==room && room!=='Corredor' && (room!=='Plenário' || previous.active)) {
         const office = [...this.privateOffices.offices.values()].find(entry=>entry.layout.name===room &&
@@ -789,8 +817,9 @@ export class Gameplay {
     if (player.knockedOut || player.carried || player.carrying || this.hasOfficeChannel(player.id)) return;
     if (raw.kind!=='capture') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
     const device = this.surveillance.channel(player.id,'spyCamera');
+    if (!device || !('channel' in raw) || raw.channel!==device.id) return 'O canal da câmera mudou.';
     const frame = this.spyFrame(player,world);
-    if (!device || !frame) return;
+    if (!frame) return;
     const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
       Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
     const result = this.album.capture(player.id,world.now,id=>({
@@ -1217,11 +1246,13 @@ export class Gameplay {
   }
 
   private tickXray(world:GameplayWorld, exploring:boolean) {
+    let ended = false;
     for (const [id,scan] of this.scanning) {
       const player = world.players.find(player=>player.id===id);
       if (!exploring || scan.ends<=world.now || !player || world.present?.(id)===false ||
           player.knockedOut || player.carried || this.wearing(id,'xray')?.id!==scan.item) {
         this.scanning.delete(id);
+        ended = true;
         continue;
       }
       const safeMission = world.hasMission?.(id,'fiscalizacaoParalela');
@@ -1235,6 +1266,7 @@ export class Gameplay {
         publishGameplay(world,player,'xray-target-revealed',{target:target.id,place,witnesses:[]});
       }
     }
+    return ended;
   }
 
   private xrayVision(player:Player,world:GameplayWorld):GameplayView['xrayVision'] {
@@ -1293,12 +1325,12 @@ export class Gameplay {
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price} = product;
-      const autoEquip = direct && isGear(kind) && !gearConflict(kind,this.equipped(id).map(({data})=>data));
+      const storage = marketPurchaseSlot(kind,this.inventory(id).map(({data})=>data),this.equipped(id).map(({data})=>data),direct);
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
-      } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
+      } else if (!storage) return 'Inventário cheio.';
       if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
       const basePrice = marketProduct(catalog,kind)!.price;
@@ -1307,7 +1339,7 @@ export class Gameplay {
       if (!paid) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       const inventoryItem = canStackItem(kind) ? this.addToInventory(this.items.get(data.id)!,id).id : data.id;
-      if (autoEquip) {
+      if (storage==='equipped') {
         this.changeGear(player,data.id,true,world);
         confirmation = 'Compra equipada.';
       }
@@ -1482,7 +1514,10 @@ export class Gameplay {
     if (action.kind==='supply') {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
-      if (!(terminal.supply==='document' && action.target?.startsWith('project-')) && this.inventory(id).some(item => item.data.kind===terminal.supply)) return 'Você já está carregando um desse balcão.';
+      const projectDocument = terminal.supply==='document' && action.target?.startsWith('project-');
+      if (!projectDocument && this.inventory(id).some(({data})=>data.kind===terminal.supply)) {
+        return 'Você já está carregando um desse balcão.';
+      }
       if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
@@ -1558,7 +1593,9 @@ export class Gameplay {
         const total = cashAmount(data);
         const partial = action.target==='partial';
         const amount = partial ? treasuryPartialAmount(total ?? 0) : total;
-        if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
+        if (place!=='treasury' || !terminal || !total) return 'Leve a maleta à Tesouraria.';
+        if (action.expectedCash!==undefined && action.expectedCash!==total) return 'O valor da maleta mudou.';
+        if (!amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
         if (partial) {
           data.cash = Math.round((total!-amount)*10)/10;
           this.clearRequests(data.id);
@@ -1662,15 +1699,15 @@ export class Gameplay {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
         if (this.transfers.length>16) this.transfers.shift();
       }
-      this.addToInventory(transferred,player.id);
-      if (cashAmount(transferred.data)) this.expose(player.id,transferred.data.id);
-      this.event(world,owner,'transferred',transferred.data,player.id);
+      const received = this.addToInventory(transferred,player.id);
       const amount = cashAmount(transferred.data);
-      if (!amount && !owner.npc && !player.npc && world.hasMission?.(player.id,'amizadeInstitucional')) {
-        this.event(world,player,'item-received',transferred.data,owner.id,{witnesses:[]});
+      if (amount) this.expose(player.id,transferred.data.id);
+      this.event(world,owner,'transferred',transferred.data,player.id,
+        amount && !owner.npc && !player.npc ? {amount} : undefined);
+      if (!amount && !owner.npc && !player.npc) {
+        this.event(world,player,'item-received',transferred.data,owner.id,{inventoryItem:received.id,witnesses:[]});
       }
       if (amount && !owner.npc && !player.npc) {
-        this.event(world,owner,'cash-handed-over',transferred.data,player.id,{amount,witnesses:[]});
         this.event(world,player,'cash-received',transferred.data,owner.id,{amount,witnesses:[]});
       }
       return 'Objeto recebido.';

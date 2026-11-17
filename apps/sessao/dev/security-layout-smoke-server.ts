@@ -2,6 +2,7 @@ import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
 import {securityRoom,type Player} from '../src/map';
+import {hideouts} from '../src/surveillance';
 
 class SecurityLayoutRoom extends SessionRoom {
   onCreate() {
@@ -14,6 +15,15 @@ class SecurityLayoutRoom extends SessionRoom {
         if (positioned.has(player)) continue;
         positioned.add(player);
         Object.assign(player,{x:securityRoom.terminal.x,y:securityRoom.terminal.y+15});
+        const surveillance = Reflect.get(Reflect.get(this,'gameplay'),'surveillance');
+        const sites = hideouts.filter(site=>site.id==='coffee' || site.id==='library');
+        for (const [index,site] of sites.entries()) {
+          const id = index+1;
+          const device = {id,kind:'spyCamera' as const,name:'Câmera '+site.room,room:site.room,site,owner:player.id,
+            hardware:{id,discoveredBy:new Set<string>()},active:false,removed:false,alerts:true,until:0,alertAt:0,installedAt:0};
+          Reflect.get(surveillance,'devices').set(id,device);
+          Reflect.get(surveillance,'occupied').set(site.id,device);
+        }
       }
     },100);
   }

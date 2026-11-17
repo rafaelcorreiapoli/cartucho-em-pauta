@@ -13,7 +13,7 @@ import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
-export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, requiredVotes:3} as const;
+export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
 export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
@@ -23,6 +23,12 @@ export const stabilityRules = {initial:48,target:45,maximum:100,deficitRate:2} a
 
 export function deficitStabilityLoss(deficit:number) {
   return -Math.round(-Math.max(0,deficit)*stabilityRules.deficitRate) || 0;
+}
+
+export function fundedProjectStability(impact:Impact,budget:number,balance:number) {
+  const funding = impact.budget<0 ? Math.min(1,budget/-impact.budget) : 1;
+  const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
+  return benefit-deficitStabilityLoss(-balance);
 }
 
 export const stations = {
@@ -129,19 +135,21 @@ export type BillVoter = Omit<SessionParticipant,'role'> & {vote?:BillVote};
 export type CassationView = {candidates:Omit<SessionParticipant,'role'>[]; eligible:boolean; voted:number; electorate:number; quorum:number; choice?:string|null};
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
 export type Action = 'amendment' | 'audit' | 'panel' | 'fraud';
-export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
+export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; abstentions?:number; absences?:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
 export type PlenaryView = {
   ballotCountdown?: number;
+  projectWarning?: number;
+  projectVoteExpired?: boolean;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; remaining:number; stability:number; budget:number; host?:string;
+  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
   complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
-  policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
+  policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; congressDestroyed?:boolean; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 
 export function voteIntentSummary(intents:readonly VoteIntent[] = []) {
