@@ -350,7 +350,7 @@ test('occupied installation sites expose only the actions the server accepts',()
   const place = 'technicalVip';
   const {point} = installationSites[place];
   const buy = (player:Player)=>{
-    Object.assign(player,terminals.credentials.point);
+    Object.assign(player,npcs.credentialsVendor.interaction);
     expect(buyCredentialGood(game,player,'vip',world)).toBe('Compra guardada no inventário.');
     const item = game.view(player,world).inventory.find(({kind})=>kind==='vip')!;
     Object.assign(player,point);

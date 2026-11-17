@@ -907,7 +907,7 @@ test('the VIP reservation mission uses a chair the player can actually reserve',
   const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
   const world = (now:number)=>match.gameplayWorld([player],now,()=>false);
   let now = 1;
-  for (const place of ['coffeeVip','lobbyVip','libraryVip','pressVip'] as const) {
+  for (const place of ['technicalVip','lobbyVip','libraryVip','pressVip'] as const) {
     Object.assign(player,npcs.credentialsVendor.interaction);
     game.act(player,{kind:'open-shop',target:'credentialsVendor'},world(now));
     const token = game.view(player,world(now)).dialogue?.token;
