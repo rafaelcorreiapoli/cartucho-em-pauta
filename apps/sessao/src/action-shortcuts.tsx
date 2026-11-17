@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { node } from './gameplay-ui';
 import { appForKey, type LaunchHudApp } from './hud-apps';
-import { hudConsumesKeys } from './game-keys';
+import { hudConsumesKeys, isEditingText } from './game-keys';
 
 const pageSize = 9;
 
@@ -101,15 +101,21 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       return;
     }
     if (active) {
+      if (active.id==='dossier-dialog' && !event.shiftKey && event.key.toLowerCase()==='j' && shortcuts.j()) {
+        event.preventDefault();
+        return;
+      }
       if (active===palette && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
         event.preventDefault();
         page += event.key==='ArrowLeft' ? -1 : 1;
         render();
         return;
       }
-      if (event.target instanceof Element && event.target.closest('input, select, textarea, [contenteditable="true"]')) return;
-      if (event.shiftKey || !/^[0-9]$/.test(event.key)) return;
-      const control = [...active.querySelectorAll<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`)].find(available);
+      if (isEditingText(event.target)) return;
+      const key = event.shiftKey && /^Digit[1-9]$/.test(event.code) ? 'Shift+'+event.code.at(-1) :
+        !event.shiftKey && /^[0-9]$/.test(event.key) ? event.key : undefined;
+      if (!key) return;
+      const control = [...active.querySelectorAll<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`)].find(available);
       if (!control) return;
       event.preventDefault();
       control.click();

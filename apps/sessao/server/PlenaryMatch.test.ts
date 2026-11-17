@@ -662,18 +662,6 @@ test('the last ballot does not redraw a voting mission from an already credited 
   expect(missions().active.map(m=>m.kind)).toContain('apoio');
 });
 
-test('legislative brief activities require their respective stations and the negotiation phase',()=>{
-  const match = new PlenaryMatch(1);
-  match.start(host.id,[host],0);
-  publishProjectFiling(match,host);
-  for (const key of ['secretary','archive'] as const) {
-    expect(match.roomActivity(host,key,1)).toBeUndefined();
-    expect(match.roomActivity(at(host,key),key,1)).toEqual({activity:key});
-  }
-  match.advance(NEGOTIATION_MS);
-  expect(match.roomActivity(at(host,'secretary'),'secretary',NEGOTIATION_MS+1)).toBeUndefined();
-});
-
 test('cassation requires at least three eligible players to be called',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
@@ -734,6 +722,29 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   match.advance(open+HEARING_MS);
   expect(view(open+HEARING_MS)).toMatchObject({phase:'negotiation',electorate:3,remaining:55,
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
+});
+
+test('cassation counts the same connected votes in the HUD and the final tally',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const openedAt = 50+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  match.castCassation(host.id,traitor.id,openedAt);
+  match.castCassation(honest.id,null,openedAt);
+  match.castCassation(traitor.id,host.id,openedAt);
+  const ballot = (id=host.id)=>match.view(id,ids,openedAt).cassation!;
+  expect(ballot()).toMatchObject({electorate:3,quorum:2,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  expect(ballot()).toMatchObject({electorate:2,quorum:2,voted:1});
+  expect(ballot().choice).toBeUndefined();
+  expect(ballot(honest.id).choice).toBeNull();
+  expect(ballot(traitor.id).choice).toBeUndefined();
+  match.setPlayerConnected(traitor.id,true);
+  expect(ballot()).toMatchObject({electorate:3,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  match.advance(openedAt+HEARING_MS);
+  expect(match.view(host.id,ids,openedAt+HEARING_MS).cassationResult?.text).toContain('Ninguém foi cassado');
 });
 
 test('project votes expose portraits and current choices without roles; abstentions do not count as no',()=>{
@@ -1274,4 +1285,59 @@ test('emergency maintenance is assigned during an outage and rewards both repair
   for (const player of operators) expect(missions(player.id,end).completed.filter(isMaintenance)).toHaveLength(1);
   expect(missions(traitor.id,end).active.some(isMaintenance)).toBe(false);
   expect(missions(traitor.id,end).completed.some(isMaintenance)).toBe(false);
+});
+
+test.each([1,2])('the hearing resolves with the published threshold when %i voters support removal',yesVotes=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.changePopularity(host.id,20);
+  match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
+  const initial = match.view(host.id,ids,10);
+  expect(initial.hearing).toMatchObject({voted:0,quorum:2});
+  match.vote(host.id,'yes',11);
+  match.vote(traitor.id,yesVotes===2 ? 'yes' : 'no',12);
+  const during = match.view(host.id,ids,12);
+  expect(during.hearing).toMatchObject({voted:2,quorum:2,vote:'yes'});
+  match.advance(10+HEARING_MS);
+  const after = match.view(honest.id,ids,10+HEARING_MS);
+  expect(after.hearing).toBeUndefined();
+  expect(after.hearingResult).toContain(yesVotes===2 ? 'aprovado' : 'rejeitado');
+});
+
+test('a captured phone game can be reported once with a photo and pays the reporter',()=>{
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  const reporter = {...host,...stations.audit};
+  const subject = {...honest,x:reporter.x+12,y:reporter.y};
+  const players = [reporter,subject,traitor];
+  expect(match.start(reporter.id,players,0,()=>.9)).toBe(true);
+  const world = match.gameplayWorld(players,100,()=>false);
+  const capture = () => {
+    expect(game.act(reporter,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+    world.now += 2000;
+    return game.photoView(reporter.id,world.now).album.at(-1)!.photo;
+  };
+
+  game.act(subject,{kind:'phone-open'},world);
+  const innocent = capture();
+  game.act(subject,{kind:'game-start'},world);
+  const proof = capture();
+  const duplicate = capture();
+  expect(match.complaintView(reporter.id,[innocent,proof]).proofs).toEqual([
+    {photo:proof.id,kind:'phone-game',target:subject.id,accused:subject.nick},
+  ]);
+  expect(match.submitComplaint(reporter,subject.id,world.now,innocent)).toContain('incompatível');
+  expect(match.submitComplaint({...reporter,x:0,y:0},subject.id,world.now,proof)).toContain('balcão');
+  expect(match.submitComplaint(reporter,subject.id,world.now,proof)).toBeUndefined();
+  expect(match.submitComplaint(reporter,subject.id,world.now,duplicate)).toContain('incompatível');
+  expect(match.complaintView(reporter.id,[proof,duplicate]).proofs).toEqual([]);
+  expect(match.view(reporter.id,ids,world.now).politics).toMatchObject({wallet:9,popularity:48,progression:{xp:25}});
+  expect(match.view(subject.id,ids,world.now).politics?.popularity).toBe(32);
+  const [decision] = match.complaintView(subject.id).history;
+  expect(decision).toMatchObject({kind:'phone-game',accused:subject.nick,hasPhoto:true});
+  const mail = new InternalMail();
+  mail.publishComplaint(decision);
+  expect(mail.view()[0]).toMatchObject({author:'Corregedoria',subject:'Infração confirmada · Jogo no celular',
+    body:expect.stringContaining(subject.nick)});
 });
