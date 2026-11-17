@@ -143,6 +143,14 @@ export class PlenaryMatch {
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
 
+  private hasFutureVoteNegotiation(now:number) {
+    return this.remainingAgendaBallots(now)>Number(this.phase==='ballot');
+  }
+
+  negotiableProject(now:number) {
+    if (this.phase==='negotiation' && this.hasFutureVoteNegotiation(now)) return this.projectIndex;
+  }
+
   get projectRound() { return this.round; }
 
   recordNpcVote(id:string,vote:Vote) {
@@ -261,7 +269,12 @@ export class PlenaryMatch {
     this.receivedEvents.clear();
     this.filedDocuments.clear();
     let campaignReady = false;
-    this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
+    this.economy.reset(contacts,random,(id,kind)=>{
+      if (!campaignReady) return true;
+      if (kind==='emenda') return !this.amended;
+      if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
+      return this.election.canCampaignAction(id,kind);
+    });
     this.economy.setAgendaPowerAvailability(()=>this.powerOut);
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
@@ -869,7 +882,7 @@ export class PlenaryMatch {
       this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
       this.ends = now+BALLOT_MS;
-      if (this.ends===this.sessionEndsAt) this.refreshAgendaEligibility(now);
+      if (!this.hasFutureVoteNegotiation(now)) this.refreshAgendaEligibility(now);
       return;
     }
     if (now<this.ends) return;

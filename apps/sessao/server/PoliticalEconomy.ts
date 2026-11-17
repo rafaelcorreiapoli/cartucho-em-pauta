@@ -6,7 +6,7 @@ import type { GameplayEvent, ObjectKind } from '../src/gameplay';
 import { CABINET_GRANT, canTransferAmount, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Contact, type DirectoryContact,
   type Agenda, type Evidence, type EvidenceKind, type Offer, type PoliticsView, type Split } from '../src/politics';
 import type { BillVote, Vote } from '../src/plenary';
-import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
+import { PersonalAgenda, type AgendaAction, type AgendaMetrics } from './PersonalAgenda';
 
 type TransferChannel = 'transfer'|'pix';
 type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number;channel:TransferChannel}>;
@@ -35,7 +35,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canAgendaAction?:(id:string,kind:'propaganda'|'discurso'|'emenda')=>boolean) {
+    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean) {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -55,7 +55,7 @@ export class PoliticalEconomy {
         isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
         npcHasCash:(minimum=0.1)=>[...this.npcIds].some(id=>this.wallet(id)>=minimum),
         canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
-        canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
+        canAgendaAction:canAgendaAction && ((kind:AgendaAction)=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
