@@ -1,3 +1,4 @@
+import {mountAssetLoading} from './ui/asset-loading';
 import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
@@ -57,10 +58,6 @@ const audio = new GameAudio();
 installHudHelp(document.querySelector('main')!);
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
-const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
-const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
-const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status')!;
-const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
@@ -85,6 +82,8 @@ const entrance = mountRoomEntrance(document.querySelector<HTMLElement>('#room-en
     void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick}));
   });
 let connecting = false;
+const renderLoading = mountAssetLoading(document.getElementById('asset-loading-mount')!,()=>void room?.leave());
+renderLoading();
 
 const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#room-settings')!,audio.preferences,{
   leave:()=>void room?.leave(),
@@ -137,7 +136,7 @@ function showLobby(message: string) {
   document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
   document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
-  loadingScreen.hidden = true;
+  renderLoading();
   landing.hidden = false;
   entrance.update({message});
 }
@@ -181,11 +180,9 @@ async function connect(join: () => Promise<Room>) {
     inviteUrl.searchParams.set('sala',joined.roomId);
     const destroyInvite = mountLobbyInvite(document.getElementById('lobby-invite-mount')!,inviteUrl.href,settings.open);
     hudListeners.signal.addEventListener('abort',destroyInvite,{once:true});
-    loadingProgress.value = 0;
-    loadingStatus.textContent = 'Carregando o Congresso…';
-    loadingBack.hidden = true;
-    loadingScreen.hidden = false;
+    let loadingProgress = 0;
     let assetError = false;
+    renderLoading({progress:loadingProgress});
 
     const audioReady = audio.enter();
     let assetsReady = false;
@@ -197,15 +194,14 @@ async function connect(join: () => Promise<Room>) {
         if (room!==joined) return;
         if (progress<0) {
           assetError = true;
-          loadingStatus.textContent = 'Falha ao carregar o cenário. Volte e tente novamente.';
-          loadingBack.hidden = false;
+          renderLoading({progress:loadingProgress,failed:true});
         } else if (!assetError) {
-          loadingProgress.value = progress*.95;
+          loadingProgress = progress*.95;
+          renderLoading({progress:loadingProgress});
           if (progress===1) void Promise.resolve(audioReady).then(()=>{
-            if (room!==joined) return;
+            if (room!==joined || assetError) return;
             assetsReady = true;
-            loadingProgress.value = 1;
-            loadingScreen.hidden = true;
+            renderLoading();
             if (previousView) panel.render(previousView);
           });
         }
@@ -441,7 +437,5 @@ async function connect(join: () => Promise<Room>) {
     entrance.update({busy:false});
   }
 }
-
-loadingBack.onclick = () => void room?.leave();
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());
