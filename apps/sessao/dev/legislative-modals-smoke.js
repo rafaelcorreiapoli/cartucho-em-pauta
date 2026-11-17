@@ -51,6 +51,9 @@ async page => {
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Projetos QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  const twoNpcs = page.locator('#parliamentarian-count [data-count="2"]');
+  await twoNpcs.click();
+  await twoNpcs.and(page.locator('[aria-pressed="true"]')).waitFor();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.getByRole('button',{name:'Secretaria · Falar com Dona Sílvia'}).click();
   await page.getByRole('button',{name:'Solicitar documento'}).click();
@@ -93,7 +96,26 @@ async page => {
   await page.keyboard.press('o');
   await page.getByRole('button',{name:/Estatuto da Fila Preferencial/}).waitFor();
   await page.getByRole('button',{name:new RegExp(title)}).waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('#gameplay-dialog').waitFor({state:'hidden'});
   await page.setViewportSize({width:1280,height:720});
+  const conversation = page.getByRole('button',{name:/^Conversar · /});
+  await conversation.nth(1).waitFor();
+  const conversations = await conversation.all();
+  const npcDeal = page.locator('#parliamentarian-dialog');
+  const signatureMission = 'Consiga duas assinaturas no mesmo documento';
+  await page.getByRole('list',{name:'Objetivos ativos'}).getByText(signatureMission,{exact:true}).waitFor();
+  for (const npc of conversations) {
+    await npc.click();
+    const sign = npcDeal.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
+    await sign.waitFor();
+    if (await npcDeal.getByRole('button',{name:new RegExp(title)}).count()) throw Error('NPC ofereceu assinatura de projeto');
+    await page.keyboard.press(await sign.getAttribute('aria-keyshortcuts'));
+    await sign.waitFor({state:'hidden'});
+    await page.keyboard.press('Escape');
+    await npcDeal.locator('#parliamentarian-title').waitFor({state:'detached'});
+  }
+  await page.locator('#agenda-dock [data-done="true"]').getByText(signatureMission,{exact:true}).waitFor();
   await page.reload();
   const guest = await page.context().newPage();
   try {

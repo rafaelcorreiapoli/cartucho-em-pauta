@@ -3,6 +3,7 @@ import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
 import {publishProjectFiling} from '../server/project-test-fixture';
 import {stations} from '../src/plenary';
+import type {Parliamentarians} from '../server/Parliamentarians';
 
 class LegislativeModalsRoom extends SessionRoom {
   onCreate() {
@@ -18,7 +19,20 @@ class LegislativeModalsRoom extends SessionRoom {
         if (!positioned.has(player.id)) {
           positioned.add(player.id);
           Object.assign(player,hearingTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
-          if (hearingTest) Reflect.get(match,'economy').changePopularity(player.id,20);
+          const economy = Reflect.get(match,'economy');
+          if (hearingTest) economy.changePopularity(player.id,20);
+          if (player.nick==='Projetos QA') {
+            const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+            Reflect.set(agenda,'missions',[]);
+            Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
+            match.refreshAgendaEligibility();
+          }
+        }
+        if (player.nick==='Projetos QA') {
+          const parliamentarians:Parliamentarians = Reflect.get(this,'parliamentarians');
+          parliamentarians.players.forEach((npc,index)=>{
+            Object.assign(npc,{x:stations.secretary.x+8+index*6,y:stations.secretary.y,moving:false});
+          });
         }
         const now = this.clock.currentTime;
         if (filed || !match.view(player.id,[player.id],now).politics?.grantUsed) continue;
