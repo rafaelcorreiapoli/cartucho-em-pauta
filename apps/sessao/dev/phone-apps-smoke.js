@@ -101,12 +101,22 @@ async page => {
   await dialog.getByRole('button',{name:'Tirar foto'}).locator('kbd',{hasText:/^1$/}).waitFor();
   await dialog.getByRole('button',{name:'Selfie'}).locator('kbd',{hasText:/^2$/}).waitFor();
   await page.waitForFunction(()=>document.querySelector('.camera-preview').getContext('2d').getImageData(0,0,1,1).data[3]>0);
+  await dialog.locator('.phone-camera-controls button').evaluateAll(buttons=>{
+    window.syntheticCameraClicks = 0;
+    for (const button of buttons) {
+      button.removeAttribute('aria-keyshortcuts');
+      button.addEventListener('click',event=>{
+        if (!event.isTrusted) window.syntheticCameraClicks++;
+      });
+    }
+  });
   await page.keyboard.press('2');
   await dialog.locator('.camera-selfie-portrait').waitFor();
   await page.keyboard.press('1');
   await dialog.getByRole('button',{name:/Abrir álbum · 1\//}).waitFor();
   await page.keyboard.press('3');
   await preview.waitFor({state:'detached'});
+  if (await page.evaluate(()=>window.syntheticCameraClicks)!==0) throw Error('A Câmera simulou clique');
   const photo = dialog.getByRole('button',{name:/Abrir fotografia/});
   await photo.click();
   await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();

@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {usePhoneKeys} from './use-phone-keys';
 import {PhoneContactFace} from './phone-call';
 import type {Ref} from 'react';
 import type {GameplayAction} from '../gameplay';
@@ -10,7 +11,10 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
 }) {
   const [selfie,setSelfie] = useState(false);
   const disabled = !available || count>=PHOTO_LIMIT;
-  return <section className="phone-camera">
+  const takePhoto = ()=>{ if (!disabled) send({kind:selfie ? 'selfie' : 'photo'}); };
+  const toggleSelfie = ()=>{ if (!disabled) setSelfie(current=>!current); };
+  const panel = usePhoneKeys(key=>key==='1' ? takePhoto : key==='2' ? toggleSelfie : key==='3' ? openAlbum : undefined);
+  return <section ref={panel} className="phone-camera">
     <div className="phone-camera-viewfinder">
       {selfie && <div className="camera-selfie-portrait"><PhoneContactFace person={{id:"self",name:"Você",character}}/></div>}
       <canvas ref={preview} className="camera-preview" role="img" aria-label="Enquadramento da câmera"/>
@@ -21,11 +25,11 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
         <small>{count}/{PHOTO_LIMIT}</small><kbd className="action-key" aria-hidden="true">3</kbd>
       </button>
       <button type="button" className="camera-shutter" aria-label="Tirar foto" disabled={disabled}
-        aria-keyshortcuts="1" onClick={()=>send({kind:selfie ? 'selfie' : 'photo'})}>
+        aria-keyshortcuts="1" onClick={takePhoto}>
         <span aria-hidden="true"/><kbd className="action-key" aria-hidden="true">1</kbd>
       </button>
       <button type="button" className="camera-selfie" aria-label="Selfie" disabled={disabled}
-        aria-keyshortcuts="2" aria-pressed={selfie} onClick={()=>setSelfie(!selfie)}>
+        aria-keyshortcuts="2" aria-pressed={selfie} onClick={toggleSelfie}>
         <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie</small><kbd className="action-key" aria-hidden="true">2</kbd>
       </button>
     </div>

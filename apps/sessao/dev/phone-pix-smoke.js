@@ -84,6 +84,19 @@ async page => {
     await receiver.keyboard.press('o');
     await receiver.locator(dialog).getByRole('button',{name:'Café',exact:true}).waitFor();
     await receiver.keyboard.press('Escape');
+    await page.keyboard.press('c');
+    await page.keyboard.press('1');
+    const dial = page.locator(dialog).getByRole('button',{name:'Ligar para Bia',exact:true});
+    await dial.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+    await page.keyboard.press('1');
+    const decline = receiver.locator(dialog).getByRole('button',{name:'Recusar',exact:true});
+    await decline.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+    await receiver.keyboard.press('2');
+    await dial.waitFor();
+    await page.keyboard.press('Escape');
+    await receiver.keyboard.press('Escape');
+    await page.locator(dialog).waitFor({state:'hidden'});
+    await receiver.locator(dialog).waitFor({state:'hidden'});
     for (const client of [page,receiver]) {
       await client.keyboard.press('c');
       await client.locator(dialog).getByRole('button',{name:'Pix',exact:true}).click();
