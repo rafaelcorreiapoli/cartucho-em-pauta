@@ -388,6 +388,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     let visible:Player[] = [];
     const spyFrames = new Map<string,SpyCameraFrame>();
     const unconfirmedSpyFrames:SpyCameraFrame[] = [];
+    const photoViews = new Map<string,PhotoAccessView>();
     const securityFrames = new Map<string,{camera:string;scene:PhotoScene}>();
     const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
@@ -409,7 +410,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       const notices:string[] = [];
       feedback.set(peer.sessionId,notices);
       peer.onMessage('gameplay-feedback',(message:string)=>notices.push(message));
-      for (const message of ['players','photo-state','item-obtained']) peer.onMessage(message,()=>{});
+      peer.onMessage('photo-state',(view:PhotoAccessView)=>photoViews.set(peer.sessionId,view));
+      for (const message of ['players','item-obtained']) peer.onMessage(message,()=>{});
     }
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
@@ -559,6 +561,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(unconfirmedSpyFrames).toEqual([]);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
+    expect(photoViews.get(carrier.sessionId)?.album).toEqual([]);
+    expect(photoViews.get(passenger.sessionId)?.album).toEqual([]);
+    carrier.send('spy',{kind:'capture',channel:channel+1,token:3540});
+    await wait(()=>feedback.get(carrier.sessionId)?.includes('O canal da câmera mudou.')===true);
+    expect(photoViews.get(carrier.sessionId)?.album).toEqual([]);
+    passenger.send('spy',{kind:'capture',channel,token:3540});
+    await wait(()=>feedback.get(passenger.sessionId)?.includes('O canal da câmera mudou.')===true);
+    carrier.send('spy',{kind:'capture',channel,token:3550});
+    await wait(()=>photoViews.get(carrier.sessionId)?.album.length===1);
+    expect(photoViews.get(carrier.sessionId)?.album[0].photo.source).toEqual({kind:'surveillance',channel:gameplay()?.surveillance?.channels[0].name});
+    expect(photoViews.get(passenger.sessionId)?.album).toEqual([]);
     carrier.send('spy',{kind:'close',token:3580});
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);
