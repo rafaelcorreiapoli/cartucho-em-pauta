@@ -52,7 +52,7 @@ export function ForwardedNotice({notice}:{notice:InternalNotice}) {
   return notice.forwardedFrom===undefined ? null : <small>Encaminhado do comunicado #{notice.forwardedFrom}</small>;
 }
 
-export function ComplaintDesk({view,photos,submit}:{view:ComplaintView;photos:readonly {id:number;label:string}[];submit?:(id:number,photo?:number)=>void}) {
+export function ComplaintDesk({view,submit}:{view:ComplaintView;submit?:(id:number,photo?:number)=>void}) {
   if (!view.history.length && !submit) return null;
   return <section className="grid gap-2">
     <h3>Corregedoria</h3>
@@ -63,9 +63,9 @@ export function ComplaintDesk({view,photos,submit}:{view:ComplaintView;photos:re
       submit(entry.id,photo || undefined);
     }}>
       <h4>{infractionLabels[entry.kind]} · {entry.accused}</h4>
-      {!!photos.length && <label>Foto complementar <select name="photo">
+      {!!entry.photoIds?.length && <label>Foto complementar <select name="photo">
         <option value="">Sem foto</option>
-        {photos.map(photo=><option value={photo.id} key={photo.id}>{photo.label}</option>)}
+        {entry.photoIds.map(id=><option value={id} key={id}>Fotografia #{id}</option>)}
       </select></label>}
       <button type="submit" className="hud-button">Denunciar</button>
     </form>)}
@@ -124,7 +124,7 @@ export function mountInternalMail(publish:(message:{subject:string;body:string;a
           error = null;
           render();
         }}>Novo comunicado</button>
-        <ComplaintDesk view={complaints} photos={choices.filter(choice=>choice.kind==='photo')} submit={exploring && complaints.atDesk ? submit : undefined}/>
+        <ComplaintDesk view={complaints} submit={exploring && complaints.atDesk ? submit : undefined}/>
         {reports.map(report=><article className="mail-entry" key={'report-'+report.notice}>
           <h3>Perícia concluída</h3><Attachment draw={draw} attachment={{kind:'report',report}}/>
         </article>)}

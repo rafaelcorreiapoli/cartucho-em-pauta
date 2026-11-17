@@ -534,8 +534,10 @@ export class SessionRoom extends Room {
         }
         const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
         if (this.match.running) {
-          view.complaints = this.match.complaintView(id);
-          if (this.match.canFileComplaint(state.player,now)) view.complaints.atDesk = true;
+          const atDesk = this.match.canFileComplaint(state.player,now);
+          const photos = atDesk ? this.gameplay.photoView(id,now).album.map(entry=>entry.photo) : undefined;
+          view.complaints = this.match.complaintView(id,photos);
+          if (atDesk) view.complaints.atDesk = true;
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
         if (this.match.phase==='negotiation') view.fireInteraction = this.match.fireInteraction(
