@@ -135,7 +135,10 @@ export class PlenaryMatch {
   refreshAgendaEligibility(now=this.agendaNow) {
     this.agendaNow = Math.max(this.agendaNow,now);
     this.agendaBallotsLeft = this.remainingAgendaBallots(this.agendaNow);
-    this.economy.updateAgendaEligibility(this.electorate,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id,this.agendaNow));
+    const agendaPlayers = this.expelled.size
+      ? new Set([...this.electorate].filter(id=>!this.expelled.has(id)))
+      : this.electorate;
+    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id,this.agendaNow));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }

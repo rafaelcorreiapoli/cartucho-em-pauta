@@ -17,7 +17,7 @@ import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {BALLOT_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
+import {BALLOT_MS,CASSATION_NOTICE_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {HEARING_MS,SUSPENSION_MS,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
@@ -1813,4 +1813,41 @@ test('the Agenda offers extraordinary collection only when a robbery can fund a 
   const completed = view().missions.completed.find(mission=>mission.kind==='recolhimentoExtraordinario')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view().progression.xp-before).toBe(missionReward('recolhimentoExtraordinario').xp);
+});
+
+test('cassation removes an impossible two-sender Pix mission but leaves a payable one in the HUD',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,x:140,y:146,character,direction:0,moving:false,
+  }));
+  const [host,candidate,remaining] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['doisPix','pixVinte','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const render = (now:number)=>renderToStaticMarkup(<ul>
+    {view(now).politics!.missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
+  </ul>);
+  expect(render(1)).toContain('Receba Pix de dois jogadores distintos');
+
+  match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
+  const open = 50+CASSATION_NOTICE_MS;
+  match.advance(open);
+  match.castCassation(host.id,candidate.id,open);
+  match.castCassation(remaining.id,candidate.id,open);
+  const close = open+HEARING_MS;
+  match.advance(close);
+  expect(view(close).cassationResult?.text).toContain(candidate.nick+' perdeu o mandato');
+  expect(render(close)).not.toContain('Receba Pix de dois jogadores distintos');
+  expect(render(close)).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
+  const pay = (to:string,now:number)=>match.politics(host,{kind:'transfer',to,amount:PIX_MISSION_AMOUNT},players,now);
+  expect(pay(candidate.id,close+1)).toBe(false);
+  const before = view(close+1).politics!.progression.xp;
+  expect(pay(remaining.id,close+2)).toBe(true);
+  const politics = view(close+2).politics!;
+  expect(politics.missions.completed.some(mission=>mission.kind==='pixVinte')).toBe(true);
+  expect(politics.progression.xp-before).toBe(missionReward('pixVinte').xp);
 });
