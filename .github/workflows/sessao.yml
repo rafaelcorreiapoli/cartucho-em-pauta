@@ -43,6 +43,8 @@ jobs:
           - reward
           - phone-pix
           - legislative-modals
+          - context-overflow
+          - context-progress
     env:
       SMOKE_FLOW: ${{ matrix.flow }}
     defaults:
