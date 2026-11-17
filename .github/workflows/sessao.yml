@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flow: [security-layout, market, vote-history, megaphone-speech]
+        flow: [security-layout, market, vote-history, megaphone-speech, legislative-modals]
     env:
       SMOKE_FLOW: ${{ matrix.flow }}
     defaults:
