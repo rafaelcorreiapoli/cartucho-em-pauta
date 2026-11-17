@@ -38,7 +38,7 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import {mountRoomEntrance} from './ui/room-entrance';
 import {mountLobbyInvite} from './ui/lobby-invite';
-import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
+import { bills, MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
@@ -316,8 +316,7 @@ async function connect(join: () => Promise<Room>) {
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
       const cassationAnnounced = !!view.cassationIn && !previousView?.cassationIn;
-      const projectAnnounced = view.project!==undefined && !view.cassationIn && view.remaining<=projectRules.warningSeconds &&
-        ((previousView?.remaining ?? 0)>projectRules.warningSeconds || !!previousView?.cassation);
+      const projectAnnounced = !!view.projectWarning && !previousView?.projectWarning;
       if (view.phase==='negotiation' && view.project!==undefined && view.proposer && view.project!==previousView?.project) {
         hud.notify('Projeto em pauta',`${view.proposer} protocolou ${bills[view.project].name}. Votação em ${Math.ceil(view.remaining/60)} min.`);
       }

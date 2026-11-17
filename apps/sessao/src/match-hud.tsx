@@ -18,7 +18,7 @@ import { equippedWeapon } from './equipment';
 import { hudConsumesKeys } from './game-keys';
 import type { Motion, Player } from './map';
 import { money, type PoliticsAction } from './politics';
-import { projectRules, stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
+import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
 
@@ -231,8 +231,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
           notify(view.election?.result?.cycle!==previous.election?.result?.cycle ? 'Renovação de Mandato' : 'Campanha',notice.text);
         }
-        if (view.phase==='negotiation' && view.project!==undefined && !view.cassationIn && view.remaining<=projectRules.warningSeconds && previous.remaining>projectRules.warningSeconds) {
-          notify('Votação de projeto',`Plenário em ${view.remaining} s.`);
+        if (view.projectWarning && !previous.projectWarning) {
+          notify('Votação de projeto',`Plenário em ${view.projectWarning} s.`);
         }
         if ((view.phase!==previous.phase || view.round!==previous.round) && (view.phase==='ballot' || view.phase==='hearing')) {
           notify(view.phase==='ballot' ? 'Projeto · votação aberta' : view.cassation ? 'Cassação · votação aberta' : 'Afastamento · votação aberta',

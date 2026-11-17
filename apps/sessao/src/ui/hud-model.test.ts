@@ -3,9 +3,10 @@ import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
-import {missionReward} from '../politics';
+import {HEARING_MS,missionReward} from '../politics';
+import {ELECTION_RULES} from '../elections';
 import type {Player} from '../map';
-import {NEGOTIATION_MS} from '../plenary';
+import {BALLOT_MS,CASSATION_NOTICE_MS,NEGOTIATION_MS,stations} from '../plenary';
 import {terminals} from '../gameplay';
 import {stationRecharge} from '../station-recharge';
 import {installationSites} from '../installations';
@@ -362,4 +363,32 @@ test('the HUD starts a replacement Pix mission at zero after a transfer complete
   pay(bia,3);
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'doisPix',current:2}));
   expect(hud.profile.get()?.xp).toBe(missionReward('recebido').xp+missionReward('doisPix').xp);
+});
+
+test('the HUD suppresses a project warning when cassation delays its vote past the deadline',()=>{
+  const others = ['bia','caio'].map(id=>({...player,id,nick:id}));
+  const players = [player,...others];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+  const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS;
+  publishProjectFiling(match,player,0,voteAt-NEGOTIATION_MS);
+
+  const hearingEnd = voteAt+1;
+  const hearingAt = hearingEnd-HEARING_MS;
+  const noticeAt = hearingAt-CASSATION_NOTICE_MS;
+  match.politics({...player,...stations.panel},{kind:'call-cassation'},players,noticeAt);
+  const hud = createHudModel();
+  hud.render(match.view(player.id,ids,noticeAt));
+  expect(hud.countdown.get()).toEqual({kind:'cassation',seconds:30});
+  match.advance(hearingAt);
+  expect(match.phase).toBe('hearing');
+  match.advance(hearingEnd);
+  expect(match.phase).toBe('negotiation');
+  const view = match.view(player.id,ids,hearingEnd);
+  expect(view.project).toBe(0);
+  expect(view.projectWarning).toBeUndefined();
+  expect(view.ballotCountdown).toBeUndefined();
+  hud.render(view);
+  expect(hud.countdown.get()).toBeUndefined();
 });

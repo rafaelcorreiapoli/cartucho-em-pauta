@@ -462,11 +462,17 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
   }
 
-  ballotCountdown(now:number) {
+  private projectWarning(now:number) {
     const at = this.proposal?.voteAt;
-    if (this.phase!=='negotiation' || at===undefined || at-now>5000 ||
-      now+BALLOT_MS>this.sessionEndsAt || this.cassationAt!==undefined) return;
-    return Math.max(1,Math.ceil((at-now)/1000));
+    if (this.phase!=='negotiation' || at===undefined || this.cassationAt!==undefined ||
+        Math.max(at,now)+BALLOT_MS>this.sessionEndsAt) return;
+    const seconds = Math.max(1,Math.ceil((at-now)/1000));
+    if (seconds<=projectRules.warningSeconds) return seconds;
+  }
+
+  ballotCountdown(now:number) {
+    const warning = this.projectWarning(now);
+    if (warning!==undefined && warning<=projectRules.countdownSeconds) return warning;
   }
 
   declareVote(id:string,vote:Vote|null,now:number) {
@@ -968,6 +974,7 @@ export class PlenaryMatch {
         choice:this.cassationChoice(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
+      projectWarning:this.projectWarning(now),
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
       remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? this.proposal?.voteAt ?? this.sessionEndsAt : this.ends)-now)/1000)) : 0,
