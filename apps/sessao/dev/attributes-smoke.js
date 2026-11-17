@@ -16,10 +16,10 @@ async page => {
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   const levelUp = page.locator('#level-up-dialog[open]');
-  await levelUp.getByRole('button',{name:'Depois'}).click({timeout:1500}).catch(async error=>{
-    if (await levelUp.count()) throw error;
-  });
-  await page.keyboard.press('p');
+  const allocate = levelUp.getByRole('button',{name:'Distribuir ponto'});
+  await allocate.waitFor();
+  await allocate.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('1');
   const attributes = page.locator('#attributes-dialog[open]');
   await attributes.getByText('2 pontos para distribuir').waitFor();
   const stamina = attributes.getByRole('button',{name:'Investir em Fôlego'});

@@ -29,6 +29,17 @@ function AvailablePoints({points, actionForKey}:{
   return <p ref={label} id="attributes-available" role="status">{pointLabel(points)} para distribuir</p>;
 }
 
+function CelebrationChoices({choose}:{choose:(choice:'allocate'|'later')=>void}) {
+  const form = useDialogKeys<HTMLFormElement>(key=>{
+    if (key==='1') return ()=>choose('allocate');
+    if (key==='2') return ()=>choose('later');
+  });
+  return <form ref={form} method="dialog" className="progression-buttons">
+    <button className="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
+    <button className="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autoFocus>Depois</button>
+  </form>;
+}
+
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void,reward:(text:string)=>void) {
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
@@ -130,10 +141,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         <div className="level-up-number"><span>NÍVEL</span><strong id="level-up-level">{to-from>1 ? `${from} → ${to}` : to}</strong></div>
         <p id="level-up-points">+{pointLabel(to-from)} de atributo</p>
       </header>
-      <form method="dialog" className="progression-buttons">
-        <button className="hud-button" value="allocate" aria-keyshortcuts="1">Distribuir ponto</button>
-        <button className="hud-button hud-button--secondary" value="later" aria-keyshortcuts="2" autoFocus>Depois</button>
-      </form>
+      <CelebrationChoices choose={choice=>celebration.close(choice)}/>
     </>));
   }
 
