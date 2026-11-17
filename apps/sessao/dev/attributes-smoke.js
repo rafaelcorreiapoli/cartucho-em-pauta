@@ -1,5 +1,6 @@
 async page => {
-  await page.addInitScript(()=>{
+  const gameUrl = page.url();
+  await page.context().addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
     window.micAttempts = 0;
     navigator.mediaDevices.getUserMedia = async ()=>{
@@ -10,11 +11,14 @@ async page => {
   await page.setViewportSize({width:1024,height:600});
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.reload();
-  await page.getByRole('textbox',{name:'Seu nick'}).fill('Atributos QA');
-  await page.getByRole('button',{name:'Criar sala'}).click();
-  await page.locator('#parliamentarian-count [data-count="0"]').click();
-  await page.getByRole('button',{name:'Iniciar sessão'}).click();
-  await page.locator('#session[data-phase="negotiation"]').waitFor();
+  async function start(client,nick) {
+    await client.getByRole('textbox',{name:'Seu nick'}).fill(nick);
+    await client.getByRole('button',{name:'Criar sala'}).click();
+    await client.locator('#parliamentarian-count [data-count="0"]').click();
+    await client.getByRole('button',{name:'Iniciar sessão'}).click();
+    await client.locator('#session[data-phase="negotiation"]').waitFor();
+  }
+  await start(page,'Atributos QA');
   const levelUp = page.locator('#level-up-dialog[open]');
   const allocate = levelUp.getByRole('button',{name:'Distribuir ponto'});
   await allocate.waitFor();
@@ -52,5 +56,25 @@ async page => {
   await attributes.getByText('150/150',{exact:true}).waitFor();
   if (await stamina.getAttribute('aria-pressed')!=='false') throw Error('O atalho armou investimento durante a contagem.');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
-  return {viewport:'1024×600',stamina:'150/150',remainingPoints:1,countdownBlocked:true};
+  const deferred = await page.context().newPage();
+  try {
+    await deferred.emulateMedia({reducedMotion:'reduce'});
+    await deferred.goto(gameUrl);
+    await start(deferred,'Adiar QA');
+    const celebration = deferred.locator('#level-up-dialog');
+    const later = celebration.getByRole('button',{name:'Depois'});
+    await later.waitFor();
+    await later.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+    await deferred.keyboard.press('2');
+    await celebration.waitFor({state:'hidden'});
+    const sheet = deferred.locator('#attributes-dialog');
+    if (await sheet.isVisible()) throw Error('Adiar abriu a ficha de atributos.');
+    await deferred.keyboard.press('p');
+    await sheet.getByText('2 pontos para distribuir').waitFor();
+    await sheet.getByText('100/100',{exact:true}).waitFor();
+    if (await deferred.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
+  } finally {
+    await deferred.close();
+  }
+  return {viewport:'1024×600',stamina:'150/150',remainingPoints:1,countdownBlocked:true,deferredPoints:2};
 }
