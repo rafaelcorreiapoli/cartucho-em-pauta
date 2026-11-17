@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { agendaProject, bills, type PlenaryView } from '../plenary';
+import { agendaProject, type PlenaryView } from '../plenary';
 import { describeEvidence } from '../politics';
 import { DialogDismiss } from './dialog-dismiss';
 
@@ -18,21 +18,16 @@ function PublicRecords({politics}:Pick<PlenaryView,'politics'>) {
 const briefTitles = {secretary:'Pauta legislativa',archive:'Registro público'};
 
 export function LegislativeBrief({activity,view}:{activity:BriefActivity;view:PlenaryView}) {
-  const project = agendaProject(view);
-  const upcoming = view.queuedProjects?.filter(index=>bills[index]!==project) ?? [];
+  const project = view.project===undefined ? undefined : agendaProject(view);
   return <>
     <header className="flex items-center justify-between gap-4">
       <h2 id="legislative-brief-title">{briefTitles[activity]}</h2>
       <DialogDismiss label="Fechar">×</DialogDismiss>
     </header>
-    {activity==='archive' ? <PublicRecords politics={view.politics}/> : <>
+    {activity==='archive' ? <PublicRecords politics={view.politics}/> : project ? <>
       <h3>{project.name}</h3>
       <p>{project.description}</p>
-      {upcoming.length>0 && <>
-        <h3>Próximos na pauta</h3>
-        <ol>{upcoming.map(index=><li key={index}>{bills[index].name}</li>)}</ol>
-      </>}
-    </>}
+    </> : <p>Nenhum projeto em pauta. Consulte Projetos no celular ou solicite um documento na Secretaria.</p>}
   </>;
 }
 

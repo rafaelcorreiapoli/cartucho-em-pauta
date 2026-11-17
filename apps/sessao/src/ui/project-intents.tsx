@@ -7,7 +7,7 @@ const choices = [['yes','Pretendo aprovar'],['no','Pretendo rejeitar'],['clear',
 export function ProjectIntents({view,id,declare}:{view:PlenaryView;id:string;declare:(intent:Intent)=>void}) {
   const summary = view.hearing ? '' : voteIntentSummary(view.voteIntents);
   const ownIntent = view.voteIntents?.find(intent=>intent.id===id)?.vote;
-  const canDeclare = view.phase==='negotiation' && view.mandate && !view.politics?.suspended;
+  const canDeclare = view.phase==='negotiation' && view.project!==undefined && !view.cassationIn && view.mandate && !view.politics?.suspended;
   return <>
     {summary && <p id="intent-summary" aria-label="Intenções de voto">{summary}</p>}
     {canDeclare && <div id="intent-controls" className="flex gap-2" role="group" aria-label="Declarar intenção de voto">
@@ -20,7 +20,7 @@ export function ProjectIntents({view,id,declare}:{view:PlenaryView;id:string;dec
 
 function detailsState(view:PlenaryView) {
   const {hearing,phase} = view;
-  const project = agendaProject(view);
+  const project = view.project===undefined ? undefined : agendaProject(view);
   const objection = !hearing && (phase==='negotiation' || phase==='ballot') ? view.election?.objection : undefined;
   const clue = hearing ? '' : [
     view.auditNote,
@@ -28,12 +28,12 @@ function detailsState(view:PlenaryView) {
     view.reportedFraud ? 'Fraude denunciada. O painel mostra os números reais.' :
       view.audit==='fraud' ? 'Fraude encontrada. Vá ao Painel para corrigir os números.' :
       view.audit==='clean' ? 'A auditoria conferiu os valores do painel.' : '',
-    view.role==='Infiltrado' && !view.canFraud && !view.reportedFraud &&
+    project && view.role==='Infiltrado' && !view.canFraud && !view.reportedFraud &&
       'Você alterou os números que os outros veem no painel.',
   ].filter(Boolean).join(' ');
   return {
-    title:hearing?.target ?? project.name,
-    description:hearing ? '' : project.description,
+    title:hearing?.target ?? project?.name ?? 'Nenhum projeto em pauta',
+    description:hearing ? '' : project?.description ?? 'Escolha um projeto na Secretaria e leve o documento ao Protocolo.',
     objection:objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '',
     hearingResult:view.hearingResult,
     clue,

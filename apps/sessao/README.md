@@ -34,11 +34,23 @@ Entre com um nick e crie a sala ou use o link de convite. A caricatura é
 uma skin: o mapa, a voz e os avisos usam o nick. O anfitrião pode iniciar
 sozinho para testar sem infiltrado ou convidar até onze amigos. Ativem
 a voz e iniciem a sessão. No multiplayer, o papel secreto é sorteado independentemente da skin. Os
-parlamentares ganham se terminarem os três projetos com pelo menos 45 de
-estabilidade; o infiltrado ganha se impedir isso. Se chegar a zero, a partida
-termina na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
+parlamentares ganham se chegarem ao fim da sessão com pelo menos três projetos
+votados e 45 de estabilidade. Projetos rejeitados contam. Se a meta não for
+atingida, o infiltrado ganha. Se a estabilidade chegar a zero, a partida termina
+na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
 
-Cada projeto começa com 3 minutos e 25 segundos de articulação. No mapa, a visão de outros
+Consulte **Celular → Projetos** e solicite um documento na Secretaria. Carimbe na
+Secretaria e no Gabinete e peça a assinatura de outro jogador com mandato
+(em partida solo, a assinatura é dispensada). O jogador com mandato que entregar
+o documento no Protocolo entra como proponente. Protocolar é gratuito.
+
+O Protocolo aceita um projeto por vez e já avisa todos quem o apresentou.
+A articulação dura dois minutos. Se houver outra votação no Plenário, o projeto
+aguarda sua conclusão. Após a apuração, o Protocolo reabre em um minuto. Cada
+projeto pode ser votado uma vez por partida, e o proponente aparece na votação e
+no histórico. Sem projeto protocolado, o relógio da sessão continua correndo.
+
+No mapa, a visão de outros
 jogadores é local e a voz perde volume com distância e paredes. Os pontos dourados
 permitem protocolar uma emenda que troca estabilidade por economia, auditar os
 valores e corrigir o painel após descobrir uma fraude. O infiltrado pode mexer no
@@ -132,7 +144,8 @@ Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-hist
 e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
 Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
 `dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
-O teste usa os resultados publicados pelo gameserver e clica nas setas reais do HUD.
+O servidor de teste simula protocolos em nome do jogador local. O teste confere o
+proponente no HUD e usa as setas reais do histórico.
 
 ## Métricas do gameserver
 

@@ -198,7 +198,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     feedback.delete(alice.sessionId);
     alice.send('gameplay',{action:{kind:'file',item:original.id,place:'protocol'},token:1710});
     await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
-    expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
+    expect(views.get(alice.sessionId)?.project).toBeUndefined();
     economy.changePopularity(alice.sessionId,40);
     move(alice,stations.panel);
     const prematureVote = {vote:'no',token:1760};
@@ -237,10 +237,12 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.stamps.includes('Gabinete')));
     move(alice,stations.amendment);
     alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2110});
-    await wait(()=>views.get(alice.sessionId)?.queuedProjects?.includes(1));
-    Reflect.set(match,'ends',room.clock.currentTime);
+    await wait(()=>views.get(alice.sessionId)?.project===1);
+    expect(views.get(bia.sessionId)?.proposer).toBe('Alice');
+    expect(views.get(caio.sessionId)?.proposer).toBe('Alice');
+    Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
     await wait(()=>views.get(bia.sessionId)?.phase==='ballot');
-    expect(views.get(bia.sessionId)?.project).toBe(1);
+    expect(views.get(bia.sessionId)).toMatchObject({project:1,proposer:'Alice'});
 
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
@@ -248,7 +250,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(alice,stations.amendment);
     alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2120});
     await wait(()=>feedback.get(alice.sessionId)==='O objeto não está com você.');
-    expect(views.get(alice.sessionId)?.queuedProjects).toEqual([]);
+    expect(views.get(alice.sessionId)?.project).toBeUndefined();
     const fire = Reflect.get(match,'fire');
     const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;
     const firefighter = rooms.find(peer=>peer!==infiltrator)!;

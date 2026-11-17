@@ -11,6 +11,9 @@ export type GameplayWorld = {
   spendSubsidized?:(id:string,price:number,subsidy:number)=>boolean;
   vision?:(id:string)=>number;
   plenary?:boolean;
+  projectFilingError?:(id:string,project:number)=>string|undefined;
+  projectSignatures?:number;
+  canSignProject?:(id:string)=>boolean;
   hasMandate?:(id:string)=>boolean;
   deposit?:(id:string,amount:number)=>boolean;
   lootWallet?:(id:string,fraction:number)=>number;

@@ -65,6 +65,7 @@ async page => {
   await page.locator('[data-vote="yes"]').waitFor();
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
   await sheet.getByRole('heading',{name:'Auxílio Churrasco'}).waitFor();
+  await sheet.getByText('Protocolado por Histórico QA').waitFor();
   await sheet.getByRole('button',{name:'Recolher votação'}).click();
   await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
   await sheet.getByRole('button',{name:'Expandir votação'}).click();

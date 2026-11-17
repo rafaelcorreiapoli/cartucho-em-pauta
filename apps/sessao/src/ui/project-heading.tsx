@@ -1,24 +1,26 @@
 import {createRoot} from 'react-dom/client';
-import {agendaProject,type PlenaryView} from '../plenary';
+import {agendaProject,projectRules,type PlenaryView} from '../plenary';
 
 export function projectHeading(view:PlenaryView) {
   const hearing = view.hearing;
-  const queued = view.queuedProjects?.length ?? 0;
+  const waiting = view.project===undefined && !view.cassation && !hearing;
   const negotiating = view.phase==='negotiation';
   return {
-    title:view.cassation ? 'Quem é o infiltrado?' : hearing?.target ?? agendaProject(view).name,
-    round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `Projeto ${view.round+1}${queued ? ` · +${queued} na pauta` : ''}`,
-    phase:negotiating ? 'Articulação' : view.cassation ? 'Cassação' : hearing ? 'Afastamento' : 'Votação',
-    clockLabel:view.isolationSeconds ? 'Isolamento' : negotiating ? 'Votação em' : 'Tempo de voto',
-    seconds:view.isolationSeconds || view.remaining,
+    title:view.cassation ? 'Quem é o infiltrado?' : hearing?.target ?? (waiting ? 'Nenhum projeto em pauta' : agendaProject(view).name),
+    round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `${view.outcomes.length}/${projectRules.requiredVotes} projetos votados`,
+    phase:negotiating ? waiting ? 'Jogo livre' : 'Articulação' : view.cassation ? 'Cassação' : hearing ? 'Afastamento' : 'Votação',
+    clockLabel:view.isolationSeconds ? 'Isolamento' : negotiating ? view.cassationIn ? 'Cassação em' : waiting ? 'Fim da sessão' : 'Votação em' : 'Tempo de voto',
+    hint:waiting ? view.protocolCooldown ? `Protocolo reabre em ${view.protocolCooldown} s` : 'Consulte Projetos no celular.' : view.proposer && negotiating ? `Protocolado por ${view.proposer}` : undefined,
+    seconds:view.isolationSeconds || view.cassationIn || view.remaining,
   };
 }
 
-export function ProjectHeading({title,round,phase,clockLabel,seconds}:ReturnType<typeof projectHeading>) {
+export function ProjectHeading({title,round,phase,clockLabel,seconds,hint}:ReturnType<typeof projectHeading>) {
   return <>
     <div className="bill-heading">
       <div className="deck-project-meta"><span id="bill-round">{round}</span><span>Fase <strong id="phase">{phase}</strong></span></div>
       <h2 id="bill">{title}</h2>
+      {hint && <p>{hint}</p>}
     </div>
     <div className="clock-chip" data-urgent={seconds<=10}>
       <svg className="hud-glyph" aria-hidden="true"><use href="#icon-clock"/></svg>

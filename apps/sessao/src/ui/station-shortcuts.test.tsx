@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -9,6 +10,7 @@ test('the contextual shortcuts reflect room activities and consumed public grant
   const player:Player = {id:'a',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.4)).toBe(true);
+  publishProjectFiling(match,player);
   const view = (now:number)=>match.view(player.id,[player.id],now);
   const render = (station?:Station,now=1)=>renderToStaticMarkup(
     <StationShortcuts actions={stationShortcuts(view(now),station ? {...player,...stations[station]} : player,station)}

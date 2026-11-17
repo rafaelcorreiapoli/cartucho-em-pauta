@@ -47,7 +47,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
       if (running && phase!=='ballot') heading.render(view);
       if (historyChanged) history.render(view.outcomes,matchId);
       details.render(view);
-      impact.render(view.yes,view.no,running && phase!=='ballot' && !hearing && !view.cassation);
+      impact.render(view.yes,view.no,running && view.project!==undefined && phase!=='ballot' && !hearing && !view.cassation);
       ballot.render(view);
     },
     destroy() { lobby.destroy(); brief.destroy(); history.destroy(); ballot.destroy(); impact.destroy(); heading.destroy(); details.destroy(); },

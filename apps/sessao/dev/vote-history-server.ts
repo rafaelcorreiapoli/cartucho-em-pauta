@@ -1,13 +1,33 @@
-// Use the regular server with shorter phases for the browser smoke test.
+// Short phases and scripted player filings for the browser smoke test.
 Bun.plugin({
   name:'short-vote-history-rounds',
   setup(build) {
     build.onLoad({filter:/\/sessao\/src\/plenary\.ts$/},async ({path})=>({
-      contents:(await Bun.file(path).text()).replace('205_000','12_000').replace('35_000','14000'),
+      contents:(await Bun.file(path).text()).replace('debateMs:120_000','debateMs:12_000')
+        .replace('cooldownMs:60_000','cooldownMs:3_000').replace('BALLOT_MS = 35_000','BALLOT_MS = 14_000'),
       loader:'ts',
     }));
   },
 });
-await import('../server/index');
+const {defineRoom,defineServer} = await import('colyseus');
+const {BunWebSockets} = await import('@colyseus/bun-websockets');
+const {SessionRoom} = await import('../server/SessionRoom');
+const {publishProjectFiling} = await import('../server/project-test-fixture');
+
+class TestRoom extends SessionRoom {
+  onCreate() {
+    super.onCreate();
+    this.clock.setInterval(()=>{
+      const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
+      const player:import('../src/map').Player|undefined = Reflect.get(this,'players').values().next().value?.player;
+      if (!player || match.phase!=='negotiation' || match.projectIndex!==undefined || match.projectRound>=3) return;
+      const now = this.clock.currentTime;
+      if (match.gameplayWorld([player],now,()=>false).projectFilingError?.(player.id,match.projectRound)) return;
+      publishProjectFiling(match,player,match.projectRound,now);
+    },500);
+  }
+}
+await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(TestRoom)}})
+  .listen(Number(process.env.PORT || 2604),'127.0.0.1');
 
 export {};

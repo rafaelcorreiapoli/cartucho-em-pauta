@@ -1,3 +1,4 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
@@ -9,6 +10,7 @@ test('the history renders the latest authoritative result and enables previous p
   const match = new PlenaryMatch(1);
   const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:140,y:146};
   match.start(player.id,[player],0,()=>0);
+  publishProjectFiling(match,player);
   const getOutcomes = ()=>match.view(player.id,[player.id],0).outcomes;
   expect(renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>)).toBe('');
   match.advance(NEGOTIATION_MS);
@@ -16,8 +18,10 @@ test('the history renders the latest authoritative result and enables previous p
   const firstEnd = NEGOTIATION_MS+BALLOT_MS;
   match.advance(firstEnd);
   expect(renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>)).toContain('Auxílio Churrasco: aprovado. 1 a favor, 0 contra.');
-  match.advance(firstEnd+NEGOTIATION_MS);
-  match.advance(firstEnd+NEGOTIATION_MS+BALLOT_MS);
+  const nextFiling = firstEnd+60_000;
+  publishProjectFiling(match,player,1,nextFiling);
+  match.advance(nextFiling+NEGOTIATION_MS);
+  match.advance(nextFiling+NEGOTIATION_MS+BALLOT_MS);
   const markup = renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>);
   expect(markup).toContain('Votação 2 de 2');
   const [first,second] = getOutcomes();
@@ -28,6 +32,7 @@ test('the history renders the latest authoritative result and enables previous p
 
   expect(markup).toContain('Wi-Fi na Praça: rejeitado. 0 a favor, 0 contra.');
   expect(markup).toContain('Ninguém votou');
+  expect(markup).toContain(`Protocolado por ${player.nick}`);
   expect(markup).toContain('aria-label="Votação anterior">');
   expect(markup).toContain('aria-label="Próxima votação" disabled=""');
 });

@@ -1,3 +1,5 @@
+import {publishProjectFiling} from '../../server/project-test-fixture';
+
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ProjectImpact} from './project-impact';
@@ -11,6 +13,8 @@ test('the project cards display the impacts sent by the gameserver',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>0)).toBe(true);
+  publishProjectFiling(match,player);
+
   const {yes,no} = match.view(player.id,[player.id],1);
   const markup = renderToStaticMarkup(<ProjectImpact yes={yes} no={no}/>);
   expect(markup).toContain(`id="yes-stability" data-effect="gain">+${yes.stability}</strong>`);
@@ -31,12 +35,13 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     expect(match.start(player.id,[player],0,()=>0)).toBe(true);
     const project = bills.indexOf(bill);
     match.gameplayWorld([player],1,()=>false).publish({
-      type:'filed',actor:player.id,item:1,project,position:stations.amendment,at:1,witnesses:[],
+      type:'filed',actor:player.id,item:1,project,position:stations.amendment,at:0,witnesses:[],
     });
     match.advance(NEGOTIATION_MS);
     const view = match.view(player.id,[player.id],NEGOTIATION_MS);
     const markup = renderToStaticMarkup(<ProjectBallot {...view} ownId={player.id} eligible cast={()=>{}}/>);
     expect(markup).toContain(bill.name);
+    expect(markup).toContain(`Protocolado por ${player.nick}`);
     expect(markup).toContain(bill.banner!);
     if (bill.effect?.kind==='policy') {
       expect(markup).toContain(bill.effect.detail);
