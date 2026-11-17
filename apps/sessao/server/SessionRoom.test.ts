@@ -552,7 +552,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>gameplay()?.surveillance?.progress!==undefined);
     await Bun.sleep(5100);
     await wait(()=>gameplay()?.surveillance?.channels.length===1);
-    const channel = gameplay()!.surveillance!.channels[0].id;
+    const {id:channel,name:cameraName} = gameplay()!.surveillance!.channels[0];
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
     passenger.send('spy',{kind:'open',channel,token:3520});
     carrier.send('spy',{kind:'open',channel,token:3530});
@@ -570,7 +570,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>feedback.get(passenger.sessionId)?.includes('O canal da câmera mudou.')===true);
     carrier.send('spy',{kind:'capture',channel,token:3550});
     await wait(()=>photoViews.get(carrier.sessionId)?.album.length===1);
-    expect(photoViews.get(carrier.sessionId)?.album[0].photo.source).toEqual({kind:'surveillance',channel:gameplay()?.surveillance?.channels[0].name});
+    expect(photoViews.get(carrier.sessionId)?.album[0].photo.source).toEqual({kind:'surveillance',channel:cameraName});
     expect(photoViews.get(passenger.sessionId)?.album).toEqual([]);
     carrier.send('spy',{kind:'close',token:3580});
     carrier.send('spy',{kind:'open',channel,token:3530});
