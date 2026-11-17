@@ -1,3 +1,4 @@
+import {DialogDismiss} from './dialog-dismiss';
 import {useState} from 'react';
 import {PhoneContactFace} from './phone-call';
 import type {Motion,Player} from '../map';
@@ -47,7 +48,7 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
   return <>
     <header className="social-header">
       <h2>Dossiê</h2>
-      {close && <button className="hud-icon-button" type="button" aria-label="Fechar dossiê" onClick={close}>×</button>}
+      {close && <DialogDismiss label="Fechar dossiê" onDismiss={close}/>}
     </header>
     <section aria-label="Ofertas de documentos">
       {model.offers.map(offer=><div className="offer" key={offer.id}>

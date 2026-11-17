@@ -13,9 +13,8 @@ export function GameplayDialogHeader({title,bag,back}:{title:string;bag?:boolean
         return <Tag key={index} {...attributes}/>;
       })}
     </svg>}{title}</h2>
-    {back ? <button id="phone-back" type="button" className="hud-icon-button" aria-label="Fechar aplicativo"
-      aria-keyshortcuts="Escape" onClick={back}>✕</button> :
-      <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>}
+    {back ? <DialogDismiss id="phone-back" label="Fechar aplicativo" shortcut="Escape" onDismiss={back}/> :
+      <DialogDismiss label="Fechar"/>}
   </>;
 }
 
