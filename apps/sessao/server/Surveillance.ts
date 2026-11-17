@@ -21,6 +21,16 @@ export class Surveillance {
       hideouts.some(site=>(site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
   }
 
+  cameraAvailability(id:string,inventoryIds:readonly number[],credited:ReadonlySet<string>) {
+    const installed = [...this.occupied.values()].filter(device=>device.owner===id && device.kind==='spyCamera');
+    const uncredited = installed.filter(device=>!credited.has(String(device.hardware.id))).length;
+    const empty = hideouts.filter(site=>(site.accepts as readonly SpyDevice[]).includes('spyCamera') &&
+      !this.occupied.has(site.id)).length;
+    const slots = Math.min(spyRules.limit-uncredited,empty+installed.length-uncredited);
+    const portable = inventoryIds.filter(item=>!credited.has(String(this.recoveredHardware.get(item)?.id ?? item))).length;
+    return {installed:installed.length, uncredited, slots, portable};
+  }
+
   private devices = new Map<number,Device>();
   private recoveredHardware = new Map<number,Hardware>();
   private occupied = new Map<string,Device>();
