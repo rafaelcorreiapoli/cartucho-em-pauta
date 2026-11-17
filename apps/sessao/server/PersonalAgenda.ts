@@ -213,11 +213,11 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes') {
+      if (mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' || mission.kind==='chamadasUrgentes') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
-          (mission.kind==='doisPix' || this.hasOffice?.(id)!==false);
+          (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
       } else if ((mission.kind==='assinaturas' || mission.kind==='comissaoImprovisada') && (npcSigners || !npcCount)) {
         const possible = new Set([...targets.map(({id})=>id),...(npcSigners ?? [])]);

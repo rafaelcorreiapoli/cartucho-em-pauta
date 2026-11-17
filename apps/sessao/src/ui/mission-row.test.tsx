@@ -1,3 +1,4 @@
+import {PhoneSession} from '../../server/PhoneSession';
 import {InternalMail} from '../../server/InternalMail';
 import {ELECTION_RULES} from '../elections';
 import {internalMailRules} from '../internal-mail';
@@ -723,4 +724,43 @@ test('the plenary visit objective requires entry and exit within the same articu
   const completed = view(resumedAt+3).missions.completed.find(mission=>mission.kind==='presencaPlenario')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(resumedAt+3).progression.xp).toBe(25);
+});
+
+test('urgent calls retain confirmed HUD progress after the first contact leaves',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [caller,first,second] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(caller.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(caller.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  const phone = new PhoneSession();
+  let now = 0;
+  const world = ()=>match.gameplayWorld(players,now,()=>true);
+  const view = ()=>match.view(caller.id,players.map(({id})=>id),now).politics!;
+  const mission = ()=>view().missions.active.find(({kind})=>kind==='chamadasUrgentes')!;
+  const call = (contact:Player)=>{
+    now++;
+    expect(phone.act(caller,{kind:'call',target:contact.id},world())).toBe('Chamando…');
+    expect(phone.act(contact,{kind:'answer'},world())).toBe('Ligação atendida.');
+    for (let elapsed=0;elapsed<10_000;elapsed+=100) {
+      now+=100;
+      phone.tick(world(),true);
+    }
+    phone.act(caller,{kind:'hangup'},world());
+  };
+
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('0 / 2');
+  call(first);
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('1 / 2');
+  match.leave(first.id,now);
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('1 / 2');
+  call(second);
+  const completed = view().missions.completed.find(({kind})=>kind==='chamadasUrgentes')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(45);
 });
