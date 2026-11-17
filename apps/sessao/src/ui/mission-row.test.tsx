@@ -1,3 +1,4 @@
+import {terminals} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
 import {PhoneSession} from '../../server/PhoneSession';
@@ -1763,4 +1764,42 @@ test.each([0,1])('mail missions respect the exact end of an approved isolation (
   expect(match.canHandleObjects(target.id,releaseAt)).toBe(true);
   const mission = mailMission(target,releaseAt)!;
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Publique um comunicado com anexo');
+});
+
+test('the Agenda offers extraordinary collection only when a robbery can fund a partial deposit',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...terminals.treasury.point};
+  const npc:Player = {...player,id:'npc-parliamentarian-1',nick:'Parlamentar',npc:true};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const world = match.gameplayWorld([player,npc],1,()=>false);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['recolhimentoExtraordinario','rouboNpc','cafe','passeio','selfieSolo']);
+
+  const view = ()=>match.view(player.id,[player.id],world.now).politics!;
+  const active = ()=>view().missions.active.find(mission=>mission.kind==='recolhimentoExtraordinario');
+  world.takeWallet!(npc.id);
+  world.earn!(npc.id,0.1);
+  match.refreshAgendaEligibility();
+  expect(active()).toBeUndefined();
+  expect(view().missions.active.some(mission=>mission.kind==='rouboNpc')).toBe(true);
+
+  world.earn!(npc.id,0.1);
+  Reflect.set(agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('0 / 2');
+  expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
+  match.refreshAgendaEligibility();
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('1 / 2');
+
+  const briefcase = game.view(player,world).inventory.find(item=>item.kind==='briefcase')!;
+  const before = view().progression.xp;
+  expect(game.act(player,{kind:'deliver',place:'treasury',item:briefcase.id,target:'partial'},world))
+    .toContain('entregues à Tesouraria');
+  const completed = view().missions.completed.find(mission=>mission.kind==='recolhimentoExtraordinario')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp-before).toBe(missionReward('recolhimentoExtraordinario').xp);
 });

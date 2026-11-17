@@ -10,9 +10,10 @@ import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, ar
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
+  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
+const minimumPartialDepositLot = 0.2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const activityMissions = {
@@ -391,7 +392,7 @@ export class PersonalAgenda {
       }
       if (kind==='recolhimentoExtraordinario' && event.item!==undefined) {
         const item = String(event.item);
-        if (event.type==='npc-robbed' && (event.amount ?? 0)>=0.2) {
+        if (event.type==='npc-robbed' && (event.amount ?? 0)>=minimumPartialDepositLot) {
           this.countFacts(mission,[{value:item}]);
           if (mission.current===0) gains[kind] = 1;
         }
@@ -496,7 +497,8 @@ export class PersonalAgenda {
       if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
     }
     if (kind==='dinheiroPresencialVinte' && !metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)) return false;
-    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario') && metrics.npcHasCash?.()===false) return false;
+    if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
+    if (kind==='recolhimentoExtraordinario' && metrics.npcHasCash?.(minimumPartialDepositLot)===false) return false;
     if (kind==='votoNpc') {
       if (this.cannotVote || this.ballotsLeft===0 || metrics.canPay?.()===false) return false;
       if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;

@@ -53,7 +53,7 @@ export class PoliticalEconomy {
       const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
         isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
-        npcHasCash:()=>[...this.npcIds].some(id=>this.wallet(id)>0),
+        npcHasCash:(minimum=0.1)=>[...this.npcIds].some(id=>this.wallet(id)>=minimum),
         canPay:()=>this.paymentsLeft(contact.id,this.agendaRound)>0,
         canAgendaAction:canAgendaAction && ((kind:'propaganda'|'discurso'|'emenda')=>canAgendaAction(contact.id,kind))};
       const progression = new CharacterProgression(this.matchId);
