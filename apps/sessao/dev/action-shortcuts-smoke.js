@@ -23,6 +23,8 @@ async page => {
   const apps = page.locator('#congress-app-panel');
   await launcher.waitFor();
   await page.locator('#asset-loading').waitFor({state:'hidden'});
+  await page.waitForFunction(()=>document.querySelector('#congress-apps')
+    ?.checkVisibility({visibilityProperty:true,opacityProperty:true}));
   await page.keyboard.press('u');
   await apps.waitFor();
   await page.keyboard.press('F2');
@@ -95,9 +97,17 @@ async page => {
   await palette.waitFor();
   const closeAction = palette.locator('.shortcut-list button').filter({hasText:'Fechar'});
   const key = await closeAction.getAttribute('aria-keyshortcuts');
+  await palette.evaluate(node=>{
+    window.syntheticPaletteClicks = 0;
+    node.addEventListener('click',event=>{
+      if (!event.isTrusted) window.syntheticPaletteClicks++;
+    });
+  });
+  await closeAction.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
+  if (await page.evaluate(()=>window.syntheticPaletteClicks)!==0) throw Error('O atalho simulou um clique no menu F2');
   const dossier = page.getByRole('dialog',{name:'Dossiê'});
   for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:800,height:600}]) {
     await page.setViewportSize(viewport);

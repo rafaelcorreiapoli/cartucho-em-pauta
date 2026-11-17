@@ -47,6 +47,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
   const settings = root.querySelector<HTMLDialogElement>('#room-settings')!;
   let scope:HTMLElement = root;
   let page = 0;
+  let visibleEntries:readonly ShortcutEntry[] = [];
 
   function modal() {
     return document.activeElement?.closest<HTMLDialogElement>('dialog:modal') ??
@@ -70,10 +71,11 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
     ];
     const total = Math.max(1,Math.ceil(actions.length/pageSize));
     page = Math.max(0,Math.min(page,total-1));
+    visibleEntries = actions.slice(page*pageSize,(page+1)*pageSize).map(({name,activate})=>({
+      name,activate:()=>{ palette.close(); activate(); },
+    }));
     flushSync(()=>paletteRoot.render(<ShortcutPalette
-      entries={actions.slice(page*pageSize,(page+1)*pageSize).map(({name,activate})=>({
-        name,activate:()=>{ palette.close(); activate(); },
-      }))}
+      entries={visibleEntries}
       page={page} total={total} changePage={offset=>{ page += offset; render(); }}
     />));
     if (palette.open) palette.querySelector<HTMLButtonElement>('.shortcut-list button')?.focus({preventScroll:true});
@@ -110,6 +112,13 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       const key = event.shiftKey && /^Digit[1-9]$/.test(event.code) ? 'Shift+'+event.code.at(-1) :
         !event.shiftKey && /^[0-9]$/.test(event.key) ? event.key : undefined;
       if (!key) return;
+      if (active===palette) {
+        const entry = visibleEntries[Number(key)-1];
+        if (!entry) return;
+        event.preventDefault();
+        entry.activate();
+        return;
+      }
       const control = [...active.querySelectorAll<HTMLButtonElement>(`button[aria-keyshortcuts="${key}"]`)].find(available);
       if (!control) return;
       event.preventDefault();
