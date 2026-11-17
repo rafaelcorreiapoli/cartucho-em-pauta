@@ -838,7 +838,7 @@ export class PlenaryMatch {
       this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
       this.ends = now+BALLOT_MS;
-      this.refreshAgendaEligibility(now);
+      if (this.ends===this.sessionEndsAt) this.refreshAgendaEligibility(now);
       return;
     }
     if (now<this.ends) return;
