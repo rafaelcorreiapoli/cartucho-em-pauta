@@ -76,7 +76,13 @@ async page => {
   await page.keyboard.press('y');
   const yesVoter = sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'});
   await yesVoter.getByText('Histórico QA').waitFor();
-  await yesVoter.locator('img.phone-contact-face').evaluate(image=>image.decode());
+  await yesVoter.locator('.portrait.phone-contact-face[data-skin]').evaluate(async portrait=>{
+    const source = getComputedStyle(portrait).backgroundImage.match(/url\(["']?([^"')]+)["']?\)/)?.[1];
+    if (!source) throw Error('Voter portrait has no sprite sheet');
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+  });
   await page.keyboard.press('r');
   await sheet.locator('[data-vote-state="no"]').getByText('Histórico QA').waitFor();
   await page.keyboard.press('n');
