@@ -134,7 +134,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     </>;
     if (channel && editing===channel.id) {
       register('Nome do canal',()=>nameInput.current?.focus());
-      register('Salvar',saveName);
+      entries.push({id:`rename:${channel.id}`,name:'Salvar',activate:saveName});
     }
     root.render(<SurveillanceDialogContent entries={entries} channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
       camera={selected && {name:selected.name,attach:attachViewport}}/>);

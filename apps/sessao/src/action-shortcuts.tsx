@@ -6,7 +6,7 @@ import { appForKey, type LaunchHudApp } from './hud-apps';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 
 const pageSize = 9;
-export type ShortcutEntry = {name:string;activate:()=>void};
+export type ShortcutEntry = {id?:string;name:string;activate:()=>void};
 
 function available(control:HTMLElement) {
   return !control.matches(':disabled, [aria-disabled="true"], input[type="hidden"]') &&

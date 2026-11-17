@@ -1,4 +1,4 @@
-import {useEffect,useEffectEvent,useLayoutEffect,useRef} from 'react';
+import {useEffectEvent,useLayoutEffect,useRef} from 'react';
 import {isEditingText} from '../game-keys';
 
 import type {ShortcutEntry} from '../action-shortcuts';
@@ -9,8 +9,12 @@ export function dialogKeyActions(dialog:HTMLElement) {
   const registration = paletteEntries.get(dialog);
   if (!registration || !registration.owner.isConnected || registration.owner.closest('[hidden]')) return;
   return registration.entries.map(entry=>({name:entry.name,activate:()=>{
-    if (dialog.matches('dialog:modal') && paletteEntries.get(dialog)===registration &&
-        registration.owner.isConnected && !registration.owner.closest('[hidden]')) entry.activate();
+    const current = paletteEntries.get(dialog);
+    if (!dialog.matches('dialog:modal') || current?.owner!==registration.owner ||
+        !current.owner.isConnected || current.owner.closest('[hidden]')) return;
+    const action = current===registration ? entry :
+      entry.id===undefined ? undefined : current.entries.find(candidate=>candidate.id===entry.id);
+    action?.activate();
   }}));
 }
 
@@ -25,7 +29,7 @@ export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=>
     paletteEntries.set(dialog,registration);
     return ()=>{ if (paletteEntries.get(dialog)===registration) paletteEntries.delete(dialog); };
   },[entries]);
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     function keydown(event:KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing ||
           event.ctrlKey || event.altKey || event.metaKey || isEditingText(event.target)) return;

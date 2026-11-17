@@ -204,8 +204,9 @@ async page => {
   const cassationRoom = (await page.locator('#room-label').textContent()).trim().split(' ')[1];
   const disconnected = await page.context().newPage();
   const witness = await page.context().newPage();
+  const fourth = await page.context().newPage();
   try {
-    for (const [client,nick] of [[disconnected,'Bia'],[witness,'Caio']]) {
+    for (const [client,nick] of [[disconnected,'Bia'],[witness,'Caio'],[fourth,'Dani']]) {
       await client.goto(page.url());
       await client.getByRole('textbox',{name:'Seu nick'}).fill(nick);
       await client.getByRole('textbox',{name:'Código da sala'}).fill(cassationRoom);
@@ -235,7 +236,7 @@ async page => {
     await candidate.waitFor();
     await page.keyboard.press(await candidate.getAttribute('aria-keyshortcuts'));
     await ballot.getByRole('button',{name:'Caio',pressed:true}).waitFor();
-    await witness.getByRole('region',{name:'Votação de cassação'}).getByText(/1\/2 votaram/).waitFor();
+    await witness.getByRole('region',{name:'Votação de cassação'}).getByText(/1\/3 votaram/).waitFor();
     const result = page.getByRole('dialog',{name:'Resultados'});
     const witnessResult = witness.getByRole('dialog',{name:'Resultados'});
     for (const modal of [result,witnessResult]) {
@@ -247,6 +248,7 @@ async page => {
   } finally {
     if (!disconnected.isClosed()) await disconnected.close();
     await witness.close();
+    await fourth.close();
   }
   await page.reload();
   await page.setViewportSize({width:800,height:600});

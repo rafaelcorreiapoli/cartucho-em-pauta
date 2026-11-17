@@ -132,6 +132,7 @@ async page => {
     await receiver.keyboard.press('Escape');
 
     await page.keyboard.press('c');
+    await page.locator(dialog).getByRole('button',{name:'Câmera',exact:true}).waitFor();
     await page.keyboard.press('3');
     await page.locator(dialog).getByRole('button',{name:'Tirar foto',exact:true}).click();
     const openAlbum = page.locator(dialog).getByRole('button',{name:/Abrir álbum · 1\//});
@@ -256,10 +257,13 @@ async page => {
     const denounce = page.getByRole('button',{name:'Denunciar',exact:true});
     await denounce.waitFor();
     await receiver.keyboard.press('c');
+    await receiver.locator(dialog).getByRole('button',{name:'Joguinhos'}).waitFor();
     await receiver.keyboard.press('2');
+    await receiver.locator(dialog).getByRole('button',{name:'Snake',exact:true}).waitFor();
     await receiver.keyboard.press('1');
     await receiver.locator(dialog).getByText('Use as setas para começar',{exact:true}).waitFor();
     await page.keyboard.press('c');
+    await page.locator(dialog).getByRole('button',{name:'Câmera',exact:true}).waitFor();
     await page.keyboard.press('3');
     await page.locator(dialog).getByRole('button',{name:'Tirar foto',exact:true}).click();
     await page.locator(dialog).getByRole('button',{name:/Abrir álbum · 1\//}).waitFor();
