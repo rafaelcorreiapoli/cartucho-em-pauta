@@ -23,17 +23,8 @@ export class PhoneSession {
     for (const call of new Set(this.calls.values())) {
       if (!exploring || !world.voice(call.from) || !world.voice(call.to) || (!call.connected && call.expires<=world.now)) {
         this.endCall(call,world);
-      } else if (call.connected && call.sampledAt!==undefined) {
-        const duration = Math.min(100,world.now-call.sampledAt);
-        call.sampledAt = world.now;
-        if (duration<=0) continue;
-        for (const [id,target] of [[call.from,call.to],[call.to,call.from]]) {
-          if (!world.hasMission?.(id,'debateTelefonico') && !world.hasMission?.(id,'chamadasUrgentes')) continue;
-          const player = world.players.find(person=>person.id===id);
-          if (player && !player.knockedOut && world.present?.(id)!==false && world.present?.(target)!==false) {
-            publishGameplay(world,player,'call-time',{target,duration,item:call.expires,witnesses:[]});
-          }
-        }
+      } else if (call.connected) {
+        this.sampleCall(call,world);
       }
     }
     for (const [id,game] of this.games) {
@@ -58,6 +49,24 @@ export class PhoneSession {
       if (!this.playingPhoneGame(game)) {
         publishGameplay(world,player,game.snake.status==='won' ? 'game-won' : 'game-stopped',
           {duration:world.now-game.start,witnesses:game.witnesses});
+      }
+    }
+  }
+
+  private sampleCall(call:Call,world:PhoneWorld) {
+    const caller = world.players.find(({id})=>id===call.from);
+    const receiver = world.players.find(({id})=>id===call.to);
+    if (!caller || !receiver || caller.knockedOut || receiver.knockedOut ||
+        world.present?.(caller.id)===false || world.present?.(receiver.id)===false) {
+      call.sampledAt = undefined;
+      return;
+    }
+    const duration = Math.min(100,world.now-(call.sampledAt ?? world.now));
+    call.sampledAt = world.now;
+    if (duration<=0) return;
+    for (const [player,target] of [[caller,receiver],[receiver,caller]]) {
+      if (world.hasMission?.(player.id,'debateTelefonico') || world.hasMission?.(player.id,'chamadasUrgentes')) {
+        publishGameplay(world,player,'call-time',{target:target.id,duration,item:call.expires,witnesses:[]});
       }
     }
   }
