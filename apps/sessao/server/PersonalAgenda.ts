@@ -124,7 +124,6 @@ export class PersonalAgenda {
   private savingsStartingWallet = 0;
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
-  private missionPayers = new Set<string>();
   private missionCoffee = new Set<string>();
   private seenEvents = new Set<string>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
@@ -177,8 +176,9 @@ export class PersonalAgenda {
     const key = `payment:${transferId}`;
     if (this.seenEvents.has(key)) return;
     this.seenEvents.add(key);
-    if (this.hasActive('articulacao')) this.missionPayers.add(from);
-    this.progress(metrics,{recebido:1});
+    const mission = this.missions.find(entry=>entry.kind==='articulacao');
+    const articulacao = mission ? this.countFacts(mission,[{value:from}]) : 0;
+    this.progress(metrics,{recebido:1,articulacao});
   }
 
   recordTransfer(metrics:AgendaMetrics, amount:number,to:string,transferId:number) {
@@ -208,11 +208,11 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes') {
+      if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
-          (mission.kind==='doisPix' || this.hasOffice?.(id)!==false);
+          (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
       } else if ((mission.kind==='assinaturas' || mission.kind==='comissaoImprovisada') && (npcSigners || !npcCount)) {
         const possible = new Set([...targets.map(({id})=>id),...(npcSigners ?? [])]);
@@ -534,7 +534,6 @@ export class PersonalAgenda {
       if (kind==='poupancaInstitucional') this.savingsStartingWallet = metrics.wallet;
       if (kind==='fortuna') target = Math.max(target,metrics.wallet+4);
       if (kind==='campanha') target = Math.min(100,Math.max(target,metrics.popularity+15));
-      if (kind==='articulacao') this.missionPayers.clear();
       if (kind==='entrega') this.missionCoffee.clear();
       const person = Object.hasOwn(targetedAgendas,kind) ? this.pickTarget(kind) : undefined;
       this.missions.push({id:++this.nextMissionId,kind,current:0,target,person});
@@ -545,7 +544,6 @@ export class PersonalAgenda {
     if (mission.kind==='poupancaInstitucional') return Math.max(0,Math.round((metrics.wallet-this.savingsStartingWallet)*10)/10);
     if (mission.kind==='fortuna') return metrics.wallet;
     if (mission.kind==='campanha') return metrics.popularity;
-    if (mission.kind==='articulacao') return this.missionPayers.size;
     if (mission.kind==='entrega') return this.missionCoffee.size;
     return mission.current;
   }

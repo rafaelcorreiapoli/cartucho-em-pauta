@@ -681,3 +681,38 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
 });
+
+test.each([true,false])('transfer progress follows the number of remaining distinct senders, available=%s',anotherSender=>{
+  const players:Player[] = (anotherSender ? ['Rafa','Bia','Caio','Duda'] : ['Rafa','Bia','Caio']).map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [recipient,credited,next] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(recipient.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(recipient.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['articulacao','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  const view = (now:number)=>match.view(recipient.id,players.map(({id})=>id),now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='articulacao');
+  const pay = (sender:Player,now:number)=>match.politics(sender,{kind:'transfer',to:recipient.id,amount:1},players,now);
+  expect(active(0)?.current).toBe(0);
+  expect(pay(credited,1)).toBe(true);
+  expect(pay(credited,2)).toBe(true);
+  expect(active(2)?.current).toBe(1);
+  match.leave((anotherSender ? credited : next).id,3);
+
+  if (anotherSender) {
+    expect(renderToStaticMarkup(<MissionRow mission={active(3)!}/>)).toContain('1 / 2');
+    expect(pay(next,4)).toBe(true);
+    const completed = view(4).missions.completed.find(mission=>mission.kind==='articulacao')!;
+    expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+    expect(view(4).progression.xp).toBe(30);
+  } else {
+    expect(active(3)).toBeUndefined();
+    expect(view(3).missions.active).toHaveLength(3);
+    expect(view(3).missions.completed).toEqual([]);
+    expect(view(3).progression.xp).toBe(0);
+  }
+});
