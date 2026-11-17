@@ -773,7 +773,7 @@ export class PlenaryMatch {
   }
 
   private canRepairOutage(id:string) {
-    return this.powerOut && !this.disconnected.has(id) && !this.isolated(id) &&
+    return this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt) && !this.disconnected.has(id) && !this.isolated(id) &&
       [...this.electorate].some(other=>other!==id && !this.disconnected.has(other) && !this.isolated(other));
   }
 
@@ -794,18 +794,22 @@ export class PlenaryMatch {
   actOnPower(player:Player,action:PowerAction,now:number) {
     if (!this.canOperatePower(player,action.panel,now)) return;
     if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
-    const wasOut = this.powerOut;
+    const couldRepair = this.power.canFinishBefore(now,this.sessionEndsAt);
     const result = this.power.act(player.id,action,now,this.powerCooldown(now));
-    if (this.powerOut!==wasOut) this.refreshAgendaEligibility();
+    if (couldRepair!==this.power.canFinishBefore(now,this.sessionEndsAt)) this.refreshAgendaEligibility(now);
     return result;
   }
 
   advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
+    const couldRepair = this.power.canFinishBefore(now,this.sessionEndsAt);
     const repairedBy = this.power.advance(now,(id,panel)=>{
       const player = playerAt(id);
       return !!player && this.canOperatePower(player,panel,now);
     });
-    if (!repairedBy) return;
+    if (!repairedBy) {
+      if (couldRepair && !this.power.canFinishBefore(now,this.sessionEndsAt)) this.refreshAgendaEligibility(now);
+      return;
+    }
     for (const panel of [0,1] as const) {
       const id = repairedBy[panel];
       const player = id && playerAt(id);
@@ -875,6 +879,7 @@ export class PlenaryMatch {
   advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
     const electionWasOpen = this.election.open(this.agendaNow);
+    const couldRepair = this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt);
     this.agendaNow = Math.max(this.agendaNow,now);
     const wasCritical = this.criticalStability;
     const wasBurning = this.fire.burning;
@@ -889,7 +894,8 @@ export class PlenaryMatch {
     const expiredSuspensions = this.economy.expireSuspensions(now);
     const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
     const crossedCrisisThreshold = (this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability;
-    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold) this.refreshAgendaEligibility();
+    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold ||
+        couldRepair!==this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt)) this.refreshAgendaEligibility();
     const closingVote = (this.phase==='ballot' || this.phase==='hearing') && this.ends<=this.sessionEndsAt;
     if (now>=this.sessionEndsAt && !closingVote) {
       this.finishAtDeadline();

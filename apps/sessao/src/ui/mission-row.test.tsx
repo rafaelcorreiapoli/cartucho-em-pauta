@@ -2300,3 +2300,49 @@ test.each([
   expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
   expect(view(finishedAt).progression.xp).toBe(missionReward(kind).xp);
 });
+
+test.each(['waiting','running','interrupted'] as const)('outage missions respect the last possible repair (%s)', status=>{
+  const started = status!=='waiting';
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
+  }));
+  const [rafa,bia,caio] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>.9)).toBe(true);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(rafa.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const lastStart = deadline-powerRules.repairMs-1;
+  expect(match.actOnPower(caio,{kind:'sabotage',panel:0},lastStart)).toBe('Energia cortada.');
+  const view = (now:number)=>match.view(rafa.id,ids,now).politics!;
+  const active = ()=>view(lastStart).missions.active.map(mission=>mission.kind);
+  expect(active()).toContain('manutencaoEmergencia');
+  expect(active()).toContain('heroiInesperado');
+  if (started) {
+    match.actOnPower(rafa,{kind:'repair',panel:0},lastStart);
+    match.actOnPower(bia,{kind:'repair',panel:1},lastStart);
+  }
+  // Keep this fixture focused on the electrical outage.
+  const fire = Reflect.get(match,'fire');
+  Reflect.set(fire,'next',Infinity);
+  match.advance(lastStart+1);
+  expect(active().includes('manutencaoEmergencia')).toBe(started);
+  expect(active().includes('heroiInesperado')).toBe(started);
+  expect(view(lastStart+1).progression.xp).toBe(0);
+  if (!started) return;
+  if (status==='interrupted') {
+    match.actOnPower(bia,{kind:'cancel',panel:1},lastStart+1);
+    expect(active()).not.toContain('manutencaoEmergencia');
+    expect(active()).not.toContain('heroiInesperado');
+    expect(view(lastStart+1).progression.xp).toBe(0);
+    return;
+  }
+  match.advancePower(deadline-1,id=>players.find(player=>player.id===id));
+  const completed = view(deadline-1).missions.completed;
+  expect(renderToStaticMarkup(<ul>{completed.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}</ul>))
+    .toContain('Conclua o reparo de uma pane elétrica junto a outro jogador');
+  expect(view(deadline-1).progression.xp).toBe(100);
+});
