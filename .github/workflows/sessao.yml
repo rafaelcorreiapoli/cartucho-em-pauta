@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flow: [security-layout, market, vote-history]
+        flow: [security-layout, market, vote-history, megaphone-speech]
     env:
       SMOKE_FLOW: ${{ matrix.flow }}
     defaults:
@@ -47,20 +47,34 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Install headless Chromium
         run: npx --yes --package=@playwright/cli@0.1.24 playwright-cli install-browser chrome-for-testing --with-deps
-      - name: Verify the HUD against a local game server
+      - name: Run a game flow in Chrome
         run: |
           set -euo pipefail
           browser() { npx --yes --package=@playwright/cli@0.1.24 playwright-cli -s="sessao-$SMOKE_FLOW-ci" "$@"; }
-          PORT=26874 SESSAO_LOCAL_SOLO=1 bun "dev/$SMOKE_FLOW-smoke-server.ts" &
-          server_pid=$!
           VITE_GAME_SERVER=http://127.0.0.1:26874 bun node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5194 --strictPort &
           client_pid=$!
+          pids=("$client_pid")
           cleanup() {
             browser close || true
-            kill "$server_pid" "$client_pid" 2>/dev/null || true
+            kill "${pids[@]}" 2>/dev/null || true
           }
           trap cleanup EXIT
-          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:26874/health
+          if [[ "$SMOKE_FLOW" != megaphone-speech ]]; then
+            PORT=26874 SESSAO_LOCAL_SOLO=1 bun "dev/$SMOKE_FLOW-smoke-server.ts" &
+            pids+=("$!")
+            curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:26874/health
+          fi
           curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:5194/ >/dev/null
-          browser open http://127.0.0.1:5194 --browser chrome-for-testing --config dev/private-call-chrome.json
+          url=http://127.0.0.1:5194
+          if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then
+            url="$url/?captureVoice=1"
+          fi
+          browser open "$url" --browser chrome-for-testing --config dev/private-call-chrome.json
           browser run-code --filename "dev/$SMOKE_FLOW-smoke.js" --json
+      - name: Keep the received megaphone clips
+        if: matrix.flow == 'megaphone-speech'
+        uses: actions/upload-artifact@v4
+        with:
+          name: megaphone-received-audio
+          path: /tmp/sessao-megaphone-*.webm
+          if-no-files-found: error
