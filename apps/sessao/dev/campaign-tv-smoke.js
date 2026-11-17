@@ -24,13 +24,14 @@ async page => {
         image:element.querySelector('img').naturalWidth,
         number:element.querySelector('strong').textContent,
         skin:element.querySelector('[data-skin]').dataset.skin,
+        announcement:element.parentElement.querySelector('.campaign-tv-announcement').textContent.trim(),
       };
     });
     if (ad.side!==side || (motion && (!ad.opening?.startsWith(side==='left' ? 'translateX(calc(-' : 'translateX(calc(100%') ||
         ad.onScreen!=='none')) || (!motion && ad.opening) || ad.image===0 || !/^\d+$/.test(ad.number)) {
       throw Error('Propaganda incorreta: '+JSON.stringify(ad));
     }
-    if ((await announcement(client).textContent()).trim()!==`Propaganda eleitoral. Vote ${nick}, número ${ad.number}.`) {
+    if (ad.announcement!==`Propaganda eleitoral. Vote ${nick}, número ${ad.number}.`) {
       throw Error('Anúncio acessível incorreto.');
     }
     return ad;
@@ -75,13 +76,13 @@ async page => {
     for (const client of [page,guest]) {
       if (await caption(client).locator('span').textContent()!=='Vote Rafa') throw Error('A segunda propaganda interrompeu a primeira.');
     }
-    await page.clock.resume();
-    await guest.clock.resume();
+    await Promise.all([page,guest].map(client=>client.clock.fastForward(4_600)));
     const bia = await Promise.all([checkAd(page,'Bia','right',true),checkAd(guest,'Bia','left',false)]);
     if (bia[0].number!==bia[1].number || bia[0].skin!==bia[1].skin || bia[0].number===rafa[0].number) {
       throw Error('Identidade da segunda propaganda incorreta.');
     }
     for (const client of [page,guest]) {
+      await client.clock.resume();
       await tv(client).waitFor({state:'detached'});
       if ((await announcement(client).textContent()).trim() || await client.evaluate(()=>window.micAttempts)!==0) {
         throw Error('O anúncio não foi limpo ou o microfone foi solicitado.');
