@@ -7,13 +7,19 @@ class TestRoom extends SessionRoom {
     super.onCreate();
     const positioned = new WeakSet();
     this.clock.setInterval(()=>{
-      if (Reflect.get(this,'match').phase!=='negotiation') return;
+      const match = Reflect.get(this,'match');
+      if (match.phase!=='negotiation') return;
       for (const state of Reflect.get(this,'players').values()) {
         if (positioned.has(state)) continue;
         positioned.add(state);
+        // Fund a third accessory so the replacement prompt can be exercised.
+        Reflect.get(match,'economy').earn(state.player.id,2);
         Object.assign(state.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
       }
     },100);
   }
 }
-await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(TestRoom)}}).listen(2605,'127.0.0.1');
+await defineServer({
+  transport:new BunWebSockets(),rooms:{plenary:defineRoom(TestRoom)},
+  express:app=>{ app.get('/health',(_request,response)=>response.sendStatus(200)); },
+}).listen(Number(process.env.PORT ?? 2605),'127.0.0.1');

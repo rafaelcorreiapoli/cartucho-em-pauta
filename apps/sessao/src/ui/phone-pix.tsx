@@ -24,8 +24,8 @@ export function PhonePix({politics,ownId,send}:{politics:PoliticsView;ownId:stri
         <output>{money(amount)}</output>
         <button type="button" className="hud-icon-button" aria-label="Aumentar valor" disabled={amount+1>politics.wallet} onClick={()=>setAmount(amount+1)}>+</button>
       </div>
-      <button type="button" className="hud-button" aria-keyshortcuts="5" disabled={!transfer}
-        onClick={()=>{if (transfer?.kind==='transfer') send({kind:'transfer',to:transfer.to,amount:transfer.amount});}}>{politics.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido'} <kbd className="action-key" aria-hidden="true">5</kbd></button>
+      <button type="button" className="hud-button" aria-keyshortcuts="1" disabled={!transfer}
+        onClick={()=>{if (transfer?.kind==='transfer') send({kind:'transfer',to:transfer.to,amount:transfer.amount});}}>{politics.paymentsLeft ? 'Transferir' : 'Limite de pagamentos atingido'} <kbd className="action-key" aria-hidden="true">1</kbd></button>
     </footer>
   </section>;
 }

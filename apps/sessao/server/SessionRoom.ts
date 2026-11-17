@@ -222,8 +222,10 @@ export class SessionRoom extends Room {
     });
     this.onMessage('complaint-submit',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || !raw || typeof raw!=='object' || !('id' in raw) || typeof raw.id!=='number' || !Number.isSafeInteger(raw.id)) return;
-      if (!this.consumeRoomCommand(player.id,raw)) return;
+      if (!player || !raw || typeof raw!=='object') return;
+      const id = 'id' in raw && typeof raw.id==='number' && Number.isSafeInteger(raw.id) ? raw.id :
+        'target' in raw && typeof raw.target==='string' ? raw.target : undefined;
+      if (id===undefined || !this.consumeRoomCommand(player.id,raw)) return;
       const photoId = 'photo' in raw ? raw.photo : undefined;
       const photo = photoId===undefined ? undefined :
         this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===photoId)?.photo;
@@ -231,8 +233,13 @@ export class SessionRoom extends Room {
         client.send('gameplay-feedback','Fotografia indisponível no seu álbum.');
         return;
       }
-      const error = this.match.submitComplaint(player,raw.id,this.clock.currentTime,photo);
+      const error = this.match.submitComplaint(player,id,this.clock.currentTime,photo);
       if (error) client.send('gameplay-feedback',error);
+      else {
+        const [decision] = this.match.complaintView(player.id).history;
+        this.internalMail.publishComplaint(decision);
+        this.broadcast('mail-state',this.internalMail.view());
+      }
     });
     this.onMessage('mail-read',client=>{
       client.send('mail-state',this.internalMail.view());

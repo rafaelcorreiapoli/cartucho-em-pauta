@@ -1,4 +1,4 @@
-import { vipAreaRadius } from '../src/installations';
+import { portraitInteractionRadius, vipAreaRadius } from '../src/installations';
 import type { GameplayEvent } from '../src/gameplay';
 import { privateOffices } from '../src/private-offices';
 import { securityRoom, roomAt } from '../src/map';
@@ -11,7 +11,7 @@ const fact = (value:string|number, group?:string):Fact[] => [{value:String(value
 const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.id!==actor);
 const portraitNear = (photo:Photo,owner?:string) => photo.decorations.some(item=>
   item.kind==='portrait' && (owner===undefined || item.owner.id===owner) &&
-  Math.hypot(item.x-photo.center.x,item.y-photo.center.y)<=28);
+  Math.hypot(item.x-photo.center.x,item.y-photo.center.y)<=portraitInteractionRadius);
 const privateRooms = new Set(['Antecâmara',...privateOffices.map(office=>office.name)]);
 const capture = (test:(photo:Photo,actor:string)=>Fact[]) => (event:GameplayEvent) =>
   event.type==='photo' && event.photo ? test(event.photo,event.actor) : [];

@@ -1,5 +1,6 @@
 import {expect,test} from 'bun:test';
-import {matchingFruit,winningReels} from './phone-minigames';
+import {winningReels} from '../bets';
+import {matchingFruit} from '../candy';
 
 test('fruit matches include crossing rows and columns without wrapping rows',()=>{
   const board = Array.from({length:25},(_,index)=>index);

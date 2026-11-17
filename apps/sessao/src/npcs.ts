@@ -13,6 +13,10 @@ export const npcs = {
     interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
   credentialsVendor:{name:'Carmem Carimbo',sprite:'carmem-carimbo.webp',portrait:'retrato-carmem-carimbo.webp',x:160,y:473,direction:0,
     interaction:{x:149,y:493},dialogue:'credentials',label:'Credenciamento',catalog:'credentials'},
+  secretary:{name:'Dona Sílvia',sprite:'silvia-secretaria.webp',x:85,y:221,direction:0,
+    interaction:{x:83,y:247},dialogue:'secretary',label:'Secretaria',catalog:undefined},
+  protocol:{name:'Seu Mauro',sprite:'mauro-protocolo.webp',x:127,y:338,direction:0,
+    interaction:{x:129,y:365},dialogue:'protocol',label:'Protocolo',catalog:undefined},
   snackVendor:{name:'Palmirinha',sprite:'palmirinha.webp',x:886,y:328,direction:0,
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
@@ -39,9 +43,22 @@ export type DialogueOption = {
   next?:string;
   action?:'shop'|'close';
   requires?:DialogueCondition;
+  fileItem?:number;
 };
 export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
+  secretary:{
+    start:{
+      text:'Escolha um projeto. Confira no inventário quantas assinaturas você precisa pedir a outros jogadores antes de levar o documento ao Protocolo.',
+      options:[{id:'projects',label:'Solicitar documento'},{id:'leave',label:'Encerrar',action:'close'}],
+    },
+  },
+  protocol:{
+    start:{
+      text:'Qual documento você quer protocolar? Projetos só precisam das assinaturas exigidas.',
+      options:[{id:'leave',label:'Encerrar',action:'close'}],
+    },
+  },
   credentials:{
     start:{
       text:'Retratos oficiais e placas para reservar uma cadeira, Excelência.',
@@ -121,5 +138,6 @@ export type DialogueView = {
   text:string;
   options:readonly Pick<DialogueOption,'id'|'label'>[];
   shop:boolean;
+  feedback?:string;
   token:number;
 };

@@ -1,4 +1,4 @@
-// Supply a Portuguese speech WAV at /tmp/sessao-megaphone-speech.wav.
+// Use the bundled Brazilian Portuguese speech fixture without a physical microphone.
 // Open with ?captureVoice=1 to save the four received clips for listening.
 async page => {
   await page.reload();
@@ -9,7 +9,7 @@ async page => {
     input.hidden = true;
     document.body.append(input);
   });
-  await page.locator('#speech-fixture').setInputFiles('/tmp/sessao-megaphone-speech.wav');
+  await page.locator('#speech-fixture').setInputFiles('dev/fixtures/megaphone-pt-br.flac');
   const {recordings,...measurements} = await page.evaluate(async () => {
     const capture = new URLSearchParams(location.search).get('captureVoice')==='1';
     const recordings = {};

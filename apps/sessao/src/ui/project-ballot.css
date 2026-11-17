@@ -125,7 +125,7 @@
 .project-ballot-self strong { display: block; color: #fff3d5; }
 .project-vote-button { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .35em; min-height: 40px; padding: .3em; border: 1px solid color-mix(in srgb,var(--accent) 62%,var(--tone)); border-radius: 11px; background: linear-gradient(var(--tone),color-mix(in srgb,var(--tone) 65%,#100e13)); color: #fff5e5; font-weight: 800; cursor: pointer; }
 .project-vote-button b { font-size: 1.4em; color: var(--accent); line-height: 1; }
-.project-vote-button kbd { font-size: .72em; color: var(--accent); }
+.project-vote-button .action-key { color: var(--accent); }
 .project-vote-button:hover:not(:disabled), .project-vote-button[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--accent), 0 0 12px color-mix(in srgb,var(--accent) 36%,transparent); }
 .project-vote-button:disabled { opacity: .55; cursor: default; }
 @media (prefers-reduced-motion: no-preference) {
@@ -214,7 +214,6 @@
 .project-ballot-summary strong { font-size: 1.25em; }
 .project-ballot-footer { margin-inline: 1.4em; padding: .7em 1em; gap: 1.15em; border-radius: 1.7em; }
 .project-vote-button { align-self: center; border-radius: .8em; min-height: 3.2em; font-size: 1.1em; box-shadow: inset 0 1px #ffffff28; }
-.project-vote-button kbd { padding: .15em .35em; border-radius: .3em; background: #0716125c; }
 @media (max-width: 920px) {
   .project-ballot-group ul { padding-inline: .2em; }
   .project-ballot-count { min-width: 3em; font-size: 1em; }

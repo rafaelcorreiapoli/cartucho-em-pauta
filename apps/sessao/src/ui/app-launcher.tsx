@@ -30,7 +30,7 @@ export function AppLauncher({status,launch}:{status:HudAppStatus;launch:LaunchHu
         className="congress-app-toggle congress-app" aria-label={app.label} title={app.label} aria-keyshortcuts={app.key}
         style={{'--app-index':index} as CSSProperties}
         onClick={()=>{setOpen(false);launch(app.id);}}>
-        <Icon name={app.icon}/><span className="congress-app-label">{app.label} <kbd>{app.key}</kbd></span>
+        <Icon name={app.icon}/><span className="congress-app-label">{app.label}</span><kbd className="action-key" aria-hidden="true">{app.key}</kbd>
         {status[app.id]?.badge && <strong className="congress-app-badge">{status[app.id]?.badge}</strong>}
       </button>)}
     </section>}

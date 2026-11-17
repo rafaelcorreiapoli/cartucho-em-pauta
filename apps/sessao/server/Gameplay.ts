@@ -112,15 +112,18 @@ export class Gameplay {
     return true;
   }
 
-  private documentRequirements(item:WorldItem) {
+  private documentRequirements(item:WorldItem,proposer:string) {
     const document = item.document!;
-    const missing = document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp));
+    const project = document.project;
+    const missing = project===undefined ? document.requiredStamps.filter(stamp=>!document.stamps.includes(stamp)) : [];
     const recorded = this.signedProjects.get(item.id);
-    const valid = document.project===undefined ? document.signatures.length :
-      document.signatures.filter(person=>recorded?.get(person.id)?.project===document.project).length;
-    if (valid!==document.signatures.length) return 'O documento não atende aos requisitos formais.';
+    if (project!==undefined && document.signatures.some(person=>recorded?.get(person.id)?.project!==project)) {
+      return 'O documento não atende aos requisitos formais.';
+    }
+    const valid = project===undefined ? document.signatures.length :
+      new Set(document.signatures.filter(person=>person.id!==proposer).map(person=>person.id)).size;
     const signatures = document.requiredSignatures-valid;
-    if (signatures>0) missing.push(`${signatures} assinatura(s)`);
+    if (signatures>0) missing.push(signatures===1 ? '1 assinatura' : `${signatures} assinaturas`);
     if (missing.length) return `Falta: ${missing.join(', ')}.`;
   }
 
@@ -724,7 +727,7 @@ export class Gameplay {
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
-      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
+      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
@@ -825,7 +828,7 @@ export class Gameplay {
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
         direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
-        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),
+        exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
       decorations:[...this.installations.values()].filter(visible).map(item=>({...item})),
@@ -837,7 +840,7 @@ export class Gameplay {
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
         character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
@@ -1274,7 +1277,9 @@ export class Gameplay {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,(npc,direct)=>{
-      const product = marketProduct(npcs[npc].catalog,requested,world.policies,world.publicBudget);
+      const catalog = npcs[npc].catalog;
+      if (!catalog) return 'Abra o catálogo do vendedor.';
+      const product = marketProduct(catalog,requested,world.policies,world.publicBudget);
       if (!product) {
         return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested) || isCredentialGood(requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
@@ -1288,7 +1293,7 @@ export class Gameplay {
       } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
       if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      const basePrice = marketProduct(npcs[npc].catalog,kind)!.price;
+      const basePrice = marketProduct(catalog,kind)!.price;
       const subsidy = Math.round((basePrice-price)*10)/10;
       const paid = subsidy && world.spendSubsidized ? world.spendSubsidized(id,price,subsidy) : world.spend?.(id,price);
       if (!paid) return 'Saldo insuficiente.';
@@ -1393,7 +1398,8 @@ export class Gameplay {
       if (!target || !canReachDownedPlayer(player,target)) return 'Aproxime-se do jogador nocauteado.';
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
-    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
+    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,
+      this.dialogueEligibility(id,world),this.documentsForProtocol(id),item=>this.fileDocument(player,item,world));
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
@@ -1473,8 +1479,8 @@ export class Gameplay {
           template.office : undefined;
         data.document = {
           author:player.nick,title:bill?.name ?? template.title,project,description:bill?.description,edited:false,signatures:[],stamps:[],
-          requiredSignatures:bill ? world.projectSignatures ?? Number(world.players.some(person=>person.id!==id && !person.npc)) : Math.min(template.signatures,Math.max(0,world.players.length-1)),
-          requiredStamps:[...template.stamps],requiredOffice,
+          requiredSignatures:bill ? world.projectSignatures ?? Math.min(2,world.players.filter(person=>person.id!==id && !person.npc).length) : Math.min(template.signatures,Math.max(0,world.players.length-1)),
+          requiredStamps:bill ? [] : [...template.stamps],requiredOffice,
         };
       }
       this.event(world,player,'collected',data);
@@ -1511,9 +1517,6 @@ export class Gameplay {
         if (!target) return 'Aproxime-se do destinatário.';
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return 'Este jogador não pode assinar o documento.';
-        }
-        if (action.kind==='sign-request' && data.document?.project!==undefined && world.canSignProject?.(target.id)===false) {
-          return 'A assinatura precisa ser de outro jogador com mandato.';
         }
         this.clearRequests(data.id);
         const key = ++this.serial;
@@ -1588,33 +1591,39 @@ export class Gameplay {
       }
       case 'stamp':
         if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
+        if (data.document.project!==undefined) return 'Projetos não exigem carimbos.';
         if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
         data.document.stamps.push(terminal.stamp);
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
       case 'verify-document':
         if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
-        return this.documentRequirements(data) ?? 'Documento atende aos requisitos formais.';
-      case 'file': {
-        if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
-        if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
-        const error = this.documentRequirements(data);
-        if (error) return error;
-        if (data.document.project!==undefined) {
-          if (data.document.requiredSignatures && !data.document.signatures.some(signer=>
-            signer.id!==id && (world.canSignProject?.(signer.id) ?? world.players.some(person=>person.id===signer.id && !person.npc)))) {
-            return 'A assinatura precisa ser de outro jogador com mandato.';
-          }
-          const reason = world.projectFilingError?.(id,data.document.project);
-          if (reason) return reason;
-        }
-        const filed = [...this.items.values()].filter(item=>'filed' in item.place);
-        if (filed.length>=24) this.remove(filed[0]);
-        this.move(item,{filed:true});
-        this.event(world,player,'filed',data,undefined,{project:data.document.project});
-        return 'Documento protocolado.';
-      }
+        return this.documentRequirements(data,id) ?? 'Documento atende aos requisitos formais.';
     }
+  }
+
+  private documentsForProtocol(id:string) {
+    return this.inventory(id).flatMap(({data})=>data.document ? [{id:data.id,title:data.document.title}] : []);
+  }
+
+  private fileDocument(player:Player,itemId:number,world:GameplayWorld) {
+    const id = player.id;
+    if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
+    const item = this.items.get(itemId);
+    if (!item || !('holder' in item.place) || item.place.holder!==id || !item.data.document) return 'O documento não está com você.';
+    const {data} = item;
+    const document = item.data.document;
+    const error = this.documentRequirements(data,id);
+    if (error) return error;
+    if (document.project!==undefined) {
+      const reason = world.projectFilingError?.(id,document.project);
+      if (reason) return reason;
+    }
+    const filed = [...this.items.values()].filter(item=>'filed' in item.place);
+    if (filed.length>=24) this.remove(filed[0]);
+    this.move(item,{filed:true});
+    this.event(world,player,'filed',data,undefined,{project:document.project});
+    return 'Documento protocolado.';
   }
 
   private respond(player:Player, action:GameplayAction, world:GameplayWorld) {
@@ -1653,7 +1662,7 @@ export class Gameplay {
     }
     const doc = item.data.document;
     if (!doc || doc.signatures.some(person => person.id===player.id) ||
-      (doc.project!==undefined && (player.npc || world.canSignProject?.(player.id)===false)) ||
+      (doc.project!==undefined && player.npc) ||
       (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});
