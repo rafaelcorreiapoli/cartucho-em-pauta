@@ -2,7 +2,7 @@ import {mailPublicationFee,marketProduct} from '../src/market-catalog';
 import type {BillPolicies} from '../src/plenary';
 import { firstAidKit } from '../src/medical';
 import { inPlenary } from '../src/map';
-import { credentialGoods } from '../src/installations';
+import { credentialGoods, type AgendaDecoration } from '../src/installations';
 import { foods } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
@@ -11,7 +11,7 @@ import { agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targeted
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:'portrait'|'vip'|'anyPortrait'|'anyVip',replacement?:boolean)=>boolean}>;
+  remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -110,7 +110,8 @@ const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabal
 const activeMissionCount = 3;
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
 
-function canCompleteTimedMission(kind:Agenda,metrics:AgendaMetrics) {
+function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
+  if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (mailMissions.has(kind)) return metrics.canPublishMail?.()!==false;
   if (kind==='propaganda' || kind==='campanhaUltimaHora') return (metrics.remainingAdvertisements?.() ?? 1)>0;
   return true;
@@ -226,7 +227,7 @@ export class PersonalAgenda {
         if (documents && [...documents.values()].some(signed=>new Set([...possible,...signed]).size>=mission.target)) return true;
       } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
-          canCompleteTimedMission(mission.kind,metrics) &&
+          canCompleteMissionNow(mission.kind,metrics) &&
           (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
       this.factsByMission.delete(mission.id);
       this.callSamples.delete(mission.id);
@@ -463,7 +464,7 @@ export class PersonalAgenda {
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
     if (decoration && metrics.wallet<credentialGoods[decoration].price && !metrics.owns?.(decoration)) return false;
-    if (!canCompleteTimedMission(kind,metrics)) return false;
+    if (!canCompleteMissionNow(kind,metrics)) return false;
     if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;

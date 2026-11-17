@@ -300,7 +300,8 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    if (event.type==='spy-removed' || event.type==='advertisement-aired') this.refreshAgendaEligibility();
+    if (event.type==='spy-removed' || event.type==='advertisement-aired' ||
+        event.kind==='vip' && (event.type==='installed' || event.type==='uninstalled')) this.refreshAgendaEligibility();
     return true;
   }
 

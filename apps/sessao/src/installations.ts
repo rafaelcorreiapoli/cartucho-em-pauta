@@ -17,6 +17,7 @@ export const installationSites = {
   pizza:{kind:'pizza',point:roomActivities.coffee,label:'Mesa do Cafezinho'},
 } as const;
 export type Installable = typeof installationSites[keyof typeof installationSites]['kind'];
+export type AgendaDecoration = 'portrait'|'vip'|'anyPortrait'|'anyVip'|'vipSpace';
 export const credentialGoods = {portrait:{price:2},vip:{price:1}} as const;
 export const installationArt = {
   portrait:{texture:'portrait-mount',sprite:'moldura-congresso.webp',width:26,height:31,centerY:0},
