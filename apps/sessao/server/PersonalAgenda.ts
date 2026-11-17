@@ -10,7 +10,7 @@ import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, ar
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; powerOut?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
-  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
+  canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
 const minimumPartialDepositLot = 0.2;
@@ -234,6 +234,13 @@ export class PersonalAgenda {
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
           (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
+      } else if (mission.kind==='recolhimentoExtraordinario' && metrics.canPartiallyDepositCash) {
+        const lots = this.factsByMission.get(mission.id)?.get('');
+        for (const lot of lots ?? []) {
+          if (!metrics.canPartiallyDepositCash(Number(lot))) lots?.delete(lot);
+        }
+        mission.current = lots?.size ? 1 : 0;
+        if (mission.current || metrics.npcHasCash?.(minimumPartialDepositLot)!==false) return true;
       } else if (mission.kind==='pizzada' && playerCount<photoMissions.pizzada.players) {
         const pizza = metrics.installedPizza?.();
         if (pizza?.owned && metrics.isScandalPizza?.(pizza.id)) {

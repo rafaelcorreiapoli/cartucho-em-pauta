@@ -402,6 +402,10 @@ export class PoliticalEconomy {
     }
   }
 
+  setAgendaCashAvailability(canPartiallyDepositCash:(itemId:number)=>boolean) {
+    for (const account of this.accounts.values()) Object.assign(account,{canPartiallyDepositCash});
+  }
+
   setAgendaMailAvailability(canPublishMail:(id:string)=>boolean,agendaSelfies?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['agendaSelfies']>>) {
     for (const [id,account] of this.accounts) Object.assign(account,{
       canPublishMail:()=>canPublishMail(id),

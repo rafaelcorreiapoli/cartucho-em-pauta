@@ -414,6 +414,11 @@ export class Gameplay {
     return this.inventory(id).some(({data})=>cashAmount(data)===amount);
   }
 
+  canPartiallyDepositCash(itemId:number) {
+    const item = this.items.get(itemId);
+    return !!item && treasuryPartialAmount(cashAmount(item.data) ?? 0)>0;
+  }
+
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
 
   signableDocuments(player:Player,npc:Player,world:GameplayWorld) {

@@ -94,6 +94,10 @@ export class PlenaryMatch {
     return availableAt<this.sessionEndsAt;
   }
 
+  setAgendaCashAvailability(check:Parameters<PoliticalEconomy['setAgendaCashAvailability']>[0]) {
+    this.economy.setAgendaCashAvailability(check);
+  }
+
   setAgendaCommerce(now:()=>number) {
     this.economy.setAgendaCommerce(()=>({policies:this.activePolicies(now()),publicBudget:this.budget}));
   }
@@ -340,7 +344,9 @@ export class PlenaryMatch {
     this.economy.recordGameplay(event);
     const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
     const changedPizza = event.kind==='pizza' && (event.type==='installed' || event.type==='uninstalled' || event.type==='slice');
-    if (droppedSpy || changedPizza || event.kind==='xray' || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    const changedRobbedCash = event.kind==='briefcase' &&
+      (event.type==='npc-robbed' || event.type==='delivered' || event.type==='money-pocketed');
+    if (changedRobbedCash || droppedSpy || changedPizza || event.kind==='xray' || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }

@@ -1774,6 +1774,7 @@ test('the Agenda offers extraordinary collection only when a robbery can fund a 
   match.addParliamentarian(npc);
   const game = new Gameplay();
   game.reset(0,()=>.9,[player]);
+  match.setAgendaCashAvailability(itemId=>game.canPartiallyDepositCash(itemId));
   const world = match.gameplayWorld([player,npc],1,()=>false);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   Reflect.set(agenda,'missions',[]);
@@ -1795,6 +1796,16 @@ test('the Agenda offers extraordinary collection only when a robbery can fund a 
   match.refreshAgendaEligibility();
   expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain('1 / 2');
 
+  const consumedLot = game.view(player,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(game.act(player,{kind:'deliver',place:'treasury',item:consumedLot.id},world)).toContain('entregues à Tesouraria');
+  expect(active()).toBeUndefined();
+  expect(view().missions.completed.some(mission=>mission.kind==='recolhimentoExtraordinario')).toBe(false);
+
+  world.earn!(npc.id,0.2);
+  Reflect.set(agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(active()?.current).toBe(0);
+  expect(game.robNpc(player,npc,world)).toContain('Maleta roubada');
   const briefcase = game.view(player,world).inventory.find(item=>item.kind==='briefcase')!;
   const before = view().progression.xp;
   expect(game.act(player,{kind:'deliver',place:'treasury',item:briefcase.id,target:'partial'},world))

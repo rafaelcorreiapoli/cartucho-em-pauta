@@ -196,6 +196,7 @@ export class SessionRoom extends Room {
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
+        this.match.setAgendaCashAvailability(itemId=>this.gameplay.canPartiallyDepositCash(itemId));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.clock.currentTime));
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
