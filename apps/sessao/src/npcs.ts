@@ -8,7 +8,7 @@ export const snackBar = {
 } as const;
 
 export const npcs = {
-  vendor:{name:'Doutor Gambiarra',sprite:'doutor-gambiarra.webp',portrait:'retrato-doutor-gambiarra.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
+  vendor:{name:'Daniel Vorcaro',sprite:'daniel-vorcaro.webp',portrait:'retrato-daniel-vorcaro.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   furnitureVendor:{name:'Roberto Justus',sprite:'roberto-justus.webp',portrait:'retrato-roberto-justus.webp',x:525,y:451,direction:0,
     interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
   credentialsVendor:{name:'Carmem Carimbo',sprite:'carmem-carimbo.webp',portrait:'retrato-carmem-carimbo.webp',x:160,y:473,direction:0,

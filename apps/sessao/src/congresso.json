@@ -1487,30 +1487,6 @@
           "point": true
         },
         {
-          "id": 113,
-          "name": "",
-          "x": 713,
-          "y": 460,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
-          "id": 114,
-          "name": "",
-          "x": 757,
-          "y": 435,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
           "id": 115,
           "name": "",
           "x": 274,
@@ -2080,8 +2056,8 @@
         {
           "id": 189,
           "name": "Silvio Santos",
-          "x": 650,
-          "y": 456,
+          "x": 660,
+          "y": 469,
           "width": 0,
           "height": 0,
           "rotation": 0,
@@ -2092,7 +2068,7 @@
         {
           "id": 190,
           "name": "Balcão do Topa ou Não Topa: atendimento",
-          "x": 650,
+          "x": 660,
           "y": 488,
           "width": 0,
           "height": 0,
