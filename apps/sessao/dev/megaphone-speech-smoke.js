@@ -127,7 +127,9 @@ async page => {
       await waitFor(()=>receivingSpeech(listenerAudio),'Áudio WebRTC inaudível');
       const receiver = receivingSpeech(listenerAudio);
       if (!receiver) throw Error('No WebRTC playback received');
+      let distantReceiver;
       async function sample(name,broadcast) {
+        const distant = broadcast ? distantReceiver : undefined;
         await waitFor(()=>!!route && (broadcast ? route[3]===true && route[2]===false : route[2]===true && !route[3]),'Rota de áudio inesperada: '+name);
         await pause(250);
         let recorded;
@@ -154,30 +156,34 @@ async page => {
             });
           };
         }
-        let peak = 0;
-        let activeWindows = 0;
-        let bass = 0;
-        let mid = 0;
-        const samples = new Float32Array(receiver.fftSize);
-        const spectrum = new Float32Array(receiver.frequencyBinCount);
-        const hzPerBin = receiver.context.sampleRate / receiver.fftSize;
-        for (let i=0;i<110;i++) {
-          receiver.getFloatTimeDomainData(samples);
-          const rms = Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length);
-          if (rms>.008) activeWindows++;
-          receiver.getFloatFrequencyData(spectrum);
-          for (let bin=1;bin*hzPerBin<2400;bin++) {
-            const hz = bin*hzPerBin;
-            const energy = 10**(spectrum[bin]/10);
-            if (hz>=90 && hz<=330) bass += energy;
-            if (hz>=700) mid += energy;
+        const measure = async meter=>{
+          let peak = 0;
+          let activeWindows = 0;
+          let bass = 0;
+          let mid = 0;
+          const samples = new Float32Array(meter.fftSize);
+          const spectrum = new Float32Array(meter.frequencyBinCount);
+          const hzPerBin = meter.context.sampleRate / meter.fftSize;
+          for (let i=0;i<110;i++) {
+            meter.getFloatTimeDomainData(samples);
+            const rms = Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length);
+            if (rms>.008) activeWindows++;
+            meter.getFloatFrequencyData(spectrum);
+            for (let bin=1;bin*hzPerBin<2400;bin++) {
+              const hz = bin*hzPerBin;
+              const energy = 10**(spectrum[bin]/10);
+              if (hz>=90 && hz<=330) bass += energy;
+              if (hz>=700) mid += energy;
+            }
+            for (const value of samples) peak = Math.max(peak,Math.abs(value));
+            await pause(55);
           }
-          for (const value of samples) peak = Math.max(peak,Math.abs(value));
-          await pause(55);
-        }
+          if (activeWindows<15 || peak>=.98) throw Error(JSON.stringify({name,peak,activeWindows}));
+          return {peak,activeWindows,bassToMid:bass/mid};
+        };
+        const [nearby,far] = await Promise.all([measure(receiver),distant && measure(distant)]);
         await recorded?.();
-        if (activeWindows<15 || peak>=.98) throw Error(JSON.stringify({broadcast,peak,activeWindows}));
-        return {peak,activeWindows,bassToMid:bass/mid};
+        return {...nearby,distant:far};
       }
       const normal = await sample('voz-normal',false);
       await waitFor(()=>observerRoutes?.length===0,'Observador deve estar fora da proximidade');
@@ -210,6 +216,8 @@ async page => {
       inputs[1].gain.value = 0;
       peers[0].toggleMute();
       await waitFor(()=>receivingSpeech(listenerAudio) && receivingSpeech(observerAudio),'A transmissão não voltou após o mute');
+      distantReceiver = receivingSpeech(observerAudio);
+      if (!distantReceiver) throw Error('Áudio distante não chegou ao medidor');
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
       act({kind:'toggle-modulator'});
@@ -222,6 +230,10 @@ async page => {
       if (gear()?.call?.state!=='connected') throw Error('Desligar o megafone encerrou a chamada');
       const disguiseOnly = await sample('modulador',false);
       if (combined.bassToMid>=disguiseOnly.bassToMid*.65) throw Error(JSON.stringify({disguiseOnly,combined}));
+      if (filtered.distant.bassToMid>=normal.bassToMid*.65 || combined.distant.bassToMid>=disguiseOnly.bassToMid*.65) {
+        throw Error(JSON.stringify({normal,filtered,disguiseOnly,combined}));
+      }
+      if (amplitude(distantReceiver)>=.003) throw Error('Áudio distante permaneceu após desligar o Megafone');
       const tracksPerConnection = [...receivedTracks.values()];
       if (meters.length!==6 || devices.length!==3 || tracksPerConnection.length!==6 || tracksPerConnection.some(count=>count!==1)) {
         throw Error(JSON.stringify({streams:meters.length,microphoneSources:devices.length,tracksPerConnection}));
