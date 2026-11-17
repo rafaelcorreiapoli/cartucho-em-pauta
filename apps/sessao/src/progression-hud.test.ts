@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../server/PlenaryMatch';
 import {Gameplay} from '../server/Gameplay';
+import {publishProjectFiling} from '../server/project-test-fixture';
 import type {Player} from './map';
 import {BALLOT_MS,NEGOTIATION_MS,stations} from './plenary';
 import {attributePlayerView,canSelectAttribute} from './progression-hud';
@@ -19,6 +20,7 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
   const match = new PlenaryMatch(1);
   const game = new Gameplay();
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
   game.reset(0,()=>.9,[player]);
   const economy = Reflect.get(match,'economy');
   const {progression} = Reflect.get(economy,'accounts').get(player.id);

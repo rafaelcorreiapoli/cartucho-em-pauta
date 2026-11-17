@@ -232,6 +232,7 @@ test('the megaphone notice follows the phase and the anonymous snapshot flag',()
   const match = new PlenaryMatch(1);
   const ids = [player.id];
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
   const hud = createHudModel();
   const notify = (view:ReturnType<PlenaryMatch['view']>)=>hud.render({...view,megaphoneActive:true});
   const updates:boolean[] = [];
