@@ -90,12 +90,11 @@ async page => {
     if (previousCanvas) await usePalette(button,name);
     else await useShortcut(button);
     await surveillance.getByRole('heading',{name,exact:true}).waitFor();
-    if (previousCanvas) await page.waitForFunction(node=>!node.isConnected,previousCanvas);
+    if (previousCanvas) await previousCanvas.waitFor({state:'detached'});
     await surveillance.locator('.spy-viewport[aria-busy="false"]').waitFor();
-    await page.waitForFunction(()=>{
-      const canvases = document.querySelectorAll('#spy-monitor .spy-viewport canvas');
-      if (canvases.length!==1) return false;
-      const canvas = canvases[0];
+    await canvas.waitFor();
+    if (await canvas.count()!==1) throw Error('Mais de um canvas na câmera '+name);
+    const hasScene = await canvas.evaluate(canvas=>{
       const context = canvas.getContext('2d');
       if (!context) return false;
       const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
@@ -104,9 +103,14 @@ async page => {
       }
       return false;
     });
+    if (!hasScene) throw Error('Primeiro quadro sem cenário na câmera '+name);
+  }
+  async function markCanvas(id) {
+    await canvas.evaluate((node,mark)=>{node.dataset.testCanvas = mark;},id);
+    return page.locator(`canvas[data-test-canvas="${id}"]`);
   }
   await openCamera('Câmera Cafezinho');
-  const first = await canvas.elementHandle();
+  const first = await markCanvas('first');
   await openCamera('Câmera Biblioteca',first);
   await usePalette(surveillance.getByRole('button',{name:'Fotografar',exact:true}),'Fotografar');
   await page.getByText('Foto guardada no álbum.',{exact:true}).waitFor();
@@ -117,10 +121,10 @@ async page => {
   await useShortcut(surveillance.getByRole('button',{name:'Fechar canal'}));
   await viewport.waitFor({state:'detached'});
   await openCamera('Câmera Cafezinho');
-  const reopened = await canvas.elementHandle();
+  const reopened = await markCanvas('reopened');
   await surveillance.getByRole('button',{name:'Fechar vigilância'}).click();
   await surveillance.waitFor({state:'hidden'});
-  await page.waitForFunction(node=>!node.isConnected,reopened);
+  await reopened.waitFor({state:'detached'});
   await page.keyboard.press('v');
   await surveillance.getByText('Selecione um canal.').waitFor();
   if (await viewport.count()) throw Error('Monitor reabriu com a câmera anterior');
