@@ -191,3 +191,21 @@ test('initial NPC appearances are sampled without repeats and use the correspond
   members.reset(3,0,new Set([0,1,2,3,4,5,6]),()=>0);
   expect(members.players.map(({character})=>character)).toEqual([7,0,1]);
 });
+
+test('NPC negotiation exposes the live payment quota and still accepts a free vote when exhausted',()=>{
+  const {humans:[buyer],npcs:[,npc],match,talk,world} = fixture();
+  Object.assign(buyer,{x:npc.x+8,y:npc.y});
+  publishProjectFiling(match,buyer);
+  const active = world(2);
+  talk.act(buyer,{kind:'talk',target:npc.id},active);
+  const deal = talk.view(buyer,active)!;
+  expect(deal.paymentsLeft).toBeGreaterThan(0);
+  for (let i=0;i<deal.paymentsLeft;i++) expect(active.payNpc!(buyer.id,npc.id,1)).toBe(true);
+  const {minimum,wallet} = deal;
+  expect(talk.view(buyer,active)).toMatchObject({paymentsLeft:0,wallet:wallet-deal.paymentsLeft});
+  const vote = {kind:'vote',target:npc.id,round:match.projectRound,project:deal.projectIndex};
+  expect(minimum.yes).toBeGreaterThan(0);
+  expect(minimum.no).toBe(0);
+  expect(talk.act(buyer,{...vote,vote:'yes',amount:minimum.yes},active)).toBe('Pagamento indisponível.');
+  expect(talk.act(buyer,{...vote,vote:'no',amount:0},active)).toBe('Voto comprometido.');
+});

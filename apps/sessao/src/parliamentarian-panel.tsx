@@ -15,6 +15,7 @@ type Send = (action:object)=>void;
 export function ParliamentarianDealPanel({deal,round,send}:{deal:ParliamentarianDeal;round:number;send:Send}) {
   const [quote,setQuote] = useState<{vote:Vote;amount:number}>();
   let shortcut = 0;
+  const paymentUnavailable = (price:number) => price>0 && (deal.paymentsLeft<=0 || price>deal.wallet);
   function action(label:string,run:()=>void,disabled=false) {
     const key = ++shortcut<=9 ? String(shortcut) : undefined;
     return <button key={label} type="button" className="hud-button hud-button--secondary" onClick={run}
@@ -28,24 +29,24 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
       <DialogDismiss className="hud-button hud-button--secondary">Encerrar</DialogDismiss>
     </header>
     <div className="parliamentarian-options">
-      <p>Carteira · {money(deal.wallet)}</p>
+      <p>Carteira · {money(deal.wallet)}{deal.paymentsLeft<=0 && ' · Limite de pagamentos atingido'}</p>
       {deal.documents.map(doc=><div className="grid" key={doc.id}>{action(
         `${doc.title} · ${doc.price ? money(doc.price) : 'Assinatura gratuita'}`,
-        ()=>send({kind:'sign',target:deal.id,item:doc.id,amount:doc.price}),doc.price>deal.wallet
+        ()=>send({kind:'sign',target:deal.id,item:doc.id,amount:doc.price}),paymentUnavailable(doc.price)
       )}</div>)}
       {deal.project ? <><h3>{deal.project}</h3>
       {(['yes','no'] as const).map(vote=>action(vote==='yes' ? 'Negociar voto a favor' : 'Negociar voto contra',
-        ()=>setQuote({vote,amount:deal.minimum[vote]})))}
+        ()=>setQuote({vote,amount:deal.minimum[vote]}),paymentUnavailable(deal.minimum[vote])))}
       {quote && <>
         <p>{minimum ? `Contraproposta · mínimo de ${money(minimum)}` : 'Aceita sem pagamento.'}</p>
         {minimum>0 && <>
           {action('− R$ 10 mil',()=>setQuote({...quote,amount:amount-1}),amount<=minimum)}
-          {action('+ R$ 10 mil',()=>setQuote({...quote,amount:amount+1}),amount>=deal.wallet)}
+          {action('+ R$ 10 mil',()=>setQuote({...quote,amount:amount+1}),paymentUnavailable(amount+1))}
         </>}
         {action(`Confirmar ${quote.vote==='yes' ? 'a favor' : 'contra'} · ${amount ? money(amount) : 'Grátis'}`,()=>{
           send({kind:'vote',target:deal.id,round,project:deal.projectIndex,vote:quote.vote,amount});
           setQuote(undefined);
-        },amount>deal.wallet)}
+        },paymentUnavailable(amount))}
       </>}</> : <p>Nenhum projeto em pauta.</p>}
     </div>
   </>;
@@ -76,7 +77,7 @@ export function createParliamentarianPanel(send:Send) {
       }
       if (dismissed) return;
       const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.id]);
-      const next = JSON.stringify([projectKey,deal.name,deal.project,deal.documents,deal.minimum,deal.wallet]);
+      const next = JSON.stringify([projectKey,deal.name,deal.project,deal.documents,deal.minimum,deal.wallet,deal.paymentsLeft]);
       if (key!==next) {
         key = next;
         flushSync(()=>root.render(<ParliamentarianDealPanel key={projectKey} deal={deal} round={view.round} send={send}/>));

@@ -33,6 +33,7 @@ export class ParliamentarianTalk {
     const projectIndex = this.match.projectIndex;
     const minimum = (vote:'yes'|'no') => projectIndex===undefined ? 0 : this.members.minimum(npc.id,this.match.projectRound,vote,projectIndex,player.id);
     return {id:npc.id,name:npc.nick,project:projectIndex===undefined ? undefined : bills[projectIndex].name,projectIndex,wallet:world.wallet?.(player.id) ?? 0,
+      paymentsLeft:world.paymentsLeft?.(player.id) ?? 0,
       expiresIn:Math.ceil((session.until-world.now)/1000),
       documents:this.gameplay.signableDocuments(player,npc,world).map(doc=>({...doc,price:this.members.signature(npc.id,player.id)})),
       minimum:{yes:minimum('yes'),no:minimum('no')}};

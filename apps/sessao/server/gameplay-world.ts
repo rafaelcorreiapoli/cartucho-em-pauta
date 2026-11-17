@@ -19,6 +19,7 @@ export type GameplayWorld = {
   deposit?:(id:string,amount:number)=>boolean;
   lootWallet?:(id:string,fraction:number)=>number;
   takeWallet?:(id:string)=>number;
+  paymentsLeft?:(id:string)=>number;
   payNpc?:(from:string,to:string,amount:number)=>boolean;
   cashFlow?:(kind:'spawned'|'expired',amount:number)=>void;
   feedback?:(id:string,message:string)=>void;

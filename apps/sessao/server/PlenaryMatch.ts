@@ -447,6 +447,7 @@ export class PlenaryMatch {
       },
       lootWallet:(id,fraction)=>current() && this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
       takeWallet:id=>current() && this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
+      paymentsLeft:id=>current() ? this.economy.paymentsLeft(id,this.round) : 0,
       payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>{ if (current()) this.economy.earn(id,amount); },

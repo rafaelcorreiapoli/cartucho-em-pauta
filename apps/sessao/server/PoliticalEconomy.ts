@@ -462,7 +462,7 @@ export class PoliticalEconomy {
     }
   }
 
-  private paymentsLeft(id:string,round:number) {
+  paymentsLeft(id:string,round:number) {
     const account = this.accounts.get(id);
     return PAYMENTS_PER_ROUND-(account?.paymentRound===round ? account.payments : 0);
   }
