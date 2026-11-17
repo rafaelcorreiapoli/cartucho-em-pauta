@@ -14,7 +14,7 @@ import { binoculars, xray } from './equipment';
 import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
+import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheet } from './character-art';
 import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
@@ -169,7 +169,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,...combatSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...combatSheets,phoneSheet]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
         this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
@@ -698,6 +698,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!downed) view.fallAt = undefined;
         const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt);
         const combatArt = downed ?? recoil ?? attack;
+        const phone = latest.phone;
+        const usingPhone = (phone==='open' || phone==='game') && !player.moving &&
+          handling===undefined && !combatArt && !pose && !latest.carrying && !latest.cashInHand;
+        const handsetArt = usingPhone ? phoneArt(character,time,reducedMotion.matches) : undefined;
         const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
         const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? -reach);
         const labelY = latest.carried ? y-51 : y+2;
@@ -708,14 +712,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const spriteDepth = y+(latest.carried ? 1 : 0);
         if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
-          .setFlipX(downed?.flipX ?? recoil?.flipX ?? facing===3);
+          .setFlipX(downed?.flipX ?? recoil?.flipX ?? (!handsetArt && facing===3));
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        const phone = latest.phone;
         if (phone && !downed) {
           const signalY = spriteY-(latest.exposed?.length ? 55 : 43);
           for (const radius of [2.5,4.5,6.5]) {
@@ -756,7 +759,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
         } else {
           sprite.anims.stop();
-          sprite.setTexture(combatArt?.key ?? sheet.key,combatArt?.frame ?? frame+row*4);
+          const art = combatArt ?? handsetArt;
+          sprite.setTexture(art?.key ?? sheet.key,art?.frame ?? frame+row*4);
         }
         if (grip && latest.cashInHand && !pose && !combatArt) {
           const walkFrame = typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
