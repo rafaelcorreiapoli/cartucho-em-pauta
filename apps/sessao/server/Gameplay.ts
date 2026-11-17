@@ -460,6 +460,11 @@ export class Gameplay {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
+  private dropItem(player:Player,item:Item,world:GameplayWorld) {
+    this.move(item,this.groundPlace(item.data,player,world.now));
+    this.event(world,player,'dropped',item.data);
+  }
+
   private groundPlace(kind:ObjectKind | WorldItem, {x,y}:Motion, now:number):GroundPlace {
     return {ground:{x,y},expires:cashAmount(kind) && (typeof kind==='string' || kind.cash===undefined) ? now+cashLifetime : undefined};
   }
@@ -556,6 +561,12 @@ export class Gameplay {
         if (!target.knockedOut) return;
         this.transport.detach(target,world);
         publishGameplay(world,attacker,'character-knocked-out',{target:target.id});
+        if (!target.npc) {
+          for (const item of this.inventory(target.id)) {
+            if (!cashAmount(item.data)) continue;
+            this.dropItem(target,item,world);
+          }
+        }
         this.dialogues.close(target.id);
         this.stopModulator(target.id);
         this.phone.leave(target,world);
@@ -1580,8 +1591,7 @@ export class Gameplay {
       case 'drop': {
         if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
         const dropped = this.takeUnits(item,quantity);
-        this.move(dropped,this.groundPlace(dropped.data,player,world.now));
-        this.event(world,player,'dropped',dropped.data);
+        this.dropItem(player,dropped,world);
         return 'Objeto largado.';
       }
       case 'store':
