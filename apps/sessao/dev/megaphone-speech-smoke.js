@@ -16,22 +16,35 @@ async page => {
     const speech = await document.querySelector('#speech-fixture').files[0].arrayBuffer();
     const {RoomVoice} = await import('/src/voice.ts');
     const {voiceModulatorDisguise} = await import('/src/live-disguise.ts');
+    const {megaphone} = await import('/src/equipment.ts');
     const NativeAudio = AudioContext;
     const devices = [];
     const inputs = [];
+    const sources = [];
     navigator.mediaDevices.getUserMedia = async () => {
       const context = new NativeAudio();
       await context.resume();
       const output = context.createMediaStreamDestination();
-      const signal = context.createBufferSource();
-      signal.buffer = await context.decodeAudioData(speech.slice(0));
-      signal.loop = true;
+      const buffer = await context.decodeAudioData(speech.slice(0));
       const input = context.createGain();
       input.gain.value = devices.length ? 0 : 1;
       devices.push(context);
       inputs.push(input);
-      signal.connect(input).connect(output);
-      signal.start();
+      input.connect(output);
+      let signal;
+      const play = (loop,delay=0)=>{
+        if (signal) {
+          signal.stop();
+          signal.disconnect();
+        }
+        signal = context.createBufferSource();
+        signal.buffer = buffer;
+        signal.loop = loop;
+        signal.connect(input);
+        signal.start(context.currentTime+delay);
+      };
+      sources.push({play,duration:buffer.duration});
+      play(true);
       return output.stream;
     };
     const meters = [];
@@ -159,7 +172,9 @@ async page => {
         if (capture) {
           recorders.push(record(receiver,name));
           if (distant) recorders.push(record(distant,name+'-distante'));
+          sources[0].play(false,.3);
         }
+        const windows = capture ? Math.ceil((sources[0].duration+.8)*1000/55) : 110;
         const measure = async meter=>{
           let peak = 0;
           let activeWindows = 0;
@@ -168,7 +183,7 @@ async page => {
           const samples = new Float32Array(meter.fftSize);
           const spectrum = new Float32Array(meter.frequencyBinCount);
           const hzPerBin = meter.context.sampleRate / meter.fftSize;
-          for (let i=0;i<110;i++) {
+          for (let i=0;i<windows;i++) {
             meter.getFloatTimeDomainData(samples);
             const rms = Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length);
             if (rms>.008) activeWindows++;
@@ -190,6 +205,7 @@ async page => {
         return {...nearby,distant:far};
       }
       const normal = await sample('voz-normal',false);
+      if (capture) sources[0].play(true);
       await waitFor(()=>observerRoutes?.length===0,'Observador deve estar fora da proximidade');
       act({kind:'call',target:listener.sessionId});
       await waitFor(()=>listenerView?.gameplay?.call?.state==='incoming','Chamada privada não chegou');
@@ -224,6 +240,14 @@ async page => {
       if (!distantReceiver) throw Error('Áudio distante não chegou ao medidor');
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
+      if (capture) {
+        act({kind:'toggle-megaphone'});
+        await waitFor(()=>observerRoutes?.length===0,'O primeiro ciclo do Megafone não encerrou');
+        await pause(megaphone.cooldown);
+        act({kind:'toggle-megaphone'});
+        await waitFor(()=>observerRoutes?.some(([id,,,filtered])=>id===host.sessionId && filtered),
+          'O Megafone não reativou após a recarga');
+      }
       act({kind:'toggle-modulator'});
       await waitFor(()=>gear()?.modulator?.active,'Modulador não ativado');
       await peers[0].setDisguise(voiceModulatorDisguise);
