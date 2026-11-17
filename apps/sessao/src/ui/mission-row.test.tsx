@@ -16,7 +16,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -1434,4 +1434,41 @@ test('public meeting uses the same group size for the agenda, room sampling and 
   const state = match.view(host.id,ids,end).politics!;
   expect(state.missions.completed).toContainEqual(expect.objectContaining({kind:'reuniaoPublica',current:agendaDurationMs.reuniaoPublica}));
   expect(state.progression.xp).toBe(45);
+});
+
+
+test('an attached photo can only credit mail missions active at publication',()=>{
+  const author:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.press};
+  const players = [author];
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  const mail = new InternalMail();
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','jornalismo','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(author.id,[author.id],now).politics!;
+  const publish = (now:number)=>{
+    const world = match.gameplayWorld(players,now,()=>false);
+    game.act(author,{kind:'photo'},world);
+    const photo = game.photoView(author.id,now).album.at(-1)!.photo;
+    expect(mail.publish(author,{subject:'Registro',body:'Foto em anexo',attachment:{kind:'photo',id:photo.id}},
+      world,()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  };
+
+  publish(1);
+  const first = view(1);
+  expect(first.missions.completed.map(mission=>mission.kind)).toEqual(['mensagemComAnexo']);
+  const next = first.missions.active.find(mission=>mission.kind==='jornalismo')!;
+  expect(next?.current).toBe(0);
+  expect(renderToStaticMarkup(<MissionRow mission={next}/>)).toContain('data-done="false"');
+  expect(first.progression.xp).toBe(missionReward('mensagemComAnexo').xp);
+
+  const afterCooldown = mail.nextPublicationAt(author.id);
+  publish(afterCooldown);
+  const second = view(afterCooldown);
+  const completed = second.missions.completed.find(mission=>mission.kind==='jornalismo')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(second.progression.xp-first.progression.xp).toBe(missionReward('jornalismo').xp);
 });

@@ -303,7 +303,7 @@ export class PlenaryMatch {
     this.economy.recordGameplay(event);
     const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
     const changedPizza = event.kind==='pizza' && (event.type==='installed' || event.type==='uninstalled' || event.type==='slice');
-    if (droppedSpy || changedPizza || event.type==='photo-published' || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    if (droppedSpy || changedPizza || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }

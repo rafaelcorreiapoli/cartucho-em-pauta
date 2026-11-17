@@ -334,6 +334,15 @@ export class PersonalAgenda {
 
   applyGameplayEvent(metrics:AgendaMetrics, event:GameplayEvent, scandalPizza:boolean) {
     const gains:Partial<Record<Agenda,number>> = {};
+    let publishedMailPhoto:GameplayEvent|undefined;
+    if (event.type==='mail-published' && event.photo?.author.id===event.actor) {
+      const publication = photoPublicationKey(event.photo.id,'internal-mail');
+      if (!this.seenEvents.has(publication)) {
+        this.seenEvents.add(publication);
+        publishedMailPhoto = {...event,type:'photo-published',place:'internal-mail'};
+        gains.jornalismo = 1;
+      }
+    }
     if (event.type==='purchased' && event.kind) this.acquired.add(event.kind);
     if (event.type==='purchased' && event.kind && isOfficeFurniture(event.kind)) {
       gains.ostentacao = event.amount ?? officeGoods[event.kind].price;
@@ -363,9 +372,10 @@ export class PersonalAgenda {
       }
       const rule = photoMissions[kind as keyof typeof photoMissions];
       if (rule && (kind!=='pizzada' || scandalPizza)) {
-        const photo = event.photo;
+        const factEvent = kind==='publicouSelfie' && publishedMailPhoto ? publishedMailPhoto : event;
+        const photo = factEvent.photo;
         const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
-        const facts = rule.facts(humanPhoto ? {...event,photo:humanPhoto} : event);
+        const facts = rule.facts(humanPhoto ? {...factEvent,photo:humanPhoto} : factEvent);
         if (kind==='publicouSelfie' && photo && facts.length) {
           if (this.rewardedSelfieIds.has(photo.id)) continue;
           this.rewardedSelfieIds.add(photo.id);

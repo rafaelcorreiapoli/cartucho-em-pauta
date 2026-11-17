@@ -388,7 +388,7 @@ export class PoliticalEconomy {
       }
       if (event.type==='uninstalled') this.scandalPizzas.delete(event.item);
     }
-    if (event.type==='photo-published' && event.photo?.selfie && event.photo.author.id===event.actor &&
+    if ((event.type==='photo-published' || event.type==='mail-published') && event.photo?.selfie && event.photo.author.id===event.actor &&
       event.photo.people.some(person=>person.id!==event.actor) && !account.selfieBonus) {
       account.selfieBonus = true;
       account.popularity = cap(account.popularity+4);
