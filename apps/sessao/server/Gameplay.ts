@@ -267,7 +267,10 @@ export class Gameplay {
 
   ownsWiretap(id:string) { return this.surveillance.countInstalled(id,'wiretap')>0; }
 
-  ownsSpyCameras(id:string) { return this.surveillance.countInstalled(id,'spyCamera'); }
+  agendaCameras(id:string,credited:ReadonlySet<string>) {
+    const cameras = this.inventory(id).filter(({data})=>data.kind==='spyCamera').map(({data})=>data.id);
+    return this.surveillance.cameraAvailability(id,cameras,credited);
+  }
 
   canInstallSpy(id:string,kind:SpyDevice) { return this.surveillance.canInstall(id,kind); }
 

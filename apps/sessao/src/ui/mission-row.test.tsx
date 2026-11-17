@@ -425,7 +425,7 @@ test('cleanup requires a private discovery, works without the detector and expir
   expect(missions(peer,removed).completed.some(mission=>mission.kind==='limpeza')).toBe(false);
 });
 
-test('Investigação Particular counts two physical cameras across reinstallation',()=>{
+test.each([false,true])('Investigação Particular tracks reachable distinct cameras, lost second=%s',loseSecond=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
   const ids = [player.id];
   const match = new PlenaryMatch(1);
@@ -433,7 +433,7 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   const game = new Gameplay();
   game.reset(0,()=>.9,[player]);
   const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
-  account.ownsSpyCameras = ()=>game.ownsSpyCameras(player.id);
+  account.agendaCameras = (credited:ReadonlySet<string>)=>game.agendaCameras(player.id,credited);
   Reflect.set(account.agenda,'missions',[]);
   Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
@@ -471,6 +471,23 @@ test('Investigação Particular counts two physical cameras across reinstallatio
   const recoveredAt = secondInstalledAt+10+spyRules.remove;
   game.tick(at(recoveredAt),true);
   const recovered = game.view(player,at(recoveredAt)).inventory.find(item=>item.kind==='spyCamera')!;
+  expect(progress(recoveredAt).current).toBe(1);
+  if (loseSecond) {
+    const economy = Reflect.get(match,'economy');
+    expect(economy.spend(player.id,view(recoveredAt).wallet)).toBe(true);
+    Reflect.set(account.agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
+    Object.assign(player,{x:933,y:244});
+    game.spyAction(player,{kind:'remove',site:'press'},at(recoveredAt));
+    const removedAt = recoveredAt+spyRules.remove;
+    game.tick(at(removedAt),true);
+    const remaining = view(removedAt).missions;
+    const hud = remaining.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+    expect(hud).not.toContain('Consulte duas câmeras escondidas próprias');
+    expect(remaining.active).toHaveLength(3);
+    expect(remaining.completed).toEqual([]);
+    expect(view(removedAt).progression.xp).toBe(0);
+    return;
+  }
   game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},at(recoveredAt));
   const reinstalledAt = recoveredAt+spyRules.install;
   game.tick(at(reinstalledAt),true);

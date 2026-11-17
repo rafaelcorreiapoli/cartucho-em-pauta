@@ -10,7 +10,7 @@ import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
 import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; ownsSpyCameras?:()=>number; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
@@ -232,6 +232,20 @@ export class PersonalAgenda {
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
           (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
+      } else if (mission.kind==='duasCameras' && metrics.agendaCameras) {
+        const credited = this.factsByMission.get(mission.id)?.get('') ?? new Set<string>();
+        const {uncredited,slots,portable} = metrics.agendaCameras(credited);
+        const needed = Math.max(0,mission.target-mission.current-uncredited);
+        const commerce = metrics.commerce?.();
+        let budget = commerce?.publicBudget ?? Infinity;
+        let cost = 0;
+        const basePrice = marketProduct('equipment','spyCamera')!.price;
+        for (let i=portable;i<needed;i++) {
+          const price = marketProduct('equipment','spyCamera',commerce?.policies,budget)!.price;
+          budget = Math.round((budget-basePrice+price)*10)/10;
+          cost += Math.round(price*10);
+        }
+        if (needed<=slots && cost<=Math.round(metrics.wallet*10)) return true;
       } else if ((mission.kind==='assinaturas' || mission.kind==='comissaoImprovisada') && (npcSigners || !npcCount)) {
         const possible = new Set([...targets.map(({id})=>id),...(npcSigners ?? [])]);
         if (possible.size>=mission.target) return true;
@@ -495,7 +509,7 @@ export class PersonalAgenda {
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaEquipmentPrice('bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
-    if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
+    if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {

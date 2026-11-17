@@ -1643,3 +1643,28 @@ test('Escuta Ativa keeps its progress only while the player can still use or rei
   expect(listening()).toBeUndefined();
   expect(agenda.view(state).completed).toEqual([]);
 });
+
+test('the camera mission keeps credit when the remaining distinct camera can be installed or bought',()=>{
+  const options = {installed:2,uncredited:2,slots:0,portable:0};
+  const state = {wallet:0,popularity:40,agendaCameras:()=>options};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['duasCameras','cafe','passeio','selfieSolo']);
+  const refresh = ()=>agenda.updateEligibility(state,1,true,3);
+  const mission = ()=>agenda.view(state).active.find(row=>row.kind==='duasCameras');
+  refresh();
+  recordAgendaEvent(agenda,event('spy-viewed',{kind:'spyCamera',item:1}));
+  expect(mission()?.current).toBe(1);
+
+  Object.assign(options,{installed:1,uncredited:0,slots:1,portable:1});
+  refresh();
+  expect(mission()?.current).toBe(1);
+  options.portable = 0;
+  state.wallet = 3;
+  refresh();
+  expect(mission()?.current).toBe(1);
+  state.wallet = 2.9;
+  refresh();
+  expect(mission()).toBeUndefined();
+  expect(agenda.view(state).completed).toEqual([]);
+});
