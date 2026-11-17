@@ -30,6 +30,7 @@ Chamadas e Snake encerram ao sair da articulação ou ao perder a conexão. Uma 
 ## Onde estender
 
 - **Item ou interação.** Declare o item em `src/gameplay.ts` e a intenção no contrato correspondente. Implemente a validação no domínio que possui o estado e o controle visual no painel. Para itens, reaproveite as operações de custódia de `Gameplay`.
+- **Ação contextual.** O HUD reúne as ações de campo e omite de **Objetos próximos** somente as coletas já cobertas por um botão direto. HUD, mapa e inventário usam a mesma seleção para identificar quando só há um retrato ou uma placa para instalar. Com vários itens, o inventário oferece a escolha.
 - **Missão.** Defina o rótulo e o prêmio em `src/politics.ts`. Use `PersonalAgenda` para o progresso e o baralho, ou `photo-missions.ts` para fatos observáveis em fotos. Reaproveite eventos existentes quando registrarem o fato necessário.
 - **Evento.** Declare o fato em `GameplayEvent` e publique após a mutação bem-sucedida. Derive qualquer resposta ao cliente na projeção do destinatário.
 - **Política.** Coloque regras de fase e voto em `PlenaryMatch`, regras de candidatura ou cargo em `ElectionCycle` e débitos, créditos e provas em `PoliticalEconomy`.

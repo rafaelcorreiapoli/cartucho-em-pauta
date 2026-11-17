@@ -19,9 +19,10 @@ export type FieldAction = GameplayAction
   | {kind:'cross-door';door:number}
   | {kind:'inspect-stash'}
   | {kind:'edit-document';item:number;project:number}
-  | {kind:'open-security'};
+  | {kind:'open-security'}
+  | {kind:'publish-photo'};
 
-export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[]) {
+export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[], canPublishPhoto=false) {
   const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean}[] = [];
   const state = view?.gameplay;
   if (state && player) {
@@ -58,6 +59,9 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
     for (const npc of state.parliamentarians ?? []) {
       actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
         action:{kind:'npc-deal',request:{kind:npc.down ? 'rob' : 'talk',target:npc.id}}});
+    }
+    if (canPublishPhoto && state.locations.includes('press') && !player.carrying && !player.carried && view?.ballotCountdown===undefined) {
+      actions.push({label:'Publicar foto',icon:'camera',action:{kind:'publish-photo'}});
     }
     if (state.locations.includes('treasury')) {
       for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});

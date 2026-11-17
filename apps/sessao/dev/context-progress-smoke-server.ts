@@ -19,7 +19,9 @@ class ContextProgressRoom extends SessionRoom {
         const token = game.view(player,world).dialogue?.token;
         if (game.act(player,{kind:'shop-buy',target:'portrait',token},world)!=='Compra guardada no inventário.') continue;
         game.act(player,{kind:'dialogue-close'},world);
-        Object.assign(player,installationSites.hall.point);
+        const point = installationSites.hall.point;
+        Object.assign(player,point);
+        Reflect.get(game,'create').call(game,'extinguisher',{ground:point});
         prepared.add(player.id);
       }
     },100);

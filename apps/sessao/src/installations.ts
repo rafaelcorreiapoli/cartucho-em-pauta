@@ -1,4 +1,4 @@
-import { hasInventorySpace, type GameplayAction, type GameplayView } from './gameplay';
+import { hasInventorySpace, type GameplayAction, type GameplayView, type WorldItem } from './gameplay';
 import { canInteract, type InteractionActor } from './interactions';
 import type { Motion } from './map';
 import { roomActivities } from './room-activities';
@@ -31,17 +31,25 @@ export function canReachInstallation(actor:InteractionActor,point:Motion,kind:In
   return canInteract(actor,point,kind==='portrait' ? {radius:portraitInteractionRadius} : undefined);
 }
 
+export function contextualInstallItem(inventory:readonly WorldItem[], kind:Installable) {
+  const candidates = inventory.filter(item=>item.kind===kind);
+  return candidates.length===1 ? candidates[0] : undefined;
+}
+
 export function decorationActions(playerId:string, state:Pick<GameplayView,'interactive'|'installable'|'inventory'>) {
   const actions:{label:string; action:GameplayAction}[] = [];
   for (const [place,{kind,point}] of Object.entries(installationSites)) {
     if (kind==='pizza') continue;
     const placed = state.interactive.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
-    const item = state.inventory.find(item=>item.kind===kind);
+    const item = contextualInstallItem(state.inventory,kind);
     const portrait = kind==='portrait';
     if (item && state.installable.includes(place) && placed?.owner.id!==playerId) {
       const label = placed ? (portrait ? 'Substituir retrato' : 'Substituir placa VIP') :
         (portrait ? 'Pendurar retrato' : 'Reservar cadeira');
       actions.push({label,action:{kind:'install',item:item.id,place}});
+    }
+    if (portrait && placed && placed.owner.id!==playerId && !placed.marked) {
+      actions.push({label:'Rabiscar retrato',action:{kind:'mark',item:placed.id}});
     }
     if (placed && (portrait && placed.owner.id!==playerId || hasInventorySpace(state.inventory.length))) actions.push({
       label:portrait ? (placed.owner.id===playerId ? 'Retirar retrato' : 'Arrancar retrato') : 'Retirar placa VIP',

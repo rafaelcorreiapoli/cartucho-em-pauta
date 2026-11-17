@@ -369,6 +369,9 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     expect(remove.action).toEqual({kind:'uninstall',item:item.id});
     if (site.kind==='portrait') {
       expect(remove.label).toBe('Arrancar retrato');
+      const mark = decorationActions(bob.id,game.view(bob,world)).find(option=>option.action.kind==='mark')!;
+      expect(game.act(bob,mark.action,world)).toBe('Retrato rabiscado.');
+      expect(decorationActions(bob.id,game.view(bob,world)).some(option=>option.action.kind==='mark')).toBe(false);
       expect(game.act(bob,remove.action,world)).toBe('Retrato arrancado e destruído.');
       expect(game.view(bob,world).inventory).toEqual([]);
     } else {

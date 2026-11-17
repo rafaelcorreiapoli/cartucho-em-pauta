@@ -21,7 +21,7 @@ import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
 import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
-import { installationSites } from './installations';
+import { contextualInstallItem, installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
@@ -82,7 +82,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let assigningSlot:number|undefined;
   let pendingPickup:InteractionArea | undefined;
   let collectedArea:InteractionArea | undefined;
-  let app:PhoneApp|'Denunciar'|undefined;
+  let app:PhoneApp|'Denunciar'|'Publicar foto'|undefined;
   let decorationId:number | undefined;
   let equipmentOpen = false;
   let stashOpen = false;
@@ -295,10 +295,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
+    const canPublishHere = state.locations.includes('press') && phase==='negotiation' && view.ballotCountdown===undefined;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.length);
-    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? [decoration,canRemoveDecoration] :
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.officeOptions,state.surveillance?.options] : decoration ? [decoration,canRemoveDecoration] :
       app==='Denunciar' ? photos.complaintKey(view.complaints) :
-      app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
+      (app==='Álbum' || app==='Publicar foto') ? photos.albumKey(contacts,canPublishHere) :
       app==='Câmera' ? photos.count :
       app==='Projetos' ? [view.project,view.outcomes,view.projectFilingClosed,view.projectVoteExpired] :
       app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory] :
@@ -394,20 +395,22 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       };
       if (selection?.source==='inventory') {
         const definition = objects[item.kind];
-        if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach(option=>{
           actions.push({label:option.label,run:()=>{ sendSpy(option); dialog.close(); }});
         });
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
-        if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
+        if (decorSlot && !state.officeOptions?.some(option=>option.kind==='office-install' && option.item===item.id && option.place===decorSlot.id)) {
+          act('Instalar no gabinete','office-install',decorSlot.id);
+        }
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
         if (consumable) actions.push({label:consumable.label,run:()=>send(consumable.action)});
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
+          if (site.kind!=='pizza' && contextualInstallItem(state.inventory,site.kind)) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : item.kind==='vip' ? 'Reservar cadeira' : 'Instalar ou substituir';
           if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
         }
@@ -442,7 +445,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
       if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
       if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
-      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation',closePhoneApp);
+      if (app==='Publicar foto') application = photos.renderPublication(canPublishHere,closePhoneApp);
+      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
     mailHost.hidden = !showMail;
@@ -596,13 +600,19 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     nearbyActions,
     requestShortcuts:()=>requestEntries,
     hotbarShortcuts,
-    nearby(player:Motion | undefined, exploring:boolean) {
+    canPublishPhoto:()=>photos.hasUnpublished,
+    openPhotoPublication() {
+      app = 'Publicar foto';
+      photos.resetSelection();
+      open();
+    },
+    nearby(player:Motion | undefined, exploring:boolean, directCollections:readonly number[]) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
         collectedArea = undefined;
       }
       const state = exploring ? previous?.gameplay : undefined;
-      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,photos.count] : null);
+      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,directCollections] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
       const tiles:NearbyItem[] = [];
@@ -610,6 +620,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         tiles.push({key,kind,name,verb,activate});
       if (state) {
         for (const item of state.nearby) {
+          if (directCollections.includes(item.id)) continue;
           add('ground-'+item.id,item.kind,itemName(item),'Pegar',
             ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id})));
         }
@@ -621,10 +632,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
             ()=>send({kind:'recover',item:item.id}),
           ));
         }
-        if (state.locations.includes('press') && photos.count) {
-          add('album','portrait','Álbum para a Imprensa','Abrir',openPersonalAlbum);
-        }
         for (const decoration of state.interactive) {
+          if (!decoration.privateOffice && decoration.kind!=='pizza') continue;
           add('decoration-'+decoration.id,decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id));
         }
         for (const place of state.locations) {
