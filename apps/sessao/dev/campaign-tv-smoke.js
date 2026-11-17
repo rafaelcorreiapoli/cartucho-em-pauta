@@ -25,8 +25,12 @@ async page => {
         if (!element || element===previous) return;
         previous = element;
         const keyframes = element.getAnimations()[0]?.effect.getKeyframes();
+        const frame = element.getBoundingClientRect();
+        const equipment = document.querySelector('.character-dock').getBoundingClientRect();
+        const agenda = document.getElementById('agenda-dock').getBoundingClientRect();
         window.campaignAds.push({
           at:performance.now(),
+          fitsBetweenHud:frame.top>=equipment.bottom && frame.bottom<=agenda.top,
           title:element.querySelector('.campaign-tv-caption span').textContent,
           side:element.dataset.side,
           opening:keyframes?.[0]?.transform,
@@ -44,6 +48,7 @@ async page => {
   }
 
   function checkAd(ad,nick,side,motion) {
+    if (side==='left' && !ad.fitsBetweenHud) throw Error('A TV não cabe entre os equipamentos e a agenda.');
     if (ad.title!=='Vote '+nick) throw Error('Propaganda fora de ordem: '+JSON.stringify(ad));
     if (ad.side!==side || (motion && (!ad.opening?.startsWith(side==='left' ? 'translateX(calc(-' : 'translateX(calc(100%') ||
         ad.onScreen!=='none')) || (!motion && ad.opening) || ad.image===0 || !/^\d+$/.test(ad.number)) {

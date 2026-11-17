@@ -1,6 +1,7 @@
 .campaign-tv {
   position: absolute;
-  top: clamp(80px, 18dvh, 170px);
+  top: 53%;
+  translate: 0 -50%;
   --tv-edge: clamp(8px, 1.5vw, 20px);
   z-index: 8;
   pointer-events: none;
@@ -14,6 +15,9 @@
 .campaign-tv[data-side="right"] {
   right: var(--tv-edge);
   width: min(280px, 35vw, 45dvh);
+}
+@media (max-height: 500px) {
+  .campaign-tv { max-width: 38dvh; }
 }
 .campaign-tv > img {
   display: block;
