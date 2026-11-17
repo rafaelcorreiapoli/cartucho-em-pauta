@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Ballot,CassationBallot,ballotShortcut,hearingBallotState} from './ballot';
+import {Ballot,CassationBallot,ballotPalette,ballotShortcut,hearingBallotState} from './ballot';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {CASSATION_NOTICE_MS,stations} from '../plenary';
 import type {Player} from '../map';
@@ -57,6 +57,8 @@ test('the hearing HUD renders the quorum and participation from the gameserver s
   const view = match.view(host.id,ids,11);
   expect(view.hearing).toMatchObject({quorum:3,voted:1,vote:'yes'});
   expect(ballotShortcut(view,host.id,'n',true)).toBeUndefined();
+  expect(ballotPalette(view,host.id,true)).toEqual([{name:'Afastar',vote:'yes'},{name:'Não afastar',vote:'no'}]);
+  expect(ballotPalette({...view,mandate:false},host.id,true)).toEqual([]);
   expect(ballotShortcut(view,host.id,'r',true)).toEqual({kind:'bill',vote:'no'});
   expect(ballotShortcut({...view,mandate:false},host.id,'y',true)).toBeUndefined();
   const hearing = hearingBallotState(view)!;
@@ -89,6 +91,9 @@ test('cassation removes a disconnected target and shows the gameserver participa
   expect(render()).toContain('2/3 votaram · 2 votos para cassar');
   expect(render()).toContain('Bia');
   match.setPlayerConnected(target.id,false);
+  expect(ballotPalette(match.view(host.id,ids,openedAt),host.id,true)).toEqual([
+    {name:observer.nick,candidate:observer.id},{name:'Pular voto',candidate:null},
+  ]);
   expect(ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true))
     .toEqual({kind:'cassation',candidate:observer.id});
   expect(render()).toContain('1/2 votaram · 2 votos para cassar');

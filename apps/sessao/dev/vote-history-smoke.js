@@ -105,9 +105,13 @@ async page => {
     throw Error('Y enviou voto com a cédula recolhida');
   }
   const yesButton = sheet.getByRole('button',{name:'Votar SIM'});
-  await yesButton.evaluate(button=>button.removeAttribute('data-vote'));
-  await page.keyboard.press('y');
-  await yesButton.evaluate(button=>button.setAttribute('data-vote','yes'));
+  await yesButton.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
+  await page.keyboard.press('F2');
+  const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+  const vote = palette.getByRole('button',{name:'Votar SIM',exact:true});
+  await vote.waitFor();
+  await page.keyboard.press(await vote.getAttribute('aria-keyshortcuts'));
+  await palette.waitFor({state:'hidden'});
   const yesVoter = sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'});
   await yesVoter.getByText('Histórico QA').waitFor();
   await yesVoter.locator('.portrait.phone-contact-face[data-skin]').evaluate(async portrait=>{

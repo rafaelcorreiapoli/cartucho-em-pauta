@@ -1,4 +1,4 @@
-import {billVoteKeys} from './ballot-shortcuts';
+import {billVoteKeys,projectVoteLabels} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
@@ -8,9 +8,9 @@ import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
 
 const choices = [
-  {vote:'yes',label:'SIM',action:'Votar SIM',key:billVoteKeys.yes,symbol:'✓'},
-  {vote:'no',label:'NÃO',action:'Votar NÃO',key:billVoteKeys.no,symbol:'×'},
-  {vote:'abstain',label:'Abstenções',action:'Abster-se',key:billVoteKeys.abstain,symbol:'○'},
+  {vote:'yes',label:'SIM',action:projectVoteLabels.yes,key:billVoteKeys.yes,symbol:'✓'},
+  {vote:'no',label:'NÃO',action:projectVoteLabels.no,key:billVoteKeys.no,symbol:'×'},
+  {vote:'abstain',label:'Abstenções',action:projectVoteLabels.abstain,key:billVoteKeys.abstain,symbol:'○'},
 ] as const;
 
 

@@ -1,4 +1,4 @@
-import {billVoteKeys,cassationChoices} from './ballot-shortcuts';
+import {billVoteKeys,cassationChoices,hearingVoteLabels,projectVoteLabels} from './ballot-shortcuts';
 import type {CSSProperties} from 'react';
 import {PhoneContactFace} from './phone-call';
 import {ProjectBallot} from './project-ballot';
@@ -10,7 +10,7 @@ type BallotState = {
 };
 
 export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,cast}:BallotState & {cast:(vote:Vote)=>void}) {
-  const options = hearing ? {yes:'Afastar',no:'Não afastar'} : {yes:'Aprovar',no:'Rejeitar'};
+  const options = hearing ? hearingVoteLabels : {yes:'Aprovar',no:'Rejeitar'};
   const maximum = Math.max(1,electorate);
   return <div id="ballot">
     <div className="ballot-progress">
@@ -92,4 +92,15 @@ export function ballotShortcut(view:PlenaryView,ownId:string,key:string,expanded
   if (ballot.kind==='project' && !expanded) return;
   const vote = (Object.keys(billVoteKeys) as BillVote[]).find(vote=>billVoteKeys[vote]===key.toUpperCase());
   if (vote && (vote!=='abstain' || ballot.kind==='project')) return {kind:'bill',vote} as const;
+}
+
+export function ballotPalette(view:PlenaryView,ownId:string,expanded:boolean) {
+  const ballot = sessionBallotState(view);
+  if (!ballot?.state.eligible || ballot.kind==='project' && !expanded) return [];
+  if (ballot.kind==='cassation') return [
+    ...cassationChoices(ballot.state,ownId).candidates.map(({person})=>({name:person.name,candidate:person.id})),
+    {name:'Pular voto',candidate:null},
+  ];
+  if (ballot.kind==='hearing') return (['yes','no'] as const).map(vote=>({name:hearingVoteLabels[vote],vote}));
+  return (['yes','no','abstain'] as const).map(vote=>({name:projectVoteLabels[vote],vote}));
 }

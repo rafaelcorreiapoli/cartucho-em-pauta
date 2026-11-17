@@ -4,7 +4,7 @@ import {ProjectDetails,projectDetailsState} from './ui/project-intents';
 import {ProjectHeading,projectHeading} from './ui/project-heading';
 import {VoteBrief,VoteHistory} from './ui/vote-history';
 import {ProjectImpact} from './ui/project-impact';
-import {SessionBallot,ballotShortcut,sessionBallotState} from './ui/ballot';
+import {SessionBallot,ballotPalette,ballotShortcut,sessionBallotState} from './ui/ballot';
 import type {createRoomCommandSender} from './room-commands';
 import {mountLobbyControls} from './ui/lobby-controls';
 import type {Outcome,PlenaryView} from './plenary';
@@ -85,7 +85,20 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
     root.render(<LegislativeDock view={next} brief={brief} outcomes={outcomes} id={id} command={command} onExpansion={onExpansion}/>);
   }
 
+  const ballotIdentity = (current:PlenaryView) => JSON.stringify([current.politics?.progression.matchId,
+    current.phase,current.round,current.project,current.hearing?.target,!!current.cassation]);
+
   return {
+    votingShortcuts(canVote:()=>boolean) {
+      if (!view || !canVote()) return [];
+      const identity = ballotIdentity(view);
+      return ballotPalette(view,id,expanded).map(choice=>({name:choice.name,activate:()=>{
+        if (!view || !canVote() || ballotIdentity(view)!==identity ||
+            !ballotPalette(view,id,expanded).some(current=>JSON.stringify(current)===JSON.stringify(choice))) return;
+        if ('vote' in choice) command('bill-vote',{vote:choice.vote});
+        else command('cassation-vote',{candidate:choice.candidate});
+      }}));
+    },
     voteByKey(key:string) {
       if (!view) return false;
       const action = ballotShortcut(view,id,key,expanded);
