@@ -31,6 +31,8 @@ export class PlenaryMatch {
   private round = 0;
   private proposal?:{project:number; proposer:string; voteAt:number};
   private protocolOpensAt = 0;
+  private agendaNow = 0;
+  private agendaBallotsLeft = -1;
   private get sessionEndsAt() { return this.started+rules.matchDuration; }
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
@@ -94,9 +96,21 @@ export class PlenaryMatch {
     if (this.running) this.refreshAgendaEligibility();
   }
 
-  refreshAgendaEligibility() {
-    const ballotsLeft = bills.length-this.outcomes.length;
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id));
+  private remainingAgendaBallots(now:number) {
+    const blockedUntil = Math.max(now,this.phase==='hearing' ? this.ends : now,
+      this.cassationAt===undefined ? now : this.cassationAt+HEARING_MS);
+    const firstEnd = this.phase==='ballot' ? this.ends :
+      (this.proposal ? Math.max(blockedUntil,this.proposal.voteAt) :
+        Math.max(blockedUntil,this.protocolOpensAt)+projectRules.debateMs)+BALLOT_MS;
+    if (firstEnd>this.sessionEndsAt) return 0;
+    const cycle = projectRules.cooldownMs+projectRules.debateMs+BALLOT_MS;
+    return Math.min(bills.length-this.outcomes.length,1+Math.floor((this.sessionEndsAt-firstEnd)/cycle));
+  }
+
+  refreshAgendaEligibility(now=this.agendaNow) {
+    this.agendaNow = Math.max(this.agendaNow,now);
+    this.agendaBallotsLeft = this.remainingAgendaBallots(this.agendaNow);
+    this.economy.updateAgendaEligibility(this.electorate,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -235,6 +249,8 @@ export class PlenaryMatch {
     this.budget = rules.startingBudget;
     this.round = 0;
     this.protocolOpensAt = now;
+    this.agendaNow = now;
+    this.agendaBallotsLeft = -1;
     this.outcomes = [];
     this.winner = this.reason = undefined;
     this.nextRound();
@@ -297,7 +313,7 @@ export class PlenaryMatch {
     }
     if (project!==undefined) {
       this.proposal = {project,proposer:this.economy.name(event.actor),voteAt:event.at+projectRules.debateMs};
-      this.refreshAgendaEligibility();
+      this.refreshAgendaEligibility(event.at);
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
@@ -757,6 +773,8 @@ export class PlenaryMatch {
 
   advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
+    this.agendaNow = Math.max(this.agendaNow,now);
+    if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft) this.refreshAgendaEligibility();
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
       this.stability = clamp(this.stability-damage);

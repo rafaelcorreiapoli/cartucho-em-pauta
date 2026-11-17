@@ -13,7 +13,7 @@ import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
+import {BALLOT_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
@@ -711,6 +711,30 @@ test('the signature mission keeps the signed document visible after a signer lea
   const completed = view(5).missions.completed.find(mission=>mission.kind==='comissaoImprovisada')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(5).progression.xp).toBe(65);
+});
+
+test('the agenda removes two-vote missions when only one full ballot fits',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['projetos','votacao','cafe','passeio','selfieSolo']);
+  const lastTwoStart = ELECTION_RULES.matchDuration-2*(NEGOTIATION_MS+BALLOT_MS)-projectRules.cooldownMs;
+  const markup = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active
+    .map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  match.advance(lastTwoStart);
+  expect(markup(lastTwoStart)).toContain('0 / 2');
+  match.advance(lastTwoStart+1);
+  expect(markup(lastTwoStart+1)).not.toContain('0 / 2');
+  expect(match.view(player.id,[player.id],lastTwoStart+1).politics!.missions.active.map(mission=>mission.kind)).toContain('votacao');
+
+  publishProjectFiling(match,player,0,lastTwoStart+1);
+  const voteAt = lastTwoStart+1+NEGOTIATION_MS;
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  match.vote(player.id,'yes',voteAt);
+  expect(match.view(player.id,[player.id],voteAt).politics!.missions.completed.map(mission=>mission.kind)).toContain('votacao');
 });
 
 test('the plenary visit objective requires entry and exit within the same articulation',()=>{
