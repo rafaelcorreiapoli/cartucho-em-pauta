@@ -2385,3 +2385,44 @@ test('the next bill can complete another library mission for the same reader',()
   expect(updated.missions.completed.find(mission=>mission.id===replacement.id)?.current).toBe(1);
   expect(updated.progression.xp).toBe(2*missionReward('leitura').xp);
 });
+
+test.each([0,1])('a final hearing preserves fire missions only if articulation resumes (%s ms)', remaining=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>0)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration;
+  const hearingAt = deadline-HEARING_MS-remaining;
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['apagarIncendio','plantaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  match.advance(hearingAt-1);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const crisis = ['apagarIncendio','plantaoEmergencia','heroiInesperado'] as const;
+  const active = (now:number)=>view(now).politics!.missions.active.filter(mission=>crisis.some(kind=>kind===mission.kind));
+  expect(active(hearingAt-1)).toHaveLength(3);
+
+  match.politics(host,{kind:'hearing',target:target.id},players,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(view(hearingAt).fire?.paused).toBe(true);
+  expect(active(hearingAt)).toHaveLength(remaining ? 3 : 0);
+  expect(view(hearingAt).politics!.progression.xp).toBe(0);
+  if (!remaining) return;
+
+  const resumeAt = hearingAt+HEARING_MS;
+  match.advance(resumeAt);
+  expect(match.phase).toBe('negotiation');
+  const site = view(resumeAt).fire!.site;
+  Object.assign(host,fireSites[site]);
+  expect(match.actOnFire(host,'extinguish',site,resumeAt,true)).toBe('Incêndio apagado.');
+  const {missions,progression} = view(resumeAt).politics!;
+  expect(missions.completed.map(mission=>mission.kind)).toEqual([...crisis]);
+  expect(renderToStaticMarkup(<MissionRow mission={missions.completed[0]} done/>)).toContain('data-done="true"');
+  expect(progression.xp).toBe(crisis.reduce((total,kind)=>total+missionReward(kind).xp,0));
+});

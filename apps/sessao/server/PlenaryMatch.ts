@@ -73,8 +73,13 @@ export class PlenaryMatch {
 
   private get criticalStability() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
 
+  private get canArticulateBeforeDeadline() {
+    return this.running && this.agendaNow<this.sessionEndsAt &&
+      (this.phase==='negotiation' || this.ends<this.sessionEndsAt);
+  }
+
   private canFightCrisis(id:string) {
-    return this.criticalStability && (this.fire.burning || this.canRepairOutage(id));
+    return this.criticalStability && this.canArticulateBeforeDeadline && (this.fire.burning || this.canRepairOutage(id));
   }
 
   setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1],agendaReportNotices?:(id:string)=>readonly number[]) {
@@ -285,6 +290,7 @@ export class PlenaryMatch {
         return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || project!==undefined);
       }
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
+      if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.election.canCampaignAction(id,kind);
     });
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
@@ -791,7 +797,7 @@ export class PlenaryMatch {
   }
 
   private canRepairOutage(id:string) {
-    return this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt) && !this.disconnected.has(id) && !this.isolated(id) &&
+    return this.canArticulateBeforeDeadline && this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt) && !this.disconnected.has(id) && !this.isolated(id) &&
       [...this.electorate].some(other=>other!==id && !this.disconnected.has(other) && !this.isolated(other));
   }
 
@@ -897,6 +903,7 @@ export class PlenaryMatch {
   advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
     const electionWasOpen = this.election.open(this.agendaNow);
+    const canReturn = this.canArticulateBeforeDeadline;
     const couldRepair = this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt);
     this.agendaNow = Math.max(this.agendaNow,now);
     const wasCritical = this.criticalStability;
@@ -912,7 +919,7 @@ export class PlenaryMatch {
     const expiredSuspensions = this.economy.expireSuspensions(now);
     const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
     const crossedCrisisThreshold = (this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability;
-    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold ||
+    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold || canReturn!==this.canArticulateBeforeDeadline ||
         couldRepair!==this.power.canFinishBefore(this.agendaNow,this.sessionEndsAt)) this.refreshAgendaEligibility();
     const closingVote = (this.phase==='ballot' || this.phase==='hearing') && this.ends<=this.sessionEndsAt;
     if (now>=this.sessionEndsAt && !closingVote) {
