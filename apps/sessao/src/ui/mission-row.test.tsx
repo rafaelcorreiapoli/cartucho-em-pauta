@@ -44,7 +44,7 @@ test('mission rows show XP, cash and popularity from the reward table',()=>{
   );
   for (const done of [false,true]) {
     const protocol = render('protocolo',done);
-    expect(protocol).toContain(`${missionReward('protocolo').xp} XP`);
+    expect(protocol).toContain(`data-reward="xp">${missionReward('protocolo').xp} XP</span>`);
     expect(protocol).toContain(`+${missionReward('protocolo').popularity} Pop`);
     expect(protocol).not.toContain('data-reward="cash"');
   }
@@ -61,7 +61,8 @@ test('an opposition mission shows progress across successive ballots',()=>{
   const mission:Mission = {id:3,kind:'oposicao',current:1,target:2};
   const markup = renderToStaticMarkup(<MissionRow mission={mission}/>);
   expect(markup).toContain('Vote contra dois projetos rejeitados');
-  expect(markup).toContain('1 / 2');
+  expect(markup).toContain('class="react-mission-meta"><div class="react-mission-rewards"');
+  expect(markup).toContain('</div><small>1 / 2</small>');
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
 });
 
