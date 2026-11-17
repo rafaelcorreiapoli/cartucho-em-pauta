@@ -44,6 +44,39 @@ async page => {
     await surveillance.waitFor({state:'hidden'});
     results.push({width,height,terminalScroll:bounds.scroll});
   }
+  await page.setViewportSize({width:1280,height:720});
+  await page.keyboard.press('v');
+  const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});
+  const viewport = surveillance.getByLabel('Visão ao vivo da câmera');
+  const canvas = viewport.locator('canvas');
+  async function openCamera(name,previousCanvas) {
+    await surveillance.getByRole('button',{name:new RegExp(name)}).click();
+    await surveillance.getByRole('heading',{name,exact:true}).waitFor();
+    if (previousCanvas) await page.waitForFunction(node=>!node.isConnected,previousCanvas);
+    await page.waitForFunction(()=>{
+      const canvases = document.querySelectorAll('#spy-monitor .spy-viewport canvas');
+      if (canvases.length!==1) return false;
+      const canvas = canvases[0];
+      const context = canvas.getContext('2d');
+      const center = context?.getImageData(canvas.width/2-12,canvas.height/2-12,24,24).data;
+      if (!center) return false;
+      return center.some((value,index)=>value!==center[index%4]);
+    });
+  }
+  await openCamera('Câmera Cafezinho');
+  const first = await canvas.elementHandle();
+  await openCamera('Câmera Biblioteca',first);
+  await surveillance.getByRole('button',{name:'Fechar canal'}).click();
+  await viewport.waitFor({state:'detached'});
+  await openCamera('Câmera Cafezinho');
+  const reopened = await canvas.elementHandle();
+  await surveillance.getByRole('button',{name:'Fechar vigilância'}).click();
+  await surveillance.waitFor({state:'hidden'});
+  await page.waitForFunction(node=>!node.isConnected,reopened);
+  await page.keyboard.press('v');
+  await surveillance.getByText('Selecione um canal.').waitFor();
+  if (await viewport.count()) throw Error('Monitor reabriu com a câmera anterior');
+
   if (await page.evaluate(()=>window.micAttempts)) throw Error('O teste tentou abrir o microfone');
   return results;
 }
