@@ -21,6 +21,8 @@ async page => {
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
   const apps = page.locator('#congress-app-panel');
+  await launcher.waitFor();
+  await page.locator('#asset-loading').waitFor({state:'hidden'});
   await page.keyboard.press('u');
   await apps.waitFor();
   await page.keyboard.press('F2');
