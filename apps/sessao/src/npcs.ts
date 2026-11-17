@@ -19,7 +19,7 @@ export const npcs = {
 export const treasuryLayout = {bounds:[326,403,132,127],divider:[458,403,10,127],luxuryDoor:[486,392,40,11]} as const;
 
 export const treasurer = {
-  name:'Marcos Valério', sprite:'marcos-valerio.webp', x:403, y:446, direction:0,
+  name:'Eduardo Cunha', sprite:'eduardo-cunha-tesoureiro.webp', x:403, y:446, direction:0,
   counter:{x:380,y:456}, interaction:{x:403,y:486}, label:'Tesouraria',
 } as const;
 

@@ -35,7 +35,7 @@ const briefcaseGrip = {
   Bolsonaro: [[[83,103],[86,97],[83,103],[87,87]],[[57,104],[85,90],[57,104],[82,89]],[[41,103],[41,99],[41,103],[43,94]]],
   Clodovil: [[[90,101],[95,94],[90,101],[87,91]],[[56,103],[81,84],[56,103],[81,84]],[[34,101],[36,96],[34,101],[36,96]]],
   Tiririca: [[[85,104],[89,95],[85,104],[80,91]],[[58,103],[86,88],[58,103],[87,87]],[[41,105],[38,98],[41,105],[39,91]]],
-  'Eduardo Cunha': [[[94,100],[95,95],[94,100],[88,92]],[[54,104],[84,86],[54,104],[84,86]],[[35,101],[34,98],[35,101],[34,98]]],
+  'Sikêra Jr.': [[[94,102],[95,92],[94,102],[84,95]],[[54,102],[85,87],[54,102],[86,87]],[[34,102],[35,94],[34,102],[36,94]]],
   'Alexandre Frota': [[[92,106],[94,92],[92,106],[87,91]],[[54,105],[83,85],[54,105],[83,85]],[[34,106],[34,96],[34,106],[34,96]]],
   'Sergio Moro': [[[85,106],[87,99],[85,106],[82,92]],[[55,105],[85,90],[55,105],[84,89]],[[43,106],[40,100],[43,106],[43,94]]],
   'Inês Brasil': [[[94,100],[98,95],[94,100],[92,89]],[[65,100],[89,79],[65,100],[89,79]],[[38,101],[32,94],[38,101],[32,94]]],
@@ -122,14 +122,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       outline:Phaser.GameObjects.Image;
       ready:()=>boolean;
       run:()=>void;
+      hit:(x:number,y:number)=>boolean;
     }>();
 
     private registerInteraction(art:Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,
-      ready:()=>boolean,run:()=>void,container?:Phaser.GameObjects.Container) {
+      ready:()=>boolean,run:()=>void,container?:Phaser.GameObjects.Container,
+      hit = (x:number,y:number)=>hitInteractionArt(art,x,y)) {
       const outline = createInteractionOutline(this,art);
       if (container) container.addAt(outline,container.getIndex(art));
       else outline.setDepth(art.depth-.01);
-      this.interactionTargets.set(art,{outline,ready,run});
+      this.interactionTargets.set(art,{outline,ready,run,hit});
       art.once('destroy',()=>this.interactionTargets.delete(art));
     }
     private installationFixtures: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
@@ -276,7 +278,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const item = availableItem();
             if (item) interact({kind:'install',item:item.id,place});
           }
-        });
+        },undefined,(x,y)=>kind==='portrait' && !installed()
+          ? Math.abs(x-art.x)<=width/2+8 && Math.abs(y-art.y)<=height/2+8
+          : hitInteractionArt(art,x,y));
+
       }
       this.officeDoors = this.add.graphics().setDepth(2);
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
@@ -324,7 +329,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const {x,y} = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
         const target = [...this.interactionTargets].filter(([art,{outline}])=>outline.visible && art.visible)
           .sort(([a],[b])=>(b.parentContainer?.depth ?? b.depth)-(a.parentContainer?.depth ?? a.depth))
-          .find(([art])=>hitInteractionArt(art,x,y));
+          .find(([,interaction])=>interaction.hit(x,y));
         if (target) {
           destination = undefined;
           target[1].run();

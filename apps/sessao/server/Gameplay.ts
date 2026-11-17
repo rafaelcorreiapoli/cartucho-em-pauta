@@ -16,7 +16,7 @@ import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VIS
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { installationSites, vipAreaRadius } from '../src/installations';
+import { canReachInstallation, installationSites, vipAreaRadius } from '../src/installations';
 import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -689,8 +689,9 @@ export class Gameplay {
       modulator,
       decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
         localPerception(player,item,this.vision(player.id,world.now)).visible),
-      interactive:[...this.installations.values()].filter(item=>canReachObject(player,item)),
-      installable:Object.entries(installationSites).filter(([,site])=>canReachObject(player,site.point)).map(([key])=>key),
+      interactive:[...this.installations.values()].filter(item=>item.kind==='portrait' && !item.privateOffice
+        ? canReachInstallation(player,item,'portrait') : canReachObject(player,item)),
+      installable:Object.entries(installationSites).filter(([,site])=>canReachInstallation(player,site.point,site.kind)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
@@ -824,7 +825,7 @@ export class Gameplay {
     const siteKey = action.kind==='install' ? action.place : [...this.installations].find(([,item])=>item.id===action.item)?.[0];
     if (!siteKey || !Object.hasOwn(installationSites,siteKey)) return 'Aproxime-se do local.';
     const site = installationSites[siteKey as keyof typeof installationSites];
-    if (!canReachObject(player,site.point)) return 'Aproxime-se do local.';
+    if (!canReachInstallation(player,site.point,site.kind)) return 'Aproxime-se do local.';
     const placed = this.installations.get(siteKey);
     if (action.kind==='install') {
       const item = this.items.get(action.item ?? -1);
@@ -868,14 +869,15 @@ export class Gameplay {
         duration:installedAt===undefined ? undefined : world.now-installedAt});
       return 'Retrato rabiscado.';
     }
-    if (!this.available(player.id)) return 'Inventário cheio.';
+    const torn = placed.kind==='portrait' && placed.owner.id!==player.id;
+    if (!torn && !this.available(player.id)) return 'Inventário cheio.';
     this.installations.delete(siteKey);
     this.portraitInstalledAt.delete(siteKey);
     this.servings.delete(placed.id);
-    this.items.set(data.id,{data,place:{holder:player.id}});
+    if (!torn) this.items.set(data.id,{data,place:{holder:player.id}});
     if (placed.owner.id!==player.id) this.clearedSites.set(siteKey,{by:player.id,owner:placed.owner.id});
     this.event(world,player,'uninstalled',data,placed.owner.id,{place:siteKey});
-    return 'Objeto retirado.';
+    return torn ? 'Retrato arrancado e destruído.' : 'Objeto retirado.';
   }
 
   private officeBreaches(now:number) {
@@ -944,11 +946,11 @@ export class Gameplay {
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
         }
       }
-      if (own) for (const slot of decorSlots) {
-        if (!this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
-        officeDecor.push({id:layout.id,kind:slot});
+      for (const slot of decorSlots) {
+        if ((!own && slot!=='portrait') || !this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
+        if (own) officeDecor.push({id:layout.id,kind:slot});
         const decoration = this.installations.get(`office:${layout.id}:${slot}`);
-        if (decoration) add('office-remove',`Retirar · ${objects[slot].name}`,decoration.id);
+        if (decoration) add('office-remove',own ? `Retirar · ${objects[slot].name}` : 'Arrancar retrato',decoration.id);
       }
     }
     return {offices,ownOffice,officeFurnishings,officeOptions,officeStash,officeDecor};
@@ -1015,15 +1017,16 @@ export class Gameplay {
     if (kind==='office-remove') {
       const slot = decorSlots.find(slot=>this.installations.get(`office:${office.layout.id}:${slot}`)?.id===action.item);
       if (!slot) return 'Decoração indisponível.';
-      if (!own || !offices.near(player,office,decorPoint(office.layout,slot))) return 'Use o ponto de decoração do seu gabinete.';
-      if (!this.available(player.id)) return 'Inventário cheio.';
+      const torn = !own && slot==='portrait';
+      if ((!own && !torn) || !offices.near(player,office,decorPoint(office.layout,slot))) return 'Use o ponto de decoração do seu gabinete.';
+      if (!torn && !this.available(player.id)) return 'Inventário cheio.';
       const key = `office:${office.layout.id}:${slot}`;
       const decoration = this.installations.get(key)!;
       this.installations.delete(key);
       const data = {id:decoration.id,kind:decoration.kind};
-      this.items.set(data.id,{data,place:{holder:player.id}});
-      this.event(world,player,'uninstalled',data,undefined,{place:office.layout.id});
-      return 'Decoração recolhida.';
+      if (!torn) this.items.set(data.id,{data,place:{holder:player.id}});
+      this.event(world,player,'uninstalled',data,torn ? decoration.owner.id : undefined,{place:office.layout.id});
+      return torn ? 'Retrato arrancado e destruído.' : 'Decoração recolhida.';
     }
     if (!item || !('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
     if (kind==='office-install') {

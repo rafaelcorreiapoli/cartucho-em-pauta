@@ -7,7 +7,7 @@ for (const [name,skin] of [
   ['Bolsonaro','bolsonaro'],
   ['Clodovil','clodovil'],
   ['Tiririca','tiririca'],
-  ['Eduardo Cunha','eduardo-cunha'],
+  ['Sikêra Jr.','sikera-jr'],
   ['Alexandre Frota','alexandre-frota'],
   ['Sergio Moro','sergio-moro'],
   ['Inês Brasil','ines-brasil'],
@@ -30,7 +30,7 @@ for (const [name,skin] of [
 }
 
 test('the replacement skins ship all three combat sheets at the Phaser atlas dimensions', async ()=>{
-  for (const skin of ['alexandre-frota','ines-brasil','eduardo-cunha']) {
+  for (const skin of ['alexandre-frota','ines-brasil','sikera-jr']) {
     for (const action of ['attack','hit','fall']) {
       const asset = Bun.file(new URL(`../public/assets/${skin}-${action}.webp`,import.meta.url));
       expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
