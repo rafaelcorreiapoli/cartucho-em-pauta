@@ -21,6 +21,8 @@ export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
 export const PIX_MISSION_AMOUNT = 2;
 export const COFFEE_DELIVERY_RECIPIENTS = 3;
+export const PUBLIC_MEETING_PEERS = 3;
+export const LATE_CAMPAIGN_WINDOW_MS = 60_000;
 export const SAVINGS_MISSION_AMOUNT = 10;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
@@ -128,7 +130,7 @@ export const agendas = {
   flagraGabinete:'Fotografe um visitante dentro de um gabinete',
   presencaPlenario:'Entre e saia do Plenário durante a articulação',
   reuniaoGabinete:`Passe ${agendaDurationMs.reuniaoGabinete/1000} segundos no mesmo gabinete que outro jogador`,
-  reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros três jogadores`,
+  reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros ${PUBLIC_MEETING_PEERS} jogadores`,
   tresSelfies:'Tire selfies em três salas públicas diferentes',
   plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
   heroiInesperado:`Ajude a resolver uma crise com Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`,
@@ -158,7 +160,7 @@ export const agendas = {
   chamadasUrgentes:`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`,
   discursoMegafone:`Use o Megafone por ${agendaDurationMs.discursoMegafone/1000} segundos`,
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
-  campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',
+  campanhaUltimaHora:`Veicule propaganda nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos antes da eleição`,
   bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
   provaDocumental:'Fotografe um documento físico visível',
 } as const;

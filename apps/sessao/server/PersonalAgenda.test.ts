@@ -10,7 +10,7 @@ import { terminals, type GameplayEvent } from '../src/gameplay';
 import { rooms, type Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
-import { agendaDurationMs, urgentCallMission } from '../src/politics';
+import { agendaDurationMs, urgentCallMission, LATE_CAMPAIGN_WINDOW_MS } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
@@ -982,7 +982,7 @@ test.each([
   ['fiscalizacaoParalela',event('xray-target-revealed',{place:'safe'}),event('xray-target-revealed',{place:'npc'})],
   ['patrimonioSuspeito',event('xray-target-revealed',{place:'npc'}),event('xray-scanned')],
   ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
-  ['campanhaUltimaHora',event('advertisement-aired',{duration:60_000}),event('advertisement-aired',{duration:60_001,at:2})],
+  ['campanhaUltimaHora',event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS}),event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS+1,at:2})],
   ['mensagemComAnexo',event('mail-published',{place:'document'}),event('photo-published')],
   ['retratacaoOficial',event('mail-published',{place:'report'}),event('mail-published',{place:'document'})],
   ['instalarGrampo',event('spy-installed',{kind:'wiretap'}),event('spy-installed',{kind:'spyCamera'})],

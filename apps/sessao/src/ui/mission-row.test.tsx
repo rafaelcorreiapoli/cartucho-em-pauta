@@ -16,7 +16,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,money,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -630,10 +630,12 @@ test.each([true,false])('the final campaign slot is consumed once and only the l
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['campanhaUltimaHora','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
-  const now = ELECTION_RULES.interval*ELECTION_RULES.cycles-60_000-Number(!isLastMinute);
+  const now = ELECTION_RULES.interval*ELECTION_RULES.cycles-LATE_CAMPAIGN_WINDOW_MS-Number(!isLastMinute);
   const view = ()=>match.view(player.id,[player.id],now).politics!;
   const before = view();
-  expect(before.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(true);
+  const mission = before.missions.active.find(mission=>mission.kind==='campanhaUltimaHora')!;
+  expect(mission).toBeDefined();
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain(`nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos`);
   expect(match.electionAction(player,{kind:'advertise'},now,false)).toBeDefined();
   const after = view();
   expect(after.missions.active.some(mission=>mission.kind==='campanhaUltimaHora')).toBe(false);
@@ -1386,4 +1388,37 @@ test('the agenda displays emergency maintenance only while the outage can be rep
 test('the Pix mission card displays the configured amount',()=>{
   const pix = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'pixVinte',current:0,target:1}}/>);
   expect(pix).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
+});
+
+
+test('public meeting uses the same group size for the agenda, room sampling and HUD',()=>{
+  const players:Player[] = Array.from({length:PUBLIC_MEETING_PEERS+1},(_,index)=>({
+    id:String(index),nick:'Parlamentar '+index,character:index,direction:0,moving:false,...stations.coffee,
+  }));
+  const [host,...peers] = players;
+  const ids = players.map(({id})=>id);
+  const game = new Gameplay();
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['reuniaoPublica','cafe','passeio','selfieSolo']);
+  const active = ()=>match.view(host.id,ids,0).politics!.missions.active.find(mission=>mission.kind==='reuniaoPublica');
+  const guest = peers.at(-1)!;
+  match.setPlayerConnected(guest.id,false);
+  expect(active()).toBeUndefined();
+  Reflect.set(agenda,'missions',[]);
+  match.setPlayerConnected(guest.id,true);
+  expect(renderToStaticMarkup(<MissionRow mission={active()!}/>)).toContain(`com outros ${PUBLIC_MEETING_PEERS} jogadores`);
+
+  const tick = (now:number,absent=false)=>game.tick({...match.gameplayWorld(players,now,()=>false),
+    present:id=>!absent || id!==guest.id},true);
+  tick(0,true);
+  tick(100,true);
+  expect(active()?.current).toBe(0);
+  for (let now=200;now<=100+agendaDurationMs.reuniaoPublica;now+=100) tick(now);
+  const state = match.view(host.id,ids,100+agendaDurationMs.reuniaoPublica).politics!;
+  expect(state.missions.completed).toContainEqual(expect.objectContaining({kind:'reuniaoPublica',current:agendaDurationMs.reuniaoPublica}));
+  expect(state.progression.xp).toBe(45);
 });

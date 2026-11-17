@@ -7,7 +7,7 @@ import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
-import { archiveDutyRoom, money, NEW_PORTRAIT_MS } from '../src/politics';
+import { archiveDutyRoom, money, NEW_PORTRAIT_MS, PUBLIC_MEETING_PEERS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
@@ -624,7 +624,7 @@ export class Gameplay {
         const inOffice = privateOffices.some(office=>office.name===room);
         const peers = world.players.filter(other=>other.id!==player.id && !other.npc && !other.knockedOut &&
           world.present?.(other.id)!==false && roomAt(other)===room).length;
-        const type = inOffice && peers>=1 ? 'office-meeting-time' : !inOffice && peers>=3 ? 'public-meeting-time' : undefined;
+        const type = inOffice && peers>=1 ? 'office-meeting-time' : !inOffice && peers>=PUBLIC_MEETING_PEERS ? 'public-meeting-time' : undefined;
         const duration = Math.min(100,world.now-previous.at);
         if (type && duration>0) publishGameplay(world,player,type,{duration,place:room});
       }
