@@ -3,7 +3,7 @@ import {flushSync} from 'react-dom';
 import {ELECTION_RULES,type ElectionAction} from '../elections';
 import type {PlenaryView,Station} from '../plenary';
 import {money} from '../politics';
-import {StationActionButton} from './station-action-button';
+import {ContextActionButton} from './context-action-button';
 
 const definitions = {
   advertise:{station:'press',label:'Veicular propaganda',icon:'chart',detail:`${money(ELECTION_RULES.advertisementCost)} · 1 por ciclo`},
@@ -33,7 +33,7 @@ export function ElectionStationActions({actions,voiceHint,send}:ReturnType<typeo
   send:(action:ElectionAction)=>void;
 }) {
   return <>
-    {actions.map(kind=><StationActionButton key={kind} id={kind} {...definitions[kind]} activate={()=>send({kind})}/>)}
+    {actions.map(kind=><ContextActionButton key={kind} id={kind} {...definitions[kind]} activate={()=>send({kind})}/>)}
     {voiceHint ? <p id="interview-hint">Ative a voz para entrar ao vivo.</p> : null}
   </>;
 }

@@ -1,4 +1,4 @@
-import {StationActionButton} from './station-action-button';
+import {ContextActionButton} from './context-action-button';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
 import {type Action,type PlenaryView,type Station} from '../plenary';
@@ -28,7 +28,7 @@ export function legislativeStationActions(view:PlenaryView|undefined,station:Sta
 export function LegislativeStationActions({actions,send}:{
   actions:readonly StationAction[];send:(action:StationAction)=>void;
 }) {
-  return actions.map(action=><StationActionButton key={action} {...definitions[action]} action={action}
+  return actions.map(action=><ContextActionButton key={action} {...definitions[action]} action={action}
     activate={()=>send(action)}/>);
 }
 
