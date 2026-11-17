@@ -1,5 +1,5 @@
 import { stationRecharge } from '../src/station-recharge';
-import { installationSites } from '../src/installations';
+import { decorationInstallMs, installationSites } from '../src/installations';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { PersonalAgenda } from './PersonalAgenda';
@@ -320,7 +320,9 @@ test('furniture missions use the actual cabinet slots and prices at assignment',
   expect(game.act(player,{kind:'office-remove',place:layout.id,item:installed.id},world)).toBe('Decoração recolhida.');
   expect(economy.spend(player.id,1)).toBe(true);
   expect(draw()).toEqual(['gabinete','televisao','cafe']);
-  expect(game.act(player,{kind:'office-install',place:layout.id,item:installed.id},world)).toBe('Decoração instalada.');
+  expect(game.act(player,{kind:'office-install',place:layout.id,item:installed.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   const completed = economy.view(player.id,[],0,false,()=>true)!.missions.completed.map(mission=>mission.kind);
   expect(completed).toContain('televisao');
   expect(completed).toContain('gabinete');
@@ -366,7 +368,9 @@ test('decoration missions require enough money or an item already in the invento
   expect(draw()).toEqual(['retrato','cafe','passeio']);
   const portrait = game.view(player,world).inventory.find(item=>item.kind==='portrait')!;
   Object.assign(player,installationSites.hall.point);
-  expect(game.act(player,{kind:'install',place:'hall',item:portrait.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'hall',item:portrait.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(economy.view(player.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='retrato')).toBe(true);
   expect(draw()).toEqual(['cafe','passeio','selfieSolo']);
 });
@@ -423,7 +427,9 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
     expect(buyCredentialGood(game,player,kind,world)).toContain('inventário');
     const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
     Object.assign(player,point);
-    expect(game.act(player,{kind:'install',place,item:item.id},world)).toBe('Objeto instalado.');
+    expect(game.act(player,{kind:'install',place,item:item.id},world)).toBe('Instalando decoração…');
+    world.now += decorationInstallMs;
+    game.tick(world,true);
   };
 
   expect(draw()).toContain('autorretrato');
@@ -465,7 +471,9 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   const vip = game.view(owner,world).interactive.find(item=>item.kind==='vip')!;
   expect(game.act(owner,{kind:'uninstall',item:vip.id},world)).toBe('Objeto retirado.');
   expect(draw(true)).toContain('mandaVip');
-  expect(game.act(owner,{kind:'install',place:'technicalVip',item:vip.id},world)).toBe('Objeto instalado.');
+  expect(game.act(owner,{kind:'install',place:'technicalVip',item:vip.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='mandaVip')).toBe(true);
   expect(draw(true)).not.toContain('mandaVip');
 });
@@ -1163,7 +1171,9 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   const plate = game.view(host,world).inventory.find(item=>item.kind==='vip')!;
   const point = installationSites.technicalVip.point;
   Object.assign(host,point);
-  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(draw()).toBe(true);
   const current = ()=>agenda.view(options).active.find(mission=>mission.kind==='reuniaoVip')?.current;
   const tick = (count:number)=>{
@@ -1181,7 +1191,9 @@ test('Reunião de Alto Nível needs a live VIP plaque and both players inside it
   expect(game.act(host,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
   tick(1);
   expect(current()).toBe(0);
-  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(host,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   tick(150);
   expect(current()).toBe(14900);
   tick(1);
@@ -1244,7 +1256,9 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
   expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Aproxime-se do local.');
   expect(rewards).toEqual([]);
   Object.assign(player,installationSites.technicalVip.point);
-  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto indisponível.');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'privilegioAdquirido'}));
   expect(rewards).toEqual([25]);
@@ -1253,7 +1267,9 @@ test('the VIP mission requires an installed plaque rather than just buying it',(
   expect(draw(metrics)).toBe(true);
   expect(game.act(player,{kind:'uninstall',item:plate.id},world)).toBe('Objeto retirado.');
   world.now++;
-  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'technicalVip',item:plate.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(rewards).toEqual(beforeReinstall);
 });
 
@@ -1343,13 +1359,17 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   const [portrait] = game.view(owner,world).inventory;
   for (const player of players) Object.assign(player,installationSites.hall.point);
   const install = ()=>game.act(owner,{kind:'install',place:'hall',item:portrait.id},world);
-  expect(install()).toBe('Objeto instalado.');
+  expect(install()).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   expect(game.act(owner,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
   world.now += 60_001;
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
   expect(rewards).toEqual([]);
   expect(game.act(owner,{kind:'uninstall',item:portrait.id},world)).toBe('Objeto retirado.');
-  expect(install()).toBe('Objeto instalado.');
+  expect(install()).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   world.now++;
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');

@@ -5,6 +5,8 @@ import { roomActivities } from './room-activities';
 
 export const vipAreaRadius = 12;
 
+export const decorationInstallMs = 2000;
+
 export const installationSites = {
   hall:{kind:'portrait',point:{x:210,y:96},label:'Antecâmara'},
   archivePortrait:{kind:'portrait',point:{x:540,y:27},label:'Arquivo'},

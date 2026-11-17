@@ -24,7 +24,7 @@ test('attribute requests cannot be replayed, forged or carried across matches',(
   const view = (id='a')=>economy.view(id,[],0,false,()=>true)!.progression;
   economy.reset(players,()=>0);
   const firstMatch = view().matchId;
-  expect(economy.allocate('a',{attribute:'hp',matchId:firstMatch,revision:0})).toBe(false);
+  expect(economy.allocate('a',{attribute:'agility',matchId:firstMatch,revision:0})).toBe(false);
   const worldEvent = {actor:'a',position:{x:0,y:0},witnesses:[]};
   economy.recordGameplay({...worldEvent,type:'filed',at:1,item:1,kind:'document'});
   economy.recordGameplay({...worldEvent,type:'filed',at:1,item:1,kind:'document'});
@@ -34,12 +34,12 @@ test('attribute requests cannot be replayed, forged or carried across matches',(
   economy.recordGameplay(coffee);
   expect(view()).toMatchObject({xp:110,available:1});
   expect(view('b')).toMatchObject({xp:0,available:0});
-  const request = {attribute:'hp',matchId:firstMatch,revision:0} as const;
+  const request = {attribute:'agility',matchId:firstMatch,revision:0} as const;
   expect(readAttributeRequest({...request,attribute:'__proto__'})).toBeUndefined();
   expect(economy.allocate('a',request)).toBe(true);
   expect(economy.allocate('a',request)).toBe(false);
-  expect(view()).toMatchObject({invested:{hp:1},available:0,revision:1});
+  expect(view()).toMatchObject({invested:{agility:1},available:0,revision:1});
   economy.reset(players,()=>0);
-  expect(view()).toMatchObject({xp:0,level:1,available:0,invested:{hp:0}});
+  expect(view()).toMatchObject({xp:0,level:1,available:0,invested:{agility:0}});
   expect(economy.allocate('a',request)).toBe(false);
 });

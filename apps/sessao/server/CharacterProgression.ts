@@ -3,7 +3,7 @@ import { levelThresholds, type AttributePoints, type AttributeRequest, type Prog
 export class CharacterProgression {
   private xp = 0;
   private revision = 0;
-  private invested:AttributePoints = {hp:0,stamina:0,attack:0,defense:0};
+  private invested:AttributePoints = {agility:0,stamina:0};
 
   constructor(private readonly matchId:number) {}
 

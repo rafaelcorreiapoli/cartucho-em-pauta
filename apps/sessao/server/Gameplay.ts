@@ -16,7 +16,7 @@ import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VIS
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { canReachInstallation, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
+import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
 import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -37,6 +37,10 @@ type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number; quantity?:number};
+type PendingInstallation = {action:GameplayAction; origin:Motion; started:number; ends:number};
+const interactionDuration = (player:Player, baseMs:number) =>
+  Math.ceil(baseMs/(1+(player.interactionSpeedBonus ?? 0)/100));
+
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
 const cashLifetime = 55_000;
@@ -69,6 +73,7 @@ export class Gameplay {
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
   private portraitInstalledAt = new Map<string,number>();
+  private pendingInstallations = new Map<string,PendingInstallation>();
   private installations = new Map<string,Decoration>();
   private servings = new Map<number,Set<string>>();
   private clearedSites = new Map<string,{by:string;owner:string}>();
@@ -180,6 +185,7 @@ export class Gameplay {
     this.concealedUntil.clear();
     this.scanning.clear();
     this.binocularUse.clear();
+    this.pendingInstallations.clear();
     this.installations.clear();
     this.portraitInstalledAt.clear();
     this.servings.clear();
@@ -198,8 +204,8 @@ export class Gameplay {
     this.signedProjects.clear();
     for (const player of players) {
       player.pocketing = undefined;
-      player.hpBonus = player.attackBonus = player.defenseBonus = undefined;
-      player.staminaMax = player.canSprint = player.sprinting = undefined;
+      player.interactionSpeedBonus = undefined;
+      player.staminaMax = player.runningShoes = player.sprinting = undefined;
       player.stamina = MAX_STAMINA;
       player.speedModifier = undefined;
       player.staminaRegenModifier = undefined;
@@ -521,6 +527,7 @@ export class Gameplay {
       },
     });
     this.tickOfficeChannels(world,exploring);
+    this.tickInstallations(world,exploring);
     this.updateMegaphone(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
@@ -621,6 +628,7 @@ export class Gameplay {
     this.scanning.delete(player.id);
     this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
+    this.pendingInstallations.delete(player.id);
     if (this.roomSamples.get(player.id)?.securityPeer) {
       publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
     }
@@ -691,6 +699,7 @@ export class Gameplay {
       ...this.officeView(player,world.now,world.players),
       equipped,equipmentCooldowns,
       stationCooldowns:this.stationCooldowns.view(world.now),
+      installationProgress:this.installationProgress(id,world.now),
       forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
@@ -835,7 +844,37 @@ export class Gameplay {
     return 'Foto guardada no álbum.';
   }
 
-  private changeInstallation(player:Player,action:GameplayAction,world:GameplayWorld) {
+  private startInstallation(player:Player,action:GameplayAction,now:number) {
+    this.pendingInstallations.set(player.id,{action,origin:{x:player.x,y:player.y},
+      started:now,ends:now+interactionDuration(player,decorationInstallMs)});
+    return 'Instalando decoração…';
+  }
+
+  private installationProgress(id:string,now:number) {
+    const pending = this.pendingInstallations.get(id);
+    if (!pending) return;
+    return {elapsed:Math.floor((now-pending.started)/100)*100,duration:pending.ends-pending.started};
+  }
+
+  private tickInstallations(world:GameplayWorld,exploring:boolean) {
+    for (const [id,pending] of this.pendingInstallations) {
+      const player = world.players.find(person=>person.id===id);
+      if (!exploring || !player || player.knockedOut || player.carrying || player.carried ||
+          world.present?.(id)===false || player.x!==pending.origin.x || player.y!==pending.origin.y) {
+        this.pendingInstallations.delete(id);
+        world.feedback?.(id,'Instalação interrompida.');
+        continue;
+      }
+      if (world.now<pending.ends) continue;
+      this.pendingInstallations.delete(id);
+      const message = pending.action.kind==='office-install'
+        ? this.officeAction(player,pending.action,world,true)
+        : this.changeInstallation(player,pending.action,world,true);
+      if (message) world.feedback?.(id,message);
+    }
+  }
+
+  private changeInstallation(player:Player,action:GameplayAction,world:GameplayWorld,complete = false) {
     const siteKey = action.kind==='install' ? action.place : [...this.installations].find(([,item])=>item.id===action.item)?.[0];
     if (!siteKey || !Object.hasOwn(installationSites,siteKey)) return 'Aproxime-se do local.';
     const site = installationSites[siteKey as keyof typeof installationSites];
@@ -846,6 +885,7 @@ export class Gameplay {
       if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return 'Objeto indisponível.';
       const conflict = installationConflict(placed,player.id);
       if (conflict) return conflict;
+      if (!complete && site.kind!=="pizza") return this.startInstallation(player,action,world.now);
       this.remove(item);
       const cleared = this.clearedSites.get(siteKey);
       this.clearedSites.delete(siteKey);
@@ -930,7 +970,7 @@ export class Gameplay {
         if (!tool || target!=='door' && this.ownerInside(office,players)) return;
         const duration = this.privateOffices.breachTime(office,target,this.toolLevel(tool),now);
         if (duration) add(target==='door' ? 'office-breach-door' : target==='safe' ? 'office-breach-safe' : 'office-breach-cabinet',
-          `Arrombar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · ${duration/1000} s`,tool.id);
+          `Arrombar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · ${(interactionDuration(player,duration)/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})} s`,tool.id);
       };
       if (this.privateOffices.near(player,office,'door')) {
         if (office.doorUntil<=now) {
@@ -991,7 +1031,7 @@ export class Gameplay {
     return prior ? 'Decoração substituída.' : 'Decoração instalada.';
   }
 
-  private officeAction(player:Player, action:GameplayAction, world:GameplayWorld) {
+  private officeAction(player:Player, action:GameplayAction, world:GameplayWorld, complete = false) {
     const {kind} = action;
     const {now} = world;
     const offices = this.privateOffices;
@@ -1048,6 +1088,7 @@ export class Gameplay {
       if (!decor) return 'Decoração incompatível.';
       const point = decorPoint(office.layout,decor);
       if (!own || !offices.near(player,office,point)) return 'Use o ponto de decoração do seu gabinete.';
+      if (!complete) return this.startInstallation(player,action,now);
       this.remove(item);
       return this.installOfficeDecor(player,office.layout,decor,item.data,world);
     }
@@ -1071,7 +1112,7 @@ export class Gameplay {
     const duration = kind==='office-cash' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
     if (!duration) return kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
-    offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+duration,level});
+    offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+interactionDuration(player,duration),baseDuration:duration,level});
     if (kind==='office-cash') {
       player.pocketing = true;
       this.expose(player.id,item.data.id);
@@ -1098,7 +1139,7 @@ export class Gameplay {
       const valid = exploring && player && !player.knockedOut && !player.carrying && !player.moving &&
         world.present?.(id)!==false && player.x===channel.origin.x && player.y===channel.origin.y &&
         item && 'holder' in item.place && item.place.holder===id && offices.near(player,office,target) &&
-        (kind==='office-cash' ? office.owner===id : (target==='door' || !this.ownerInside(office,world.players)) && offices.breachTime(office,target,channel.level,world.now)===channel.ends-channel.started);
+        (kind==='office-cash' ? office.owner===id : (target==='door' || !this.ownerInside(office,world.players)) && offices.breachTime(office,target,channel.level,world.now)===channel.baseDuration);
       if (valid && world.now<channel.ends) continue;
       offices.channels.delete(id);
       if (player) player.pocketing = undefined;
@@ -1250,15 +1291,13 @@ export class Gameplay {
   applyAttribute(player:Player, attribute:Attribute) {
     const {bonus} = attributeUpgrades[attribute];
     switch (attribute) {
-      case 'hp': this.combat.increaseMaxHp(player,bonus); break;
+      case 'agility': player.interactionSpeedBonus = (player.interactionSpeedBonus ?? 0)+bonus; break;
       case 'stamina': {
         const max = player.staminaMax ?? MAX_STAMINA;
         player.staminaMax = max+bonus;
         player.stamina = Math.min(player.staminaMax,(player.stamina ?? max)+bonus);
         break;
       }
-      case 'attack': player.attackBonus = (player.attackBonus ?? 0)+bonus; break;
-      case 'defense': player.defenseBonus = (player.defenseBonus ?? 0)+bonus; break;
     }
   }
 
@@ -1274,7 +1313,7 @@ export class Gameplay {
         ? 'Este espaço já está ocupado.' : 'Os dois espaços de acessórios estão ocupados.';
       this.move(item,{equipped:id});
       if (conflict) this.changeGear(player,conflict.id,false,world);
-      if (item.data.kind==='runningShoes') player.canSprint = true;
+      if (item.data.kind==='runningShoes') player.runningShoes = true;
       this.event(world,player,'equipped',item.data);
       return 'Equipado.';
     }
@@ -1284,7 +1323,7 @@ export class Gameplay {
     if (item.data.kind==='binoculars') this.stopBinoculars(id);
     if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id);
-    if (item.data.kind==='runningShoes') player.canSprint = player.sprinting = undefined;
+    if (item.data.kind==='runningShoes') player.runningShoes = undefined;
     this.event(world,player,'unequipped',item.data);
     return 'Guardado no inventário.';
   }
@@ -1312,9 +1351,10 @@ export class Gameplay {
     const {id} = player;
     if (action.kind==='dialogue-close') return this.dialogues.close(id);
     if (player.knockedOut) return 'Você está nocauteado.';
-    if (this.privateOffices.channels.get(id)?.kind==='office-cash' && action.kind!=='office-cancel') {
-      return 'Você já está embolsando dinheiro.';
-    }
+    const officeChannel = this.privateOffices.channels.get(id);
+    if (officeChannel?.kind==='office-cash' && action.kind!=='office-cancel') return 'Você já está embolsando dinheiro.';
+    if (this.pendingInstallations.has(id)) return 'Você já está instalando uma decoração.';
+    if (officeChannel && (action.kind==='install' || action.kind==='office-install')) return 'Já existe uma interação em andamento.';
     if (action.kind==='release') return this.transport.drop(player,world) ? 'Jogador colocado no chão.' : undefined;
     if (action.kind==='treat') return this.treat(player,world);
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';

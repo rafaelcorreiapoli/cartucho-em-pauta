@@ -1,6 +1,7 @@
 import {PlenaryMatch} from './PlenaryMatch';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
+import { decorationInstallMs } from '../src/installations';
 import type { GameplayWorld } from './gameplay-world';
 import { decorPoint, decorSlots, eastAnnex, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
 import { canStand, localPerception, wallBetween, type Player } from '../src/map';
@@ -95,9 +96,11 @@ test('cash can only be converted once at the owners safe, with interruption and 
   expect(game.view(owner,world).inventory[0]?.id).toBe(cash.id);
   Object.assign(owner,home.safe);
   Object.assign(visitor,{x:home.safe.x,y:home.safe.y+13});
+  game.applyAttribute(owner,'agility');
+  const fasterCashMs = officeRules.cashMs/1.25;
   act(owner,'office-cash',home.id,cash.id);
   tick(1000);
-  expect(game.view(owner,world).officeChannel).toMatchObject({kind:'office-cash',officeId:home.id,elapsed:1000});
+  expect(game.view(owner,world).officeChannel).toMatchObject({kind:'office-cash',officeId:home.id,elapsed:1000,duration:fasterCashMs});
   expect(act(owner,'office-cash',home.id,cash.id)).toBe('Você já está embolsando dinheiro.');
   expect(game.view(owner,world).officeOptions?.map(option=>option.kind)).toEqual(['office-cancel']);
   expect(act(owner,'office-cancel')).toBe('Interação cancelada.');
@@ -108,7 +111,7 @@ test('cash can only be converted once at the owners safe, with interruption and 
   expect(act(owner,'office-cash',home.id,cash.id)).toBe('Você já está embolsando dinheiro.');
   act(visitor,'photo');
   expect(game.photoView(visitor.id,world.now).album[0]?.photo.people.find(person=>person.id===owner.id)?.pocketing).toBe(true);
-  tick(officeRules.cashMs-1001);
+  tick(fasterCashMs-1001);
   expect(credit.size).toBe(0);
   tick(1);
   expect(credit.get(owner.id)).toBe(3);
@@ -199,7 +202,7 @@ test('shop purchases furnish the correct office slots even when the inventory is
 });
 
 test('a visitor can tear down a portrait inside an office without collecting it',()=>{
-  const {players:[owner,visitor],game,world,act,buy} = setup();
+  const {players:[owner,visitor],game,world,act,buy,tick} = setup();
   const [home] = privateOffices;
   const point = decorPoint(home,'portrait');
   Object.assign(owner,npcs.credentialsVendor.interaction);
@@ -208,7 +211,8 @@ test('a visitor can tear down a portrait inside an office without collecting it'
   expect(game.act(owner,{kind:'shop-buy',target:'portrait',token},world)).toBe('Compra guardada no inventário.');
   const [portrait] = game.view(owner,world).inventory;
   Object.assign(owner,point);
-  expect(act(owner,'office-install',home.id,portrait.id)).toBe('Decoração instalada.');
+  expect(act(owner,'office-install',home.id,portrait.id)).toBe('Instalando decoração…');
+  tick(decorationInstallMs);
   for (let i=0;i<INVENTORY_SLOTS;i++) buy(visitor,'lockpick');
   Object.assign(visitor,atDoor(home,false));
   expect(game.view(visitor,world).officeOptions?.some(option=>option.label==='Arrancar retrato')).toBe(false);

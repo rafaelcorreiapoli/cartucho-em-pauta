@@ -85,10 +85,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const fire = view?.fireInteraction;
     if (fire?.option) actions.push({label:fire.option.label,icon:'alert',action:{kind:'fire',option:fire.option}});
     const channel = state?.officeChannel;
+    const installation = state?.installationProgress;
     const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
     const meter = fire?.progress!==undefined ? {value:fire.progress,max:1,label:'Instalando dispositivo',detail:'Instalando dispositivo'} :
+      installation ? {value:installation.elapsed,max:installation.duration,label:'Instalando decoração',detail:'Instalando decoração'} :
       state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
       detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : channel?.kind==='office-cash' ? {value:channel.elapsed,max:channel.duration,label:'Embolsando dinheiro'} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
       detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :

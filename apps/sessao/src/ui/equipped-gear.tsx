@@ -41,14 +41,14 @@ export function equippedGearState(state?:GameplayView) {
         charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
       const name = objects[item.kind].name;
       const label = activeSeconds ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` :
-        charges ? `${name} · ${time}` : item.kind==='runningShoes' ? `${name} · Segure Shift para correr` : name;
+        charges ? `${name} · ${time}` : name;
       const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` :
         item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
       const toggle = item.kind==='xray' || item.kind==='megaphone' || item.kind==='voiceModulator';
       return {
         kind:item.kind, control, active, time, tooltip, pressed:toggle ? active : undefined,
         label:item.kind==='xray' ? `${scanning ? 'Desativar' : 'Ativar'} ${label}` : label,
-        hint:control?.key ?? (item.kind==='runningShoes' ? 'Shift' : undefined),
+        hint:control?.key,
       };
     }),
     concealment:state.concealmentSeconds,
