@@ -21,10 +21,12 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
         <small>{count}/{PHOTO_LIMIT}</small>
       </button>
       <button type="button" className="camera-shutter" aria-label="Tirar foto" disabled={disabled}
-        aria-keyshortcuts="5" onClick={()=>send({kind:selfie ? 'selfie' : 'photo'})}><span aria-hidden="true"/></button>
+        aria-keyshortcuts="5" onClick={()=>send({kind:selfie ? 'selfie' : 'photo'})}>
+        <span aria-hidden="true"/><kbd className="action-key" aria-hidden="true">5</kbd>
+      </button>
       <button type="button" className="camera-selfie" aria-label="Selfie" disabled={disabled}
         aria-keyshortcuts="6" aria-pressed={selfie} onClick={()=>setSelfie(!selfie)}>
-        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie</small>
+        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie <kbd className="action-key" aria-hidden="true">6</kbd></small>
       </button>
     </div>
   </section>;

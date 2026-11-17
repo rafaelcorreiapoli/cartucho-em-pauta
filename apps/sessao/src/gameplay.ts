@@ -1,3 +1,5 @@
+import type { CandyRound } from './candy';
+import type { BetsRound } from './bets';
 import {npcs} from './npcs';
 import { incendiary } from './fire';
 import type { RechargeStation } from './station-recharge';
@@ -96,7 +98,7 @@ export { canInteract as canReachObject } from './interactions';
 export const INVENTORY_SLOTS = 6;
 export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 export type PhoneActivity = 'open'|'call'|'game';
-const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn'] as const;
+const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn','bets-spin','candy-start','candy-swap'] as const;
 type PhoneActionKind = typeof phoneActions[number];
 
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','verify-document','store','recover','deliver',
@@ -104,7 +106,7 @@ const gameplayActions = ['supply','collect','offer','sign-request','accept','dec
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
-export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number};
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
 
 export function isPhoneAction(action:GameplayAction):action is PhoneAction {
@@ -113,7 +115,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'edit','phone-open','call','answer','game-start','game-turn','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean, voting=false) {
@@ -142,7 +144,7 @@ export type GameplayView = {
   equipmentCooldowns?:Record<number,number>;
   megaphoneSeconds?:number;
   modulator?:{active:boolean};
-  exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; locations:string[];
+  exposed:number[]; decorations:Decoration[]; interactive:Decoration[]; installable:string[]; requests:ItemRequest[]; call?:PhoneCall; game?:SnakeView; bets?:BetsRound; candy?:CandyRound; locations:string[];
 };
 export type InteractionCue = 'cash'|'stamp'|'lock'|'pickup';
 
@@ -157,8 +159,11 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
   if (!kind) return;
   const quantity = 'quantity' in raw ? raw.quantity : undefined;
   if (quantity!==undefined && (typeof quantity!=='number' || !Number.isSafeInteger(quantity) || quantity<1)) return;
+  const cells = 'cells' in raw ? raw.cells : undefined;
+  if (kind==='candy-swap' && (!Array.isArray(cells) || cells.length!==2 || !cells.every(Number.isSafeInteger))) return;
   return {
     kind,
+    ...(kind==='candy-swap' ? {cells:cells as [number,number]} : {}),
     item:'item' in raw && typeof raw.item==='number' && Number.isSafeInteger(raw.item) ? raw.item : undefined,
     target:'target' in raw && typeof raw.target==='string' ? raw.target : undefined,
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,

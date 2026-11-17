@@ -246,7 +246,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Projetos' ? [view.project,view.outcomes] :
       app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory] :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
-      [state.game?.status,state.game?.score];
+      [state.game?.status,state.game?.score,state.candy,state.bets,view.politics?.wallet];
     if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
     const nextKey = JSON.stringify([selection,recipient,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
@@ -388,7 +388,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       let application:ReactNode;
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
         available={phase==='negotiation'} send={send}/>;
-      if (app==='Joguinhos') application = <PhoneSnake game={state.game} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>;
+      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>;
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics}/>;

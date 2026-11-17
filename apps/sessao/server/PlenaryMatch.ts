@@ -376,6 +376,8 @@ export class PlenaryMatch {
         return true;
       },
       plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
+      earnXp:(id,amount)=>this.economy.earnXp(id,amount),
+      settleBet:(id,stake,payout,maxPayout)=>this.economy.settleBet(id,stake,payout,maxPayout),
       office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
       projectFilingError:(id,project)=>this.projectFilingError(id,project,now),
       projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
