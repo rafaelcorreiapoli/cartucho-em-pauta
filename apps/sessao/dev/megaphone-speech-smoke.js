@@ -1,5 +1,5 @@
 // Use the bundled Brazilian Portuguese speech fixture without a physical microphone.
-// Open with ?captureVoice=1 to save the four received clips for listening.
+// Open with ?captureVoice=1 to save the received clips from both listeners for listening.
 async page => {
   await page.reload();
   await page.evaluate(() => {
@@ -128,33 +128,37 @@ async page => {
       const receiver = receivingSpeech(listenerAudio);
       if (!receiver) throw Error('No WebRTC playback received');
       let distantReceiver;
+      function record(meter,name) {
+        const output = meter.context.createMediaStreamDestination();
+        meter.connect(output);
+        const recorder = new MediaRecorder(output.stream,{mimeType:'audio/webm;codecs=opus'});
+        const chunks = [];
+        recorder.ondataavailable = event=>chunks.push(event.data);
+        const stopped = new Promise(resolve=>recorder.addEventListener('stop',resolve,{once:true}));
+        recorder.start();
+        return async()=>{
+          recorder.stop();
+          await stopped;
+          meter.disconnect(output);
+          output.stream.getTracks().forEach(track=>track.stop());
+          const clip = new Blob(chunks,{type:recorder.mimeType});
+          if (!clip.size) throw Error('Empty recording: '+name);
+          recordings[name] = await new Promise((resolve,reject)=>{
+            const reader = new FileReader();
+            reader.onload = ()=>resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(clip);
+          });
+        };
+      }
       async function sample(name,broadcast) {
         const distant = broadcast ? distantReceiver : undefined;
         await waitFor(()=>!!route && (broadcast ? route[3]===true && route[2]===false : route[2]===true && !route[3]),'Rota de áudio inesperada: '+name);
         await pause(250);
-        let recorded;
+        const recorders = [];
         if (capture) {
-          const output = receiver.context.createMediaStreamDestination();
-          receiver.connect(output);
-          const recorder = new MediaRecorder(output.stream,{mimeType:'audio/webm;codecs=opus'});
-          const chunks = [];
-          recorder.ondataavailable = event=>chunks.push(event.data);
-          const stopped = new Promise(resolve=>recorder.addEventListener('stop',resolve,{once:true}));
-          recorder.start();
-          recorded = async()=>{
-            recorder.stop();
-            await stopped;
-            receiver.disconnect(output);
-            output.stream.getTracks().forEach(track=>track.stop());
-            const clip = new Blob(chunks,{type:recorder.mimeType});
-            if (!clip.size) throw Error('Empty recording: '+name);
-            recordings[name] = await new Promise((resolve,reject)=>{
-              const reader = new FileReader();
-              reader.onload = ()=>resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(clip);
-            });
-          };
+          recorders.push(record(receiver,name));
+          if (distant) recorders.push(record(distant,name+'-distante'));
         }
         const measure = async meter=>{
           let peak = 0;
@@ -182,7 +186,7 @@ async page => {
           return {peak,activeWindows,bassToMid:bass/mid};
         };
         const [nearby,far] = await Promise.all([measure(receiver),distant && measure(distant)]);
-        await recorded?.();
+        await Promise.all(recorders.map(finish=>finish()));
         return {...nearby,distant:far};
       }
       const normal = await sample('voz-normal',false);
