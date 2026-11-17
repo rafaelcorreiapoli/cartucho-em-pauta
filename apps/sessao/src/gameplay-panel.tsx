@@ -374,7 +374,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if ('storage' in terminal) act(`Guardar · ${terminal.title}`,'store',place);
           if (item.document && 'stamp' in terminal) act(`Carimbar · ${terminal.stamp}`,'stamp',place);
           if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
-          if (item.document && 'file' in terminal) act('Protocolar','file',place);
         }
       }
       const detail = objectCard(item,actions,selection?.source==='inventory');

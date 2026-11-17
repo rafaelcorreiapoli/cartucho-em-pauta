@@ -706,7 +706,7 @@ export class Gameplay {
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
-      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world)),
+      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentAvailable(player,world.now),
       modulator,
@@ -1256,7 +1256,9 @@ export class Gameplay {
     const {id} = player;
     let confirmation = 'Compra guardada no inventário.';
     return this.dialogues.purchase(player,token,(npc,direct)=>{
-      const product = marketProduct(npcs[npc].catalog,requested,world.policies,world.publicBudget);
+      const catalog = npcs[npc].catalog;
+      if (!catalog) return 'Abra o catálogo do vendedor.';
+      const product = marketProduct(catalog,requested,world.policies,world.publicBudget);
       if (!product) {
         return marketProduct('equipment',requested) || marketProduct('food',requested) || marketProduct('furniture',requested) || isCredentialGood(requested)
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
@@ -1270,7 +1272,7 @@ export class Gameplay {
       } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
       if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
-      const basePrice = marketProduct(npcs[npc].catalog,kind)!.price;
+      const basePrice = marketProduct(catalog,kind)!.price;
       const subsidy = Math.round((basePrice-price)*10)/10;
       const paid = subsidy && world.spendSubsidized ? world.spendSubsidized(id,price,subsidy) : world.spend?.(id,price);
       if (!paid) return 'Saldo insuficiente.';
@@ -1375,7 +1377,8 @@ export class Gameplay {
       if (!target || !canReachDownedPlayer(player,target)) return 'Aproxime-se do jogador nocauteado.';
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
-    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,this.dialogueEligibility(id,world));
+    if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,
+      this.dialogueEligibility(id,world),this.documentsForProtocol(id),item=>this.fileDocument(player,item,world));
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
@@ -1577,26 +1580,35 @@ export class Gameplay {
       case 'verify-document':
         if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
         return this.documentRequirements(data) ?? 'Documento atende aos requisitos formais.';
-      case 'file': {
-        if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
-        if (!data.document || !terminal || !('file' in terminal)) return 'Leve o documento ao Protocolo.';
-        const error = this.documentRequirements(data);
-        if (error) return error;
-        if (data.document.project!==undefined) {
-          if (data.document.requiredSignatures && !data.document.signatures.some(signer=>
-            signer.id!==id && (world.canSignProject?.(signer.id) ?? world.players.some(person=>person.id===signer.id && !person.npc)))) {
-            return 'A assinatura precisa ser de outro jogador com mandato.';
-          }
-          const reason = world.projectFilingError?.(id,data.document.project);
-          if (reason) return reason;
-        }
-        const filed = [...this.items.values()].filter(item=>'filed' in item.place);
-        if (filed.length>=24) this.remove(filed[0]);
-        this.move(item,{filed:true});
-        this.event(world,player,'filed',data,undefined,{project:data.document.project});
-        return 'Documento protocolado.';
-      }
     }
+  }
+
+  private documentsForProtocol(id:string) {
+    return this.inventory(id).flatMap(({data})=>data.document ? [{id:data.id,title:data.document.title}] : []);
+  }
+
+  private fileDocument(player:Player,itemId:number,world:GameplayWorld) {
+    const id = player.id;
+    if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
+    const item = this.items.get(itemId);
+    if (!item || !('holder' in item.place) || item.place.holder!==id || !item.data.document) return 'O documento não está com você.';
+    const {data} = item;
+    const document = item.data.document;
+    const error = this.documentRequirements(data);
+    if (error) return error;
+    if (document.project!==undefined) {
+      if (document.requiredSignatures && !document.signatures.some(signer=>
+        signer.id!==id && (world.canSignProject?.(signer.id) ?? world.players.some(person=>person.id===signer.id && !person.npc)))) {
+        return 'A assinatura precisa ser de outro jogador com mandato.';
+      }
+      const reason = world.projectFilingError?.(id,document.project);
+      if (reason) return reason;
+    }
+    const filed = [...this.items.values()].filter(item=>'filed' in item.place);
+    if (filed.length>=24) this.remove(filed[0]);
+    this.move(item,{filed:true});
+    this.event(world,player,'filed',data,undefined,{project:document.project});
+    return 'Documento protocolado.';
   }
 
   private respond(player:Player, action:GameplayAction, world:GameplayWorld) {

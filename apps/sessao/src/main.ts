@@ -219,7 +219,13 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('spy-frame',(frame:SpyCameraFrame)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
-    const market = createMarketPanel(sendGameplay);
+    const market = createMarketPanel(sendGameplay,()=>{
+      const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
+      projectPicker.open('Solicitar documento',index=>{
+        sendGameplay({kind:'supply',place:'secretary',target:'project-'+index});
+        sendGameplay({kind:'dialogue-close'});
+      },undefined,voted);
+    });
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
@@ -240,11 +246,6 @@ async function connect(join: () => Promise<Room>) {
       if (action.kind==='spy') { sendCommand('spy',action.option); return; }
       if (action.kind==='edit-document') {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
-        return;
-      }
-      if (action.kind==='request-document') {
-        const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
-        projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}),undefined,voted);
         return;
       }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
@@ -281,7 +282,7 @@ async function connect(join: () => Promise<Room>) {
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
       else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
-      else if (market.isOpen()) hud.notify('Loja',message);
+      else if (market.isOpen()) hud.notify(previousView?.gameplay?.dialogue?.npc==='protocol' ? 'Protocolo' : previousView?.gameplay?.dialogue?.npc==='secretary' ? 'Secretaria' : 'Loja',message);
       else gameplay.feedback(message);
     });
     const campaignTv = createCampaignTv(session,joined.sessionId);

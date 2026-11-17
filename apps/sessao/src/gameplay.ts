@@ -1,3 +1,4 @@
+import {npcs} from './npcs';
 import { incendiary } from './fire';
 import type { RechargeStation } from './station-recharge';
 import { firstAidKit } from './medical';
@@ -98,7 +99,7 @@ export type PhoneActivity = 'open'|'call'|'game';
 const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn'] as const;
 type PhoneActionKind = typeof phoneActions[number];
 
-const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','verify-document','store','recover','deliver',
+const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
@@ -175,7 +176,7 @@ export const terminals = {
   cabinet:{point:stations.cabinet,title:'Mesa de Verbas',stamp:'Gabinete'},
   archive:{point:stations.archive,title:'Arquivo',storage:true},
   treasury:{point:treasurer.interaction,title:treasurer.label},
-  protocol:{point:stations.amendment,title:'Protocolo',file:true},
+  protocol:{point:npcs.protocol.interaction,title:'Protocolo'},
 } as const;
 export type Terminal = keyof typeof terminals;
 export const canVerifyDocumentAt = (place:string|undefined) => place==='secretary' || place==='protocol';

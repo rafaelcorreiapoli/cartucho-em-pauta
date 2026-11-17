@@ -1,8 +1,8 @@
-import { treasurer } from './npcs';
+import { npcs, treasurer } from './npcs';
 
 export const roomActivities = {
   cabinet: {...treasurer.interaction, title:treasurer.label, label:'Consultar orçamento', icon:'wallet'},
-  secretary: {x:83,y:247, title:'Secretaria', label:'Ver pauta', icon:'document'},
+  secretary: {...npcs.secretary.interaction, title:'Secretaria', label:'Ver pauta', icon:'document'},
   coffee: {x:240,y:250, title:'Cafezinho', label:'Tomar um cafezinho', icon:'coffee'},
   archive: {x:549,y:90, title:'Arquivo', label:'Abrir registro público', icon:'document'},
   library: {x:424,y:364, title:'Biblioteca', label:'Estudar o projeto', icon:'document'},

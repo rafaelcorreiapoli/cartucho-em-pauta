@@ -39,10 +39,10 @@ votados e 45 de estabilidade. Projetos rejeitados contam. Se a meta não for
 atingida, o infiltrado ganha. Se a estabilidade chegar a zero, a partida termina
 na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
 
-Consulte **Celular → Projetos** e solicite um documento na Secretaria. Carimbe na
+Consulte **Celular → Projetos** e fale com Dona Sílvia no balcão da Secretaria para solicitar um documento. Carimbe na
 Secretaria e no Gabinete e peça a assinatura de outro jogador com mandato
 (em partida solo, a assinatura é dispensada). O jogador com mandato que entregar
-o documento no Protocolo entra como proponente. Protocolar é gratuito.
+o documento a Seu Mauro no balcão do Protocolo entra como proponente. Protocolar é gratuito.
 
 O Protocolo aceita um projeto por vez e já avisa todos quem o apresentou.
 A articulação dura dois minutos. Se houver outra votação no Plenário, o projeto
