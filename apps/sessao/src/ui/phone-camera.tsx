@@ -18,7 +18,7 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
     <div className="phone-camera-controls">
       <button type="button" className="camera-gallery" aria-keyshortcuts="3" aria-label={`Abrir álbum · ${count}/${PHOTO_LIMIT}`} onClick={openAlbum}>
         <svg className="hud-glyph" aria-hidden="true"><use href="#icon-app-photos"/></svg>
-        <small>{count}/{PHOTO_LIMIT} <kbd className="action-key" aria-hidden="true">3</kbd></small>
+        <small>{count}/{PHOTO_LIMIT}</small><kbd className="action-key" aria-hidden="true">3</kbd>
       </button>
       <button type="button" className="camera-shutter" aria-label="Tirar foto" disabled={disabled}
         aria-keyshortcuts="1" onClick={()=>send({kind:selfie ? 'selfie' : 'photo'})}>
@@ -26,7 +26,7 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
       </button>
       <button type="button" className="camera-selfie" aria-label="Selfie" disabled={disabled}
         aria-keyshortcuts="2" aria-pressed={selfie} onClick={()=>setSelfie(!selfie)}>
-        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie <kbd className="action-key" aria-hidden="true">2</kbd></small>
+        <svg className="hud-glyph" aria-hidden="true"><use href="#icon-camera"/></svg><small>Selfie</small><kbd className="action-key" aria-hidden="true">2</kbd>
       </button>
     </div>
   </section>;
