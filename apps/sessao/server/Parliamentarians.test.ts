@@ -1,4 +1,5 @@
 import {publishProjectFiling} from './project-test-fixture';
+import {fieldActions} from '../src/ui/field-actions';
 import { npcs } from '../src/npcs';
 import { expect,test } from 'bun:test';
 import { Gameplay } from './Gameplay';
@@ -223,4 +224,28 @@ test('a delayed close only affects the negotiation it belongs to',()=>{
   expect(talk.view(buyer,state)).toEqual(current);
   talk.act(buyer,{kind:'close',session:current.session},state);
   expect(talk.view(buyer,state)).toBeUndefined();
+});
+
+test('the HUD cancels a robbery without transferring cash and a delayed conversation close cannot cancel it',()=>{
+  const {humans:[buyer],npcs:[npc],game,match,talk,world} = fixture();
+  Object.assign(npc,{x:buyer.x+8,y:buyer.y});
+  const state = world(1);
+  talk.act(buyer,{kind:'talk',target:npc.id},state);
+  const {session} = talk.view(buyer,state)!;
+  npc.knockedOut = true;
+  talk.act(buyer,{kind:'rob',target:npc.id},state);
+  talk.act(buyer,{kind:'close',session},state);
+  const robberyProgress = talk.robberyProgress(buyer.id,1);
+  expect(robberyProgress).toBe(0);
+  const view = {...match.view(buyer.id,[buyer.id],1),gameplay:{...game.view(buyer,state),robberyProgress}};
+  const cancel = fieldActions(view,buyer,state.players).find(button=>button.label==='Cancelar roubo')?.action;
+  if (cancel?.kind!=='npc-deal') throw Error('HUD did not offer the robbery cancellation');
+  expect(talk.act(buyer,{kind:cancel.command},state)).toBe('Roubo interrompido.');
+  expect(talk.robberyProgress(buyer.id,1)).toBeUndefined();
+  const wallet = state.wallet!(npc.id);
+  talk.tick(world(1+npcRules.robberyMs),true);
+  expect(state.wallet!(npc.id)).toBe(wallet);
+  expect(game.view(buyer,state).inventory).toEqual([]);
+  view.gameplay.robberyProgress = talk.robberyProgress(buyer.id,1);
+  expect(fieldActions(view,buyer,state.players).map(button=>button.label)).not.toContain('Cancelar roubo');
 });

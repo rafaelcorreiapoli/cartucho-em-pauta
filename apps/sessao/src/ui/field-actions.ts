@@ -14,7 +14,7 @@ export type FieldAction = GameplayAction
   | {kind:'power';option:PowerAction}
   | {kind:'fire';option:FireOption}
   | {kind:'spy';option:SpyOption}
-  | {kind:'npc-deal';command:'talk'|'rob'|'close';target?:string}
+  | {kind:'npc-deal';command:'talk'|'rob'|'cancel-robbery';target?:string}
   | {kind:'cross-door';door:number}
   | {kind:'inspect-stash'}
   | {kind:'edit-document';item:number;project:number}
@@ -43,7 +43,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   for (const option of spy?.options ?? []) actions.push({
     label:option.label,blocked:option.blocked,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
   });
-  if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
+  if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'cancel-robbery'}});
   for (const {label,...action} of state?.officeOptions ?? []) {
     actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
   }

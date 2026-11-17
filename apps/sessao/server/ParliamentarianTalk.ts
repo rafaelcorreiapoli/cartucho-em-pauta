@@ -42,11 +42,15 @@ export class ParliamentarianTalk {
 
   act(player:Player,raw:unknown,world:GameplayWorld) {
     if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
-    if (raw.kind!=='close' && this.robberies.has(player.id)) return 'Roubo em andamento.';
     if (raw.kind==='close') {
       if ('session' in raw && raw.session===this.sessions.get(player.id)?.id) this.sessions.delete(player.id);
       return;
     }
+    if (raw.kind==='cancel-robbery') {
+      if (this.robberies.delete(player.id)) return 'Roubo interrompido.';
+      return;
+    }
+    if (this.robberies.has(player.id)) return 'Roubo em andamento.';
     const target = 'target' in raw && typeof raw.target==='string' ? this.target(raw.target) : undefined;
     if (!target) return 'Parlamentar indisponível.';
     if (raw.kind==='rob') {
