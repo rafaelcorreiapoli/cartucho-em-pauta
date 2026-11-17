@@ -1174,3 +1174,51 @@ test('the pizza mission keeps its first slice after that guest leaves',()=>{
   expect(game.act(caio,{kind:'slice',item:pizza.id},world(5))).toBe('Fatia servida.');
   expect(render(5,true)).toContain('data-done="true"');
 });
+
+test('Solenidade appears with a fresh rival portrait and disappears once another visitor marks it',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction,
+  }));
+  const [owner,visitor,rival] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(owner.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  let now = 1;
+  const world = ()=>match.gameplayWorld(players,now,()=>false);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,
+    (id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement,now));
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const player of players) {
+    const {agenda} = accounts.get(player.id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['solenidadeInauguracao','cafe','passeio','selfieSolo']);
+  }
+  const view = (player:Player)=>match.view(player.id,players.map(({id})=>id),now).politics!;
+  const render = (player:Player,done=false)=>view(player).missions[done ? 'completed' : 'active']
+    .map(mission=>renderToStaticMarkup(<MissionRow mission={mission} done={done}/>)).join('');
+  const label = 'Rabisque um Retrato Oficial';
+  match.refreshAgendaEligibility();
+  expect(render(visitor)).not.toContain(label);
+
+  game.act(owner,{kind:'open-shop',target:'credentialsVendor'},world());
+  expect(game.act(owner,{kind:'shop-buy',target:'portrait',token:game.view(owner,world()).dialogue?.token},world()))
+    .toBe('Compra guardada no inventário.');
+  const portrait = game.view(owner,world()).inventory.find(item=>item.kind==='portrait')!;
+  players.forEach(player=>Object.assign(player,installationSites.hall.point));
+  expect(game.act(owner,{kind:'install',place:'hall',item:portrait.id},world())).toBe('Instalando decoração…');
+  now += decorationInstallMs;
+  game.tick(world(),true);
+  // Eligibility is applied on the next draw when the Agenda already has three missions.
+  for (const player of [visitor,rival]) Reflect.set(accounts.get(player.id).agenda,'missions',[]);
+  match.refreshAgendaEligibility();
+  expect(render(owner)).not.toContain(label);
+  expect(render(visitor)).toContain(label);
+  expect(render(rival)).toContain(label);
+
+  expect(game.act(rival,{kind:'mark',item:portrait.id},world())).toBe('Retrato rabiscado.');
+  expect(render(rival,true)).toContain(label);
+  expect(view(rival).progression.xp).toBe(30);
+  expect(render(visitor)).not.toContain(label);
+  expect(view(visitor).progression.xp).toBe(0);
+});

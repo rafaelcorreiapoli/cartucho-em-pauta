@@ -7,7 +7,7 @@ import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
 import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
-import { archiveDutyRoom, money } from '../src/politics';
+import { archiveDutyRoom, money, NEW_PORTRAIT_MS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
@@ -226,7 +226,12 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false) {
+  hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false, now?:number) {
+    if (kind==='freshForeignPortrait') return [...this.installations].some(([site,item])=>{
+      const installedAt = this.portraitInstalledAt.get(site);
+      return item.kind==='portrait' && item.owner.id!==id && !item.marked &&
+        installedAt!==undefined && now!==undefined && now-installedAt<=NEW_PORTRAIT_MS;
+    });
     if (kind==='vipSpace') return Object.entries(installationSites).some(([site,{kind}])=>
       kind==='vip' && this.installations.get(site)?.owner.id!==id);
     if (kind==='anyPortrait' || kind==='anyVip') {
@@ -239,6 +244,16 @@ export class Gameplay {
     });
     return [...this.installations.values()].some(item=>item.kind===kind &&
       (kind==='portrait' ? item.owner.id===id : item.owner.id!==id));
+  }
+
+  expireRecentPortraits(now:number) {
+    let expired = false;
+    for (const [site,installedAt] of this.portraitInstalledAt) {
+      if (now-installedAt<=NEW_PORTRAIT_MS) continue;
+      this.portraitInstalledAt.delete(site);
+      expired = true;
+    }
+    return expired;
   }
 
   installedPizza(id:string) {
