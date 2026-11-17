@@ -6,7 +6,7 @@ import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
 import {HEARING_MS,missionReward} from '../politics';
 import {ELECTION_RULES} from '../elections';
 import type {Player} from '../map';
-import {BALLOT_MS,CASSATION_NOTICE_MS,NEGOTIATION_MS,stations} from '../plenary';
+import {BALLOT_MS,CASSATION_NOTICE_MS,NEGOTIATION_MS,projectRules,stations} from '../plenary';
 import {terminals,readGameplayAction,treasuryDeliveries} from '../gameplay';
 import {stationRecharge} from '../station-recharge';
 import {installationSites} from '../installations';
@@ -371,6 +371,52 @@ test('the HUD starts a replacement Pix mission at zero after a transfer complete
   pay(bia,3);
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'doisPix',current:2}));
   expect(hud.profile.get()?.xp).toBe(missionReward('recebido').xp+missionReward('doisPix').xp);
+});
+
+test.each([false,true])('the Agenda rechecks shared amendment availability after another player acts, future vote=%s',futureVote=>{
+  const peer = {...player,id:'bia',nick:'Bia'};
+  const players = [player,peer];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,players,0,()=>.9)).toBe(true);
+  const filingAt = futureVote ? 0 : ELECTION_RULES.matchDuration-BALLOT_MS-NEGOTIATION_MS;
+  publishProjectFiling(match,player,0,filingAt);
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const id of ids) {
+    const {agenda} = accounts.get(id);
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['emenda','cafe','passeio','selfieSolo']);
+  }
+  match.refreshAgendaEligibility(filingAt);
+  const hud = createHudModel();
+  const update = (now:number)=>hud.render(match.view(peer.id,ids,now));
+  const hasAmendment = ()=>hud.agenda.get()?.active.some(mission=>mission.kind==='emenda');
+  update(filingAt);
+  expect(hasAmendment()).toBe(true);
+
+  match.act({...player,...stations.amendment},'amendment',filingAt+1);
+  update(filingAt+1);
+  expect(hasAmendment()).toBe(futureVote);
+  if (!futureVote) expect(hud.agenda.get()?.active).toHaveLength(3);
+  const actor = match.view(player.id,ids,filingAt+1).politics!;
+  expect(actor.missions.completed).toContainEqual(expect.objectContaining({kind:'emenda'}));
+  expect(actor.progression.xp).toBe(missionReward('emenda').xp);
+  match.act({...peer,...stations.amendment},'amendment',filingAt+2);
+  update(filingAt+2);
+  expect(hud.profile.get()?.xp).toBe(0);
+  expect(hud.agenda.get()?.recent).not.toContainEqual(expect.objectContaining({kind:'emenda'}));
+
+  if (futureVote) {
+    match.advance(NEGOTIATION_MS);
+    for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
+    const nextFiling = NEGOTIATION_MS+BALLOT_MS+projectRules.cooldownMs;
+    match.advance(NEGOTIATION_MS+BALLOT_MS);
+    publishProjectFiling(match,player,1,nextFiling);
+    match.act({...peer,...stations.amendment},'amendment',nextFiling+1);
+    update(nextFiling+1);
+    expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'emenda'}));
+    expect(hud.profile.get()?.xp).toBe(missionReward('emenda').xp);
+  }
 });
 
 test('the HUD suppresses a project warning when cassation delays its vote past the deadline',()=>{

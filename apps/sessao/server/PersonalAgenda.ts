@@ -117,7 +117,7 @@ function agendaProductPrice(catalog:Parameters<typeof marketProduct>[0],item:Obj
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && metrics.canUseXray?.()===false) return false;
-  if (kind==='leitura') return metrics.canAgendaAction?.('leitura')!==false;
+  if (kind==='leitura' || kind==='emenda') return metrics.canAgendaAction?.(kind)!==false;
   if (kind==='dinheiroPresencialVinte') return metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)===true;
   if (kind==='heroiInesperado') return metrics.canFightCrisis?.()===true;
   if (kind==='manutencaoEmergencia') return metrics.canRepairOutage?.()===true;
@@ -526,7 +526,7 @@ export class PersonalAgenda {
       if (metrics.npcVotePrice && (metrics.npcVotePrice() ?? Infinity)>metrics.wallet) return false;
     }
     const action = kind==='campanhaUltimaHora' ? 'propaganda' : kind;
-    if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
+    if ((action==='propaganda' || action==='discurso') && metrics.canAgendaAction?.(action)===false) return false;
     if (kind==='bandejaGourmet') {
       // Coffee can be collected at the station and carried back to the office.
       const prices = marketKinds.food.map(food=>food==='coffee' || metrics.owns?.(food)

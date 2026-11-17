@@ -275,7 +275,7 @@ export class PlenaryMatch {
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>{
       if (!campaignReady) return true;
-      if (kind==='emenda') return !this.amended;
+      if (kind==='emenda') return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || this.amended);
       if (kind==='leitura') return this.phase!=='ballot' && !!this.proposal || this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       return this.election.canCampaignAction(id,kind);
@@ -401,6 +401,7 @@ export class PlenaryMatch {
     if (action==='amendment' && !this.amended) {
       this.amended = true;
       this.publishActivity(player,'amendment-filed',now);
+      this.refreshAgendaEligibility(now);
     }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
