@@ -411,7 +411,9 @@ export class Gameplay {
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
 
   hasCashLot(id:string,amount:number) {
-    return this.inventory(id).some(({data})=>cashAmount(data)===amount);
+    if (this.inventory(id).some(({data})=>cashAmount(data)===amount)) return true;
+    const office = this.privateOffices.ownedBy(id);
+    return !!office && this.officeStash(office.id).some(({data})=>cashAmount(data)===amount);
   }
 
   canPartiallyDepositCash(itemId:number) {

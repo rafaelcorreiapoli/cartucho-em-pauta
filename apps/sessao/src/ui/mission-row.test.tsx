@@ -2122,3 +2122,57 @@ test('Republishing a forensic report cannot complete another Retratação Oficia
   expect(active(finish)).toBeUndefined();
   expect(view(finish).progression.xp).toBe(90);
 });
+
+test('the cash handover mission tracks custody across stash, drop, collection and acceptance',()=>{
+  const sender:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const recipient:Player = {...sender,id:'bia',nick:'Bia',character:1};
+  const npc:Player = {...sender,id:'npc-parliamentarian-1',nick:'NPC',character:2,npc:true};
+  const players = [sender,recipient,npc];
+  const ids = [sender.id,recipient.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(sender.id,[sender,recipient],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[sender,recipient]);
+  const economy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(sender.id);
+  Reflect.get(economy,'accounts').get(sender.id).hasCashLot = (amount:number)=>game.hasCashLot(sender.id,amount);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['dinheiroPresencialVinte','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(sender.id,ids,1).politics!;
+  const active = ()=>view().missions.active.find(mission=>mission.kind==='dinheiroPresencialVinte');
+  expect(active()).toBeUndefined();
+  const world = match.gameplayWorld(players,1,()=>false);
+  world.takeWallet!(npc.id);
+  world.earn!(npc.id,2);
+  expect(game.robNpc(sender,npc,world)).toContain('Maleta roubada');
+  const mission = active()!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Entregue R$ 20 mil em espécie');
+  const inventory = ()=>game.view(sender,world).inventory;
+  const cash = inventory().find(item=>item.kind==='briefcase')!;
+  const home = privateOffices.find(office=>office.id===game.view(sender,world).ownOffice)!;
+  Object.assign(sender,home.cabinet);
+  expect(game.act(sender,{kind:'office-stash',place:home.id,item:cash.id},world)).toBe('Objeto guardado no armário.');
+  expect(inventory().some(item=>item.id===cash.id)).toBe(false);
+  expect(active()).toEqual(mission);
+  expect(game.act(sender,{kind:'office-take',place:home.id,item:cash.id},world)).toBe('Objeto retirado do armário.');
+  expect(active()).toEqual(mission);
+
+  Object.assign(sender,stations.coffee);
+  Object.assign(recipient,stations.coffee);
+  expect(game.act(sender,{kind:'drop',item:cash.id},world)).toBe('Objeto largado.');
+  expect(active()).toBeUndefined();
+  expect(view().progression.xp).toBe(0);
+  expect(game.act(sender,{kind:'collect',item:cash.id},world)).toBe('Objeto recolhido.');
+  const next = active()!;
+  expect(next.id).not.toBe(mission.id);
+  expect(game.act(sender,{kind:'offer',target:recipient.id,item:cash.id},world)).toBe('Pedido enviado.');
+  const request = game.view(recipient,world).requests[0];
+  expect(game.act(recipient,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
+  expect(active()).toBeUndefined();
+  const completed = view().missions.completed.find(entry=>entry.id===next.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});

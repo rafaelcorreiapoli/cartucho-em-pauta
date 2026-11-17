@@ -115,6 +115,7 @@ function agendaProductPrice(catalog:Parameters<typeof marketProduct>[0],item:Obj
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && metrics.canUseXray?.()===false) return false;
+  if (kind==='dinheiroPresencialVinte') return metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)===true;
   if (kind==='heroiInesperado') return metrics.canFightCrisis?.()===true;
   if (kind==='manutencaoEmergencia') return metrics.powerOut?.()===true;
   if (kind==='escutaAtiva') {
@@ -516,7 +517,6 @@ export class PersonalAgenda {
       if (metrics.canPay?.()===false) return false;
       if (this.availableTargets && !this.targets.some(person=>this.targetAvailable(kind,person.id))) return false;
     }
-    if (kind==='dinheiroPresencialVinte' && !metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)) return false;
     if (kind==='rouboNpc' && metrics.npcHasCash?.()===false) return false;
     if (kind==='recolhimentoExtraordinario' && metrics.npcHasCash?.(minimumPartialDepositLot)===false) return false;
     if (kind==='votoNpc') {
