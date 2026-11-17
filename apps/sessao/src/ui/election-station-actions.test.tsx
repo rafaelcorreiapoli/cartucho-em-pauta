@@ -48,7 +48,7 @@ test('the gameserver and HUD close campaigning during a project countdown',()=>{
   expect(view().election?.personal?.advertised).toBe(false);
 });
 
-test('the HUD keeps plenary speech available after the final renewal',()=>{
+test('the HUD closes election station actions after the final renewal',()=>{
   const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...stations.panel};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -57,8 +57,6 @@ test('the HUD keeps plenary speech available after the final renewal',()=>{
   const view = ()=>match.view(player.id,[player.id],now);
   expect(view().election?.remaining).toBe(0);
   expect(electionStationActions(view(),'press',false).actions).not.toContain('advertise');
-  expect(electionStationActions(view(),'panel',false).actions).toContain('speech');
-  match.electionAction(player,{kind:'speech'},now,false);
-  expect(view().election?.personal?.spoke).toBe(true);
-  expect(electionStationActions(view(),'panel',false).actions).not.toContain('speech');
+  expect(electionStationActions(view(),'panel',false).actions).toEqual([]);
+  expect(electionStationActions(view(),'tv',true).actions).toEqual([]);
 });

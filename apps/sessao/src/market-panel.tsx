@@ -234,10 +234,6 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       if (!state.shop) {
         const choices = state.options.map(option=>({...option,activate:()=>{
           if (state.npc==='secretary' && option.id==='projects') return requestDocument();
-          if (state.npc==='secretary' && option.id==='standalone-document') {
-            send({kind:'supply',place:'secretary',target:'queue'});
-            return send({kind:'dialogue-close'});
-          }
           send({kind:'dialogue-choice',target:option.id,token:state.token});
         }}));
         marketKeys.clear();

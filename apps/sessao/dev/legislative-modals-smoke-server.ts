@@ -36,6 +36,10 @@ class LegislativeModalsRoom extends SessionRoom {
             Reflect.set(agenda,'missions',[]);
             Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
             match.refreshAgendaEligibility();
+            // Seed the legacy document to exercise its inventory shortcuts without exposing it on the counter.
+            const gameplay:import('../server/Gameplay').Gameplay = Reflect.get(this,'gameplay');
+            gameplay.act(player,{kind:'supply',place:'secretary',target:'queue'},
+              match.gameplayWorld([player],this.clock.currentTime,()=>false));
           }
         }
         if (player.nick==='Projetos QA') {

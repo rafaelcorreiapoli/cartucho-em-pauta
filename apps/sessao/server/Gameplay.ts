@@ -1515,7 +1515,7 @@ export class Gameplay {
       if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
       if (!this.available(id)) return 'Inventário cheio.';
       const projectDocument = terminal.supply==='document' && action.target?.startsWith('project-');
-      if (!projectDocument && this.inventory(id).some(({data})=>data.kind===terminal.supply && data.document?.project===undefined)) {
+      if (!projectDocument && this.inventory(id).some(({data})=>data.kind===terminal.supply)) {
         return 'Você já está carregando um desse balcão.';
       }
       if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;

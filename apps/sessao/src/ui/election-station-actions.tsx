@@ -16,10 +16,10 @@ export function electionStationActions(view:PlenaryView|undefined,station:Statio
   const actions:StationElectionAction[] = [];
   const election = view?.election;
   const personal = election?.personal;
-  if (view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !personal) {
+  if (view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !election.remaining || !personal) {
     return {actions,voiceHint:false};
   }
-  if (station==='press' && election.remaining>0 && !personal.advertised && (view.politics?.wallet ?? 0)>=ELECTION_RULES.advertisementCost) actions.push('advertise');
+  if (station==='press' && !personal.advertised && (view.politics?.wallet ?? 0)>=ELECTION_RULES.advertisementCost) actions.push('advertise');
   if (station==='panel') {
     if (!personal.spoke) actions.push('speech');
     if (view.project!==undefined && election.canObject) actions.push('object');
