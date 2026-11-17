@@ -1,3 +1,4 @@
+import {fireRules,fireSites} from '../fire';
 import {minimumPartialDepositLot,terminals,treasuryDeliveries,type GameplayEvent} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {decorationInstallMs,installationSites} from '../installations';
@@ -2011,4 +2012,57 @@ test('an NPC vote purchase advances the Agenda once despite a repeat offer and e
   expect(redrawn.missions.active).toContainEqual(expect.objectContaining({kind:'votoNpc',current:0}));
   state.publish(events[0]);
   expect(view()).toEqual(redrawn);
+});
+
+
+test.each([false,true])('the crisis mission follows fire eligibility and rewards only the player who resolves it (expire=%s)',expires=>{
+  const site = fireSites[0];
+  const host:Player = {id:'Rafa',nick:'Rafa',character:0,direction:0,moving:false,x:site.x,y:site.y+10};
+  const peer:Player = {...host,id:'Bia',nick:'Bia',character:1};
+  const players = [host,peer];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT);
+  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  for (const {id} of players) {
+    const account = accounts.get(id);
+    account.canFightCrisis = ()=>match.canFightCrisis();
+    const {agenda} = account;
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['heroiInesperado','cafe','passeio']);
+  }
+  const view = (id:string,now:number)=>match.view(id,ids,now).politics!;
+  const active = (id:string,now:number)=>view(id,now).missions.active.find(mission=>mission.kind==='heroiInesperado');
+  expect(match.actOnFire(host,'plant',0,1,false,1)).toBe('Instalando dispositivo…');
+  const installedAt = 1+fireRules.install;
+  match.advance(installedAt);
+  expect(match.updateFireInstallation(installedAt,id=>players.find(p=>p.id===id),()=>true,()=>true)?.feedback)
+    .toBe('Incendiário instalado.');
+  const ignitedAt = installedAt+fireRules.fuse;
+  match.advance(ignitedAt);
+  expect(active(host.id,ignitedAt)).toBeUndefined();
+  const criticalAt = ignitedAt+fireRules.tick;
+  match.advance(criticalAt);
+  expect(active(host.id,criticalAt)).toBeDefined();
+  const mission = active(host.id,criticalAt)!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Ajude a resolver uma crise');
+  expect(active(peer.id,criticalAt)).toBeDefined();
+  for (const {id} of players) Reflect.get(accounts.get(id).agenda,'missionDeck').push('selfieSolo');
+  const resolvedAt = expires ? ignitedAt+fireRules.duration : criticalAt+1;
+  if (expires) match.advance(resolvedAt);
+  else expect(match.actOnFire(host,'extinguish',0,resolvedAt,true)).toBe('Incêndio apagado.');
+
+  for (const {id} of players) {
+    const completed = view(id,resolvedAt).missions.completed.find(mission=>mission.kind==='heroiInesperado');
+    expect(active(id,resolvedAt)).toBeUndefined();
+    expect(view(id,resolvedAt).missions.active.some(mission=>mission.kind==='selfieSolo')).toBe(true);
+    if (!expires && id===host.id) {
+      expect(renderToStaticMarkup(<MissionRow mission={completed!} done/>)).toContain('data-done="true"');
+      expect(view(id,resolvedAt).progression.xp).toBe(55);
+    } else {
+      expect(completed).toBeUndefined();
+      expect(view(id,resolvedAt).progression.xp).toBe(0);
+    }
+  }
 });

@@ -610,8 +610,10 @@ export class PlenaryMatch {
         this.budget -= result.budget;
         this.cash.diverted += action.diverted;
         this.cash.projects += result.budget-action.diverted;
+        const couldFightCrisis = this.canFightCrisis();
         this.stability = clamp(this.stability+result.stability);
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
+        else if (couldFightCrisis!==this.canFightCrisis()) this.refreshAgendaEligibility(now);
         break;
       }
       case 'share':
@@ -836,6 +838,7 @@ export class PlenaryMatch {
     const insideRoom = roomAt(player)===fireSites[site].name;
     this.publishActivity(player,'fire-extinguished',now,
       {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
+    this.refreshAgendaEligibility(now);
     return 'Incêndio apagado.';
   }
 
@@ -847,6 +850,7 @@ export class PlenaryMatch {
     if (!this.running) return;
     const electionWasOpen = this.election.open(this.agendaNow);
     this.agendaNow = Math.max(this.agendaNow,now);
+    const couldFightCrisis = this.canFightCrisis();
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
       this.stability = clamp(this.stability-damage);
@@ -855,7 +859,8 @@ export class PlenaryMatch {
         return;
       }
     }
-    if (this.economy.expireSuspensions(now)) this.refreshAgendaEligibility();
+    const expiredSuspensions = this.economy.expireSuspensions(now);
+    if (expiredSuspensions || couldFightCrisis!==this.canFightCrisis()) this.refreshAgendaEligibility();
     if (now>=this.sessionEndsAt && !(this.phase==='ballot' && this.ends<=this.sessionEndsAt)) {
       this.finishAtDeadline();
       return;

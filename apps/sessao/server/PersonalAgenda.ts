@@ -116,6 +116,7 @@ function agendaProductPrice(catalog:Parameters<typeof marketProduct>[0],item:Obj
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && metrics.canUseXray?.()===false) return false;
+  if (kind==='heroiInesperado') return metrics.canFightCrisis?.()===true;
   if (kind==='manutencaoEmergencia') return metrics.powerOut?.()===true;
   if (kind==='escutaAtiva') {
     return !!metrics.ownsWiretap?.() || (!!metrics.canInstallSpy?.('wiretap') &&
@@ -538,7 +539,6 @@ export class PersonalAgenda {
     if (!canCompleteMissionNow(kind,metrics)) return false;
     if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
-    if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaProductPrice('equipment','bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
