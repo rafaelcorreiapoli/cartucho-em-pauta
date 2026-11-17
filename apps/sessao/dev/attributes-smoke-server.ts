@@ -14,19 +14,21 @@ class AttributesSmokeRoom extends SessionRoom {
     let countdown = false;
     this.clock.setInterval(()=>{
       if (match.phase!=='negotiation') return;
-      for (const account of accounts.values()) {
+      for (const [player,account] of accounts) {
         if (!seeded.has(account)) {
           account.progression.earn(levelThresholds[2]);
           seeded.add(account);
         }
         if (!countdown && account.progression.view().revision===1) {
           countdown = true;
-          Reflect.set(match,'ends',this.clock.currentTime+5_000);
+          Reflect.set(match,'proposal',{project:0,proposer:player,voteAt:this.clock.currentTime+5_000});
         }
       }
     },50);
   }
 }
 
-await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(AttributesSmokeRoom)}})
-  .listen(2609,'127.0.0.1');
+await defineServer({
+  transport:new BunWebSockets(),rooms:{plenary:defineRoom(AttributesSmokeRoom)},
+  express:app=>{ app.get('/health',(_request,response)=>response.sendStatus(200)); },
+}).listen(Number(process.env.PORT ?? 2609),'127.0.0.1');

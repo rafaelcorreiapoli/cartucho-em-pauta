@@ -1,3 +1,5 @@
+export const MINIGAME_FRUIT_XP = 1;
+
 export const levelThresholds = [0,100,240,420,650,950] as const;
 export const attributeUpgrades = {
   agility:{label:'Agilidade',resource:'Velocidade de interação',bonus:25},

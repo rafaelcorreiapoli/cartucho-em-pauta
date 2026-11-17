@@ -8,12 +8,13 @@ export type GameplayWorld = {
   nextEventId?:()=>number;
   policies?:BillPolicies;
   publicBudget?:number;
+  earnXp?:(id:string,amount:number)=>void;
+  settleBet?:(id:string,stake:number,payout:number,maxPayout:number)=>boolean;
   spendSubsidized?:(id:string,price:number,subsidy:number)=>boolean;
   vision?:(id:string)=>number;
   plenary?:boolean;
   projectFilingError?:(id:string,project:number)=>string|undefined;
   projectSignatures?:number;
-  canSignProject?:(id:string)=>boolean;
   hasMandate?:(id:string)=>boolean;
   deposit?:(id:string,amount:number)=>boolean;
   lootWallet?:(id:string,fraction:number)=>number;

@@ -11,8 +11,8 @@ test('camera shutter locks when the album is full or the session is in a vote',(
   expect(available).toContain('aria-label="Enquadramento da câmera"');
   expect(available).not.toContain('disabled=""');
   for (const markup of [render(PHOTO_LIMIT,true),render(0,false)]) {
-    expect(markup).toContain('disabled="" aria-keyshortcuts="5"');
-    expect(markup).toContain('disabled="" aria-keyshortcuts="6"');
-    expect(markup).toContain('aria-keyshortcuts="7" aria-label="Abrir álbum');
+    expect(markup).toContain('disabled="" aria-keyshortcuts="1"');
+    expect(markup).toContain('disabled="" aria-keyshortcuts="2"');
+    expect(markup).toContain('aria-keyshortcuts="3" aria-label="Abrir álbum');
   }
 });
