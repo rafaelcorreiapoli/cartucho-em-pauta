@@ -802,6 +802,41 @@ test('replayed installations cannot turn a pre-scandal pizza into a scandal pizz
   expect(mission().completed).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
 });
 
+test('Pizzada keeps credit for a departed guest only if the same pizza can still serve the others',()=>{
+  for (const scenario of ['credited guest left','unserved guest left','pizza replaced','too few slices']) {
+    const economy = new PoliticalEconomy();
+    const ids = ['a','b','c','d'];
+    economy.reset(ids.map(id=>({id,name:id})),()=>0);
+    economy.recordOfficialScandal();
+    const {agenda} = Reflect.get(economy,'accounts').get('a');
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+    economy.updateAgendaEligibility(new Set(ids),3);
+    expect(agenda.hasActive('pizzada')).toBe(true);
+
+    economy.recordGameplay(event('installed',{kind:'pizza',item:15,place:'pizza'}));
+    economy.recordGameplay(event('slice',{at:2,kind:'pizza',item:15,target:'b'}));
+    const pizza = {id:scenario==='pizza replaced' ? 16 : 15,owned:true,canTakeSlice:true,
+      slices:scenario==='too few slices' ? 1 : 5,served:new Set(scenario==='pizza replaced' ? [] : ['b'])};
+    if (scenario==='pizza replaced') economy.recordGameplay(event('installed',{at:3,kind:'pizza',item:16,place:'pizza'}));
+    economy.setAgendaInventory(()=>false,undefined,undefined,undefined,undefined,()=>pizza);
+    const leaving = scenario==='unserved guest left' ? 'c' : 'b';
+    economy.updateAgendaEligibility(new Set(ids.filter(id=>id!==leaving)),3);
+    const missions = ()=>economy.view('a',[],0,false,()=>true)!.missions;
+
+    if (scenario!=='credited guest left') {
+      expect(missions().active.some(row=>row.kind==='pizzada')).toBe(false);
+      expect(missions().completed).toEqual([]);
+      continue;
+    }
+    expect(missions().active).toContainEqual(expect.objectContaining({kind:'pizzada',current:1}));
+    for (const [index,target] of ['c','d'].entries()) {
+      economy.recordGameplay(event('slice',{at:4+index,kind:'pizza',item:15,target}));
+    }
+    expect(missions().completed).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
+  }
+});
+
 test('coffee delivery counts accepted cups for three distinct available human recipients',()=>{
   const players:Player[] = ['a','b','c','d'].map(id=>({
     id,nick:id,character:0,direction:0,moving:false,...terminals.coffee.point,

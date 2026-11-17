@@ -234,6 +234,13 @@ export class PersonalAgenda {
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
           (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
         if (targets.filter(canContribute).length>=remaining) return true;
+      } else if (mission.kind==='pizzada' && playerCount<photoMissions.pizzada.players) {
+        const pizza = metrics.installedPizza?.();
+        if (pizza?.owned && metrics.isScandalPizza?.(pizza.id)) {
+          const credited = this.factsByMission.get(mission.id)?.get(String(pizza.id));
+          const remaining = targets.filter(({id})=>!pizza.served.has(id) && !credited?.has(id)).length;
+          if ((credited?.size ?? 0)+Math.min(pizza.slices,remaining)>=mission.target) return true;
+        }
       } else if (mission.kind==='duasCameras' && metrics.agendaCameras) {
         const credited = this.factsByMission.get(mission.id)?.get('') ?? new Set<string>();
         const {uncredited,slots,portable} = metrics.agendaCameras(credited);

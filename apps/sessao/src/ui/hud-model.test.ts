@@ -7,6 +7,8 @@ import {missionReward} from '../politics';
 import type {Player} from '../map';
 import {NEGOTIATION_MS} from '../plenary';
 import {terminals} from '../gameplay';
+import {installationSites} from '../installations';
+import {npcs} from '../npcs';
 import {createHudModel} from './hud-model';
 
 const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
@@ -142,6 +144,45 @@ test('replayed pizza installation leaves the HUD unchanged until a valid Pizzada
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('pizzada').xp);
   expect(agendaUpdates).toBe(1);
+});
+
+test('the HUD preserves Pizzada progress after a served guest leaves the match',()=>{
+  const host = {...player,...npcs.snackVendor.interaction};
+  const guests = ['bia','caio','dani'].map(id=>({...player,...installationSites.pizza.point,id,nick:id}));
+  const players = [host,...guests];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  match.start(host.id,players,0,()=>0);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  match.setAgendaInventory(()=>false,undefined,undefined,undefined,undefined,id=>game.installedPizza(id));
+  economy.recordOfficialScandal();
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pizzada','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  game.act(host,{kind:'talk',target:'snackVendor'},world(1));
+  game.act(host,{kind:'dialogue-choice',target:'products',token:game.view(host,world(1)).dialogue?.token},world(1));
+  game.act(host,{kind:'shop-buy',target:'pizza',token:game.view(host,world(2)).dialogue?.token},world(2));
+  const [pizza] = game.view(host,world(2)).inventory;
+  Object.assign(host,installationSites.pizza.point);
+  game.act(host,{kind:'install',place:'pizza',item:pizza.id},world(3));
+  expect(game.act(guests[0],{kind:'slice',item:pizza.id},world(4))).toBe('Fatia servida.');
+
+  const hud = createHudModel();
+  match.leave(guests[0].id,5);
+  const remainingIds = ids.filter(id=>id!==guests[0].id);
+  hud.render(match.view(host.id,remainingIds,5));
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'pizzada',current:1}));
+  const xp = hud.profile.get()?.xp ?? 0;
+  for (const [index,guest] of guests.slice(1).entries()) {
+    expect(game.act(guest,{kind:'slice',item:pizza.id},world(6+index))).toBe('Fatia servida.');
+  }
+  hud.render(match.view(host.id,remainingIds,8));
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pizzada',current:3}));
+  expect(hud.profile.get()?.xp).toBe(xp+missionReward('pizzada').xp);
 });
 
 test('the HUD replaces a credited voting mission without offering it again on the last ballot',()=>{
