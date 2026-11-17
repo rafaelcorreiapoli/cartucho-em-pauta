@@ -3,7 +3,7 @@ import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
-import {HEARING_MS,missionReward} from '../politics';
+import {AGENDA_TRANSFER_MIN,HEARING_MS,missionReward} from '../politics';
 import {ELECTION_RULES} from '../elections';
 import type {Player} from '../map';
 import {BALLOT_MS,CASSATION_NOTICE_MS,NEGOTIATION_MS,projectRules,stations} from '../plenary';
@@ -345,6 +345,40 @@ test('the megaphone notice follows the phase and the anonymous snapshot flag',()
   expect(hud.broadcast.get()).toBe(false);
 });
 
+
+test('a paid NPC deal uses the transfer quota without completing the human transfer mission',()=>{
+  const peer = {...player,id:'bia',nick:'Bia'};
+  const npc:Player = {...player,id:'npc-parliamentarian-1',nick:'Parlamentar',npc:true};
+  const players = [player,peer,npc];
+  const ids = [player.id,peer.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player,peer],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['pagamento','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const hud = createHudModel();
+  const view = (now:number)=>match.view(player.id,ids,now);
+  const initial = view(0).politics!;
+  hud.render(view(0));
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'pagamento'}));
+
+  const world = match.gameplayWorld(players,1,()=>false);
+  expect(world.payNpc?.(player.id,npc.id,AGENDA_TRANSFER_MIN)).toBe(true);
+  const paid = view(1);
+  expect(paid.politics).toMatchObject({
+    wallet:initial.wallet-AGENDA_TRANSFER_MIN,paymentsLeft:initial.paymentsLeft-1,
+  });
+  hud.render(paid);
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'pagamento',current:0}));
+  expect(hud.profile.get()?.xp).toBe(0);
+
+  expect(match.politics(player,{kind:'transfer',to:peer.id,amount:AGENDA_TRANSFER_MIN},players,2)).toBe(true);
+  hud.render(view(2));
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'pagamento'}));
+  expect(hud.profile.get()?.xp).toBe(missionReward('pagamento').xp);
+});
 
 test('the HUD starts a replacement Pix mission at zero after a transfer completes its predecessor',()=>{
   const recipient = {...player};

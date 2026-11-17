@@ -220,8 +220,8 @@ export class PoliticalEconomy {
     const {from,to,amount,channel} = event;
     const recipient = this.accounts.get(to);
     const source = this.accounts.get(from);
-    if (!source || !recipient) return;
-    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from,event.id,channel==='pix');
+    if (!source || !recipient || this.npcIds.has(from) || this.npcIds.has(to)) return;
+    recipient.agenda.recordPayment(recipient,from,event.id,channel==='pix');
     source.agenda.recordTransfer(source,amount,to,event.id,channel==='pix');
   }
 
