@@ -2,7 +2,7 @@ import {MINIGAME_FRUIT_XP} from '../src/progression';
 import {expect,test} from 'bun:test';
 import {BET_PAYOUT,BET_SPIN_MS,winningReels} from '../src/bets';
 import {CANDY_BURST_MS} from '../src/candy';
-import {SNAKE_STEP_MS} from '../src/snake';
+import {SNAKE_ROUND_MS,SNAKE_STEP_MS} from '../src/snake';
 import {PoliticalEconomy} from './PoliticalEconomy';
 import {PhoneSession} from './PhoneSession';
 import type {GameplayAction,GameplayEvent} from '../src/gameplay';
@@ -184,4 +184,28 @@ test('closing the phone ends Snake exactly once and blocks delayed play time and
   expect(events.filter(event=>event.type==='game-stopped')).toHaveLength(1);
   expect(events.filter(event=>event.type==='game-played')).toHaveLength(1);
   expect(rewards).toEqual([]);
+});
+
+test('Snake starts its clock on valid input and credits only time before the deadline',()=>{
+  const phone = new PhoneSession();
+  const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
+  const events:GameplayEvent[] = [];
+  const world = {players:[player],now:0,voice:()=>false,publish:(event:GameplayEvent)=>events.push(event),hasMission:()=>true};
+  phone.act(player,{kind:'phone-open'},world);
+  phone.act(player,{kind:'game-start'},world);
+  world.now = SNAKE_ROUND_MS+100;
+  phone.act(player,{kind:'game-turn',direction:'left'},world);
+  phone.tick(world,true);
+  expect(phone.view(player.id,world.players).game?.status).toBe('ready');
+  expect(events.some(event=>event.type==='game-played')).toBe(false);
+
+  phone.act(player,{kind:'game-turn',direction:'right'},world);
+  const deadline = world.now+SNAKE_ROUND_MS;
+  world.now = deadline-30;
+  phone.tick(world,true);
+  world.now = deadline+500;
+  phone.tick(world,true);
+  expect(phone.view(player.id,world.players).game?.status).toBe('lost');
+  expect(events.filter(event=>event.type==='game-played').map(event=>event.duration)).toEqual([100,30]);
+  expect(events.filter(event=>event.type==='game-stopped').map(event=>event.duration)).toEqual([SNAKE_ROUND_MS]);
 });

@@ -53,6 +53,8 @@ async page => {
   await page.keyboard.press('1');
   await dialog.locator('.phone-snake canvas').waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
+  await page.keyboard.press('ArrowLeft');
+  await dialog.getByText('Use as setas para começar',{exact:true}).waitFor();
   await page.keyboard.press('ArrowRight');
   await dialog.getByText('1 / 5 frutas',{exact:true}).waitFor();
   await dialog.getByText('Fim de jogo',{exact:true}).waitFor();

@@ -1,6 +1,7 @@
 export const SNAKE_SIZE = 12;
 export const SNAKE_GOAL = 5;
 export const SNAKE_STEP_MS = 160;
+export const SNAKE_ROUND_MS = 60_000;
 export const snakeDirections = ['up','right','down','left'] as const;
 export type SnakeDirection = typeof snakeDirections[number];
 export type SnakeView = {
