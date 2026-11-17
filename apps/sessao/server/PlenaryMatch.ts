@@ -355,13 +355,17 @@ export class PlenaryMatch {
     return true;
   }
 
+  private projectFilingClosed(now:number) {
+    return Math.max(now,this.protocolOpensAt)+projectRules.debateMs+BALLOT_MS>this.sessionEndsAt;
+  }
+
   private projectFilingError(id:string,project:number,now:number) {
     if (!bills[project] || !this.canVote(id)) return 'Somente jogadores com mandato podem protocolar projetos.';
     if (this.outcomes.some(outcome=>outcome.project===project)) return 'Esse projeto já foi votado nesta partida.';
     if (this.proposal) return 'Já há um projeto em pauta.';
     if (this.phase!=='negotiation' || this.cassationAt!==undefined) return 'O Protocolo aguarda a liberação do Plenário.';
+    if (this.projectFilingClosed(now)) return 'Não há tempo para votar outro projeto nesta partida.';
     if (now<this.protocolOpensAt) return `Protocolo disponível em ${Math.ceil((this.protocolOpensAt-now)/1000)} s.`;
-    if (now+projectRules.debateMs+BALLOT_MS>this.sessionEndsAt) return 'Não há tempo para votar outro projeto nesta partida.';
   }
 
   act(player:Player, action:Action, now:number) {
@@ -978,6 +982,7 @@ export class PlenaryMatch {
       ballotCountdown:this.ballotCountdown(now),
       projectWarning:this.projectWarning(now),
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
+      projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
       remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? this.proposal?.voteAt ?? this.sessionEndsAt : this.ends)-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,

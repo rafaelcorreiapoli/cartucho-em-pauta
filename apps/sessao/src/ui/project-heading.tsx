@@ -9,7 +9,7 @@ export function projectHeading(view:PlenaryView) {
     round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `${view.outcomes.length}/${projectRules.requiredVotes} projetos votados`,
     phase:negotiating ? waiting ? 'Jogo livre' : 'Articulação' : view.cassation ? 'Cassação' : hearing ? 'Afastamento' : 'Votação',
     clockLabel:view.isolationSeconds ? 'Isolamento' : negotiating ? view.cassationIn ? 'Cassação em' : waiting ? 'Fim da sessão' : 'Votação em' : 'Tempo de voto',
-    hint:waiting ? view.protocolCooldown ? `Protocolo reabre em ${view.protocolCooldown} s` : 'Consulte Projetos no celular.' : view.proposer && negotiating ? `Protocolado por ${view.proposer}` : undefined,
+    hint:waiting ? view.projectFilingClosed ? 'Protocolo de projetos encerrado.' : view.protocolCooldown ? `Protocolo reabre em ${view.protocolCooldown} s` : 'Consulte Projetos no celular.' : view.proposer && negotiating ? `Protocolado por ${view.proposer}` : undefined,
     seconds:view.isolationSeconds || view.cassationIn || view.remaining,
   };
 }
