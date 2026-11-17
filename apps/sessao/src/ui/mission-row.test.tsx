@@ -24,7 +24,7 @@ import {BALLOT_MS,CASSATION_NOTICE_MS,bills,NEGOTIATION_MS,projectRules,policyDu
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
 import {PhonePix} from './phone-pix';
-import {HEARING_MS,SUSPENSION_MS,agendaCashTargets,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {HEARING_MS,SUSPENSION_MS,agendaCounts,agendaCashTargets,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -601,6 +601,22 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   const mission = after.politics!.missions.active.find(mission=>mission.kind==='ostentacao')!;
   expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('R$ 18 mil / R$ 50 mil');
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
+  const installTwo = draw(buyer,'doisMoveis')!;
+  expect(installTwo.target).toBe(agendaCounts.doisMoveis);
+  const xp = view(buyer).politics!.progression.xp;
+  const buy = (target:'officeRug'|'officeChair')=>{
+    const purchaseWorld = match.gameplayWorld(players,++now,()=>false);
+    game.act(buyer,{kind:'open-shop',target:'furnitureVendor'},purchaseWorld);
+    const quote = game.view(buyer,purchaseWorld).dialogue?.token;
+    expect(game.act(buyer,{kind:'shop-buy',target,token:quote},purchaseWorld)).toBe('Compra instalada no seu gabinete.');
+  };
+  buy('officeRug');
+  const progress = view(buyer).politics!.missions.active.find(entry=>entry.id===installTwo.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={progress}/>)).toContain('1 / 2');
+  buy('officeChair');
+  const complete = view(buyer).politics!.missions.completed.find(entry=>entry.id===installTwo.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
+  expect(view(buyer).politics!.progression.xp-xp).toBe(missionReward('doisMoveis').xp);
   now += policyDuration;
   expect(draw(limited,'doisMoveis')).toBeUndefined();
 });
@@ -1186,7 +1202,14 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(economy.spend(player.id,view().wallet)).toBe(true);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
-  economy.earn(player.id,1);
+  economy.earn(player.id,.4);
+  draw();
+  expect(render()).not.toContain('Consuma dois alimentos diferentes');
+  economy.earn(player.id,.1);
+  draw();
+  expect(render()).toContain('Consuma dois alimentos diferentes');
+  expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.target).toBe(agendaCounts.bandejaGourmet);
+  economy.earn(player.id,.5);
   game.act(player,{kind:'open-shop',target:'snackVendor'},world);
   game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
   game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);

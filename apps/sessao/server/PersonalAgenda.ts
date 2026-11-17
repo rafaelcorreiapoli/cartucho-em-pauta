@@ -84,7 +84,7 @@ const minimumPlayers:Partial<Record<Agenda,number>> = {
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,
-  doisMoveis:2,chamadasUrgentes:urgentCallMission.contacts,bandejaGourmet:2,entrega:COFFEE_DELIVERY_RECIPIENTS,
+  chamadasUrgentes:urgentCallMission.contacts,entrega:COFFEE_DELIVERY_RECIPIENTS,
   fortuna:12,campanha:65,...agendaCounts,...agendaCashTargets,...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
@@ -528,9 +528,12 @@ export class PersonalAgenda {
     if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
     if (kind==='bandejaGourmet') {
       // Coffee can be collected at the station and carried back to the office.
-      const hasSecondFood = metrics.owns?.('pinga') || marketKinds.food.some(food=>
-        food!=='coffee' && (metrics.owns?.(food) || agendaProductPrice('food',food,metrics)<=metrics.wallet));
-      if (!hasSecondFood) return false;
+      const prices = marketKinds.food.map(food=>food==='coffee' || metrics.owns?.(food)
+        ? 0 : Math.round(agendaProductPrice('food',food,metrics)*10));
+      if (metrics.owns?.('pinga')) prices.push(0);
+      const required = agendaCounts.bandejaGourmet;
+      const cheapest = prices.sort((a,b)=>a-b).slice(0,required);
+      if (cheapest.length<required || cheapest.reduce((sum,price)=>sum+price,0)>Math.round(metrics.wallet*10)) return false;
     }
     if (kind==='comprarLagosta' && metrics.wallet<agendaProductPrice('food','lobster',metrics)) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
@@ -584,7 +587,7 @@ export class PersonalAgenda {
       if (kind==='doisMoveis' || kind==='ostentacao') {
         const alreadyOwned = kind==='doisMoveis' ? furnitureKinds.filter(item=>metrics.owns?.(item)) : [];
         function viable(remaining:readonly OfficeFurniture[],count:number,spent:number,budget:number):boolean {
-          if (kind==='doisMoveis' ? count>=2 : spent>=agendaCashTargets.ostentacao*10) return true;
+          if (kind==='doisMoveis' ? count>=agendaCounts.doisMoveis : spent>=agendaCashTargets.ostentacao*10) return true;
           return remaining.some(item=>{
             const quoted = price(item,budget);
             const total = spent+Math.round(quoted*10);

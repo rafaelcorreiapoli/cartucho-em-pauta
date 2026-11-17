@@ -45,7 +45,7 @@ export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_00
 export const agendaCounts = {
   assinaturas:2, comissaoImprovisada:3, passeio:3, articulacao:2, projetos:2, oposicao:2,
   fiscalCafe:3, turismo:3, tresSelfies:3, vigilanciaInstitucional:2, duasCameras:2,
-  visitaDoisGabinetes:2, doisPix:2,
+  visitaDoisGabinetes:2, doisPix:2, doisMoveis:2, bandejaGourmet:2,
 } as const;
 
 export const photoMissionCounts = {
@@ -164,7 +164,7 @@ export const agendas = {
   retratacaoOficial:'Publique um Laudo de Perícia',
   fotoOstentacao:'Fotografe um móvel de luxo instalado',
   fotoDinheiro:'Fotografe alguém com dinheiro exposto',
-  doisMoveis:'Instale dois móveis diferentes no seu gabinete',
+  doisMoveis:`Instale ${countWord(agendaCounts.doisMoveis)} móveis diferentes no seu gabinete`,
   visitaDoisGabinetes:`Visite gabinetes de ${countWord(agendaCounts.visitaDoisGabinetes)} colegas diferentes`,
   recolhimentoExtraordinario:'Roube uma maleta de um NPC e entregue parte dela à Tesouraria',
   dinheiroPresencialVinte:`Entregue ${money(CASH_HANDOVER_MISSION_AMOUNT)} em espécie a outro jogador`,
@@ -176,7 +176,7 @@ export const agendas = {
   discursoMegafone:`Use o Megafone por ${agendaDurationMs.discursoMegafone/1000} segundos`,
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
   campanhaUltimaHora:`Veicule propaganda nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos antes da eleição`,
-  bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',
+  bandejaGourmet:`Consuma ${countWord(agendaCounts.bandejaGourmet)} alimentos diferentes no seu gabinete`,
   provaDocumental:'Fotografe um documento físico visível',
 } as const;
 export type Agenda = keyof typeof agendas;
