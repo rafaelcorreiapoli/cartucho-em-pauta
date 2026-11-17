@@ -57,7 +57,7 @@ class LegislativeModalsRoom extends SessionRoom {
         publishProjectFiling(match,player,0,now);
         const proposal = Reflect.get(match,'proposal');
         if (proposal) {
-          proposal.voteAt = now+8_000;
+          proposal.voteAt = now+12_000;
           filed = true;
         }
       }

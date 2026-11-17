@@ -37,10 +37,17 @@ async page => {
   async function runShortcut(original,name) {
     await original.evaluate(control=>control.setAttribute('aria-label','Rótulo original alterado'));
     await page.keyboard.press('F2');
-    await page.locator('#action-shortcuts').getByRole('button',{name}).click();
+    const palette = page.locator('#action-shortcuts');
+    const entry = palette.getByRole('button',{name});
+    const next = palette.getByRole('button',{name:'Próxima página'});
+    while (!await entry.count() && await next.count() && await next.isEnabled()) await next.click();
+    await entry.click();
   }
   await runShortcut(institution.getByRole('button',{name:'R$ 60 mil',exact:true}),/^R\$ 60 mil$/);
   await runShortcut(institution.getByRole('button',{name:'Desviar 50%'}),/Desviar 50%/);
+  await institution.getByRole('button',{name:'Abastecimento',exact:true}).click();
+  await institution.getByText('30% de desconto na Lanchonete por 9 s',{exact:true}).waitFor();
+  await institution.getByRole('button',{name:'Saúde',exact:true}).click();
   await runShortcut(institution.getByRole('button',{name:/Aplicar verba de/}),/Aplicar verba de/);
   await institution.waitFor({state:'hidden'});
   await page.getByText('Modais QA aplicou R$ 60 mil em Saúde.',{exact:true}).waitFor();
