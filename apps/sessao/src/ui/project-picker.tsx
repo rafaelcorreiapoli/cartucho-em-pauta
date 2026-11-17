@@ -86,7 +86,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     selectAndReveal(index);
   }
   const picker = useDialogKeys<HTMLDivElement>(()=>undefined,[
-    {name:'Fechar',activate:()=>picker.current?.closest('dialog')?.close()},
+    {name:'Fechar',activate:():void=>{picker.current?.closest('dialog')?.close();}},
     ...(selected===undefined ? [] : [{name:'Confirmar',activate:submit}]),
     ...choices.map(index=>({name:bills[index]!.name,activate:()=>selectAndReveal(index)})),
   ]);

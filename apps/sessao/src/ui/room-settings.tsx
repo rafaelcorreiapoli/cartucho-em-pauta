@@ -23,7 +23,7 @@ export function RoomSettings({preferences,state,actions}:{
   const music = useRef<HTMLInputElement>(null);
   const effects = useRef<HTMLInputElement>(null);
   const section = useDialogKeys<HTMLElement>(()=>undefined,[
-    {name:'Fechar configurações',activate:()=>section.current?.closest('dialog')?.close()},
+    {name:'Fechar configurações',activate:():void=>{section.current?.closest('dialog')?.close();}},
     {name:'Sair',activate:actions.leave},
     {name:'Música',activate:()=>music.current?.focus()},
     {name:'Efeitos e passos',activate:()=>effects.current?.focus()},
