@@ -1229,7 +1229,7 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   let xpAfterCoffee = 0;
   for (const kind of ['coffee','coxinha'] as const) {
     const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
-    expect(game.act(player,{kind:'use',item:item.id},world)).toBe('Objeto utilizado.');
+    expect(game.act(player,{kind:'use',item:item.id},world)).toBe(kind==='coffee' ? 'Café bebido.' : 'Objeto utilizado.');
     if (kind==='coffee') {
       expect(render()).toContain('1 / 2');
       xpAfterCoffee = view().progression.xp;
@@ -1718,7 +1718,7 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   Object.assign(player,game.officeSpawn(player.id)!);
   const consume = (kind:'coffee'|'pinga')=>{
     const {id:item} = inventory.find(entry=>entry.kind===kind)!;
-    expect(game.act(player,{kind:'use',item},world)).toBe('Objeto utilizado.');
+    expect(game.act(player,{kind:'use',item},world)).toBe(kind==='coffee' ? 'Café bebido.' : 'Objeto utilizado.');
   };
   consume('coffee');
   expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.current).toBe(1);
