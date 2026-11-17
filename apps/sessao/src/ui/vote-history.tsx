@@ -1,5 +1,4 @@
 import {useState} from 'react';
-import {createRoot} from 'react-dom/client';
 import {agendaProject,deficitStabilityLoss,type Outcome} from '../plenary';
 
 export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
@@ -47,22 +46,6 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
   </>;
 }
 
-export function mountVoteHistory(history:HTMLDetailsElement) {
-  const root = createRoot(history);
-  return {
-    render(outcomes:readonly Outcome[], matchId?:number) {
-      history.hidden = !outcomes.length;
-      if (!outcomes.length) history.open = false;
-      root.render(outcomes.length ? <VoteHistory key={matchId} outcomes={outcomes}/> : null);
-    },
-    destroy() {
-      history.open = false;
-      history.hidden = true;
-      root.unmount();
-    },
-  };
-}
-
 export function VoteBrief({outcome}:{outcome:Outcome}) {
   const scores = [
     {id:'yes',label:'Votos a favor',icon:'check',value:outcome.yes},
@@ -79,24 +62,4 @@ export function VoteBrief({outcome}:{outcome:Outcome}) {
       </span>)}
     </div>
   </>;
-}
-
-export function mountVoteBrief(host:HTMLElement) {
-  const root = createRoot(host);
-  let timer:number|undefined;
-  function clear() {
-    window.clearTimeout(timer);
-    host.hidden = true;
-  }
-  return {
-    clear,
-    render(outcome:Outcome) {
-      clear();
-      host.dataset.passed = String(outcome.passed);
-      root.render(<VoteBrief outcome={outcome}/>);
-      host.hidden = false;
-      timer = window.setTimeout(clear,8500);
-    },
-    destroy() { clear(); root.unmount(); },
-  };
 }

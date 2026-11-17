@@ -72,6 +72,12 @@ async page => {
   await sheet.getByText('Protocolado por Histórico QA').waitFor();
   await sheet.getByRole('button',{name:'Recolher votação'}).click();
   await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
+  const collapsedClock = await sheet.locator('.project-ballot-handle time').textContent();
+  await page.waitForFunction(previous=>{
+    const clock = document.querySelector('.project-ballot-handle time');
+    return clock && clock.textContent!==previous;
+  },collapsedClock);
+  await sheet.getByRole('button',{name:'Expandir votação'}).waitFor();
   await sheet.getByRole('button',{name:'Expandir votação'}).click();
   await page.keyboard.press('y');
   const yesVoter = sheet.locator('[data-vote-state="yes"]').filter({hasText:'Histórico QA'});
@@ -90,6 +96,10 @@ async page => {
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
   await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});
+  const brief = page.locator('#project-outcome-brief');
+  await brief.locator('#brief-project').filter({hasText:'Auxílio Churrasco'}).waitFor({state:'attached'});
+  if (await brief.getAttribute('hidden')!==null) throw Error('New outcome brief was not activated');
+  await page.locator('#project-outcome-brief[hidden]').waitFor({state:'attached'});
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
   await page.locator('#session[data-phase="ballot"]').waitFor();
@@ -103,6 +113,12 @@ async page => {
   await history.getByRole('button',{name:'Votação anterior'}).click();
   if (await pages.getAttribute('aria-label')!=='Votação 1 de 2') throw Error('Previous arrow did not update page');
   if (await history.locator('#outcome-bill').textContent()!=='Auxílio Churrasco') throw Error('Wrong previous project');
+  const ballotClock = await sheet.locator('#project-ballot-body time').textContent();
+  await page.waitForFunction(previous=>{
+    const clock = document.querySelector('#project-ballot-body time');
+    return clock && clock.textContent!==previous;
+  },ballotClock);
+  if (await pages.getAttribute('aria-label')!=='Votação 1 de 2') throw Error('A clock tick reset vote history');
   if (!await history.getByRole('button',{name:'Votação anterior'}).isDisabled()) throw Error('Previous arrow exceeded bounds');
   await history.getByRole('button',{name:'Próxima votação'}).click();
   if (!await history.getByRole('button',{name:'Próxima votação'}).isDisabled()) throw Error('Next arrow exceeded bounds');

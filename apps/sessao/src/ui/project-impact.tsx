@@ -1,4 +1,3 @@
-import {createRoot} from 'react-dom/client';
 import type {Impact} from '../plenary';
 
 const metrics = [
@@ -30,19 +29,4 @@ export function ProjectImpact({yes,no}:{yes:Impact;no:Impact}) {
       })}
     </div>
   </div>);
-}
-
-export function mountProjectImpact(host:HTMLElement) {
-  const root = createRoot(host);
-  let key = '';
-  return {
-    render(yes:Impact,no:Impact,visible:boolean) {
-      const next = visible ? JSON.stringify([yes,no]) : '';
-      if (next===key) return;
-      key = next;
-      host.hidden = !visible;
-      root.render(visible ? <ProjectImpact yes={yes} no={no}/> : null);
-    },
-    destroy() { root.unmount(); host.hidden = true; },
-  };
 }
