@@ -17,7 +17,7 @@ export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;pub
   canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
-const drankCoffee = (event:GameplayEvent) => event.type==='coffee-drunk' || event.type==='used' && event.kind==='coffee';
+const drankCoffee = (event:GameplayEvent) => event.type==='used' && event.kind==='coffee';
 
 const activityMissions = {
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,

@@ -77,7 +77,7 @@ async page => {
     }
 
     const xp = await observeGain('.xp-gain','+20 XP',()=>
-      page.getByRole('button',{name:'Tomar um cafezinho'}).click());
+      page.getByRole('button',{name:'Beber café'}).click());
 
     await page.getByRole('button',{name:'Aplicar verba',exact:true}).click();
     await page.getByRole('button',{name:'Desviar R$ 30 mil',exact:true}).click();

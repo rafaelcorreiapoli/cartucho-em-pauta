@@ -493,7 +493,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     let coffeeEvent:GameplayEvent|undefined;
     Reflect.set(match,'recordGameplay',(event:GameplayEvent)=>{
       const accepted = record(event);
-      if (accepted && event.type==='coffee-drunk') coffeeEvent = event;
+      if (accepted && event.type==='used' && event.kind==='coffee') coffeeEvent = event;
       return accepted;
     });
     passenger.send('room-activity',{activity:'coffee',token:3270});
@@ -728,7 +728,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
   }
 },25_000);
 
-test('six human clients see all three NPCs in distinct seats when the vote opens',async()=>{
+test('six human clients can select eight NPCs and fill the available seats when the vote opens',async()=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
@@ -764,14 +764,14 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
       });
       for (const key of ['control','mail-state','mail-reports','photo-state']) peer.onMessage(key,()=>{});
     }
-    host.send('lobby-npc-count',{count:3,token:1});
-    await wait(()=>rooms.every(peer=>npcCounts.get(peer.sessionId)===3));
+    host.send('lobby-npc-count',{count:8,token:1});
+    await wait(()=>rooms.every(peer=>npcCounts.get(peer.sessionId)===8));
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
     const guest = rooms[1];
     guest.send('lobby-npc-count',{count:0,token:1});
     const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
     await wait(()=>commandTokens.get(guest.sessionId)===1);
-    expect(Reflect.get(room,'lobbyNpcCount')).toBe(3);
+    expect(Reflect.get(room,'lobbyNpcCount')).toBe(8);
     host.send('start-match',{infiltrators:2,token:2});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
@@ -786,11 +786,11 @@ test('six human clients see all three NPCs in distinct seats when the vote opens
     const match: import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');
     publishProjectFiling(match,observer,0,room.clock.currentTime);
     Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
-    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===9));
-    const expected = [...PLENARY_SEATS.slice(0,6),...PLENARY_SEATS.slice(-3)].map(({x,y})=>`${x},${y}`).sort();
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===12));
+    const expected = PLENARY_SEATS.map(({x,y})=>`${x},${y}`).sort();
     for (const peer of rooms) {
       const players = states.get(peer.sessionId)!;
-      expect(players.filter(player=>player.npc)).toHaveLength(3);
+      expect(players.filter(player=>player.npc)).toHaveLength(6);
       expect(players.map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
     }
 

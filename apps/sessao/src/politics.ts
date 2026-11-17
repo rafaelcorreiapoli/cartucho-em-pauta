@@ -113,7 +113,7 @@ export const agendas = {
   articulacao: `Receba dinheiro de ${countWord(agendaCounts.articulacao)} jogadores diferentes`,
   projetos: `Vote a favor de ${countWord(agendaCounts.projetos)} projetos aprovados`,
   oposicao: `Vote contra ${countWord(agendaCounts.oposicao)} projetos rejeitados`,
-  cafe: 'Tome um cafezinho',
+  cafe: 'Beba um café',
   leitura: 'Estude o projeto na Biblioteca',
   auditoria: 'Faça uma auditoria na Corregedoria',
   emenda: 'Apresente uma emenda no Protocolo',

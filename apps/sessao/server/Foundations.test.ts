@@ -466,7 +466,7 @@ for (const [kind,hp,stamina] of consumableCases) {
     expect(item.kind).toBe(kind);
     const use = {kind:'use',item:item.id} as const;
     expect(game.act(alice,use,world)).toBe('O objeto não está com você.');
-    expect(game.act(bob,use,world)).toBe('Objeto utilizado.');
+    expect(game.act(bob,use,world)).toBe(kind==='coffee' ? 'Café bebido.' : 'Objeto utilizado.');
     expect(game.act(bob,use,world)).toBe('Objeto indisponível.');
     expect(game.view(bob,world).inventory).toEqual([]);
     expect(game.view(bob,world).vitality?.hp).toBe(hp);

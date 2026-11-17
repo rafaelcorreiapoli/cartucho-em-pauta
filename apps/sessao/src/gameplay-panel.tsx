@@ -596,13 +596,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     nearbyActions,
     requestShortcuts:()=>requestEntries,
     hotbarShortcuts,
-    nearby(player:Motion | undefined, exploring:boolean) {
+    nearby(player:Motion | undefined, exploring:boolean, directCollections:readonly number[]) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
         collectedArea = undefined;
       }
       const state = exploring ? previous?.gameplay : undefined;
-      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,photos.count] : null);
+      const key = JSON.stringify(state ? [state.nearby,state.stored,state.filed,state.locations,state.interactive,photos.count,directCollections] : null);
       if (key===nearbyKey) return;
       nearbyKey = key;
       const tiles:NearbyItem[] = [];
@@ -610,6 +610,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         tiles.push({key,kind,name,verb,activate});
       if (state) {
         for (const item of state.nearby) {
+          if (directCollections.includes(item.id)) continue;
           add('ground-'+item.id,item.kind,itemName(item),'Pegar',
             ()=>pickUp(player=>canReachObject(player,item),()=>send({kind:'collect',item:item.id})));
         }

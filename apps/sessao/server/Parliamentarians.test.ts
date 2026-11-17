@@ -7,7 +7,7 @@ import { Parliamentarians } from './Parliamentarians';
 import { ParliamentarianTalk } from './ParliamentarianTalk';
 import { PlenaryMatch } from './PlenaryMatch';
 import { npcRules } from '../src/parliamentarians';
-import { NAMES, canStand, type Player } from '../src/map';
+import { NAMES, canStand, roomAt, type Player } from '../src/map';
 import { BALLOT_MS, NEGOTIATION_MS } from '../src/plenary';
 import { terminals } from '../src/gameplay';
 import { privateOffices, officeRules } from '../src/private-offices';
@@ -107,6 +107,7 @@ test('NPC routes stay on valid floor and stop for a negotiation',()=>{
     for (let tick=0;tick<220;tick++) {
       members.tick(tick*50,.05,new Set(),true);
       expect(canStand(npc.x,npc.y)).toBe(true);
+      if (npc.x===140 && npc.y===146 && !npc.moving) break;
     }
   } finally { Math.random = random; }
   expect(npc).toMatchObject({x:140,y:146,moving:false});
@@ -117,17 +118,15 @@ test('an NPC stops walking on the first tick after it reaches its destination',(
   members.reset(1,0);
   const [npc] = members.players;
   Object.assign(npc,{x:136,y:146});
-  const random = Math.random;
-  Math.random = ()=>.99;
-  try {
-    const paused = new Set<string>();
-    members.tick(0,.1,paused,true);
-    expect(npc).toMatchObject({x:140,y:146,moving:true});
-    members.tick(100,.1,paused,true);
-    expect(npc).toMatchObject({x:140,y:146,moving:false});
-    members.tick(npcRules.pauseMs-1,.1,paused,true);
-    expect(npc).toMatchObject({x:140,y:146,moving:false});
-  } finally { Math.random = random; }
+  const member = Reflect.get(members,'members').get(npc.id);
+  member.route = [{x:140,y:146}];
+  const paused = new Set<string>();
+  members.tick(0,.1,paused,true);
+  expect(npc).toMatchObject({x:140,y:146,moving:true});
+  members.tick(100,.1,paused,true);
+  expect(npc).toMatchObject({x:140,y:146,moving:false});
+  members.tick(npcRules.pauseMs-1,.1,paused,true);
+  expect(npc).toMatchObject({x:140,y:146,moving:false});
 });
 
 test('NPC preferences are tied to projects and paid promises stay on the negotiated bill',()=>{
@@ -179,6 +178,28 @@ test('agenda uses the same paid vote quote as the NPC negotiation',()=>{
   expect(members.cheapestPaidVote(buyer,0,project)).toBe(Math.min(...prices()));
   for (const npc of npcs) members.commit(npc.id,0,'yes',10,project);
   expect(members.cheapestPaidVote(buyer,0,project)).toBe(11);
+});
+
+test('eight NPCs start in distinct rooms and reserve separate roaming destinations',()=>{
+  const members = new Parliamentarians();
+  members.reset(npcRules.maxCount,0,new Set([0,1]),()=>0);
+  const players = members.players;
+  expect(players).toHaveLength(8);
+  expect(new Set(players.map(player=>player.character)).size).toBe(8);
+  expect(new Set(players.map(roomAt)).size).toBe(8);
+  for (const player of players) expect(canStand(player.x,player.y)).toBe(true);
+
+  const random = Math.random;
+  Math.random = ()=>0;
+  try {
+    members.tick(4_000,.05,new Set(),true);
+    const assignments = [...(Reflect.get(members,'members') as Map<string,{destination:string}>).values()]
+      .map(member=>member.destination);
+    expect(new Set(assignments).size).toBe(8);
+    expect(players.some(player=>player.moving)).toBe(true);
+  } finally {
+    Math.random = random;
+  }
 });
 
 test('initial NPC appearances are sampled without repeats and use the corresponding names',()=>{

@@ -17,7 +17,7 @@ import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
-import { bills, recoveryPolicy, stations } from '../src/plenary';
+import { bills, canReachStation, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
@@ -1223,6 +1223,20 @@ export class Gameplay {
     }
   }
 
+  drinkStationCoffee(player:Player,world:GameplayWorld) {
+    if (world.plenary || player.carried || !canReachStation(player,'coffee')) return;
+    if (!this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;
+    return this.drinkCoffee(player,world);
+  }
+
+  private drinkCoffee(player:Player,world:GameplayWorld,item?:number) {
+    this.consumeFood(player,foodDefinition('coffee').effect);
+    const place = roomAt(player);
+    const target = this.privateOffices.ownedBy(player.id)?.name===place ? player.id : undefined;
+    publishGameplay(world,player,'used',{kind:'coffee',item,place,target});
+    return 'Café bebido.';
+  }
+
   private consumeFood(player:Player, effect:FoodEffect) {
     if (effect.hp) this.combat.heal(player,effect.hp);
     const max = player.staminaMax ?? MAX_STAMINA;
@@ -1611,6 +1625,7 @@ export class Gameplay {
         }
         const consumed = this.takeUnits(item,1);
         this.remove(consumed);
+        if (data.kind==='coffee') return this.drinkCoffee(player,world,consumed.data.id);
         if (isFood(data.kind)) this.consumeFood(player,foodDefinition(data.kind).effect);
         const consumptionRoom = roomAt(player);
         const ownOffice = this.privateOffices.ownedBy(id)?.name===consumptionRoom;
