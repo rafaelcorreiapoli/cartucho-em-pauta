@@ -172,12 +172,16 @@ async page => {
         if (capture) {
           recorders.push(record(receiver,name));
           if (distant) recorders.push(record(distant,name+'-distante'));
-          sources[0].play(false,.3);
         }
-        const windows = capture ? Math.ceil((sources[0].duration+.8)*1000/55) : 110;
+        const phrase = sources[0];
+        const leadIn = .3;
+        const interval = 55;
+        phrase.play(false,leadIn);
+        const windows = Math.ceil((phrase.duration+.8)*1000/interval);
+        const startedAt = performance.now();
         const measure = async meter=>{
           let peak = 0;
-          let activeWindows = 0;
+          const voicedWindows = [0,0,0];
           let bass = 0;
           let mid = 0;
           const samples = new Float32Array(meter.fftSize);
@@ -186,7 +190,12 @@ async page => {
           for (let i=0;i<windows;i++) {
             meter.getFloatTimeDomainData(samples);
             const rms = Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/samples.length);
-            if (rms>.008) activeWindows++;
+            if (rms>.008) {
+              // Include the WebRTC buffer and analyser delay at the end of the utterance.
+              const seconds = (performance.now()-startedAt)/1000-leadIn;
+              const part = Math.min(2,Math.max(0,Math.floor(seconds/phrase.duration*3)));
+              voicedWindows[part]++;
+            }
             meter.getFloatFrequencyData(spectrum);
             for (let bin=1;bin*hzPerBin<2400;bin++) {
               const hz = bin*hzPerBin;
@@ -195,17 +204,19 @@ async page => {
               if (hz>=700) mid += energy;
             }
             for (const value of samples) peak = Math.max(peak,Math.abs(value));
-            await pause(55);
+            await pause(interval);
           }
-          if (activeWindows<15 || peak>=.98) throw Error(JSON.stringify({name,peak,activeWindows}));
-          return {peak,activeWindows,bassToMid:bass/mid};
+          if (voicedWindows.some(count=>count<4) || peak>=.98) {
+            throw Error(JSON.stringify({name,peak,voicedWindows}));
+          }
+          return {peak,voicedWindows,bassToMid:bass/mid};
         };
         const [nearby,far] = await Promise.all([measure(receiver),distant && measure(distant)]);
         await Promise.all(recorders.map(finish=>finish()));
         return {...nearby,distant:far};
       }
       const normal = await sample('voz-normal',false);
-      if (capture) sources[0].play(true);
+      sources[0].play(true);
       await waitFor(()=>observerRoutes?.length===0,'Observador deve estar fora da proximidade');
       act({kind:'call',target:listener.sessionId});
       await waitFor(()=>listenerView?.gameplay?.call?.state==='incoming','Chamada privada não chegou');
@@ -240,14 +251,12 @@ async page => {
       if (!distantReceiver) throw Error('Áudio distante não chegou ao medidor');
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
-      if (capture) {
-        act({kind:'toggle-megaphone'});
-        await waitFor(()=>observerRoutes?.length===0,'O primeiro ciclo do Megafone não encerrou');
-        await pause(megaphone.cooldown);
-        act({kind:'toggle-megaphone'});
-        await waitFor(()=>observerRoutes?.some(([id,,,filtered])=>id===host.sessionId && filtered),
-          'O Megafone não reativou após a recarga');
-      }
+      act({kind:'toggle-megaphone'});
+      await waitFor(()=>observerRoutes?.length===0,'O primeiro ciclo do Megafone não encerrou');
+      await pause(megaphone.cooldown);
+      act({kind:'toggle-megaphone'});
+      await waitFor(()=>observerRoutes?.some(([id,,,filtered])=>id===host.sessionId && filtered),
+        'O Megafone não reativou após a recarga');
       act({kind:'toggle-modulator'});
       await waitFor(()=>gear()?.modulator?.active,'Modulador não ativado');
       await peers[0].setDisguise(voiceModulatorDisguise);
