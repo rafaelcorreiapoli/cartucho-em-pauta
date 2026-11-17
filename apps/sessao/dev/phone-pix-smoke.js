@@ -58,11 +58,14 @@ async page => {
     if (!await page.locator('#institutional-dialog #institutional-actions').count()) throw Error('Missing institutional panel');
     if (await page.locator('#cabinet-form,#hearing-form').count()) throw Error('Institutional actions should require station proximity');
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
+    const cashReward = await receiver.locator('[aria-label="Objetivos ativos"]')
+      .getByText('Receba dinheiro de outro parlamentar',{exact:true}).count();
     await pix.getByRole('button',{name:'Bia',exact:true}).click();
     await page.keyboard.press('1');
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
 
-    await receiver.locator(dialog).locator('.pix-balance').getByText('R$ 90 mil',{exact:true}).waitFor();
+    const receivedBalance = receiver.locator(dialog).locator('.pix-balance');
+    await receivedBalance.getByText(cashReward ? 'R$ 110 mil' : 'R$ 90 mil',{exact:true}).waitFor();
     await receiver.getByText('Pix recebido',{exact:true}).waitFor();
     if (await page.getByText('Pix recebido',{exact:true}).count()) throw Error('Sender received the private Pix notification');
 
