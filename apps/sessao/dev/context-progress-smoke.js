@@ -1,7 +1,11 @@
 async page => {
   await page.addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
-    navigator.mediaDevices.getUserMedia = async ()=>{ throw new DOMException('QA sem microfone','NotAllowedError'); };
+    window.micAttempts = 0;
+    navigator.mediaDevices.getUserMedia = async ()=>{
+      window.micAttempts++;
+      throw new DOMException('QA sem microfone','NotAllowedError');
+    };
   });
   await page.reload();
   await page.setViewportSize({width:1280,height:720});
@@ -21,4 +25,5 @@ async page => {
   });
   await progress.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Retirar retrato',exact:true}).waitFor();
+  if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }
