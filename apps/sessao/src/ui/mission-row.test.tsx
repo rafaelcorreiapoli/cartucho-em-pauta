@@ -819,6 +819,8 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   const {agenda} = account;
   account.ownsWiretap = ()=>game.ownsWiretap(player.id);
+  account.canInstallSpy = (kind:'wiretap'|'spyCamera')=>game.canInstallSpy(player.id,kind);
+  account.owns = (kind:'wiretap')=>game.owns(player.id,kind);
   const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
   Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   game.act(player,{kind:'open-shop',target:'vendor'},world(1));
@@ -856,6 +858,34 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   tick(1);
   const completed = view().missions.completed.find(({kind})=>kind==='escutaAtiva')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+
+  const economy = Reflect.get(match,'economy');
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const retry = active();
+  expect(retry).toBeDefined();
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio','selfieSolo']);
+  game.spyAction(player,{kind:'recover',site:'coffee'},world(now));
+  tick(spyRules.remove);
+  expect(game.ownsWiretap(player.id)).toBe(false);
+  expect(game.owns(player.id,'wiretap')).toBe(true);
+  expect(game.canInstallSpy(player.id,'wiretap')).toBe(true);
+  expect(active().id).toBe(retry.id);
+  const recovered = game.view(player,world(now)).inventory.find(item=>item.kind==='wiretap')!;
+  game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},world(now));
+  tick(spyRules.install);
+  expect(active().id).toBe(retry.id);
+  game.spyAction(player,{kind:'recover',site:'coffee'},world(now));
+  tick(spyRules.remove);
+  const portable = game.view(player,world(now)).inventory.find(item=>item.kind==='wiretap')!;
+  expect(active().id).toBe(retry.id);
+  game.act(player,{kind:'drop',item:portable.id},world(now));
+  expect(game.owns(player.id,'wiretap')).toBe(false);
+  expect(active()).toBeUndefined();
+  expect(view().missions.active).toHaveLength(3);
   expect(view().progression.xp).toBe(35);
 });
 

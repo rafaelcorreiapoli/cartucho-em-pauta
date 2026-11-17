@@ -110,7 +110,16 @@ const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabal
 const activeMissionCount = 3;
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
 
+function agendaEquipmentPrice(item:ObjectKind,metrics:AgendaMetrics) {
+  const commerce = metrics.commerce?.();
+  return marketProduct('equipment',item,commerce?.policies,commerce?.publicBudget)?.price ?? Infinity;
+}
+
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
+  if (kind==='escutaAtiva' && metrics.ownsWiretap?.()===false) {
+    return !!metrics.canInstallSpy?.('wiretap') &&
+      (!!metrics.owns?.('wiretap') || agendaEquipmentPrice('wiretap',metrics)<=metrics.wallet);
+  }
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
   if (mailMissions.has(kind)) return metrics.canPublishMail?.()!==false;
@@ -438,10 +447,6 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
-    const equipmentPrice = (item:ObjectKind)=>{
-      const commerce = metrics.commerce?.();
-      return marketProduct('equipment',item,commerce?.policies,commerce?.publicBudget)?.price ?? Infinity;
-    };
     if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics,CAMPAIGN_SPENDING_TARGET) ||
         metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao' || kind==='doisPix') {
@@ -488,18 +493,18 @@ export class PersonalAgenda {
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
     if (kind==='patrimonioSuspeito' && !this.npcCount) return false;
     if (kind==='escutaAtiva' && !metrics.ownsWiretap?.()) return false;
-    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<equipmentPrice('bugDetector')) return false;
+    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaEquipmentPrice('bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
     if (kind==='duasCameras' && (metrics.ownsSpyCameras?.() ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
-      if (!metrics.canInstallSpy?.(device) || metrics.wallet<equipmentPrice(device) && !metrics.owns?.(device)) return false;
+      if (!metrics.canInstallSpy?.(device) || metrics.wallet<agendaEquipmentPrice(device,metrics) && !metrics.owns?.(device)) return false;
     }
-    if (kind==='segurancaParlamentar' && metrics.wallet<equipmentPrice('baton') && !metrics.owns?.('baton')) return false;
-    if (kind==='discursoMegafone' && metrics.wallet<equipmentPrice('megaphone') && !metrics.owns?.('megaphone')) return false;
-    if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<equipmentPrice('binoculars'))) return false;
+    if (kind==='segurancaParlamentar' && metrics.wallet<agendaEquipmentPrice('baton',metrics) && !metrics.owns?.('baton')) return false;
+    if (kind==='discursoMegafone' && metrics.wallet<agendaEquipmentPrice('megaphone',metrics) && !metrics.owns?.('megaphone')) return false;
+    if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<agendaEquipmentPrice('binoculars',metrics))) return false;
     if (kind==='reuniaoVip' && !metrics.hasAgendaDecoration?.('anyVip')) return false;
     if (kind==='cerimonialOficial' && !metrics.hasAgendaDecoration?.('anyPortrait')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
