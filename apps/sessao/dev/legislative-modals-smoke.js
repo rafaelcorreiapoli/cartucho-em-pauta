@@ -233,5 +233,23 @@ async page => {
     if (!disconnected.isClosed()) await disconnected.close();
     await witness.close();
   }
-  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,staleCandidateRejected:true,cassationResultDismissedViaF2:true};
+  await page.reload();
+  await page.setViewportSize({width:800,height:600});
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Final QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.locator('#parliamentarian-count [data-count="0"]').click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  const finale = page.locator('#session-finale');
+  await page.locator('#session[data-phase="finished"]').waitFor();
+  await finale.getByRole('heading',{name:'Infiltrados'}).waitFor({state:'hidden'});
+  await finale.getByRole('region',{name:'Parlamentares'}).getByText('Final QA',{exact:true}).waitFor();
+  const finaleBox = await finale.boundingBox();
+  if (!finaleBox || finaleBox.x!==0 || finaleBox.y!==0 || finaleBox.width!==800 || finaleBox.height!==600) {
+    throw Error('A tela final não cobre o viewport: '+JSON.stringify(finaleBox));
+  }
+  await runShortcut(finale.getByRole('button',{name:'Continuar',exact:true}),/^Continuar$/);
+  await finale.waitFor({state:'hidden'});
+  await page.locator('#session[data-phase="finished"]').waitFor();
+  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,
+    staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true};
 }

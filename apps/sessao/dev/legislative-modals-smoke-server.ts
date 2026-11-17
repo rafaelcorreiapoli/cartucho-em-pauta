@@ -3,6 +3,7 @@ import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
 import {publishProjectFiling} from '../server/project-test-fixture';
 import {stations} from '../src/plenary';
+import {ELECTION_RULES} from '../src/elections';
 import type {Parliamentarians} from '../server/Parliamentarians';
 
 class LegislativeModalsRoom extends SessionRoom {
@@ -24,6 +25,9 @@ class LegislativeModalsRoom extends SessionRoom {
       for (const {player} of players.values()) {
         if (!positioned.has(player.id)) {
           positioned.add(player.id);
+          if (player.nick==='Final QA') {
+            this.clock.setTimeout(()=>match.advance(this.clock.currentTime+ELECTION_RULES.matchDuration),500);
+          }
           Object.assign(player,plenaryTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
           const economy = Reflect.get(match,'economy');
           if (plenaryTest) economy.changePopularity(player.id,20);
