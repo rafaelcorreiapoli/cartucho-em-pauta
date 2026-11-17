@@ -16,7 +16,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {CRISIS_MISSION_STABILITY_LIMIT,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,money,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -1379,4 +1379,13 @@ test('the agenda displays emergency maintenance only while the outage can be rep
   expect(render(end)).toContain('data-done="true"');
   expect(render(end)).toContain(title);
   expect(match.view(rafa.id,ids,end).politics?.progression.xp).toBe(45);
+});
+
+
+test('mission cards use the configured Pix amount and coffee delivery count',()=>{
+  const pix = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'pixVinte',current:0,target:1}}/>);
+  expect(pix).toContain('Envie um Pix de '+money(PIX_MISSION_AMOUNT));
+  const delivery = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'entrega',current:1,target:COFFEE_DELIVERY_RECIPIENTS}}/>);
+  expect(delivery).toContain(`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`);
+  expect(delivery).toContain('1 / '+COFFEE_DELIVERY_RECIPIENTS);
 });

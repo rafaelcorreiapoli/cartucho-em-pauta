@@ -19,6 +19,8 @@ export const CAMPAIGN_SPENDING_TARGET = 5;
 export const CRISIS_MISSION_STABILITY_LIMIT = 30;
 export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
+export const PIX_MISSION_AMOUNT = 2;
+export const COFFEE_DELIVERY_RECIPIENTS = 3;
 export const SAVINGS_MISSION_AMOUNT = 10;
 export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
 
@@ -64,7 +66,7 @@ export const agendas = {
   visitaGabinete:'Visite o gabinete de um colega',
   passeio:'Visite três salas públicas diferentes',
   pausaCafe:`Passe ${agendaDurationMs.pausaCafe/1000} segundos no Cafezinho durante a articulação`,
-  entrega:'Entregue cafezinho a três jogadores diferentes.',
+  entrega:`Entregue cafezinho a ${COFFEE_DELIVERY_RECIPIENTS} jogadores diferentes.`,
   sigilo:'Largue um objeto sem testemunhas.',
   joguinho:`Vença uma partida de Snake coletando ${SNAKE_GOAL} frutas sem ser visto durante a partida.`,
   fotografia:'Tire uma foto com outro jogador visível.',
@@ -150,7 +152,7 @@ export const agendas = {
   recolhimentoExtraordinario:'Roube uma maleta de um NPC e entregue parte dela à Tesouraria',
   dinheiroPresencialVinte:`Entregue ${money(CASH_HANDOVER_MISSION_AMOUNT)} em espécie a outro jogador`,
   caixaDois:'Receba dinheiro em espécie de outro jogador',
-  pixVinte:'Envie um Pix de R$ 20 mil',
+  pixVinte:`Envie um Pix de ${money(PIX_MISSION_AMOUNT)}`,
   doisPix:'Receba Pix de dois jogadores distintos',
   debateTelefonico:`Fique ${agendaDurationMs.debateTelefonico/1000} segundos na mesma chamada durante a articulação`,
   chamadasUrgentes:`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`,

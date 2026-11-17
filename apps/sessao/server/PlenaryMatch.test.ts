@@ -13,7 +13,7 @@ import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
-import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT } from '../src/politics';
 
 import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
@@ -1388,4 +1388,30 @@ test('election support and withdrawal are visible in observers’ polls',()=>{
   expect(position(4)?.supports).toBe(candidate.id);
   match.electionAction(voter,{kind:'support',to:''},3,false);
   expect(position(4)?.supports).toBeUndefined();
+});
+
+
+test('the Pix agenda uses the same amount for the wallet check and exact payment',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const agenda = Reflect.get(economy,'accounts').get(host.id).agenda;
+  expect(economy.spend(host.id,economy.wallet(host.id)-PIX_MISSION_AMOUNT+1)).toBe(true);
+  const missions = ()=>match.view(host.id,ids,10).politics!.missions;
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['pixVinte','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  draw();
+  expect(missions().active.some(row=>row.kind==='pixVinte')).toBe(false);
+  economy.earn(host.id,2*PIX_MISSION_AMOUNT);
+  draw();
+  expect(missions().active).toContainEqual(expect.objectContaining({kind:'pixVinte',current:0}));
+  const pay = (amount:number,now:number)=>match.politics(host,{kind:'transfer',to:honest.id,amount},people,now);
+  expect(pay(PIX_MISSION_AMOUNT-1,1)).toBe(true);
+  expect(missions().active).toContainEqual(expect.objectContaining({kind:'pixVinte',current:0}));
+  expect(pay(PIX_MISSION_AMOUNT,2)).toBe(true);
+  expect(missions().completed).toContainEqual(expect.objectContaining({kind:'pixVinte',current:1}));
 });
