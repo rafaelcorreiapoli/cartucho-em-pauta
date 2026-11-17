@@ -141,7 +141,6 @@
   background: #2b4a37;
 }
 .congress-app .hud-glyph { flex: none; color: var(--color-hud-budget); }
-.congress-app kbd { font-size: 10px; color: var(--color-hud-muted); }
 #agenda-dock .react-missions > li { column-gap: 12px; }
 #agenda-dock .react-mission-check { margin-inline: 1px 2px; }
 #agenda-dock .react-agenda header { column-gap: 12px; }
@@ -274,7 +273,7 @@
   background: #0b1812e8;
   white-space: nowrap;
 }
-.congress-app-badge { position: absolute; top: 2px; right: 4px; color: #f2d68d; }
+.congress-app-badge { position: absolute; bottom: 2px; left: 4px; color: #f2d68d; }
 @media (prefers-reduced-motion: no-preference) {
   .congress-app { animation: congress-app-enter 200ms ease-out both; animation-delay: calc(var(--app-index) * 24ms); }
 }
@@ -425,7 +424,7 @@
 #stations .hud-button .hud-glyph { width: 17px; height: 17px; color: #e9d49a; }
 #stations .station-key {
   position: absolute;
-  inset: 3px 4px auto auto;
+  inset: -5px -4px auto auto;
   min-width: 17px;
   min-height: 17px;
   padding: 0 3px;
@@ -435,7 +434,6 @@
   color: #eddaaa;
   font: 700 10px/1 system-ui,sans-serif;
 }
-#stations .hud-button:has(.station-key) { padding-right: 29px; }
 .context-nearby { position: relative; }
 #stations #nearby-items {
   --context-tile: clamp(86px, 8vw, 112px);
@@ -481,7 +479,6 @@
   #stations .hud-button, #stations .context-item { transition: border-color 130ms, box-shadow 130ms; }
   #stations #nearby-items:not([hidden]) { animation: congress-app-enter 130ms ease-out; }
 }
-#stations .hud-button:has(.station-key:not(:empty)) { padding-top: 6px; }
 #stations .hud-button { min-width: 0; height: 36px; white-space: normal; }
 
 #command-strip {
@@ -616,7 +613,6 @@
 }
 .gear-slot:has(.equipped-gear-tile[data-active="true"]) { border-color: #84edca; }
 .gear-slot .equipped-gear-footer { position: absolute; inset: auto 4px 3px 4px; }
-.gear-slot .equipped-gear-key { font-size: 8px; }
 .gear-slot .equipped-gear-timer { font-size: 8px; }
 .character-dock {
   display: grid;
@@ -715,6 +711,7 @@
 }
 .bag-item-actions > button span { display: flex; align-items: center; gap: 8px; }
 .bag-item-actions > button :is(svg,kbd) { flex: none; }
+.bag-item-actions > button > .action-key { inset: 0 2px auto auto; }
 .bag-item-actions .bag-pin:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
 .bag-recipient { display: grid; gap: 4px; margin-bottom: 6px; }
 .bag-preview { grid-column: 1/-1; padding-top: 10px; border-top: 1px solid #9f8b5280; }
@@ -784,7 +781,7 @@
 .market-detail-price { display: flex; align-items: center; gap: 7px; color: var(--party-gold); font-weight: 750; }
 .market-detail-description,.market-detail-effects { border-top: 1px solid #6d92747d; padding-top: 8px; font-size: .84rem; }
 .market-detail-effects strong { display: block; margin-bottom: 3px; }
-.market-buy { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.market-buy { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; }
 .market-buy span { display: flex; align-items: center; gap: 7px; }
 .market-buy:not(:disabled) { background: linear-gradient(#f0d68b,#d5ad59); color: #171b12; }
 .market-catalog .market-product-button:hover:not([aria-pressed="true"]) { border-color: #8bab8a; }
@@ -882,14 +879,6 @@
   gap: 0;
 }
 
-.congress-app-label kbd {
-  display: inline-block;
-  margin-inline-start: .4rem;
-  padding: .1rem .3rem;
-  border-radius: .25rem;
-  background: #284337;
-  color: var(--color-hud-budget);
-}
 #room-settings {
   position: fixed;
   inset: 0;
@@ -908,7 +897,7 @@
 #room-settings h2 { margin: 0; }
 #room-settings > section + section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-hud-border); }
 
-#election-poll-dialog {
+:is(#election-poll-dialog,.legislative-modal) {
   width: min(32rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow: auto;
@@ -918,9 +907,11 @@
   border: 1px solid var(--color-hud-border);
   border-radius: var(--radius-hud);
 }
-#election-poll-dialog::backdrop { background: #081510b8; }
-#election-poll-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-#election-poll-dialog h2 { margin: 0; }
+:is(#election-poll-dialog,.legislative-modal)::backdrop { background: #081510b8; }
+:is(#election-poll-dialog,.legislative-modal) header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+:is(#election-poll-dialog,.legislative-modal) h2 { margin: 0; }
+.legislative-modal form { display: grid; gap: .55rem; margin: .7rem 0 0; }
+.legislative-modal .social-header { align-items: center; }
 #election-polls ol { padding: 0; list-style: none; }
 
 .plenary-countdown[data-kind="cassation"] {
@@ -938,7 +929,7 @@
 .cassation-candidates { width: 100%; display: grid; grid-template-columns: repeat(auto-fit,minmax(82px,1fr)); gap: .42rem; }
 .cassation-candidates button { display: grid; place-items: center; position: relative; gap: .2rem; min-width: 0; padding: .35rem; }
 .cassation-candidates button > span:last-of-type { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cassation-candidates kbd { position: absolute; inset: .2rem .3rem auto auto; }
+.cassation-candidates .action-key { inset: .2rem .3rem auto auto; }
 .cassation-ballot button[aria-pressed="true"] { border-color: #f89a8b; background-color: #67362d; }
 #session[data-phase="hearing"]:has(.cassation-ballot) .deck-project-links { display: none; }
 

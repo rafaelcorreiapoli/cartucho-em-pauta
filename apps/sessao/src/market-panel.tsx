@@ -27,7 +27,7 @@ export function MarketDialogContent({title,children}:{title:string;children:Reac
   </>;
 }
 
-export function createMarketPanel(send:(action:GameplayAction)=>void) {
+export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocument:()=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
   const root = createRoot(dialog);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
@@ -196,7 +196,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -204,14 +204,15 @@ export function createMarketPanel(send:(action:GameplayAction)=>void) {
       dialog.classList.toggle('market-catalog',state.shop);
       dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
       if (!state.shop) {
-        flushSync(()=>root.render(<MarketDialogContent title={npc.name}>
+        flushSync(()=>root.render(<MarketDialogContent title={npc.catalog ? npc.name : `${npc.label} · ${npc.name}`}>
           <div className="market-line">
             <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>
             <p>{state.text}</p>
           </div>
+          {state.feedback && <p role="status">{state.feedback}</p>}
           <div className="market-choices">
             {state.options.map((option,index)=><button key={option.id} type="button" className="hud-button hud-button--secondary"
-              aria-keyshortcuts={String(index+1)} onClick={()=>send({kind:'dialogue-choice',target:option.id,token:state.token})}>
+              aria-keyshortcuts={String(index+1)} onClick={()=>state.npc==='secretary' && option.id==='projects' ? requestDocument() : send({kind:'dialogue-choice',target:option.id,token:state.token})}>
               {option.label}<kbd className="action-key" aria-hidden="true">{index+1}</kbd>
             </button>)}
           </div>

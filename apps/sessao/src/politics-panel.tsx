@@ -8,27 +8,34 @@ import {InstitutionalActions,institutionalActions} from './ui/institutional-acti
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void,focusMap:()=>void) {
-  const dock = el<HTMLDetailsElement>('politics-dock');
-  const institutional = el<HTMLDetailsElement>('institutional-dock');
+  const dossierDialog = el<HTMLDialogElement>('dossier-dialog');
+  const institutional = el<HTMLDialogElement>('institutional-dialog');
   const dossierRoot = createRoot(el('dossier-content'));
   const institutionalRoot = createRoot(el('institutional-actions'));
   let dossierKey = '';
   let institutionalKey = '';
   let players:Player[] = [];
   let view:PlenaryView|undefined;
-  dock.open = institutional.open = false;
+  const canOpenDossier = () => !!view?.politics && view.phase==='negotiation';
+  let hasInstitutionalActions = false;
+  function restoreFocus() {
+    if (!document.querySelector('dialog:modal')) focusMap();
+  }
+  dossierDialog.addEventListener('close',restoreFocus);
+  institutional.addEventListener('close',restoreFocus);
 
   function sendInstitutional(action:PoliticsAction) {
     send(action);
-    if (action.kind==='call-cassation') institutional.open = false;
-    if (action.kind!=='hearing') focusMap();
+    if (action.kind==='call-cassation') institutional.close();
+    restoreFocus();
   }
 
-  function closeDossier() { dock.open = false; focusMap(); }
-  function closeInstitutional() { institutional.open = false; focusMap(); }
+  function closeDossier() { dossierDialog.close(); }
+  function closeInstitutional() { institutional.close(); }
 
   function openDossier() {
-    dock.open = true;
+    if (!canOpenDossier() || dossierDialog.open) return;
+    dossierDialog.showModal();
     el('dossier-content').querySelector<HTMLElement>('button[aria-pressed="true"]')?.focus();
   }
 
@@ -41,6 +48,8 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
     }
 
     const model = institutionalActions(view,players.find(player=>player.id===id));
+    hasInstitutionalActions = !!(model.grant || model.hearing || model.cassation);
+    if (!hasInstitutionalActions && institutional.open) closeInstitutional();
     const key = JSON.stringify(model);
     if (key===institutionalKey) return;
     institutionalKey = key;
@@ -50,23 +59,27 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
   return {
     sendInstitutional,
     openInstitutional() {
-      institutional.open = true;
+      if (!hasInstitutionalActions || institutional.open) return;
+      institutional.showModal();
       el('institutional-actions').querySelector<HTMLElement>('.game-choice')?.focus();
     },
     openDossier,
     toggleDossier() {
-      if (dock.hidden) return false;
-      if (dock.open) closeDossier();
+      if (!canOpenDossier()) return false;
+      if (dossierDialog.open) closeDossier();
       else openDossier();
       return true;
     },
     render(next:PlenaryView) {
       view = next;
-      dock.hidden = !view.politics;
-      institutional.hidden = !view.politics || view.phase!=='negotiation';
+      if (!canOpenDossier() && dossierDialog.open) closeDossier();
       renderPanels();
     },
     destroy() {
+      dossierDialog.removeEventListener('close',restoreFocus);
+      institutional.removeEventListener('close',restoreFocus);
+      closeDossier();
+      closeInstitutional();
       dossierRoot.unmount();
       institutionalRoot.unmount();
     },

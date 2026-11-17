@@ -59,13 +59,9 @@ export class PoliticalEconomy {
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
         if (!account) return;
-        const before = progression.view();
-        progression.earn(reward.xp);
-        const after = progression.view();
+        const after = this.earnXp(contact.id,reward.xp)!;
         console.info(JSON.stringify({event:'mission-xp',playerId:contact.id,matchId:after.matchId,
           missions:completed.map(({id,kind})=>({id,kind})),amount:reward.xp,xp:after.xp}));
-        if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:contact.id,
-          matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
         const cash = Math.min(this.rewardReserve,reward.cash ?? 0);
         this.rewardReserve -= cash;
         this.credit(account,cash);
@@ -161,6 +157,27 @@ export class PoliticalEconomy {
     account.wallet = Math.round((account.wallet-amount)*10)/10;
     this.rewardReserve = Math.round((this.rewardReserve+amount)*10)/10;
     this.reserveFees = Math.round((this.reserveFees+amount)*10)/10;
+    return true;
+  }
+
+  earnXp(id:string,amount:number) {
+    const progression = this.accounts.get(id)?.progression;
+    if (!progression) return;
+    const before = progression.view();
+    progression.earn(amount);
+    const after = progression.view();
+    if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:id,
+      matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
+    return after;
+  }
+
+  settleBet(id:string,stake:number,payout:number,maxPayout:number) {
+    const stakeThousands = Math.round(stake*10);
+    const reserveThousands = Math.round(this.rewardReserve*10);
+    if (Math.round(this.wallet(id)*10)<stakeThousands ||
+        reserveThousands+stakeThousands<Math.round(maxPayout*10)) return false;
+    if (!payout) return this.spend(id,stake);
+    this.rewardFromReserve(id,(Math.round(payout*10)-stakeThousands)/10);
     return true;
   }
 

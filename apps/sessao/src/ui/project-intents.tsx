@@ -34,17 +34,20 @@ function detailsState(view:PlenaryView) {
   return {
     title:hearing?.target ?? project?.name ?? 'Nenhum projeto em pauta',
     description:hearing ? '' : project?.description ?? 'Escolha um projeto na Secretaria e leve o documento ao Protocolo.',
-    objection:objection ? `${objection} contestou o projeto: aprovação exige ${view.billQuorum} votos.` : '',
+    electorate:phase==='negotiation' ? view.electorate : undefined,
+    quorum:phase==='negotiation' && project ? view.billQuorum : undefined,
+    objection:objection ? `${objection} contestou o projeto.` : '',
     hearingResult:view.hearingResult,
     clue,
   };
 }
 
 export function ProjectDetails({view,id,declare}:Parameters<typeof ProjectIntents>[0]) {
-  const {title,description,objection,hearingResult,clue} = detailsState(view);
+  const {title,description,electorate,quorum,objection,hearingResult,clue} = detailsState(view);
   return <>
     <h2 id="project-details-title">{title}</h2>
     <p id="bill-description">{description}</p>
+    {electorate!==undefined && <p>Parlamentares aptos a votar: {electorate}{quorum!==undefined && ` · Votos a favor para aprovar: ${quorum}`}</p>}
     <ProjectIntents view={view} id={id} declare={declare}/>
     <p className="hud-feedback" id="bill-objection" hidden={!objection}>{objection}</p>
     <p className="hud-feedback" id="hearing-result" role="status" hidden={!hearingResult}>{hearingResult}</p>

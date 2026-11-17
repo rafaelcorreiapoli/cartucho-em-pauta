@@ -8,12 +8,14 @@ import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
 import { privateOffices } from './private-offices';
+import {npcs,treasurer} from './npcs';
 import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
 export const projectRules = {debateMs:120_000, cooldownMs:60_000, warningSeconds:30, requiredVotes:3} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
+export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
 export const CASSATION_NOTICE_MS = 30_000;
 
@@ -25,6 +27,9 @@ export function deficitStabilityLoss(deficit:number) {
 
 export const stations = {
   ...roomActivities,
+  cabinet:treasurer.interaction,
+  secretary:npcs.secretary.interaction,
+  archive:{x:549,y:90},
   amendment: {x:129,y:365},
   audit: {x:808,y:93},
   panel: {x:548,y:620},
@@ -135,7 +140,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
-  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
+  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 

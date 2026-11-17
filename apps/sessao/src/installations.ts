@@ -4,6 +4,7 @@ import type { Motion } from './map';
 import { roomActivities } from './room-activities';
 
 export const vipAreaRadius = 12;
+export const portraitInteractionRadius = 38;
 
 export const decorationInstallMs = 2000;
 
@@ -27,7 +28,7 @@ export const installationArt = {
 } as const;
 
 export function canReachInstallation(actor:InteractionActor,point:Motion,kind:Installable) {
-  return canInteract(actor,point,kind==='portrait' ? {radius:38} : undefined);
+  return canInteract(actor,point,kind==='portrait' ? {radius:portraitInteractionRadius} : undefined);
 }
 
 export function decorationActions(playerId:string, state:Pick<GameplayView,'interactive'|'installable'|'inventory'>) {

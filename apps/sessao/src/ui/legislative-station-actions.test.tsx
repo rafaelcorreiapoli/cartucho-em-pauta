@@ -2,12 +2,11 @@ import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
-import {BALLOT_MS,bankAuditCost,bankAuditFee,bills,NEGOTIATION_MS,policyDuration,stations,type Station} from '../plenary';
-import {money} from '../politics';
+import {BALLOT_MS,bankAuditFee,bills,NEGOTIATION_MS,stations,type Station} from '../plenary';
 import type {Player} from '../map';
 import {LegislativeStationActions,legislativeStationActions} from './legislative-station-actions';
 
-test('station controls follow actual amendment, audit and correction state without exposing the infiltrator',()=>{
+test('station controls show complaints and follow the amendment and correction state without exposing the infiltrator',()=>{
   const people:Player[] = ['Rafa','Bia','Caio'].map((id,character)=>({
     id,nick:id,character,x:0,y:0,direction:0,moving:false,
   }));
@@ -29,7 +28,7 @@ test('station controls follow actual amendment, audit and correction state witho
   match.act({...traitor,...stations.panel},'fraud',2);
   expect(render(traitor,'panel')).toBe('');
   expect(render(host,'panel')).toBe('');
-  expect(render(auditor,'audit')).toContain('data-action="audit"');
+  expect(render(auditor,'audit')).toContain('data-action="denounce"');
   match.act({...auditor,...stations.audit},'audit',3);
   expect(render(auditor,'panel')).toContain('data-action="panel"');
   expect(render(host,'panel')).toBe('');
@@ -40,7 +39,7 @@ test('station controls follow actual amendment, audit and correction state witho
   expect(render(auditor,'audit',NEGOTIATION_MS)).toBe('');
 });
 
-test.each([true,false])('audit advertises only the public conditional fee, approval=%s',approved=>{
+test.each([true,false])('audit server fees still follow the approved policy, approval=%s',approved=>{
   const players:Player[] = ['Rafa','Bia','Caio'].map((id,character)=>({
     id,nick:id,character,...stations.audit,direction:0,moving:false,
   }));
@@ -57,22 +56,11 @@ test.each([true,false])('audit advertises only the public conditional fee, appro
   const resolved = NEGOTIATION_MS+BALLOT_MS;
   match.advance(resolved);
   const view = (now:number)=>match.view(auditor.id,ids,now);
-  const render = (now:number)=>{
-    const snapshot = view(now);
-    return renderToStaticMarkup(<LegislativeStationActions actions={legislativeStationActions(snapshot,'audit')}
-      auditFee={bankAuditCost(snapshot.policies)} send={()=>{}}/>);
-  };
   const now = resolved+1;
-  const label = `${money(bankAuditFee)} se revelar registro sigiloso`;
-  const initial = render(now);
-  expect(initial).toContain('data-action="audit"');
-  expect(initial.includes(label)).toBe(approved);
   const balance = view(now).politics!.wallet;
   expect(match.act(auditor,'audit',now)?.text).toContain('Nenhum registro');
   expect(view(now).politics!.wallet).toBe(balance);
   expect(match.politics(host,{kind:'transfer',to:recipient.id,amount:1},players,now+1)).toBe(true);
-  expect(render(now+1)).toBe(initial);
   expect(match.act(auditor,'audit',now+2)?.text).toContain('Documento encontrado');
   expect(view(now+2).politics!.wallet).toBe(balance-(approved ? bankAuditFee : 0));
-  expect(render(resolved+policyDuration)).not.toContain(label);
 });

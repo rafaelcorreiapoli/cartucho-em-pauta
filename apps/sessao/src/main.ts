@@ -178,8 +178,6 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
-    document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);
@@ -219,19 +217,26 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('spy-frame',(frame:SpyCameraFrame)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
-    const market = createMarketPanel(sendGameplay);
+    const market = createMarketPanel(sendGameplay,()=>{
+      const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
+      projectPicker.open('Solicitar documento',index=>{
+        sendGameplay({kind:'supply',place:'secretary',target:'project-'+index});
+        sendGameplay({kind:'dialogue-close'});
+      },undefined,voted);
+    });
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
         ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
-      ]),width=>game?.setPhoneInset(width));
+      ]),width=>game?.setPhoneInset(width),
+      proof=>sendCommand('complaint-submit',proof.kind==='phone-game' ? {target:proof.target,photo:proof.photo} : {id:proof.id,photo:proof.photo}));
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => sendCommand('room-activity',{activity}),gameplay.nearby,action=>{
+    },activity => sendCommand('room-activity',{activity}),{...gameplay.nearbyActions,render:gameplay.nearby},action=>{
       if (action.kind!=='attack' && action.kind!=='install' && action.kind!=='uninstall') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
       if (action.kind==='power') { sendCommand('power-action',action.option); return; }
@@ -242,16 +247,11 @@ async function connect(join: () => Promise<Room>) {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
         return;
       }
-      if (action.kind==='request-document') {
-        const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
-        projectPicker.open('Solicitar documento',index=>sendGameplay({kind:'supply',place:'secretary',target:'project-'+index}),undefined,voted);
-        return;
-      }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);
       map.focus({preventScroll:true});
-    },political,action=>sendCommand('plenary-action',{action}),{
+    },political,action=>action==='denounce' ? gameplay.openComplaint() : sendCommand('plenary-action',{action}),{
       send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
     const reactHud = mountReactHud();
@@ -281,7 +281,7 @@ async function connect(join: () => Promise<Room>) {
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
       else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
-      else if (market.isOpen()) hud.notify('Loja',message);
+      else if (market.isOpen()) hud.notify(previousView?.gameplay?.dialogue?.npc==='protocol' ? 'Protocolo' : previousView?.gameplay?.dialogue?.npc==='secretary' ? 'Secretaria' : 'Loja',message);
       else gameplay.feedback(message);
     });
     const campaignTv = createCampaignTv(session,joined.sessionId);

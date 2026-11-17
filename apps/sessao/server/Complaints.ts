@@ -1,9 +1,9 @@
-import {complaintRules,type ComplaintCase,type InfractionKind} from '../src/complaints';
+import {complaintRules,type ComplaintCase,type ComplaintProof,type InfractionKind} from '../src/complaints';
 import type {GameplayEvent} from '../src/gameplay';
 import type {Motion} from '../src/map';
 import type {Photo} from '../src/photography';
 
-type Case = {id:number;kind:InfractionKind;actor:string;at:number;position:Motion;eligible:Set<string>};
+type Case = {id:number;kind:Exclude<InfractionKind,'phone-game'>;actor:string;at:number;position:Motion;eligible:Set<string>};
 
 function matchesIncident(photo:Photo,entry:Case) {
   return Math.abs(photo.at-entry.at)<=complaintRules.photoWindowMs && photo.people.some(person=>
@@ -14,10 +14,12 @@ export class Complaints {
   private serial = 0;
   private cases = new Map<number,Case>();
   private recent = new Map<string,{id:number;at:number}>();
+  private reportedGames = new Set<string>();
   private decisions:ComplaintCase[] = [];
 
   reset() {
     this.cases.clear();
+    this.reportedGames.clear();
     this.recent.clear();
     this.decisions = [];
   }
@@ -47,6 +49,36 @@ export class Complaints {
     }));
   }
 
+  private gameKey(photo:Photo,target:string,session?:number) {
+    return session===undefined ? `photo:${photo.id}:${target}` : `game:${session}:${target}`;
+  }
+
+  private gameProofs(reporter:string,photo:Photo,isPlayer:(id:string)=>boolean) {
+    return photo.people.filter(person=>person.id!==reporter && person.phone==='game' && isPlayer(person.id) &&
+      !this.reportedGames.has(this.gameKey(photo,person.id,person.gameSession)));
+  }
+
+  proofs(reporter:string,photos:readonly Photo[],isPlayer:(id:string)=>boolean,name:(id:string)=>string):ComplaintProof[] {
+    const incidentProofs = this.available(reporter,name,photos).flatMap(({kind,photoIds,accused,id})=>kind==='phone-game' ? [] :
+      (photoIds ?? []).map(photo=>({photo,kind,accused,id})));
+    return [...incidentProofs,...photos.flatMap(photo=>this.gameProofs(reporter,photo,isPlayer).map(person=>({
+      photo:photo.id,kind:'phone-game' as const,accused:person.name,target:person.id,
+    })))];
+  }
+
+  submitGame(reporter:string,photo:Photo,target:string,isPlayer:(id:string)=>boolean,name:(id:string)=>string) {
+    const person = this.gameProofs(reporter,photo,isPlayer).find(entry=>entry.id===target);
+    if (!person) return;
+    this.reportedGames.add(this.gameKey(photo,target,person.gameSession));
+    const decision:ComplaintCase = {id:++this.serial,kind:'phone-game',accused:name(target),at:photo.at,hasPhoto:true};
+    this.addDecision(decision);
+    return {actor:target,decision};
+  }
+
+  private addDecision(decision:ComplaintCase) {
+    this.decisions = [decision,...this.decisions].slice(0,complaintRules.history);
+  }
+
   history() { return this.decisions; }
 
   submit(reporter:string,id:number,name:(id:string)=>string,photo?:Photo) {
@@ -56,7 +88,7 @@ export class Complaints {
     this.cases.delete(id);
     const decision = this.describe(entry,name);
     if (photo) decision.hasPhoto = true;
-    this.decisions = [decision,...this.decisions].slice(0,complaintRules.history);
+    this.addDecision(decision);
     return {actor:entry.actor,decision};
   }
 
