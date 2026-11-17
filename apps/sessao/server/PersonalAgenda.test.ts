@@ -1670,3 +1670,23 @@ test('the camera mission keeps credit when the remaining distinct camera can be 
   expect(mission()).toBeUndefined();
   expect(agenda.view(state).completed).toEqual([]);
 });
+
+test('a saved group selfie only opens a mission if a publication channel is still available',()=>{
+  const photos = [{id:1,public:true}];
+  let canMail = false;
+  const state = {...metrics,agendaSelfies:()=>photos,canPublishMail:()=>canMail};
+  const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    return agenda.hasActive('publicouSelfie');
+  };
+  expect(draw()).toBe(false);
+  canMail = true;
+  expect(draw()).toBe(true);
+  state.wallet = 0;
+  expect(draw()).toBe(false);
+  photos[0].public = false;
+  expect(draw()).toBe(true);
+});

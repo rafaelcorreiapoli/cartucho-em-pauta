@@ -684,6 +684,8 @@ export class Gameplay {
   disconnectCall(id:string,world:GameplayWorld) { this.phone.disconnectCall(id,world); }
 
   get photoRevision() { return this.album.revision; }
+  agendaSelfies(id:string) { return this.album.agendaSelfies(id); }
+
   photoView(id:string,now:number) { return this.album.view(id,now); }
 
   private dialogueEligibility(id:string, world:GameplayWorld) {

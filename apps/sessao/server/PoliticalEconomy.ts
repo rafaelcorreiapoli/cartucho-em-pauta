@@ -399,8 +399,11 @@ export class PoliticalEconomy {
     }
   }
 
-  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean) {
-    for (const [id,account] of this.accounts) Object.assign(account,{canPublishMail:()=>canPublishMail(id)});
+  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean,agendaSelfies?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['agendaSelfies']>>) {
+    for (const [id,account] of this.accounts) Object.assign(account,{
+      canPublishMail:()=>canPublishMail(id),
+      agendaSelfies:agendaSelfies && (()=>agendaSelfies(id)),
+    });
   }
 
   setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
