@@ -195,7 +195,7 @@ export class SessionRoom extends Room {
         this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
-        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id));
+        this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
           (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
@@ -355,6 +355,7 @@ export class SessionRoom extends Room {
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
           !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
       const text = this.gameplay.act(player,action,this.gameplayWorld());
+      if (action.kind==='photo-delete') this.match.refreshAgendaEligibility();
       if (text) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);

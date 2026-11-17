@@ -1309,3 +1309,39 @@ test('the Agenda credits a published selfie once even when both channels publish
   expect(latest).toMatchObject({id:pending.id,kind:'publicouSelfie'});
   expect(renderToStaticMarkup(<MissionRow mission={latest} done/>)).toContain('data-done="true"');
 });
+
+test('the Agenda can offer selfie publication from the album while the photographed players are offline',()=>{
+  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...stations.press,
+  }));
+  const [author,bia,caio] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(author.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,players);
+  const mail = new InternalMail();
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id),id=>game.agendaSelfies(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(author.id);
+  const world = (now:number)=>match.gameplayWorld(players,now,()=>false);
+  const view = (now:number)=>match.view(author.id,players.map(({id})=>id),now).politics!;
+  game.act(author,{kind:'selfie'},world(100));
+  const photo = game.photoView(author.id,100).album[0].photo;
+  match.setPlayerConnected(bia.id,false);
+  match.setPlayerConnected(caio.id,false);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+  };
+
+  draw();
+  const props = view(101).missions.active.find(row=>row.kind==='publicouSelfie')!;
+  expect(renderToStaticMarkup(<MissionRow mission={props}/>)).toContain('Publique uma selfie sua');
+  expect(game.act(author,{kind:'photo-publish',item:photo.id},world(102))).toBe('Fotografia publicada no álbum público.');
+  const published = view(102);
+  expect(published.missions.completed).toContainEqual(expect.objectContaining({id:props.id,kind:'publicouSelfie'}));
+  expect(published.progression.xp).toBe(30);
+  expect(published.popularity).toBe(44);
+  draw();
+  expect(view(103).missions.active.some(row=>row.kind==='publicouSelfie')).toBe(false);
+});

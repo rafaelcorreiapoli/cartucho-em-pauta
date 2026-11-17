@@ -10,7 +10,7 @@ import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
 import { CRISIS_MISSION_STABILITY_LIMIT, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type AgendaMetrics = Readonly<{wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canPublishMail?:()=>boolean; hasForensicReport?:()=>boolean; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   remainingAdvertisements?:()=>number; canAgendaAction?:(kind:'propaganda'|'discurso'|'emenda')=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:()=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureSpendingTarget = 5;
 const signatureTarget = 2;
@@ -108,6 +108,7 @@ const decorationRequirements = {
 
 const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','trabalhoRemoto','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const activeMissionCount = 3;
+const photoPublicationKey = (id:number,channel?:string) => JSON.stringify(['photo-published',id,channel]);
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
 
 function agendaEquipmentPrice(item:ObjectKind,metrics:AgendaMetrics) {
@@ -251,7 +252,8 @@ export class PersonalAgenda {
         if (possible.size>=mission.target) return true;
         const documents = this.factsByMission.get(mission.id);
         if (documents && [...documents.values()].some(signed=>new Set([...possible,...signed]).size>=mission.target)) return true;
-      } else if (this.availableInMatch(mission.kind,mission.target-mission.current) &&
+      } else if ((this.availableInMatch(mission.kind,mission.target-mission.current) ||
+          mission.kind==='publicouSelfie' && this.canPublishSavedSelfie(metrics)) &&
           (mission.kind!=='limpeza' || metrics.hasKnownForeignSpy?.()) &&
           canCompleteMissionNow(mission.kind,metrics) &&
           (mission.kind!=='investimentoPolitico' || this.canMeetCampaignTarget(metrics,mission.target-mission.current)) && (!mission.person || targets.some(person=>person.id===mission.person?.id && this.targetAvailable(mission.kind,person.id)))) return true;
@@ -291,12 +293,19 @@ export class PersonalAgenda {
         : Math.max(0,this.playerCount-1);
       const needed = (missionTargets[kind] ?? signatureTarget)-colleagues;
       if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
-    } else if (players>humans) return false;
+    } else if (players>humans) return kind==='publicouSelfie' && !!metrics && this.canPublishSavedSelfie(metrics);
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
       return !this.cannotVote && this.ballotsLeft-Number(consumed)>=remaining;
     }
     return !this.cannotVote || !['campanhaUltimaHora','protocolo','propaganda','discurso','emenda','auditoria'].includes(kind);
+  }
+
+  private canPublishSavedSelfie(metrics:AgendaMetrics) {
+    const canMail = metrics.canPublishMail?.()!==false &&
+      metrics.wallet>=mailPublicationFee(metrics.commerce?.().policies);
+    return metrics.agendaSelfies?.().some(photo=>!this.rewardedSelfieIds.has(photo.id) &&
+      (!photo.public || canMail && !this.seenEvents.has(photoPublicationKey(photo.id,'internal-mail')))) ?? false;
   }
 
   private countFacts(mission:Mission, facts:Parameters<typeof applyFacts>[1]) {
@@ -307,7 +316,7 @@ export class PersonalAgenda {
 
   acceptGameplayEvent(event:GameplayEvent) {
     const key = event.type==='photo-published' && event.photo
-      ? JSON.stringify([event.type,event.photo.id,event.place])
+      ? photoPublicationKey(event.photo.id,event.place)
       : event.eventId!==undefined ? 'event:'+event.eventId
         : JSON.stringify([event.type,event.at,event.item,event.target,event.kind,event.place,event.photo?.id]);
     if (this.seenEvents.has(key)) return false;

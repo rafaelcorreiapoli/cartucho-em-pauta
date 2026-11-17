@@ -71,8 +71,8 @@ export class PlenaryMatch {
 
   canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
 
-  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number) {
-    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration);
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
+    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration,agendaSelfies);
   }
 
   setAgendaCommerce(now:()=>number) {
@@ -300,7 +300,7 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    if (event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    if (event.type==='photo-published' || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }
