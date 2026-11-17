@@ -1,3 +1,4 @@
+import {HudHelpButton} from './hud-help';
 import {HudIcon} from './hud-icon';
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
@@ -44,18 +45,18 @@ export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congre
         <path fill="currentColor" d="M2 16h26v3h-2v8h4v2H0v-2h4v-8H2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM68 16h26v3h-2v8h4v2H66v-2h4v-8h-2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM47 1h2v9l13 4v3h-3v10h4v2H33v-2h4V17h-3v-3l13-4zm-6 16v10h3V17zm6 0v10h3V17zm6 0v10h3V17z"/>
       </svg>
     </div>
-    <button type="button" className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      data-help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</button>
+    <HudHelpButton className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelpButton>
     <div className="congress-meter-track flex items-center">
       <Laurel/>
       <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
       <strong className="tabular-nums">{stability}</strong>
       <Laurel right/>
     </div>
-    <button type="button" className="congress-budget flex items-center justify-center"
-      data-help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
+    <HudHelpButton className="congress-budget flex items-center justify-center"
+      help={`Paga projetos e verbas de gabinete. Cada ponto de déficit custa ${stabilityRules.deficitRate} pontos de estabilidade.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{money(budget)}</strong>
-    </button>
+    </HudHelpButton>
   </section>;
 }
 
@@ -148,8 +149,8 @@ export function CharacterProfile({model}:{model:HudModel}) {
     <div className="deck-identity">
       <div className="profile-name-row">
         <strong id="hud-nick">{person?.nick}</strong>
-        {infiltrator ? <button id="profile-role" className="resource-help profile-help" type="button" aria-label="Infiltrado"
-          data-help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></button> : null}
+        {infiltrator ? <HudHelpButton id="profile-role" className="resource-help profile-help" aria-label="Infiltrado"
+          help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></HudHelpButton> : null}
         <span id="profile-level-mount"><Level state={model.profile}/></span>
       </div>
       <div className="profile-subtitle">
