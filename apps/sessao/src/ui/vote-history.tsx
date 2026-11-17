@@ -1,3 +1,4 @@
+import {formatImpact,impactTone} from './impact-value';
 import {useState} from 'react';
 import {agendaProject,deficitStabilityLoss,type Outcome} from '../plenary';
 
@@ -9,10 +10,9 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
   const recent = outcomes[latest];
   if (!outcome || !recent) return null;
   const step = (delta:number) => setSelection({count:outcomes.length,index:Math.max(0,Math.min(latest,index+delta))});
-  const signed = (value:number) => value>0 ? '+'+value : String(value);
   const threshold = `${outcome.needed} ${outcome.needed===1 ? 'voto' : 'votos'} a favor para passar`;
   const details = [
-    `Estabilidade ${signed(outcome.applied.stability)} · Orçamento ${signed(outcome.applied.budget)}`,
+    `Estabilidade ${formatImpact(outcome.applied.stability)} · Orçamento ${formatImpact(outcome.applied.budget,true)}`,
     outcome.deficit ? `Déficit: −${deficitStabilityLoss(outcome.deficit)} de estabilidade` : '',
     outcome.fraud ? 'O painel foi fraudado' : '',
   ].filter(Boolean).join(' · ');
@@ -58,7 +58,7 @@ export function VoteBrief({outcome}:{outcome:Outcome}) {
     <div className="brief-scores">
       {scores.map(({id,label,icon,value,delta})=><span key={id} title={label}>
         <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>
-        <strong id={'brief-'+id} data-effect={delta ? value>0 ? 'gain' : value<0 ? 'loss' : 'neutral' : undefined}>{delta && value>0 ? '+' : ''}{value}</strong>
+        <strong id={'brief-'+id} data-effect={delta ? impactTone(value) : undefined}>{delta ? formatImpact(value,id==='budget') : value}</strong>
       </span>)}
     </div>
   </>;

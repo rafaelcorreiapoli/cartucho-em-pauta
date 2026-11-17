@@ -314,8 +314,8 @@ button.equipped-gear-tile { cursor: pointer; }
 #brief-verdict { color: var(--party-mint); font: 730 19px/1.1 system-ui,sans-serif; }
 #project-outcome-brief[data-passed="false"] #brief-verdict { color: var(--party-coral); }
 #brief-project { color: var(--command-muted); }
-.brief-scores { display: flex; gap: 12px; }
-.brief-scores > span { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.brief-scores { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.brief-scores > span { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .brief-scores .hud-glyph { color: var(--party-gold); }
 #command-deck #legislative-dock:has(#project-outcome-brief:not([hidden])) #proposal { display: none; }
 

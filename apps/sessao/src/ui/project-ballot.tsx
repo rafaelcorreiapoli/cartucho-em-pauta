@@ -1,3 +1,5 @@
+import {formatImpact,impactTone} from './impact-value';
+import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
 import {agendaProject,bills,BALLOT_MS,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
 import {PhoneContactFace} from './phone-call';
@@ -10,22 +12,15 @@ const choices = [
 ] as const;
 
 
-function Glyph({name}:{name:string}) {
-  return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
-}
-
 function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
-  const effect = value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
-  const sign = value>0 ? '+' : value<0 ? '−' : '';
-  const amount = currency ? `R$ ${Math.round(Math.abs(value)*10)} mil` : Math.abs(value);
-  return <b className="project-impact-value" data-effect={effect}>{sign}{amount}</b>;
+  return <b className="project-impact-value" data-effect={impactTone(value)}>{formatImpact(value,currency)}</b>;
 }
 
 export function ProjectImpact({impact,approved,detail}:{impact:Impact;approved:boolean;detail?:string}) {
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
-    <strong><Glyph name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><Glyph name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
-    <span><Glyph name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
+    <strong><HudIcon name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
+    <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
+    <span><HudIcon name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
     {detail && <small>{detail}</small>}
   </div>;
 }
@@ -56,7 +51,7 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <header className="project-ballot-banner" data-project={index}>
         <div className="project-ballot-art" aria-hidden="true">
-          {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <Glyph name="wifi"/>}
+          {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
         </div>
         <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
         <ProjectImpact impact={yes} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
@@ -65,10 +60,10 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
         <ProjectImpact impact={no} approved={false}/>
       </header>
       <div className="project-ballot-timer">
-        <Glyph name="ballot"/><strong>Votação em andamento</strong>
+        <HudIcon name="ballot"/><strong>Votação em andamento</strong>
         <progress className="animated-progress" aria-label="Tempo restante" value={remaining} max={BALLOT_MS/1000}
           style={{'--meter-ratio':remaining/(BALLOT_MS/1000)} as CSSProperties}/>
-        <time><Glyph name="clock"/>{clock}</time>
+        <time><HudIcon name="clock"/>{clock}</time>
       </div>
       <div className="project-ballot-score">
         {groups.map(({key,label,badge})=><section key={key} data-choice={key} aria-label={label} className="project-ballot-group">

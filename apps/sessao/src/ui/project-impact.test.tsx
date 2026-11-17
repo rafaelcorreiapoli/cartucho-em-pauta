@@ -18,13 +18,14 @@ test('the project cards display the impacts sent by the gameserver',()=>{
   const {yes,no} = match.view(player.id,[player.id],1);
   const markup = renderToStaticMarkup(<ProjectImpact yes={yes} no={no}/>);
   expect(markup).toContain(`id="yes-stability" data-effect="gain">+${yes.stability}</strong>`);
-  expect(markup).toContain(`id="yes-budget" data-effect="loss">${yes.budget}</strong>`);
-  expect(markup).toContain(`id="no-stability" data-effect="loss">${no.stability}</strong>`);
+  expect(markup).toContain(`id="yes-budget" data-effect="loss">−R$ 280 mil</strong>`);
+  expect(markup).toContain(`id="no-stability" data-effect="loss">−14</strong>`);
 });
 
 test('zero has no sign or gain styling',()=>{
   const markup = renderToStaticMarkup(<ProjectImpact yes={{stability:0,budget:0}} no={{stability:0,budget:0}}/>);
-  expect(markup.match(/data-effect="neutral">0<\/strong>/g)).toHaveLength(4);
+  expect(markup.match(/data-effect="neutral">0<\/strong>/g)).toHaveLength(2);
+  expect(markup.match(/data-effect="neutral">R\$ 0 mil<\/strong>/g)).toHaveLength(2);
 });
 
 test('the ballot displays the catalog banner, policy details and gameserver-funded allowance',()=>{

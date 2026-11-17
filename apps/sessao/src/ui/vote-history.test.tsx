@@ -26,6 +26,8 @@ test('the history renders the latest authoritative result and enables previous p
   expect(markup).toContain('Votação 2 de 2');
   const [first,second] = getOutcomes();
   expect(renderToStaticMarkup(<VoteBrief outcome={first}/>)).toContain('id="brief-yes">1');
+  expect(renderToStaticMarkup(<VoteBrief outcome={first}/>)).toContain('id="brief-budget" data-effect="loss">−R$ 280 mil');
+  expect(markup).toContain('Estabilidade −18 · Orçamento R$ 0 mil');
   const brief = renderToStaticMarkup(<VoteBrief outcome={second}/>);
   expect(brief).toContain('Projeto rejeitado');
   expect(brief).toContain('id="brief-stability" data-effect="loss"');

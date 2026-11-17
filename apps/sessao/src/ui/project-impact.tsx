@@ -1,3 +1,4 @@
+import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import type {Impact} from '../plenary';
 
@@ -18,8 +19,8 @@ export function ProjectImpact({yes,no}:{yes:Impact;no:Impact}) {
         const value = impact[metric.key];
         return <span title={metric.label} key={metric.key}>
           <HudIcon name={metric.icon}/>
-          <strong id={key+'-'+metric.key} data-effect={value>0 ? 'gain' : value<0 ? 'loss' : 'neutral'}>
-            {value>0 ? '+'+value : value}
+          <strong id={key+'-'+metric.key} data-effect={impactTone(value)}>
+            {formatImpact(value,metric.key==='budget')}
           </strong>
           <span className="sr-only"> {metric.label.toLowerCase()}</span>
         </span>;

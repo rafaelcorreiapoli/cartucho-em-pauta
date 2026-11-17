@@ -1,3 +1,4 @@
+import {formatImpact,impactTone} from './impact-value';
 import {DialogHeader} from './dialog-header';
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { documentRules } from '../internal-mail';
@@ -10,12 +11,8 @@ import './project-picker.css';
 type Project = (typeof bills)[number];
 
 function budgetImpact(value:number) {
-  return {value:Math.min(0,value),label:value<0 ? `−${money(-value)}` : money(0)};
-}
-
-function stabilityImpact(value:number) {
-  if (value<0) return `−${-value}`;
-  return value>0 ? `+${value}` : '0';
+  const cost = Math.min(0,value);
+  return {value:cost,label:formatImpact(cost,true)};
 }
 
 function approvalBudget(bill:Project) {
@@ -36,14 +33,10 @@ function extraEffect(bill:Project) {
   }
 }
 
-function effectTone(value:number) {
-  return value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
-}
-
 function ImpactSummary({impact,budget}:{impact:Impact;budget:ReturnType<typeof budgetImpact>}) {
   return <span className="project-picker-impact">
-    <span>Orçamento <b data-effect={effectTone(budget.value)}>{budget.label}</b></span>
-    <span>Estabilidade <b data-effect={effectTone(impact.stability)}>{stabilityImpact(impact.stability)}</b></span>
+    <span>Orçamento <b data-effect={impactTone(budget.value)}>{budget.label}</b></span>
+    <span>Estabilidade <b data-effect={impactTone(impact.stability)}>{formatImpact(impact.stability)}</b></span>
   </span>;
 }
 

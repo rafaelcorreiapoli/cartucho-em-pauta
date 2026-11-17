@@ -117,6 +117,9 @@ async page => {
   const brief = page.locator('#project-outcome-brief');
   await brief.locator('#brief-project').filter({hasText:'Auxílio Churrasco'}).waitFor({state:'attached'});
   if (await brief.getAttribute('hidden')!==null) throw Error('New outcome brief was not activated');
+  await brief.locator('#brief-budget').filter({hasText:'R$ 0 mil'}).waitFor({state:'attached'});
+  const stabilityColor = await brief.locator('#brief-stability').evaluate(node=>getComputedStyle(node).color);
+  if (stabilityColor!==impactColors.loss) throw Error('Resumo da votação não preservou a cor de perda');
   await page.locator('#project-outcome-brief[hidden]').waitFor({state:'attached'});
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
