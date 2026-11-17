@@ -51,11 +51,11 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
-function InventoryShortcuts({entries,numberActions,children}:{
-  entries:readonly ShortcutEntry[];numberActions:ReadonlyMap<string,()=>void>;children:ReactNode;
+function InventoryShortcuts({entries,numberActions,children,bag}:{
+  entries:readonly ShortcutEntry[];numberActions:ReadonlyMap<string,()=>void>;children:ReactNode;bag?:boolean;
 }) {
   const panel = useDialogKeys<HTMLDivElement>(key=>numberActions.get(key),entries);
-  return <div ref={panel} className="bag-layout">{children}</div>;
+  return <div ref={panel} className={bag ? "bag-layout" : undefined}>{children}</div>;
 }
 
 export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void, submitComplaint:(proof:ComplaintProof)=>void) {
@@ -136,6 +136,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const focusHotbar = ()=>body.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus();
     if (chooseQuantity && bagOpen && canPinToHotbar(item)) entries?.push({name:'Adicionar à hotbar',activate:focusHotbar});
+    const canPin = chooseQuantity && !bagOpen && canPinToHotbar(item);
+    const pinned = canPin && hotbar.includes(item.id);
+    const updateHotbar = (slots:typeof hotbar) => {
+      hotbar = slots;
+      highlightSlot();
+      renderKey = '';
+      render();
+    };
+    const removeShortcut = ()=>updateHotbar(hotbar.map(id=>id===item.id ? undefined : id));
+    if (pinned) entries?.push({name:'Remover atalho',activate:removeShortcut});
     let shortcut = 0;
     return <article className="object-card" key={item.id}>
       <div className={isBag ? "bag-item-info" : "object-card-content"}>
@@ -175,12 +185,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </button>}
         {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
-          {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
-            disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
-            aria-keyshortcuts={canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
-            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}><kbd aria-hidden="true">⇧ {index+1}</kbd></button>)}
-          {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
-            onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
+          {hotbar.map((id,index)=>{
+            const label = `Vincular ao slot ${index+1}`;
+            const key = `Shift+${index+1}`;
+            const assign = ()=>updateHotbar(assignHotbarSlot(hotbar,index,item.id));
+            if (canPin) {
+              entries?.push({name:label,activate:assign});
+              shortcuts?.numberActions?.set(key,assign);
+            }
+            return <button key={index} type="button" className="hud-button hud-button--secondary"
+              disabled={!canPin} aria-label={label} aria-pressed={id===item.id}
+              aria-keyshortcuts={canPin ? key : undefined} onClick={assign}><kbd aria-hidden="true">⇧ {index+1}</kbd></button>;
+          })}
+          {pinned && <button type="button" className="hud-button hud-button--secondary"
+            onClick={removeShortcut}>Remover atalho</button>}
         </div>}
         {controls.map(({label,run,disabled})=>{
           const key = !disabled && shortcut<9 ? String(++shortcut) : undefined;
@@ -293,10 +311,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const previouslyFocused = document.activeElement;
     const focused = body.contains(previouslyFocused);
     let content:ReactNode;
-    const inventoryShortcuts = bagOpen ? {
+    const inventoryShortcuts = {
       entries:[{name:'Fechar',activate:()=>dialog.close()}] as ShortcutEntry[],
       numberActions:new Map<string,()=>void>(),
-    } : undefined;
+    };
     if (stash) {
       content = <OfficeStash stash={stash} inventory={state.inventory} send={send} close={()=>dialog.close()}/>;
     }
@@ -315,9 +333,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           render();
         }
       };
-      const entries = inventoryShortcuts!.entries;
+      const entries = inventoryShortcuts.entries;
       for (const filter of bagFilters) entries.push({name:filter,activate:()=>chooseFilter(filter)});
-      return <InventoryShortcuts {...inventoryShortcuts!}>
+      return <InventoryShortcuts {...inventoryShortcuts} bag>
         <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
           {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
             onClick={()=>chooseFilter(filter)}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
@@ -407,7 +425,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
       }
       const detail = objectCard(item,actions,selection?.source==='inventory',inventoryShortcuts);
-      content = bagOpen ? renderBag(detail) : detail;
+      content = bagOpen ? renderBag(detail) : <InventoryShortcuts {...inventoryShortcuts}>{detail}</InventoryShortcuts>;
     }
     if (decoration) {
       content = <DecorationCard decoration={decoration} ownId={ownId}

@@ -130,6 +130,27 @@ async page => {
     await npcDeal.waitFor({state:'hidden'});
   }
   await page.locator('#agenda-dock [data-done="true"]').getByText(signatureMission,{exact:true}).waitFor();
+  await page.keyboard.press('o');
+  const objectDialog = page.locator('#gameplay-dialog');
+  await objectDialog.getByRole('button',{name:/Estatuto da Fila Preferencial/}).click();
+  await page.keyboard.press('Shift+Digit1');
+  await page.keyboard.press('Escape');
+  await objectDialog.waitFor({state:'hidden'});
+  await page.keyboard.press('Shift+Digit1');
+  await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor();
+  await runShortcut(objectDialog.locator('summary'),/^Inspecionar$/);
+  await objectDialog.locator('details[open]').getByText(/Assinaturas 2\//).waitFor();
+  await page.keyboard.press('Shift+Digit2');
+  await objectDialog.getByRole('button',{name:'Vincular ao slot 2',pressed:true}).waitFor();
+  const drop = objectDialog.getByRole('button',{name:'Largar no chão',exact:true});
+  const dropKey = await drop.getAttribute('aria-keyshortcuts');
+  await drop.evaluate(button=>{
+    button.removeAttribute('aria-keyshortcuts');
+    button.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();},true);
+  });
+  await page.keyboard.press(dropKey);
+  await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor({state:'hidden'});
+
   await page.reload();
   const guest = await page.context().newPage();
   try {
@@ -251,5 +272,5 @@ async page => {
   await finale.waitFor({state:'hidden'});
   await page.locator('#session[data-phase="finished"]').waitFor();
   return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,
-    staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true};
+    staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true,hotbarDocumentInspectedAndDroppedByKeyboard:true};
 }
