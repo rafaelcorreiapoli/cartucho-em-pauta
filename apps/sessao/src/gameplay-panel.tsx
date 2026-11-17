@@ -11,6 +11,8 @@ import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import type { ReactNode } from 'react';
+import type {ShortcutEntry} from './action-shortcuts';
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
@@ -47,6 +49,13 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 }
 
 import type { SpyOption } from "./surveillance";
+
+function InventoryShortcuts({entries,numberActions,children}:{
+  entries:readonly ShortcutEntry[];numberActions:ReadonlyMap<string,()=>void>;children:ReactNode;
+}) {
+  const panel = useDialogKeys<HTMLDivElement>(key=>numberActions.get(key),entries);
+  return <div ref={panel} className="bag-layout">{children}</div>;
+}
 
 export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void, submitComplaint:(proof:ComplaintProof)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
@@ -99,7 +108,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let recipient = '';
   let quantity = 1;
 
-  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false) {
+  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false,
+    shortcuts?:{entries:ShortcutEntry[];numberActions:Map<string,()=>void>}) {
     const definition = objects[item.kind];
     const doc = item.document;
     const cash = cashAmount(item);
@@ -110,6 +120,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const rank = (action:ObjectAction) => action.label==='Equipar' || action.label===useLabel ? 0 : action.label==='Largar no chão' ? 1 : 2;
       return rank(first)-rank(second);
     }) : actions;
+    let detail:HTMLDetailsElement|null = null;
+    let recipientSelect:HTMLSelectElement|null = null;
+    const entries = shortcuts?.entries;
+    const detailLabel = isBag ? 'Mais detalhes' : 'Inspecionar';
+    entries?.push({name:detailLabel,activate:()=>{if (detail) detail.open = !detail.open;}});
+    if (chooseQuantity && previous?.gameplay?.contacts.length) {
+      entries?.push({name:'Selecionar jogador',activate:()=>recipientSelect?.focus()});
+    }
+    if (chooseQuantity && itemQuantity(item)>1) {
+      if (selectedItemQuantity(item,quantity)>1) entries?.push({name:'Diminuir quantidade',activate:()=>changeQuantity(item,-1)});
+      if (selectedItemQuantity(item,quantity)<itemQuantity(item)) entries?.push({name:'Aumentar quantidade',activate:()=>changeQuantity(item,1)});
+    }
+    const focusHotbar = ()=>body.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus();
+    if (chooseQuantity && bagOpen && canPinToHotbar(item)) entries?.push({name:'Adicionar à hotbar',activate:focusHotbar});
     let shortcut = 0;
     return <article className="object-card" key={item.id}>
       <div className={isBag ? "bag-item-info" : "object-card-content"}>
@@ -118,7 +142,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
           <p className="bag-description">{doc?.description ?? definition.description}</p>
         </>}
-        <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
+        <details ref={node=>{detail=node;}}><summary>{detailLabel}</summary>
           {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
           {doc && <>
             <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
@@ -129,7 +153,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           {!!cash && <p>{money(cash)}</p>}
         </details>
         {chooseQuantity && !!previous?.gameplay?.contacts.length && <label className={isBag ? 'bag-recipient' : 'object-recipient'}>Jogador
-          <select value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
+          <select ref={node=>{recipientSelect=node;}} value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
             <option value="">Escolha…</option>
             {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
           </select>
@@ -144,7 +168,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
         {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
-          disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
+          disabled={!canPinToHotbar(item)} onClick={focusHotbar}>
           <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
         {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
@@ -158,6 +182,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </div>}
         {controls.map(({label,run,disabled})=>{
           const key = !disabled && shortcut<9 ? String(++shortcut) : undefined;
+          if (!disabled) entries?.push({name:label,activate:run});
+          if (key) shortcuts?.numberActions.set(key,run);
           return <button type="button" key={label} className="hud-button hud-button--secondary"
             aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
         })}
@@ -265,6 +291,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const previouslyFocused = document.activeElement;
     const focused = body.contains(previouslyFocused);
     let content:ReactNode;
+    const inventoryShortcuts = bagOpen ? {
+      entries:[{name:'Fechar',activate:()=>dialog.close()}] as ShortcutEntry[],
+      numberActions:new Map<string,()=>void>(),
+    } : undefined;
     if (stash) {
       content = <OfficeStash stash={stash} inventory={state.inventory} send={send}/>;
     }
@@ -272,28 +302,33 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const inventory = state!.inventory;
       const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
         (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
-      return <div className="bag-layout">
+      const chooseFilter = (filter:typeof bagFilter)=>{bagFilter = filter;selection = undefined;render();};
+      const chooseItem = (entry:WorldItem)=>{
+        if (assigningSlot!==undefined) {
+          hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
+          dialog.close();
+        } else {
+          selection = {id:entry.id,source:'inventory'};
+          quantity = 1;
+          render();
+        }
+      };
+      const entries = inventoryShortcuts!.entries;
+      for (const filter of bagFilters) entries.push({name:filter,activate:()=>chooseFilter(filter)});
+      return <InventoryShortcuts {...inventoryShortcuts!}>
         <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
           {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
-            onClick={()=>{bagFilter = filter;selection = undefined;render();}}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
+            onClick={()=>chooseFilter(filter)}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
         </div>
         <div className="bag-storage">
           <div className="congress-bag">
             {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
               const entry = filtered[index];
+              const disabled = !!(entry && assigningSlot!==undefined && !canPinToHotbar(entry));
+              if (entry && !disabled) entries.push({name:itemName(entry),activate:()=>chooseItem(entry)});
               return entry ? <button key={entry.id} type="button" className="item-tile" title={itemName(entry)}
                 aria-label={itemName(entry)} aria-pressed={selection?.id===entry.id}
-                disabled={assigningSlot!==undefined && !canPinToHotbar(entry)}
-                onClick={()=>{
-                  if (assigningSlot!==undefined) {
-                    hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
-                    dialog.close();
-                  } else {
-                    selection = {id:entry.id,source:'inventory'};
-                    quantity = 1;
-                    render();
-                  }
-                }}>
+                disabled={disabled} onClick={()=>chooseItem(entry)}>
                 <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
                 {itemQuantity(entry)>1 && <span className="slot-count">×{itemQuantity(entry)}</span>}
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
@@ -307,23 +342,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <div className="bag-preview-slots">
             {hotbar.map((id,index)=>{
               const pinned = inventory.find(entry=>entry.id===id);
+              const pin = ()=>{if (item) pinBagItem(item,index);};
+              const canPin = !!item && canPinToHotbar(item);
+              const label = `Vincular ao slot ${index+1}`;
+              if (canPin) entries.push({name:label,activate:pin});
               return <button type="button" key={index} className="item-tile"
-                disabled={!item || !canPinToHotbar(item)} aria-pressed={!!item && item.id===id}
-                aria-label={`Vincular ao slot ${index+1}`} aria-keyshortcuts={item && canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
-                onClick={()=>{
-                  if (!item) return;
-                  hotbar = id===item.id ? hotbar.map((entry,slot)=>slot===index ? undefined : entry) : assignHotbarSlot(hotbar,index,item.id);
-                  highlightSlot();
-                  renderKey = '';
-                  render();
-                }}>
+                disabled={!canPin} aria-pressed={!!item && item.id===id}
+                aria-label={label} aria-keyshortcuts={canPin ? `Shift+${index+1}` : undefined} onClick={pin}>
                 <kbd className="slot-key" aria-hidden="true">⇧ {index+1}</kbd>
                 {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
               </button>;
             })}
           </div>
         </footer>
-      </div>;
+      </InventoryShortcuts>;
     }
     if (bagOpen && !item) {
       content = renderBag();
@@ -387,7 +419,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
         }
       }
-      const detail = objectCard(item,actions,selection?.source==='inventory');
+      const detail = objectCard(item,actions,selection?.source==='inventory',inventoryShortcuts);
       content = bagOpen ? renderBag(detail) : detail;
     }
     if (decoration) {
@@ -463,6 +495,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }));
   }
 
+  function pinBagItem(item:WorldItem,index:number) {
+    if (!canPinToHotbar(item)) return;
+    hotbar = hotbar[index]===item.id ? hotbar.map((id,slot)=>slot===index ? undefined : id) : assignHotbarSlot(hotbar,index,item.id);
+    highlightSlot();
+    renderKey = '';
+    render();
+  }
+
   const onSlotKey = (event:KeyboardEvent) => {
     if (event.isComposing) return;
     if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
@@ -472,6 +512,16 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (item && itemQuantity(item)>1) {
         event.preventDefault();
         changeQuantity(item,event.key==='ArrowLeft' ? -1 : 1);
+        return;
+      }
+    }
+    if (bagOpen && dialog.matches('dialog:modal') && dialog.contains(document.activeElement) && selection?.source==='inventory' &&
+        event.shiftKey && !event.defaultPrevented && !event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey &&
+        !isEditingText(event.target) && /^Digit[1-6]$/.test(event.code)) {
+      const item = inventoryItems.find(entry=>entry.id===selection?.id);
+      if (item && canPinToHotbar(item)) {
+        event.preventDefault();
+        pinBagItem(item,Number(event.code.at(-1))-1);
         return;
       }
     }

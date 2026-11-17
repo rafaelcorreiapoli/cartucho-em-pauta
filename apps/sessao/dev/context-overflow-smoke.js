@@ -99,7 +99,10 @@ async page => {
   const bagGeometry = ()=>Promise.all([bag.boundingBox(),bag.locator('.bag-detail').boundingBox(),
     bag.locator('.bag-preview').boundingBox()]);
   const emptyGeometry = JSON.stringify(await bagGeometry());
-  await bagCoffee.click();
+  await bagCoffee.evaluate(button=>button.setAttribute('aria-label','Retrato original alterado'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Café',exact:true}).click();
+  await bag.getByRole('button',{name:'Retrato original alterado',pressed:true}).evaluate(button=>button.setAttribute('aria-label','Café'));
   const themedSelection = await page.locator('.bag-storage .item-tile[aria-pressed="true"]').evaluate(button=>{
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--hud-item-selection');
@@ -126,7 +129,8 @@ async page => {
     }
   });
   if (!themedDetails) throw Error('Detalhe e ação principal não seguem o tema compartilhado');
-  if (JSON.stringify(await bagGeometry())!==emptyGeometry) throw Error('Seleção moveu o layout do inventário');
+  const selectedGeometry = JSON.stringify(await bagGeometry());
+  if (selectedGeometry!==emptyGeometry) throw Error(`Seleção moveu o layout do inventário: ${emptyGeometry} → ${selectedGeometry}`);
   const drop = bag.getByRole('button',{name:'Largar no chão',exact:true});
   await drop.waitFor();
   const actions = await bag.locator('.bag-item-actions').boundingBox();
@@ -134,7 +138,9 @@ async page => {
   if (!actions || !dropBounds || dropBounds.y+dropBounds.height>actions.y+actions.height) {
     throw Error('Largar no chão ficou fora da área visível do inventário');
   }
-  await drop.click();
+  await drop.evaluate(button=>button.setAttribute('aria-label','Ação original alterada'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Largar no chão',exact:true}).click();
   await bagCoffee.waitFor({state:'hidden'});
   await bag.getByRole('button',{name:'Pinga ×3',exact:true}).click();
   const quantity = bag.getByLabel('Quantidade selecionada');
@@ -142,8 +148,12 @@ async page => {
   await bag.getByRole('button',{name:'Aumentar quantidade'}).evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
   await page.keyboard.press('ArrowRight');
   await quantity.filter({hasText:'2 / 3'}).waitFor();
+  await bag.getByRole('button',{name:'Vincular ao slot 1'}).evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
   await page.keyboard.press('Shift+1');
-  await drop.click();
+  await bag.getByRole('button',{name:'Vincular ao slot 1',pressed:true}).waitFor();
+  const dropKey = await drop.getAttribute('aria-keyshortcuts');
+  await drop.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press(dropKey);
   await bag.getByRole('button',{name:'Pinga',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await bag.waitFor({state:'hidden'});
