@@ -23,6 +23,7 @@ async page => {
   if (await plan.getByRole('img').count()!==1) throw Error('A planta deve mostrar apenas o seu marcador.');
   const position = await marker.getAttribute('style');
   if (!position?.includes('left:') || !position.includes('top:')) throw Error('Marcador sem coordenadas.');
+  await page.screenshot({path:'/tmp/sessao-exploration-map.png'});
   await page.keyboard.up('Tab');
   await plan.waitFor({state:'hidden'});
   await page.keyboard.down('Tab');
