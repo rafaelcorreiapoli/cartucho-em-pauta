@@ -1829,10 +1829,14 @@ test.each([false,true])('Pix missions and recipients reflect cassation with prio
   Reflect.set(agenda,'missionDeck',['doisPix','pixVinte','cafe','passeio','selfieSolo']);
   match.refreshAgendaEligibility();
   const view = (now:number)=>match.view(host.id,ids,now);
+  const phone = (player:Player,now:number)=>renderToStaticMarkup(
+    <PhonePix politics={match.view(player.id,ids,now).politics!} ownId={player.id} send={()=>{}}/>
+  );
   const render = (now:number)=>renderToStaticMarkup(<ul>
     {view(now).politics!.missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}
   </ul>);
   expect(render(1)).toContain('Receba Pix de dois jogadores distintos');
+  expect(phone(host,1)).toContain(candidate.nick);
   const receive = (from:Player,now:number)=>match.politics(from,{kind:'transfer',to:host.id,amount:1},players,now);
   if (priorCredit) {
     expect(receive(candidate,2)).toBe(true);
@@ -1842,14 +1846,19 @@ test.each([false,true])('Pix missions and recipients reflect cassation with prio
   match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);
+  expect(phone(host,open)).toContain('Nenhum destinatário disponível.');
+  const beforeHearingTransfer = match.view(remaining.id,ids,open).politics!.paymentsLeft;
+  expect(receive(remaining,open)).toBe(false);
+  expect(match.view(remaining.id,ids,open).politics!.paymentsLeft).toBe(beforeHearingTransfer);
   match.castCassation(host.id,candidate.id,open);
   match.castCassation(remaining.id,candidate.id,open);
   const close = open+HEARING_MS;
   match.advance(close);
   expect(view(close).cassationResult?.text).toContain(candidate.nick+' perdeu o mandato');
-  const phone = renderToStaticMarkup(<PhonePix politics={view(close).politics!} ownId={host.id} send={()=>{}}/>);
-  expect(phone).not.toContain(candidate.nick);
-  expect(phone).toContain(remaining.nick);
+  expect(phone(host,close)).not.toContain(candidate.nick);
+  expect(phone(host,close)).toContain(remaining.nick);
+  expect(phone(candidate,close)).toContain('Nenhum destinatário disponível.');
+  expect(receive(candidate,close)).toBe(false);
   if (priorCredit) {
     expect(render(close)).toContain('1 / 2');
     const before = view(close).politics!.progression.xp;

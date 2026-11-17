@@ -554,6 +554,10 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.disconnected.has(id) && !this.isolated(id);
   }
 
+  private canSendPix(id:string, now:number) {
+    return this.canReceivePix(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+  }
+
   contacts(player:Player, players:Player[]): Contact[] {
     return this.phase==='negotiation' || this.phase==='ballot' ? players.filter(other => this.nearby(player,other))
       .map(({id}) => ({id,name:this.economy.name(id)})) : [];
@@ -561,7 +565,11 @@ export class PlenaryMatch {
 
   politics(player:Player, action:PoliticsAction, players:Player[], now:number) {
     const {id} = player;
-    const privateDeal = action.kind==='transfer' || action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
+    if (action.kind==='transfer') {
+      return this.canSendPix(id,now) && this.canReceivePix(action.to) &&
+        this.economy.transfer(id,action.to,action.amount,true,this.round,'pix');
+    }
+    const privateDeal = action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
     if ((this.phase!=='negotiation' && !(this.phase==='ballot' && privateDeal)) ||
       now>=this.ends || !this.electorate.has(id) || this.isolated(id)) return;
     const near = (target:string) => players.some(other => other.id===target && this.nearby(player,other));
@@ -577,8 +585,6 @@ export class PlenaryMatch {
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
         break;
       }
-      case 'transfer':
-        return this.canReceivePix(action.to) && this.economy.transfer(id,action.to,action.amount,true,this.round,'pix');
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
         break;
@@ -975,7 +981,7 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient)) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
