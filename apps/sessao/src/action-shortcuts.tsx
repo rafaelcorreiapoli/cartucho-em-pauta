@@ -101,6 +101,10 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       return;
     }
     if (active) {
+      if (active.id==='dossier-dialog' && !event.shiftKey && event.key.toLowerCase()==='j' && shortcuts.j()) {
+        event.preventDefault();
+        return;
+      }
       if (active===palette && (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
         event.preventDefault();
         page += event.key==='ArrowLeft' ? -1 : 1;

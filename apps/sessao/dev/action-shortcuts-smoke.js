@@ -84,7 +84,7 @@ async page => {
   await page.keyboard.press(key);
   await palette.waitFor({state:'hidden'});
   await attributes.waitFor({state:'hidden'});
-  const dossier = page.locator('#dossier-content');
+  const dossier = page.getByRole('dialog',{name:'Dossiê'});
   for (const viewport of [{width:1280,height:720},{width:1024,height:600},{width:800,height:600}]) {
     await page.setViewportSize(viewport);
     await page.keyboard.press('j');
@@ -93,7 +93,7 @@ async page => {
     if (!panel || panel.x<0 || panel.y<0 || panel.x+panel.width>viewport.width || panel.y+panel.height>viewport.height) {
       throw Error('Dossiê fora do viewport: '+JSON.stringify({viewport,panel}));
     }
-    if (await page.locator('#social-docks > details > summary:visible').count()) throw Error('Acionador legado do Dossiê visível');
+    if (await page.locator('#social-docks, #politics-dock, #institutional-dock').count()) throw Error('Acionador legado do Dossiê visível');
     if (viewport.width===1024) await page.keyboard.press('j');
     else await dossier.getByRole('button',{name:'Fechar dossiê'}).click();
     await dossier.waitFor({state:'hidden'});

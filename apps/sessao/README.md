@@ -133,6 +133,13 @@ netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist
 
 O deploy do Netlify é uma prévia. A variável `SESSAO_PREVIEW_SOLO=1` habilita partidas com um humano nessa prévia. Deixe a variável desativada em ambientes que exigem seis humanos. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
 
+## Teste dos modais legislativos no Chrome
+
+Execute `SESSAO_LOCAL_SOLO=1 bun dev/legislative-modals-smoke-server.ts` e
+`VITE_GAME_SERVER=http://127.0.0.1:26874 bun run dev --port 5194` em processos separados.
+Abra o cliente no Playwright CLI com `dev/private-call-chrome.json` e execute
+`run-code --filename=dev/legislative-modals-smoke.js`.
+
 ## Teste da loja no Chrome
 
 Com `SESSAO_LOCAL_SOLO=1 bun dev/market-smoke-server.ts`, o jogador de teste começa no Apoio Técnico.

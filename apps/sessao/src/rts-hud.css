@@ -355,7 +355,7 @@ button.equipped-gear-tile { cursor: pointer; }
   pointer-events: none;
 }
 .deck-tool-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
-#command-deck :is(#social-docks,#voice-dock) {
+#command-deck #voice-dock {
   position: static;
   display: flex;
   align-items: center;
@@ -369,7 +369,6 @@ button.equipped-gear-tile { cursor: pointer; }
   gap: 4px;
 }
 #command-deck #voice-host { position: relative; display: flex; padding-left: 4px; border-left: 1px solid var(--command-divider); }
-#command-deck #social-docks { width: auto; }
 #command-deck #voice-dock { flex-wrap: nowrap; }
 #command-deck :is(#voice-dock button,#voice-dock summary) {
   display: flex;
@@ -402,7 +401,6 @@ button.equipped-gear-tile { cursor: pointer; }
   border-radius: 6px;
   background: #203a30;
 }
-#command-deck #social-docks .politics-content { inset: auto 0 calc(100% + 8px) auto; }
 
 #world #stations {
   padding: 6px 14px 10px;
