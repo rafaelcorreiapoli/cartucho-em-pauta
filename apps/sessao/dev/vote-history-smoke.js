@@ -206,6 +206,7 @@ async page => {
           allVisible:cards.every(card=>card.width>0 && card.left>=bounds.left && card.right<=bounds.right+1),
           noOverflow:list.scrollWidth<=list.clientWidth+1 && list.scrollHeight<=list.clientHeight+1,
           ellipsis:labels.some(label=>label.scrollWidth>label.clientWidth && getComputedStyle(label).textOverflow==='ellipsis'),
+          panelHeight:Math.round(panelBounds.height),
           compact:panelBounds.height<(innerWidth>=800 ? 220 : innerHeight*.65),
           sideBySide:project.right<=score.left && Math.abs(project.top-score.top)<1 && buttons.every(button=>button.left>=score.left),
           controlsVisible:buttons.length===3 && buttons.every(button=>button.top>=0 && button.bottom<=innerHeight),
