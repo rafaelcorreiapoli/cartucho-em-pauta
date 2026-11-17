@@ -30,11 +30,11 @@ export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;bud
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
+type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'|'botMessages'> & {
   ownId:string; eligible:boolean; onExpansion?:(expanded:boolean)=>void; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,botMessages,ownId,eligible,cast,onExpansion}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -104,6 +104,9 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
         <span data-choice="pending">Pendentes <strong>{count(undefined)}</strong></span>
         <span>Total <strong>{billVoters.length}</strong></span><span>{billQuorum} para aprovar</span>
       </div>
+      {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
+        {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
+      </ul> : null}
       <footer className="project-ballot-footer">
         <div className="project-ballot-self">{self && <PhoneContactFace person={self}/>}
           <div>Seu voto<strong role="status">{vote ? vote==='abstain'?'Abstenção':vote==='yes'?'SIM':'NÃO' : eligible?'Aguardando…':'Sem direito a voto'}</strong></div>
