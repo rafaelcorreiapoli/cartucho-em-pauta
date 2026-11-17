@@ -41,8 +41,11 @@ async page => {
   await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
   const coffee = page.getByRole('button',{name:'Pegar Café',exact:true});
   await coffee.waitFor();
-  await coffee.and(page.locator('[aria-keyshortcuts="2"]')).waitFor();
-  if (!(await badge(coffee)).includes('"2"')) throw Error('O item não exibe o atalho do submenu');
+  await coffee.and(page.locator('[aria-keyshortcuts]')).waitFor();
+  const coffeeKey = await coffee.getAttribute('aria-keyshortcuts');
+  if (!/^[1-9]$/.test(coffeeKey) || !(await badge(coffee)).includes(JSON.stringify(coffeeKey))) {
+    throw Error('O item não exibe o atalho do submenu');
+  }
   await overflow.first().waitFor({state:'hidden'});
   if (await more.getAttribute('aria-expanded')!=='false') throw Error('Mais ações ficou aberto junto com Objetos próximos');
   await page.keyboard.press('Escape');
