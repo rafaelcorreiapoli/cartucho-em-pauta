@@ -14,6 +14,16 @@ Em outro terminal, execute `bun run dev` e abra http://localhost:5175. Crie uma 
 Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram feitas de frente, perfil e costas, com duas poses de passada para cada direção, e empacotadas em quadros de 128×128. O perfil é espelhado no jogo para a quarta direção. O mapa usa um atlas de móveis próprio, pisos e paredes montados no Phaser.
 
 
+## Editar a planta no Tiled
+
+Abra [congresso.json](src/congresso.json) com **File → Open** no [Tiled](https://www.mapeditor.org/). O jogo lê esse arquivo diretamente. Salve com **File → Save**, aguarde o servidor de desenvolvimento reiniciar e recrie a sala para carregar a planta nova.
+
+- **Salas**, **Pisos e corredores** e **Detalhes do piso** definem as áreas, cores, padrões de ladrilho e tapetes.
+- **Paredes** contém retângulos inteiros. O jogo recorta as aberturas usando os retângulos de **Portas** e usa o resultado no desenho, na planta do Tab, na colisão e na linha de visão. Para mover uma porta, selecione o objeto nessa camada e mantenha-o alinhado dentro de uma parede, com a mesma espessura. As paredes aparecem inteiras no Tiled.
+- **Mesas**, **Móveis** e **Pontos** posicionam os objetos e as referências usadas no jogo, como o terminal de segurança, os assentos e os cofres. Preserve os nomes dos pontos e das portas que o jogo usa para identificar esses objetos. Estações de serviço, câmeras e rotas de NPCs ainda têm coordenadas no código.
+
+Para experimentar, selecione **Plenário 2** na camada **Portas**, troque **X** de `500` para `410` e salve. Em uma nova partida, a passagem fica centrada em `x=440` e o trecho em `x=530` vira parede. Use Tab para conferir a abertura na planta.
+
 ## Jogar uma sessão
 
 O lobby mostra quem entrou e permite escolher uma caricatura antes de começar.

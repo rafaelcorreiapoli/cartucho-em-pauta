@@ -1,9 +1,10 @@
+import { mapDoor, mapPoint, roomBounds } from './congress-layout';
 import type { Office } from './elections';
 import type { ObjectKind } from './gameplay';
 import type { Agenda, EvidenceKind } from './politics';
 
 export const snackBar = {
-  name:'Lanchonete', bounds:[824,270,126,122], door:[853,259,44,11],
+  name:'Lanchonete', bounds:roomBounds('Lanchonete'), door:mapDoor('Lanchonete'),
 } as const;
 
 export const npcs = {
@@ -16,11 +17,9 @@ export const npcs = {
     counter:{x:864,y:329},interactionRadius:36,interaction:{x:886,y:356},dialogue:'snacks',label:snackBar.name,catalog:'food'},
 } as const;
 
-export const treasuryLayout = {bounds:[326,403,132,127],divider:[458,403,10,127],luxuryDoor:[486,392,40,11]} as const;
-
 export const treasurer = {
   name:'Eduardo Cunha', sprite:'eduardo-cunha-tesoureiro.webp', x:403, y:446, direction:0,
-  counter:{x:380,y:456}, interaction:{x:403,y:486}, label:'Tesouraria',
+  counter:mapPoint('Balcão da tesouraria'), interaction:{x:403,y:486}, label:'Tesouraria',
 } as const;
 
 export const mapNpcs = {...npcs,treasurer};

@@ -1,9 +1,10 @@
+import { mapDoor, roomBounds } from './congress-layout';
 export const infirmary = {
   x:913,y:486,
-  door:[806,468,6,35],
+  door:mapDoor('Enfermaria'),
   doctor:{name:'Drauzio Varella',x:928,y:475},
   name:'Enfermaria',
-  bounds:[812,403,138,127],
+  bounds:roomBounds('Enfermaria'),
   price:1,
   healing:35,
 } as const;
