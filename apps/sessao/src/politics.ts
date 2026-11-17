@@ -15,6 +15,7 @@ export const AGENDA_REWARD = 2;
 export const AGENDA_TRANSFER_MIN = 3;
 export const TARGET_TRANSFER_AMOUNT = 1;
 export const CAMPAIGN_SPENDING_TARGET = 5;
+export const CRISIS_MISSION_STABILITY_LIMIT = 30;
 export const NEW_PORTRAIT_MS = 60_000;
 export const CASH_HANDOVER_MISSION_AMOUNT = 2;
 export const SAVINGS_MISSION_AMOUNT = 10;
@@ -127,7 +128,7 @@ export const agendas = {
   reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros três jogadores`,
   tresSelfies:'Tire selfies em três salas públicas diferentes',
   plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
-  heroiInesperado:'Ajude a resolver uma crise com Estabilidade abaixo de 30',
+  heroiInesperado:`Ajude a resolver uma crise com Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`,
   varredura:'Encontre um dispositivo clandestino com o Detector de Escutas',
   limpeza:'Remova um dispositivo clandestino descoberto',
   fiscalizacaoParalela:'Revele o saldo do cofre de outro parlamentar com o Raio X',

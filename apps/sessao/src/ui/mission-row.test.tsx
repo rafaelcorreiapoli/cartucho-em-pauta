@@ -13,7 +13,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -936,4 +936,12 @@ test('Presença Parlamentar shows the full visit objective and completion check'
   expect(active).not.toContain('data-done="true"');
   const completed = renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>);
   expect(completed).toContain('data-done="true"');
+});
+
+test('the crisis and urgent call instructions use the same limits as the gameserver',()=>{
+  const call = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'chamadasUrgentes',current:1,target:2}}/>);
+  expect(call).toContain(`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`);
+  expect(call).toContain('1 / 2');
+  const crisis = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'heroiInesperado',current:0,target:1}}/>);
+  expect(crisis).toContain(`Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`);
 });

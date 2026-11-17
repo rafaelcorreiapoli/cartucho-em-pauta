@@ -11,7 +11,7 @@ import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
-import { HEARING_MS } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS } from '../src/politics';
 
 import { BALLOT_MS, policyDuration, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
@@ -1193,4 +1193,37 @@ test('successive shop and mail policies keep their own deadlines and public cost
   expect(match.gameplayWorld(people,first+policyDuration,()=>false).policies).toEqual({mail:second+policyDuration});
   expect(view(second+policyDuration).policies).toEqual({});
   expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('Herói Inesperado requires an active crisis below the shared stability threshold',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const account = Reflect.get(economy,'accounts').get(honest.id);
+  account.canFightCrisis = ()=>match.canFightCrisis();
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['heroiInesperado']);
+  const now = fireRules.firstAfter;
+  const view = ()=>match.view(honest.id,ids,now);
+  const active = ()=>view().politics!.missions.active.some(mission=>mission.kind==='heroiInesperado');
+
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(false);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT);
+  match.advance(now);
+  const site = view().fire!.site;
+  expect(site).toBeDefined();
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(false);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(true);
+
+  const player = {...honest,...fireSites[site]};
+  const before = view().politics!.progression.xp;
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
+  expect(view().politics!.missions.completed.some(mission=>mission.kind==='heroiInesperado')).toBe(true);
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
+  expect(view().politics!.progression.xp).toBe(before+55);
 });
