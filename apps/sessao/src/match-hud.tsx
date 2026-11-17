@@ -1,4 +1,5 @@
 import {mountRewardEffects} from './ui/reward-effects';
+import {ContextOverflow} from './ui/context-overflow';
 import {contextActionKeys} from './ui/context-action-keys';
 import {mountStationShortcuts} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
@@ -16,7 +17,6 @@ import { canReachDownedPlayer, doorDestination } from './interactions';
 import { infirmary } from './medical';
 import { decorationActions } from './installations';
 import { npcs } from './npcs';
-import { button as hudButton, glyph as hudGlyph, node } from './gameplay-ui';
 import { hudConsumesKeys } from './game-keys';
 import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
@@ -168,30 +168,31 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
   const legislative = mountLegislativeStationActions(element('legislative-station-actions'),sendLegislative);
   const electoral = mountElectionStationActions(element('station-election-actions'),election.send);
-  const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button')];
-  const more = hudButton('Mais ações',()=>{
-    const expanded = more.getAttribute('aria-expanded')!=='true';
-    if (expanded && nearby.expanded()) nearby.close();
-    more.setAttribute('aria-expanded',String(expanded));
+  const overflowHost = element('context-overflow');
+  const overflowRoot = createRoot(overflowHost);
+  let overflowExpanded = false;
+  let overflowKey = '';
+  const actionButtons = () => [...stations.querySelectorAll<HTMLButtonElement>('.station-actions button:not(.context-more)')];
+  function toggleOverflow() {
+    overflowExpanded = !overflowExpanded;
+    if (overflowExpanded) nearby.close();
     refreshActionKeys();
-  });
-  more.classList.add('hud-button','context-more');
-  more.setAttribute('aria-expanded','false');
-  const overflowBreak = node('span');
-  overflowBreak.className = 'context-overflow-break';
-  overflowBreak.setAttribute('aria-hidden','true');
-  overflowBreak.hidden = true;
-  stations.querySelector('.station-actions')!.append(overflowBreak,more);
+  }
   const unavailable = '[hidden]:not(#stations), [data-context-hidden="true"]';
   function refreshActionKeys() {
     const buttons = actionButtons();
-    const model = contextActionKeys(buttons.map(button=>({
-      kind:button===more ? 'more' : button.id==='nearby-objects' ? 'nearby' : button.closest('#nearby-items') ? 'item' : 'action',
+    const controls = buttons.map(button=>({
+      kind:button.id==='nearby-objects' ? 'nearby' as const : button.closest('#nearby-items') ? 'item' as const : 'action' as const,
       visible:!button.closest(unavailable),enabled:!button.disabled,
-    })),more.getAttribute('aria-expanded')==='true',nearby.expanded());
-    more.hidden = !model.hasMore;
-    overflowBreak.hidden = !model.showOverflow;
-    if (!model.hasMore) more.setAttribute('aria-expanded','false');
+    }));
+    const model = contextActionKeys([...controls,{kind:'more',visible:false,enabled:true}],overflowExpanded,nearby.expanded());
+    if (!model.hasMore) overflowExpanded = false;
+    const overflow = {visible:model.hasMore,expanded:model.showOverflow,shortcut:model.buttons.at(-1)?.key};
+    const nextOverflowKey = JSON.stringify(overflow);
+    if (nextOverflowKey!==overflowKey) {
+      overflowKey = nextOverflowKey;
+      flushSync(()=>overflowRoot.render(<ContextOverflow {...overflow} toggle={toggleOverflow}/>));
+    }
     for (const [index,button] of buttons.entries()) {
       const {placement,key:shortcut} = model.buttons[index];
       if (placement) button.dataset.contextOverflow = placement==='primary' ? 'false' : placement==='overflow' ? 'expanded' : 'true';
@@ -216,7 +217,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
   function onContextClick(event:MouseEvent) {
     if (event.target instanceof Element && event.target.closest('#nearby-objects') &&
-      nearby.expanded()) more.setAttribute('aria-expanded','false');
+      nearby.expanded()) overflowExpanded = false;
     refreshActionKeys();
   }
   stations.addEventListener('click',onContextClick);
@@ -234,9 +235,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         event.preventDefault();
         nearby.close();
         refreshActionKeys();
-      } else if (!stations.hidden && more.getAttribute('aria-expanded')==='true') {
+      } else if (!stations.hidden && overflowExpanded) {
         event.preventDefault();
-        more.click();
+        toggleOverflow();
       }
       return;
     }
@@ -284,7 +285,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hasElectionAction = electoral.render(view,context,election.hasVoice());
     const hasShortcut = shortcuts.render(view,player,context);
     const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
-    if (!exploring || !canInteract) more.setAttribute('aria-expanded','false');
+    if (!exploring || !canInteract) overflowExpanded = false;
     stations.hidden = !exploring || (!nearby.visible() && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
     refreshActionKeys();
   }
@@ -352,8 +353,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       stations.hidden = true;
       progressRoot.unmount();
       shortcuts.destroy();
-      more.remove();
-      overflowBreak.remove();
+      overflowRoot.unmount();
       fieldRoot.unmount();
     },
   };
