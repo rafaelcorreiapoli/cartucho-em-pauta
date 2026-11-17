@@ -38,7 +38,7 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
   signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 
-export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean}) {
+export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean;u:()=>boolean}) {
   disableHudTabStops(root,signal);
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
@@ -120,7 +120,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
       }
       return;
     }
-    if (key==='j' || key==='l') {
+    if (key==='j' || key==='l' || key==='u') {
       if (shortcuts[key]()) event.preventDefault();
       return;
     }
@@ -133,7 +133,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
     }
     const control = key==='y' || key==='r' || key==='n' && root.querySelector('[data-vote="abstain"]')
       ? root.querySelector<HTMLElement>(`[data-vote="${key==='y' ? 'yes' : key==='r' ? 'no' : 'abstain'}"]`)
-      : (/^[a-z]$/.test(key) ? root.querySelector<HTMLElement>(`#congress-apps > button[aria-keyshortcuts="${key.toUpperCase()}"]`) : null);
+      : null;
     if (!control || !available(control)) return;
     event.preventDefault();
     control.click();

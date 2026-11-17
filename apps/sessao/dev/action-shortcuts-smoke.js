@@ -19,7 +19,10 @@ async page => {
   await settings.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
-  await page.getByRole('button',{name:'Aplicativos',exact:true}).click();
+  const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
+  const apps = page.locator('#congress-app-panel');
+  await page.keyboard.press('u');
+  await apps.waitFor();
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await palette.waitFor();
@@ -44,13 +47,21 @@ async page => {
   await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await page.keyboard.press('Escape');
   await gameplay.waitFor({state:'hidden'});
-  const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
-  if (await launcher.getAttribute('aria-expanded')==='false') await launcher.click();
+  await launcher.click();
+  await apps.waitFor();
   for (const [name,key] of [['Equipamentos','E'],['Personagem','P'],['Celular','C'],['Microfone','M'],['Configurações','K']]) {
     const app = page.locator('#congress-app-panel').getByRole('button',{name,exact:true});
     if (await app.getAttribute('aria-keyshortcuts')!==key) throw Error('Atalho ausente: '+name);
   }
+  await page.keyboard.press('c');
+  await gameplay.getByRole('heading',{name:'Celular',exact:true}).waitFor();
+  await apps.waitFor({state:'hidden'});
   await page.keyboard.press('Escape');
+  await gameplay.waitFor({state:'hidden'});
+  await page.keyboard.press('u');
+  await apps.waitFor();
+  await page.keyboard.press('u');
+  await apps.waitFor({state:'hidden'});
   await page.keyboard.press('m');
   await page.keyboard.press('m');
   await page.keyboard.press('k');

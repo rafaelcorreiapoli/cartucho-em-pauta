@@ -298,7 +298,7 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
-    bindActionShortcuts(session,hudListeners.signal,launchApp,{j:political.toggleDossier,l:election.showPolls});
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle});
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       (id,photo)=>sendCommand('complaint-submit',{id,photo}));
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
@@ -359,6 +359,7 @@ async function connect(join: () => Promise<Room>) {
       if (gains.xp) hud.showReward('xp',gains.xp,rewardHead);
       suppressXpEffect = false;
       progression.render(view);
+      if (view.phase!==previousView?.phase && (view.phase==='ballot' || view.phase==='hearing')) appLauncher.close();
       appStatus = hudAppStatus(view,assetsReady);
       appLauncher.render(appStatus);
       game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
