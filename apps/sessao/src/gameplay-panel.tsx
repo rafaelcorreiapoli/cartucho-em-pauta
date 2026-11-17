@@ -71,6 +71,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const slotsRoot = createRoot(slots);
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
+  let requestEntries:ShortcutEntry[] = [];
   const nearbyActions = createNearbyActions();
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
@@ -110,7 +111,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let quantity = 1;
 
   function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false,
-    shortcuts?:{entries:ShortcutEntry[];numberActions:Map<string,()=>void>}) {
+    shortcuts?:{entries:ShortcutEntry[];numberActions?:Map<string,()=>void>}) {
     const definition = objects[item.kind];
     const doc = item.document;
     const cash = cashAmount(item);
@@ -184,7 +185,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         {controls.map(({label,run,disabled})=>{
           const key = !disabled && shortcut<9 ? String(++shortcut) : undefined;
           if (!disabled) entries?.push({name:label,activate:run});
-          if (key) shortcuts?.numberActions.set(key,run);
+          if (key) shortcuts?.numberActions?.set(key,run);
           return <button type="button" key={label} className="hud-button hud-button--secondary"
             aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
         })}
@@ -556,6 +557,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       nearbyActions.update([]);
     },
     nearbyActions,
+    requestShortcuts:()=>requestEntries,
     nearby(player:Motion | undefined, exploring:boolean) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
@@ -620,19 +622,29 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (requestKey!==requestBox.dataset.request) {
         requestBox.dataset.request = requestKey;
         requestBox.hidden = !incoming && !information;
+        const entries:ShortcutEntry[] = [];
+        const respond = (kind:GameplayAction['kind'],item:number)=>()=>send({kind,item});
         if (information) {
+          const accept = respond('info-accept',information.id);
+          const decline = respond('info-decline',information.id);
+          entries.push({name:'Aceitar fotografia',activate:accept},{name:'Recusar fotografia',activate:decline});
           requestRoot.render(<article className="object-card">
             <p>{information.from.name} quer {information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.</p>
-            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-accept',item:information.id})}>Aceitar</button>
-            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-decline',item:information.id})}>Recusar</button>
+            <button className="hud-button hud-button--secondary" onClick={accept}>Aceitar</button>
+            <button className="hud-button hud-button--secondary" onClick={decline}>Recusar</button>
           </article>);
         } else if (incoming) {
+          const label = incoming.kind==='signature' ? 'Assinar' : 'Aceitar';
+          const accept = respond('accept',incoming.id);
+          const decline = respond('decline',incoming.id);
           requestRoot.render(<><p>{incoming.from.name} {incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}</p>
             {objectCard(incoming.item,[
-              {label:incoming.kind==='signature' ? 'Assinar' : 'Aceitar',run:()=>send({kind:'accept',item:incoming.id})},
-              {label:'Recusar',run:()=>send({kind:'decline',item:incoming.id})},
-            ])}</>);
+              {label,run:accept},{label:'Recusar',run:decline},
+            ],false,{entries})}</>);
         } else requestRoot.render(null);
+        requestEntries = entries.map(({name,activate})=>({
+          name,activate:()=>{if (requestBox.dataset.request===requestKey) activate();},
+        }));
       }
       render();
     },

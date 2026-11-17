@@ -113,7 +113,13 @@ async page => {
     if (await use.getAttribute('aria-keyshortcuts')!=='1') throw Error('O primeiro atalho do item deve ser 1');
     await bag.getByLabel('Jogador').selectOption({label:'Bia'});
     await bag.getByRole('button',{name:'Oferecer',exact:true}).click();
-    await receiver.locator('#object-request').getByRole('button',{name:'Aceitar',exact:true}).click();
+    const accept = receiver.locator('#object-request').getByRole('button',{name:'Aceitar',exact:true});
+    await accept.evaluate(button=>button.setAttribute('aria-label','Aceite original alterado'));
+    await receiver.keyboard.press('F2');
+    const acceptShortcut = receiver.locator('#action-shortcuts').getByRole('button',{name:'Aceitar',exact:true});
+    await acceptShortcut.waitFor();
+    await receiver.keyboard.press(await acceptShortcut.getAttribute('aria-keyshortcuts'));
+    await receiver.locator('#object-request').waitFor({state:'hidden'});
     await bag.getByRole('button',{name:'Café',exact:true}).waitFor({state:'hidden'});
     await page.keyboard.press('Escape');
     await receiver.keyboard.press('o');
@@ -256,5 +262,5 @@ async page => {
   } finally {
     await receiver.close();
   }
-  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true};
+  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true,itemOfferAcceptedViaF2:true};
 }
