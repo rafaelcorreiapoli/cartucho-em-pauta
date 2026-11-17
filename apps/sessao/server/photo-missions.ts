@@ -3,14 +3,14 @@ import type { GameplayEvent } from '../src/gameplay';
 import { privateOffices } from '../src/private-offices';
 import { securityRoom, roomAt } from '../src/map';
 import type { Photo } from '../src/photography';
-import type { Agenda } from '../src/politics';
+import {photoMissionCounts,type Agenda} from '../src/politics';
 
 type Fact = {value:string; group?:string};
 type Rule = {target:number; players:number; facts:(event:GameplayEvent)=>Fact[]};
 const fact = (value:string|number, group?:string):Fact[] => [{value:String(value),group}];
 export function isGroupSelfie(photo:Photo,author:string) {
   return photo.selfie && photo.author.id===author &&
-    photo.people.filter(person=>person.id!==author && !person.id.startsWith('npc-parliamentarian-')).length>=2;
+    photo.people.filter(person=>person.id!==author && !person.id.startsWith('npc-parliamentarian-')).length>=photoMissionCounts.publicouSelfie;
 }
 
 const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.id!==actor);
@@ -25,24 +25,31 @@ export const photoMissions = {
   fotografia:{target:1,players:2,facts:capture((photo,actor)=>people(photo,actor).length ? fact(photo.id) : [])},
   flagra:{target:1,players:2,facts:capture((photo,actor)=>
     people(photo,actor).some(person=>person.exposed?.some(item=>item.kind==='briefcase')) ? fact(photo.id) : [])},
-  selfie:{target:3,players:4,facts:capture((photo,actor)=>
+  selfie:{target:photoMissionCounts.selfie,players:photoMissionCounts.selfie+1,facts:capture((photo,actor)=>
     photo.selfie ? people(photo,actor).map(person=>({value:person.id})) : [])},
   presidenteFoto:{target:1,players:2,facts:capture((photo,actor)=>
     photo.selfie && people(photo,actor).some(person=>person.office==='president') ? fact(photo.id) : [])},
   celularFoto:{target:1,players:2,facts:capture((photo,actor)=>
     people(photo,actor).some(person=>person.phone==='game' && [securityRoom.name,'Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
-  reuniaoFoto:{target:1,players:3,facts:capture((photo,actor)=>{
-    const guests = people(photo,actor);
-    return guests.some(person=>privateRooms.has(roomAt(person)) &&
-      guests.some(other=>other.id!==person.id && roomAt(other)===roomAt(person))) ? fact(photo.id) : [];
+  reuniaoFoto:{target:1,players:photoMissionCounts.reuniaoFoto+1,facts:capture((photo,actor)=>{
+    const rooms = new Map<string,Set<string>>();
+    for (const person of people(photo,actor)) {
+      const room = roomAt(person);
+      if (!privateRooms.has(room)) continue;
+      const guests = rooms.get(room) ?? new Set<string>();
+      guests.add(person.id);
+      if (guests.size>=photoMissionCounts.reuniaoFoto) return fact(photo.id);
+      rooms.set(room,guests);
+    }
+    return [];
   })},
-  dossieFoto:{target:3,players:2,facts:capture((photo,actor)=>
+  dossieFoto:{target:photoMissionCounts.dossieFoto,players:2,facts:capture((photo,actor)=>
     people(photo,actor).map(person=>({value:roomAt(person),group:person.id})))},
   apresentarFoto:{target:1,players:2,facts:event=>
     event.type==='photo-shown' && event.photo && people(event.photo,event.actor).some(person=>person.exposed?.length) ? fact(event.photo.id) : []},
   entregaFoto:{target:1,players:3,facts:capture((photo,actor)=>
     photo.transfers.some(event=>event.from!==actor && event.to!==actor) ? fact(photo.id) : [])},
-  publicouSelfie:{target:1,players:3,facts:event=>
+  publicouSelfie:{target:1,players:photoMissionCounts.publicouSelfie+1,facts:event=>
     event.type==='photo-published' && event.photo && isGroupSelfie(event.photo,event.actor) ? fact(event.photo.id) : []},
   retrato:{target:1,players:1,facts:event=>event.type==='installed' && event.kind==='portrait' ? fact(event.item!) : []},
   autorretrato:{target:1,players:1,facts:capture((photo,actor)=>photo.selfie && portraitNear(photo,actor) ? fact(photo.id) : [])},
@@ -56,8 +63,8 @@ export const photoMissions = {
       person.id!==item.owner.id && Math.hypot(person.x-item.x,person.y-item.y)<=vipAreaRadius)) ? fact(photo.id) : [])},
   mandaVip:{target:1,players:2,facts:event=>
     event.type==='installed' && event.kind==='vip' && event.replaced ? fact(event.item!) : []},
-  fatias:{target:2,players:3,facts:event=>event.type==='slice' && event.target ? fact(event.target) : []},
-  pizzada:{target:3,players:4,facts:event=>event.type==='slice' && event.target ? fact(event.target,String(event.item)) : []},
+  fatias:{target:photoMissionCounts.fatias,players:photoMissionCounts.fatias+1,facts:event=>event.type==='slice' && event.target ? fact(event.target) : []},
+  pizzada:{target:photoMissionCounts.pizzada,players:photoMissionCounts.pizzada+1,facts:event=>event.type==='slice' && event.target ? fact(event.target,String(event.item)) : []},
 } satisfies Partial<Record<Agenda,Rule>>;
 
 export function applyFacts(groups:Map<string,Set<string>>,facts:Fact[]) {

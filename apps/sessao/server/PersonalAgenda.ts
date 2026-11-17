@@ -6,14 +6,13 @@ import { isFood } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { CRISIS_MISSION_STABILITY_LIMIT, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, archiveDutyRoom, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type AgendaAction = 'propaganda'|'discurso'|'emenda'|'votoNpc';
 
 export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; remainingAdvertisements?:()=>number; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
-const signatureTarget = 2;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const drankCoffee = (event:GameplayEvent) => event.type==='coffee-drunk' || event.type==='used' && event.kind==='coffee';
@@ -80,12 +79,13 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:PUBLIC_MEETING_PEERS+1,fotoDinheiro:2,chamadasUrgentes:urgentCallMission.contacts+1,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:3, escandalo:3, entrega:COFFEE_DELIVERY_RECIPIENTS+1, assinar:2,
+  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:PUBLIC_MEETING_PEERS+1,fotoDinheiro:2,chamadasUrgentes:urgentCallMission.contacts+1,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:agendaCounts.articulacao+1, escandalo:3, entrega:COFFEE_DELIVERY_RECIPIENTS+1, assinar:2,
   recebido:2, pagamento:2, visitaGabinete:2, jogarOculto:2,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
-  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,comissaoImprovisada:3,tresSelfies:3,duasCameras:2,vigilanciaInstitucional:2,doisMoveis:2,visitaDoisGabinetes:2,chamadasUrgentes:urgentCallMission.contacts,doisPix:2,bandejaGourmet:2,fiscalCafe:3, turismo:3, entrega:COFFEE_DELIVERY_RECIPIENTS, fortuna:12, campanha:65, articulacao:2, projetos:2, oposicao:2,
-  assinaturas:signatureTarget, passeio:3, ...agendaCashTargets, ...agendaDurationMs,
+  investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,
+  doisMoveis:2,chamadasUrgentes:urgentCallMission.contacts,bandejaGourmet:2,entrega:COFFEE_DELIVERY_RECIPIENTS,
+  fortuna:12,campanha:65,...agendaCounts,...agendaCashTargets,...agendaDurationMs,
 };
 const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
@@ -313,7 +313,7 @@ export class PersonalAgenda {
       const colleagues = drawing && available
         ? this.targets.filter(person=>available.has(person.id)).length
         : Math.max(0,this.playerCount-1);
-      const needed = (missionTargets[kind] ?? signatureTarget)-colleagues;
+      const needed = (missionTargets[kind] ?? agendaCounts.assinaturas)-colleagues;
       if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
     } else if (players>humans) return kind==='publicouSelfie' && !!metrics && this.canPublishSavedSelfie(metrics);
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
@@ -553,7 +553,7 @@ export class PersonalAgenda {
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
     if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaProductPrice('equipment','bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
-    if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<2) return false;
+    if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<agendaCounts.duasCameras) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
