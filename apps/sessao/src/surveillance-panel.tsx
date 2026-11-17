@@ -1,18 +1,38 @@
 import { flushSync } from 'react-dom';
 import { SurveillanceDialogContent } from './ui/surveillance-dialog';
 import { createRoot } from 'react-dom/client';
-import { node } from './gameplay-ui';
 import { createSurveillanceViewport } from './surveillance-viewport';
 import { acceptsSpyCameraFrame, monitoredChannel, type SpyCameraFrame, type SpyDevice, type SpyView } from './surveillance';
 
 export function createSurveillancePanel(send:(action:object)=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#surveillance-dialog')!;
   const root = createRoot(dialog);
-  const viewport = node('div');
-  viewport.className = 'spy-viewport';
-  viewport.setAttribute('aria-label','Visão ao vivo da câmera');
+  let viewport:HTMLDivElement|null = null;
   let live:ReturnType<typeof createSurveillanceViewport>|undefined;
-  function stopViewport() { live?.destroy(); live = undefined; }
+  let pendingFrame:SpyCameraFrame|undefined;
+  function stopViewport() {
+    live?.destroy();
+    live = undefined;
+    pendingFrame = undefined;
+  }
+  function drawFrame(frame:SpyCameraFrame) {
+    if (!viewport) {
+      pendingFrame = frame;
+      return;
+    }
+    live ??= createSurveillanceViewport(viewport);
+    live.receive(frame);
+  }
+  function attachViewport(host:HTMLDivElement|null) {
+    viewport = host;
+    if (!host) {
+      stopViewport();
+    } else if (pendingFrame) {
+      const frame = pendingFrame;
+      pendingFrame = undefined;
+      if (dialog.open && acceptsSpyCameraFrame(view,frame)) drawFrame(frame);
+    }
+  }
   let view:SpyView|undefined;
   let key = '';
   let page = 0;
@@ -74,7 +94,6 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       </button>;
     };
     const monitor = <>
-      {selected && <><h3>{selected.name}</h3><div ref={host=>{ if (host && viewport.parentElement!==host) host.append(viewport); }}/></>}
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
         {selected && action('Fotografar',()=>send({kind:'capture'}))}
@@ -98,7 +117,8 @@ export function createSurveillancePanel(send:(action:object)=>void) {
         </form>}
       </>}
     </>;
-    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor}/>);
+    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor}
+      camera={selected && {name:selected.name,attach:attachViewport}}/>);
   }
 
   function open() {
@@ -125,15 +145,14 @@ export function createSurveillancePanel(send:(action:object)=>void) {
   return {
     open,
     render(next?:SpyView) {
-      if (next?.selected!==view?.selected) stopViewport();
+      if (monitoredChannel(next)?.id!==monitoredChannel(view)?.id) stopViewport();
       view = next;
       if (!view && dialog.open) dialog.close();
       update();
     },
     frame(frame:SpyCameraFrame) {
       if (!dialog.open || !acceptsSpyCameraFrame(view,frame)) return;
-      live ??= createSurveillanceViewport(viewport);
-      live.receive(frame);
+      drawFrame(frame);
     },
     destroy() {
       root.unmount();
