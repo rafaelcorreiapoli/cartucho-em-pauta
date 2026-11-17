@@ -34,13 +34,20 @@ async page => {
     await institution.waitFor({state:'hidden'});
   }
   await grant.click();
-  await institution.getByRole('button',{name:'Desviar R$ 30 mil'}).click();
-  await institution.getByRole('button',{name:/Aplicar verba de/}).click();
+  async function runShortcut(original,name) {
+    await original.evaluate(control=>control.setAttribute('aria-label','Rótulo original alterado'));
+    await page.keyboard.press('F2');
+    await page.locator('#action-shortcuts').getByRole('button',{name}).click();
+  }
+  await runShortcut(institution.getByRole('button',{name:'Desviar R$ 30 mil'}),/Desviar R\$ 30 mil/);
+  await runShortcut(institution.getByRole('button',{name:/Aplicar verba de/}),/Aplicar verba de/);
   await institution.waitFor({state:'hidden'});
   await grant.waitFor({state:'hidden'});
   await page.locator('#profile-dock').getByText('R$ 110 mil',{exact:true}).waitFor();
   await page.keyboard.press('j');
   await dossier.waitFor();
+  await runShortcut(dossier.locator('summary'),/Registro público/);
+  await dossier.locator('details[open]').waitFor();
   await page.locator('#session[data-phase="ballot"]').waitFor();
   await dossier.waitFor({state:'hidden'});
   await page.keyboard.press('j');
@@ -143,8 +150,16 @@ async page => {
     const submit = institution.getByRole('button',{name:'Convocar votação',exact:true});
     await submit.waitFor();
     if (await submit.isEnabled()) throw Error('É possível convocar votação sem escolher um alvo');
-    await institution.getByRole('button',{name:/^Bia ·/}).click();
-    await submit.click();
+    const actionMenu = page.locator('#action-shortcuts');
+    await page.keyboard.press('F2');
+    await actionMenu.waitFor();
+    if (await actionMenu.getByRole('button',{name:/Convocar votação/}).count()) {
+      throw Error('O F2 permite convocar votação sem escolher um alvo');
+    }
+    await page.keyboard.press('Escape');
+    await actionMenu.waitFor({state:'hidden'});
+    await runShortcut(institution.getByRole('button',{name:/^Bia ·/}),/^Bia ·/);
+    await runShortcut(submit,/Convocar votação/);
     await institution.waitFor({state:'hidden'});
 
     for (const client of [page,guest]) {
