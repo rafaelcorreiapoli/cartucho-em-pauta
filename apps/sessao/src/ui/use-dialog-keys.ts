@@ -27,14 +27,16 @@ export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=>
   },[entries]);
   useEffect(()=>{
     function keydown(event:KeyboardEvent) {
-      if (event.defaultPrevented || event.repeat || event.isComposing || event.shiftKey ||
+      if (event.defaultPrevented || event.repeat || event.isComposing ||
           event.ctrlKey || event.altKey || event.metaKey || isEditingText(event.target)) return;
       const owner = panel.current;
       const dialog = owner?.closest('dialog:modal');
       if (!dialog || owner?.closest('[hidden]')) return;
       const active = document.activeElement?.closest('dialog:modal');
       if (active ? active!==dialog : [...document.querySelectorAll('dialog:modal')].some(open=>open!==dialog)) return;
-      const action = currentAction(event.key);
+      const key = event.shiftKey ? (/^Digit[1-9]$/.test(event.code) ? 'Shift+'+event.code.at(-1) : undefined) : event.key;
+      if (!key) return;
+      const action = currentAction(key);
       if (!action) return;
       event.preventDefault();
       action();

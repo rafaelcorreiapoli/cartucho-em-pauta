@@ -169,5 +169,26 @@ async page => {
     throw Error('Hotbar abriu o inventário ou simulou clique ao consumir');
   }
   if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
+  await page.reload();
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Armário QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.locator('#parliamentarian-count [data-count="0"]').click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.getByRole('button',{name:'Abrir armário',exact:true}).click();
+  const stash = page.getByRole('dialog',{name:'Armário particular'});
+  const deposit = stash.getByRole('button',{name:'Guardar Pinga',exact:true});
+  const withdraw = stash.getByRole('button',{name:'Retirar Pinga',exact:true});
+  await deposit.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('Shift+1');
+  await withdraw.waitFor();
+  await deposit.waitFor({state:'hidden'});
+  await withdraw.evaluate(button=>button.setAttribute('aria-label','Ação original alterada'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Retirar Pinga',exact:true}).click();
+  await deposit.waitFor();
+  await stash.getByRole('button',{name:'Ação original alterada',exact:true}).waitFor({state:'hidden'});
+  await page.keyboard.press('Escape');
+  await stash.waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
+  return {stashDepositViaShift:true,stashWithdrawalViaF2:true};
 }

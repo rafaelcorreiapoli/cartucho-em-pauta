@@ -12,8 +12,16 @@ class ContextOverflowRoom extends SessionRoom {
       for (const {player} of Reflect.get(this,'players').values()) {
         if (positioned.has(player.id)) continue;
         positioned.add(player.id);
-        Object.assign(player,stations.coffee);
-        for (let i=0;i<3;i++) Reflect.get(this,'gameplay').distributePinga(player,this.clock.currentTime);
+        const game = Reflect.get(this,'gameplay');
+        if (player.nick==='Armário QA') {
+          const office = Reflect.get(game,'privateOffices').ownedBy(player.id);
+          if (!office) throw new Error('O cenário de teste precisa de um gabinete atribuído.');
+          Object.assign(player,office.cabinet);
+          game.distributePinga(player,this.clock.currentTime);
+        } else {
+          Object.assign(player,stations.coffee);
+          for (let i=0;i<3;i++) game.distributePinga(player,this.clock.currentTime);
+        }
       }
       for (const player of Reflect.get(this,'parliamentarians').players) {
         Object.assign(player,{x:stations.coffee.x+8,y:stations.coffee.y});

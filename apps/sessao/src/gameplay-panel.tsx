@@ -296,7 +296,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       numberActions:new Map<string,()=>void>(),
     } : undefined;
     if (stash) {
-      content = <OfficeStash stash={stash} inventory={state.inventory} send={send}/>;
+      content = <OfficeStash stash={stash} inventory={state.inventory} send={send} close={()=>dialog.close()}/>;
     }
     function renderBag(detail?:ReturnType<typeof objectCard>) {
       const inventory = state!.inventory;
