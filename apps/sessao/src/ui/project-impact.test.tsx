@@ -4,7 +4,8 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ProjectImpact} from './project-impact';
 import {ProjectBallot} from './project-ballot';
-import {bills,NEGOTIATION_MS,pingaProgram,policyDiscountPercent,policyDuration,recoveryPolicy,stations} from '../plenary';
+import {SessionBallot,sessionBallotState} from './ballot';
+import {BALLOT_MS,bills,NEGOTIATION_MS,pingaProgram,policyDiscountPercent,policyDuration,recoveryPolicy,stations} from '../plenary';
 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
@@ -67,4 +68,23 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
       expect(markup).toContain('Até +2 popularidade por entrega · 90 s');
     }
   }
+});
+
+test('the ballot projects the stability applied by the gameserver when a project runs a deficit',()=>{
+  const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>0)).toBe(true);
+  publishProjectFiling(match,player);
+  Reflect.set(match,'budget',24.7);
+  match.advance(NEGOTIATION_MS);
+  const view = match.view(player.id,[player.id],NEGOTIATION_MS);
+  const state = sessionBallotState(view)!;
+  expect(state.kind).toBe('project');
+  const markup = renderToStaticMarkup(<SessionBallot state={state} ownId={player.id} cast={()=>{}} castCassation={()=>{}}/>);
+  expect(markup).toContain('Déficit de R$ 33 mil');
+  expect(markup).toContain('data-effect="gain">+12</b>');
+
+  match.vote(player.id,'yes',NEGOTIATION_MS+1);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  expect(match.view(player.id,[player.id],NEGOTIATION_MS+BALLOT_MS).outcome?.applied.stability).toBe(12);
 });

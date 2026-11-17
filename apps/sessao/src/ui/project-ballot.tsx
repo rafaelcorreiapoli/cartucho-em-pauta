@@ -1,7 +1,8 @@
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
 import {useState,type CSSProperties} from 'react';
-import {agendaProject,bills,BALLOT_MS,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {agendaProject,bills,BALLOT_MS,fundedProjectStability,pingaProgram,type BillVote,type Impact,type PlenaryView} from '../plenary';
+import {money} from '../politics';
 import {PhoneContactFace} from './phone-call';
 import './project-ballot.css';
 
@@ -16,20 +17,23 @@ function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
   return <b className="project-impact-value" data-effect={impactTone(value)}>{formatImpact(value,currency)}</b>;
 }
 
-export function ProjectImpact({impact,approved,detail}:{impact:Impact;approved:boolean;detail?:string}) {
+export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;budget:number;approved:boolean;detail?:string}) {
+  const balance = budget+Math.min(0,impact.budget);
+  const stability = fundedProjectStability(impact,budget,balance);
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><HudIcon name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
+    <span><HudIcon name="shield"/><ImpactValue value={stability}/> Estabilidade</span>
     <span><HudIcon name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
+    {balance<0 && <small className="project-ballot-deficit">Déficit de {money(-balance)}</small>}
     {detail && <small>{detail}</small>}
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
+type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
   ownId:string; eligible:boolean; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -67,10 +71,10 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
           {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
         </div>
         <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
-        <ProjectImpact impact={yes} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
+        <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
           bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
           bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
-        <ProjectImpact impact={no} approved={false}/>
+        <ProjectImpact impact={no} budget={budget} approved={false}/>
       </header>
       <div className="project-ballot-timer">
         <HudIcon name="ballot"/><strong>Votação em andamento</strong>

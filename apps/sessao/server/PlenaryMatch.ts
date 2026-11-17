@@ -16,7 +16,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
+  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, fundedProjectStability,
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
@@ -873,9 +873,7 @@ export class PlenaryMatch {
       for (const id of this.electorate) if (this.canVote(id)) this.economy.earn(id,payout);
       this.cash.salaries += previous.budget-this.budget;
     } else this.cash.projects += previous.budget-this.budget;
-    const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
-    const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
-    this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
+    this.stability = clamp(this.stability+fundedProjectStability(impact,previous.budget,balance));
     this.outcomes.push({round:this.round,project,proposer,passed,yes,no,abstentions,absences,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
     this.economy.cancelOffers();

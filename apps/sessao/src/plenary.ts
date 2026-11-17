@@ -25,6 +25,12 @@ export function deficitStabilityLoss(deficit:number) {
   return -Math.round(-Math.max(0,deficit)*stabilityRules.deficitRate) || 0;
 }
 
+export function fundedProjectStability(impact:Impact,budget:number,balance:number) {
+  const funding = impact.budget<0 ? Math.min(1,budget/-impact.budget) : 1;
+  const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
+  return benefit-deficitStabilityLoss(-balance);
+}
+
 export const stations = {
   ...roomActivities,
   cabinet:treasurer.interaction,
