@@ -16,7 +16,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
+  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
@@ -71,8 +71,8 @@ export class PlenaryMatch {
 
   canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
 
-  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number) {
-    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration);
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
+    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration,agendaSelfies);
   }
 
   setAgendaCommerce(now:()=>number) {
@@ -219,6 +219,7 @@ export class PlenaryMatch {
     this.filedDocuments.clear();
     let campaignReady = false;
     this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
+    this.economy.setAgendaPowerAvailability(()=>this.powerOut);
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
@@ -300,8 +301,9 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    if (event.type==='spy-removed' || event.type==='advertisement-aired' ||
-        event.kind==='vip' && (event.type==='installed' || event.type==='uninstalled')) this.refreshAgendaEligibility();
+    const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
+    if (droppedSpy || event.type==='photo-published' || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+        (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }
 
@@ -454,14 +456,20 @@ export class PlenaryMatch {
     this.cassationVotes.set(id,candidate);
   }
 
+  private cassationChoice(id:string) {
+    if (!this.canVoteInCassation(id)) return undefined;
+    const target = this.cassationVotes.get(id);
+    return target == null || this.canVoteInCassation(target) ? target : undefined;
+  }
+
   private resolveCassation(now:number) {
     const electorate = this.cassationElectorate();
     const tally = new Map<string,number>();
     for (const id of electorate) {
-      const target = this.cassationVotes.get(id);
-      if (target && electorate.includes(target)) tally.set(target,(tally.get(target) ?? 0)+1);
+      const target = this.cassationChoice(id);
+      if (target) tally.set(target,(tally.get(target) ?? 0)+1);
     }
-    const majority = Math.floor(electorate.length/2)+1;
+    const majority = majorityQuorum(electorate.length);
     const result = [...tally].find(([,votes])=>votes>=majority);
     this.cassationOpen = false;
     this.cassationVotes.clear();
@@ -622,20 +630,27 @@ export class PlenaryMatch {
   }
 
   complaintView(id:string,photos?:readonly Photo[]) {
-    return {available:this.complaints.available(id,actor=>this.economy.name(actor),photos),history:this.complaints.history()};
+    const name = (actor:string)=>this.economy.name(actor);
+    return {available:this.complaints.available(id,name,photos),history:this.complaints.history(),
+      proofs:photos && this.complaints.proofs(id,photos,actor=>this.electorate.has(actor),name)};
   }
 
   canFileComplaint(player:Player,now:number) {
-    return this.phase==='negotiation' && this.canHandleObjects(player.id,now) && this.at(player,'audit');
+    return this.phase==='negotiation' && !player.knockedOut && !player.carried && !player.carrying &&
+      this.canHandleObjects(player.id,now) && this.at(player,'audit');
   }
 
-  submitComplaint(player:Player,id:number,now:number,photo?:Photo) {
+  submitComplaint(player:Player,id:number|string,now:number,photo?:Photo) {
     if (!this.canFileComplaint(player,now)) {
       return 'Vá ao balcão da Corregedoria durante a articulação.';
     }
-    const result = this.complaints.submit(player.id,id,actor=>this.economy.name(actor),photo);
+    const name = (actor:string)=>this.economy.name(actor);
+    const result = typeof id==='number' ? this.complaints.submit(player.id,id,name,photo) :
+      photo && this.complaints.submitGame(player.id,photo,id,actor=>this.electorate.has(actor),name);
     if (!result) return 'Caso indisponível ou fotografia incompatível.';
     this.economy.rewardFromReserve(player.id,complaintRules.reward);
+    this.economy.changePopularity(player.id,complaintRules.popularityGain);
+    this.economy.earnXp(player.id,complaintRules.xp);
     this.economy.changePopularity(result.actor,-complaintRules.popularityLoss);
     this.election.scandal(result.actor);
     this.economy.recordOfficialScandal();
@@ -664,7 +679,10 @@ export class PlenaryMatch {
   actOnPower(player:Player,action:PowerAction,now:number) {
     if (!this.canOperatePower(player,action.panel,now)) return;
     if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
-    return this.power.act(player.id,action,now,this.powerCooldown(now));
+    const wasOut = this.powerOut;
+    const result = this.power.act(player.id,action,now,this.powerCooldown(now));
+    if (this.powerOut!==wasOut) this.refreshAgendaEligibility();
+    return result;
   }
 
   advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
@@ -680,6 +698,7 @@ export class PlenaryMatch {
         amount:this.stability,place:roomAt(player)===powerPanels[panel].name ? 'inside-crisis-room' : undefined,
       });
     }
+    this.refreshAgendaEligibility();
   }
 
   private canUseFire(player:Player,now:number) {
@@ -844,7 +863,7 @@ export class PlenaryMatch {
   }
 
   private votingPlayers() { return [...this.electorate].filter(id => this.canVote(id)).length; }
-  private quorum() { return Math.floor(this.votingPlayers()/2)+1; }
+  private quorum() { return majorityQuorum(this.votingPlayers()); }
 
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
@@ -880,8 +899,8 @@ export class PlenaryMatch {
       canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
-        quorum:Math.floor(candidates.length/2)+1,voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
-        choice:this.cassationVotes.get(id)},
+        quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationChoice(candidate.id)!==undefined).length,
+        choice:this.cassationChoice(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
@@ -903,7 +922,7 @@ export class PlenaryMatch {
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,vote:this.hearingVote(id)} : undefined,
+      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,quorum:this.quorum(),vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
       no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,

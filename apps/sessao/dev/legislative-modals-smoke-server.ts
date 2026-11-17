@@ -12,10 +12,13 @@ class LegislativeModalsRoom extends SessionRoom {
     this.clock.setInterval(()=>{
       const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
       if (match.phase!=='negotiation') return;
-      for (const {player} of Reflect.get(this,'players').values()) {
+      const players:Map<string,{player:import('../src/map').Player}> = Reflect.get(this,'players');
+      const hearingTest = players.size === 2;
+      for (const {player} of players.values()) {
         if (!positioned.has(player.id)) {
           positioned.add(player.id);
-          Object.assign(player,stations.cabinet);
+          Object.assign(player,hearingTest ? stations.panel : stations.cabinet);
+          if (hearingTest) Reflect.get(match,'economy').changePopularity(player.id,20);
         }
         const now = this.clock.currentTime;
         if (filed || !match.view(player.id,[player.id],now).politics?.grantUsed) continue;

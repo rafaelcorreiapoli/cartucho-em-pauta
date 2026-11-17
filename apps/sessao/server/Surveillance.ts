@@ -1,4 +1,4 @@
-import { canReachObject, type WorldItem } from '../src/gameplay';
+import { canReachObject, hasInventorySpace, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player, type Rect } from '../src/map';
 import { cameraSees, hideouts, spyRules, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
 
@@ -19,6 +19,16 @@ export class Surveillance {
   canInstall(id:string,kind:SpyDevice) {
     return this.countInstalled(id,kind)<spyRules.limit &&
       hideouts.some(site=>(site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
+  }
+
+  cameraAvailability(id:string,inventoryIds:readonly number[],credited:ReadonlySet<string>) {
+    const installed = [...this.occupied.values()].filter(device=>device.owner===id && device.kind==='spyCamera');
+    const uncredited = installed.filter(device=>!credited.has(String(device.hardware.id))).length;
+    const empty = hideouts.filter(site=>(site.accepts as readonly SpyDevice[]).includes('spyCamera') &&
+      !this.occupied.has(site.id)).length;
+    const slots = Math.min(spyRules.limit-uncredited,empty+installed.length-uncredited);
+    const portable = inventoryIds.filter(item=>!credited.has(String(this.recoveredHardware.get(item)?.id ?? item))).length;
+    return {installed:installed.length, uncredited, slots, portable};
   }
 
   private devices = new Map<number,Device>();
@@ -101,12 +111,15 @@ export class Surveillance {
       if (!this.near(player,site)) continue;
       const device = this.occupied.get(site.id);
       const known = device && this.known(id,device);
-      if (known) {
+      const inventory = access.inventory(id);
+      if (known && device.owner===id) {
+        const blocked = hasInventorySpace(inventory.length) ? undefined : 'Inventário cheio';
+        options.push({label:`Recuperar dispositivo · ${site.name}`,kind:'recover',site:site.id,blocked});
+      } else if (known) {
         options.push({label:`Remover dispositivo · ${site.name}`,kind:'remove',site:site.id});
-        if (device.owner===id) options.push({label:`Recuperar dispositivo · ${site.name}`,kind:'recover',site:site.id});
-        else options.push({label:'Deixar instalado',kind:'keep',site:site.id});
+        options.push({label:'Deixar instalado',kind:'keep',site:site.id});
       }
-      for (const item of access.inventory(id)) {
+      for (const item of inventory) {
         if (item.kind==='bugDetector') options.push({label:`Inspecionar · ${site.name}`,kind:'inspect',site:site.id,item:item.id});
         if ((item.kind==='wiretap' || item.kind==='spyCamera') && (site.accepts as readonly SpyDevice[]).includes(item.kind)) options.push({
           label:`Instalar ${item.kind==='wiretap' ? 'grampo' : 'câmera'} · ${site.name}`,kind:'install',site:site.id,item:item.id,
@@ -162,7 +175,13 @@ export class Surveillance {
       if (item?.kind!=='wiretap' && item?.kind!=='spyCamera' || !(site.accepts as readonly SpyDevice[]).includes(item.kind)) return;
     } else if (raw.kind==='inspect') {
       if (item?.kind!=='bugDetector') return;
-    } else if (!device || !this.known(id,device) || raw.kind==='recover' && device.owner!==id) return;
+    } else {
+      if (!device || !this.known(id,device)) return;
+      if (raw.kind==='recover') {
+        if (device.owner!==id) return;
+        if (!hasInventorySpace(access.inventory(id).length)) return 'Inventário cheio.';
+      } else if (device.owner===id) return;
+    }
     this.jobs.set(id,{kind:raw.kind,site,item:item?.id,target:raw.kind==='remove' || raw.kind==='recover' ? device?.id : undefined,
       x:player.x,y:player.y,ends:now+spyRules[raw.kind]});
   }

@@ -399,8 +399,15 @@ export class PoliticalEconomy {
     }
   }
 
-  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean) {
-    for (const [id,account] of this.accounts) Object.assign(account,{canPublishMail:()=>canPublishMail(id)});
+  setAgendaMailAvailability(canPublishMail:(id:string)=>boolean,agendaSelfies?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['agendaSelfies']>>) {
+    for (const [id,account] of this.accounts) Object.assign(account,{
+      canPublishMail:()=>canPublishMail(id),
+      agendaSelfies:agendaSelfies && (()=>agendaSelfies(id)),
+    });
+  }
+
+  setAgendaPowerAvailability(powerOut:()=>boolean) {
+    for (const account of this.accounts.values()) Object.assign(account,{powerOut});
   }
 
   setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {
@@ -409,7 +416,7 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:AgendaDecoration,replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, ownsSpyCameras?:(id:string)=>number, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasForensicReport?:(id:string)=>boolean, hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, agendaCameras?:(id:string,credited:ReadonlySet<string>)=>ReturnType<NonNullable<AgendaMetrics['agendaCameras']>>, canFightCrisis?:()=>boolean, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
     for (const [id,account] of this.accounts) {
       const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
         const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
@@ -417,7 +424,7 @@ export class PoliticalEconomy {
         return prices.length===needed && total<=account.wallet &&
           prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
       });
-      Object.assign(account,{canFightCrisis,hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,ownsSpyCameras:ownsSpyCameras && (()=>ownsSpyCameras(id)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{canFightCrisis,hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,agendaCameras:agendaCameras && ((credited:ReadonlySet<string>)=>agendaCameras(id,credited)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),hasForensicReport:hasForensicReport && (()=>hasForensicReport(id)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:AgendaDecoration,replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }
