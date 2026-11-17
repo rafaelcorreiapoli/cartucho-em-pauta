@@ -170,7 +170,7 @@ export class PersonalAgenda {
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
     private reward:(reward:MissionReward, completed:Mission[])=>void) {
-    const deck = Object.keys(agendas) as Agenda[];
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria');
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
     const activity = startingActivities[Math.floor(random()*startingActivities.length)];

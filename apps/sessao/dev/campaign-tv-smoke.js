@@ -55,14 +55,27 @@ async page => {
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
 
-    await advertiser(page).click();
+    // Keep both airtime timers paused until the second purchase is acknowledged.
+    for (const client of [page,guest]) {
+      await advertiser(client).waitFor();
+      await client.evaluate(async ()=>{
+        const image = new Image();
+        image.src = '/assets/campaign-tv.webp';
+        await image.decode();
+      });
+      await client.clock.install();
+      await client.clock.pauseAt(new Date(await client.evaluate(()=>Date.now())+1000));
+    }
+    await advertiser(page).dispatchEvent('click');
     const rafa = await Promise.all([checkAd(page,'Rafa','left',true),checkAd(guest,'Rafa','right',false)]);
     if (rafa[0].number!==rafa[1].number || rafa[0].skin!==rafa[1].skin) throw Error('Clientes receberam propagandas diferentes.');
-    await advertiser(guest).click();
+    await advertiser(guest).dispatchEvent('click');
     await advertiser(guest).waitFor({state:'hidden'});
     for (const client of [page,guest]) {
       if (await caption(client).locator('span').textContent()!=='Vote Rafa') throw Error('A segunda propaganda interrompeu a primeira.');
     }
+    await page.clock.resume();
+    await guest.clock.resume();
     const bia = await Promise.all([checkAd(page,'Bia','right',true),checkAd(guest,'Bia','left',false)]);
     if (bia[0].number!==bia[1].number || bia[0].skin!==bia[1].skin || bia[0].number===rafa[0].number) {
       throw Error('Identidade da segunda propaganda incorreta.');
