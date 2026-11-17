@@ -4,6 +4,7 @@ import { money } from '../src/politics';
 import { contextActionKeys } from '../src/ui/context-action-keys';
 import { xrayRechargeAction } from '../src/ui/xray-recharge-action';
 import { Parliamentarians } from './Parliamentarians';
+import { hideouts } from '../src/surveillance';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
 
@@ -390,7 +391,7 @@ test('public portrait and VIP sites are reachable and show the installer to othe
     expect(buyCredentialGood(game,alice,site.kind,world)).toBe('Compra guardada no inventário.');
     const [item] = game.view(alice,world).inventory;
     expect(game.act(alice,{kind:'install',place,item:item.id},world)).toBe('Aproxime-se do local.');
-    const approach = {x:site.point.x,y:site.point.y+(place==='libraryPortrait' ? 30 : 10)};
+    const approach = {x:site.point.x,y:site.point.y+10};
     expect(canStand(approach.x,approach.y)).toBe(true);
     expect(findRoute({x:140,y:146},approach).at(-1)).toEqual(approach);
     if (site.kind==='portrait') {
@@ -604,7 +605,8 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   game.spyAction(bob,{kind:'mute',channel:audio.id},world);
   expect(game.spyVolume(bob,watcher)).toBe(0);
   const replacementCamera = buy(bob,'spyCamera');
-  Object.assign(bob,{x:527,y:350});
+  const shelf = hideouts.find(site=>site.id==='library')!;
+  Object.assign(bob,{x:shelf.x,y:shelf.y+13});
   game.spyAction(bob,{kind:'install',site:'library',item:replacementCamera.id},world);
   world.now += 5000;
   game.tick(world,true);
