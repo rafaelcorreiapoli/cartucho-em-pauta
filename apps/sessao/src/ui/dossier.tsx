@@ -48,7 +48,7 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
   if (evidence!==undefined && selected?.id!==evidence) setEvidence(undefined);
   return <>
     <header className="social-header">
-      <h2>Dossiê</h2>
+      <h2 id="dossier-title">Dossiê</h2>
       {close && <DialogDismiss label="Fechar dossiê" onDismiss={close}/>}
     </header>
     <section aria-label="Ofertas de documentos">
