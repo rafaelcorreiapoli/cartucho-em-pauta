@@ -327,7 +327,7 @@ export class PlenaryMatch {
   }
 
   private recordGameplay(event:GameplayEvent):boolean {
-    if (event.at<this.started) return false;
+    if (!this.running || event.at<this.started) return false;
 
     const project = event.type==='filed' ? event.project : undefined;
     if (project!==undefined && this.projectFilingError(event.actor,project,event.at)) return false;
@@ -411,7 +411,7 @@ export class PlenaryMatch {
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
     const generation = this.matchGeneration;
-    const current = ()=>generation===this.matchGeneration;
+    const current = ()=>this.running && generation===this.matchGeneration;
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,

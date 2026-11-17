@@ -392,3 +392,38 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   hud.render(view);
   expect(hud.countdown.get()).toBeUndefined();
 });
+
+test('delayed work cannot change the final Agenda, XP, wallet or budget',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration;
+  const pending = match.gameplayWorld([player],deadline-1,()=>false);
+  const coffee = {
+    type:'coffee-drunk',actor:player.id,at:deadline-1,position:player,witnesses:[],eventId:pending.nextEventId!(),
+  } as const;
+  match.advance(deadline);
+  expect(match.phase).toBe('finished');
+  const view = ()=>match.view(player.id,[player.id],deadline);
+  const final = view();
+  const hud = createHudModel();
+  hud.render(final);
+  const agenda = hud.agenda.get();
+  const resources = hud.resources.get();
+  const congress = hud.congress.get();
+
+  const finished = match.gameplayWorld([player],deadline,()=>false);
+  for (const world of [pending,finished]) {
+    expect(world.publish({...coffee,witnesses:[]})).toBe(false);
+    expect(world.spend!(player.id,1)).toBe(false);
+    expect(world.spendSubsidized!(player.id,1,1)).toBe(false);
+    expect(world.settleBet!(player.id,1,2,2)).toBe(false);
+    world.earn(player.id,1);
+    world.earnXp!(player.id,20);
+  }
+  expect(view().politics).toEqual(final.politics);
+  expect(view().budget).toBe(final.budget);
+  hud.render(view());
+  expect(hud.agenda.get()).toBe(agenda);
+  expect(hud.resources.get()).toBe(resources);
+  expect(hud.congress.get()).toBe(congress);
+});
