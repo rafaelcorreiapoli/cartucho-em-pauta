@@ -724,6 +724,29 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
+test('cassation counts the same connected votes in the HUD and the final tally',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  const openedAt = 50+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  match.castCassation(host.id,traitor.id,openedAt);
+  match.castCassation(honest.id,null,openedAt);
+  match.castCassation(traitor.id,host.id,openedAt);
+  const ballot = (id=host.id)=>match.view(id,ids,openedAt).cassation!;
+  expect(ballot()).toMatchObject({electorate:3,quorum:2,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  expect(ballot()).toMatchObject({electorate:2,quorum:2,voted:1});
+  expect(ballot().choice).toBeUndefined();
+  expect(ballot(honest.id).choice).toBeNull();
+  expect(ballot(traitor.id).choice).toBeUndefined();
+  match.setPlayerConnected(traitor.id,true);
+  expect(ballot()).toMatchObject({electorate:3,voted:3,choice:traitor.id});
+  match.setPlayerConnected(traitor.id,false);
+  match.advance(openedAt+HEARING_MS);
+  expect(match.view(host.id,ids,openedAt+HEARING_MS).cassationResult?.text).toContain('Ninguém foi cassado');
+});
+
 test('project votes expose portraits and current choices without roles; abstentions do not count as no',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);

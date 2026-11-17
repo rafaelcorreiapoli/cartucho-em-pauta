@@ -454,12 +454,18 @@ export class PlenaryMatch {
     this.cassationVotes.set(id,candidate);
   }
 
+  private cassationChoice(id:string) {
+    if (!this.canVoteInCassation(id)) return undefined;
+    const target = this.cassationVotes.get(id);
+    return target == null || this.canVoteInCassation(target) ? target : undefined;
+  }
+
   private resolveCassation(now:number) {
     const electorate = this.cassationElectorate();
     const tally = new Map<string,number>();
     for (const id of electorate) {
-      const target = this.cassationVotes.get(id);
-      if (target && electorate.includes(target)) tally.set(target,(tally.get(target) ?? 0)+1);
+      const target = this.cassationChoice(id);
+      if (target) tally.set(target,(tally.get(target) ?? 0)+1);
     }
     const majority = majorityQuorum(electorate.length);
     const result = [...tally].find(([,votes])=>votes>=majority);
@@ -887,8 +893,8 @@ export class PlenaryMatch {
       canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
-        quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationVotes.has(candidate.id)).length,
-        choice:this.cassationVotes.get(id)},
+        quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationChoice(candidate.id)!==undefined).length,
+        choice:this.cassationChoice(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
