@@ -1,6 +1,7 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
+import type {WorldItem} from '../src/gameplay';
 import {stations} from '../src/plenary';
 class TestRoom extends SessionRoom {
   onCreate() {
@@ -15,6 +16,17 @@ class TestRoom extends SessionRoom {
         // Permit the call UI to exercise signaling without capturing audio.
         voice.add(state.player.id);
         Object.assign(state.player,stations.coffee);
+        const game = Reflect.get(this,'gameplay');
+        const holder = state.player.id;
+        if (state.player.nick==='Alice') {
+          const document:WorldItem = Reflect.get(game,'create').call(game,'document',{holder});
+          document.document = {
+            author:holder,title:'Projeto de teste',description:'Anexo de teste',edited:false,project:0,
+            signatures:[],stamps:[],requiredStamps:[],requiredSignatures:0,
+          };
+        } else {
+          Reflect.get(game,'create').call(game,'forensicKit',{holder});
+        }
       }
     },100);
   }

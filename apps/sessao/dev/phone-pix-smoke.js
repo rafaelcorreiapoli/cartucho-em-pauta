@@ -186,16 +186,34 @@ async page => {
       await client.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();
     }
     const mail = page.locator(dialog).locator('#phone-mail');
-    await mail.getByRole('button',{name:'Novo comunicado'}).click();
+    async function runMailShortcut(client, original, name) {
+      await original.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
+      await client.keyboard.press('F2');
+      await client.locator('#action-shortcuts').getByRole('button',{name,exact:false}).click();
+    }
+    await runMailShortcut(page,mail.getByRole('button',{name:'Novo comunicado'}),'Novo comunicado');
     await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
     await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
+    await mail.getByRole('button',{name:'Selecionar anexo'}).click();
+    await mail.getByRole('button',{name:'Projeto de teste',exact:true}).click();
     const publish = mail.getByRole('button',{name:/^Publicar/});
     await publish.evaluate(button=>{
       button.removeAttribute('aria-keyshortcuts');
       button.focus();
     });
     await page.keyboard.press('1');
-    await receiver.locator(dialog).getByRole('heading',{name:'Aviso do Cafezinho'}).waitFor();
+    const receivedMail = receiver.locator(dialog).locator('#phone-mail');
+    await receivedMail.getByRole('heading',{name:'Aviso do Cafezinho'}).waitFor();
+    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Realizar perícia'}),'Realizar perícia · Aviso do Cafezinho');
+    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Consumir kit'}),'Consumir kit · Aviso do Cafezinho');
+    await receivedMail.getByText(/VERDADEIRO/).waitFor();
+    if (await mail.getByText(/VERDADEIRO/).count()) throw Error('O laudo privado vazou para outro jogador');
+    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Encaminhar'}),'Encaminhar · Aviso do Cafezinho');
+    await receivedMail.getByLabel('Mensagem').fill('Encaminhado após perícia');
+    await receivedMail.getByRole('button',{name:/^Publicar/}).focus();
+    await receiver.keyboard.press('1');
+    await mail.getByRole('heading',{name:'Enc: Aviso do Cafezinho',exact:true}).waitFor();
+    await mail.getByText('Encaminhado após perícia',{exact:true}).waitFor();
   } finally {
     await receiver.close();
   }
