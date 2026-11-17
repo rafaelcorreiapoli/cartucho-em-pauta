@@ -711,7 +711,7 @@ export class Gameplay {
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
       vitality:this.combat.view(player,world.now),
-      treatment:this.treatmentAvailable(player,world.now),
+      treatment:this.treatmentOffer(player,world),
       modulator,
       decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
         localPerception(player,item,this.vision(player.id,world.now)).visible),
@@ -1338,6 +1338,13 @@ export class Gameplay {
     const patient = this.transport.passenger(player) ?? player;
     const {hp,max} = this.combat.view(patient,now);
     if (hp<max) return {target:patient===player ? undefined : patient.id};
+  }
+
+  private treatmentOffer(player:Player,world:GameplayWorld):GameplayView['treatment'] {
+    const patient = this.treatmentAvailable(player,world.now);
+    if (!patient) return;
+    const wallet = world.wallet?.(player.id);
+    return {...patient,price:infirmary.price,affordable:wallet===undefined ? undefined : wallet>=infirmary.price};
   }
 
   private treat(player:Player, world:GameplayWorld) {

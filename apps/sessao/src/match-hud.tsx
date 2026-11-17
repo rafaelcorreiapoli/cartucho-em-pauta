@@ -14,7 +14,7 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { equippedWeapon, xray } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
-import { infirmary } from './medical';
+import {treatmentAction} from './ui/treatment-action';
 import { decorationActions } from './installations';
 import { npcs } from './npcs';
 import { hudConsumesKeys } from './game-keys';
@@ -65,7 +65,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   let roster:Player[] = [];
   let own:Player | undefined;
   function renderField(view:PlenaryView|undefined, player:Player|undefined) {
-    const actions:{label:string; icon:string; action:FieldAction}[] = [];
+    const actions:{label:string; icon:string; action:FieldAction; disabled?:boolean}[] = [];
     const state = view?.gameplay;
     if (state && player) {
       const extinguisher = state.nearby.find(item=>item.kind==='extinguisher');
@@ -111,10 +111,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
-      if (state.treatment) {
-        actions.push({label:`${state.treatment.target ? 'Atender carregado' : 'Consultar '+infirmary.doctor.name} · ${money(infirmary.price)}`,
-          icon:'shield',action:{kind:'treat'}});
-      }
+      const treatment = treatmentAction(state.treatment,view?.politics?.wallet);
+      if (treatment) actions.push({...treatment,icon:'shield',action:{kind:'treat'}});
       if (player.carrying) {
         actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
       } else {
@@ -140,8 +138,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const key = JSON.stringify(actions);
     if (key===fieldKey) return;
     fieldKey = key;
-    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action})=>
-      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" onClick={()=>sendField(action)}>
+    flushSync(()=>fieldRoot.render(actions.map(({label,icon,action,disabled})=>
+      <button key={JSON.stringify(action)} type="button" className="hud-button hud-button--secondary" disabled={disabled} onClick={()=>sendField(action)}>
         <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>{label}
       </button>)));
   }

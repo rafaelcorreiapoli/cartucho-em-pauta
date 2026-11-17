@@ -131,7 +131,7 @@ export type GameplayView = {
   surveillance?:SpyView;
   security?:SecurityView;
   contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
-  npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
+  npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string; price?:number; affordable?:boolean};
   vitality?:{hp:number; max:number; recovery:number};
   offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
