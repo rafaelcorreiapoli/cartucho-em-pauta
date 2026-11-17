@@ -803,7 +803,7 @@ test('the plenary visit objective requires entry and exit within the same articu
 });
 
 test('urgent calls retain confirmed HUD progress after the first contact leaves',()=>{
-  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+  const players:Player[] = ['Rafa','Bia','Caio','Dani'].map((nick,character)=>({
     id:nick,nick,character,direction:0,moving:false,x:445,y:143,
   }));
   const [caller,first,second] = players;
@@ -1250,7 +1250,7 @@ test.each([true,false])('selfies retain distinct colleagues who already counted,
 });
 
 test('the pizza mission keeps its first slice after that guest leaves',()=>{
-  const players:Player[] = ['rafa','bia','caio'].map(id=>({
+  const players:Player[] = ['rafa','bia','caio','dani'].map(id=>({
     id,nick:id,character:0,direction:0,moving:false,...npcs.snackVendor.interaction,
   }));
   const [host,bia,caio] = players;
