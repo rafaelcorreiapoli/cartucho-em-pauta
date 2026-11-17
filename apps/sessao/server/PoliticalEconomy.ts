@@ -414,8 +414,8 @@ export class PoliticalEconomy {
     });
   }
 
-  setAgendaPowerAvailability(powerOut:()=>boolean) {
-    for (const account of this.accounts.values()) Object.assign(account,{powerOut});
+  setAgendaPowerAvailability(canRepairOutage:(id:string)=>boolean) {
+    for (const [id,account] of this.accounts) Object.assign(account,{canRepairOutage:()=>canRepairOutage(id)});
   }
 
   setAgendaCommerce(commerce:NonNullable<AgendaMetrics['commerce']>) {

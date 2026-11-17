@@ -275,7 +275,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       return this.election.canCampaignAction(id,kind);
     });
-    this.economy.setAgendaPowerAvailability(()=>this.powerOut);
+    this.economy.setAgendaPowerAvailability(id=>this.canRepairOutage(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
@@ -751,6 +751,11 @@ export class PlenaryMatch {
 
   private powerCooldown(now:number) {
     return this.energySavingsActive(now) ? energySavings.sabotageCooldown : powerRules.cooldownMs;
+  }
+
+  private canRepairOutage(id:string) {
+    return this.powerOut && !this.disconnected.has(id) && !this.isolated(id) &&
+      [...this.electorate].some(other=>other!==id && !this.disconnected.has(other) && !this.isolated(other));
   }
 
   private canUsePower(now:number) {

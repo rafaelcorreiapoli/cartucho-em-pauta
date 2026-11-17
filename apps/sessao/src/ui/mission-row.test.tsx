@@ -1437,6 +1437,15 @@ test('the agenda displays emergency maintenance only while the outage can be rep
   expect(match.actOnPower(caio,{kind:'sabotage',panel:0},10)).toBe('Energia cortada.');
   expect(render(10)).toContain(title);
   expect(render(10)).not.toContain('data-done="true"');
+  match.setPlayerConnected(bia.id,false);
+  expect(render(10)).toContain(title);
+  match.setPlayerConnected(caio.id,false);
+  expect(match.powerOut).toBe(true);
+  expect(render(10)).not.toContain(title);
+  expect(match.view(rafa.id,ids,10).politics?.progression.xp).toBe(0);
+  match.setPlayerConnected(bia.id,true);
+  expect(render(10)).toContain(title);
+
   match.actOnPower(rafa,{kind:'repair',panel:0},11);
   match.actOnPower(bia,{kind:'repair',panel:1},11);
   const end = 11+powerRules.repairMs;
