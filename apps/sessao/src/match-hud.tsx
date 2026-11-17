@@ -8,7 +8,6 @@ import { documentRules } from './internal-mail';
 import { mountElectionStationActions } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
 import { mountLegislativeStationActions } from './ui/legislative-station-actions';
-import { mountLegislativeBrief } from './ui/legislative-brief';
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -28,7 +27,7 @@ import { roomActivities, type RoomActivity, type RoomActivityResult } from './ro
 
 import type { SpyOption } from "./surveillance";
 
-type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'request-document'} | {kind:'open-security'};
+type FieldAction = {kind:'power';option:PowerAction} | {kind:'fire'; option:FireOption} | {kind:"spy"; option:SpyOption} | {kind:'npc-deal'; command:'talk'|'rob'|'close'; target?:string} | GameplayAction | {kind:'cross-door';door:number} | {kind:'inspect-stash'} | {kind:'edit-document';item:number;project:number} | {kind:'open-security'};
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -38,7 +37,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
-  const legislativeBrief = mountLegislativeBrief(element<HTMLDialogElement>('legislative-brief'));
   const stations = element('stations');
   const shortcuts = mountStationShortcuts(element('station-shortcuts'),kind=>{
     switch (kind) {
@@ -115,7 +113,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
     }
     if (state?.security) actions.push({label:'Consultar câmeras',icon:'camera',action:{kind:'open-security'}});
-    if (state?.locations.includes('secretary')) actions.push({label:'Solicitar documento',icon:'document',action:{kind:'request-document'}});
     if (state?.locations.includes('reprography')) {
       for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {
         actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id,project:item.document.project}});
@@ -148,7 +145,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
           }
         }
         for (const target of state.npcNearby ?? []) {
-          actions.push({label:`Abrir loja · ${npcs[target].name}`,icon:'inventory',action:{kind:'open-shop',target}});
+          const npc = npcs[target];
+          if (npc.catalog) actions.push({label:`Abrir loja · ${npc.name}`,icon:'inventory',action:{kind:'open-shop',target}});
+          else actions.push({label:`${npc.label} · Falar com ${npc.name}`,icon:'document',action:{kind:'talk',target}});
         }
         for (const target of roster) {
           if (canReachDownedPlayer(player,target)) {
@@ -295,13 +294,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     showReward:rewards.show,
     activityResult({activity,text}:RoomActivityResult) {
       const info = roomActivities[activity];
-      if ((activity==='secretary' || activity==='archive') && previous?.phase==='negotiation') {
-        legislativeBrief.open(activity,previous);
-      }
       if (text) notify(info.title,text);
     },
     render(view:PlenaryView) {
-      if (view.phase!=='negotiation') legislativeBrief.close();
       const politics = view.politics;
 
       if (previous) {
@@ -344,7 +339,6 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     destroy() {
       gear.destroy();
       notices.destroy();
-      legislativeBrief.destroy();
       legislative.destroy();
       electoral.destroy();
       rewards.destroy();

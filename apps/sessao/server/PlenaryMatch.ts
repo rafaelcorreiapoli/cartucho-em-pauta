@@ -20,7 +20,7 @@ import {
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
-import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, money, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -349,7 +349,6 @@ export class PlenaryMatch {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
     switch (activity) {
-      case 'cabinet': return {activity,text:`O orçamento público está em ${money(this.budget)}.`};
       case 'coffee':
         if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
         this.publishActivity(player,'coffee-drunk',now);
@@ -358,9 +357,6 @@ export class PlenaryMatch {
         if (!this.proposal) return {activity,text:'Nenhum projeto em pauta.'};
         this.publishActivity(player,'bill-studied',now);
         return {activity,text:`Você estudou o projeto ${bills[this.proposal.project].name}.`};
-      case 'quorum': return {activity,text:!this.proposal ? 'Nenhum projeto em pauta.' : `Votos a favor necessários para aprovar ${bills[this.proposal.project].name}: ${this.billQuorum()}.`};
-      case 'benches': return {activity,text:`Parlamentares aptos a votar nesta rodada: ${this.votingPlayers()}.`};
-      default: return {activity};
     }
   }
 
@@ -376,10 +372,11 @@ export class PlenaryMatch {
         return true;
       },
       plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
+      earnXp:(id,amount)=>this.economy.earnXp(id,amount),
+      settleBet:(id,stake,payout,maxPayout)=>this.economy.settleBet(id,stake,payout,maxPayout),
       office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
       projectFilingError:(id,project)=>this.projectFilingError(id,project,now),
-      projectSignatures:this.initialPlayers===1 ? 0 : 1,
-      canSignProject:id=>this.canVote(id),
+      projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
       hasMandate:id=>this.npcIds.has(id) || !!this.election.office(id),
       cashFlow:(kind,amount)=>{ this.cash[kind] += amount; },
       deposit:(id,amount)=>{

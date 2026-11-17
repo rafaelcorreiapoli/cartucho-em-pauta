@@ -67,6 +67,16 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const players = Reflect.get(room,'players') as Map<string,{player:Player}>;
     const move = (peer:Room,point:{x:number;y:number})=>Object.assign(players.get(peer.sessionId)!.player,point);
     const state = (peer:Room)=>views.get(peer.sessionId)?.gameplay;
+    const submitAtProtocol = async (item:number,token:number) => {
+      move(alice,npcs.protocol.interaction);
+      alice.send('gameplay',{action:{kind:'talk',target:'protocol'},token:token-5});
+      const conversation = await wait(()=>{
+        const dialogue = state(alice)?.dialogue;
+        return dialogue?.npc==='protocol' ? dialogue : undefined;
+      });
+      alice.send('gameplay',{action:{kind:'dialogue-choice',target:`file-${item}`,token:conversation.token},token});
+      return conversation;
+    };
     alice.send('start-match',{npcs:0,token:1});
     await wait(()=>state(alice));
     const economy = Reflect.get(match,'economy');
@@ -194,9 +204,8 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     expect(views.get(caio.sessionId)?.politics?.missions.completed.filter(mission=>mission.kind==='publicouSelfie')).toEqual([completedSelfie]);
     expect(inboxes.get(alice.sessionId)?.some(entry=>entry.subject==='Reenvio')).toBe(false);
     expect(JSON.stringify(forwarded)).not.toContain('authentic');
-    move(alice,stations.amendment);
     feedback.delete(alice.sessionId);
-    alice.send('gameplay',{action:{kind:'file',item:original.id,place:'protocol'},token:1710});
+    await submitAtProtocol(original.id,1710);
     await wait(()=>feedback.get(alice.sessionId)==='O documento não atende aos requisitos formais.');
     expect(views.get(alice.sessionId)?.project).toBeUndefined();
     economy.changePopularity(alice.sessionId,40);
@@ -225,18 +234,18 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     move(alice,stations.secretary);
     alice.send('gameplay',{action:{kind:'supply',place:'secretary',target:'project-1'},token:1980});
     const fresh = await wait(()=>state(alice)?.inventory.find(item=>item.document?.project===1));
-    alice.send('gameplay',{action:{kind:'stamp',place:'secretary',item:fresh.id},token:2000});
-    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.stamps.includes('Secretaria')));
+    expect(fresh.document).toMatchObject({requiredSignatures:2,requiredStamps:[]});
     move(caio,{x:stations.secretary.x+8,y:stations.secretary.y});
     alice.send('gameplay',{action:{kind:'sign-request',item:fresh.id,target:caio.sessionId},token:2030});
     const freshRequest = await wait(()=>state(caio)?.requests.find(entry=>entry.item.id===fresh.id));
     caio.send('gameplay',{action:{kind:'accept',item:freshRequest.id},token:2050});
     await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.signatures.length));
-    move(alice,stations.cabinet);
-    alice.send('gameplay',{action:{kind:'stamp',place:'cabinet',item:fresh.id},token:2080});
-    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.stamps.includes('Gabinete')));
-    move(alice,stations.amendment);
-    alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2110});
+    move(bia,{x:stations.secretary.x-8,y:stations.secretary.y});
+    alice.send('gameplay',{action:{kind:'sign-request',item:fresh.id,target:bia.sessionId},token:2080});
+    const secondSignature = await wait(()=>state(bia)?.requests.find(entry=>entry.item.id===fresh.id));
+    bia.send('gameplay',{action:{kind:'accept',item:secondSignature.id},token:2090});
+    await wait(()=>state(alice)?.inventory.find(item=>item.id===fresh.id && item.document?.signatures.length===2));
+    await submitAtProtocol(fresh.id,2110);
     await wait(()=>views.get(alice.sessionId)?.project===1);
     expect(views.get(bia.sessionId)?.proposer).toBe('Alice');
     expect(views.get(caio.sessionId)?.proposer).toBe('Alice');
@@ -247,9 +256,9 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     Reflect.set(match,'ends',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
     // A new command token does not make an already filed item available again.
-    move(alice,stations.amendment);
-    alice.send('gameplay',{action:{kind:'file',place:'protocol',item:fresh.id},token:2120});
-    await wait(()=>feedback.get(alice.sessionId)==='O objeto não está com você.');
+    const replay = await submitAtProtocol(fresh.id,2120);
+    await wait(()=>feedback.get(alice.sessionId)==='Opção indisponível.');
+    expect(replay.options.some(option=>option.id===`file-${fresh.id}`)).toBe(false);
     expect(views.get(alice.sessionId)?.project).toBeUndefined();
     const fire = Reflect.get(match,'fire');
     const infiltrator = rooms.find(peer=>views.get(peer.sessionId)?.role==='Infiltrado')!;

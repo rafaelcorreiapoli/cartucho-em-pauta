@@ -26,7 +26,7 @@ test('cassation shows other candidates and the private skip selection',()=>{
   }}/>);
   expect(html).not.toContain('Meu nick');
   expect(html).toContain('Outro nick');
-  expect(html).toContain('aria-keyshortcuts="0" aria-pressed="true">Pular voto');
+  expect(html).toContain('aria-keyshortcuts="2" aria-pressed="true">Pular voto');
 });
 
 test('project impacts signal each number independently of the vote outcome',()=>{
