@@ -1596,3 +1596,24 @@ test('a pizza-serving mission preserves credited guests and requires enough new 
   expect(agenda.hasActive('fatias')).toBe(false);
   expect(agenda.view(metrics).completed).toEqual([]);
 });
+
+test('one selfie cannot repeatedly pay the publication mission across channels',()=>{
+  const contacts = ['b','c'].map(id=>({id,name:id}));
+  const payouts:number[] = [];
+  const agenda = new PersonalAgenda(metrics,3,()=>0,reward=>payouts.push(reward.xp));
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['publicouSelfie','jornalismo','cafe']);
+    agenda.updateEligibility(metrics,3,true,3,0,contacts);
+  };
+  const photo = {...missionPhoto,people:contacts.map(contact=>({...contact,x:480,y:650,character:0,direction:0 as const}))};
+  draw();
+  recordAgendaEvent(agenda,event('photo-published',{photo}));
+  expect(payouts).toEqual([30]);
+  draw();
+  recordAgendaEvent(agenda,event('photo-published',{photo,place:'internal-mail'}));
+  expect(agenda.view(metrics).completed.map(row=>row.kind)).toEqual(['publicouSelfie','jornalismo']);
+  expect(agenda.hasActive('publicouSelfie')).toBe(true);
+  recordAgendaEvent(agenda,event('photo-published',{photo:{...photo,id:photo.id+1}}));
+  expect(agenda.view(metrics).completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(2);
+});
