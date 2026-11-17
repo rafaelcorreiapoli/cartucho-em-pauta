@@ -7,6 +7,13 @@ export const characterSheets = [
   {key:'players-expansion',path:'assets/sprites-expansao.png'},
 ] as const;
 
+export const phoneSheet = {key:'lula-phone',path:'assets/lula-phone.webp'} as const;
+
+export function phoneArt(character:number,time:number,reducedMotion:boolean) {
+  if (NAMES[character]!=='Lula') return;
+  return {key:phoneSheet.key,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
+}
+
 const combatCharacters:Record<(typeof NAMES)[number],string> = {
   Lula:'lula',
   Bolsonaro:'bolsonaro',
