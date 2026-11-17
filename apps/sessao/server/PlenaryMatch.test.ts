@@ -554,7 +554,8 @@ test.each([0,2,3])('the deadline counts rejected projects toward the three-vote 
   match.advance(ELECTION_RULES.matchDuration);
   const result = match.view(host.id,[host.id],ELECTION_RULES.matchDuration);
   expect(result.outcomes.map(outcome=>outcome.passed)).toEqual(Array(count).fill(false));
-  expect(result.winner).toBe(count===3 ? 'Parlamentar' : 'Infiltrado');
+  expect(result.winner).toBe(count===3 ? 'Parlamentar' : undefined);
+  expect(result.congressDestroyed).toBe(count<3 ? true : undefined);
 });
 
 test('campaign missions return to the draw after renewal resets used actions',()=>{

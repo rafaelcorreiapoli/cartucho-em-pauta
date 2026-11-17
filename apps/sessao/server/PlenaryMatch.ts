@@ -225,6 +225,7 @@ export class PlenaryMatch {
   private audits = new Map<string,'clean' | 'fraud'>();
   private outcomes: Outcome[] = [];
   private winner?: Role;
+  private congressDestroyed?: boolean;
   private finalRoster:SessionParticipant[] = [];
   private reason?: string;
 
@@ -280,7 +281,7 @@ export class PlenaryMatch {
     this.agendaNow = now;
     this.agendaBallotsLeft = -1;
     this.outcomes = [];
-    this.winner = this.reason = undefined;
+    this.winner = this.reason = this.congressDestroyed = undefined;
     this.nextRound();
     return true;
   }
@@ -952,7 +953,8 @@ export class PlenaryMatch {
     this.treasuryBonus = undefined;
     this.cassationAt = undefined;
     this.cassationOpen = false;
-    this.winner = winner;
+    this.congressDestroyed = winner==='Infiltrado' || this.stability===0 || undefined;
+    this.winner = winner==='Infiltrado' && !this.infiltrators.size ? undefined : winner;
     this.reason = reason;
   }
 
@@ -996,7 +998,7 @@ export class PlenaryMatch {
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,quorum:this.quorum(),vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
-      no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
+      no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,congressDestroyed:this.congressDestroyed,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,
       infiltratorName:this.phase==='finished' ? this.infiltratorName : undefined,
     };

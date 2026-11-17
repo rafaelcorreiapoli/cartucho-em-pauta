@@ -27,8 +27,8 @@ const finaleParticles = Array.from({length:44},(_,index)=>({
   '--particle-duration':`${3+(index%7)*.6}s`,
 }) as CSSProperties);
 
-export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<PlenaryView,'winner'|'reason'|'stability'|'finalRoster'>) {
-  const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || stability===0 ? 'destroyed' : 'ended';
+export function SessionResult({winner,reason,stability,congressDestroyed,finalRoster=[]}:Pick<PlenaryView,'winner'|'reason'|'stability'|'congressDestroyed'|'finalRoster'>) {
+  const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || congressDestroyed || stability===0 ? 'destroyed' : 'ended';
   const headline = outcome==='saved' ? 'O Congresso foi salvo!' :
     outcome==='destroyed' ? 'O Congresso foi destruído!' : 'Sessão encerrada';
   const factions = [
