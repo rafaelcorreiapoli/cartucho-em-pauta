@@ -195,17 +195,20 @@ async page => {
         const bounds = list.getBoundingClientRect();
         const cards = [...list.children].map(card=>card.getBoundingClientRect());
         const labels = [...list.querySelectorAll('.project-voter-name')];
-        const panel = list.closest('.project-ballot').getBoundingClientRect();
+        const panel = list.closest('.project-ballot');
+        const panelBounds = panel.getBoundingClientRect();
+        const buttons = [...panel.querySelectorAll('[data-vote]')].map(button=>button.getBoundingClientRect());
         return {
           count:cards.length,
           singleRow:cards.every(card=>Math.abs(card.top-cards[0].top)<1),
           allVisible:cards.every(card=>card.width>0 && card.left>=bounds.left && card.right<=bounds.right+1),
           noOverflow:list.scrollWidth<=list.clientWidth+1 && list.scrollHeight<=list.clientHeight+1,
           ellipsis:labels.some(label=>label.scrollWidth>label.clientWidth && getComputedStyle(label).textOverflow==='ellipsis'),
-          compact:panel.height<innerHeight*.65,
+          compact:panelBounds.height<innerHeight*.65,
+          controlsVisible:buttons.length===3 && buttons.every(button=>button.top>=0 && button.bottom<=innerHeight),
         };
       });
-      if (layout.count!==6 || !layout.singleRow || !layout.allVisible || !layout.noOverflow || !layout.ellipsis || !layout.compact) {
+      if (layout.count!==6 || !layout.singleRow || !layout.allVisible || !layout.noOverflow || !layout.ellipsis || !layout.compact || !layout.controlsVisible) {
         throw Error(`Cédula lotada em ${width}×${height}: ${JSON.stringify(layout)}`);
       }
       await page.screenshot({path:`/tmp/sessao-ballot-${width}x${height}.png`,animations:'disabled'});

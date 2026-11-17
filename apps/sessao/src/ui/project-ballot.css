@@ -2,6 +2,7 @@
   position: fixed;
   inset: auto 0 0;
   width: min(calc(100% - 2 * var(--hud-edge)), 820px);
+  max-height: none;
   padding: 0;
   overflow: visible;
   border: 0;
@@ -60,12 +61,12 @@
   display: grid;
   gap: 6px;
   max-height: 60dvh;
-  overflow: auto;
-  scrollbar-width: thin;
+  grid-template-rows: minmax(0,1fr) auto;
   padding: 4px 8px 8px;
 }
 #legislative-dock:has(#vote-history:not([hidden])) .project-ballot-body { padding-bottom: 36px; }
 .project-ballot-body[hidden] { display: none; }
+.project-ballot-content { display: grid; gap: 6px; overflow: auto; scrollbar-width: thin; }
 .project-ballot-banner {
   display: grid;
   grid-template-columns: 72px minmax(0,1fr) repeat(2,minmax(0,132px));

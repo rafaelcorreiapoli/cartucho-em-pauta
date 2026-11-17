@@ -50,42 +50,44 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
       {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
     </button>
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
-      <header className="project-ballot-banner" data-project={index}>
-        <div className="project-ballot-art" aria-hidden="true">
-          {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
+      <div className="project-ballot-content">
+        <header className="project-ballot-banner" data-project={index}>
+          <div className="project-ballot-art" aria-hidden="true">
+            {art ? <img data-banner={index===0 ? '' : undefined} src={import.meta.env.BASE_URL+'assets/'+art} alt=""/> : <HudIcon name="wifi"/>}
+          </div>
+          <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
+          <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
+            bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
+            bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
+          <ProjectImpact impact={no} budget={budget} approved={false}/>
+        </header>
+        <div className="project-ballot-timer">
+          <HudIcon name="ballot"/><strong>Votação em andamento</strong>
+          <progress className="animated-progress" aria-label="Tempo restante" value={remaining} max={BALLOT_MS/1000}
+            style={{'--meter-ratio':remaining/(BALLOT_MS/1000)} as CSSProperties}/>
+          <time><HudIcon name="clock"/>{clock}</time>
         </div>
-        <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
-        <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
-          bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
-          bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
-        <ProjectImpact impact={no} budget={budget} approved={false}/>
-      </header>
-      <div className="project-ballot-timer">
-        <HudIcon name="ballot"/><strong>Votação em andamento</strong>
-        <progress className="animated-progress" aria-label="Tempo restante" value={remaining} max={BALLOT_MS/1000}
-          style={{'--meter-ratio':remaining/(BALLOT_MS/1000)} as CSSProperties}/>
-        <time><HudIcon name="clock"/>{clock}</time>
-      </div>
-      <div className="project-ballot-score">
-        <div className="project-ballot-summary">
-          {choices.map(({vote:choice,label})=><span key={choice} data-choice={choice}>{label} <strong>{counts[choice]}</strong></span>)}
-          <span data-choice="pending">Pendentes <strong>{counts.pending}</strong></span>
-          <span>Total <strong>{billVoters.length}</strong></span><span>{billQuorum} para aprovar</span>
+        <div className="project-ballot-score">
+          <div className="project-ballot-summary">
+            {choices.map(({vote:choice,label})=><span key={choice} data-choice={choice}>{label} <strong>{counts[choice]}</strong></span>)}
+            <span data-choice="pending">Pendentes <strong>{counts.pending}</strong></span>
+            <span>Total <strong>{billVoters.length}</strong></span><span>{billQuorum} para aprovar</span>
+          </div>
+          {billVoters.length>0 && <ul className="project-ballot-roster" aria-label="Votos dos parlamentares">
+            {billVoters.map(person=>{
+              const state = person.vote ?? 'pending';
+              const label = state==='yes' ? 'SIM' : state==='no' ? 'NÃO' : state==='abstain' ? 'Abstenção' : 'Pendente';
+              return <li key={person.id} data-choice={state} data-vote-state={state} title={`${person.name} · ${label}`}>
+                <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
+                <b><span aria-hidden="true">{state==='abstain' ? '○' : state==='pending' ? '?' : label}</span><span className="sr-only">{label}</span></b>
+              </li>;
+            })}
+          </ul>}
         </div>
-        {billVoters.length>0 && <ul className="project-ballot-roster" aria-label="Votos dos parlamentares">
-          {billVoters.map(person=>{
-            const state = person.vote ?? 'pending';
-            const label = state==='yes' ? 'SIM' : state==='no' ? 'NÃO' : state==='abstain' ? 'Abstenção' : 'Pendente';
-            return <li key={person.id} data-choice={state} data-vote-state={state} title={`${person.name} · ${label}`}>
-              <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
-              <b><span aria-hidden="true">{state==='abstain' ? '○' : state==='pending' ? '?' : label}</span><span className="sr-only">{label}</span></b>
-            </li>;
-          })}
-        </ul>}
+        {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
+          {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
+        </ul> : null}
       </div>
-      {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
-        {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
-      </ul> : null}
       <footer className="project-ballot-footer">
         <div className="project-ballot-self">{self && <PhoneContactFace person={self}/>}
           <div>Seu voto<strong role="status">{vote ? vote==='abstain'?'Abstenção':vote==='yes'?'SIM':'NÃO' : eligible?'Aguardando…':'Sem direito a voto'}</strong></div>
