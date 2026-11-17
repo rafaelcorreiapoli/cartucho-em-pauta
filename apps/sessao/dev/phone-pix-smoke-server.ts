@@ -15,6 +15,11 @@ class TestRoom extends SessionRoom {
         positioned.add(state);
         // Permit the call UI to exercise signaling without capturing audio.
         voice.add(state.player.id);
+        if (state.player.nick==='Denúncia QA' || state.player.nick==='Jogo QA') {
+          Object.assign(state.player,stations.audit);
+          if (state.player.nick==='Jogo QA') state.player.x += 12;
+          continue;
+        }
         Object.assign(state.player,stations.coffee);
         const game = Reflect.get(this,'gameplay');
         const holder = state.player.id;

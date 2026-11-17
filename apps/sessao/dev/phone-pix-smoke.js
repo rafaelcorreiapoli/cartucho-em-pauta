@@ -186,12 +186,12 @@ async page => {
       await client.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();
     }
     const mail = page.locator(dialog).locator('#phone-mail');
-    async function runMailShortcut(client, original, name) {
+    async function runShortcut(client, original, name) {
       await original.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
       await client.keyboard.press('F2');
       await client.locator('#action-shortcuts').getByRole('button',{name,exact:false}).click();
     }
-    await runMailShortcut(page,mail.getByRole('button',{name:'Novo comunicado'}),'Novo comunicado');
+    await runShortcut(page,mail.getByRole('button',{name:'Novo comunicado'}),'Novo comunicado');
     await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
     await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
     await mail.getByRole('button',{name:'Selecionar anexo'}).click();
@@ -204,18 +204,57 @@ async page => {
     await page.keyboard.press('1');
     const receivedMail = receiver.locator(dialog).locator('#phone-mail');
     await receivedMail.getByRole('heading',{name:'Aviso do Cafezinho'}).waitFor();
-    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Realizar perícia'}),'Realizar perícia · Aviso do Cafezinho');
-    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Consumir kit'}),'Consumir kit · Aviso do Cafezinho');
+    await runShortcut(receiver,receivedMail.getByRole('button',{name:'Realizar perícia'}),'Realizar perícia · Aviso do Cafezinho');
+    await runShortcut(receiver,receivedMail.getByRole('button',{name:'Consumir kit'}),'Consumir kit · Aviso do Cafezinho');
     await receivedMail.getByText(/VERDADEIRO/).waitFor();
     if (await mail.getByText(/VERDADEIRO/).count()) throw Error('O laudo privado vazou para outro jogador');
-    await runMailShortcut(receiver,receivedMail.getByRole('button',{name:'Encaminhar'}),'Encaminhar · Aviso do Cafezinho');
+    await runShortcut(receiver,receivedMail.getByRole('button',{name:'Encaminhar'}),'Encaminhar · Aviso do Cafezinho');
     await receivedMail.getByLabel('Mensagem').fill('Encaminhado após perícia');
     await receivedMail.getByRole('button',{name:/^Publicar/}).focus();
     await receiver.keyboard.press('1');
     await mail.getByRole('heading',{name:'Enc: Aviso do Cafezinho',exact:true}).waitFor();
     await mail.getByText('Encaminhado após perícia',{exact:true}).waitFor();
+
+    await page.reload();
+    await page.getByRole('textbox',{name:'Seu nick'}).fill('Denúncia QA');
+    await page.getByRole('button',{name:'Criar sala'}).click();
+    await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
+    await receiver.goto(await page.getByLabel('Link da sala').inputValue());
+    await receiver.getByRole('textbox',{name:'Seu nick'}).fill('Jogo QA');
+    await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
+    await receiver.locator('#lobby-back').waitFor();
+    await page.locator('#parliamentarian-count [data-count="0"]').click();
+    await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
+    const denounce = page.getByRole('button',{name:'Denunciar',exact:true});
+    await denounce.waitFor();
+    await receiver.keyboard.press('c');
+    await receiver.keyboard.press('2');
+    await receiver.keyboard.press('1');
+    await receiver.locator(dialog).getByText('Use as setas para começar',{exact:true}).waitFor();
+    await page.keyboard.press('c');
+    await page.keyboard.press('3');
+    await page.locator(dialog).getByRole('button',{name:'Tirar foto',exact:true}).click();
+    await page.locator(dialog).getByRole('button',{name:/Abrir álbum · 1\//}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator(dialog).waitFor({state:'hidden'});
+    await denounce.click();
+    const complaint = page.getByRole('dialog',{name:'Denunciar',exact:true});
+    await runShortcut(page,complaint.getByRole('button',{name:'Selecionar foto',exact:true}),'Selecionar foto');
+    await runShortcut(page,complaint.getByRole('button',{name:/Abrir fotografia/}),'Abrir fotografia');
+    await runShortcut(page,complaint.getByRole('button',{name:/Denunciar Jogo QA/}),'Denunciar Jogo QA');
+    await complaint.getByText('Nenhuma foto com irregularidades denunciáveis.',{exact:true}).waitFor();
+
+    await receiver.keyboard.press('Escape');
+    await receiver.locator(dialog).waitFor({state:'hidden'});
+    await receiver.keyboard.press('c');
+    await receiver.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();
+    const bulletin = receivedMail.locator('article').filter({
+      has:receiver.getByRole('heading',{name:'Infração confirmada · Jogo no celular',exact:true}),
+    });
+    await bulletin.getByText('Jogo QA perdeu popularidade após a confirmação de uma denúncia de jogo no celular.',{exact:true}).waitFor();
   } finally {
     await receiver.close();
   }
-  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true};
+  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true};
 }
