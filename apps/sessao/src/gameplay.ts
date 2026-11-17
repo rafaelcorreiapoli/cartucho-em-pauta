@@ -57,7 +57,7 @@ export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
   if (!('use' in objects[kind])) return;
   const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' ? 'Usar' :
     isDrink(kind) ? 'Beber' : 'Comer';
-  return {label,key:'1',action:{kind:'use',item:item.id}} as const;
+  return {label,action:{kind:'use',item:item.id}} as const;
 }
 
 export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>) {

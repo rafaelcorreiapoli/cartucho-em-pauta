@@ -23,6 +23,7 @@ export function dossierModel(id:string,view:PlenaryView|undefined,players:readon
     evidence:politics.evidence.map(record=>({
       id:record.id,label:`Documento ${record.id} · Rodada ${record.round+1}`,detail:describeEvidence(record,nameOf),
     })),
+    publicRecords:politics.ledger.slice().reverse().map(record=>({id:record.id,detail:describeEvidence(record,nameOf)})),
     contacts:politics.contacts.flatMap(contact=>{
       const player = players.find(player=>player.id===contact.id);
       return player ? [{...contact,character:player.character}] : [];
@@ -94,8 +95,14 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
       </> : <div className="social-empty">
         <svg className="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
         <strong>Nenhuma prova no dossiê</strong>
-        <p>Audite documentos na Corregedoria ou receba provas de outros jogadores.</p>
+        <p>Você pode receber provas de outros jogadores.</p>
       </div>}
     </section>
+    <details>
+      <summary>Registro público</summary>
+      {model.publicRecords.length ? <ol className="grid gap-2">
+        {model.publicRecords.map(record=><li key={record.id}>{record.detail}</li>)}
+      </ol> : <p>Nenhum registro público.</p>}
+    </details>
   </>;
 }

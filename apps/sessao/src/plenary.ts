@@ -8,6 +8,7 @@ import type { GameplayView } from './gameplay';
 import type { ElectionView } from './elections';
 import type { PoliticsView } from './politics';
 import { privateOffices } from './private-offices';
+import {npcs,treasurer} from './npcs';
 import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
@@ -26,6 +27,9 @@ export function deficitStabilityLoss(deficit:number) {
 
 export const stations = {
   ...roomActivities,
+  cabinet:treasurer.interaction,
+  secretary:npcs.secretary.interaction,
+  archive:{x:549,y:90},
   amendment: {x:129,y:365},
   audit: {x:808,y:93},
   panel: {x:548,y:620},

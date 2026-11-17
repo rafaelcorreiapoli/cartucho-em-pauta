@@ -662,18 +662,6 @@ test('the last ballot does not redraw a voting mission from an already credited 
   expect(missions().active.map(m=>m.kind)).toContain('apoio');
 });
 
-test('legislative brief activities require their respective stations and the negotiation phase',()=>{
-  const match = new PlenaryMatch(1);
-  match.start(host.id,[host],0);
-  publishProjectFiling(match,host);
-  for (const key of ['secretary','archive'] as const) {
-    expect(match.roomActivity(host,key,1)).toBeUndefined();
-    expect(match.roomActivity(at(host,key),key,1)).toEqual({activity:key});
-  }
-  match.advance(NEGOTIATION_MS);
-  expect(match.roomActivity(at(host,'secretary'),'secretary',NEGOTIATION_MS+1)).toBeUndefined();
-});
-
 test('cassation requires at least three eligible players to be called',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
@@ -1264,4 +1252,41 @@ test.each([1,2])('the hearing resolves with the published threshold when %i vote
   const after = match.view(honest.id,ids,10+HEARING_MS);
   expect(after.hearing).toBeUndefined();
   expect(after.hearingResult).toContain(yesVotes===2 ? 'aprovado' : 'rejeitado');
+});
+
+test('a captured phone game can be reported once with a photo and pays the reporter',()=>{
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  const reporter = {...host,...stations.audit};
+  const subject = {...honest,x:reporter.x+12,y:reporter.y};
+  const players = [reporter,subject,traitor];
+  expect(match.start(reporter.id,players,0,()=>.9)).toBe(true);
+  const world = match.gameplayWorld(players,100,()=>false);
+  const capture = () => {
+    expect(game.act(reporter,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
+    world.now += 2000;
+    return game.photoView(reporter.id,world.now).album.at(-1)!.photo;
+  };
+
+  game.act(subject,{kind:'phone-open'},world);
+  const innocent = capture();
+  game.act(subject,{kind:'game-start'},world);
+  const proof = capture();
+  const duplicate = capture();
+  expect(match.complaintView(reporter.id,[innocent,proof]).proofs).toEqual([
+    {photo:proof.id,kind:'phone-game',target:subject.id,accused:subject.nick},
+  ]);
+  expect(match.submitComplaint(reporter,subject.id,world.now,innocent)).toContain('incompatível');
+  expect(match.submitComplaint({...reporter,x:0,y:0},subject.id,world.now,proof)).toContain('balcão');
+  expect(match.submitComplaint(reporter,subject.id,world.now,proof)).toBeUndefined();
+  expect(match.submitComplaint(reporter,subject.id,world.now,duplicate)).toContain('incompatível');
+  expect(match.complaintView(reporter.id,[proof,duplicate]).proofs).toEqual([]);
+  expect(match.view(reporter.id,ids,world.now).politics).toMatchObject({wallet:9,popularity:48,progression:{xp:25}});
+  expect(match.view(subject.id,ids,world.now).politics?.popularity).toBe(32);
+  const [decision] = match.complaintView(subject.id).history;
+  expect(decision).toMatchObject({kind:'phone-game',accused:subject.nick,hasPhoto:true});
+  const mail = new InternalMail();
+  mail.publishComplaint(decision);
+  expect(mail.view()[0]).toMatchObject({author:'Corregedoria',subject:'Infração confirmada · Jogo no celular',
+    body:expect.stringContaining(subject.nick)});
 });

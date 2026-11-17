@@ -1,3 +1,4 @@
+import {infractionLabels,type ComplaintProof,type ComplaintView} from './complaints';
 import type {ReactNode} from 'react';
 import {PhoneContactFace} from './ui/phone-call';
 import { objects, type GameplayAction } from './gameplay';
@@ -17,6 +18,7 @@ export function createPhonePhotos(
   let albumTab:'personal'|'public' = 'personal';
   let photoId:number | undefined;
   let photoRecipient:string | undefined;
+  let choosingProof = false;
   let showing = false;
   let cameraPreview:HTMLCanvasElement | undefined;
   const previewTimer = window.setInterval(()=>{
@@ -58,6 +60,7 @@ export function createPhonePhotos(
     get request() { return photos.request; },
     resetSelection() {
       albumTab = 'personal';
+      choosingProof = false;
       photoId = photoRecipient = undefined;
     },
     clearRecipient() { photoRecipient = undefined; },
@@ -69,6 +72,25 @@ export function createPhonePhotos(
     setPreview(canvas:HTMLCanvasElement|null) {
       cameraPreview = canvas ?? undefined;
       if (canvas) drawPhoto(canvas);
+    },
+    complaintKey(view?:ComplaintView) {
+      return [view?.atDesk,view?.proofs,choosingProof,photoId,photos.album.map(entry=>entry.photo.id)];
+    },
+    renderComplaintAlbum(view:ComplaintView|undefined,submit:(proof:ComplaintProof)=>void) {
+      if (!view?.atDesk) return <p>Aproxime-se do balcão da Corregedoria durante a articulação.</p>;
+      if (!choosingProof) return <AlbumButton onClick={()=>{choosingProof = true;render();}}>Selecionar foto</AlbumButton>;
+      const proofs = view.proofs ?? [];
+      const evidence = photos.album.filter(({photo})=>proofs.some(proof=>proof.photo===photo.id));
+      const selected = evidence.find(({photo})=>photo.id===photoId)?.photo;
+      if (!selected) return photoGrid(evidence.map(entry=>entry.photo),'Nenhuma foto com irregularidades denunciáveis.');
+      return <>
+        <AlbumButton onClick={()=>{photoId = undefined;render();}}>Voltar às fotos</AlbumButton>
+        {photoView(selected,true)}
+        {proofs.filter(proof=>proof.photo===selected.id).map(proof=>
+          <AlbumButton key={proof.kind==='phone-game' ? proof.target : proof.id} onClick={()=>submit(proof)}>
+            Denunciar {proof.accused} · {infractionLabels[proof.kind]}
+          </AlbumButton>)}
+      </>;
     },
     renderAlbum(contacts:Contact[], directory:DirectoryContact[], publishable:boolean) {
       const entry = albumTab==='personal' ? photos.album.find(entry=>entry.photo.id===photoId) : undefined;

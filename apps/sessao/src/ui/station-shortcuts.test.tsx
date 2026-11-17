@@ -26,9 +26,10 @@ test('the contextual shortcuts reflect room activities and consumed public grant
   expect(match.roomActivity({...player,...stations.coffee},'coffee',3)?.unavailable).toBe(true);
 
   expect(render('cabinet')).toContain('Aplicar verba');
-  expect(render('cabinet')).toContain('Consultar orçamento');
+  expect(render('cabinet')).not.toContain('Consultar orçamento');
   match.politics({...player,...stations.cabinet},{kind:'grant',diverted:0},[player],4);
-  expect(render('cabinet',4)).not.toContain('Aplicar verba');
-  expect(render('cabinet',4)).toContain('Consultar orçamento');
+  expect(render('cabinet',4)).toBe('');
+  expect(render('secretary')).toBe('');
+  expect(render('archive')).toBe('');
   expect(render('coffee',NEGOTIATION_MS-1)).toBe('');
 });

@@ -8,13 +8,15 @@ import { createSnake, stepSnake, turnSnake, type SnakeRound } from '../src/snake
 import { gameplayWitnesses, publishGameplay, type GameplayWorld } from './gameplay-world';
 
 type Call = {id:number; from:string; to:string; connected:boolean; expires:number; sampledAt?:number};
-type PhoneRound = {snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
+type PhoneRound = {id:number;snake:SnakeRound; start:number; sampledAt:number; witnesses:Set<string>};
 type PhoneWorld = Pick<GameplayWorld,'players'|'now'|'voice'|'publish'|'present'|'vision'|'hasMission'|'wallet'|'settleBet'|'earnXp'>;
 
 export class PhoneSession {
   private nextCallId = 0;
   private calls = new Map<string,Call>();
   private games = new Map<string,PhoneRound>();
+  private nextGameId = 0;
+  private miniGames = new Map<string,number>();
   private nextCandyId = 0;
   private candy = new Map<string,{round:CandyRound;readyAt:number}>();
   private bets = new Map<string,{round:BetsRound;readyAt:number}>();
@@ -23,6 +25,7 @@ export class PhoneSession {
   reset() {
     this.calls.clear();
     this.games.clear();
+    this.miniGames.clear();
     this.bets.clear();
     this.candy.clear();
     this.openScreens.clear();
@@ -31,6 +34,7 @@ export class PhoneSession {
   tick(world:PhoneWorld, exploring:boolean, inOwnOffice?:(player:Player)=>boolean) {
     if (!exploring) {
       this.openScreens.clear();
+      this.miniGames.clear();
       this.candy.clear();
     }
     for (const call of new Set(this.calls.values())) {
@@ -108,13 +112,20 @@ export class PhoneSession {
 
   leave(player:Player, world:PhoneWorld) {
     this.openScreens.delete(player.id);
+    this.miniGames.delete(player.id);
     this.candy.delete(player.id);
     this.disconnectCall(player.id,world);
     this.stopPhoneGame(player,world);
   }
 
+  gameSession(id:string) {
+    const snake = this.games.get(id);
+    if (snake && this.playingPhoneGame(snake)) return snake.id;
+    return this.miniGames.get(id);
+  }
+
   activity(id:string):PhoneActivity|undefined {
-    if (this.playingPhoneGame(this.games.get(id))) return 'game';
+    if (this.gameSession(id)!==undefined) return 'game';
     if (this.calls.get(id)?.connected) return 'call';
     if (this.openScreens.has(id)) return 'open';
   }
@@ -157,6 +168,7 @@ export class PhoneSession {
         return;
       case 'phone-close':
         this.openScreens.delete(id);
+        this.miniGames.delete(id);
         this.candy.delete(id);
         return;
       case 'call': {
@@ -184,6 +196,7 @@ export class PhoneSession {
         const previous = this.candy.get(id);
         if (previous && previous.readyAt>world.now) return;
         if (action.kind==='candy-start') {
+          this.miniGames.set(id,++this.nextGameId);
           this.candy.set(id,{round:{id:++this.nextCandyId,board:newCandyBoard(),score:0},readyAt:world.now});
           return;
         }
@@ -208,15 +221,17 @@ export class PhoneSession {
         const maxPayout = amount*BET_PAYOUT/10;
         const payout = winningReels(reels) ? maxPayout : 0;
         if (!world.settleBet?.(id,stake,payout,maxPayout)) return 'O Bets está sem reserva para pagar o prêmio desta aposta.';
+        if (!this.miniGames.has(id)) this.miniGames.set(id,++this.nextGameId);
         this.bets.set(id,{round:{id:(previous?.round.id ?? 0)+1,reels,stake,payout},readyAt:world.now+BET_SPIN_MS});
         return;
       }
       case 'game-start':
         if (this.playingPhoneGame(this.games.get(id))) return;
-        this.games.set(id,{snake:createSnake(world.now),start:world.now,sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
+        this.games.set(id,{id:++this.nextGameId,snake:createSnake(world.now),start:world.now,sampledAt:world.now,witnesses:new Set(gameplayWitnesses(world.players,player))});
         publishGameplay(world,player,'game-started');
         return;
       case 'game-stop':
+        this.miniGames.delete(id);
         this.candy.delete(id);
         this.stopPhoneGame(player,world);
         return;

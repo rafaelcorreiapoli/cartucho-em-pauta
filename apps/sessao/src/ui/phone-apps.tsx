@@ -1,13 +1,13 @@
 import type {ReactNode} from 'react';
 
 const apps = {
-  'Telefone':['app-call','1'],
-  'Joguinhos':['app-games','2'],
-  'Câmera':['app-camera','3'],
-  'Álbum':['app-photos','4'],
-  'Projetos':['ballot','5'],
-  'Correio':['document','8'],
-  'Pix':['wallet','9'],
+  'Telefone':'app-call',
+  'Joguinhos':'app-games',
+  'Câmera':'app-camera',
+  'Álbum':'app-photos',
+  'Projetos':'ballot',
+  'Correio':'document',
+  'Pix':'wallet',
 } as const;
 
 export type PhoneApp = keyof typeof apps;
@@ -26,9 +26,6 @@ export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children}:{
 }
 
 export function PhoneApps({active,select}:{active?:PhoneApp;select:(app:PhoneApp)=>void}) {
-  return (Object.keys(apps) as PhoneApp[]).map(app=>{
-    const [icon,shortcut] = apps[app];
-    return <PhoneAppButton key={app} name={app} icon={icon} shortcut={shortcut}
-      pressed={app===active} onClick={()=>select(app)}/>;
-  });
+  return (Object.keys(apps) as PhoneApp[]).map((app,index)=><PhoneAppButton key={app} name={app} icon={apps[app]} shortcut={String(index+1)}
+    pressed={app===active} onClick={()=>select(app)}/>);
 }
