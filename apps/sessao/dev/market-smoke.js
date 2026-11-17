@@ -12,7 +12,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
-  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
   const dialog = page.locator('#market-dialog');
   const slots = dialog.locator('.market-products > *');
   const detail = dialog.getByRole('region',{name:'Produto selecionado'});
@@ -26,7 +26,7 @@ async page => {
     }
   });
   await dialog.locator('.market-vendor img').evaluate(image=>image.decode());
-  if (!await dialog.getByText('Doutor Gambiarra',{exact:true}).isVisible()) throw Error('Vendor name');
+  if (!await dialog.getByText('Daniel Vorcaro',{exact:true}).isVisible()) throw Error('Vendor name');
   if (await slots.count()!==9) throw Error('Unexpected slot count');
   const bounds = async ()=>JSON.stringify(await Promise.all([dialog.boundingBox(),detail.boundingBox(),dialog.locator('.market-paging').boundingBox()]));
   await dialog.locator(".market-buy").waitFor();
@@ -128,11 +128,11 @@ async page => {
   await equippedMegaphone.waitFor({state:'hidden'});
   await chooseFromPalette('Fechar');
   await equipment.waitFor({state:'hidden'});
-  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
   await detail.waitFor();
   await dialog.getByRole('button',{name:'Fechar',exact:true}).click();
   await dialog.waitFor({state:'hidden'});
-  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
   await detail.waitFor();
   await page.keyboard.press('Escape');
   await dialog.waitFor({state:'hidden'});
@@ -142,7 +142,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado Lotado');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
-  await page.getByRole('button',{name:/Abrir loja.*Doutor Gambiarra/}).click();
+  await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
 
   const selectProduct = async name =>{
     const product = dialog.getByRole('button',{name:new RegExp('^'+name+' ·','i')});
