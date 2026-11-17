@@ -774,7 +774,6 @@ export class PlenaryMatch {
   advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
     this.agendaNow = Math.max(this.agendaNow,now);
-    if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft) this.refreshAgendaEligibility();
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
       this.stability = clamp(this.stability-damage);
@@ -792,6 +791,7 @@ export class PlenaryMatch {
       this.renew(now);
       if (!this.running) return;
     }
+    if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft) this.refreshAgendaEligibility();
     if (this.cassationAt!==undefined && now>=this.cassationAt) {
       this.cassationAt = undefined;
       this.cassationOpen = true;
