@@ -1590,7 +1590,9 @@ export class Gameplay {
         const total = cashAmount(data);
         const partial = action.target==='partial';
         const amount = partial ? treasuryPartialAmount(total ?? 0) : total;
-        if (place!=='treasury' || !terminal || !amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
+        if (place!=='treasury' || !terminal || !total) return 'Leve a maleta à Tesouraria.';
+        if (action.expectedCash!==undefined && action.expectedCash!==total) return 'O valor da maleta mudou.';
+        if (!amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
         if (partial) {
           data.cash = Math.round((total!-amount)*10)/10;
           this.clearRequests(data.id);

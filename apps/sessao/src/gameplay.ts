@@ -73,7 +73,7 @@ export function treasuryDeliveries(inventory:readonly WorldItem[]) {
   return inventory.flatMap(item=>{
     const amount = cashAmount(item);
     if (!amount) return [];
-    const action = {kind:'deliver',place:'treasury',item:item.id} as const;
+    const action = {kind:'deliver',place:'treasury',item:item.id,expectedCash:amount} as const;
     const deliveries:{label:string;action:GameplayAction}[] = [{label:`Entregar ${money(amount)} ao tesoureiro`,action}];
     const portion = treasuryPartialAmount(amount);
     if (portion>0) deliveries.push({label:`Entregar só ${money(portion)}`,action:{...action,target:'partial'}});
@@ -108,7 +108,7 @@ const gameplayActions = ['supply','collect','offer','sign-request','accept','dec
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
-export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; cells?:[number,number]};
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; expectedCash?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
 
 export function isPhoneAction(action:GameplayAction):action is PhoneAction {
@@ -161,6 +161,8 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
   if (!kind) return;
   const quantity = 'quantity' in raw ? raw.quantity : undefined;
   if (quantity!==undefined && (typeof quantity!=='number' || !Number.isSafeInteger(quantity) || quantity<1)) return;
+  const expectedCash = kind==='deliver' && 'expectedCash' in raw ? raw.expectedCash : undefined;
+  if (expectedCash!==undefined && (typeof expectedCash!=='number' || !Number.isFinite(expectedCash) || expectedCash<=0)) return;
   const cells = 'cells' in raw ? raw.cells : undefined;
   if (kind==='candy-swap' && (!Array.isArray(cells) || cells.length!==2 || !cells.every(Number.isSafeInteger))) return;
   return {
@@ -171,6 +173,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,
     token:'token' in raw && typeof raw.token==='number' && Number.isSafeInteger(raw.token) ? raw.token : undefined,
     ...(quantity===undefined ? {} : {quantity}),
+    ...(expectedCash===undefined ? {} : {expectedCash}),
     direction:'direction' in raw ? snakeDirections.find(direction=>direction===raw.direction) : undefined,
   };
 }
