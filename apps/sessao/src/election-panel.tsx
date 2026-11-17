@@ -1,7 +1,8 @@
+import type {ShortcutEntry} from './action-shortcuts';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
-import {useState} from 'react';
+import {useRef,useState,type Ref} from 'react';
 import {CharacterPortrait} from './ui/character-portrait';
 import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
 import type { PlenaryView } from './plenary';
@@ -24,9 +25,9 @@ export function ElectionSummary({rank,candidate,atRisk,remaining}:{
   </>;
 }
 
-function ElectionCycle({result}:{result?:ElectionView['result']}) {
+function ElectionCycle({result,details}:{result?:ElectionView['result'];details:Ref<HTMLDetailsElement>}) {
   const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
-  return result ? <details id="election-result" key={result.cycle}>
+  return result ? <details ref={details} id="election-result" key={result.cycle}>
       <summary>Renovação {result.cycle}</summary>
       <p>{eliminated && `${eliminated} perdeu o mandato. `}
         {!!result.expectedSalary && `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).`}
@@ -39,10 +40,19 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
   const candidates = election.polls.filter(candidate=>candidate.id!==id)
     .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR') || a.id.localeCompare(b.id));
   const current = election.polls.find(candidate=>candidate.id===id)?.supports ?? '';
+  const details = useRef<HTMLDetailsElement>(null);
+  const canSupport = election.canCampaign && election.remaining>0 && candidates.length>0;
+  const cycle = election.result?.cycle;
+  const toggleCycle = ()=>{if (details.current) details.current.open = !details.current.open;};
+  const cycleAction = cycle===undefined ? undefined : {name:'Renovação '+cycle,activate:toggleCycle};
+  const readOnly = useDialogKeys<HTMLDivElement>(()=>undefined,canSupport ? undefined : [
+    {name:'Fechar pesquisa eleitoral',activate:()=>readOnly.current?.closest('dialog')?.close()},
+    ...(cycleAction ? [cycleAction] : []),
+  ]);
   return <>
     <DialogHeader id="election-poll-title" title="Pesquisa eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
-    <div className="election-poll-content">
-      <div id="election-cycle"><ElectionCycle result={election.result}/></div>
+    <div ref={readOnly} className="election-poll-content">
+      <div id="election-cycle"><ElectionCycle result={election.result} details={details}/></div>
       <section aria-label="Pesquisa eleitoral"><div id="election-polls">
         <section><h4>Classificação projetada</h4><ol role="list">
           {election.polls.map((candidate,index)=>{
@@ -63,44 +73,54 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
         </ol></section>
       </div></section>
       <div id="election-support">
-        {election.canCampaign && election.remaining>0 && candidates.length>0 &&
-          <ElectionSupport key={current} candidates={candidates} current={current} onSupport={onSupport}/>}
+        {canSupport &&
+          <ElectionSupport key={current} candidates={candidates} current={current} onSupport={onSupport} cycleAction={cycleAction}/>}
       </div>
     </div>
   </>;
 }
 
-function ElectionSupport({candidates,current,onSupport}:{
-  candidates:ElectionView['polls']; current:string; onSupport:(candidate:string)=>void;
+function ElectionSupport({candidates,current,onSupport,cycleAction}:{
+  candidates:ElectionView['polls']; current:string; onSupport:(candidate:string)=>void; cycleAction?:ShortcutEntry;
 }) {
   const [choice,select] = useState(current);
   const selected = candidates.some(candidate=>candidate.id===choice) ? choice : '';
   const submit = () => {
     if (selected!==current) onSupport(selected);
   };
+  const clear = ()=>select('');
+  const submitLabel = selected ? 'Declarar apoio' : 'Retirar apoio';
+  const options = candidates.map((candidate,index)=>({
+    ...candidate, shortcut:index<8 ? String(index+1) : undefined, choose:()=>select(candidate.id),
+  }));
+  const entries:ShortcutEntry[] = [
+    {name:'Fechar pesquisa eleitoral',activate:()=>form.current?.closest('dialog')?.close()},
+    ...options.map(({name,choose})=>({name,activate:choose})),
+    {name:'Sem apoio',activate:clear},
+  ];
+  if (selected!==current) entries.push({name:submitLabel,activate:submit});
+  if (cycleAction) entries.push(cycleAction);
   const form = useDialogKeys<HTMLFormElement>(key=>{
-    if (key==='0') return submit;
-    if (key==='9') return ()=>select('');
-    const candidate = /^[1-8]$/.test(key) ? candidates[Number(key)-1] : undefined;
-    if (candidate) return ()=>select(candidate.id);
-  });
+    if (key==='0' && selected!==current) return submit;
+    if (key==='9') return clear;
+    return options.find(option=>option.shortcut===key)?.choose;
+  },entries);
   return <form ref={form} id="support-form" onSubmit={event=>{event.preventDefault();submit();}}>
     <strong id="support-label">Apoio público</strong>
     <div className="support-candidates" role="group" aria-labelledby="support-label">
-      {candidates.map(({id,name,character},index)=>{
-        const shortcut = index<8 ? String(index+1) : undefined;
+      {options.map(({id,name,character,shortcut,choose})=>{
         return <button key={id} type="button" className="hud-button hud-button--secondary"
-          aria-pressed={selected===id} aria-keyshortcuts={shortcut} onClick={()=>select(id)}>
+          aria-pressed={selected===id} aria-keyshortcuts={shortcut} onClick={choose}>
           <CharacterPortrait character={character}/>
           <span>{name}</span>
           {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
         </button>;
       })}
       <button type="button" className="hud-button hud-button--secondary" aria-pressed={!selected}
-        aria-keyshortcuts="9" onClick={()=>select('')}>Sem apoio<kbd className="action-key" aria-hidden="true">9</kbd></button>
+        aria-keyshortcuts="9" onClick={clear}>Sem apoio<kbd className="action-key" aria-hidden="true">9</kbd></button>
     </div>
     <button type="submit" className="hud-button" aria-keyshortcuts="0" disabled={selected===current}>
-      {selected ? 'Declarar apoio' : 'Retirar apoio'} <kbd className="action-key" aria-hidden="true">0</kbd>
+      {submitLabel} <kbd className="action-key" aria-hidden="true">0</kbd>
     </button>
   </form>;
 }

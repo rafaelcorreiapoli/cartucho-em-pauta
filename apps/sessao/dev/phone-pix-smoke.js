@@ -61,14 +61,29 @@ async page => {
       await button.evaluate(control=>control.removeAttribute('aria-keyshortcuts'));
       await page.keyboard.press(key);
     };
+    const palette = page.locator('#action-shortcuts');
+    async function sendSupportThroughPalette(label) {
+      const original = polls.getByRole('button',{name:label,exact:true});
+      await original.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
+      await page.keyboard.press('F2');
+      await palette.getByRole('button',{name:new RegExp(label)}).click();
+      await palette.waitFor({state:'hidden'});
+    }
+    await page.keyboard.press('F2');
+    await palette.waitFor();
+    if (await palette.getByRole('button',{name:/Declarar apoio|Retirar apoio/}).count()) {
+      throw Error('O F2 ofereceu confirmação antes de mudar o apoio');
+    }
+    await page.keyboard.press('Escape');
+    await palette.waitFor({state:'hidden'});
     await directKey('1');
     await bia.and(polls.locator('[aria-pressed="true"]')).waitFor();
-    await directKey('0');
+    await sendSupportThroughPalette('Declarar apoio');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor();
     await polls.getByText('Apoia Bia',{exact:true}).waitFor();
     await directKey('9');
     await polls.getByRole('button',{name:'Retirar apoio',exact:true}).and(polls.locator(':enabled')).waitFor();
-    await directKey('0');
+    await sendSupportThroughPalette('Retirar apoio');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor({state:'hidden'});
     for (const client of [page,receiver]) {
       await client.keyboard.press('Escape');
@@ -171,4 +186,5 @@ async page => {
   } finally {
     await receiver.close();
   }
+  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true};
 }
