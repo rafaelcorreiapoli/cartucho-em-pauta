@@ -421,9 +421,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
-      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired}/>;
-      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint);
-      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
+      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
+      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
+      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation',closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
     mailHost.hidden = !showMail;

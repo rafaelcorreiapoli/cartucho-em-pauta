@@ -49,6 +49,13 @@ async page => {
     await palette.getByRole('button',{name:new RegExp(label)}).click();
     await palette.waitFor({state:'hidden'});
   };
+  await page.keyboard.press('5');
+  const catalog = dialog.getByRole('region',{name:'Catálogo de projetos'});
+  const bill = catalog.locator('details').filter({hasText:'Auxílio Churrasco'});
+  await viaPalette(bill.locator('summary'),'Auxílio Churrasco');
+  await bill.getByText('Cria um auxílio para financiar churrascos.',{exact:true}).waitFor();
+  await viaPalette(dialog.getByRole('button',{name:'Fechar aplicativo'}),'Fechar aplicativo');
+  await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await viaPalette(dialog.getByRole('button',{name:'Câmera',exact:true}),'Câmera');
   await dialog.getByRole('heading',{name:'Câmera',exact:true}).waitFor();
   await viaPalette(dialog.getByRole('button',{name:'Selfie',exact:true}),'Selfie');
@@ -173,7 +180,7 @@ async page => {
   await preview.waitFor({state:'detached'});
   if (await page.evaluate(()=>window.syntheticCameraClicks)!==0) throw Error('A Câmera simulou clique');
   const photo = dialog.getByRole('button',{name:/Abrir fotografia/});
-  await photo.click();
+  await viaPalette(photo,'Abrir fotografia');
   await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();
   await dialog.getByText('Original',{exact:true}).waitFor();
   if (await dialog.getByRole('img',{name:/^Selfie em/}).evaluate(canvas=>canvas.width)<600) throw Error('Low-resolution selfie canvas');
