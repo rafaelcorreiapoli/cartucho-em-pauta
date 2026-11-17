@@ -1,3 +1,4 @@
+import {xrayRechargeAction} from './ui/xray-recharge-action';
 import {ContextProgress,contextProgress} from './ui/context-progress';
 import {mountRewardEffects} from './ui/reward-effects';
 import {ContextOverflow} from './ui/context-overflow';
@@ -12,7 +13,7 @@ import { mountLegislativeStationActions } from './ui/legislative-station-actions
 import { mountNotices } from './ui/notices';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { equippedWeapon, xray } from './equipment';
+import { equippedWeapon } from './equipment';
 import { canReachDownedPlayer, doorDestination } from './interactions';
 import {treatmentAction} from './ui/treatment-action';
 import { decorationActions } from './installations';
@@ -105,9 +106,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       if (state.locations.includes('treasury')) {
         for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});
       }
-      if (state.npcNearby?.includes('vendor') && state.equipped?.some(item=>item.kind==='xray')) actions.push({
-        label:`Recarregar Raio X · ${money(xray.rechargePrice)}`,icon:'wallet',action:{kind:'recharge-xray'},
-      });
+      const recharge = xrayRechargeAction(state,view?.politics?.wallet);
+      if (recharge) actions.push({...recharge,icon:'wallet',action:{kind:'recharge-xray'}});
       if (state.officeStash) actions.push({label:'Abrir armário',icon:'inventory',action:{kind:'inspect-stash'}});
       const door = PLENARY_DOORS.findIndex((_,index)=>doorDestination(player,index,false)!==undefined);
       if (door>=0) actions.push({label:'Atravessar porta',icon:'map',action:{kind:'cross-door',door}});
