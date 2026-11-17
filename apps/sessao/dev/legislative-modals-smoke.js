@@ -157,8 +157,53 @@ async page => {
     await page.locator('#ballot').getByText('Seu voto: afastar',{exact:true}).waitFor();
     await guest.locator('#ballot').getByText(/1\/2 votaram/).waitFor();
     if (await guest.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
-    return {resolutions:3,projectPickerResolutions:2,clients:2,hearingVoteReplicatedViaF2:true};
+
   } finally {
     await guest.close();
   }
+
+  await page.reload();
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Cassação QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
+  const cassationRoom = (await page.locator('#room-label').textContent()).trim().split(' ')[1];
+  const disconnected = await page.context().newPage();
+  const witness = await page.context().newPage();
+  try {
+    for (const [client,nick] of [[disconnected,'Bia'],[witness,'Caio']]) {
+      await client.goto(page.url());
+      await client.getByRole('textbox',{name:'Seu nick'}).fill(nick);
+      await client.getByRole('textbox',{name:'Código da sala'}).fill(cassationRoom);
+      await client.getByRole('button',{name:'Entrar',exact:true}).click();
+      await client.locator('#lobby-back').waitFor();
+    }
+    await page.locator('#parliamentarian-count [data-count="0"]').click();
+    await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    await page.getByRole('button',{name:/^Convocar cassação/}).click();
+    const ballot = page.getByRole('region',{name:'Votação de cassação'});
+    await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor();
+    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
+    await page.keyboard.press('F2');
+    const stale = palette.getByRole('button',{name:'Bia',exact:true});
+    await stale.waitFor();
+    const previousKey = await stale.getAttribute('aria-keyshortcuts');
+    await disconnected.close();
+    await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor({state:'hidden'});
+    await page.keyboard.press(previousKey);
+    await palette.waitFor({state:'hidden'});
+    if (await ballot.getByRole('button',{name:'Caio',pressed:true}).count()) {
+      throw Error('Uma escolha antiga mudou o voto para outro candidato.');
+    }
+    await page.keyboard.press('F2');
+    if (await stale.count()) throw Error('O F2 manteve o candidato desconectado.');
+    const candidate = palette.getByRole('button',{name:'Caio',exact:true});
+    await candidate.waitFor();
+    await page.keyboard.press(await candidate.getAttribute('aria-keyshortcuts'));
+    await ballot.getByRole('button',{name:'Caio',pressed:true}).waitFor();
+    await witness.getByRole('region',{name:'Votação de cassação'}).getByText(/1\/2 votaram/).waitFor();
+  } finally {
+    if (!disconnected.isClosed()) await disconnected.close();
+    await witness.close();
+  }
+  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,staleCandidateRejected:true};
 }

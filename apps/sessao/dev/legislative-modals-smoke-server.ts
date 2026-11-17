@@ -10,17 +10,18 @@ class LegislativeModalsRoom extends SessionRoom {
     super.onCreate();
     const positioned = new Set<string>();
     let filed = false;
+    let shortenedCassation = false;
     this.clock.setInterval(()=>{
       const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
       if (match.phase!=='negotiation') return;
       const players:Map<string,{player:import('../src/map').Player}> = Reflect.get(this,'players');
-      const hearingTest = players.size === 2;
+      const plenaryTest = players.size >= 2;
       for (const {player} of players.values()) {
         if (!positioned.has(player.id)) {
           positioned.add(player.id);
-          Object.assign(player,hearingTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
+          Object.assign(player,plenaryTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
           const economy = Reflect.get(match,'economy');
-          if (hearingTest) economy.changePopularity(player.id,20);
+          if (plenaryTest) economy.changePopularity(player.id,20);
           if (player.nick==='Projetos QA') {
             const {agenda} = Reflect.get(economy,'accounts').get(player.id);
             Reflect.set(agenda,'missions',[]);
@@ -35,6 +36,10 @@ class LegislativeModalsRoom extends SessionRoom {
           });
         }
         const now = this.clock.currentTime;
+        if (!shortenedCassation && player.nick==='Cassação QA' && Reflect.get(match,'cassationAt')!==undefined) {
+          shortenedCassation = true;
+          Reflect.set(match,'cassationAt',now+500);
+        }
         if (filed || !match.view(player.id,[player.id],now).politics?.grantUsed) continue;
         publishProjectFiling(match,player,0,now);
         const proposal = Reflect.get(match,'proposal');
