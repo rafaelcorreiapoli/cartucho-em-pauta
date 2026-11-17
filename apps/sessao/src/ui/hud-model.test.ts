@@ -195,7 +195,7 @@ test('the HUD receives multiple deposits of the same cash lot in one server tick
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('contribuinte').xp);
 });
 
-test('a delayed event from the previous match cannot complete the new HUD agenda',()=>{
+test('delayed gameplay from the previous match cannot affect the new HUD',()=>{
   const match = new PlenaryMatch(1);
   const ids = [player.id];
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
@@ -214,12 +214,21 @@ test('a delayed event from the previous match cannot complete the new HUD agenda
   const render = ()=>hud.render(match.view(player.id,ids,4));
   render();
   const initial = hud.agenda.get();
+  const initialResources = hud.resources.get();
+  const initialCongress = hud.congress.get();
   expect(initial?.active).toContainEqual(expect.objectContaining({kind:'cafe',current:0}));
+  previousWorld.earn(player.id,4);
+  previousWorld.earnXp!(player.id,25);
+  expect(previousWorld.deposit!(player.id,3)).toBe(false);
+  expect(previousWorld.spendSubsidized!(player.id,2,2)).toBe(false);
   expect(previousWorld.publish({...previousEvent,at:4,eventId:previousWorld.nextEventId!()})).toBe(false);
   expect(nextWorld.publish(previousEvent)).toBe(false);
+  expect(nextWorld.publish({...previousEvent,at:4,eventId:previousWorld.nextEventId!()})).toBe(false);
   expect(nextWorld.publish({...previousEvent,at:4})).toBe(false);
   render();
   expect(hud.agenda.get()).toBe(initial);
+  expect(hud.resources.get()).toBe(initialResources);
+  expect(hud.congress.get()).toBe(initialCongress);
   expect(hud.profile.get()?.xp).toBe(0);
 
   expect(match.roomActivity(player,'coffee',4)?.text).toContain('Cafezinho tomado');

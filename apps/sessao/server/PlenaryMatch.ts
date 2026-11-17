@@ -364,25 +364,26 @@ export class PlenaryMatch {
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
     const generation = this.matchGeneration;
+    const current = ()=>generation===this.matchGeneration;
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
       spendSubsidized:(id,price,subsidy)=>{
-        if (Math.round(subsidy*10)>Math.round(this.budget*10) || !this.economy.spend(id,price)) return false;
+        if (!current() || Math.round(subsidy*10)>Math.round(this.budget*10) || !this.economy.spend(id,price)) return false;
         this.budget = Math.round((this.budget-subsidy)*10)/10;
         this.cash.projects += subsidy;
         return true;
       },
-      plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>this.economy.spend(id,amount),
-      earnXp:(id,amount)=>this.economy.earnXp(id,amount),
-      settleBet:(id,stake,payout,maxPayout)=>this.economy.settleBet(id,stake,payout,maxPayout),
+      plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>current() && this.economy.spend(id,amount),
+      earnXp:(id,amount)=>{ if (current()) this.economy.earnXp(id,amount); },
+      settleBet:(id,stake,payout,maxPayout)=>current() && this.economy.settleBet(id,stake,payout,maxPayout),
       office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
-      projectFilingError:(id,project)=>this.projectFilingError(id,project,now),
+      projectFilingError:(id,project)=>current() ? this.projectFilingError(id,project,now) : 'Partida encerrada.',
       projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
       hasMandate:id=>this.npcIds.has(id) || !!this.election.office(id),
-      cashFlow:(kind,amount)=>{ this.cash[kind] += amount; },
+      cashFlow:(kind,amount)=>{ if (current()) this.cash[kind] += amount; },
       deposit:(id,amount)=>{
-        if (!this.running || !this.electorate.has(id) || amount<=0) return false;
+        if (!current() || !this.running || !this.electorate.has(id) || amount<=0) return false;
         this.cash.treasury += amount;
         this.budget = Math.round((this.budget+amount)*10)/10;
         const credited = this.treasuryReputation.get(id) ?? 0;
@@ -392,13 +393,14 @@ export class PlenaryMatch {
         this.economy.changePopularity(id,gain+Math.min(gain,bonus));
         return true;
       },
-      lootWallet:(id,fraction)=>this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
-      takeWallet:id=>this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
-      payNpc:(from,to,amount)=>this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
+      lootWallet:(id,fraction)=>current() && this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
+      takeWallet:id=>current() && this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
+      payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
-      hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>this.economy.earn(id,amount),
-      nextEventId:()=>++this.eventSequence,
-      publish:event=>generation===this.matchGeneration && this.recordGameplay(event),
+      hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>{ if (current()) this.economy.earn(id,amount); },
+      // An obsolete world must not mint an ID the next match would accept.
+      nextEventId:()=>current() ? ++this.eventSequence : this.eventSequenceAtStart,
+      publish:event=>current() && this.recordGameplay(event),
     };
   }
 

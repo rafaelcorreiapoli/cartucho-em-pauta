@@ -946,6 +946,40 @@ test('a previous match event cannot reserve the new match’s document ID',()=>{
   expect(view().project).toBe(2);
 });
 
+test('a previous gameplay world cannot settle transactions against the new match',()=>{
+  const match = new PlenaryMatch(1);
+  const npc:Player = {...host,id:'npc-parliamentarian-1',npc:true};
+  expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const previous = match.gameplayWorld([host,npc],1,()=>false);
+  match.leave(host.id,2);
+  expect(match.start(host.id,[host],3,()=>.9)).toBe(true);
+  match.addParliamentarian(npc);
+  const next = match.gameplayWorld([host,npc],4,()=>false);
+  const state = ()=>({
+    economy:match.economySummary(0),
+    politics:match.view(host.id,[host.id],4).politics,
+  });
+  const initial = state();
+
+  expect(previous.spend!(host.id,1)).toBe(false);
+  expect(previous.spendSubsidized!(host.id,1,1)).toBe(false);
+  expect(previous.settleBet!(host.id,1,2,2)).toBe(false);
+  expect(previous.deposit!(host.id,1)).toBe(false);
+  expect(previous.payNpc!(host.id,npc.id,1)).toBe(false);
+  expect(previous.takeWallet!(npc.id)).toBe(0);
+  expect(previous.lootWallet!(host.id,.5)).toBe(0);
+  expect(previous.projectFilingError!(host.id,0)).toBe('Partida encerrada.');
+  previous.cashFlow!('expired',1);
+  previous.earn(host.id,1);
+  previous.earnXp!(host.id,20);
+  expect(state()).toEqual(initial);
+
+  expect(next.spend!(host.id,1)).toBe(true);
+  next.earnXp!(host.id,20);
+  expect(state().politics).toMatchObject({wallet:initial.politics!.wallet-1,progression:{xp:20}});
+});
+
 test('Investimento Político counts paid advertisements after assignment across renewals',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
