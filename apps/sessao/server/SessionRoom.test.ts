@@ -1,5 +1,5 @@
 import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
-import { ELECTION_RULES } from '../src/elections';
+import { ELECTION_RULES, type CampaignBroadcast } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
@@ -222,10 +222,11 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
-    const broadcasts:string[] = [];
-    first.onMessage('campaign-advertisement',({advertiserId}:{advertiserId:string})=>broadcasts.push(advertiserId));
-    second.onMessage('campaign-advertisement',()=>{});
-    third.onMessage('campaign-advertisement',()=>{});
+    const broadcasts = participants.map(peer=>{
+      const ads:CampaignBroadcast[] = [];
+      peer.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>ads.push(ad));
+      return ads;
+    });
     second.send('election',{kind:'advertise',token:1810});
     await walkTo(second,stations.press);
     expect(secondView!.election?.personal?.advertised).toBe(false);
@@ -240,7 +241,14 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.advertised).toBe(true);
     expect(firstView!.election?.personal?.advertised).toBe(false);
-    expect(broadcasts).toEqual([second.sessionId]);
+    await until(()=>broadcasts.every(ads=>ads.length>=1));
+    const expectedAd = {
+      advertiserId:second.sessionId,name:'Bia',character:positions.get(second.sessionId)!.character,
+      number:expect.any(Number),
+    };
+    expect(broadcasts).toEqual([[expectedAd],[expectedAd],[expectedAd]]);
+    expect(broadcasts[0][0]).toEqual(broadcasts[1][0]);
+    expect(broadcasts[0][0]).toEqual(broadcasts[2][0]);
     const previousMatch = secondView!.politics!.progression.matchId;
     await first.leave();
     await until(() => roster.at(-1)?.length===1);

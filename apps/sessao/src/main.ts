@@ -1,7 +1,7 @@
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
-import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
+import { ELECTION_RULES, type CampaignBroadcast } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
@@ -284,7 +284,7 @@ async function connect(join: () => Promise<Room>) {
       else gameplay.feedback(message);
     });
     const campaignTv = createCampaignTv(session,joined.sessionId);
-    joined.onMessage('campaign-advertisement',(ad:CampaignAdvertisement & {advertiserId:string})=>{
+    joined.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>{
       campaignTv.enqueue(ad);
       if (ad.advertiserId===joined.sessionId) {
         hud.notify('Propaganda no ar',`+${ELECTION_RULES.advertisementStrength} de força eleitoral neste ciclo.`);
