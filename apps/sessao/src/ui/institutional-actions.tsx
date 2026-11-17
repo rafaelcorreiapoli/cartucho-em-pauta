@@ -32,7 +32,7 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
   const nominee = hearing?.candidates.find(candidate=>candidate.id===target);
   return <div id="politics-actions">
     <header className="social-header">
-      <h2>Ações institucionais</h2>
+      <h2 id="institutional-title">Ações institucionais</h2>
       {close && <DialogDismiss label="Fechar ações institucionais" onDismiss={close}/>}
     </header>
     {grant && <form id="cabinet-form" onSubmit={event=>{

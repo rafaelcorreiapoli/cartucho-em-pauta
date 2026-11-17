@@ -178,8 +178,6 @@ async function connect(join: () => Promise<Room>) {
       closeDetails();
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
-    document.querySelector<HTMLElement>('#politics-dock')!.hidden = true;
-    document.querySelector<HTMLElement>('#institutional-dock')!.hidden = true;
     settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);

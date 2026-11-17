@@ -44,7 +44,7 @@ async page => {
       await client.locator(dialog).locator('.pix-balance').getByText('R$ 80 mil',{exact:true}).waitFor();
     }
     if (await page.locator('#trade-dock, #trade-contact').count()) throw Error('Legacy transfer controls are still mounted');
-    if (!await page.locator('#institutional-dock #institutional-actions').count()) throw Error('Missing institutional panel');
+    if (!await page.locator('#institutional-dialog #institutional-actions').count()) throw Error('Missing institutional panel');
     if (await page.locator('#cabinet-form,#hearing-form').count()) throw Error('Institutional actions should require station proximity');
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
     await pix.getByRole('button',{name:'Bia',exact:true}).click();

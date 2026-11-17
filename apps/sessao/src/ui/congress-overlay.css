@@ -897,7 +897,7 @@
 #room-settings h2 { margin: 0; }
 #room-settings > section + section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-hud-border); }
 
-#election-poll-dialog {
+:is(#election-poll-dialog,.legislative-modal) {
   width: min(32rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow: auto;
@@ -907,9 +907,11 @@
   border: 1px solid var(--color-hud-border);
   border-radius: var(--radius-hud);
 }
-#election-poll-dialog::backdrop { background: #081510b8; }
-#election-poll-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-#election-poll-dialog h2 { margin: 0; }
+:is(#election-poll-dialog,.legislative-modal)::backdrop { background: #081510b8; }
+:is(#election-poll-dialog,.legislative-modal) header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+:is(#election-poll-dialog,.legislative-modal) h2 { margin: 0; }
+.legislative-modal form { display: grid; gap: .55rem; margin: .7rem 0 0; }
+.legislative-modal .social-header { align-items: center; }
 #election-polls ol { padding: 0; list-style: none; }
 
 .plenary-countdown[data-kind="cassation"] {
