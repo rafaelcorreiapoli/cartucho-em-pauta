@@ -17,6 +17,14 @@ async page => {
   const slots = dialog.locator('.market-products > *');
   const detail = dialog.getByRole('region',{name:'Produto selecionado'});
   await detail.waitFor();
+  await page.evaluate(()=>{
+    window.syntheticMarketClicks = 0;
+    for (const id of ['market-dialog','equip-purchase-dialog']) {
+      document.getElementById(id).addEventListener('click',event=>{
+        if (!event.isTrusted) window.syntheticMarketClicks++;
+      });
+    }
+  });
   await dialog.locator('.market-vendor img').evaluate(image=>image.decode());
   if (!await dialog.getByText('Doutor Gambiarra',{exact:true}).isVisible()) throw Error('Vendor name');
   if (await slots.count()!==9) throw Error('Unexpected slot count');
@@ -35,7 +43,9 @@ async page => {
   }
   const initial = await bounds();
   const binoculars = dialog.getByRole('button',{name:/^Binóculo ·/});
-  await page.keyboard.press(await binoculars.getAttribute('aria-keyshortcuts'));
+  const binocularsKey = await binoculars.getAttribute('aria-keyshortcuts');
+  await binoculars.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press(binocularsKey);
   await detail.getByRole('heading',{name:'Binóculo',exact:true}).waitFor();
   if (await bounds()!==initial) throw Error('Selection moved catalog');
   await page.keyboard.press('Enter');
@@ -66,5 +76,6 @@ async page => {
   await detail.waitFor();
   await page.keyboard.press('Escape');
   await dialog.waitFor({state:'hidden'});
+  if (await page.evaluate(()=>window.syntheticMarketClicks)!==0) throw Error('Um atalho da loja simulou clique');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('A loja tentou acessar o microfone');
 }
