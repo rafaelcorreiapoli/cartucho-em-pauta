@@ -362,12 +362,10 @@ async function connect(join: () => Promise<Room>) {
       if (view.phase!==previousView?.phase && (view.phase==='ballot' || view.phase==='hearing')) appLauncher.close();
       appStatus = hudAppStatus(view,assetsReady);
       appLauncher.render(appStatus);
-      game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
       game?.setPlenaryView(view);
-      game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       settings.update({roomLabel:label});
       if (phase===view.phase) {
@@ -386,7 +384,6 @@ async function connect(join: () => Promise<Room>) {
       if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
-      game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
       if (negotiating) map.focus({preventScroll:true});
     });

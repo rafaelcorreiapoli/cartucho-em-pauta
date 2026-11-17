@@ -15,7 +15,7 @@ import { cashAmount, objects, treasuryDeliveries, type GroundItem, type Gameplay
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
-import type { Assignment, Office } from './elections';
+import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
 import { groundItemArt } from './map-props';
@@ -65,8 +65,8 @@ const directions = new Map(Object.entries({
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
   combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
   let players: Player[] = [];
-  let groundItems: GroundItem[] = [];
-  let decorations: Decoration[] = [];
+  let worldSnapshot = projectWorldSnapshot();
+  let phase:Phase = 'lobby';
   let phoneInset = 0;
   let inLobby = true;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -75,7 +75,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let plenaryViewReceivedAt = 0;
   let running = false;
   let resizeObserver:ResizeObserver | undefined;
-  let titles = new Map<string,Office>();
   const local = new PredictedMovement(send);
   const history = new PlayerHistory();
   let destination: Motion | undefined;
@@ -116,8 +115,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,View>();
     private groundMarkers = new Map<number,Phaser.GameObjects.Container>();
-    private renderedGround?:GroundItem[];
-    private renderedDecorations?:Decoration[];
+    private renderedGround?:readonly GroundItem[];
+    private renderedDecorations?:readonly Decoration[];
     private installed = new Map<number,{marker:Phaser.GameObjects.Container; label?:Phaser.GameObjects.Text; mark?:Phaser.GameObjects.Text}>();
     photoRenderer?:PhotoRenderer;
     private interactionTargets = new Map<Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text,{
@@ -264,7 +263,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const art = this.add.image(point.x,point.y+centerY,texture)
           .setDisplaySize(width,height).setDepth(point.y).setVisible(false);
         this.installationFixtures.push({point,art});
-        const installed = () => decorations.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
+        const installed = () => worldSnapshot.decorations.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
         const availableItem = () => {
           const gameplay = plenaryView?.gameplay;
           if (!gameplay?.installable.includes(place)) return;
@@ -380,6 +379,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
 
     private renderGroundItems() {
+      const {ground:groundItems} = worldSnapshot;
       if (this.renderedGround===groundItems) return;
       this.renderedGround = groundItems;
       const visible = new Set(groundItems.map(item=>item.id));
@@ -406,6 +406,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
 
     private renderDecorations() {
+      const {decorations} = worldSnapshot;
       if (this.renderedDecorations===decorations) return;
       this.renderedDecorations = decorations;
       const ids = new Set(decorations.map(item=>item.id));
@@ -746,8 +747,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           });
         }
         view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-44).setVisible(!!exposed.length);
-        const title = titles.get(id);
-        office.setVisible(running || !!title).setPosition(x,labelY+6)
+        office.setVisible(running || worldSnapshot.officeHolders.has(id)).setPosition(x,labelY+6)
           .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
         const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
         if (office.style.color!==officeColor) office.setColor(officeColor);
@@ -856,7 +856,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       destination = undefined;
       local.input({door});
     },
-    setGroundItems(items:GroundItem[], installed:Decoration[]) { groundItems = items; decorations = installed; },
     drawPhoto(canvas:HTMLCanvasElement, captured?:PhotoScene) {
       if (!scene.sys.isActive() || !scene.photoRenderer) return;
       if (captured) {
@@ -876,14 +875,17 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         people:players.filter(person=>person.id!==ownId && inPhotoFrame(center,person,true)).map(person=>({
           ...person,name:person.nick,
         })),
-        ground:groundItems.filter(item=>inPhotoFrame(center,item)),
-        decorations:decorations.filter(item=>inPhotoFrame(center,item)),
+        ground:worldSnapshot.ground.filter(item=>inPhotoFrame(center,item)),
+        decorations:worldSnapshot.decorations.filter(item=>inPhotoFrame(center,item)),
       });
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
     setPhoneInset(width:number) { phoneInset = width; },
-    clearPrivateVision() { plenaryView = undefined; },
+    clearPrivateVision() {
+      plenaryView = undefined;
+      worldSnapshot = projectWorldSnapshot();
+    },
     setPlenaryView(view:PlenaryView) {
       if (view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined) {
         stop();
@@ -891,7 +893,18 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         destination = undefined;
       }
       plenaryView = view;
+      worldSnapshot = projectWorldSnapshot(view);
       plenaryViewReceivedAt = performance.now();
+      if (phase===view.phase) return;
+      phase = view.phase;
+      inLobby = phase==='lobby';
+      if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
+      negotiating = phase==='negotiation';
+      running = negotiating || phase==='ballot' || phase==='hearing';
+      if (!running) {
+        scene.fog?.setVisible(false);
+        scene.hideFogEdge();
+      }
     },
     reconcile(snapshot: ControlState) {
       const before = local.state;
@@ -910,17 +923,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         sprite?.setPosition(after.player.x,after.player.y);
       }
     },
-    setMatchPhase(phase:Phase) {
-      inLobby = phase==='lobby';
-      if (scene.sys.isActive()) scene.cameras.main.setVisible(!inLobby);
-      negotiating = phase==='negotiation';
-      running = negotiating || phase==='ballot' || phase==='hearing';
-      if (!running) {
-        scene.fog?.setVisible(false);
-        scene.hideFogEdge();
-      }
-    },
-    setOffices(assignments:Assignment[]) { titles = new Map(assignments.map(({id,office}) => [id,office])); },
     destroy() {
       listeners.abort();
       resizeObserver?.disconnect();
