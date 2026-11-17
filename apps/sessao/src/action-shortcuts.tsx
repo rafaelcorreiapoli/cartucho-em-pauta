@@ -1,19 +1,10 @@
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { node } from './gameplay-ui';
 import { appForKey, type LaunchHudApp } from './hud-apps';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 
 const pageSize = 9;
-
-export function markShortcut(control:HTMLElement, key:string, label = key) {
-  control.setAttribute('aria-keyshortcuts',key);
-  const badge = node('kbd',label);
-  badge.className = 'action-key';
-  badge.setAttribute('aria-hidden','true');
-  control.append(badge);
-}
 
 function available(control:HTMLElement) {
   return !control.matches(':disabled, [aria-disabled="true"], input[type="hidden"]') &&
@@ -49,7 +40,6 @@ function disableHudTabStops(root:HTMLElement, signal:AbortSignal) {
 
 export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launchApp:LaunchHudApp, shortcuts:{j:()=>boolean;l:()=>boolean}) {
   disableHudTabStops(root,signal);
-  const launcher = root.querySelector<HTMLButtonElement>('#open-action-shortcuts')!;
   const palette = root.querySelector<HTMLDialogElement>('#action-shortcuts')!;
   const paletteRoot = createRoot(palette);
   const map = root.querySelector<HTMLElement>('#map')!;
@@ -64,7 +54,7 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
 
   function render() {
     const actions = [...scope.querySelectorAll<HTMLElement>('button, summary, input, select, textarea')]
-      .filter(control=>control!==launcher && !palette.contains(control) && available(control))
+      .filter(control=>!palette.contains(control) && available(control))
       .map(control=>({control,name:actionName(control)})).filter(({name})=>name);
     const total = Math.max(1,Math.ceil(actions.length/pageSize));
     page = Math.max(0,Math.min(page,total-1));
@@ -91,7 +81,6 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
     palette.showModal();
   }
 
-  launcher.onclick = toggle;
   document.addEventListener('keydown',event=>{
     if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || root.hidden) return;
     const active = modal();
@@ -151,7 +140,6 @@ export function bindActionShortcuts(root:HTMLElement, signal:AbortSignal, launch
     if (!modal()) map.focus({preventScroll:true});
   },{signal});
   signal.addEventListener('abort',()=>{
-    launcher.onclick = null;
     if (settings.open) settings.close();
     palette.close();
     paletteRoot.unmount();

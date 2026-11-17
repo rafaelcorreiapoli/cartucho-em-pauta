@@ -162,10 +162,6 @@ async function connect(join: () => Promise<Room>) {
     delete session.dataset.inPlenary;
     session.hidden = false;
     setup.hidden = false;
-    const voiceDock = document.querySelector<HTMLElement>('#voice-dock')!;
-    const voiceLobby = document.querySelector<HTMLElement>('#voice-lobby')!;
-    const voiceHost = document.querySelector<HTMLElement>('#voice-host')!;
-    voiceLobby.append(voiceDock);
     const closeDetails = () => {
       for (const panel of session.querySelectorAll<HTMLDetailsElement>('details[name="game-panels"][open]')) panel.open = false;
     };
@@ -391,8 +387,6 @@ async function connect(join: () => Promise<Room>) {
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
-      const voiceMount = matchRunning ? voiceHost : voiceLobby;
-      if (voiceDock.parentElement!==voiceMount) voiceMount.append(voiceDock);
       if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));

@@ -129,16 +129,6 @@
 #election-dock[data-urgency="soon"] { border-color: #bba365; }
 #election-dock[data-urgency="high"] { border-color: #f4cc75; box-shadow: 0 0 0 1px #f4cc7544; }
 
-#voice-dock {
-  top: calc(var(--hud-edge) + var(--hud-top-row));
-  right: var(--hud-edge);
-  bottom: auto;
-  left: auto;
-  z-index: 3;
-  max-width: var(--hud-side);
-  justify-content: flex-end;
-}
-#voice-dock button, #voice-dock summary { min-height: 33px; font-size: .73rem; }
 #voice-status:empty { display: none; }
 
 
@@ -250,10 +240,7 @@
 #session #electoral-notice { top: auto; left: auto; right: var(--hud-edge); bottom: calc(var(--hud-edge) + 52px); }
 #movement-hint { display: none; }
 
-#election-dock[open],
-#voice-dock:has(details[open]) { z-index: 5; }
-#session[data-phase="lobby"] #voice-dock { top: auto; bottom: var(--hud-edge); }
-#session[data-phase="lobby"] #voice-dock .sound-settings-content { top: auto; bottom: calc(100% + 6px); }
+#election-dock[open] { z-index: 5; }
 #session[data-phase="finished"] :is(#profile-dock,#congress-dock) { display: none; }
 
 
@@ -269,7 +256,6 @@
   #election-timer { font-size: .68rem; }
   #legislative-dock { max-height: 28dvh; }
   #session:is([data-phase="ballot"],[data-phase="hearing"]) #legislative-dock { max-height: 40dvh; width: min(305px,calc(100% - 2 * var(--hud-edge))); z-index: 4; }
-  #voice-dock { top: auto; bottom: calc(var(--hud-edge) + 48px); padding: .25rem; gap: .2rem; max-width: calc(100% - 2 * var(--hud-edge)); }
 
   #legislative-dock .clock-chip { flex: none; }
   #hud-notices {

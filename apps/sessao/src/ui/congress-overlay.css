@@ -281,16 +281,9 @@
   from { transform: translateY(12px) scale(.92); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
-#command-deck :is(#open-action-shortcuts,#voice-toggle),
-#command-deck #voice-host { position: absolute; right: 0; bottom: var(--hot-slot); padding: 0; border: 0; }
-#command-deck #voice-host #voice-dock { pointer-events: auto; }
 .congress-bag { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .congress-bag .item-tile { min-height: 78px; }
 #command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
-#command-deck #voice-dock > :is(#open-action-shortcuts,#voice-toggle),
-
-#session #open-action-shortcuts { display: none; }
-
 #command-deck #legislative-dock { grid-column: 2; overflow: visible; }
 #command-deck #last-vote { pointer-events: auto; z-index: 5; }
 #command-deck .deck-tools { grid-column: 3; }

@@ -346,53 +346,6 @@ button.equipped-gear-tile { cursor: pointer; }
   pointer-events: none;
 }
 .deck-tool-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
-#command-deck #voice-dock {
-  position: static;
-  display: flex;
-  align-items: center;
-  inset: auto;
-  max-width: none;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  gap: 4px;
-}
-#command-deck #voice-host { position: relative; display: flex; padding-left: 4px; border-left: 1px solid var(--command-divider); }
-#command-deck #voice-dock { flex-wrap: nowrap; }
-#command-deck :is(#voice-dock button,#voice-dock summary) {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 6px;
-  gap: 3px;
-  min-width: 29px;
-  min-height: 28px;
-  margin: 0;
-  border: 1px solid #668b766d;
-  border-radius: 5px;
-  background: #1c362b;
-  box-shadow: none;
-  color: var(--command-paper);
-  font: 660 11px/1 system-ui,sans-serif;
-  white-space: nowrap;
-}
-#command-deck :is(#voice-dock button,#voice-dock summary):hover { background: #375c49; }
-#command-deck #voice-toggle[data-voice="live"] { color: var(--party-mint); }
-#command-deck #voice-toggle[data-voice="muted"] { color: var(--party-coral); }
-#command-deck #voice-toggle > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#command-deck #voice-status:not(:empty) {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 7px);
-  width: max-content;
-  max-width: 240px;
-  padding: 7px 9px;
-  border-radius: 6px;
-  background: #203a30;
-}
-
 #world #stations {
   padding: 6px 14px 10px;
   background: none;

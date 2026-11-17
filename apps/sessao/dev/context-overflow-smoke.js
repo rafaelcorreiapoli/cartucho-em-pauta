@@ -61,5 +61,17 @@ async page => {
   await deal.waitFor();
   await page.keyboard.press('Escape');
   await deal.waitFor({state:'hidden'});
+  const legacy = page.locator('#voice-dock, #voice-host, #voice-lobby, #open-action-shortcuts');
+  if (await legacy.count()) throw Error('O dock antigo de voz continua montado');
+  await page.keyboard.press('k');
+  const settings = page.getByRole('dialog',{name:'Configurações'});
+  await settings.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await page.keyboard.press('F2');
+  const shortcuts = page.getByRole('dialog',{name:'Atalhos de teclado'});
+  await shortcuts.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await page.keyboard.press('F2');
+  await shortcuts.waitFor({state:'hidden'});
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
 }

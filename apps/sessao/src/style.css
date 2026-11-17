@@ -130,10 +130,6 @@ p { margin:.5rem 0; }
   position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:max(12px,env(safe-area-inset-bottom));
   padding:.5rem .7rem; margin:0; font-size:.75rem; pointer-events:none;
 }
-#voice-dock {
-  position:absolute; left:max(12px,env(safe-area-inset-left)); bottom:max(12px,env(safe-area-inset-bottom));
-  padding:.4rem; max-width:calc(100% - 24px); font-size:.8rem;
-}
 #voice-status:not(:empty) { display:block; margin:.3rem .15rem .05rem; }
 #disguise-pitch-value { font-variant-numeric:tabular-nums; }
 #disguise-pitch { width:100%; }
@@ -271,8 +267,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 #registration-hint:empty { display:none; }
 #election-result { border-left:2px solid var(--hud-gold); padding-left:.4rem; margin:.35rem 0 .65rem; }
 #election-result summary { color:var(--hud-gold); }
-#voice-dock { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
-#voice-status:not(:empty) { flex-basis:100%; }
 .sound-settings-content h3 { margin:0 0 .45rem; font-size:.9rem; }
 .sound-settings-content .hud-range { display:block; width:100%; margin:.3rem 0 .65rem; }
 .mute-option { display:flex; align-items:center; gap:.35rem; }
