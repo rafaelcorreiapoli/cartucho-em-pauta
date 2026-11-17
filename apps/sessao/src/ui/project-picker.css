@@ -10,6 +10,8 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.project-picker-content { display: contents; }
+
 #project-picker header,
 #project-picker footer {
   display: flex;
@@ -47,6 +49,7 @@
 }
 
 .project-picker-option {
+  position: relative;
   display: grid;
   grid-template-columns: clamp(2.75rem, 10vw, 3.5rem) minmax(0, 1fr) auto;
   align-items: center;
@@ -104,7 +107,17 @@
   gap: .15rem .75rem;
 }
 
-.project-picker-impact b { color: var(--hud-gold); }
+.project-picker-option .action-key { inset: .2rem .3rem auto auto; }
+.project-picker-impact [data-effect="gain"] { color: #a8e796; }
+.project-picker-impact [data-effect="loss"] { color: #ffaaa3; }
+
+.project-picker-banner {
+  width: 100%;
+  height: clamp(5rem, 22vh, 10rem);
+  object-fit: contain;
+  border-radius: var(--radius-hud);
+  background: var(--color-hud-track);
+}
 
 .project-picker-details {
   display: grid;
