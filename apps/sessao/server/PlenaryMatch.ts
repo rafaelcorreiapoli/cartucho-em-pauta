@@ -391,8 +391,9 @@ export class PlenaryMatch {
     };
   }
 
-  allocateAttribute(id:string, request:AttributeRequest, now:number) {
-    return this.phase==='negotiation' && now<this.ends && this.electorate.has(id) && this.economy.allocate(id,request);
+  allocateAttribute(player:Player, request:AttributeRequest, now:number) {
+    return this.phase==='negotiation' && this.canHandleObjects(player.id,now) && this.ballotCountdown(now)===undefined &&
+      !player.knockedOut && !player.carrying && !player.carried && this.economy.allocate(player.id,request);
   }
 
   isolated(id:string) { return this.running && (this.expelled.has(id) || this.economy.suspended(id)); }

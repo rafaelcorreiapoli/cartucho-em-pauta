@@ -152,6 +152,15 @@ Abra `http://127.0.0.1:5217/` no Playwright CLI com a configuração
 O gameserver posiciona o jogador diante das estações. O teste clica nas ações reais
 de cafezinho e verba, mede a animação e confirma a remoção dos efeitos.
 
+## Teste dos atalhos de atributos no Chrome
+
+Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/attributes-smoke-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2609 bun run dev --port 5219`.
+Abra `http://127.0.0.1:5219/` no Playwright CLI com `dev/private-call-chrome.json`
+e execute `run-code --filename=dev/attributes-smoke.js`.
+O cenário concede dois pontos e antecipa a votação após o primeiro investimento
+para verificar o bloqueio das teclas durante a contagem regressiva.
+
 ## Métricas do gameserver
 
 O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use
