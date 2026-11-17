@@ -825,3 +825,49 @@ test('six human clients can select eight NPCs and fill the available seats when 
     await server.gracefullyShutdown(false);
   }
 });
+
+test('the ordinary lobby starts solo and seats five player bots before optional NPCs',async()=>{
+  const {defineRoom,defineServer,matchMaker} = await import('colyseus');
+  const {BunWebSockets} = await import('@colyseus/bun-websockets');
+  const {SessionRoom} = await import('./SessionRoom');
+  const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
+  const port = reservation.port!;
+  await reservation.stop();
+  const server = defineServer({gracefullyShutdown:false,transport:new BunWebSockets(),rooms:{plenary:defineRoom(SessionRoom)}});
+  let host:Room|undefined;
+  const wait = async (condition:()=>boolean) => {
+    for (let attempt=0;attempt<100;attempt++) {
+      if (condition()) return;
+      await Bun.sleep(25);
+    }
+    throw new Error('Expected solo room snapshot');
+  };
+  try {
+    await server.listen(port,'127.0.0.1');
+    host = await new Client(`http://127.0.0.1:${port}`).create('plenary',{nick:'Sala solo'});
+    let view:PlenaryView|undefined;
+    let snapshot:Player[] = [];
+    host.onMessage('plenary',(next:PlenaryView)=>{ view = next; });
+    host.onMessage('players',(next:Player[])=>{ snapshot = next; });
+    for (const message of ['control','mail-state','mail-reports','photo-state']) host.onMessage(message,()=>{});
+    await wait(()=>view?.botsToFill===5);
+    expect(view).toMatchObject({phase:'lobby',minimumPlayers:1,players:1});
+    host.send('start-match',{infiltrators:2,npcs:8,token:1});
+    await wait(()=>view?.phase==='negotiation');
+    expect(view).toMatchObject({players:6,electorate:6});
+    const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
+    const match:import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');
+    const controls:Map<string,ControlState> = Reflect.get(room,'players');
+    const players = [...controls.keys()];
+    expect(players.filter(id=>match.view(id,players,room.clock.currentTime).role==='Infiltrado')).toHaveLength(2);
+    publishProjectFiling(match,controls.get(host.sessionId)!.player,0,room.clock.currentTime);
+    Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
+    await wait(()=>view?.phase==='ballot' && snapshot.length===12);
+    expect(snapshot.filter(player=>player.bot && !player.npc)).toHaveLength(5);
+    expect(snapshot.filter(player=>player.npc && !player.bot)).toHaveLength(6);
+    expect(view?.billVoters).toHaveLength(6);
+  } finally {
+    if (host) await host.leave();
+    await server.gracefullyShutdown(false);
+  }
+});

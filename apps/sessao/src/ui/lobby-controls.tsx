@@ -7,7 +7,7 @@ export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolea
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
     running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
-    canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
+    botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
 
@@ -20,11 +20,13 @@ type LobbyCommands = {
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
   const [infiltrators,setInfiltrators] = useState(1);
-  const {running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator} = state;
-  const showInfiltrators = host && players>=6;
+  const {running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
+  const showInfiltrators = host && players+botsToFill>=MIN_PLAYERS;
   const canStart = host && players>=minimum && assetsReady;
+  const botHint = botsToFill===0 ? '' : botsToFill===1 ?
+    'Entrará 1 bot para completar a sala.' : `Entrarão ${botsToFill} bots para completar a sala.`;
   const hint = players<minimum ? `${players}/${minimum} jogadores para iniciar` :
-    host ? '' : 'Aguardando quem criou a sala iniciar a sessão.';
+    host ? botHint : 'Aguardando quem criou a sala iniciar a sessão.';
   if (running) return null;
   return <>
     <div className="lobby-options">

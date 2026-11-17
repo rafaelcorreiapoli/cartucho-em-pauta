@@ -1,6 +1,6 @@
 # Presidente da Sessão
 
-Jogo de negociação e sabotagem para uma a doze pessoas em um mapa do Congresso. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
+Jogo de negociação e sabotagem para uma a doze pessoas em um mapa do Congresso. Ao iniciar com menos de seis pessoas, bots identificados completam as vagas e participam do mesmo sorteio de infiltrados. Os parlamentares NPC opcionais ocupam os assentos restantes no Plenário. O cliente usa Phaser. Bun e Colyseus mantêm as salas e decidem o movimento e as colisões.
 
 ```sh
 bun install --frozen-lockfile
@@ -34,17 +34,16 @@ O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
 
 Entre com um nick e crie a sala ou use o link de convite. A caricatura é
 uma skin: o mapa, a voz e os avisos usam o nick. O anfitrião pode iniciar
-sozinho para testar sem infiltrado ou convidar até onze amigos. Ativem
-a voz e iniciem a sessão. No multiplayer, o papel secreto é sorteado independentemente da skin. Os
+sozinho ou convidar até onze amigos. O papel secreto é sorteado entre pessoas
+e bots, independentemente da skin. Os
 parlamentares ganham se chegarem ao fim da sessão com pelo menos três projetos
 votados e 45 de estabilidade. Projetos rejeitados contam. Se a meta não for
 atingida, o infiltrado ganha. Se a estabilidade chegar a zero, a partida termina
 na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
 
 Consulte **Celular → Projetos** e fale com Dona Sílvia no balcão da Secretaria
-para solicitar um documento. Projetos dispensam carimbos. Em modo solo, leve o
-documento direto ao Protocolo. Em uma sala que começa com dois jogadores, peça
-a assinatura do outro jogador. Com três ou mais, peça duas assinaturas.
+para solicitar um documento. Projetos dispensam carimbos e exigem duas
+assinaturas. Você pode pedir assinaturas aos bots quando estiver perto deles.
 O jogador com mandato que entregar
 o documento a Seu Mauro no balcão do Protocolo entra como proponente. Protocolar é gratuito.
 
@@ -71,8 +70,7 @@ assentos laterais e painel ligado ao projeto e cronômetro do HUD. A discussão 
 voto compartilham o mesmo temporizador. O servidor decide o confinamento para
 movimento manual e por clique. Após a apuração, as portas e a voz por proximidade
 voltam a funcionar e cada jogador permanece onde estava. O placar aparece em um
-modal e também fica no histórico. As regras atuais de voto, fraude, orçamento e
-estabilidade continuam sendo processadas pelo servidor.
+modal e também fica no histórico. Os bots podem falar por texto durante a votação, com base no que viram e nas provas que receberam. Use as ações do dossiê para compartilhar provas ou oferecer documentos a um bot próximo.
 
 Uma queda de conexão reserva o lugar por 30 segundos. A reconexão automática
 do Colyseus restaura o mesmo participante, seu voto e sua posição atual. A entrada
@@ -128,12 +126,12 @@ Para testar em duas abas no mesmo computador, use localhost e fones de ouvido. P
 No diretório `apps/sessao`, publique o servidor e gere o cliente com o endpoint HTTPS do Fly:
 
 ```sh
-flyctl deploy --remote-only --ha=false --env SESSAO_PREVIEW_SOLO=1
+flyctl deploy --remote-only --ha=false
 VITE_GAME_SERVER=https://cartuchao-sessao-poc.fly.dev bun run build
 netlify deploy --no-build --site f816c8e6-7051-4355-a0f6-466b3613863e --dir dist --alias presidente-sessao-poc
 ```
 
-O deploy do Netlify é uma prévia. A variável `SESSAO_PREVIEW_SOLO=1` habilita partidas com um humano nessa prévia. Deixe a variável desativada em ambientes que exigem seis humanos. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
+O deploy do Netlify é uma prévia. O Fly usa uma única máquina porque as salas ficam em memória e liga a máquina sob demanda.
 
 ## Teste dos modais legislativos no Chrome
 

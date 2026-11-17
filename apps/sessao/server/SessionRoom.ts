@@ -26,8 +26,9 @@ import { applyInput, MAX_QUEUED_INPUTS, MAX_STAMINA, readInput, restMovement, ST
 import { readPoliticsAction } from '../src/politics';
 import { readRoomCommandToken } from '../src/room-commands';
 import { INVALID_NICK, NICK_TAKEN, nickHint, nickKey, readNick } from '../src/nick';
-import { MAX_PLAYERS } from '../src/plenary';
+import { MAX_PLAYERS, MIN_PLAYERS } from '../src/plenary';
 import { PlenaryMatch } from './PlenaryMatch';
+import { PlayerBots } from './PlayerBots';
 
 function countFromStart(request:unknown,lobbyCount:number) {
   if (!request || typeof request!=='object') return 0;
@@ -40,6 +41,7 @@ export class SessionRoom extends Room {
   maxMessagesPerSecond = 100;
   autoBatchMessages = true;
   private players = new Map<string, ControlState>();
+  private readonly bots = new PlayerBots();
   private movementQueue = new Map<string, MovementInput[]>();
 
   private resetMovement(state:ControlState) {
@@ -61,6 +63,11 @@ export class SessionRoom extends Room {
     return this.match.ballotCountdown(this.clock.currentTime)===undefined;
   }
 
+  private sees(state:ControlState,player:Player,now:number) {
+    return player===state.player || (!state.plenary || inPlenary(player)) &&
+      (state.plenary && !this.match.powerOut || characterVisible(state.player,player,this.gameplay.vision(state.player.id,now)));
+  }
+
   private gameplayWorld() {
     const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.clock.currentTime,
       id=>this.voice.has(id));
@@ -68,7 +75,7 @@ export class SessionRoom extends Room {
       ...world,
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       vision:(id:string)=>this.gameplay.vision(id,world.now),
-      present:(id:string)=>!!this.clients.getById(id) || this.parliamentarians.players.some(player=>player.id===id),
+      present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         if (!world.publish(event)) return;
         this.parliamentarians.witnessAggression(event);
@@ -100,7 +107,7 @@ export class SessionRoom extends Room {
 
   private readonly localSolo = process.env.SESSAO_LOCAL_SOLO==='1';
   private match = new PlenaryMatch(
-    this.localSolo || process.env.SESSAO_PREVIEW_SOLO==='1' ||
+    this.localSolo ||
       (process.env.NODE_ENV==='test' && process.env.SESSAO_TEST_MIN_PLAYERS==='1') ? 1 : undefined,
     this.stationCooldowns,this.localSolo,
   );
@@ -120,6 +127,7 @@ export class SessionRoom extends Room {
     gameplayMetrics.finish(this.roomId,summary.discrepancy);
     this.npcTalk.reset();
     this.parliamentarians.reset(0,now);
+    this.bots.clear(this.players);
     const players = [...this.players.values()].map(state=>state.player);
     this.gameplay.reset(now,Math.random,players);
     for (const player of players) player.speed = undefined;
@@ -188,7 +196,9 @@ export class SessionRoom extends Room {
       this.lobbyNpcCount = value;
     });
     this.onMessage('start-match', (client, countRequest:unknown) => {
-      if (!this.consumeRoomCommand(client.sessionId,countRequest)) return;
+      if (!this.consumeRoomCommand(client.sessionId,countRequest) || this.match.running ||
+          this.players.keys().next().value!==client.sessionId) return;
+      if (this.match.minimumPlayers===MIN_PLAYERS) this.bots.addTo(this.players,this.clock.currentTime);
       const players = [...this.players.values()].map(state=>state.player);
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
@@ -228,7 +238,7 @@ export class SessionRoom extends Room {
         this.matchObjectsActive = true;
         gameplayMetrics.increment('matches_started');
         void this.lock();
-      }
+      } else this.bots.clear(this.players);
     });
     this.onMessage('complaint-submit',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
@@ -477,20 +487,21 @@ export class SessionRoom extends Room {
       for (const [id,state] of this.players) {
         if (freeze && !countingDown) this.resetMovement(state);
         const input = freeze ? undefined : this.movementQueue.get(id)?.shift();
-        if (input) applyInput(state,input);
+        if (!freeze && state.player.bot) this.bots.move(state);
+        else if (input) applyInput(state,input);
         else {
           restMovement(state.player);
           if (state.player.knockedOut) state.route = [];
         }
       }
       countingDown = freeze;
-      const players = [...this.players.values()].map(state => state.player);
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       const wasVoting = this.match.allowsPlenaryCombat;
       this.match.advance(now, recipients=>{
         for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,now);
       });
       this.resetFinishedMatch(now);
+      const players = [...this.players.values()].map(state => state.player);
       const world = this.gameplayWorld();
       if (!freeze || this.match.phase!=='negotiation') {
         const exploring = this.match.phase==='negotiation';
@@ -533,7 +544,8 @@ export class SessionRoom extends Room {
         return this.players.get(id)?.player;
       },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
       if (installation) world.feedback(installation.actor,installation.feedback);
-      this.match.advancePower(now,id=>this.clients.getById(id) ? this.players.get(id)?.player : undefined);
+      this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now));
+      this.match.advancePower(now,id=>world.present(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {
         player.handlingObject = this.match.fireHandlingDirection(player);
         player.former = this.match.running ? this.match.former(player.id) : undefined;
@@ -566,6 +578,11 @@ export class SessionRoom extends Room {
           if (atDesk) view.complaints.atDesk = true;
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
+        if (!this.match.running && this.match.minimumPlayers===MIN_PLAYERS) {
+          view.minimumPlayers = 1;
+          view.botsToFill = Math.max(0,MIN_PLAYERS-players.length);
+        }
+        if (this.bots.messages.length && !state.isolated) view.botMessages = this.bots.messages;
         if (this.match.phase==='negotiation') view.fireInteraction = this.match.fireInteraction(
           state.player,now,this.gameplay.vision(id,now),this.gameplay.incendiaryItem(id)!==undefined,this.gameplay.owns(id,'extinguisher'));
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
@@ -607,10 +624,7 @@ export class SessionRoom extends Room {
           }
         }
         if (this.match.running) {
-          const vision = this.gameplay.vision(id,now);
-          const visible = world.players.filter(player=>player===state.player ||
-            (!state.plenary || inPlenary(player)) &&
-            (state.plenary && !this.match.powerOut || characterVisible(state.player,player,vision)));
+          const visible = world.players.filter(player=>this.sees(state,player,now));
           client.send('players',visible.map(({barriers:_barriers,interactionSpeedBonus:_interactionSpeed,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,now,id) ? true : undefined,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
