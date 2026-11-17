@@ -69,7 +69,7 @@ export function ResultsContent({children}:{children:ReactNode}) {
   return <>
     <header>
       <h2 id="result-title">Resultados</h2>
-      <DialogDismiss label="Fechar resultados"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+      <DialogDismiss label="Fechar resultados"/>
     </header>
     <div id="result-content">{children}</div>
     <DialogDismiss className="hud-button">Continuar</DialogDismiss>

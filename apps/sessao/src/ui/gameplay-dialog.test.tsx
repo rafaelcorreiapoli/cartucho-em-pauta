@@ -13,8 +13,12 @@ test('an app offers back while the inventory and phone home can close the native
   const bag = renderToStaticMarkup(<GameplayDialogHeader title="Inventário" bag/>);
   const app = renderToStaticMarkup(<GameplayDialogHeader title="Pix" back={()=>{}}/>);
   expect(phone).toContain('method="dialog"');
+  expect(phone).toContain('type="submit"');
+  expect(phone).toContain('href="#icon-cross"');
   expect(bag).toContain('bag-title-icon');
   expect(app).toContain('aria-label="Fechar aplicativo" aria-keyshortcuts="Escape"');
+  expect(app).toContain('id="phone-back" type="button"');
+  expect(app).toContain('href="#icon-cross"');
   expect(app).not.toContain('method="dialog"');
 });
 
