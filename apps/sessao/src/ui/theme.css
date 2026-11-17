@@ -12,8 +12,16 @@
   --color-hud-budget: #f6cb80;
   --color-hud-danger: #ff9a8c;
   --color-hud-track: #0a130f;
+  --color-hud-impact-gain: #a8e796;
+  --color-hud-impact-loss: #ff9a8b;
+  --color-hud-impact-neutral: #e0d8c6;
   --radius-hud: .7rem;
 }
+
+[data-effect="gain"] { color: var(--color-hud-impact-gain); }
+[data-effect="loss"] { color: var(--color-hud-impact-loss); }
+[data-effect="neutral"] { color: var(--color-hud-impact-neutral); }
+
 .react-resource { font-size: 11px; white-space: nowrap; }
 .react-resource strong { color:var(--meter-tone); font-size: 14px; padding-left: 3px; }
 [data-tone="stability"] { --meter-tone:var(--color-hud-stability); }

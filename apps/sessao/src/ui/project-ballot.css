@@ -231,6 +231,4 @@
 .project-ballot-impact strong { margin-block-end: .28em; }
 .project-ballot-impact span { flex-wrap: wrap; row-gap: 0; color: #e9e3d6; }
 .project-ballot-impact span svg { color: #a9bcae; }
-.project-impact-value { color: #e0d8c6; font-weight: 800; font-variant-numeric: tabular-nums; }
-.project-impact-value[data-effect="gain"] { color: #a8e796; }
-.project-impact-value[data-effect="loss"] { color: #ff9a8b; }
+.project-impact-value { font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -109,8 +109,6 @@
 }
 
 .project-picker-option .action-key { inset: .2rem .3rem auto auto; }
-.project-picker-impact [data-effect="gain"] { color: #a8e796; }
-.project-picker-impact [data-effect="loss"] { color: #ffaaa3; }
 
 .project-picker-banner {
   width: 100%;

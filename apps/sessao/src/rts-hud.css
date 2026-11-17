@@ -317,8 +317,6 @@ button.equipped-gear-tile { cursor: pointer; }
 .brief-scores { display: flex; gap: 12px; }
 .brief-scores > span { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .brief-scores .hud-glyph { color: var(--party-gold); }
-.brief-scores [data-effect="gain"] { color: var(--party-mint); }
-.brief-scores [data-effect="loss"] { color: var(--party-coral); }
 #command-deck #legislative-dock:has(#project-outcome-brief:not([hidden])) #proposal { display: none; }
 
 #command-deck .deck-tools {

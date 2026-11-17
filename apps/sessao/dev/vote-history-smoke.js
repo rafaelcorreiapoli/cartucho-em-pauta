@@ -81,6 +81,12 @@ async page => {
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
   await sheet.getByRole('heading',{name:'Auxílio Churrasco'}).waitFor();
   await sheet.getByText('Protocolado por Histórico QA').waitFor();
+  const impactColors = await sheet.evaluate(dialog=>Object.fromEntries(['gain','loss','neutral'].map(tone=>[
+    tone,getComputedStyle(dialog.querySelector(`.project-impact-value[data-effect="${tone}"]`)).color,
+  ])));
+  if (impactColors.gain!=='rgb(168, 231, 150)' || impactColors.loss!=='rgb(255, 154, 139)' || impactColors.neutral!=='rgb(224, 216, 198)') {
+    throw Error('As cores de impacto da votação não batem com os tokens do HUD');
+  }
   await sheet.getByRole('button',{name:'Recolher votação'}).click();
   await sheet.locator('.project-ballot-body').waitFor({state:'hidden'});
   const collapsedClock = await sheet.locator('.project-ballot-handle time').textContent();

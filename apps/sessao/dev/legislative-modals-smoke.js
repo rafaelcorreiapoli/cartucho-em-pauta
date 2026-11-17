@@ -63,6 +63,12 @@ async page => {
     if (!box || box.y+box.height>height || box.x+box.width>width) throw Error('Confirmação fora da tela');
   }
   if (await confirm.isEnabled()) throw Error('Confirmação sem projeto');
+  const impactColors = await picker.evaluate(dialog=>Object.fromEntries(['gain','loss'].map(tone=>[
+    tone,getComputedStyle(dialog.querySelector(`[data-effect="${tone}"]`)).color,
+  ])));
+  if (impactColors.gain!=='rgb(168, 231, 150)' || impactColors.loss!=='rgb(255, 154, 139)') {
+    throw Error('As cores de impacto do seletor não batem com as da votação');
+  }
   await page.keyboard.press('ArrowUp');
   const selected = picker.getByRole('radio',{checked:true});
   await selected.waitFor();

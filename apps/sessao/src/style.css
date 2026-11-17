@@ -220,8 +220,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .impact-card h3 { font-size:.73rem; margin:0 0 .3rem; color:#e6dfc8; }
 .impact-values { display:flex; flex-wrap:wrap; gap:.2rem .65rem; }
 .impact-values > span { color:#ced8d0; font-size:.78rem; }
-[data-effect="gain"] { color:#aee7b3; }
-[data-effect="loss"] { color:#ffc2b2; }
 .section-label { color:#d3c29d; font-weight:800; font-size:.7rem; margin-bottom:.25rem; }
 .station-grid > button { display:flex; align-items:center; gap:.4rem; min-height:34px; padding:.3rem .4rem; text-align:left; }
 .station-grid small { display:block; font-size:.65rem; font-weight:550; }
