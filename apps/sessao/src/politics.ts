@@ -122,7 +122,7 @@ export const agendas = {
   reservaCofre:'Embolse R$ 50 mil no seu cofre',
   turismo:'Tire fotos em três salas diferentes',
   comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
-  flagraGabinete:'Fotografe alguém em um gabinete alheio',
+  flagraGabinete:'Fotografe um visitante dentro de um gabinete',
   presencaPlenario:'Entre e saia do Plenário durante a articulação',
   reuniaoGabinete:`Passe ${agendaDurationMs.reuniaoGabinete/1000} segundos no mesmo gabinete que outro jogador`,
   reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros três jogadores`,

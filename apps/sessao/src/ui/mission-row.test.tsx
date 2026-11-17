@@ -945,3 +945,63 @@ test('the crisis and urgent call instructions use the same limits as the gameser
   const crisis = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'heroiInesperado',current:0,target:1}}/>);
   expect(crisis).toContain(`Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`);
 });
+
+test('the HUD replaces Fiscalização Paralela when the last foreign safe leaves the match',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [inspector,owner,withoutOffice] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(inspector.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[inspector,owner]);
+  Object.assign(inspector,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(inspector,{kind:'open-shop',target:'vendor'},world);
+  game.act(inspector,{kind:'shop-buy',target:'xray',token:game.view(inspector,world).dialogue?.token},world);
+  expect(game.owns(inspector.id,'xray')).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(inspector.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(inspector.id,[inspector.id,withoutOffice.id],10).politics!;
+  const renderAgenda = ()=>view().missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  match.setPlayerConnected(owner.id,false);
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  match.leave(owner.id,10);
+  expect(renderAgenda()).not.toContain('cofre de outro parlamentar');
+  expect(view().missions.active).toHaveLength(3);
+  expect(view().missions.completed).toEqual([]);
+  expect(view().progression.xp).toBe(0);
+});
+
+test('Flagrante de Gabinete is playable when only the photographer owns an office',()=>{
+  const photographer:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:445,y:143};
+  const visitor:Player = {...photographer,id:'bia',nick:'Bia',character:1};
+  const players = [photographer,visitor];
+  const match = new PlenaryMatch(1);
+  expect(match.start(photographer.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[photographer]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(photographer.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['flagraGabinete','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(photographer.id,players.map(({id})=>id),now).politics!;
+  const mission = view(10).missions.active.find(mission=>mission.kind==='flagraGabinete')!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Fotografe um visitante dentro de um gabinete');
+
+  game.act(photographer,{kind:'photo'},match.gameplayWorld(players,100,()=>false));
+  expect(view(100).missions.completed).toEqual([]);
+  const point = game.officeSpawn(photographer.id)!;
+  Object.assign(photographer,point);
+  Object.assign(visitor,{x:point.x+6,y:point.y});
+  game.act(photographer,{kind:'photo'},match.gameplayWorld(players,3000,()=>false));
+  const completed = view(3000).missions.completed.find(mission=>mission.kind==='flagraGabinete')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(3000).progression.xp).toBe(45);
+});
