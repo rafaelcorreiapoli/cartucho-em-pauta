@@ -1375,3 +1375,17 @@ test('a captured phone game can be reported once with a photo and pays the repor
   expect(mail.view()[0]).toMatchObject({author:'Corregedoria',subject:'Infração confirmada · Jogo no celular',
     body:expect.stringContaining(subject.nick)});
 });
+
+
+test('election support and withdrawal are visible in observers’ polls',()=>{
+  const [voter,candidate,observer] = people;
+  const match = new PlenaryMatch(1);
+  expect(match.start(voter.id,people,0,()=>0)).toBe(true);
+  const position = (now:number)=>match.view(observer.id,ids,now).election?.polls.find(poll=>poll.id===voter.id);
+  match.electionAction(voter,{kind:'support',to:voter.id},1,false);
+  expect(position(4)?.supports).toBeUndefined();
+  match.electionAction(voter,{kind:'support',to:candidate.id},2,false);
+  expect(position(4)?.supports).toBe(candidate.id);
+  match.electionAction(voter,{kind:'support',to:''},3,false);
+  expect(position(4)?.supports).toBeUndefined();
+});
