@@ -11,7 +11,7 @@ import { archiveDutyRoom, money } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
@@ -279,7 +279,7 @@ export class Gameplay {
     for (const player of players) player.barriers = doors;
   }
 
-  private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
+  private available(id:string) { return hasInventorySpace(this.inventory(id).length); }
 
   private stack(id:string,kind:ObjectKind,except?:number) {
     return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
@@ -948,7 +948,7 @@ export class Gameplay {
         if (!this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
         officeDecor.push({id:layout.id,kind:slot});
         const decoration = this.installations.get(`office:${layout.id}:${slot}`);
-        if (decoration) add('office-remove',`Retirar · ${objects[slot].name}`,decoration.id);
+        if (decoration && this.available(player.id)) add('office-remove',`Retirar · ${objects[slot].name}`,decoration.id);
       }
     }
     return {offices,ownOffice,officeFurnishings,officeOptions,officeStash,officeDecor};

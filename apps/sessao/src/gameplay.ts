@@ -94,6 +94,7 @@ export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
 
 export const INVENTORY_SLOTS = 6;
+export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 const phoneActions = ['call','answer','hangup','game-start','game-stop','game-turn'] as const;
 type PhoneActionKind = typeof phoneActions[number];
 

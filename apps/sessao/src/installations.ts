@@ -1,4 +1,4 @@
-import type { GameplayAction, GameplayView } from './gameplay';
+import { hasInventorySpace, type GameplayAction, type GameplayView } from './gameplay';
 import { roomActivities } from './room-activities';
 
 export const vipAreaRadius = 12;
@@ -35,7 +35,7 @@ export function decorationActions(playerId:string, state:Pick<GameplayView,'inte
         (portrait ? 'Pendurar retrato' : 'Reservar cadeira');
       actions.push({label,action:{kind:'install',item:item.id,place}});
     }
-    if (placed) actions.push({
+    if (placed && hasInventorySpace(state.inventory.length)) actions.push({
       label:portrait ? 'Retirar retrato' : 'Retirar placa VIP',
       action:{kind:'uninstall',item:placed.id},
     });
