@@ -100,6 +100,32 @@ async page => {
     bag.locator('.bag-preview').boundingBox()]);
   const emptyGeometry = JSON.stringify(await bagGeometry());
   await bagCoffee.click();
+  const themedSelection = await page.locator('.bag-storage .item-tile[aria-pressed="true"]').evaluate(button=>{
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue('--hud-item-selection');
+    try {
+      root.style.setProperty('--hud-item-selection','rgb(201, 170, 96)');
+      const style = getComputedStyle(button);
+      return style.borderTopColor==='rgb(201, 170, 96)' && style.borderTopLeftRadius==='12px';
+    } finally {
+      if (previous) root.style.setProperty('--hud-item-selection',previous);
+      else root.style.removeProperty('--hud-item-selection');
+    }
+  });
+  if (!themedSelection) throw Error('A seleção do item não segue o tema compartilhado');
+  const themedDetails = await page.locator('.bag-detail .object-card').evaluate(panel=>{
+    const root = document.documentElement;
+    try {
+      root.style.setProperty('--hud-item-detail-radius','19px');
+      root.style.setProperty('--hud-item-primary-ink','rgb(22, 30, 14)');
+      return getComputedStyle(panel).borderTopLeftRadius==='19px' &&
+        getComputedStyle(panel.querySelector('.bag-pin')).color==='rgb(22, 30, 14)';
+    } finally {
+      root.style.removeProperty('--hud-item-detail-radius');
+      root.style.removeProperty('--hud-item-primary-ink');
+    }
+  });
+  if (!themedDetails) throw Error('Detalhe e ação principal não seguem o tema compartilhado');
   if (JSON.stringify(await bagGeometry())!==emptyGeometry) throw Error('Seleção moveu o layout do inventário');
   const drop = bag.getByRole('button',{name:'Largar no chão',exact:true});
   await drop.waitFor();

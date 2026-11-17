@@ -49,6 +49,32 @@ async page => {
     await page.keyboard.press('ArrowLeft');
   }
   const initial = await bounds();
+  const themedSelection = await page.locator('.market-product-button[aria-pressed="true"]').evaluate(button=>{
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue('--hud-item-selection');
+    try {
+      root.style.setProperty('--hud-item-selection','rgb(201, 170, 96)');
+      const style = getComputedStyle(button);
+      return style.borderTopColor==='rgb(201, 170, 96)' && style.borderTopLeftRadius==='12px';
+    } finally {
+      if (previous) root.style.setProperty('--hud-item-selection',previous);
+      else root.style.removeProperty('--hud-item-selection');
+    }
+  });
+  if (!themedSelection) throw Error('A seleção do item não segue o tema compartilhado');
+  const themedDetails = await page.locator('.market-detail').evaluate(panel=>{
+    const root = document.documentElement;
+    try {
+      root.style.setProperty('--hud-item-detail-radius','19px');
+      root.style.setProperty('--hud-item-primary-ink','rgb(22, 30, 14)');
+      return getComputedStyle(panel).borderTopLeftRadius==='19px' &&
+        getComputedStyle(panel.querySelector('.market-buy')).color==='rgb(22, 30, 14)';
+    } finally {
+      root.style.removeProperty('--hud-item-detail-radius');
+      root.style.removeProperty('--hud-item-primary-ink');
+    }
+  });
+  if (!themedDetails) throw Error('Detalhe e ação principal não seguem o tema compartilhado');
   const binoculars = dialog.getByRole('button',{name:/^Binóculo ·/});
   const binocularsKey = await binoculars.getAttribute('aria-keyshortcuts');
   await binoculars.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
