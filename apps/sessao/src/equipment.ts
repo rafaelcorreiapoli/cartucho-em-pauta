@@ -4,7 +4,7 @@ export const equipment = {
   voiceModulator:{slot:'voice',price:3,symbol:'🎙️'},
   megaphone:{slot:'broadcast',price:4,symbol:'📣'},
   vest:{slot:'armor',price:3,damageReduction:.35,symbol:'🛡️'},
-  runningShoes:{slot:'feet',price:2,symbol:'👟'},
+  runningShoes:{slot:'feet',price:2,speedBonus:25,symbol:'👟'},
   baton:{slot:'weapon',weapon:'baton',price:2,symbol:'🏏'},
 } as const;
 

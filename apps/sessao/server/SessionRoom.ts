@@ -586,7 +586,7 @@ export class SessionRoom extends Room {
           const visible = world.players.filter(player=>player===state.player ||
             (!state.plenary || inPlenary(player)) &&
             (state.plenary && !this.match.powerOut || characterVisible(state.player,player,vision)));
-          client.send('players',visible.map(({barriers:_barriers,hpBonus:_hp,attackBonus:_attack,defenseBonus:_defense,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,now,id) ? true : undefined,health:this.gameplay.healthFraction(player,now)})));
+          client.send('players',visible.map(({barriers:_barriers,interactionSpeedBonus:_interactionSpeed,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,now,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,now,id) ? true : undefined,health:this.gameplay.healthFraction(player,now)})));
         } else client.send('players',players);
         client.send('control',state);
       }

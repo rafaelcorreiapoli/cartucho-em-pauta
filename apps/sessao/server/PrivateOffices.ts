@@ -6,7 +6,7 @@ type Target = 'door'|'cabinet'|'safe';
 type OfficeState = {layout:OfficeLayout; owner?:string; nick?:string; door:'open'|'closed'|'locked'; doorLevel:number; cabinetLevel:number; safeLevel:number;
   doorUntil:number; cabinetUntil:number};
 export type Channel = {kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; office:OfficeState; item:number;
-  started:number; ends:number; origin:Motion; level:number};
+  started:number; ends:number; baseDuration:number; origin:Motion; level:number};
 
 export class PrivateOffices {
   readonly offices = new Map<string,OfficeState>();

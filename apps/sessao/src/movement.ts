@@ -46,7 +46,7 @@ export function applyInput(state: ControlState, input: MovementInput) {
   }
   const {player} = state;
   const stamina = player.stamina ?? player.staminaMax ?? MAX_STAMINA;
-  const wantsSprint = input.sprint && player.canSprint && !player.carrying;
+  const wantsSprint = input.sprint && !player.carrying && !player.carried;
   player.sprinting = wantsSprint && stamina>=staminaDrain ? true : undefined;
   const destination = input.door===undefined ? input.destination : doorDestination(state.player,input.door,!!state.plenary);
   if (destination) state.route = findRoute(state.player,destination,state.plenary);
