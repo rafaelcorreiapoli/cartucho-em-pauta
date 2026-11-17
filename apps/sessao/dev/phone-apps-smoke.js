@@ -34,6 +34,8 @@ async page => {
   await page.keyboard.press('1');
   await dialog.getByRole('heading',{name:'Telefone',exact:true}).waitFor();
   await page.keyboard.press('Escape');
+  await dialog.waitFor({state:'hidden'});
+  await page.keyboard.press('c');
   await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
   await page.keyboard.press('2');
   await dialog.getByRole('button',{name:'Snake'}).waitFor();
