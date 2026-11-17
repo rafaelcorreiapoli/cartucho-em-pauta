@@ -5,6 +5,11 @@ import type {Photo} from '../src/photography';
 
 type Case = {id:number;kind:InfractionKind;actor:string;at:number;position:Motion;eligible:Set<string>};
 
+function matchesIncident(photo:Photo,entry:Case) {
+  return Math.abs(photo.at-entry.at)<=complaintRules.photoWindowMs && photo.people.some(person=>
+    person.id===entry.actor && Math.hypot(person.x-entry.position.x,person.y-entry.position.y)<=complaintRules.photoDistance);
+}
+
 export class Complaints {
   private serial = 0;
   private cases = new Map<number,Case>();
@@ -35,8 +40,11 @@ export class Complaints {
     this.cases.set(id,{id,kind:event.type,actor:event.actor,at:Math.max(0,event.at-started),position:event.position,eligible});
   }
 
-  available(id:string,name:(id:string)=>string) {
-    return [...this.cases.values()].filter(entry=>entry.eligible.has(id)).map(entry=>this.describe(entry,name));
+  available(id:string,name:(id:string)=>string,photos?:readonly Photo[]) {
+    return [...this.cases.values()].filter(entry=>entry.eligible.has(id)).map(entry=>({
+      ...this.describe(entry,name),
+      ...(photos && {photoIds:photos.filter(photo=>matchesIncident(photo,entry)).map(photo=>photo.id)}),
+    }));
   }
 
   history() { return this.decisions; }
@@ -44,8 +52,7 @@ export class Complaints {
   submit(reporter:string,id:number,name:(id:string)=>string,photo?:Photo) {
     const entry = this.cases.get(id);
     if (!entry?.eligible.has(reporter)) return;
-    if (photo && (Math.abs(photo.at-entry.at)>complaintRules.photoWindowMs || !photo.people.some(person=>
-      person.id===entry.actor && Math.hypot(person.x-entry.position.x,person.y-entry.position.y)<=complaintRules.photoDistance))) return;
+    if (photo && !matchesIncident(photo,entry)) return;
     this.cases.delete(id);
     const decision = this.describe(entry,name);
     if (photo) decision.hasPhoto = true;

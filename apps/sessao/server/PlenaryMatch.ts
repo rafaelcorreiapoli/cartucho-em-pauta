@@ -612,8 +612,8 @@ export class PlenaryMatch {
     return electorate ? Math.min(requested,Math.floor(Math.round(this.budget*10)/electorate)/10) : 0;
   }
 
-  complaintView(id:string) {
-    return {available:this.complaints.available(id,actor=>this.economy.name(actor)),history:this.complaints.history()};
+  complaintView(id:string,photos?:readonly Photo[]) {
+    return {available:this.complaints.available(id,actor=>this.economy.name(actor),photos),history:this.complaints.history()};
   }
 
   canFileComplaint(player:Player,now:number) {
