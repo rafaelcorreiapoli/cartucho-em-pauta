@@ -2,7 +2,7 @@ import { installationArt } from './installations';
 import { isOfficeFurniture, officeFurniture } from './private-offices';
 import { equipment } from './equipment';
 import type Phaser from 'phaser';
-import { characterArt, downedArt } from './character-art';
+import { characterArt, downedArt, phoneArt } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
 import { HEIGHT, VISION_RADIUS, WIDTH } from './map';
 import { wallVision } from './visibility';
@@ -110,14 +110,18 @@ export class PhotoRenderer {
       }
       const {sheet,frame} = characterArt(person.character);
       const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction) : undefined;
-      const pose = this.textures.getFrame(downed?.key ?? sheet.key,downed?.frame ?? frame+(person.direction===3 ? 1 : person.direction)*4);
+      const handset = !downed && (person.phone==='open' || person.phone==='game')
+        ? phoneArt(person.character,0,true)
+        : undefined;
+      const art = downed ?? handset;
+      const pose = this.textures.getFrame(art?.key ?? sheet.key,art?.frame ?? frame+(person.direction===3 ? 1 : person.direction)*4);
       if (!pose) continue;
       const source = pose.source.image as HTMLImageElement;
       const x = person.x-left, y = person.y-top;
       ctx.save();
       ctx.translate(x,person.carried ? y-24 : y);
       if (downed?.rotation) ctx.rotate(downed.rotation);
-      if (downed?.flipX ?? person.direction===3) ctx.scale(-1,1);
+      if (downed?.flipX ?? (!handset && person.direction===3)) ctx.scale(-1,1);
       ctx.drawImage(source,pose.cutX,pose.cutY,pose.cutWidth,pose.cutHeight,-19,-38*(downed?.originY ?? 1),38,38);
       ctx.restore();
       if (person.pocketing) {
@@ -127,11 +131,11 @@ export class PhotoRenderer {
       }
       const exposed = person.exposed ?? [];
       exposed.forEach(({kind},index)=>item(kind,x+(index-(exposed.length-1)/2)*12,y-37,11));
-      if (person.phone) {
+      if (person.phone==='game' || person.phone==='call') {
         ctx.font = '9px system-ui';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#b7f0d3';
-        ctx.fillText(person.phone==='game' ? '🎮' : person.phone==='call' ? '☎' : ')))',x+13,y-25);
+        ctx.fillText(person.phone==='game' ? '🎮' : '☎',x+13,y-25);
       }
       for (const handoff of recent.filter(event=>event.to===person.id)) item(handoff.kind,x+16,y-9,12);
       labels.push({name:person.name,x,y:person.carried ? y-53 : y});

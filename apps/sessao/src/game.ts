@@ -108,7 +108,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private mapProgress!: Phaser.GameObjects.Graphics;
-    private phoneSignals!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
@@ -287,7 +286,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.officeDoors = this.add.graphics().setDepth(2);
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
-      this.phoneSignals = this.add.graphics().setDepth(HEIGHT+28);
       for (const office of privateOffices) {
         const point = decorPoint(office,'portrait');
         const {texture,width,height,centerY} = installationArt.portrait;
@@ -528,7 +526,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       this.mapProgress.clear();
-      this.phoneSignals.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
       if (!negotiating || channel?.kind!=='office-cash') this.safeFraction = 0;
       if (negotiating && channel?.kind==='office-cash') {
@@ -718,13 +715,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
-        }
-        if (phone && !downed) {
-          const signalY = spriteY-(latest.exposed?.length ? 55 : 43);
-          for (const radius of [2.5,4.5,6.5]) {
-            this.phoneSignals.lineStyle(1.15,0xbbf4d8).beginPath()
-              .arc(spriteX-3,signalY,radius,-1,1).strokePath();
-          }
         }
         const name = player.npc ? NAMES[character] ?? player.nick : player.nick;
         label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : phone==='game' ? `🎮 ${name}` : phone==='call' ? `☎ ${name}` : name);
