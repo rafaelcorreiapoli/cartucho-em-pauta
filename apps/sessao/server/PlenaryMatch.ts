@@ -369,7 +369,7 @@ export class PlenaryMatch {
   }
 
   act(player:Player, action:Action, now:number) {
-    if (!this.canVote(player.id) || (!this.proposal && action!=='audit')) return;
+    if (!this.canVote(player.id) || (action!=='audit' && (!this.proposal || this.projectVoteExpired(now)))) return;
     if (this.phase!=='negotiation' || now>=this.ends) {
       if (action==='audit') return {text:'A auditoria só pode ser feita durante a articulação.',critical:false};
       return;
@@ -485,7 +485,7 @@ export class PlenaryMatch {
   }
 
   declareVote(id:string,vote:Vote|null,now:number) {
-    if (this.phase!=='negotiation' || !this.proposal || now>=this.ends || !this.canVote(id)) return;
+    if (this.phase!=='negotiation' || !this.proposal || this.projectVoteExpired(now) || now>=this.ends || !this.canVote(id)) return;
     if (vote===null) this.voteIntents.delete(id);
     else this.voteIntents.set(id,vote);
   }
@@ -996,7 +996,7 @@ export class PlenaryMatch {
       billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>
         this.canVote(id) ? [{id,name,character,vote:this.votes.get(id)}] : []) : undefined,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
-      amended:this.amended,canFraud:!!this.proposal && role==='Infiltrado' && !this.fraud && this.canVote(id),
+      amended:this.amended,canFraud:!!this.proposal && !projectVoteExpired && role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),

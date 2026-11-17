@@ -13,6 +13,7 @@ import {installationSites} from '../installations';
 import {npcs} from '../npcs';
 import {createHudModel} from './hud-model';
 import {projectHeading} from './project-heading';
+import {legislativeStationActions} from './legislative-station-actions';
 
 const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
 
@@ -373,7 +374,13 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,players,0,()=>.9)).toBe(true);
   const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS;
-  publishProjectFiling(match,player,0,voteAt-NEGOTIATION_MS);
+  const filingAt = voteAt-NEGOTIATION_MS;
+  publishProjectFiling(match,player,0,filingAt);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['emenda','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility(filingAt);
+  expect(match.view(player.id,ids,filingAt).politics!.missions.active.some(m=>m.kind==='emenda')).toBe(true);
 
   const hearingEnd = voteAt+1;
   const hearingAt = hearingEnd-HEARING_MS;
@@ -391,6 +398,14 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   expect(view.projectWarning).toBeUndefined();
   expect(view.ballotCountdown).toBeUndefined();
   expect(view.projectVoteExpired).toBe(true);
+  expect(legislativeStationActions(view,'amendment')).toEqual([]);
+  expect(view.politics!.missions.active.some(m=>m.kind==='emenda')).toBe(false);
+  match.act({...player,...stations.amendment},'amendment',hearingEnd);
+  match.declareVote(player.id,'yes',hearingEnd);
+  const afterAttempt = match.view(player.id,ids,hearingEnd);
+  expect(afterAttempt.amended).toBe(false);
+  expect(afterAttempt.voteIntents).toEqual([]);
+  expect(afterAttempt.politics!.progression.xp).toBe(view.politics!.progression.xp);
   expect(projectHeading(view)).toMatchObject({
     title:'Auxílio Churrasco',clockLabel:'Fim da sessão',seconds:35,hint:'Sem votação nesta sessão.',
   });

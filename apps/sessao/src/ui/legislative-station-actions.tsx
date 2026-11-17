@@ -15,7 +15,7 @@ export function legislativeStationActions(view:PlenaryView|undefined,station:Sta
   if (view?.phase!=='negotiation' || view.isolationSeconds || view.ballotCountdown!==undefined) return [];
   if (station==='audit') return ['denounce'];
   if (view.mandate===false) return [];
-  if (view.project===undefined) return [];
+  if (view.project===undefined || view.projectVoteExpired) return [];
   if (station==='amendment') return view.amended ? [] : ['amendment'];
   if (station!=='panel') return [];
   const actions:StationAction[] = [];

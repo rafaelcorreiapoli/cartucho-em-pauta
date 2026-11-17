@@ -290,7 +290,7 @@ export class PersonalAgenda {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
       if (this.spyAvailability?.(device)===false) return false;
     }
-    if (kind==='presidenteFoto') return false;
+    if (kind==='presidenteFoto' || kind==='emenda' && this.ballotsLeft===0) return false;
     if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
     if (kind==='amizadeInstitucional' && !this.targets.some(person=>!this.visitedTargets.has(kind+':'+person.id) &&
         (!drawing || this.targetAvailable(kind,person.id)))) return false;
