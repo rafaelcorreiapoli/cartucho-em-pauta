@@ -337,11 +337,11 @@
 }
 
 #surveillance-dialog {
-  inset: 110px var(--hud-edge, 24px) auto auto;
+  --surveillance-top: min(110px, 18dvh);
+  inset: var(--surveillance-top) var(--hud-edge, 24px) auto auto;
   margin: 0;
-  width: min(470px,calc(100vw - 32px));
-  max-height: calc(100dvh - 126px);
-  overflow: auto;
+  width: min(470px, calc(100vw - var(--hud-edge, 24px) - 1rem));
+  max-height: calc(100dvh - var(--surveillance-top) - 1rem);
   border: 1px solid #709579;
   border-radius: 18px;
   background: linear-gradient(150deg,#172f23,#0b1812);

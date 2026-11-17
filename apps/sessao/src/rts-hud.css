@@ -691,7 +691,21 @@ img.market-art {
 
 
 
-#surveillance-dialog, #security-dialog { width: min(720px, 90vw); }
+#surveillance-dialog, #security-dialog {
+  width: min(720px, 90vw);
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+}
+:is(#surveillance-dialog, #security-dialog)[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+:is(.spy-console, .security-console) {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
 #surveillance-dialog header, #security-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .spy-console { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.6fr); gap: 1rem; }
 #spy-channels, #spy-monitor { padding: .8rem; border-radius: .6rem; background: #101c18; }
