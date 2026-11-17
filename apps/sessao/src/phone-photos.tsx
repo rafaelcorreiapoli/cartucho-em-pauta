@@ -69,7 +69,10 @@ export function createPhonePhotos(
     render();
   }
 
+  const isUnpublished = (photo:Photo) => !photos.publicPhotos.some(published=>published.id===photo.id);
+
   return {
+    get hasUnpublished() { return photos.album.some(({photo})=>isUnpublished(photo)); },
     get count() { return photos.album.length; },
     get request() { return photos.request; },
     resetSelection() {
@@ -109,7 +112,20 @@ export function createPhonePhotos(
         </>;
       });
     },
-    renderAlbum(contacts:Contact[], directory:DirectoryContact[], publishable:boolean,close:()=>void) {
+    renderPublication(atPress:boolean,close:()=>void) {
+      return photoControls(close,'Fechar aplicativo',register=>{
+        if (!atPress) return <p>Aproxime-se do balcão da Imprensa durante a articulação.</p>;
+        const candidates = photos.album.map(({photo})=>photo).filter(isUnpublished);
+        const selected = candidates.find(photo=>photo.id===photoId);
+        if (!selected) return photoGrid(candidates,'Nenhuma foto disponível para publicar.',register);
+        return <>
+          <AlbumButton onClick={register('Voltar às fotos',()=>{photoId = undefined;render();})}>Voltar às fotos</AlbumButton>
+          {photoView(selected,true)}
+          <AlbumButton onClick={register('Publicar foto',()=>send({kind:'photo-publish',item:selected.id}))}>Publicar foto</AlbumButton>
+        </>;
+      });
+    },
+    renderAlbum(contacts:Contact[], directory:DirectoryContact[],close:()=>void) {
       return photoControls(close,'Fechar aplicativo',register=>{
         const entry = albumTab==='personal' ? photos.album.find(entry=>entry.photo.id===photoId) : undefined;
         const published = albumTab==='public' ? photos.publicPhotos.find(photo=>photo.id===photoId) : undefined;
@@ -136,8 +152,6 @@ export function createPhonePhotos(
               <AlbumButton onClick={register('Mostrar',()=>send({kind:'info-show',item,target:recipient.id}))}>Mostrar</AlbumButton>
               <AlbumButton onClick={register('Enviar cópia',()=>send({kind:'info-copy',item,target:recipient.id}))}>Enviar cópia</AlbumButton>
             </>}
-            {publishable && !photos.publicPhotos.some(photo=>photo.id===item) &&
-              <AlbumButton onClick={register('Publicar foto',()=>send({kind:'photo-publish',item}))}>Publicar foto</AlbumButton>}
             <AlbumButton onClick={register('Excluir do meu álbum',()=>send({kind:'photo-delete',item}))}>Excluir do meu álbum</AlbumButton>
           </>;
         }

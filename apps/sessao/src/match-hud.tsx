@@ -26,7 +26,7 @@ const noNearbyItems:readonly NearbyItem[] = [];
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  nearby:{render:(player:Motion | undefined,exploring:boolean)=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  objects:{nearby:(player:Motion | undefined,exploring:boolean,directCollections:readonly number[])=>void;get:()=>readonly NearbyItem[];canPublishPhoto:()=>boolean}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
   sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
@@ -127,7 +127,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
     const interactionView = exploring ? view : undefined;
     const installing = !!interactionView?.gameplay?.installationProgress;
-    const field = fieldActions(installing ? undefined : interactionView,player,roster);
+    const field = fieldActions(installing ? undefined : interactionView,player,roster,objects.canPublishPhoto());
     const meter = contextProgress(interactionView);
     const canInteract = exploring && !installing && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
@@ -141,8 +141,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
       }
     }
-    nearby.render(player,canInteract);
-    const items = canInteract ? nearby.get() : noNearbyItems;
+    const directCollections = field.flatMap(({action})=>action.kind==='collect' && action.item!==undefined ? [action.item] : []);
+    objects.nearby(player,canInteract,directCollections);
+    const items = canInteract ? objects.get() : noNearbyItems;
     if (!items.length || (nearbyOpen && document.querySelector('dialog:modal:not(#action-shortcuts)'))) nearbyOpen = false;
     if (!exploring || !canInteract) overflowExpanded = false;
     const legislative = legislativeStationActions(view,context);

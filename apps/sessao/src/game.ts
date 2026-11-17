@@ -17,7 +17,7 @@ import Phaser from 'phaser';
 import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt } from './character-art';
 import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
-import { installationArt, installationSites } from './installations';
+import { contextualInstallItem, installationArt, installationSites } from './installations';
 import { groundItemArt } from './map-props';
 import { drawMap } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
@@ -267,7 +267,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const availableItem = () => {
           const gameplay = plenaryView?.gameplay;
           if (!gameplay?.installable.includes(place)) return;
-          return gameplay.inventory.find(item=>item.kind===kind);
+          return contextualInstallItem(gameplay.inventory,kind);
         };
         this.registerInteraction(art,()=>{
           const decoration = installed();

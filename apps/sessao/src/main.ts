@@ -230,11 +230,12 @@ async function connect(join: () => Promise<Room>) {
       audio.stationClick();
       game?.pulseStation(station);
       map.focus({preventScroll:true});
-    },activity => sendCommand('room-activity',{activity}),{...gameplay.nearbyActions,render:gameplay.nearby},action=>{
+    },activity => sendCommand('room-activity',{activity}),{get:gameplay.nearbyActions.get,nearby:gameplay.nearby,canPublishPhoto:gameplay.canPublishPhoto},action=>{
       if (action.kind!=='attack' && action.kind!=='install' && action.kind!=='uninstall') audio.stationClick();
       if (action.kind==='npc-deal') { sendCommand('npc-deal',action.request); return; }
       if (action.kind==='power') { sendCommand('power-action',action.option); return; }
       if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
+      if (action.kind==='publish-photo') { gameplay.openPhotoPublication(); return; }
       if (action.kind==='open-security') { security.open(); return; }
       if (action.kind==='spy') { sendCommand('spy',action.option); return; }
       if (action.kind==='edit-document') {
@@ -254,6 +255,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');
+      hud.refreshActions();
     });
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
