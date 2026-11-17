@@ -878,8 +878,11 @@ test('Escuta Ativa credits only time after opening or unmuting a real wiretap',(
   game.spyAction(player,{kind:'install',site:'coffee',item:recovered.id},world(now));
   tick(spyRules.install);
   expect(active().id).toBe(retry.id);
-  game.spyAction(player,{kind:'remove',site:'coffee'},world(now));
+  game.spyAction(player,{kind:'recover',site:'coffee'},world(now));
   tick(spyRules.remove);
+  const portable = game.view(player,world(now)).inventory.find(item=>item.kind==='wiretap')!;
+  expect(active().id).toBe(retry.id);
+  game.act(player,{kind:'drop',item:portable.id},world(now));
   expect(game.owns(player.id,'wiretap')).toBe(false);
   expect(active()).toBeUndefined();
   expect(view().missions.active).toHaveLength(3);
