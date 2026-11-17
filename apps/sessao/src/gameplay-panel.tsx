@@ -251,7 +251,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Denunciar' ? photos.complaintKey(view.complaints) :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
-      app==='Projetos' ? [view.project,view.outcomes,view.projectFilingClosed] :
+      app==='Projetos' ? [view.project,view.outcomes,view.projectFilingClosed,view.projectVoteExpired] :
       app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory] :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       [state.game?.status,state.game?.score,state.candy,state.bets,view.politics?.wallet];
@@ -400,7 +400,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics}/>;
-      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed}/>;
+      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired}/>;
       if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint);
       if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;

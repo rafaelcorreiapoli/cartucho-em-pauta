@@ -467,10 +467,14 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
   }
 
+  private projectVoteExpired(now:number) {
+    return !!this.proposal && Math.max(this.proposal.voteAt,now)+BALLOT_MS>this.sessionEndsAt;
+  }
+
   private projectWarning(now:number) {
     const at = this.proposal?.voteAt;
     if (this.phase!=='negotiation' || at===undefined || this.cassationAt!==undefined ||
-        Math.max(at,now)+BALLOT_MS>this.sessionEndsAt) return;
+        this.projectVoteExpired(now)) return;
     const seconds = Math.max(1,Math.ceil((at-now)/1000));
     if (seconds<=projectRules.warningSeconds) return seconds;
   }
@@ -859,7 +863,7 @@ export class PlenaryMatch {
       return;
     }
     if (this.phase==='negotiation') {
-      if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || now+BALLOT_MS>this.sessionEndsAt) return;
+      if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || this.projectVoteExpired(now)) return;
       this.economy.cancelOffers();
       this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
@@ -971,6 +975,7 @@ export class PlenaryMatch {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
+    const projectVoteExpired = this.phase==='negotiation' && this.projectVoteExpired(now);
     return {
       policies:this.activePolicies(now),
       canCallCassation:this.canCallCassation(id,now),
@@ -981,10 +986,11 @@ export class PlenaryMatch {
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
       projectWarning:this.projectWarning(now),
+      projectVoteExpired:projectVoteExpired || undefined,
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
       projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
-      remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? this.proposal?.voteAt ?? this.sessionEndsAt : this.ends)-now)/1000)) : 0,
+      remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt) : this.ends)-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
       billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>

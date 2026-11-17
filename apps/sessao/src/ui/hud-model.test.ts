@@ -12,6 +12,7 @@ import {stationRecharge} from '../station-recharge';
 import {installationSites} from '../installations';
 import {npcs} from '../npcs';
 import {createHudModel} from './hud-model';
+import {projectHeading} from './project-heading';
 
 const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
 
@@ -389,6 +390,12 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   expect(view.project).toBe(0);
   expect(view.projectWarning).toBeUndefined();
   expect(view.ballotCountdown).toBeUndefined();
+  expect(view.projectVoteExpired).toBe(true);
+  expect(projectHeading(view)).toMatchObject({
+    title:'Auxílio Churrasco',clockLabel:'Fim da sessão',seconds:35,hint:'Sem votação nesta sessão.',
+  });
+  match.advance(hearingEnd+1);
+  expect(match.phase).toBe('negotiation');
   hud.render(view);
   expect(hud.countdown.get()).toBeUndefined();
 });
