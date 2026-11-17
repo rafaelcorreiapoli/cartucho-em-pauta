@@ -188,6 +188,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
       this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
       this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
+      this.load.image('security-terminal',import.meta.env.BASE_URL+'assets/terminal-seguranca.webp');
       this.load.image('power-panel',import.meta.env.BASE_URL+'assets/painel-eletrico.webp');
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
