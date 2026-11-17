@@ -110,9 +110,10 @@
 
 .project-picker-option .action-key { inset: .2rem .3rem auto auto; }
 
-.project-picker-banner {
-  width: 100%;
-  height: clamp(5rem, 22vh, 10rem);
+.project-picker-icon {
+  width: min(100%, clamp(5rem, 22vh, 10rem));
+  aspect-ratio: 1;
+  justify-self: start;
   object-fit: contain;
   border-radius: var(--radius-hud);
   background: var(--color-hud-track);

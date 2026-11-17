@@ -157,7 +157,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     preload() {
       this.load.on('progress',(value:number)=>loading(value*.99));
       this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
-      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp',...bills.flatMap(bill=>bill.banner ? [bill.banner] : [])];
+      const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp',...bills.map(bill=>bill.icon)];
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
 
@@ -740,8 +740,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           });
         }
         view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-44).setVisible(!!exposed.length);
-        office.setVisible(running || worldSnapshot.officeHolders.has(id)).setPosition(x,labelY+6)
-          .setText(latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' : latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : 'Parlamentar');
+        const status = latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' :
+          latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : '';
+        office.setVisible(!!status && (running || worldSnapshot.officeHolders.has(id)))
+          .setPosition(x,labelY+6).setText(status);
         const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
         if (office.style.color!==officeColor) office.setColor(officeColor);
         if (moving && !pose && !combatArt) {

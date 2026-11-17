@@ -30,7 +30,7 @@ test('zero has no sign or gain styling',()=>{
   expect(markup.match(/data-effect="neutral">R\$ 0 mil<\/strong>/g)).toHaveLength(2);
 });
 
-test('the ballot displays the catalog banner, policy details and gameserver-funded allowance',()=>{
+test('the ballot displays the catalog icon, policy details and gameserver-funded allowance',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
   expect(bills.filter(bill=>bill.id.startsWith('PROJ-N'))).toHaveLength(15);
   for (const bill of bills.filter(entry=>entry.id.startsWith('PROJ-N'))) {
@@ -45,7 +45,7 @@ test('the ballot displays the catalog banner, policy details and gameserver-fund
     const markup = renderToStaticMarkup(<ProjectBallot {...view} ownId={player.id} eligible cast={()=>{}}/>);
     expect(markup).toContain(bill.name);
     expect(markup).toContain(`Protocolado por ${player.nick}`);
-    expect(markup).toContain(bill.banner!);
+    expect(markup).toContain(bill.icon);
     if (bill.effect?.kind==='policy') {
       expect(markup).toContain(bill.effect.detail);
       if (bill.effect.policy==='recovery') {

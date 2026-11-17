@@ -119,7 +119,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
       <section className="project-picker-details" aria-label="Detalhes do projeto">
         <div ref={detail} className="project-picker-detail-content">
           {bill ? <>
-            <img className="project-picker-banner" src={import.meta.env.BASE_URL+'assets/'+(bill.banner ?? 'documento-legislativo.webp')} alt=""/>
+            <img className="project-picker-icon" src={import.meta.env.BASE_URL+'assets/'+bill.icon} alt=""/>
             <h3>{bill.name}</h3>
             <p>{bill.description}</p>
             {effect && <div><h4>Efeito extra se aprovado</h4><p>{effect}</p></div>}
