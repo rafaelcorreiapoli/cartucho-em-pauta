@@ -23,20 +23,20 @@ async page => {
   const attributes = page.locator('#attributes-dialog[open]');
   await attributes.getByText('2 pontos para distribuir').waitFor();
   const stamina = attributes.getByRole('button',{name:'Investir em Fôlego'});
-  await page.keyboard.press('4');
-  if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('A tecla 4 não selecionou Fôlego.');
-  await attributes.getByText('100/100 → 110/110',{exact:true}).waitFor();
-  await page.keyboard.press('5');
+  await page.keyboard.press('2');
+  if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('A tecla 2 não selecionou Fôlego.');
+  await attributes.getByText('100/100 → 150/150',{exact:true}).waitFor();
+  await page.keyboard.press('3');
   await attributes.getByText('1 ponto para distribuir').waitFor();
-  await attributes.getByText('110/110',{exact:true}).waitFor();
+  await attributes.getByText('150/150',{exact:true}).waitFor();
 
   await page.locator('#ballot-countdown[open]').waitFor();
   if (await stamina.isEnabled()) throw Error('É possível escolher um atributo durante a contagem.');
-  await page.keyboard.press('4');
-  await page.keyboard.press('5');
+  await page.keyboard.press('2');
+  await page.keyboard.press('3');
   await attributes.getByText('1 ponto para distribuir').waitFor();
-  await attributes.getByText('110/110',{exact:true}).waitFor();
+  await attributes.getByText('150/150',{exact:true}).waitFor();
   if (await stamina.getAttribute('aria-pressed')!=='false') throw Error('O atalho armou investimento durante a contagem.');
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
-  return {viewport:'1024×600',stamina:'110/110',remainingPoints:1,countdownBlocked:true};
+  return {viewport:'1024×600',stamina:'150/150',remainingPoints:1,countdownBlocked:true};
 }

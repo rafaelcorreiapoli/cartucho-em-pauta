@@ -33,6 +33,7 @@ export function createSurveillancePanel(send:(action:object)=>void) {
     const audio = channel?.kind==='wiretap' ? channel : undefined;
     const last = Math.max(0,Math.ceil(channels.length/pageSize)-1);
     page = Math.min(page,last);
+    let shortcut = 0;
     const channelList = <>
       <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
         {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
@@ -42,17 +43,18 @@ export function createSurveillancePanel(send:(action:object)=>void) {
         </button>)}
       </div>
       {!channels.length && <p>{device==='spyCamera' ? 'Nenhuma câmera instalada.' : 'Nenhuma escuta instalada.'}</p>}
-      {channels.slice(page*pageSize,(page+1)*pageSize).map((channel,index)=>{
+      {channels.slice(page*pageSize,(page+1)*pageSize).map(channel=>{
+        const key = channel.removed ? undefined : String(++shortcut);
         const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
-          aria-keyshortcuts={channel.removed ? undefined : String(index+1)} onClick={()=>{
+          aria-keyshortcuts={key} onClick={()=>{
             send({kind:'open',channel:channel.id});
             update();
           }}>
           <svg className="hud-glyph" aria-hidden="true"><use href={channel.kind==='wiretap' ? '#icon-mic' : '#icon-camera'}/></svg>
           <span className="flex-1"><strong>{channel.name}</strong><small>{channel.room} · {label}</small></span>
-          {!channel.removed && <kbd className="action-key" aria-hidden="true">{index+1}</kbd>}
+          {key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}
           {!channel.removed && <span className="spy-play" aria-hidden="true">▶</span>}
         </button>;
       })}
@@ -65,19 +67,21 @@ export function createSurveillancePanel(send:(action:object)=>void) {
       </div>}
     </>;
     const closeEditor = () => { editing = undefined; update(); };
-    const action = (label:string,key:string,run:()=>void) =>
-      <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
+    const action = (label:string,run:()=>void) => {
+      const key = String(++shortcut);
+      return <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
         {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
       </button>;
+    };
     const monitor = <>
       {selected && <><h3>{selected.name}</h3><div ref={host=>{ if (host && viewport.parentElement!==host) host.append(viewport); }}/></>}
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
-        {selected && action('Fotografar','5',()=>send({kind:'capture'}))}
-        {audio && action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo','6',()=>send({kind:'mute',channel:audio.id}))}
-        {action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas','7',()=>send({kind:'alerts',channel:channel.id}))}
-        {action('Renomear','8',()=>{ editing = channel.id; update(); })}
-        {action('Fechar canal','9',()=>send({kind:'close-channel',channel:channel.id}))}
+        {selected && action('Fotografar',()=>send({kind:'capture'}))}
+        {audio && action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo',()=>send({kind:'mute',channel:audio.id}))}
+        {action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas',()=>send({kind:'alerts',channel:channel.id}))}
+        {action('Renomear',()=>{ editing = channel.id; update(); })}
+        {action('Fechar canal',()=>send({kind:'close-channel',channel:channel.id}))}
         {editing===channel.id && <form key={channel.id} onSubmit={event=>{
           event.preventDefault();
           const name = String(new FormData(event.currentTarget).get('name') ?? '');

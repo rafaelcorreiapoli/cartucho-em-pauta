@@ -56,8 +56,8 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
       </button>;
     })}</div>
     <p className="game-reward">{MINIGAME_FRUIT_XP} XP por fruta eliminada</p>
-    <button className="hud-button" type="button" disabled={!!motion} aria-keyshortcuts="5"
-      onClick={()=>{setSelected(undefined);send({kind:'candy-start'});}}>Novo tabuleiro <kbd className="action-key" aria-hidden="true">5</kbd></button>
+    <button className="hud-button" type="button" disabled={!!motion} aria-keyshortcuts="1"
+      onClick={()=>{setSelected(undefined);send({kind:'candy-start'});}}>Novo tabuleiro <kbd className="action-key" aria-hidden="true">1</kbd></button>
   </section>;
 }
 
@@ -92,9 +92,9 @@ export function Bets({wallet,round,send}:{wallet:number;round?:BetsRound;send:(a
         {money(amount/10)}
       </button>)}
     </div>
-    <button type="button" className="hud-button" aria-keyshortcuts="5" disabled={spinning || stake>balance}
+    <button type="button" className="hud-button" aria-keyshortcuts="1" disabled={spinning || stake>balance}
       onClick={()=>send({kind:'bets-spin',quantity:stake,token:round?.id ?? 0})}>
-      Apostar {money(stake/10)} <kbd className="action-key" aria-hidden="true">5</kbd>
+      Apostar {money(stake/10)} <kbd className="action-key" aria-hidden="true">1</kbd>
     </button>
   </section>;
 }

@@ -34,17 +34,19 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
 export function CassationBallot({state,ownId,cast}:{
   state:CassationView; ownId:string; cast:(candidate:string|null)=>void;
 }) {
+  const candidates = state.candidates.filter(person=>person.id!==ownId);
+  const skipKey = candidates.length<9 ? String(candidates.length+1) : '0';
   return <section className="cassation-ballot" aria-label="Votação de cassação">
     <p>{state.voted}/{state.electorate} votaram · {state.quorum} votos para cassar</p>
     <div className="cassation-candidates">
-      {state.candidates.filter(person=>person.id!==ownId).map((person,index)=><button key={person.id}
+      {candidates.map((person,index)=><button key={person.id}
         type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
         aria-keyshortcuts={index<9 ? String(index+1) : undefined} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
         <PhoneContactFace person={person}/><span>{person.name}</span>{index<9 && <kbd>{index+1}</kbd>}
       </button>)}
     </div>
     <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-      aria-keyshortcuts="0" aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto</button>
+      aria-keyshortcuts={skipKey} aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto <kbd aria-hidden="true">{skipKey}</kbd></button>
     {!state.eligible && <p>Você pode acompanhar a votação.</p>}
   </section>;
 }
