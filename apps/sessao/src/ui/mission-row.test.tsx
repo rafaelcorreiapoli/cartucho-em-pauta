@@ -19,7 +19,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
+import {HEARING_MS,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -1677,4 +1677,49 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   const done = view().missions.completed.find(mission=>mission.kind==='bandejaGourmet')!;
   expect(renderToStaticMarkup(<MissionRow mission={done} done/>)).toContain('data-done="true"');
   expect(view().progression.xp-xpBefore).toBe(35);
+});
+
+test.each([0,1])('a full final hearing removes mail missions only if it leaves no time (%s ms)',remaining=>{
+  const people:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target] = people;
+  const ids = people.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  const mail = new InternalMail();
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration;
+  const hearingAt = deadline-HEARING_MS-remaining;
+  const publishAt = deadline-internalMailRules.cooldownMs-2;
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  match.setAgendaMailAvailability(id=>mail.nextPublicationAt(id));
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['mensagemComAnexo','cafe','passeio','selfieSolo']);
+  expect(mail.publish(host,{subject:'Publicação',body:'Sem anexo'},match.gameplayWorld(people,publishAt,()=>false))).toBeUndefined();
+  match.refreshAgendaEligibility(publishAt);
+  const view = (now=hearingAt)=>match.view(host.id,ids,now).politics!;
+  const mailMission = ()=>view().missions.active.find(mission=>mission.kind==='mensagemComAnexo');
+  expect(mailMission()).toBeDefined();
+  match.politics(host,{kind:'hearing',target:target.id},people,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(renderToStaticMarkup(<ul>{view().missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}</ul>)
+    .includes('Publique um comunicado com anexo')).toBe(remaining>0);
+  expect(view().missions.active).toHaveLength(3);
+  expect(view().progression.xp).toBe(0);
+  if (!remaining) return;
+
+  const resumeAt = hearingAt+HEARING_MS;
+  match.advance(resumeAt);
+  expect(match.phase).toBe('negotiation');
+  const game = new Gameplay();
+  const world = match.gameplayWorld(people,resumeAt,()=>false);
+  game.act(host,{kind:'photo'},world);
+  const photo = game.photoView(host.id,resumeAt).album.at(-1)!.photo;
+  expect(mail.publish(host,{subject:'Último registro',body:'Foto em anexo',attachment:{kind:'photo',id:photo.id}},
+    world,()=>({attachment:{kind:'photo',photo}}))).toBeUndefined();
+  const completed = view(resumeAt).missions.completed.find(mission=>mission.kind==='mensagemComAnexo')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(resumeAt).progression.xp).toBe(35);
 });

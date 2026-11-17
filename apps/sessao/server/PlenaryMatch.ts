@@ -74,7 +74,24 @@ export class PlenaryMatch {
   canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
 
   setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
-    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration,agendaSelfies);
+    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(nextPublicationAt(id)),agendaSelfies);
+  }
+
+  private canPublishBeforeDeadline(nextPublicationAt:number) {
+    if (!this.running) return false;
+    let availableAt = Math.max(this.agendaNow,nextPublicationAt);
+    const sessionOpensAt = this.phase==='negotiation' ? this.agendaNow : this.ends;
+    availableAt = Math.max(availableAt,sessionOpensAt);
+    const cassationEnd = this.cassationAt===undefined ? sessionOpensAt : this.cassationAt+HEARING_MS;
+    if (this.cassationAt!==undefined && availableAt>=this.cassationAt) {
+      availableAt = Math.max(availableAt,cassationEnd);
+    }
+    if (this.phase!=='ballot' && this.proposal) {
+      const voteAt = Math.max(this.proposal.voteAt,sessionOpensAt,cassationEnd);
+      const voteEnds = voteAt+BALLOT_MS;
+      if (voteEnds<=this.sessionEndsAt && availableAt>=voteAt && availableAt<voteEnds) availableAt = voteEnds;
+    }
+    return availableAt<this.sessionEndsAt;
   }
 
   setAgendaCommerce(now:()=>number) {
@@ -574,6 +591,7 @@ export class PlenaryMatch {
         if (!this.canCallCassation(id,now) || !this.at(player,'panel')) break;
         if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
         this.cassationAt = now+CASSATION_NOTICE_MS;
+        this.refreshAgendaEligibility(now);
         break;
       case 'hearing':
         if (this.cassationAt!==undefined || !this.canVote(id) || !this.economy.canCall(id) || !this.canVote(action.target) ||
@@ -585,6 +603,7 @@ export class PlenaryMatch {
         this.economy.cancelOffers();
         this.economy.interruptPlenaryVisits();
         this.phase = 'hearing';
+        this.refreshAgendaEligibility(now);
         break;
     }
   }
@@ -810,6 +829,7 @@ export class PlenaryMatch {
       this.economy.cancelOffers();
       this.economy.interruptPlenaryVisits();
       this.phase = 'hearing';
+      this.refreshAgendaEligibility(now);
       return;
     }
     if (this.phase==='negotiation') {
@@ -818,6 +838,7 @@ export class PlenaryMatch {
       this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
       this.ends = now+BALLOT_MS;
+      this.refreshAgendaEligibility(now);
       return;
     }
     if (now<this.ends) return;
