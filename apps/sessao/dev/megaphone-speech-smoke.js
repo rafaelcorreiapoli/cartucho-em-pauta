@@ -68,8 +68,12 @@ async page => {
     const client = new Client(server);
     const host = await client.create('plenary',{nick:'Emissor'});
     const listener = await client.joinById(host.roomId,{nick:'Ouvinte'});
-    const rooms = [host,listener];
-    const peers = rooms.map(room=>new RoomVoice(room,()=>{}));
+    const observer = await client.joinById(host.roomId,{nick:'Observador distante'});
+    const rooms = [host,listener,observer];
+    let observedSpeakers = new Set();
+    const peers = rooms.map(room=>new RoomVoice(room,speakers=>{
+      if (room===observer) observedSpeakers = speakers;
+    }));
     const pause = ms=>new Promise(resolve=>setTimeout(resolve,ms));
     async function waitFor(predicate,message) {
       for (let i=0;i<100;i++) {
@@ -80,9 +84,15 @@ async page => {
     }
     let view;
     let route;
+    let observerRoutes;
+    let listenerView;
+    let listenerRecipients;
     let token = 0;
     host.onMessage('plenary',snapshot=>{ view = snapshot; });
     listener.onMessage('voice-range',levels=>{ route = levels.find(([id])=>id===host.sessionId); });
+    listener.onMessage('plenary',snapshot=>{ listenerView = snapshot; });
+    listener.onMessage('voice-send',ids=>{ listenerRecipients = ids; });
+    observer.onMessage('voice-range',levels=>{ observerRoutes = levels; });
     for (const room of rooms) room.onMessage('*',()=>{});
     const act = action=>host.send('gameplay',{action,token:++token});
     const gear = ()=>view?.gameplay;
@@ -161,7 +171,18 @@ async page => {
         return {peak,activeWindows,bassToMid:bass/mid};
       }
       const normal = await sample('voz-normal',false);
+      await waitFor(()=>observerRoutes?.length===0,'Observador deve estar fora da proximidade');
+      act({kind:'call',target:listener.sessionId});
+      await waitFor(()=>listenerView?.gameplay?.call?.state==='incoming','Chamada privada não chegou');
+      listener.send('gameplay',{action:{kind:'answer'},token:1});
+      await waitFor(()=>gear()?.call?.state==='connected' && listenerRecipients?.includes(host.sessionId),'Chamada não conectou');
       act({kind:'toggle-megaphone'});
+      await waitFor(()=>observerRoutes?.some(([id,volume,local,filtered])=>id===host.sessionId && volume>0 && !local && filtered),
+        'Observador distante não recebeu rota global');
+      await waitFor(()=>meters.filter(m=>amplitude(m)>.01).length===2,'Áudio global não chegou ao terceiro cliente');
+      if (observerRoutes.length!==1 || listenerRecipients.includes(observer.sessionId) || observedSpeakers.has(host.sessionId)) {
+        throw Error('Megafone expôs a chamada ou a identidade do emissor');
+      }
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
       act({kind:'toggle-modulator'});
@@ -169,10 +190,12 @@ async page => {
       await peers[0].setDisguise(voiceModulatorDisguise);
       const combined = await sample('megafone-com-modulador',true);
       act({kind:'toggle-megaphone'});
+      await waitFor(()=>observerRoutes?.length===0,'Rota global permaneceu após desligar o megafone');
+      if (gear()?.call?.state!=='connected') throw Error('Desligar o megafone encerrou a chamada');
       const disguiseOnly = await sample('modulador',false);
       if (combined.bassToMid>=disguiseOnly.bassToMid*.65) throw Error(JSON.stringify({disguiseOnly,combined}));
       const tracksPerConnection = [...receivedTracks.values()];
-      if (meters.length!==2 || devices.length!==2 || tracksPerConnection.length!==2 || tracksPerConnection.some(count=>count!==1)) {
+      if (meters.length!==6 || devices.length!==3 || tracksPerConnection.length!==6 || tracksPerConnection.some(count=>count!==1)) {
         throw Error(JSON.stringify({streams:meters.length,microphoneSources:devices.length,tracksPerConnection}));
       }
       return {normal,filtered,combined,disguiseOnly,streams:meters.length,microphoneSources:devices.length,tracksPerConnection,recordings};

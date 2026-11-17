@@ -14,7 +14,8 @@ class TestRoom extends SessionRoom {
         positioned.add(state);
         // Fund a third accessory so the replacement prompt can be exercised.
         Reflect.get(match,'economy').earn(state.player.id,2);
-        Object.assign(state.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+        const position = state.player.nick==='Observador distante' ? {x:140,y:146} : {x:npcs.vendor.x,y:npcs.vendor.y+11};
+        Object.assign(state.player,position);
       }
     },100);
   }
