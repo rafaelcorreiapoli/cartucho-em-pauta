@@ -1,12 +1,12 @@
 import {isEditingText} from './game-keys';
 import {DialogHeader} from './ui/dialog-header';
 import type { ReactNode } from 'react';
-import { isCredentialGood, marketKinds, marketProduct } from './market-catalog';
+import { isCredentialGood, marketKinds, marketProduct, marketPurchaseSlot } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { EquipmentReplacement } from './ui/equipment-replacement';
 import { describeFood, foodDefinition, isFood } from './food';
 import { gearConflict, isGear } from './equipment';
-import { canStackItem, INVENTORY_SLOTS, objects, type GameplayAction, type WorldItem } from './gameplay';
+import { objects, type GameplayAction, type WorldItem } from './gameplay';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { npcs, type NpcId } from './npcs';
@@ -68,7 +68,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   dialog.addEventListener('keydown',onMarketKey);
   prompt.addEventListener('keydown',onReplacementKey);
 
-  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number) {
+  function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number,direct:boolean) {
     const catalog = npcs[npc].catalog;
     if (!catalog) return;
     const kinds = marketKinds[catalog];
@@ -79,16 +79,14 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       if (next===page || next<0 || next>=pageCount) return;
       page = next;
       selected = 0;
-      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct);
     };
     const stock = visible.map(kind=>{
       const item = objects[kind];
       const price = marketProduct(catalog,kind,policies,budget)!.price;
       const furniture = isOfficeFurniture(kind);
       const hasItem = furniture ? furnishings.includes(kind) : (isCredentialGood(kind) || isGear(kind)) && owned.some(entry=>entry.kind===kind);
-      const stack = inventory.some(entry=>entry.kind===kind) && canStackItem(kind);
-      const needsSpace = !isGear(kind) || !!gearConflict(kind,equipped);
-      const noSpace = needsSpace && !furniture && !stack && inventory.length>=INVENTORY_SLOTS;
+      const noSpace = !marketPurchaseSlot(kind,inventory,equipped,direct);
       const status = hasItem ? (furniture ? 'Instalado' : 'Adquirido') : noSpace ? 'Inventário cheio' :
         wallet<price ? 'Saldo insuficiente' : undefined;
       return {kind,item,price,status,hasItem};
@@ -96,7 +94,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     const product = stock[selected];
     const select = (index:number) => {
       selected = index;
-      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget);
+      renderCatalog(npc,token,wallet,inventory,equipped,furnishings,policies,budget,direct);
     };
     const buy = () => {
       if (product && !product.status) send({kind:'shop-buy',target:product.kind,token});
@@ -213,7 +211,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget]);
       if (key===last) return;
       last = key;
       token = state.token;
@@ -242,7 +240,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
         dialog.querySelector<HTMLButtonElement>('.market-choices button')?.focus();
         return;
       }
-      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget);
+      renderCatalog(state.npc,state.token,wallet,inventory,equipped,furnishings,policies,budget,state.direct!==false);
       if (!dialog.open) dialog.showModal();
     },
     purchased(item:Pick<WorldItem,'id'|'kind'>) {

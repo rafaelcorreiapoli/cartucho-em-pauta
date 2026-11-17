@@ -2,7 +2,7 @@ import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
-import { isCredentialGood, marketProduct } from '../src/market-catalog';
+import { isCredentialGood, marketProduct, marketPurchaseSlot } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
@@ -1317,12 +1317,12 @@ export class Gameplay {
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price} = product;
-      const autoEquip = direct && isGear(kind) && !gearConflict(kind,this.equipped(id).map(({data})=>data));
+      const storage = marketPurchaseSlot(kind,this.inventory(id).map(({data})=>data),this.equipped(id).map(({data})=>data),direct);
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {
         if (!layout) return 'Gabinete indisponível.';
         if (this.installations.has(`office:${layout.id}:${kind}`)) return 'Você já tem este móvel instalado.';
-      } else if (!autoEquip && !this.available(id) && !this.stack(id,kind)) return 'Inventário cheio.';
+      } else if (!storage) return 'Inventário cheio.';
       if (isCredentialGood(kind) && this.inventory(id).some(item=>item.data.kind===kind)) return 'Você já carrega um desses.';
       if (isGear(kind) && this.owns(id,kind)) return 'Você já tem este equipamento.';
       const basePrice = marketProduct(catalog,kind)!.price;
@@ -1331,7 +1331,7 @@ export class Gameplay {
       if (!paid) return 'Saldo insuficiente.';
       const data:WorldItem = layout ? {id:++this.serial,kind} : this.create(kind,{holder:id});
       const inventoryItem = canStackItem(kind) ? this.addToInventory(this.items.get(data.id)!,id).id : data.id;
-      if (autoEquip) {
+      if (storage==='equipped') {
         this.changeGear(player,data.id,true,world);
         confirmation = 'Compra equipada.';
       }

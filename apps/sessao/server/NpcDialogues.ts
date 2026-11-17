@@ -81,7 +81,7 @@ export class NpcDialogues {
     const text = session.npc==='protocol' && !documents.length && !session.feedback
       ? 'Você não tem documentos no inventário. Solicite um na Secretaria.'
       : this.node(session).text;
-    return {npc:session.npc,shop:session.shop,token:session.token,text,feedback:session.feedback,
+    return {npc:session.npc,shop:session.shop,direct:!!session.direct,token:session.token,text,feedback:session.feedback,
       options:this.options(session,eligible,documents).map(({id,label})=>({id,label}))};
   }
 }
