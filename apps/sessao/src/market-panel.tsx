@@ -219,8 +219,14 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       dialog.classList.toggle('market-catalog',state.shop);
       dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
       if (!state.shop) {
-        const choices = state.options.map(option=>({...option,activate:()=>state.npc==='secretary' && option.id==='projects' ?
-          requestDocument() : send({kind:'dialogue-choice',target:option.id,token:state.token})}));
+        const choices = state.options.map(option=>({...option,activate:()=>{
+          if (state.npc==='secretary' && option.id==='projects') return requestDocument();
+          if (state.npc==='secretary' && option.id==='standalone-document') {
+            send({kind:'supply',place:'secretary',target:'queue'});
+            return send({kind:'dialogue-close'});
+          }
+          send({kind:'dialogue-choice',target:option.id,token:state.token});
+        }}));
         marketKeys.clear();
         choices.forEach((choice,index)=>marketKeys.set(String(index+1),choice.activate));
         flushSync(()=>root.render(<MarketDialogContent title={npc.catalog ? npc.name : `${npc.label} · ${npc.name}`}>

@@ -49,8 +49,8 @@ export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
   secretary:{
     start:{
-      text:'Escolha um projeto. Confira no inventário quantas assinaturas você precisa pedir a outros jogadores antes de levar o documento ao Protocolo.',
-      options:[{id:'projects',label:'Solicitar documento'},{id:'leave',label:'Encerrar',action:'close'}],
+      text:'Projetos seguem para votação. Documentos avulsos também podem receber assinaturas dos parlamentares que circulam pelo Congresso.',
+      options:[{id:'projects',label:'Solicitar documento'},{id:'standalone-document',label:'Pedir documento avulso'},{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
   protocol:{

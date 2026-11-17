@@ -769,8 +769,11 @@ test('solo signature missions require enough money and payment quota for the NPC
   const world:GameplayWorld = {players:[owner,...members.players],now:1,voice:()=>false,office:()=>undefined,
     earn:()=>{},publish:event=>economy.recordGameplay(event),
     payNpc:(from,to,price)=>economy.transfer(from,to,price,true,1)};
-  game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world);
-  const [document] = game.view(owner,world).inventory;
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'project-0'},world)).toBe('Objeto guardado no inventário.');
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toBe('Objeto guardado no inventário.');
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toContain('já está carregando');
+  const [project,document] = game.view(owner,world).inventory;
+  expect(game.signWithNpc(owner,free,project.id,0,world)).toBe('Documento indisponível.');
   for (const npc of [free,paid]) {
     expect(game.signWithNpc(owner,npc,document.id,members.signature(npc.id,owner.id),world)).toBe('Assinatura obtida.');
   }

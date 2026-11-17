@@ -84,6 +84,15 @@ async page => {
   await page.locator('#market-dialog').waitFor({state:'hidden'});
   await page.keyboard.press('o');
   await page.getByRole('button',{name:new RegExp(title)}).waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('#gameplay-dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Secretaria · Falar com Dona Sílvia'}).click();
+  const standalone = page.getByRole('button',{name:'Pedir documento avulso'});
+  await page.keyboard.press(await standalone.getAttribute('aria-keyshortcuts'));
+  await page.locator('#market-dialog').waitFor({state:'hidden'});
+  await page.keyboard.press('o');
+  await page.getByRole('button',{name:/Estatuto da Fila Preferencial/}).waitFor();
+  await page.getByRole('button',{name:new RegExp(title)}).waitFor();
   await page.setViewportSize({width:1280,height:720});
   await page.reload();
   const guest = await page.context().newPage();
