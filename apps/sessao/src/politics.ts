@@ -30,6 +30,7 @@ export const targetedAgendas = {
   selfieAlvo:'Tire uma selfie com',
 } as const;
 export const archiveDutyRoom = 'Arquivo';
+export const urgentCallMission = {minCallMs:10_000,contacts:2} as const;
 export const agendaDurationMs = {jogar:30_000,jogarOculto:30_000,pausaCafe:30_000,plantaoArquivo:30_000,trabalhoRemoto:30_000,produtividade:30_000,debateTelefonico:20_000,discursoMegafone:10_000,reuniaoGabinete:15_000,reuniaoPublica:10_000,escutaAtiva:15_000,nadaADeclarar:15_000,segurancaParlamentar:10_000,reuniaoVip:15_000} as const;
 
 export const agendas = {
@@ -102,8 +103,8 @@ export const agendas = {
   solenidadeInauguracao:`Rabisque um Retrato Oficial de outro jogador instalado há até ${NEW_PORTRAIT_MS/1000} segundos`,
   amizadeInstitucional:'Entregue um item a outro jogador e receba dele um item diferente',
   privilegioAdquirido:'Instale uma Placa VIP',
-  trabalhoRemoto:'Passe 30 segundos no seu gabinete',
-  produtividade:'Jogue no celular por 30 segundos no seu gabinete',
+  trabalhoRemoto:`Passe ${agendaDurationMs.trabalhoRemoto/1000} segundos no seu gabinete`,
+  produtividade:`Jogue no celular por ${agendaDurationMs.produtividade/1000} segundos no seu gabinete`,
   cafeEstrategico:'Beba um café no Cafezinho',
   contasTesouraria:'Entregue uma maleta à Tesouraria',
   contribuinte:'Contribua com R$ 50 mil à Tesouraria',
@@ -122,8 +123,8 @@ export const agendas = {
   comissaoImprovisada:'Consiga três assinaturas no mesmo documento',
   flagraGabinete:'Fotografe alguém em um gabinete alheio',
   presencaPlenario:'Entre e saia do Plenário durante a articulação',
-  reuniaoGabinete:'Passe 15 segundos no mesmo gabinete que outro jogador',
-  reuniaoPublica:'Passe 10 segundos em uma sala pública com outros três jogadores',
+  reuniaoGabinete:`Passe ${agendaDurationMs.reuniaoGabinete/1000} segundos no mesmo gabinete que outro jogador`,
+  reuniaoPublica:`Passe ${agendaDurationMs.reuniaoPublica/1000} segundos em uma sala pública com outros três jogadores`,
   tresSelfies:'Tire selfies em três salas públicas diferentes',
   plantaoEmergencia:'Apague um incêndio ou ajude no reparo elétrico dentro da sala afetada',
   heroiInesperado:'Ajude a resolver uma crise com Estabilidade abaixo de 30',
@@ -133,7 +134,7 @@ export const agendas = {
   patrimonioSuspeito:'Revele o saldo de um parlamentar NPC com o Raio X',
   reuniaoVip:`Fique ${agendaDurationMs.reuniaoVip/1000} segundos com outro parlamentar perto de uma Placa VIP instalada`,
   segurancaParlamentar:`Fique ${agendaDurationMs.segurancaParlamentar/1000} segundos perto do mesmo parlamentar com um Porrete equipado, sem atacar`,
-  escutaAtiva:'Monitore um grampo por 15 segundos',
+  escutaAtiva:`Monitore um grampo por ${agendaDurationMs.escutaAtiva/1000} segundos`,
   instalarGrampo:'Instale um grampo em um esconderijo',
   vigilanciaInstitucional:'Consulte duas câmeras diferentes na Sala de Segurança',
   duasCameras:'Consulte duas câmeras escondidas próprias',
@@ -149,9 +150,9 @@ export const agendas = {
   caixaDois:'Receba dinheiro em espécie de outro jogador',
   pixVinte:'Envie um Pix de R$ 20 mil',
   doisPix:'Receba Pix de dois jogadores distintos',
-  debateTelefonico:'Fique 20 segundos em uma chamada durante a articulação',
-  chamadasUrgentes:'Faça chamadas de 10 segundos com dois colegas diferentes',
-  discursoMegafone:'Use o Megafone por 10 segundos',
+  debateTelefonico:`Fique ${agendaDurationMs.debateTelefonico/1000} segundos em uma chamada durante a articulação`,
+  chamadasUrgentes:`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`,
+  discursoMegafone:`Use o Megafone por ${agendaDurationMs.discursoMegafone/1000} segundos`,
   investimentoPolitico:`Gaste pelo menos ${money(CAMPAIGN_SPENDING_TARGET)} em propaganda eleitoral`,
   campanhaUltimaHora:'Veicule propaganda no último minuto antes da eleição',
   bandejaGourmet:'Consuma dois alimentos diferentes no seu gabinete',

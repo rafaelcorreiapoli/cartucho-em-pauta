@@ -10,7 +10,7 @@ import { terminals, type GameplayEvent } from '../src/gameplay';
 import type { Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
-import { agendaDurationMs } from '../src/politics';
+import { agendaDurationMs, urgentCallMission } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
@@ -892,14 +892,17 @@ test('calls need ten seconds on each of two distinct lines after the mission sta
   const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','selfieSolo']);
-  agenda.updateEligibility(metrics,3,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'}]);
-  for (const [at,target,item,duration] of [[1,'b',1,9_900],[2,'b',2,100],[3,'b',1,100],[4,'b',3,10_000],[5,'c',4,10_000]] as const) {
+  const {minCallMs,contacts} = urgentCallMission;
+  agenda.updateEligibility(metrics,contacts,true,3,0,[{id:'b',name:'B'}]);
+  expect(agenda.view(metrics).active.some(({kind})=>kind==='chamadasUrgentes')).toBe(false);
+  agenda.updateEligibility(metrics,contacts+1,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'}]);
+  for (const [at,target,item,duration] of [[1,'b',1,minCallMs-1],[2,'b',2,1],[3,'b',1,1],[4,'b',3,minCallMs],[5,'c',4,minCallMs]] as const) {
     const sample = event('call-time',{at,target,item,duration});
     recordAgendaEvent(agenda,sample);
     recordAgendaEvent(agenda,sample);
     if (at<5) expect(agenda.view(metrics).active.find(mission=>mission.kind==='chamadasUrgentes')?.current).toBe(at<3 ? 0 : 1);
   }
-  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'chamadasUrgentes',current:2}));
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'chamadasUrgentes',current:contacts,target:contacts}));
 });
 
 test.each([
