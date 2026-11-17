@@ -1630,3 +1630,51 @@ test('the Agenda shows a completed exchange only after both different items chan
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view().progression.xp).toBe(35);
 });
+
+test('Bandeja Gourmet accepts Pinga served by a project as the second consumable',()=>{
+  const player:Player = {id:'Rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  let now = 1;
+  const view = ()=>match.view(player.id,[player.id],now).politics!;
+  const economy = Reflect.get(match,'economy');
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
+  const draw = ()=>{
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    match.refreshAgendaEligibility();
+    return view().missions.active.find(mission=>mission.kind==='bandejaGourmet');
+  };
+  expect(draw()).toBeUndefined();
+  match.gameplayWorld([player],now,()=>false).publish({
+    type:'filed',actor:player.id,item:1,project:bills.findIndex(bill=>bill.id==='PROJ-N02'),
+    position:stations.amendment,at:now,witnesses:[],
+  });
+  now += NEGOTIATION_MS;
+  match.advance(now);
+  match.vote(player.id,'yes',now+1);
+  now += BALLOT_MS;
+  match.advance(now,recipients=>{ for (const id of recipients) if (id===player.id) game.distributePinga(player,now); });
+  expect(view().wallet).toBe(0);
+  expect(draw()).toBeDefined();
+
+  const world = match.gameplayWorld([player],++now,()=>false);
+  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  const inventory = game.view(player,world).inventory;
+  Object.assign(player,game.officeSpawn(player.id)!);
+  const consume = (kind:'coffee'|'pinga')=>{
+    const {id:item} = inventory.find(entry=>entry.kind===kind)!;
+    expect(game.act(player,{kind:'use',item},world)).toBe('Objeto utilizado.');
+  };
+  consume('coffee');
+  expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.current).toBe(1);
+  const xpBefore = view().progression.xp;
+  consume('pinga');
+  const done = view().missions.completed.find(mission=>mission.kind==='bandejaGourmet')!;
+  expect(renderToStaticMarkup(<MissionRow mission={done} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp-xpBefore).toBe(35);
+});

@@ -1,9 +1,8 @@
-import {mailPublicationFee,marketProduct} from '../src/market-catalog';
+import {mailPublicationFee,marketKinds,marketProduct} from '../src/market-catalog';
 import type {BillPolicies} from '../src/plenary';
-import { firstAidKit } from '../src/medical';
 import { inPlenary } from '../src/map';
-import { credentialGoods, type AgendaDecoration } from '../src/installations';
-import { foods } from '../src/food';
+import type { credentialGoods, AgendaDecoration } from '../src/installations';
+import { isFood } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
 import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,type GameplayEvent, type ObjectKind} from '../src/gameplay';
@@ -90,7 +89,6 @@ const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','pausaCafe','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   campanhaUltimaHora:ELECTION_RULES.advertisementCost,pixVinte:PIX_MISSION_AMOUNT,
-  comprarLagosta:foods.lobster.price,
   propaganda:ELECTION_RULES.advertisementCost,
   pagamento:AGENDA_TRANSFER_MIN,
   dinheiroAlvo:TARGET_TRANSFER_AMOUNT,
@@ -110,9 +108,9 @@ const activeMissionCount = 3;
 const photoPublicationKey = (id:number,channel?:string) => JSON.stringify(['photo-published',id,channel]);
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
 
-function agendaEquipmentPrice(item:ObjectKind,metrics:AgendaMetrics) {
+function agendaProductPrice(catalog:Parameters<typeof marketProduct>[0],item:ObjectKind,metrics:AgendaMetrics) {
   const commerce = metrics.commerce?.();
-  return marketProduct('equipment',item,commerce?.policies,commerce?.publicBudget)?.price ?? Infinity;
+  return marketProduct(catalog,item,commerce?.policies,commerce?.publicBudget)?.price ?? Infinity;
 }
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
@@ -120,7 +118,7 @@ function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if (kind==='manutencaoEmergencia') return metrics.powerOut?.()===true;
   if (kind==='escutaAtiva') {
     return !!metrics.ownsWiretap?.() || (!!metrics.canInstallSpy?.('wiretap') &&
-      (!!metrics.owns?.('wiretap') || agendaEquipmentPrice('wiretap',metrics)<=metrics.wallet));
+      (!!metrics.owns?.('wiretap') || agendaProductPrice('equipment','wiretap',metrics)<=metrics.wallet));
   }
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
@@ -421,7 +419,7 @@ export class PersonalAgenda {
         gains[kind] = this.countFacts(mission,[{value:event.kind}]);
       }
       if (kind==='bandejaGourmet' && event.type==='used' && event.target===event.actor &&
-          event.kind && Object.hasOwn(foods,event.kind)) gains[kind] = this.countFacts(mission,[{value:event.kind}]);
+          isFood(event.kind)) gains[kind] = this.countFacts(mission,[{value:event.kind}]);
       if (kind==='reuniaoVip') {
         if (event.type==='vip-meeting-interrupted') mission.current = 0;
         if (event.type==='vip-meeting-time') gains[kind] = event.duration ?? 0;
@@ -507,12 +505,13 @@ export class PersonalAgenda {
     if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
     if (kind==='bandejaGourmet') {
       // Coffee can be collected at the station and carried back to the office.
-      const hasSecondFood = (Object.keys(foods) as (keyof typeof foods)[]).some(food=>
-        food!=='coffee' && (metrics.owns?.(food) || foods[food].price<=metrics.wallet));
+      const hasSecondFood = metrics.owns?.('pinga') || marketKinds.food.some(food=>
+        food!=='coffee' && (metrics.owns?.(food) || agendaProductPrice('food',food,metrics)<=metrics.wallet));
       if (!hasSecondFood) return false;
     }
+    if (kind==='comprarLagosta' && metrics.wallet<agendaProductPrice('food','lobster',metrics)) return false;
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
-    if (food && metrics.wallet<(food==='firstAidKit' ? firstAidKit.price : foods[food].price) && !metrics.owns?.(food)) {
+    if (food && metrics.wallet<agendaProductPrice(food==='firstAidKit'?'equipment':'food',food,metrics) && !metrics.owns?.(food)) {
       const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;
       if (kind==='pizza') {
         if (!pizza?.canTakeSlice) return false;
@@ -524,28 +523,28 @@ export class PersonalAgenda {
       } else return false;
     }
     const decoration = decorationRequirements[kind as keyof typeof decorationRequirements];
-    if (decoration && metrics.wallet<credentialGoods[decoration].price && !metrics.owns?.(decoration)) return false;
+    if (decoration && metrics.wallet<agendaProductPrice('credentials',decoration,metrics) && !metrics.owns?.(decoration)) return false;
     if (!canCompleteMissionNow(kind,metrics)) return false;
     if (mailMissions.has(kind) && metrics.wallet<mailPublicationFee(metrics.commerce?.().policies)) return false;
     if (kind==='retratacaoOficial' && !metrics.hasForensicReport?.()) return false;
     if (kind==='heroiInesperado' && !metrics.canFightCrisis?.()) return false;
     if ((kind==='fiscalizacaoParalela' || kind==='patrimonioSuspeito') && !metrics.owns?.('xray')) return false;
-    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaEquipmentPrice('bugDetector',metrics)) return false;
+    if (kind==='varredura' && !metrics.owns?.('bugDetector') && metrics.wallet<agendaProductPrice('equipment','bugDetector',metrics)) return false;
     if (kind==='limpeza' && !metrics.hasKnownForeignSpy?.()) return false;
     if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<2) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
     if (kind==='instalarGrampo' || kind==='instalarCamera') {
       const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
-      if (!metrics.canInstallSpy?.(device) || metrics.wallet<agendaEquipmentPrice(device,metrics) && !metrics.owns?.(device)) return false;
+      if (!metrics.canInstallSpy?.(device) || metrics.wallet<agendaProductPrice('equipment',device,metrics) && !metrics.owns?.(device)) return false;
     }
-    if (kind==='segurancaParlamentar' && metrics.wallet<agendaEquipmentPrice('baton',metrics) && !metrics.owns?.('baton')) return false;
-    if (kind==='discursoMegafone' && metrics.wallet<agendaEquipmentPrice('megaphone',metrics) && !metrics.owns?.('megaphone')) return false;
-    if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<agendaEquipmentPrice('binoculars',metrics))) return false;
+    if (kind==='segurancaParlamentar' && metrics.wallet<agendaProductPrice('equipment','baton',metrics) && !metrics.owns?.('baton')) return false;
+    if (kind==='discursoMegafone' && metrics.wallet<agendaProductPrice('equipment','megaphone',metrics) && !metrics.owns?.('megaphone')) return false;
+    if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<agendaProductPrice('equipment','binoculars',metrics))) return false;
     if (kind==='reuniaoVip' && !metrics.hasAgendaDecoration?.('anyVip')) return false;
     if (kind==='cerimonialOficial' && !metrics.hasAgendaDecoration?.('anyPortrait')) return false;
     if (kind==='autorretrato' && !metrics.hasAgendaDecoration?.('portrait') &&
-        metrics.wallet<credentialGoods.portrait.price && !metrics.owns?.('portrait')) return false;
+        metrics.wallet<agendaProductPrice('credentials','portrait',metrics) && !metrics.owns?.('portrait')) return false;
     if (kind==='reforma' && !metrics.hasAgendaDecoration?.('portrait',true)) return false;
     if (kind==='mandaVip' && !metrics.hasAgendaDecoration?.('vip',true)) return false;
     if (kind==='fiscalVip' && !metrics.hasAgendaDecoration?.('vip')) return false;
