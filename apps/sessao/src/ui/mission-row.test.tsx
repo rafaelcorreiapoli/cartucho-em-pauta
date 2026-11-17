@@ -713,6 +713,29 @@ test('the signature mission keeps the signed document visible after a signer lea
   expect(view(5).progression.xp).toBe(65);
 });
 
+test('campaign spending leaves the HUD when a project vote closes an unused advertisement slot',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['investimentoPolitico','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.interval;
+  const opens = deadline-10_000;
+  publishProjectFiling(match,player,0,opens-NEGOTIATION_MS);
+  const active = (now:number)=>match.view(player.id,[player.id],now).politics!.missions.active;
+  const title = 'em propaganda eleitoral';
+  const render = (now:number)=>active(now).map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  match.advance(opens);
+  expect(match.phase).toBe('ballot');
+  match.advance(deadline-1);
+  expect(render(deadline-1)).toContain(title);
+  match.advance(deadline);
+  expect(match.phase).toBe('ballot');
+  expect(render(deadline)).not.toContain(title);
+  expect(active(deadline)).toHaveLength(3);
+});
+
 test('the agenda removes two-vote missions when only one full ballot fits',()=>{
   const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.secretary};
   const match = new PlenaryMatch(1);
