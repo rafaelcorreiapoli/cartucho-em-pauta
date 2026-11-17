@@ -1,6 +1,8 @@
 .campaign-tv {
   position: absolute;
-  top: clamp(80px, 18dvh, 170px);
+  top: var(--campaign-tv-top, 53%);
+  max-width: var(--campaign-tv-width, 100vw);
+  translate: 0 -50%;
   --tv-edge: clamp(8px, 1.5vw, 20px);
   z-index: 8;
   pointer-events: none;
