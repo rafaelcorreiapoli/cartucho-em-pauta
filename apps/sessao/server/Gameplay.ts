@@ -53,7 +53,7 @@ export class Gameplay {
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; archiveDuty:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; archiveDuty:boolean; plenaryVisit:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -555,13 +555,15 @@ export class Gameplay {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
       const active = exploring && world.present?.(player.id)!==false && !player.knockedOut && !player.carried;
+      const plenaryVisit = active && room==='Plenário' && !!world.hasMission?.(player.id,'presencaPlenario');
       const archiveDuty = active && room===archiveDutyRoom && !!world.hasMission?.(player.id,'plantaoArquivo');
       const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
         (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
       const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
         world.hasMission?.(player.id,'segurancaParlamentar') ? this.nearbyParliamentarian(player,world,previous?.securityPeer) : undefined;
       const vip = active && world.hasMission?.(player.id,'reuniaoVip') ? this.vipMeeting(player,world,previous?.vip) : undefined;
-      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,active,archiveDuty,concealedCash,securityPeer,vip});
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,active,archiveDuty,plenaryVisit,concealedCash,securityPeer,vip});
+      if (previous?.plenaryVisit && !active) publishGameplay(world,player,'plenary-visit-interrupted',{witnesses:[]});
       if (previous?.archiveDuty && !archiveDuty) {
         publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
       }
@@ -627,6 +629,9 @@ export class Gameplay {
     }
     if (this.roomSamples.get(player.id)?.archiveDuty) {
       publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
+    }
+    if (this.roomSamples.get(player.id)?.plenaryVisit) {
+      publishGameplay(world,player,'plenary-visit-interrupted',{witnesses:[]});
     }
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
