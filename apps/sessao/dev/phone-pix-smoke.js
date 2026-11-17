@@ -42,14 +42,19 @@ async page => {
     await receiver.keyboard.press('l');
     const bia = polls.getByRole('button',{name:'Bia',exact:true});
     await bia.locator('.portrait[data-skin]').waitFor();
-    await page.keyboard.press('1');
+    const directKey = async key=>{
+      const button = polls.locator(`button[aria-keyshortcuts="${key}"]`);
+      await button.evaluate(control=>control.removeAttribute('aria-keyshortcuts'));
+      await page.keyboard.press(key);
+    };
+    await directKey('1');
     await bia.and(polls.locator('[aria-pressed="true"]')).waitFor();
-    await page.keyboard.press('0');
+    await directKey('0');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor();
     await polls.getByText('Apoia Bia',{exact:true}).waitFor();
-    await page.keyboard.press('9');
+    await directKey('9');
     await polls.getByRole('button',{name:'Retirar apoio',exact:true}).and(polls.locator(':enabled')).waitFor();
-    await page.keyboard.press('0');
+    await directKey('0');
     await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor({state:'hidden'});
     for (const client of [page,receiver]) {
       await client.keyboard.press('Escape');

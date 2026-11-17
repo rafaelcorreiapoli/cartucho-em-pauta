@@ -1,3 +1,4 @@
+import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
 import {useState} from 'react';
@@ -72,7 +73,16 @@ function ElectionSupport({candidates,current,onSupport}:{
 }) {
   const [choice,select] = useState(current);
   const selected = candidates.some(candidate=>candidate.id===choice) ? choice : '';
-  return <form id="support-form" onSubmit={event=>{event.preventDefault();onSupport(selected);}}>
+  const submit = () => {
+    if (selected!==current) onSupport(selected);
+  };
+  const form = useDialogKeys<HTMLFormElement>(key=>{
+    if (key==='0') return submit;
+    if (key==='9') return ()=>select('');
+    const candidate = /^[1-8]$/.test(key) ? candidates[Number(key)-1] : undefined;
+    if (candidate) return ()=>select(candidate.id);
+  });
+  return <form ref={form} id="support-form" onSubmit={event=>{event.preventDefault();submit();}}>
     <strong id="support-label">Apoio público</strong>
     <div className="support-candidates" role="group" aria-labelledby="support-label">
       {candidates.map(({id,name,character},index)=>{
