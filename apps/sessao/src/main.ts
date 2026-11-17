@@ -36,6 +36,7 @@ import { createGame } from './game';
 import { createRoomCommandSender } from './room-commands';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
+import {mountLobbyInvite} from './ui/lobby-invite';
 import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
@@ -60,8 +61,6 @@ const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
 const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
 const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status')!;
 const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
-const lobbyInvite = document.querySelector<HTMLInputElement>('#lobby-invite-url')!;
-const copyLobbyInvite = document.querySelector<HTMLButtonElement>('#lobby-copy-invite')!;
 const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
 const code = document.querySelector<HTMLInputElement>('#room-id')!;
 const status = document.querySelector<HTMLElement>('#connection')!;
@@ -178,7 +177,8 @@ async function connect(join: () => Promise<Room>) {
     settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);
-    lobbyInvite.value = inviteUrl.href;
+    const destroyInvite = mountLobbyInvite(document.getElementById('lobby-invite-mount')!,inviteUrl.href,settings.open);
+    hudListeners.signal.addEventListener('abort',destroyInvite,{once:true});
     loadingProgress.value = 0;
     loadingStatus.textContent = 'Carregando o Congresso…';
     loadingBack.hidden = true;
@@ -461,22 +461,6 @@ lobby.onsubmit = event => {
   if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
 };
 loadingBack.onclick = () => void room?.leave();
-for (const id of ['lobby-settings','plenary-settings']) {
-  document.getElementById(id)!.onclick = settings.open;
-}
-lobbyInvite.onclick = () => lobbyInvite.select();
-async function copyInvite(button:HTMLButtonElement, label:string) {
-  if (!room) return;
-  const url = new URL(location.href);
-  url.searchParams.set('sala',room.roomId);
-  try {
-    await navigator.clipboard.writeText(url.href);
-    button.textContent = 'Link copiado';
-    setTimeout(() => { button.textContent = label; },1500);
-  } catch {
-    window.prompt('Link da sala',url.href);
-  }
-}
-copyLobbyInvite.onclick = () => void copyInvite(copyLobbyInvite,'Copiar link');
+document.getElementById('plenary-settings')!.onclick = settings.open;
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());

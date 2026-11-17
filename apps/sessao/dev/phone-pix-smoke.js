@@ -2,6 +2,10 @@
 async page => {
   await page.context().addInitScript(()=>{
     localStorage.setItem('cartuchao.sessao.audio',JSON.stringify({muted:true}));
+    Object.defineProperty(navigator.clipboard,'writeText',{value:async text=>{
+      if (window.denyInviteClipboard) throw new DOMException('Clipboard indisponível','NotAllowedError');
+      window.copiedInvite = text;
+    }});
     navigator.mediaDevices.getUserMedia = async()=>{throw new DOMException('QA sem microfone','NotAllowedError');};
   });
   await page.reload();
@@ -11,15 +15,27 @@ async page => {
     await page.getByRole('textbox',{name:'Seu nick'}).fill('Alice');
     await page.getByRole('button',{name:'Criar sala'}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
-    const code = (await page.locator('#room-label').textContent()).trim().split(' ')[1];
-    await receiver.goto(page.url());
+    const invite = await page.getByLabel('Link da sala').inputValue();
+    const code = new URL(invite).searchParams.get('sala');
+    if (!code) throw Error('O convite não contém o código da sala');
+    await page.getByRole('button',{name:'Copiar link'}).click();
+    await page.getByRole('button',{name:'Link copiado'}).waitFor();
+    if (await page.evaluate(()=>window.copiedInvite)!==invite) throw Error('O link copiado diverge do convite');
+    await page.evaluate(()=>{window.denyInviteClipboard = true;});
+    await page.locator('#lobby-copy-invite').click();
+    await page.waitForFunction(value=>{
+      const input = document.querySelector('#lobby-invite-url');
+      return input.value.slice(input.selectionStart,input.selectionEnd)===value;
+    },invite);
+    await receiver.goto(invite);
     await receiver.getByRole('textbox',{name:'Seu nick'}).fill('Bia');
-    await receiver.getByRole('textbox',{name:'Código da sala'}).fill(code);
+    if (await receiver.getByRole('textbox',{name:'Código da sala'}).inputValue()!==code) throw Error('O convite não preenche a sala');
     await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
     await receiver.locator('#lobby-back').waitFor();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
+    await page.getByLabel('Link da sala').waitFor({state:'hidden'});
     const polls = page.locator('#election-poll-dialog');
     const receiverPolls = receiver.locator('#election-poll-dialog');
     await page.keyboard.press('l');
