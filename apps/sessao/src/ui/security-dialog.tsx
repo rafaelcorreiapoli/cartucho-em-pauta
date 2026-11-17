@@ -1,14 +1,11 @@
+import {DialogHeader} from './dialog-header';
 import {securityCameras, type SecurityAction, type SecurityCameraId} from '../security';
-import {DialogDismiss} from './dialog-dismiss';
 
 export function SecurityDialogContent({camera,ready,send}:{
   camera?:SecurityCameraId; ready:boolean; send:(action:SecurityAction)=>void;
 }) {
   return <>
-    <header>
-      <h2 id="security-title">Sala de Segurança</h2>
-      <DialogDismiss label="Fechar terminal" className="hud-button hud-button--secondary"/>
-    </header>
+    <DialogHeader id="security-title" title="Sala de Segurança" dismissLabel="Fechar terminal" dismissClass="hud-button hud-button--secondary"/>
     <div className="security-console">
       <div className="security-channels" role="group" aria-label="Câmeras">
         {securityCameras.map(({id,label},index)=><button key={id} type="button" className="hud-button hud-button--secondary spy-channel"

@@ -1,3 +1,4 @@
+import {DialogHeader} from './ui/dialog-header';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -67,10 +68,7 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
 
 export function ResultsContent({children}:{children:ReactNode}) {
   return <>
-    <header>
-      <h2 id="result-title">Resultados</h2>
-      <DialogDismiss label="Fechar resultados"/>
-    </header>
+    <DialogHeader id="result-title" title="Resultados" dismissLabel="Fechar resultados"/>
     <div id="result-content">{children}</div>
     <DialogDismiss className="hud-button">Continuar</DialogDismiss>
   </>;

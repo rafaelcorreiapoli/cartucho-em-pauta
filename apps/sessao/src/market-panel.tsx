@@ -1,5 +1,5 @@
+import {DialogHeader} from './ui/dialog-header';
 import type { ReactNode } from 'react';
-import { DialogDismiss } from './ui/dialog-dismiss';
 import { isCredentialGood, marketKinds, marketProduct } from './market-catalog';
 import { isOfficeFurniture, type OfficeFurniture } from './private-offices';
 import { EquipmentReplacement } from './ui/equipment-replacement';
@@ -19,10 +19,7 @@ function marketVendorPortrait(npc:NpcId) {
 
 export function MarketDialogContent({title,children}:{title:string;children:ReactNode}) {
   return <>
-    <header>
-      <h2 id="market-title">{title}</h2>
-      <DialogDismiss label="Fechar"/>
-    </header>
+    <DialogHeader id="market-title" title={title} dismissLabel="Fechar"/>
     <div id="market-body">{children}</div>
   </>;
 }

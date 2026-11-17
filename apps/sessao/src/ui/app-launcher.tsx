@@ -1,11 +1,8 @@
+import {HudIcon} from './hud-icon';
 import {useEffect, type CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
 
 import {apps, type HudAppStatus, type LaunchHudApp} from '../hud-apps';
-
-function Icon({name}:{name:string}) {
-  return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
-}
 
 function AppLauncher({status,launch,open,toggle,close}:{status:HudAppStatus;launch:LaunchHudApp;
   open:boolean;toggle:()=>boolean;close:()=>void}) {
@@ -30,7 +27,7 @@ function AppLauncher({status,launch,open,toggle,close}:{status:HudAppStatus;laun
         className="congress-app-toggle congress-app" aria-label={app.label} title={app.label} aria-keyshortcuts={app.key}
         style={{'--app-index':index} as CSSProperties}
         onClick={()=>launch(app.id)}>
-        <Icon name={app.icon}/><span className="congress-app-label">{app.label}</span><kbd className="action-key" aria-hidden="true">{app.key}</kbd>
+        <HudIcon name={app.icon}/><span className="congress-app-label">{app.label}</span><kbd className="action-key" aria-hidden="true">{app.key}</kbd>
         {status[app.id]?.badge && <strong className="congress-app-badge">{status[app.id]?.badge}</strong>}
       </button>)}
     </section>}

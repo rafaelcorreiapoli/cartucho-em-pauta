@@ -1,3 +1,4 @@
+import {HudIcon} from './hud-icon';
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
@@ -8,10 +9,6 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
 import { missionTitle, money, timedAgendas, type Mission } from '../politics';
 import './theme.css';
-
-function Icon({name}:{name:string}) {
-  return <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+name}/></svg>;
-}
 
 function Meter({label,value,max,tone,target}:{label:string;value:number;max:number;tone:string;target?:number}) {
   const fraction = Math.max(0,Math.min(1,value/max));
@@ -37,7 +34,7 @@ function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudM
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   const remaining = useSyncExternalStore(state.subscribe,state.get);
   if (remaining===undefined) return null;
-  return <div className="plenary-countdown" data-kind={remaining.kind}><Icon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
+  return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
 export function ParliamentMetrics({stability,budget}:ReturnType<HudModel['congress']['get']>) {
@@ -95,7 +92,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
   const progress = (mission.kind==='fortuna' || mission.kind==='poupancaInstitucional' || mission.kind==='investimentoPolitico' || mission.kind==='ostentacao' || mission.kind==='reservaCofre' || mission.kind==='contribuinte') ? money(current)+' / '+money(target) :
     target>1 ? current+' / '+target+(timed ? ' s' : '') : '';
   return <li className="flex items-start gap-2" data-done={done}>
-    <span className="react-mission-check" aria-hidden="true">{done && <Icon name="check"/>}</span>
+    <span className="react-mission-check" aria-hidden="true">{done && <HudIcon name="check"/>}</span>
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
       {!done && progress && <small>{progress}</small>}
@@ -130,8 +127,8 @@ function ProfileResources({state}:{state:HudModel['resources']}) {
   const resources = useSyncExternalStore(state.subscribe,state.get,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
-    <span title="Popularidade"><Icon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
-    <span title="Dinheiro na carteira"><Icon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
+    <span title="Popularidade"><HudIcon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
+    <span title="Dinheiro na carteira"><HudIcon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
   </div>;
 }
 
@@ -152,7 +149,7 @@ export function CharacterProfile({model}:{model:HudModel}) {
       <div className="profile-name-row">
         <strong id="hud-nick">{person?.nick}</strong>
         {infiltrator ? <button id="profile-role" className="resource-help profile-help" type="button" aria-label="Infiltrado"
-          data-help="Infiltrado. Derrube a estabilidade."><Icon name="bug"/></button> : null}
+          data-help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></button> : null}
         <span id="profile-level-mount"><Level state={model.profile}/></span>
       </div>
       <div className="profile-subtitle">
@@ -184,7 +181,7 @@ export function FireNotice({fire}:{fire:FireView}) {
       </svg>
       <div><strong id="fire-title">Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
-      {!fire.paused && <p><Icon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
+      {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
     </article>
   </aside>;
 }
@@ -196,7 +193,7 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
     outage.operating!==undefined ? 'Aguardando o outro painel. Permaneça no alcance.' : 'Dois jogadores devem operar os painéis juntos.';
   return <aside id="active-outage" className="incident-panel" aria-labelledby="outage-title" data-paused={outage.paused}>
     <article className="incident-fire">
-      <Icon name="alert"/>
+      <HudIcon name="alert"/>
       <div><strong id="outage-title">Pane elétrica</strong>
         {powerPanels.map(({name},index)=><small key={name}>{index===0 ? 'A' : 'B'} · {name} · {outage.occupied[index] ? 'Em uso' : 'Livre'}</small>)}
       </div>
@@ -225,7 +222,7 @@ export function PlenarySettingsButton({open}:{open:()=>void}) {
   const {label,key,icon} = settingsApp;
   return <button id="plenary-settings" className="hud-icon-button" type="button" tabIndex={-1}
     aria-label={label} aria-keyshortcuts={key} title={label+' ('+key+')'} onClick={open}>
-    <Icon name={icon}/>
+    <HudIcon name={icon}/>
   </button>;
 }
 

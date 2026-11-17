@@ -1,4 +1,4 @@
-import { DialogDismiss } from './ui/dialog-dismiss';
+import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
 import {useState} from 'react';
 import {CharacterPortrait} from './ui/character-portrait';
@@ -39,10 +39,7 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
     .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR') || a.id.localeCompare(b.id));
   const current = election.polls.find(candidate=>candidate.id===id)?.supports ?? '';
   return <>
-    <header>
-      <h2 id="election-poll-title">Pesquisa eleitoral</h2>
-      <DialogDismiss label="Fechar pesquisa eleitoral"/>
-    </header>
+    <DialogHeader id="election-poll-title" title="Pesquisa eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
     <div id="election-cycle"><ElectionCycle result={election.result}/></div>
     <section aria-label="Pesquisa eleitoral"><div id="election-polls">
       <section><h4>Classificação projetada</h4><ol role="list">

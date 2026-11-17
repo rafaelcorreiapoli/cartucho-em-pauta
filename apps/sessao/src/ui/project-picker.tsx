@@ -1,5 +1,5 @@
+import {DialogHeader} from './dialog-header';
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { DialogDismiss } from './dialog-dismiss';
 import { documentRules } from '../internal-mail';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -85,9 +85,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
   const bill = selected===undefined ? undefined : bills[selected];
   const effect = bill && extraEffect(bill);
   return <div className="project-picker-content" onKeyDown={onKeyDown}>
-    <header><h2 className="hud-title" id="project-picker-title">{title}</h2>
-      <DialogDismiss label="Fechar"/>
-    </header>
+    <DialogHeader id="project-picker-title" title={title} dismissLabel="Fechar" titleClass="hud-title"/>
     <form className="project-picker-form" onSubmit={event=>{
       event.preventDefault();
       submit();

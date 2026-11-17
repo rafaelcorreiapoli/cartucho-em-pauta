@@ -1,8 +1,8 @@
+import {DialogHeader} from './dialog-header';
 import {useSyncExternalStore} from 'react';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import type {createAudioPreferences} from '../../../../packages/hud/audio';
-import {DialogDismiss} from './dialog-dismiss';
 
 type Preferences = ReturnType<typeof createAudioPreferences>;
 type SettingsState = {
@@ -20,10 +20,7 @@ export function RoomSettings({preferences,state,actions}:{
   const {microphone} = state;
   const voiceLabel = microphone==='live' ? 'Silenciar microfone' : microphone==='muted' ? 'Ativar microfone' : 'Ativar voz';
   return <>
-    <header>
-      <h2 id="settings-title">Configurações</h2>
-      <DialogDismiss label="Fechar configurações"/>
-    </header>
+    <DialogHeader id="settings-title" title="Configurações" dismissLabel="Fechar configurações"/>
     <section aria-label="Sala">
       <div id="room-bar">
         <span id="room-label" role="status">{state.roomLabel}</span>
