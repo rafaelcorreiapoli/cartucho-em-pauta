@@ -30,5 +30,7 @@ test('the project details render an audit note from the authoritative view',()=>
   const markup = renderToStaticMarkup(<ProjectDetails id={player.id} declare={()=>{}}
     view={{...view,audit:'fraud',auditNote:'Documento encontrado.'}}/>);
   expect(markup).toContain('Auxílio Churrasco');
+  expect(markup).toContain('Parlamentares aptos a votar: 1');
+  expect(markup).toContain('Votos a favor para aprovar: 1');
   expect(markup).toContain('Documento encontrado. Fraude encontrada.');
 });
