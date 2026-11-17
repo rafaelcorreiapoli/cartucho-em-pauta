@@ -11,12 +11,12 @@ import { archiveDutyRoom, money } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, INVENTORY_SLOTS, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
-import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius } from '../src/installations';
+import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
 import { bills, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
@@ -47,12 +47,17 @@ const cashLifetime = 55_000;
 const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
+function installationConflict(placed:Decoration|undefined,owner:string) {
+  if (placed?.kind==='pizza') return 'Já tem pizza na mesa.';
+  if (placed?.owner.id===owner) return 'Você já ocupou este lugar.';
+}
+
 export class Gameplay {
   constructor(private readonly stationCooldowns = new StationCooldowns(),private readonly powerOut = ()=>false) {}
 
   private surveillance = new Surveillance();
   private lastPolicyHeal = 0;
-  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; archiveDuty:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
+  private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; archiveDuty:boolean; plenaryVisit:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
@@ -147,14 +152,16 @@ export class Gameplay {
     if (active) {
       const player = world.players.find(player=>player.id===active.owner);
       if (!exploring || !player || player.knockedOut || player.carried || !world.voice(active.owner) ||
-          this.wearing(active.owner,'megaphone')?.id!==active.item || world.now>=active.until) {
+          this.wearing(active.owner,'megaphone')?.id!==active.item) {
         this.stopMegaphone(active.owner,world);
       } else {
-        const duration = Math.min(100,world.now-active.sampledAt);
-        active.sampledAt = world.now;
+        const end = Math.min(world.now,active.until);
+        const duration = Math.min(100,end-active.sampledAt);
+        active.sampledAt = end;
         if (duration>0 && world.hasMission?.(player.id,'discursoMegafone')) {
           publishGameplay(world,player,'megaphone-time',{duration,witnesses:[]});
         }
+        if (world.now>=active.until) this.stopMegaphone(active.owner,world);
       }
     }
     for (const [item,recharge] of this.megaphoneRecharge) {
@@ -219,7 +226,9 @@ export class Gameplay {
     return [...this.inventory(id),...this.equipped(id)].some(({data})=>data.kind===kind);
   }
 
-  hasAgendaDecoration(id:string, kind:'portrait'|'vip'|'anyPortrait'|'anyVip', replacement=false) {
+  hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false) {
+    if (kind==='vipSpace') return Object.entries(installationSites).some(([site,{kind}])=>
+      kind==='vip' && this.installations.get(site)?.owner.id!==id);
     if (kind==='anyPortrait' || kind==='anyVip') {
       return [...this.installations.values()].some(item=>item.kind===(kind==='anyPortrait' ? 'portrait' : 'vip'));
     }
@@ -285,7 +294,7 @@ export class Gameplay {
     for (const player of players) player.barriers = doors;
   }
 
-  private available(id:string) { return this.inventory(id).length<INVENTORY_SLOTS; }
+  private available(id:string) { return hasInventorySpace(this.inventory(id).length); }
 
   private stack(id:string,kind:ObjectKind,except?:number) {
     return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
@@ -553,13 +562,15 @@ export class Gameplay {
       const room = roomAt(player);
       const previous = this.roomSamples.get(player.id);
       const active = exploring && world.present?.(player.id)!==false && !player.knockedOut && !player.carried;
+      const plenaryVisit = active && room==='Plenário' && !!world.hasMission?.(player.id,'presencaPlenario');
       const archiveDuty = active && room===archiveDutyRoom && !!world.hasMission?.(player.id,'plantaoArquivo');
       const concealedCash = active && !!world.hasMission?.(player.id,'nadaADeclarar') &&
         (this.concealedUntil.get(player.id) ?? 0)>world.now && this.hasVisibleCash(player.id,world.now,player.id);
       const securityPeer = active && !player.swing && this.wearing(player.id,'baton') &&
         world.hasMission?.(player.id,'segurancaParlamentar') ? this.nearbyParliamentarian(player,world,previous?.securityPeer) : undefined;
       const vip = active && world.hasMission?.(player.id,'reuniaoVip') ? this.vipMeeting(player,world,previous?.vip) : undefined;
-      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,active,archiveDuty,concealedCash,securityPeer,vip});
+      this.roomSamples.set(player.id,{room,at:world.now,x:player.x,y:player.y,active,archiveDuty,plenaryVisit,concealedCash,securityPeer,vip});
+      if (previous?.plenaryVisit && !active) publishGameplay(world,player,'plenary-visit-interrupted',{witnesses:[]});
       if (previous?.archiveDuty && !archiveDuty) {
         publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
       }
@@ -626,6 +637,9 @@ export class Gameplay {
     }
     if (this.roomSamples.get(player.id)?.archiveDuty) {
       publishGameplay(world,player,'room-left',{place:archiveDutyRoom,witnesses:[]});
+    }
+    if (this.roomSamples.get(player.id)?.plenaryVisit) {
+      publishGameplay(world,player,'plenary-visit-interrupted',{witnesses:[]});
     }
     this.roomSamples.delete(player.id);
     player.pocketing = undefined;
@@ -700,7 +714,7 @@ export class Gameplay {
         localPerception(player,item,this.vision(player.id,world.now)).visible),
       interactive:[...this.installations.values()].filter(item=>item.kind==='portrait' && !item.privateOffice
         ? canReachInstallation(player,item,'portrait') : canReachObject(player,item)),
-      installable:Object.entries(installationSites).filter(([,site])=>canReachInstallation(player,site.point,site.kind)).map(([key])=>key),
+      installable:Object.entries(installationSites).filter(([key,site])=>canReachInstallation(player,site.point,site.kind) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
       contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
@@ -869,9 +883,9 @@ export class Gameplay {
     if (action.kind==='install') {
       const item = this.items.get(action.item ?? -1);
       if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return 'Objeto indisponível.';
-      if (placed?.kind==='pizza') return 'Já tem pizza na mesa.';
-      if (placed && placed.owner.id===player.id) return 'Você já ocupou este lugar.';
-      if (!complete && site.kind!=='pizza') return this.startInstallation(player,action,world.now);
+      const conflict = installationConflict(placed,player.id);
+      if (conflict) return conflict;
+      if (!complete && site.kind!=="pizza") return this.startInstallation(player,action,world.now);
       this.remove(item);
       const cleared = this.clearedSites.get(siteKey);
       this.clearedSites.delete(siteKey);
@@ -990,7 +1004,7 @@ export class Gameplay {
         if ((!own && slot!=='portrait') || !this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
         if (own) officeDecor.push({id:layout.id,kind:slot});
         const decoration = this.installations.get(`office:${layout.id}:${slot}`);
-        if (decoration) add('office-remove',own ? `Retirar · ${objects[slot].name}` : 'Arrancar retrato',decoration.id);
+        if (decoration && (!own || this.available(player.id))) add('office-remove',own ? `Retirar · ${objects[slot].name}` : 'Arrancar retrato',decoration.id);
       }
     }
     return {offices,ownOffice,officeFurnishings,officeOptions,officeStash,officeDecor};

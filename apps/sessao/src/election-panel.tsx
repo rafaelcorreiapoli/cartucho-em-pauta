@@ -43,7 +43,7 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
   return <>
     <header>
       <h2 id="election-poll-title">Pesquisa eleitoral</h2>
-      <DialogDismiss label="Fechar pesquisa eleitoral">×</DialogDismiss>
+      <DialogDismiss label="Fechar pesquisa eleitoral"/>
     </header>
     <div id="election-cycle"><ElectionCycle result={election.result}/></div>
     <section aria-label="Pesquisa eleitoral"><div id="election-polls">

@@ -22,7 +22,7 @@ export function RoomSettings({preferences,state,actions}:{
   return <>
     <header>
       <h2 id="settings-title">Configurações</h2>
-      <DialogDismiss label="Fechar configurações">×</DialogDismiss>
+      <DialogDismiss label="Fechar configurações"/>
     </header>
     <section aria-label="Sala">
       <div id="room-bar">

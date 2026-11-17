@@ -1,0 +1,32 @@
+import {defineRoom,defineServer} from 'colyseus';
+import {BunWebSockets} from '@colyseus/bun-websockets';
+import {SessionRoom} from '../server/SessionRoom';
+import {levelThresholds,type Progression} from '../src/progression';
+
+class AttributesSmokeRoom extends SessionRoom {
+  onCreate() {
+    super.onCreate();
+    const match = Reflect.get(this,'match');
+    const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts') as Map<string,{
+      progression:{earn:(amount:number)=>void; view:()=>Progression};
+    }>;
+    const seeded = new WeakSet<object>();
+    let countdown = false;
+    this.clock.setInterval(()=>{
+      if (match.phase!=='negotiation') return;
+      for (const account of accounts.values()) {
+        if (!seeded.has(account)) {
+          account.progression.earn(levelThresholds[2]);
+          seeded.add(account);
+        }
+        if (!countdown && account.progression.view().revision===1) {
+          countdown = true;
+          Reflect.set(match,'ends',this.clock.currentTime+5_000);
+        }
+      }
+    },50);
+  }
+}
+
+await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(AttributesSmokeRoom)}})
+  .listen(2609,'127.0.0.1');

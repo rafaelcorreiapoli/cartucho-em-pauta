@@ -58,6 +58,7 @@ export function createHudModel() {
       stamina.update({current:Math.floor(player.stamina ?? max),max});
     },
     render(view:PlenaryView) {
+      broadcast.update(view.phase==='negotiation' && view.megaphoneActive===true);
       fire.update(view.fire);
       outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;

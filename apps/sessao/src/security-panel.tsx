@@ -49,6 +49,7 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
       return;
     }
     if (requested && !dialog.open) dialog.showModal();
+    live?.clear();
     ready = false;
     paint();
   }
@@ -62,12 +63,11 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
     render,
     frame({camera,scene}:{camera:SecurityCameraId;scene:PhotoScene}) {
       if (!dialog.open || camera!==selected) return;
-      live ??= createSurveillanceViewport(viewport);
-      live.receive(scene);
-      if (!ready) {
+      live ??= createSurveillanceViewport(viewport,()=>{
         ready = true;
         paint();
-      }
+      });
+      live.receive(scene);
     },
     destroy() {
       dialog.oncancel = null;

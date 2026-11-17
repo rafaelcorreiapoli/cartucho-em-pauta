@@ -13,18 +13,17 @@ export function GameplayDialogHeader({title,bag,back}:{title:string;bag?:boolean
         return <Tag key={index} {...attributes}/>;
       })}
     </svg>}{title}</h2>
-    {back ? <button id="phone-back" type="button" className="hud-icon-button" aria-label="Fechar aplicativo"
-      aria-keyshortcuts="Escape" onClick={back}>✕</button> :
-      <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>}
+    {back ? <DialogDismiss id="phone-back" label="Fechar aplicativo" shortcut="Escape" onDismiss={back}/> :
+      <DialogDismiss label="Fechar"/>}
   </>;
 }
 
-export function DecorationCard({decoration,ownId,exploring,send}:{
-  decoration:Decoration; ownId:string; exploring:boolean; send:(action:GameplayAction)=>void;
+export function DecorationCard({decoration,ownId,exploring,canRemove,send}:{
+  decoration:Decoration; ownId:string; exploring:boolean; canRemove:boolean; send:(action:GameplayAction)=>void;
 }) {
   const {id,kind,owner,character,marked,privateOffice} = decoration;
-  const control = (label:string,action:GameplayAction['kind'])=>
-    <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:action,item:id})}>{label}</button>;
+  const control = (label:string,action:GameplayAction['kind'],disabled=false)=>
+    <button type="button" className="hud-button hud-button--secondary" disabled={disabled} onClick={()=>send({kind:action,item:id})}>{label}</button>;
   return <article className="object-card">
     <h3>{decorationLabel(decoration)}</h3>
     {kind==='portrait' && <PhoneContactFace person={{...owner,character}}/>}
@@ -32,7 +31,7 @@ export function DecorationCard({decoration,ownId,exploring,send}:{
     {kind==='vip' && <p>Área reservada por {owner.name}</p>}
     {exploring && !privateOffice && (kind==='pizza' ? control('Pegar uma fatia','slice') : <>
       {kind==='portrait' && !marked && owner.id!==ownId && control('Rabiscar','mark')}
-      {control(kind==='portrait' && owner.id!==ownId ? 'Arrancar retrato' : 'Retirar','uninstall')}
+      {control(kind==='portrait' && owner.id!==ownId ? 'Arrancar retrato' : 'Retirar','uninstall',!canRemove && (kind!=='portrait' || owner.id===ownId))}
     </>)}
   </article>;
 }

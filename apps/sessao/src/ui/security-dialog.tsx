@@ -7,7 +7,7 @@ export function SecurityDialogContent({camera,ready,send}:{
   return <>
     <header>
       <h2 id="security-title">Sala de Segurança</h2>
-      <DialogDismiss label="Fechar terminal" className="hud-button hud-button--secondary">✕</DialogDismiss>
+      <DialogDismiss label="Fechar terminal" className="hud-button hud-button--secondary"/>
     </header>
     <div className="security-console">
       <div className="security-channels" role="group" aria-label="Câmeras">

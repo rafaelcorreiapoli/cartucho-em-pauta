@@ -18,10 +18,12 @@ export const foods = {
   picanha:{name:'Picanha',description:'Uma refeição de respeito.',portrait:'retrato-picanha.webp',price:4,use:'consume',category:'Luxo',effect:{hp:70}},
 } as const satisfies Record<string,Food>;
 
+const pingaEffect = {hp:15,speed:{factor:.8,durationMs:8_000}} as const;
+
 export const pinga = {
-  name:'Pinga',description:'Recupera 15 PV e reduz a velocidade por 8 segundos.',
+  name:'Pinga',description:`Recupera até ${pingaEffect.hp} PV e reduz a velocidade por ${pingaEffect.speed.durationMs/1000} segundos.`,
   portrait:'retrato-pinga.webp',use:'consume',category:'Especial',
-  effect:{hp:15,speed:{factor:.8,durationMs:8_000}},
+  effect:pingaEffect,
 } as const satisfies Omit<Food,'price'>;
 
 const consumables = {...foods,pinga};

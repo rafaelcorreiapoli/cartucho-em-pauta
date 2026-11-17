@@ -35,7 +35,7 @@ export const objects = {
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:'Um lugar na parede para a sua própria cara.'},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:'Uma reserva que os outros podem ignorar.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
-  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s.`},
+  megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:`Aumenta em ${equipment.runningShoes.speedBonus}% a velocidade ao andar e correr.`},
@@ -93,6 +93,7 @@ export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
 
 export const INVENTORY_SLOTS = 6;
+export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 export type PhoneActivity = 'open'|'call'|'game';
 const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn'] as const;
 type PhoneActionKind = typeof phoneActions[number];
@@ -145,7 +146,7 @@ export type GameplayView = {
 export type InteractionCue = 'cash'|'stamp'|'lock'|'pickup';
 
 export type GameplayEvent = {
-  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'pix-sent'|'pix-received'|'power-repaired'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'plenary-visit-interrupted'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'pix-sent'|'pix-received'|'power-repaired'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   eventId?:number; actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 

@@ -1,3 +1,6 @@
+import {pinga} from '../src/food';
+import {restMovement,STEP_MS} from '../src/movement';
+
 import {publishProjectFiling} from './project-test-fixture';
 import { stationRecharge } from '../src/station-recharge';
 import { StationCooldowns } from './StationCooldowns';
@@ -10,9 +13,9 @@ import {powerPanels,powerRules} from '../src/power';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import { ELECTION_RULES } from '../src/elections';
 import { expect, test } from 'bun:test';
-import { HEARING_MS } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS } from '../src/politics';
 
-import { BALLOT_MS, policyDuration, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
+import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, deficitStabilityLoss } from '../src/plenary';
 import { canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -127,7 +130,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(host).budget).toBe(32);
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,2);
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,3);
-  expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11}});
+  expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11,walletIncome:3}});
   expect(view(honest).politics?.evidence).toEqual([]);
   match.politics(host,{kind:'transfer',to:honest.id,amount:2,clandestine:true},people,4);
   match.politics(host,{kind:'transfer',to:traitor.id,amount:0,clandestine:false},people,5); // Invalid amount.
@@ -912,6 +915,26 @@ test('replaying a server-identified event does not apply progress twice',()=>{
   expect(active()).toBe(4);
 });
 
+test('a previous match event cannot reserve the new match’s document ID',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
+  const before = match.gameplayWorld([host],1,()=>false);
+  const filed = {
+    type:'filed',actor:host.id,item:1,project:2,position:stations.amendment,at:1,witnesses:[],
+    eventId:before.nextEventId!(),
+  } as const;
+  expect(before.publish({...filed,witnesses:[]})).toBe(true);
+  match.leave(host.id,2);
+  expect(match.start(host.id,[host],3,()=>.9)).toBe(true);
+
+  const after = match.gameplayWorld([host],4,()=>false);
+  const view = ()=>match.view(host.id,[host.id],4);
+  expect(after.publish({...filed,at:4,witnesses:[]})).toBe(false);
+  expect(view().project).toBeUndefined();
+  expect(after.publish({...filed,at:4,eventId:after.nextEventId!(),witnesses:[]})).toBe(true);
+  expect(view().project).toBe(2);
+});
+
 test('Investimento Político counts paid advertisements after assignment across renewals',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
@@ -1064,7 +1087,12 @@ test.each(['approved','rejected','unfunded'] as const)('Minha Pinga, Minha Vida:
   const dropped = game.view(bia,world).ground.find(item=>item.kind==='pinga');
   expect(dropped).toMatchObject({x:bia.x,y:bia.y});
   expect(game.act(rafa,{kind:'use',item:doses[0].id},world)).toBe('Objeto utilizado.');
-  expect(rafa.speedModifier).toEqual({factor:.8,remainingMs:8_000});
+  const {factor,durationMs} = pinga.effect.speed;
+  expect(rafa.speedModifier).toEqual({factor,remainingMs:durationMs});
+  for (let elapsed=STEP_MS;elapsed<durationMs;elapsed+=STEP_MS) restMovement(rafa);
+  expect(rafa.speedModifier).toEqual({factor,remainingMs:STEP_MS});
+  restMovement(rafa);
+  expect(rafa.speedModifier).toBeUndefined();
   expect(inventory(rafa,at+1)).not.toContainEqual(expect.objectContaining({kind:'pinga'}));
   match.setPlayerConnected(caio.id,true);
   expect(inventory(caio,at+1)).toHaveLength(0);
@@ -1136,6 +1164,71 @@ test.each([true,false])('selective transparency only charges eligible private au
     expect(view(now+policyDuration).policies?.bankAudit).toBeUndefined();
   }
   expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('successive shop and mail policies keep their own deadlines and public costs',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const view = (at:number)=>match.view(host.id,ids,at);
+  const coffeeProject = bills.findIndex(bill=>bill.id==='PROJ-N05');
+  const mail = bills.findIndex(bill=>bill.id==='PROJ-N16');
+  const first = NEGOTIATION_MS+BALLOT_MS;
+  const nextFiling = first+projectRules.cooldownMs;
+  const nextVote = nextFiling+NEGOTIATION_MS;
+  const second = nextVote+BALLOT_MS;
+  publishProjectFiling(match,host,coffeeProject);
+  match.advance(NEGOTIATION_MS);
+  const coffee = view(NEGOTIATION_MS);
+  for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
+  match.advance(first);
+  expect(view(first).outcome).toMatchObject({passed:true,applied:{budget:coffee.yes.budget}});
+  expect(view(first).budget).toBe(coffee.budget+coffee.yes.budget);
+  expect(view(first).policies).toEqual({coffee:first+policyDuration});
+
+  publishProjectFiling(match,host,mail,nextFiling);
+  expect(view(first+policyDuration).policies).toEqual({});
+  match.advance(nextVote);
+  const mailBallot = view(nextVote);
+  for (const voter of [host,honest]) match.vote(voter.id,'yes',nextVote+1);
+  match.advance(second);
+  expect(view(second).outcomes.map(result=>result.passed)).toEqual([true,true]);
+  expect(view(second).budget).toBe(mailBallot.budget+mailBallot.yes.budget);
+  expect(view(second).policies).toEqual({mail:second+policyDuration});
+  expect(view(second+policyDuration).policies).toEqual({});
+  expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('Herói Inesperado requires an active crisis below the shared stability threshold',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const account = Reflect.get(economy,'accounts').get(honest.id);
+  account.canFightCrisis = ()=>match.canFightCrisis();
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',['heroiInesperado']);
+  const now = fireRules.firstAfter;
+  const view = ()=>match.view(honest.id,ids,now);
+  const active = ()=>view().politics!.missions.active.some(mission=>mission.kind==='heroiInesperado');
+
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(false);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT);
+  match.advance(now);
+  const site = view().fire!.site;
+  expect(site).toBeDefined();
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(false);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  match.refreshAgendaEligibility();
+  expect(active()).toBe(true);
+
+  const player = {...honest,...fireSites[site]};
+  const before = view().politics!.progression.xp;
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
+  expect(view().politics!.missions.completed.some(mission=>mission.kind==='heroiInesperado')).toBe(true);
+  expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
+  expect(view().politics!.progression.xp).toBe(before+55);
 });
 
 test('a project waits for an overlapping hearing and keeps the original proposer',()=>{

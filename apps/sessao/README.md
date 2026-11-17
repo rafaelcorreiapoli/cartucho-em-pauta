@@ -147,6 +147,33 @@ Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
 O servidor de teste simula protocolos em nome do jogador local. O teste confere o
 proponente no HUD e usa as setas reais do histórico.
 
+## Teste da TV de campanha no Chrome
+
+Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/campaign-tv-smoke-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2608 bun run dev --port 5218`.
+Abra `http://127.0.0.1:5218/` no Playwright CLI com a configuração
+`dev/private-call-chrome.json` e execute `run-code --filename=dev/campaign-tv-smoke.js`.
+O teste compra duas propagandas pelas ações da Sala de Imprensa e verifica a
+ordem, os lados da TV e o movimento reduzido em duas abas.
+
+## Teste dos efeitos de recompensa no Chrome
+
+Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/reward-smoke-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2607 bun run dev --port 5217`.
+Abra `http://127.0.0.1:5217/` no Playwright CLI com a configuração
+`dev/private-call-chrome.json` e execute `run-code --filename=dev/reward-smoke.js`.
+O gameserver posiciona o jogador diante das estações. O teste clica nas ações reais
+de cafezinho e verba, mede a animação e confirma a remoção dos efeitos.
+
+## Teste dos atalhos de atributos no Chrome
+
+Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/attributes-smoke-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2609 bun run dev --port 5219`.
+Abra `http://127.0.0.1:5219/` no Playwright CLI com `dev/private-call-chrome.json`
+e execute `run-code --filename=dev/attributes-smoke.js`.
+O cenário concede dois pontos e antecipa a votação após o primeiro investimento
+para verificar o bloqueio das teclas durante a contagem regressiva.
+
 ## Métricas do gameserver
 
 O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use

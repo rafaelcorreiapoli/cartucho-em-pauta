@@ -11,6 +11,16 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+export function attributePlayerView(player:Player) {
+  return {character:player.character,stamina:player.stamina===undefined ? undefined : Math.floor(player.stamina),
+    unavailable:!!(player.knockedOut || player.carrying || player.carried)};
+}
+
+export function canSelectAttribute(view:PlenaryView|undefined, player:ReturnType<typeof attributePlayerView>|undefined) {
+  return !!player && !player.unavailable && !!view?.gameplay && view.phase==='negotiation' &&
+    view.ballotCountdown===undefined && view.isolationSeconds===undefined;
+}
+
 export function createProgressionHud(send:(request:AttributeRequest)=>void, play:(cue:'levelUp'|'attribute')=>void,reward:(text:string)=>void) {
   const celebration = element<HTMLDialogElement>('level-up-dialog');
   const attributes = element<HTMLDialogElement>('attributes-dialog');
@@ -22,7 +32,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
 
   let latest:Progression|undefined;
   let view:PlenaryView|undefined;
-  let player:Player|undefined;
+  let player:ReturnType<typeof attributePlayerView>|undefined;
   let rewardTimer:number|undefined;
   let revealTimer:number|undefined;
   let requestTimer:number|undefined;
@@ -33,7 +43,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let completedCount = 0;
 
   function confirmAttribute() {
-    if (!latest || !selected || requested===latest.revision || !latest.available) return;
+    if (!latest || !selected || requested===latest.revision || !latest.available || !canSelectAttribute(view,player)) return;
     requested = latest.revision;
     clearTimeout(requestTimer);
     requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
@@ -53,8 +63,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
     const agility = 100+invested.agility*attributeUpgrades.agility.bonus;
     const stamina = Math.floor(player.stamina ?? staminaMax);
-    const canSpend = !!available && requested!==revision && view?.phase==='negotiation' &&
-      !player.knockedOut && !player.carrying && !!view.gameplay;
+    const canSpend = !!available && requested!==revision && canSelectAttribute(view,player);
     const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
@@ -198,7 +207,12 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       }
       if (attributes.open) renderAttributes();
     },
-    player(snapshot:Player) { player = snapshot; if (attributes.open) renderAttributes(); },
+    player(snapshot:Player) {
+      const next = attributePlayerView(snapshot);
+      if (player?.character===next.character && player.stamina===next.stamina && player.unavailable===next.unavailable) return;
+      player = next;
+      if (attributes.open) renderAttributes();
+    },
     reconnect() { reconnecting = true; },
     destroy() {
       clearTimeout(revealTimer);

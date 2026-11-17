@@ -194,3 +194,54 @@ test('the HUD receives multiple deposits of the same cash lot in one server tick
   expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'contribuinte',current:5}));
   expect(hud.profile.get()?.xp).toBe(xp+missionReward('contribuinte').xp);
 });
+
+test('a delayed event from the previous match cannot complete the new HUD agenda',()=>{
+  const match = new PlenaryMatch(1);
+  const ids = [player.id];
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const previousWorld = match.gameplayWorld([player],1,()=>false);
+  const coffee = {
+    type:'coffee-drunk',actor:player.id,position:terminals.coffee.point,at:1,witnesses:[],
+    eventId:previousWorld.nextEventId!(),
+  } as const;
+  const previousEvent = {...coffee,witnesses:[]};
+  expect(previousWorld.publish(previousEvent)).toBe(true);
+  match.leave(player.id,2);
+  expect(match.start(player.id,[player],3,()=>.9)).toBe(true);
+
+  const hud = createHudModel();
+  const nextWorld = match.gameplayWorld([player],4,()=>false);
+  const render = ()=>hud.render(match.view(player.id,ids,4));
+  render();
+  const initial = hud.agenda.get();
+  expect(initial?.active).toContainEqual(expect.objectContaining({kind:'cafe',current:0}));
+  expect(previousWorld.publish({...previousEvent,at:4,eventId:previousWorld.nextEventId!()})).toBe(false);
+  expect(nextWorld.publish(previousEvent)).toBe(false);
+  expect(nextWorld.publish({...previousEvent,at:4})).toBe(false);
+  render();
+  expect(hud.agenda.get()).toBe(initial);
+  expect(hud.profile.get()?.xp).toBe(0);
+
+  expect(match.roomActivity(player,'coffee',4)?.text).toContain('Cafezinho tomado');
+  render();
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'cafe'}));
+  expect(hud.profile.get()?.xp).toBe(missionReward('cafe').xp);
+});
+
+test('the megaphone notice follows the phase and the anonymous snapshot flag',()=>{
+  const match = new PlenaryMatch(1);
+  const ids = [player.id];
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  publishProjectFiling(match,player);
+  const hud = createHudModel();
+  const notify = (view:ReturnType<PlenaryMatch['view']>)=>hud.render({...view,megaphoneActive:true});
+  const updates:boolean[] = [];
+  hud.broadcast.subscribe(()=>updates.push(hud.broadcast.get()));
+  notify(match.view(player.id,ids,1));
+  notify(match.view(player.id,ids,2));
+  expect(updates).toEqual([true]);
+  match.advance(NEGOTIATION_MS);
+  notify(match.view(player.id,ids,NEGOTIATION_MS));
+  expect(updates).toEqual([true,false]);
+  expect(hud.broadcast.get()).toBe(false);
+});

@@ -13,7 +13,7 @@ export function mountProjectPicker() {
       if (dialog.open) return;
       flushSync(()=>root.render(<>
         <header><h2 className="hud-title" id="project-picker-title">{title}</h2>
-          <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+          <DialogDismiss label="Fechar"/>
         </header>
         <form className="project-picker-form" onSubmit={event=>{
           event.preventDefault();

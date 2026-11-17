@@ -22,7 +22,7 @@ export function LegislativeBrief({activity,view}:{activity:BriefActivity;view:Pl
   return <>
     <header className="flex items-center justify-between gap-4">
       <h2 id="legislative-brief-title">{briefTitles[activity]}</h2>
-      <DialogDismiss label="Fechar">×</DialogDismiss>
+      <DialogDismiss label="Fechar"/>
     </header>
     {activity==='archive' ? <PublicRecords politics={view.politics}/> : project ? <>
       <h3>{project.name}</h3>

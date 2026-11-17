@@ -53,6 +53,7 @@ export const energySavings = {
 export const policyDuration = 120_000;
 const policySeconds = policyDuration/1_000;
 export type BillPolicies = Partial<Record<BillPolicy,number>>;
+export const bankAuditCost = (policies?:BillPolicies) => policies?.bankAudit!==undefined ? bankAuditFee : 0;
 
 type Bill = {
   id:string; name:string; banner?:string; description:string; yes:Impact; no:Impact;
@@ -128,6 +129,7 @@ export type SessionParticipant = {id:string; name:string; character:number; role
 
 export type PlenaryView = {
   ballotCountdown?: number;
+  megaphoneActive?:true;
   phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; remaining:number; stability:number; budget:number; host?:string;
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number; amended:boolean;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;

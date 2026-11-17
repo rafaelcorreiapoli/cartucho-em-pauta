@@ -26,6 +26,8 @@ test('the dossier keeps evidence private until a nearby offer clears and the buy
   expect(render(bia,2,players,[rafa,bia])).not.toContain('data-skin="2"');
   expect(render(caio,2)).toContain('Nenhuma prova no dossiê');
   expect(render(caio,2)).toContain('aria-label="Fechar dossiê"');
+  expect(render(caio,2)).toContain('type="button" class="hud-icon-button" aria-label="Fechar dossiê"');
+  expect(render(caio,2)).toContain('href="#icon-cross"');
   match.politics(bia,{kind:'share',to:caio.id,evidence:proof.id,price:2},players,3);
   const offer = view(caio,3,players).politics!.incoming[0];
   expect(render(caio,3)).toContain('Bia oferece um documento por R$ 20 mil');

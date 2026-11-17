@@ -1,3 +1,4 @@
+import {megaphone} from '../src/equipment';
 import { expect, test } from 'bun:test';
 import { Combat } from './Combat';
 import { Gameplay } from './Gameplay';
@@ -530,25 +531,31 @@ test('megaphone reserves one channel, keeps the modulator active and releases on
   game.act(alice,{kind:'toggle-modulator'},world);
   expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
   expect(game.megaphoneSpeaker()).toBe(alice.id);
-  expect(game.view(alice,world)).toMatchObject({megaphoneSeconds:15,modulator:{active:true}});
+  expect(game.view(alice,world)).toMatchObject({megaphoneSeconds:megaphone.duration/1000,modulator:{active:true}});
   expect(game.act(bob,toggle,world)).toBe('Canal de Megafone ocupado.');
   expect(game.view(bob,world).equipmentCooldowns?.[b]).toBeUndefined();
-  world.now += 15_000;
+  world.now += megaphone.duration-1;
+  game.tick(world,true);
+  expect(game.megaphoneSpeaker()).toBe(alice.id);
+  world.now++;
   game.tick(world,true);
   expect(game.megaphoneSpeaker()).toBeUndefined();
-  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(megaphone.cooldown/1000);
   expect(game.act(alice,toggle,world)).toBe('Megafone em recarga.');
   expect(game.act(bob,toggle,world)).toBe('Megafone ativo.');
   game.tick(world,false);
   expect(game.megaphoneSpeaker()).toBeUndefined();
-  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBe(45);
-  world.now += 45_000;
+  expect(game.view(bob,world).equipmentCooldowns?.[b]).toBe(megaphone.cooldown/1000);
+  world.now += megaphone.cooldown-1;
+  game.tick(world,true);
+  expect(game.act(alice,toggle,world)).toBe('Megafone em recarga.');
+  world.now++;
   game.tick(world,true);
   expect(feedback).toContain('Megafone pronto.');
   expect(game.act(alice,toggle,world)).toBe('Megafone ativo.');
   game.stopMegaphone(alice.id,world);
   expect(game.megaphoneSpeaker()).toBeUndefined();
-  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(45);
+  expect(game.view(alice,world).equipmentCooldowns?.[a]).toBe(megaphone.cooldown/1000);
 });
 
 test('attacks spend stamina exactly once and insufficient stamina does not start cooldown',()=>{

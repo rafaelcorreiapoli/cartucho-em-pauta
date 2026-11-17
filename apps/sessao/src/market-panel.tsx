@@ -21,7 +21,7 @@ export function MarketDialogContent({title,children}:{title:string;children:Reac
   return <>
     <header>
       <h2 id="market-title">{title}</h2>
-      <DialogDismiss label="Fechar"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg></DialogDismiss>
+      <DialogDismiss label="Fechar"/>
     </header>
     <div id="market-body">{children}</div>
   </>;

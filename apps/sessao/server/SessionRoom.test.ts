@@ -1,10 +1,11 @@
 import {publishProjectFiling} from './project-test-fixture';
 import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
-import { ELECTION_RULES } from '../src/elections';
+import { ELECTION_RULES, type CampaignBroadcast } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
 import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
+import type { SpyCameraFrame } from '../src/surveillance';
 import { missionReward } from '../src/politics';
 import { privateOffices } from '../src/private-offices';
 import { expect, test } from 'bun:test';
@@ -223,10 +224,11 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics?.evidence.at(-1)?.kind).toBe('clandestine-transfer');
     expect(firstView!.election?.offices).toEqual(secondView!.election?.offices);
     expect(firstView!.election?.offices.filter(({office}) => office==='deputy')).toHaveLength(3);
-    const broadcasts:string[] = [];
-    first.onMessage('campaign-advertisement',({advertiserId}:{advertiserId:string})=>broadcasts.push(advertiserId));
-    second.onMessage('campaign-advertisement',()=>{});
-    third.onMessage('campaign-advertisement',()=>{});
+    const broadcasts = participants.map(peer=>{
+      const ads:CampaignBroadcast[] = [];
+      peer.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>ads.push(ad));
+      return ads;
+    });
     second.send('election',{kind:'advertise',token:1810});
     await walkTo(second,stations.press);
     expect(secondView!.election?.personal?.advertised).toBe(false);
@@ -241,7 +243,14 @@ test('clients share movement and voice, then receive private roles and payments'
     expect(thirdView!.politics!.wallet).toBe(balanceBefore+2+thirdRewards());
     expect(secondView!.election?.personal?.advertised).toBe(true);
     expect(firstView!.election?.personal?.advertised).toBe(false);
-    expect(broadcasts).toEqual([second.sessionId]);
+    await until(()=>broadcasts.every(ads=>ads.length>=1));
+    const expectedAd = {
+      advertiserId:second.sessionId,name:'Bia',character:positions.get(second.sessionId)!.character,
+      number:expect.any(Number),
+    };
+    expect(broadcasts).toEqual([[expectedAd],[expectedAd],[expectedAd]]);
+    expect(broadcasts[0][0]).toEqual(broadcasts[1][0]);
+    expect(broadcasts[0][0]).toEqual(broadcasts[2][0]);
     const previousMatch = secondView!.politics!.progression.matchId;
     await first.leave();
     await until(() => roster.at(-1)?.length===1);
@@ -333,9 +342,13 @@ test('clients share movement and voice, then receive private roles and payments'
 
 
   } finally {
-    server.kill();
-    await Promise.allSettled(rooms.map(room => room.leave(false)));
-    await server.exited;
+    try {
+      // A consented leave stops the SDK from reconnecting during cleanup.
+      await Promise.allSettled(rooms.map(room => room.leave()));
+    } finally {
+      server.kill();
+      await server.exited;
+    }
   }
 },65_000);
 
@@ -373,14 +386,18 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const interactionCues = new Map<string,InteractionCue[]>();
     const purchases = new Map<string,{id:number;kind:string}>();
     let visible:Player[] = [];
-    const spyFrames = new Map<string,PhotoScene>();
+    const spyFrames = new Map<string,SpyCameraFrame>();
+    const unconfirmedSpyFrames:SpyCameraFrame[] = [];
     const securityFrames = new Map<string,{camera:string;scene:PhotoScene}>();
     const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
     for (const peer of rooms) {
       peer.onMessage('control',(state:{player:Player})=>snapshots.set(peer.sessionId,state.player));
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
-      peer.onMessage('spy-frame',(frame:PhotoScene)=>spyFrames.set(peer.sessionId,frame));
+      peer.onMessage('spy-frame',(frame:SpyCameraFrame)=>{
+        if (views.get(peer.sessionId)?.gameplay?.surveillance?.selected!==frame.channel) unconfirmedSpyFrames.push(frame);
+        spyFrames.set(peer.sessionId,frame);
+      });
       peer.onMessage('security-frame',(frame:{camera:string;scene:PhotoScene})=>securityFrames.set(peer.sessionId,frame));
       const cues:string[] = [];
       foodCues.set(peer.sessionId,cues);
@@ -402,12 +419,10 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('start-match',{npcs:0,token:1});
     await wait(()=>views.get(carrier.sessionId)?.phase==='negotiation');
     const routes = new Map<string,[string,number,boolean?,boolean?][]>();
-    let broadcast = false;
     for (const peer of rooms) {
       peer.onMessage('voice-range',(levels:[string,number,boolean?,boolean?][])=>routes.set(peer.sessionId,levels));
       peer.onMessage('voice-send',()=>{});
       peer.onMessage('voice-roster',()=>{});
-      peer.onMessage('megaphone-active',(active:boolean)=>{if (peer===passenger) broadcast = active;});
       peer.send('voice-join');
     }
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
@@ -443,13 +458,14 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     carrier.send('gameplay',{action:{kind:'equip',item:gearView()?.inventory.find(item=>item.kind==='megaphone')?.id},token:2960});
     await wait(()=>!!gearView()?.equipped?.find(item=>item.kind==='megaphone'));
     carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:2980});
-    await wait(()=>broadcast && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
+    await wait(()=>views.get(passenger.sessionId)?.megaphoneActive===true && routes.get(passenger.sessionId)?.some(([id,,,filtered])=>id===carrier.sessionId && filtered===true)===true);
+    expect(views.get(carrier.sessionId)?.megaphoneActive).toBeUndefined();
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     await Bun.sleep(120);
     expect(routes.get(passenger.sessionId)).toEqual([[carrier.sessionId,.85,false,true]]);
     carrier.send('gameplay',{action:{kind:'toggle-megaphone'},token:3040});
-    await wait(()=>!broadcast && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
+    await wait(()=>views.get(passenger.sessionId)?.megaphoneActive===undefined && routes.get(passenger.sessionId)?.some(([id,,local,filtered])=>id===carrier.sessionId && local===true && !filtered)===true);
     carrier.send('voice-leave');
     passenger.send('voice-leave');
     carrier.send('gameplay',{action:{kind:'dialogue-close'},token:3080});
@@ -529,7 +545,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('spy',{kind:'open',channel,token:3520});
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>spyFrames.get(carrier.sessionId)?.people.some(person=>person.id===passenger.sessionId)===true);
-    await wait(()=>gameplay()?.surveillance?.selected===channel);
+    expect(spyFrames.get(carrier.sessionId)?.channel).toBe(channel);
+    expect(unconfirmedSpyFrames).toEqual([]);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
     carrier.send('spy',{kind:'close',token:3580});

@@ -77,3 +77,26 @@
   overflow: hidden;
   white-space: nowrap;
 }
+
+.campaign-tv-host {
+  display: contents;
+}
+
+.campaign-tv[data-side="left"] {
+  --campaign-tv-offscreen: translateX(calc(-100% - 3rem));
+}
+.campaign-tv[data-side="right"] {
+  --campaign-tv-offscreen: translateX(calc(100% + 3rem));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .campaign-tv {
+    animation-name: campaign-tv-play;
+    animation-fill-mode: forwards;
+  }
+}
+@keyframes campaign-tv-play {
+  0% { transform: var(--campaign-tv-offscreen); animation-timing-function: ease-out; }
+  6.14% { transform: none; }
+  93.86% { transform: none; animation-timing-function: ease-in; }
+  100% { transform: var(--campaign-tv-offscreen); }
+}

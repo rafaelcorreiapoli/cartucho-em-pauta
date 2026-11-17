@@ -5,7 +5,7 @@ export function SurveillanceDialogContent({channels,monitor}:{channels:ReactNode
   return <>
     <header>
       <h2 id="surveillance-title">Central de Vigilância</h2>
-      <DialogDismiss className="hud-button hud-button--secondary" label="Fechar vigilância">✕</DialogDismiss>
+      <DialogDismiss className="hud-button hud-button--secondary" label="Fechar vigilância"/>
     </header>
     <div className="spy-console"><div id="spy-channels">{channels}</div><section id="spy-monitor">{monitor}</section></div>
   </>;

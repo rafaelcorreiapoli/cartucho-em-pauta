@@ -1,3 +1,4 @@
+import {DialogDismiss} from './dialog-dismiss';
 import {useState} from 'react';
 import type {Player} from '../map';
 import {canReachStation,hearingPolicyFee,type PlenaryView} from '../plenary';
@@ -32,7 +33,7 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
   return <div id="politics-actions">
     <header className="social-header">
       <h2>Ações institucionais</h2>
-      {close && <button className="hud-icon-button" type="button" aria-label="Fechar ações institucionais" onClick={close}>×</button>}
+      {close && <DialogDismiss label="Fechar ações institucionais" onDismiss={close}/>}
     </header>
     {grant && <form id="cabinet-form" onSubmit={event=>{
       event.preventDefault();

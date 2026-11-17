@@ -6,8 +6,9 @@ import type { PhotoScene } from './photography';
 import { isOfficeFurniture, officeFixtures, officeFurniture } from './private-offices';
 import { spyRules } from './surveillance';
 
-export function createSurveillanceViewport(parent:HTMLElement) {
+export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>void) {
   let latest:PhotoScene|undefined;
+  let waitingForFrame = true;
   const size = spyRules.range*2;
   const density = 4;
 
@@ -44,6 +45,7 @@ export function createSurveillanceViewport(parent:HTMLElement) {
     update(time:number,delta:number) {
       const frame = latest;
       if (!frame?.camera) return;
+      const firstFrame = waitingForFrame;
       if (frame!==this.rendered) {
         const {camera,ground,decorations} = frame;
         this.cameras.main.centerOn(camera.x,camera.y);
@@ -78,7 +80,7 @@ export function createSurveillanceViewport(parent:HTMLElement) {
           sprite = this.add.sprite(person.x,y,sheet.key,base).setScale(.295);
           this.actors.set(person.id,sprite);
         }
-        const blend = Math.min(1,delta/55);
+        const blend = firstFrame ? 1 : Math.min(1,delta/55);
         sprite.setPosition(Phaser.Math.Linear(sprite.x,person.x,blend),Phaser.Math.Linear(sprite.y,y,blend))
           .setTexture(down?.key ?? sheet.key,down?.frame ?? base+row*4+step)
           .setOrigin(.5,down?.originY ?? 1).setRotation(down?.rotation ?? 0)
@@ -94,6 +96,10 @@ export function createSurveillanceViewport(parent:HTMLElement) {
             .setPosition(sprite.x+(index-(exposed.length-1)/2)*12,sprite.y-39);
         }
       }
+      if (firstFrame) {
+        waitingForFrame = false;
+        if (onFirstDraw) this.game.events.once(Phaser.Core.Events.POST_RENDER,onFirstDraw);
+      }
     }
   }
 
@@ -104,6 +110,10 @@ export function createSurveillanceViewport(parent:HTMLElement) {
   });
   return {
     receive(frame:PhotoScene) { latest = frame; },
+    clear() {
+      latest = undefined;
+      waitingForFrame = true;
+    },
     destroy() { game.destroy(true); },
   };
 }

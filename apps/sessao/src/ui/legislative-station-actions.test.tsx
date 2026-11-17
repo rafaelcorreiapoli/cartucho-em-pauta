@@ -2,7 +2,8 @@ import {publishProjectFiling} from '../../server/project-test-fixture';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
-import {NEGOTIATION_MS,stations,type Station} from '../plenary';
+import {BALLOT_MS,bankAuditCost,bankAuditFee,bills,NEGOTIATION_MS,policyDuration,stations,type Station} from '../plenary';
+import {money} from '../politics';
 import type {Player} from '../map';
 import {LegislativeStationActions,legislativeStationActions} from './legislative-station-actions';
 
@@ -37,4 +38,41 @@ test('station controls follow actual amendment, audit and correction state witho
   expect(render(auditor,'audit',NEGOTIATION_MS-1)).toBe('');
   match.advance(NEGOTIATION_MS);
   expect(render(auditor,'audit',NEGOTIATION_MS)).toBe('');
+});
+
+test.each([true,false])('audit advertises only the public conditional fee, approval=%s',approved=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((id,character)=>({
+    id,nick:id,character,...stations.audit,direction:0,moving:false,
+  }));
+  const [host,recipient,auditor] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const project = bills.findIndex(bill=>bill.id==='PROJ-N08');
+  match.gameplayWorld(players,0,()=>false).publish({
+    type:'filed',project,actor:host.id,item:1,position:stations.amendment,at:0,witnesses:[],
+  });
+  match.advance(NEGOTIATION_MS);
+  if (approved) for (const player of [host,recipient]) match.vote(player.id,'yes',NEGOTIATION_MS+1);
+  const resolved = NEGOTIATION_MS+BALLOT_MS;
+  match.advance(resolved);
+  const view = (now:number)=>match.view(auditor.id,ids,now);
+  const render = (now:number)=>{
+    const snapshot = view(now);
+    return renderToStaticMarkup(<LegislativeStationActions actions={legislativeStationActions(snapshot,'audit')}
+      auditFee={bankAuditCost(snapshot.policies)} send={()=>{}}/>);
+  };
+  const now = resolved+1;
+  const label = `${money(bankAuditFee)} se revelar registro sigiloso`;
+  const initial = render(now);
+  expect(initial).toContain('data-action="audit"');
+  expect(initial.includes(label)).toBe(approved);
+  const balance = view(now).politics!.wallet;
+  expect(match.act(auditor,'audit',now)?.text).toContain('Nenhum registro');
+  expect(view(now).politics!.wallet).toBe(balance);
+  expect(match.politics(host,{kind:'transfer',to:recipient.id,amount:1},players,now+1)).toBe(true);
+  expect(render(now+1)).toBe(initial);
+  expect(match.act(auditor,'audit',now+2)?.text).toContain('Documento encontrado');
+  expect(view(now+2).politics!.wallet).toBe(balance-(approved ? bankAuditFee : 0));
+  expect(render(resolved+policyDuration)).not.toContain(label);
 });

@@ -1,7 +1,8 @@
+import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
-import { ELECTION_RULES, type CampaignAdvertisement } from './elections';
+import { ELECTION_RULES, type CampaignBroadcast } from './elections';
 import { bindFloorPlan } from './ui/floor-plan';
 import {money} from './politics';
 import { mountProjectPicker } from './ui/project-picker';
@@ -20,7 +21,7 @@ import { createMarketPanel } from './market-panel';
 import type { PhotoAccessView } from './photography';
 import { createSecurityPanel } from './security-panel';
 import { createSurveillancePanel } from './surveillance-panel';
-import type { PhotoScene } from './photography';
+import type { SpyCameraFrame } from './surveillance';
 import { createGameplayPanel } from './gameplay-panel';
 import { mountResults } from './results';
 import { mountCharacterPicker } from './ui/character-picker';
@@ -215,7 +216,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('security-frame',security.frame);
     joined.onDrop(()=>security.render());
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
-    joined.onMessage('spy-frame',(frame:PhotoScene)=>surveillance.frame(frame));
+    joined.onMessage('spy-frame',(frame:SpyCameraFrame)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
     const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay);
@@ -260,7 +261,6 @@ async function connect(join: () => Promise<Room>) {
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');
     });
-    joined.onMessage('megaphone-active',(active:boolean)=>reactHud.broadcast(active));
     joined.onDrop(()=>reactHud.broadcast(false));
     joined.onMessage('gear-purchased',market.purchased);
     joined.onMessage('consumable-purchased',gameplay.purchasedConsumable);
@@ -285,7 +285,7 @@ async function connect(join: () => Promise<Room>) {
       else gameplay.feedback(message);
     });
     const campaignTv = createCampaignTv(session,joined.sessionId);
-    joined.onMessage('campaign-advertisement',(ad:CampaignAdvertisement & {advertiserId:string})=>{
+    joined.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>{
       campaignTv.enqueue(ad);
       if (ad.advertiserId===joined.sessionId) {
         hud.notify('Propaganda no ar',`+${ELECTION_RULES.advertisementStrength} de força eleitoral neste ciclo.`);
@@ -331,11 +331,11 @@ async function connect(join: () => Promise<Room>) {
       if (view.phase==='negotiation' && (cassationAnnounced || projectAnnounced)) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
-      const pastIncome = previousView?.politics?.walletIncome ?? 0;
-      const income = (view.politics?.walletIncome ?? 0)-pastIncome;
-      if (previousView?.politics && income>0) {
+      const gains = rewardGains(previousView,view,suppressXpEffect);
+      const rewardHead = gains.income || gains.xp ? game?.playerHead() : undefined;
+      if (gains.income) {
         audio.cue('cash');
-        hud.showIncome(income,game?.playerHead());
+        hud.showReward('income',gains.income,rewardHead);
       }
       panel.render(view);
       const previousOffers = previousView?.politics?.incoming ?? [];
@@ -359,12 +359,7 @@ async function connect(join: () => Promise<Room>) {
       mail.complaints(view.complaints);
       mail.price(mailPublicationFee(view.policies));
       mail.phase(view.phase==='negotiation');
-      const priorProgress = previousView?.politics?.progression;
-      const currentProgress = view.politics?.progression;
-      if (!suppressXpEffect && priorProgress && currentProgress &&
-          priorProgress.matchId===currentProgress.matchId && currentProgress.xp>priorProgress.xp) {
-        hud.showXp(currentProgress.xp-priorProgress.xp,game?.playerHead());
-      }
+      if (gains.xp) hud.showReward('xp',gains.xp,rewardHead);
       suppressXpEffect = false;
       progression.render(view);
       appStatus = hudAppStatus(view,assetsReady);

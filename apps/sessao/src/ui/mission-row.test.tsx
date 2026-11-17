@@ -1,3 +1,6 @@
+import {decorationInstallMs,installationSites} from '../installations';
+import {PhoneSession} from '../../server/PhoneSession';
+
 import {publishProjectFiling} from '../../server/project-test-fixture';
 import {InternalMail} from '../../server/InternalMail';
 import {ELECTION_RULES} from '../elections';
@@ -12,7 +15,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,bills,NEGOTIATION_MS,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
 import {MissionRow, ParliamentMetrics} from './hud';
-import {agendaDurationMs,targetedAgendas,type Mission} from '../politics';
+import {CRISIS_MISSION_STABILITY_LIMIT,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
 test('active and completed targeted missions render the public nickname',()=>{
   for (const kind of Object.keys(targetedAgendas) as (keyof typeof targetedAgendas)[]) {
@@ -93,6 +96,13 @@ test('timed mission labels and progress display the same duration in seconds',()
   }
 });
 
+test('urgent calls show the minimum per call and progress by distinct contact',()=>{
+  const {minCallMs,contacts} = urgentCallMission;
+  const html = renderToStaticMarkup(<MissionRow mission={{id:8,kind:'chamadasUrgentes',current:1,target:contacts}}/>);
+  expect(html).toContain(`${minCallMs/1000} segundos com ${contacts} colegas diferentes`);
+  expect(html).toContain(`1 / ${contacts}`);
+});
+
 test('coffee delivery shows distinct recipient progress and the completion check',()=>{
   const mission = {id:9,kind:'entrega',current:2,target:3} as const;
   const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
@@ -106,6 +116,7 @@ test('coffee delivery shows distinct recipient progress and the completion check
 test('phone call missions show time in seconds',()=>{
   const phone = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'debateTelefonico',current:12_500,target:20_000}}/>);
   expect(phone).toContain('12 / 20 s');
+  expect(phone).toContain("20 segundos na mesma chamada durante a articulação");
 });
 
 test('the surveillance mission renders sampled progress without exposing any channel',()=>{
@@ -718,4 +729,321 @@ test('the plenary visit objective requires entry and exit within the same articu
   const completed = view(resumedAt+3).missions.completed.find(mission=>mission.kind==='presencaPlenario')!;
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
   expect(view(resumedAt+3).progression.xp).toBe(25);
+});
+
+test('urgent calls retain confirmed HUD progress after the first contact leaves',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [caller,first,second] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(caller.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(caller.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['chamadasUrgentes','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  const phone = new PhoneSession();
+  let now = 0;
+  const world = ()=>match.gameplayWorld(players,now,()=>true);
+  const view = ()=>match.view(caller.id,players.map(({id})=>id),now).politics!;
+  const mission = ()=>view().missions.active.find(({kind})=>kind==='chamadasUrgentes')!;
+  const call = (contact:Player)=>{
+    now++;
+    expect(phone.act(caller,{kind:'call',target:contact.id},world())).toBe('Chamando…');
+    expect(phone.act(contact,{kind:'answer'},world())).toBe('Ligação atendida.');
+    for (let elapsed=0;elapsed<10_000;elapsed+=100) {
+      now+=100;
+      phone.tick(world(),true);
+    }
+    phone.act(caller,{kind:'hangup'},world());
+  };
+
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('0 / 2');
+  call(first);
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('1 / 2');
+  match.leave(first.id,now);
+  expect(renderToStaticMarkup(<MissionRow mission={mission()}/>)).toContain('1 / 2');
+  call(second);
+  const completed = view().missions.completed.find(({kind})=>kind==='chamadasUrgentes')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(45);
+});
+
+test('what the HUD counts as debate time pauses while either caller is knocked out',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [caller,receiver] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(caller.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(caller.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['debateTelefonico','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const phone = new PhoneSession();
+  let now = 0;
+  const world = ()=>match.gameplayWorld(players,now,()=>true);
+  const view = ()=>match.view(caller.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='debateTelefonico')!;
+  const tick = ()=>{ now+=100; phone.tick(world(),true); };
+  expect(phone.act(caller,{kind:'call',target:receiver.id},world())).toBe('Chamando…');
+  expect(phone.act(receiver,{kind:'answer'},world())).toBe('Ligação atendida.');
+  for (let i=0;i<199;i++) tick();
+  expect(active().current).toBe(19_900);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('19 / 20 s');
+
+  receiver.knockedOut = true;
+  tick();
+  tick();
+  expect(active().current).toBe(19_900);
+  expect(view().progression.xp).toBe(0);
+  receiver.knockedOut = undefined;
+  tick();
+  expect(active().current).toBe(19_900);
+  tick();
+  const completed = view().missions.completed.find(({kind})=>kind==='debateTelefonico')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});
+
+test('Escuta Ativa credits only time after opening or unmuting a real wiretap',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const ids = [player.id];
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const account = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  const {agenda} = account;
+  account.ownsWiretap = ()=>game.ownsWiretap(player.id);
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(player,{kind:'open-shop',target:'vendor'},world(1));
+  const token = game.view(player,world(1)).dialogue?.token;
+  expect(game.act(player,{kind:'shop-buy',target:'wiretap',token},world(1))).toBe('Compra guardada no inventário.');
+  const wiretap = game.view(player,world(1)).inventory.find(({kind})=>kind==='wiretap')!;
+  Object.assign(player,{x:254,y:252});
+  game.spyAction(player,{kind:'install',site:'coffee',item:wiretap.id},world(10));
+  let now = 10+spyRules.install;
+  game.tick(world(now),true);
+  const channel = game.spyView(player,world(now)).channels[0].id;
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const view = ()=>match.view(player.id,ids,now).politics!;
+  const active = ()=>view().missions.active.find(({kind})=>kind==='escutaAtiva')!;
+  const tick = (elapsed:number)=>game.tick(world(now+=elapsed),true);
+  game.spyAction(player,{kind:'open',channel},world(now+99));
+  tick(100);
+  expect(active().current).toBe(1);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('0 / 15 s');
+
+  game.spyAction(player,{kind:'mute',channel},world(now));
+  tick(100);
+  expect(active().current).toBe(1);
+  game.spyAction(player,{kind:'mute',channel},world(now+99));
+  tick(100);
+  expect(active().current).toBe(2);
+
+  for (let i=0;i<149;i++) tick(100);
+  tick(97);
+  expect(active().current).toBe(14_999);
+  expect(renderToStaticMarkup(<MissionRow mission={active()}/>)).toContain('14 / 15 s');
+  tick(1);
+  const completed = view().missions.completed.find(({kind})=>kind==='escutaAtiva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view().progression.xp).toBe(35);
+});
+
+test('Discurso Histórico credits the final active interval without counting time past expiry',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind));
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>true);
+  Object.assign(player,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(player,{kind:'open-shop',target:'vendor'},world(1));
+  const token = game.view(player,world(1)).dialogue?.token;
+  expect(game.act(player,{kind:'shop-buy',target:'megaphone',token},world(1))).toBe('Compra equipada.');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['discursoMegafone','cafe','passeio']);
+  match.refreshAgendaEligibility();
+
+  const start = 100;
+  expect(game.act(player,{kind:'toggle-megaphone'},world(start))).toBe('Megafone ativo.');
+  for (let elapsed=5_100;elapsed<=14_900;elapsed+=100) game.tick(world(start+elapsed),true);
+  game.tick(world(start+14_950),true);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = view(start+14_950).missions.active.find(({kind})=>kind==='discursoMegafone')!;
+  expect(active.current).toBe(9_950);
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('9 / 10 s');
+
+  const after = world(start+15_050);
+  const samples:number[] = [];
+  game.tick({...after,publish:event=>{
+    if (event.type==='megaphone-time') samples.push(event.duration!);
+    return after.publish(event);
+  }},true);
+  expect(samples).toEqual([50]);
+  expect(game.megaphoneSpeaker()).toBeUndefined();
+  const completed = view(after.now).missions.completed.find(({kind})=>kind==='discursoMegafone')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(after.now).progression.xp).toBe(35);
+});
+
+test('the VIP reservation mission uses a chair the player can actually reserve',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:0,y:0};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,
+    (id,kind,replacement)=>game.hasAgendaDecoration(id,kind,replacement));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  let now = 1;
+  for (const place of ['technicalVip','lobbyVip','libraryVip','pressVip'] as const) {
+    Object.assign(player,npcs.credentialsVendor.interaction);
+    game.act(player,{kind:'open-shop',target:'credentialsVendor'},world(now));
+    const token = game.view(player,world(now)).dialogue?.token;
+    expect(game.act(player,{kind:'shop-buy',target:'vip',token},world(now))).toBe('Compra guardada no inventário.');
+    const item = game.view(player,world(now)).inventory.find(item=>item.kind==='vip')!;
+    Object.assign(player,installationSites[place].point);
+    expect(game.act(player,{kind:'install',place,item:item.id},world(++now))).toBe('Instalando decoração…');
+    now += decorationInstallMs;
+    game.tick(world(now),true);
+  }
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['reserva','privilegioAdquirido','cafe','passeio']);
+  match.refreshAgendaEligibility();
+  expect(view(now).missions.active.map(({kind})=>kind)).toEqual(['cafe','passeio']);
+  const plaque = game.view(player,world(now)).interactive.find(({kind})=>kind==='vip')!;
+  expect(game.act(player,{kind:'uninstall',item:plaque.id},world(++now))).toBe('Objeto retirado.');
+  const active = view(now).missions.active.find(({kind})=>kind==='reserva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Reserve uma cadeira');
+  expect(game.act(player,{kind:'install',place:'pressVip',item:plaque.id},world(++now))).toBe('Instalando decoração…');
+  now += decorationInstallMs;
+  game.tick(world(now),true);
+  const completed = view(now).missions.completed.find(({kind})=>kind==='reserva')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+});
+
+test('Presença Parlamentar shows the full visit objective and completion check',()=>{
+  const mission = {id:1,kind:'presencaPlenario',current:0,target:1} as const;
+  const active = renderToStaticMarkup(<MissionRow mission={mission}/>);
+  expect(active).toContain('Entre e saia do Plenário durante a articulação');
+  expect(active).not.toContain('data-done="true"');
+  const completed = renderToStaticMarkup(<MissionRow mission={{...mission,current:1}} done/>);
+  expect(completed).toContain('data-done="true"');
+});
+
+test('the crisis and urgent call instructions use the same limits as the gameserver',()=>{
+  const call = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'chamadasUrgentes',current:1,target:2}}/>);
+  expect(call).toContain(`Faça chamadas de ${urgentCallMission.minCallMs/1000} segundos com ${urgentCallMission.contacts} colegas diferentes`);
+  expect(call).toContain('1 / 2');
+  const crisis = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'heroiInesperado',current:0,target:1}}/>);
+  expect(crisis).toContain(`Estabilidade abaixo de ${CRISIS_MISSION_STABILITY_LIMIT}`);
+});
+
+test('the HUD replaces Fiscalização Paralela when the last foreign safe leaves the match',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [inspector,owner,withoutOffice] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(inspector.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[inspector,owner]);
+  Object.assign(inspector,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  const world = match.gameplayWorld(players,1,()=>false);
+  game.act(inspector,{kind:'open-shop',target:'vendor'},world);
+  game.act(inspector,{kind:'shop-buy',target:'xray',token:game.view(inspector,world).dialogue?.token},world);
+  expect(game.owns(inspector.id,'xray')).toBe(true);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(inspector.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fiscalizacaoParalela','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(inspector.id,[inspector.id,withoutOffice.id],10).politics!;
+  const renderAgenda = ()=>view().missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  match.setPlayerConnected(owner.id,false);
+  expect(renderAgenda()).toContain('cofre de outro parlamentar');
+  match.leave(owner.id,10);
+  expect(renderAgenda()).not.toContain('cofre de outro parlamentar');
+  expect(view().missions.active).toHaveLength(3);
+  expect(view().missions.completed).toEqual([]);
+  expect(view().progression.xp).toBe(0);
+});
+
+test('Flagrante de Gabinete is playable when only the photographer owns an office',()=>{
+  const photographer:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:445,y:143};
+  const visitor:Player = {...photographer,id:'bia',nick:'Bia',character:1};
+  const players = [photographer,visitor];
+  const match = new PlenaryMatch(1);
+  expect(match.start(photographer.id,players,0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[photographer]);
+  match.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,id=>game.hasOffice(id));
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(photographer.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['flagraGabinete','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = (now:number)=>match.view(photographer.id,players.map(({id})=>id),now).politics!;
+  const mission = view(10).missions.active.find(mission=>mission.kind==='flagraGabinete')!;
+  expect(renderToStaticMarkup(<MissionRow mission={mission}/>)).toContain('Fotografe um visitante dentro de um gabinete');
+
+  game.act(photographer,{kind:'photo'},match.gameplayWorld(players,100,()=>false));
+  expect(view(100).missions.completed).toEqual([]);
+  const point = game.officeSpawn(photographer.id)!;
+  Object.assign(photographer,point);
+  Object.assign(visitor,{x:point.x+6,y:point.y});
+  game.act(photographer,{kind:'photo'},match.gameplayWorld(players,3000,()=>false));
+  const completed = view(3000).missions.completed.find(mission=>mission.kind==='flagraGabinete')!;
+  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+  expect(view(3000).progression.xp).toBe(45);
+});
+
+test.each([true,false])('transfer progress follows the number of remaining distinct senders, available=%s',anotherSender=>{
+  const players:Player[] = (anotherSender ? ['Rafa','Bia','Caio','Duda'] : ['Rafa','Bia','Caio']).map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,x:445,y:143,
+  }));
+  const [recipient,credited,next] = players;
+  const match = new PlenaryMatch(1);
+  expect(match.start(recipient.id,players,0,()=>.9)).toBe(true);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(recipient.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['articulacao','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+
+  const view = (now:number)=>match.view(recipient.id,players.map(({id})=>id),now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind==='articulacao');
+  const pay = (sender:Player,now:number)=>match.politics(sender,{kind:'transfer',to:recipient.id,amount:1},players,now);
+  expect(active(0)?.current).toBe(0);
+  expect(pay(credited,1)).toBe(true);
+  expect(pay(credited,2)).toBe(true);
+  expect(active(2)?.current).toBe(1);
+  match.leave((anotherSender ? credited : next).id,3);
+
+  if (anotherSender) {
+    expect(renderToStaticMarkup(<MissionRow mission={active(3)!}/>)).toContain('1 / 2');
+    expect(pay(next,4)).toBe(true);
+    const completed = view(4).missions.completed.find(mission=>mission.kind==='articulacao')!;
+    expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
+    expect(view(4).progression.xp).toBe(30);
+  } else {
+    expect(active(3)).toBeUndefined();
+    expect(view(3).missions.active).toHaveLength(3);
+    expect(view(3).missions.completed).toEqual([]);
+    expect(view(3).progression.xp).toBe(0);
+  }
 });

@@ -22,7 +22,7 @@ import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money } from './politics';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 
@@ -239,7 +239,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       navigationRoot.render(<PhoneApps select={selectApp}/>);
     }
     const phase = view.phase;
-    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? decoration :
+    const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.length);
+    const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? [decoration,canRemoveDecoration] :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
       app==='Projetos' ? [view.project,view.outcomes] :
@@ -381,7 +382,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     if (decoration) {
       content = <DecorationCard decoration={decoration} ownId={ownId}
-        exploring={phase==='negotiation'} send={send}/>;
+        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send}/>;
     }
     const showMail = phone && app==='Correio';
     if (phone && app && !showMail) {
