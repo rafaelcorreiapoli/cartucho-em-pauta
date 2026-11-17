@@ -106,7 +106,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:'call'|'game'; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; pocketing?:boolean; cashInHand?:true; speed?:number; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; canSprint?:true; hpBonus?:number; attackBonus?:number; defenseBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 

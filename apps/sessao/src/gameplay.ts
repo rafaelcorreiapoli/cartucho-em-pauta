@@ -93,7 +93,8 @@ export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
 
 export const INVENTORY_SLOTS = 6;
-const phoneActions = ['call','answer','hangup','game-start','game-stop','game-turn'] as const;
+export type PhoneActivity = 'open'|'call'|'game';
+const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn'] as const;
 type PhoneActionKind = typeof phoneActions[number];
 
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','file','verify-document','store','recover','deliver',
@@ -110,7 +111,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'edit','call','answer','game-start','game-turn','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','phone-open','call','answer','game-start','game-turn','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean, voting=false) {

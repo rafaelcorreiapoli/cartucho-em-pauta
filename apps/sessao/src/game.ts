@@ -67,6 +67,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
   let players: Player[] = [];
   let groundItems: GroundItem[] = [];
   let decorations: Decoration[] = [];
+  let phoneInset = 0;
   let inLobby = true;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let negotiating = false;
@@ -108,6 +109,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
   class Plenary extends Phaser.Scene {
     private mapProgress!: Phaser.GameObjects.Graphics;
+    private phoneSignals!: Phaser.GameObjects.Graphics;
     private officeDoors!: Phaser.GameObjects.Graphics;
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
@@ -285,6 +287,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       this.officeDoors = this.add.graphics().setDepth(2);
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
+      this.phoneSignals = this.add.graphics().setDepth(HEIGHT+28);
       for (const office of privateOffices) {
         const [doorX,doorY,doorWidth,doorHeight] = office.door;
         this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
@@ -517,6 +520,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
       }
       this.mapProgress.clear();
+      this.phoneSignals.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
       if (!negotiating || channel?.kind!=='office-cash') this.safeFraction = 0;
       if (negotiating && channel?.kind==='office-cash') {
@@ -568,7 +572,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cssHeight = parent.clientHeight || 1;
       const density = camera.width/cssWidth;
       const normalZoom = Math.max(1.5,Math.min(cssWidth/550,cssHeight/290),cssHeight/(cssWidth<=680 ? 310 : 360));
-      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : normalZoom;
+      const roomOnRight = Math.max(0,cssWidth-phoneInset);
+      const phoneZoom = phoneInset ? Math.min(normalZoom,Math.max(.95,roomOnRight/120)) : normalZoom;
+      const cssZoom = inSession ? plenaryZoom(normalZoom,cssWidth,cssHeight) : phoneZoom;
       const zoom = cssZoom*density;
       const resolution = Math.max(3,Math.ceil(zoom));
       if (resolution!==this.textResolution) {
@@ -701,8 +707,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
+        const phone = latest.phone;
+        if (phone && !downed) {
+          const signalY = spriteY-(latest.exposed?.length ? 55 : 43);
+          for (const radius of [2.5,4.5,6.5]) {
+            this.phoneSignals.lineStyle(1.15,0xbbf4d8).beginPath()
+              .arc(spriteX-3,signalY,radius,-1,1).strokePath();
+          }
+        }
         const name = player.npc ? NAMES[character] ?? player.nick : player.nick;
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : player.phone ? `${player.phone==='game' ? '🎮' : '☎'} ${name}` : name);
+        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : phone==='game' ? `🎮 ${name}` : phone==='call' ? `☎ ${name}` : name);
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
@@ -751,7 +765,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
             camera.centerOn(plenaryCameraCenter.x,plenaryCameraCenter.y);
-          } else camera.centerOn(x,y);
+          } else {
+            const offset = phoneInset ? Math.max(0,phoneInset+Math.min(110,roomOnRight/2)-cssWidth/2) : 0;
+            camera.centerOn(x-offset/cssZoom,y);
+          }
           for (const part of [view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
@@ -858,6 +875,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
+    setPhoneInset(width:number) { phoneInset = width; },
     clearPrivateVision() { plenaryView = undefined; },
     setPlenaryView(view:PlenaryView) {
       if (view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined) {

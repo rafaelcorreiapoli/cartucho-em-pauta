@@ -43,3 +43,23 @@ test('only connected, present players in articulation receive bounded mission ti
   phone.tick(world,false);
   expect(events.filter(event=>event.type==='call-time')).toHaveLength(2);
 });
+
+test('the open phone is visible until the screen closes, the player leaves or articulation ends',()=>{
+  const phone = new PhoneSession();
+  const player:Player = {id:'a',nick:'Alice',character:0,x:140,y:146,direction:0,moving:false};
+  const world = {players:[player],now:10,voice:()=>true,publish:()=>{}};
+  phone.act(player,{kind:'phone-open'},world);
+  expect(phone.activity(player.id)).toBe('open');
+  phone.act(player,{kind:'game-start'},world);
+  expect(phone.activity(player.id)).toBe('game');
+  phone.act(player,{kind:'game-stop'},world);
+  expect(phone.activity(player.id)).toBe('open');
+  phone.act(player,{kind:'phone-close'},world);
+  expect(phone.activity(player.id)).toBeUndefined();
+  phone.act(player,{kind:'phone-open'},world);
+  phone.tick(world,false);
+  expect(phone.activity(player.id)).toBeUndefined();
+  phone.act(player,{kind:'phone-open'},world);
+  phone.leave(player,world);
+  expect(phone.activity(player.id)).toBeUndefined();
+});

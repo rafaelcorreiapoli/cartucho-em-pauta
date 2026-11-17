@@ -807,7 +807,10 @@ button.item-tile:active { transform: translateY(3px); }
 }
 
 #gameplay-dialog[data-mode="phone"] {
-  width: min(368px, calc((100dvh - 2rem) * 9 / 16), calc(100vw - 1.5rem));
+  inset-inline-start: clamp(.65rem, 2vw, 2rem);
+  inset-inline-end: auto;
+  margin-inline: 0;
+  width: min(368px, calc((100dvh - 2rem) * 9 / 16), 68vw);
   aspect-ratio: 9 / 16;
   overflow: hidden;
   display: grid;
@@ -821,12 +824,13 @@ button.item-tile:active { transform: translateY(3px); }
   box-shadow: 0 0 0 2px #5e6064, 0 18px 60px #000c;
 }
 #gameplay-dialog[data-mode="phone"]:not([open]) { display: none; }
+#gameplay-dialog[data-mode="phone"]::backdrop { background: transparent; }
 @media (prefers-reduced-motion: no-preference) {
   #gameplay-dialog[data-mode="phone"][open] { animation: phone-slide-in 320ms cubic-bezier(.2,.75,.3,1) both; }
 }
 @keyframes phone-slide-in {
-  from { transform: translateY(100dvh); }
-  to { transform: translateY(0); }
+  from { transform: translateX(-115%); }
+  to { transform: translateX(0); }
 }
 #gameplay-dialog[data-mode="phone"]::before {
   content: "";

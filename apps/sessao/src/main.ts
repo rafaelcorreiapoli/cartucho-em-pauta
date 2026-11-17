@@ -224,7 +224,7 @@ async function connect(join: () => Promise<Room>) {
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
         ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
-      ]));
+      ]),width=>game?.setPhoneInset(width));
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
       audio.stationClick();
@@ -415,7 +415,7 @@ async function connect(join: () => Promise<Room>) {
       game?.update(players);
       if (!matchRunning) characterPicker.render(players);
     });
-    joined.onReconnect(() => { joined.send('mail-read'); suppressXpEffect = true; progression.reconnect(); if (voice?.active) joined.send('voice-join'); });
+    joined.onReconnect(() => { joined.send('mail-read'); suppressXpEffect = true; progression.reconnect(); gameplay.restorePhoneActivity(); if (voice?.active) joined.send('voice-join'); });
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
