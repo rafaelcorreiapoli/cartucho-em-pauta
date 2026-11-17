@@ -28,5 +28,7 @@ class AttributesSmokeRoom extends SessionRoom {
   }
 }
 
-await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(AttributesSmokeRoom)}})
-  .listen(2609,'127.0.0.1');
+await defineServer({
+  transport:new BunWebSockets(),rooms:{plenary:defineRoom(AttributesSmokeRoom)},
+  express:app=>{ app.get('/health',(_request,response)=>response.sendStatus(200)); },
+}).listen(Number(process.env.PORT ?? 2609),'127.0.0.1');

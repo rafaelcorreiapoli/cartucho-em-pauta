@@ -26,7 +26,7 @@ export function cameraSees(origin:Motion,subject:Motion) {
   return Math.hypot(subject.x-origin.x,subject.y-origin.y)<=spyRules.range && !obstacleBetween(origin,subject);
 }
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
-export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number};
+export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number; blocked?:string};
 export type SpyView = {channels:SpyChannel[]; options:SpyOption[]; selected?:number; audio?:number; muted:boolean; progress?:number};
 
 export type SpyCameraFrame = PhotoScene & {channel:number};
