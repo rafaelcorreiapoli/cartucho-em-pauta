@@ -50,3 +50,22 @@ test('the dossier keeps evidence private until a nearby offer clears and the buy
   expect(view(rafa,8,players).politics!.ledger).toContainEqual(proof);
   expect(render(press,8,[rafa,bia,press])).not.toContain(`Documento ${proof.id} · Rodada 1`);
 });
+
+test('the dossier lists public records separately from private evidence',()=>{
+  const rafa:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
+  const bia = {...rafa,id:'b',nick:'Bia'};
+  const players = [rafa,bia];
+  const match = new PlenaryMatch(1);
+  expect(match.start(rafa.id,players,0,()=>0)).toBe(true);
+  const render = ()=>{
+    const view = match.view(bia.id,players.map(({id})=>id),3);
+    return renderToStaticMarkup(<Dossier model={dossierModel(bia.id,view,players)!} send={()=>{}}/>);
+  };
+  match.politics(rafa,{kind:'transfer',to:bia.id,amount:2,clandestine:true},players,1);
+  expect(render()).toContain('Nenhum registro público.');
+  match.politics(rafa,{kind:'transfer',to:bia.id,amount:1,clandestine:false},players,2);
+  const [privateEvidence,publicRecords] = render().split('<summary>Registro público</summary>');
+  expect(privateEvidence).toContain('R$ 20 mil · pagamento clandestino.');
+  expect(publicRecords).toContain('Rafa → Bia · R$ 10 mil · pagamento público.');
+  expect(publicRecords).not.toContain('R$ 20 mil');
+});

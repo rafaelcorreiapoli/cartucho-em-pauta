@@ -19,5 +19,8 @@ class SecurityLayoutRoom extends SessionRoom {
   }
 }
 
-await defineServer({transport:new BunWebSockets(),rooms:{plenary:defineRoom(SecurityLayoutRoom)}})
+await defineServer({
+  transport:new BunWebSockets(),rooms:{plenary:defineRoom(SecurityLayoutRoom)},
+  express:app=>{ app.get('/health',(_request,response)=>response.sendStatus(200)); },
+})
   .listen(Number(process.env.PORT ?? 26874),'127.0.0.1');

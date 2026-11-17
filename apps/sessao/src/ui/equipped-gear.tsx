@@ -71,8 +71,8 @@ function EquippedTile({item,activate}:{item:NonNullable<GearState['slots'][numbe
     <GearPortrait kind={item.kind}/>
     <span className="equipped-gear-footer">
       <span className="equipped-gear-timer" aria-hidden="true" hidden={!item.time}>{item.time}</span>
-      {item.hint ? <kbd className="equipped-gear-key" aria-hidden="true">{item.hint==='Space' ? 'Espaço' : item.hint.toUpperCase()}</kbd> : null}
     </span>
+    {item.hint && <kbd className="action-key" aria-hidden="true">{item.hint==='Space' ? 'Espaço' : item.hint.toUpperCase()}</kbd>}
   </Tile>;
 }
 
