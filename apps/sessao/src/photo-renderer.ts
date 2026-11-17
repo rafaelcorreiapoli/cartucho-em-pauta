@@ -4,24 +4,29 @@ import { equipment } from './equipment';
 import type Phaser from 'phaser';
 import { characterArt, downedArt } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
-import { HEIGHT, localPerception, WIDTH } from './map';
+import { HEIGHT, VISION_RADIUS, WIDTH } from './map';
+import { wallVision } from './visibility';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type Decoration, type Photo, type PhotoScene } from './photography';
 
 export const itemSymbols:Partial<Record<ObjectKind,string>> = {vip:'★',binoculars:equipment.binoculars.symbol,voiceModulator:equipment.voiceModulator.symbol,vest:equipment.vest.symbol};
 
+// Keep map text and sprites sharp at photo zoom within a 4096px texture.
+const MAP_SCALE = 3;
+
 export class PhotoRenderer {
   private map?:HTMLImageElement;
-  private fog = document.createElement('canvas');
 
   constructor(private textures:Phaser.Textures.TextureManager) {}
 
   loadMap(staticObjects:Phaser.GameObjects.GameObject[]) {
-    const texture = this.textures.addDynamicTexture('photo-map',WIDTH,HEIGHT);
-    texture?.draw(staticObjects).render();
-    texture?.snapshot(image=>{
+    const texture = this.textures.addDynamicTexture('photo-map',WIDTH*MAP_SCALE,HEIGHT*MAP_SCALE);
+    if (!texture) return;
+    texture.camera.setOrigin(0,0).setZoom(MAP_SCALE);
+    texture.draw(staticObjects).render();
+    texture.snapshot(image=>{
       if (image instanceof HTMLImageElement) this.map = image;
-      this.textures.remove('photo-map');
     });
+    this.textures.remove('photo-map');
   }
 
   draw(canvas:HTMLCanvasElement, scene:PhotoScene, scale=4) {
@@ -34,24 +39,21 @@ export class PhotoRenderer {
     ctx.scale(scale,scale);
     ctx.fillStyle = '#101d19';
     ctx.fillRect(0,0,width,height);
-    ctx.drawImage(this.map,-left,-top);
+    ctx.drawImage(this.map,-left,-top,WIDTH,HEIGHT);
     if (scene.camera) {
       ctx.fillStyle = '#334e42';
       for (const [x,y,w,h] of scene.camera.barriers ?? []) ctx.fillRect(x-left,y-top,w,h);
+    } else {
+      const x = scene.center.x-left, y = scene.center.y-top;
+      ctx.fillStyle = '#081710a8';
+      ctx.beginPath();
+      ctx.rect(0,0,width,height);
+      const [first,...edge] = wallVision(scene.center,VISION_RADIUS);
+      ctx.moveTo(x+first.x,y+first.y);
+      for (const point of edge) ctx.lineTo(x+point.x,y+point.y);
+      ctx.closePath();
+      ctx.fill('evenodd');
     }
-    this.fog.width = Math.ceil(width/4);
-    this.fog.height = Math.ceil(height/4);
-    const mask = this.fog.getContext('2d')!;
-    mask.fillStyle = '#081710a8';
-    for (let y=0;!scene.camera && y<this.fog.height;y++) {
-      for (let x=0;x<this.fog.width;x++) {
-        const point = {x:left+x*4+2,y:top+y*4+2};
-        if (!localPerception(scene.center,point).visible) mask.fillRect(x,y,1,1);
-      }
-    }
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.fog,0,0,width,height);
-    ctx.imageSmoothingEnabled = true;
 
     const item = (kind:ObjectKind,x:number,y:number,size:number) => {
       const symbol = itemSymbols[kind];
