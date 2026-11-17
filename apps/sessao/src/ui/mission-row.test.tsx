@@ -2426,3 +2426,84 @@ test.each([0,1])('a final hearing preserves fire missions only if articulation r
   expect(renderToStaticMarkup(<MissionRow mission={missions.completed[0]} done/>)).toContain('data-done="true"');
   expect(progression.xp).toBe(crisis.reduce((total,kind)=>total+missionReward(kind).xp,0));
 });
+
+test.each([0,1])('power missions account for the blocked repair window during the last hearing (%s ms)', spare=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[character===1 ? 1 : 0],
+  }));
+  const [host,peer,infiltrator] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  economy.changePopularity(host.id,20);
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const deadline = ELECTION_RULES.matchDuration;
+  const resumeAt = deadline-powerRules.repairMs-spare;
+  const hearingAt = resumeAt-HEARING_MS;
+  expect(match.actOnPower(infiltrator,{kind:'sabotage',panel:0},hearingAt-2)).toBe('Energia cortada.');
+  match.actOnPower(host,{kind:'repair',panel:0},hearingAt-1);
+  match.actOnPower(peer,{kind:'repair',panel:1},hearingAt-1);
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const title = 'Conclua o reparo de uma pane elétrica junto a outro jogador';
+  const markup = (now:number)=>view(now).politics!.missions.active.map(mission=>renderToStaticMarkup(<MissionRow mission={mission}/>)).join('');
+  expect(markup(hearingAt-1)).toContain(title);
+  Object.assign(host,stations.panel);
+  match.politics(host,{kind:'hearing',target:infiltrator.id},players,hearingAt);
+  expect(match.phase).toBe('hearing');
+  expect(view(hearingAt).outage?.paused).toBe(true);
+  expect(markup(hearingAt).includes(title)).toBe(spare>0);
+  expect(markup(hearingAt).includes('Ajude a resolver uma crise')).toBe(spare>0);
+  match.advancePower(hearingAt,id=>players.find(player=>player.id===id));
+  expect(view(hearingAt).outage?.occupied).toEqual([false,false]);
+  expect(view(hearingAt).politics!.progression.xp).toBe(0);
+  if (!spare) return;
+
+  match.advance(resumeAt);
+  Object.assign(host,powerPanels[0]);
+  match.actOnPower(host,{kind:'repair',panel:0},resumeAt);
+  match.actOnPower(peer,{kind:'repair',panel:1},resumeAt);
+  match.advancePower(resumeAt+powerRules.repairMs,id=>players.find(player=>player.id===id));
+  const done = view(deadline-1).politics!;
+  expect(done.missions.completed.map(mission=>mission.kind)).toEqual(['manutencaoEmergencia','heroiInesperado']);
+  expect(done.progression.xp).toBe(100);
+});
+
+test('a project countdown removes outage missions before the ballot blocks the final repair window',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    nick,id:nick,character,direction:0,moving:false,...powerPanels[0],
+  }));
+  const [host,,infiltrator] = players;
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy');
+  Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT-1);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  const {agenda} = Reflect.get(economy,'accounts').get(host.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['manutencaoEmergencia','heroiInesperado','cafe','passeio','selfieSolo']);
+  const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS-powerRules.repairMs;
+  const countdownAt = voteAt-projectRules.countdownSeconds*1000;
+  const lastStart = countdownAt-powerRules.repairMs-1;
+  publishProjectFiling(match,host,0,voteAt-projectRules.debateMs);
+  Reflect.set(agenda,'missions',[]);
+  expect(match.actOnPower(infiltrator,{kind:'sabotage',panel:0},lastStart)).toBe('Energia cortada.');
+  const view = (now:number)=>match.view(host.id,ids,now);
+  const actives = (now:number)=>view(now).politics!.missions.active.map(mission=>mission.kind);
+  expect(actives(lastStart)).toContain('manutencaoEmergencia');
+  match.advance(lastStart+1);
+  expect(actives(lastStart+1)).not.toContain('manutencaoEmergencia');
+  match.advance(countdownAt);
+  expect(view(countdownAt).ballotCountdown).toBe(projectRules.countdownSeconds);
+  expect(actives(countdownAt)).not.toContain('manutencaoEmergencia');
+  expect(actives(countdownAt)).not.toContain('heroiInesperado');
+  match.advance(voteAt);
+  expect(match.phase).toBe('ballot');
+  expect(view(voteAt).outage?.paused).toBe(true);
+  expect(view(voteAt).politics!.progression.xp).toBe(0);
+});
