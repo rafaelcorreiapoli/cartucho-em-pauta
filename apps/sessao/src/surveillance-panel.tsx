@@ -1,3 +1,5 @@
+import type {ShortcutEntry} from './action-shortcuts';
+import { createRef } from 'react';
 import { flushSync } from 'react-dom';
 import { SurveillanceDialogContent } from './ui/surveillance-dialog';
 import { createRoot } from 'react-dom/client';
@@ -40,6 +42,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
   const pageSize = 4;
   const devices = [{kind:'spyCamera',label:'Câmeras',icon:'camera'},{kind:'wiretap',label:'Escutas',icon:'mic'}] as const;
   let editing:number|undefined;
+  const nameInput = createRef<HTMLInputElement>();
 
   function update(opening=false) {
     if (!dialog.open && !opening) return;
@@ -55,10 +58,18 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     page = Math.min(page,last);
     let shortcut = 0;
     const actions = new Map<string,()=>void>();
+    const entries:ShortcutEntry[] = [{name:'Fechar vigilância',activate:()=>dialog.close()}];
+    function register(name:string,activate:()=>void,key?:string) {
+      entries.push({name,activate});
+      if (key) actions.set(key,activate);
+      return activate;
+    }
+    const previous = () => {page--;update();};
+    const nextPage = () => {page++;update();};
     const channelList = <>
       <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
         {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
-          onClick={()=>{device = tab.kind;page = 0;update();}}>
+          onClick={register(tab.label,()=>{device = tab.kind;page = 0;update();})}>
           <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+tab.icon}/></svg>
           {tab.label} <small>{allChannels.filter(channel=>channel.kind===tab.kind).length}</small>
         </button>)}
@@ -67,7 +78,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       {channels.slice(page*pageSize,(page+1)*pageSize).map(channel=>{
         const key = channel.removed ? undefined : String(++shortcut);
         const openChannel = () => send({kind:'open',channel:channel.id});
-        if (key) actions.set(key,openChannel);
+        if (key) register(channel.name,openChannel,key);
         const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
@@ -80,19 +91,24 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       })}
       {last>0 && <div className="flex items-center gap-2">
         <button type="button" className="hud-button hud-button--secondary" disabled={page===0}
-          aria-label="Página anterior" onClick={()=>{page--;update();}}>‹</button>
+          aria-label="Página anterior" onClick={page>0 ? register('Página anterior',previous) : undefined}>‹</button>
         <span>{page+1} / {last+1}</span>
         <button type="button" className="hud-button hud-button--secondary" disabled={page===last}
-          aria-label="Próxima página" onClick={()=>{page++;update();}}>›</button>
+          aria-label="Próxima página" onClick={page<last ? register('Próxima página',nextPage) : undefined}>›</button>
       </div>}
     </>;
     const closeEditor = () => { editing = undefined; update(); };
     const action = (label:string,run:()=>void) => {
       const key = String(++shortcut);
-      actions.set(key,run);
+      register(label,run,key);
       return <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
         {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
       </button>;
+    };
+    const saveName = () => {
+      if (!channel || !nameInput.current) return;
+      send({kind:'rename',channel:channel.id,name:nameInput.current.value});
+      closeEditor();
     };
     const monitor = <>
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
@@ -104,11 +120,9 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
         {action('Fechar canal',()=>send({kind:'close-channel',channel:channel.id}))}
         {editing===channel.id && <form key={channel.id} onSubmit={event=>{
           event.preventDefault();
-          const name = String(new FormData(event.currentTarget).get('name') ?? '');
-          send({kind:'rename',channel:channel.id,name});
-          closeEditor();
+          saveName();
         }}>
-          <input name="name" defaultValue={channel.name} maxLength={32} aria-label="Nome do canal" autoFocus
+          <input ref={nameInput} name="name" defaultValue={channel.name} maxLength={32} aria-label="Nome do canal" autoFocus
             onFocus={event=>event.currentTarget.select()} onKeyDown={event=>{
               if (event.key!=='Escape') return;
               event.preventDefault();
@@ -118,7 +132,11 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
         </form>}
       </>}
     </>;
-    root.render(<SurveillanceDialogContent channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
+    if (channel && editing===channel.id) {
+      register('Nome do canal',()=>nameInput.current?.focus());
+      register('Salvar',saveName);
+    }
+    root.render(<SurveillanceDialogContent entries={entries} channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
       camera={selected && {name:selected.name,attach:attachViewport}}/>);
   }
 

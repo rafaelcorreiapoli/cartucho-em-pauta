@@ -59,8 +59,19 @@ async page => {
     if (!key) throw Error('Controle da vigilância sem atalho');
     await page.keyboard.press(key);
   }
+  async function usePalette(button,label) {
+    await button.evaluate(control=>control.setAttribute('aria-label','Controle original oculto do F2'));
+    await page.keyboard.press('F2');
+    const palette = page.locator('#action-shortcuts');
+    const action = palette.getByRole('button',{name:new RegExp(label)});
+    if (!await action.count()) await page.keyboard.press('ArrowRight');
+    await action.click();
+    await palette.waitFor({state:'hidden'});
+  }
   async function openCamera(name,previousCanvas) {
-    await useShortcut(surveillance.getByRole('button',{name:new RegExp(name)}));
+    const button = surveillance.getByRole('button',{name:new RegExp(name)});
+    if (previousCanvas) await usePalette(button,name);
+    else await useShortcut(button);
     await surveillance.getByRole('heading',{name,exact:true}).waitFor();
     if (previousCanvas) await page.waitForFunction(node=>!node.isConnected,previousCanvas);
     await page.waitForFunction(()=>{
@@ -76,8 +87,12 @@ async page => {
   await openCamera('Câmera Cafezinho');
   const first = await canvas.elementHandle();
   await openCamera('Câmera Biblioteca',first);
-  await useShortcut(surveillance.getByRole('button',{name:'Fotografar',exact:true}));
+  await usePalette(surveillance.getByRole('button',{name:'Fotografar',exact:true}),'Fotografar');
   await page.getByText('Foto guardada no álbum.',{exact:true}).waitFor();
+  await usePalette(surveillance.getByRole('button',{name:'Renomear',exact:true}),'Renomear');
+  await surveillance.getByRole('textbox',{name:'Nome do canal'}).fill('Biblioteca QA');
+  await usePalette(surveillance.getByRole('button',{name:'Salvar',exact:true}),'Salvar');
+  await surveillance.getByRole('heading',{name:'Biblioteca QA',exact:true}).waitFor();
   await useShortcut(surveillance.getByRole('button',{name:'Fechar canal'}));
   await viewport.waitFor({state:'detached'});
   await openCamera('Câmera Cafezinho');
