@@ -573,6 +573,7 @@
 
 .station-key {
   position: absolute;
+  pointer-events: none;
   top: .45rem;
   right: .45rem;
   display: grid;
@@ -587,7 +588,6 @@
   font: 850 .82rem/1 var(--party-display);
 }
 .station-key:empty { display: none; }
-#stations .hud-button:has(.station-key:not(:empty)) { padding-top: 1.25rem; }
 
 .poll-label { align-items: baseline; }
 .poll-label span { flex: 1; overflow-wrap: anywhere; }
@@ -1001,9 +1001,9 @@ button.item-tile:active { transform: translateY(3px); }
 .snake-pad button { min-height: 36px; border: 1px solid #4e6153; border-radius: 5px; background: #1a2920; color: #d8f2d4; cursor: pointer; }
 
 .phone-app-icon { position: relative; }
-.phone-app-icon .action-key { position: absolute; inset: 3px 3px auto auto; }
+.phone-app-icon .action-key { inset: 3px 3px auto auto; }
 .phone-app-content { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .55rem; }
-.phone-app-content .phone-contact > kbd { position: absolute; inset: 5px 5px auto auto; }
+.phone-app-content .phone-contact > .action-key { inset: 5px 5px auto auto; }
 
 #gameplay-dialog[data-mode="phone"] { grid-template-rows: auto minmax(0,1fr) auto; }
 #gameplay-dialog[data-mode="phone"] > header { grid-row: 1; border-bottom: 1px solid #ffffff14; }
@@ -1048,7 +1048,6 @@ button.item-tile:active { transform: translateY(3px); }
 .camera-gallery,.camera-selfie { display: grid; place-items: center; gap: 3px; min-width: 46px; padding: 5px; border: 0; border-radius: 9px; }
 .camera-shutter { position: relative; display: grid; place-items: center; width: 54px; height: 54px; border: 2px solid #fff; border-radius: 50%; }
 .camera-shutter span { width: 40px; height: 40px; border-radius: 50%; background: #f04449; }
-.camera-shutter .action-key { position: absolute; margin: 0; }
 .camera-shutter:active span { transform: scale(.85); }
 .phone-pix { display: grid; align-content: start; width: 100%; gap: .55rem; }
 .phone-pix h4,.phone-pix p { margin: 0; }

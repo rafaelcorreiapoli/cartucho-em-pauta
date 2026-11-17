@@ -24,7 +24,7 @@ type RoomActions = {
   election:ElectionAction;
   'mail-publish':{subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};
   'mail-examine':{notice:number};
-  'complaint-submit':{id:number;photo?:number};
+  'complaint-submit':{id:number;photo?:number} | {target:string;photo:number};
   'plenary-action':{action:Action};
   'bill-intent':{vote:Vote|'clear'};
   'bill-vote':{vote:BillVote};

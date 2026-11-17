@@ -82,7 +82,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
               <span>{invested[attribute]}</span>
               <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
                 aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
-                onClick={()=>{ selected = attribute; renderAttributes(); }}>+1 <kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
+                onClick={()=>{ selected = attribute; renderAttributes(); }}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
             </section>;
           })}
         </div></section>
@@ -98,7 +98,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         </div></section>
       </div>
       <div className="progression-buttons"><button id="confirm-attribute" type="button" className="hud-button"
-        aria-keyshortcuts="3" disabled={!canSpend || !selected} onClick={confirmAttribute}>Confirmar +1 <kbd className="action-key" aria-hidden="true">3</kbd></button></div>
+        aria-keyshortcuts="3" disabled={!canSpend || !selected} onClick={confirmAttribute}><span>Confirmar +1</span><kbd className="action-key" aria-hidden="true">3</kbd></button></div>
     </>));
   }
 

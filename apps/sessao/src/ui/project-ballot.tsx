@@ -91,7 +91,7 @@ export function ProjectBallot({round,project,proposer,remaining,yes,no,billQuoru
         </div>
         {choices.map(choice=><button key={choice.vote} type="button" className="project-vote-button" data-choice={choice.vote}
           data-vote={choice.vote} aria-keyshortcuts={choice.key} aria-pressed={vote===choice.vote} disabled={!eligible}
-          onClick={()=>cast(choice.vote)}><b aria-hidden="true">{choice.symbol}</b>{choice.action}<kbd>{choice.key}</kbd></button>)}
+          onClick={()=>cast(choice.vote)}><b aria-hidden="true">{choice.symbol}</b>{choice.action}<kbd className="action-key" aria-hidden="true">{choice.key}</kbd></button>)}
       </footer>
     </div>
   </section>;

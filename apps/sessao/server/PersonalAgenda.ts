@@ -168,7 +168,7 @@ export class PersonalAgenda {
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
     private reward:(reward:MissionReward, completed:Mission[])=>void) {
-    const deck = Object.keys(agendas) as Agenda[];
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria');
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
     const activity = startingActivities[Math.floor(random()*startingActivities.length)];
@@ -214,7 +214,8 @@ export class PersonalAgenda {
     this.cannotVote = !canVote;
     this.ballotsLeft = ballotsLeft;
     this.missions = this.missions.filter(mission=>{
-      if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' || mission.kind==='chamadasUrgentes') {
+      if (mission.kind==='articulacao' || mission.kind==='doisPix' || mission.kind==='visitaDoisGabinetes' ||
+          mission.kind==='chamadasUrgentes' || mission.kind==='selfie' || mission.kind==='fatias') {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
@@ -453,6 +454,12 @@ export class PersonalAgenda {
     }
     const action = kind==='campanhaUltimaHora' ? 'propaganda' : kind;
     if ((action==='propaganda' || action==='discurso' || action==='emenda') && metrics.canAgendaAction?.(action)===false) return false;
+    if (kind==='bandejaGourmet') {
+      // Coffee can be collected at the station and carried back to the office.
+      const hasSecondFood = (Object.keys(foods) as (keyof typeof foods)[]).some(food=>
+        food!=='coffee' && (metrics.owns?.(food) || foods[food].price<=metrics.wallet));
+      if (!hasSecondFood) return false;
+    }
     const food = consumableRequirements[kind as keyof typeof consumableRequirements];
     if (food && metrics.wallet<(food==='firstAidKit' ? firstAidKit.price : foods[food].price) && !metrics.owns?.(food)) {
       const pizza = food==='pizza' ? metrics.installedPizza?.() : undefined;

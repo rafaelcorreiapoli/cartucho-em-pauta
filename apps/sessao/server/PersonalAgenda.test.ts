@@ -1558,3 +1558,34 @@ test('phone time from separate calls cannot complete Debate Democrático',()=>{
   elapse(1);
   expect(rewards).toEqual([35]);
 });
+
+test('Bandeja Gourmet needs access to a second distinct food beyond free coffee',()=>{
+  const draw = (wallet:number,owned?:'coffee'|'coxinha',hasOffice=true)=>{
+    const state = {...metrics,wallet,owns:(kind:string)=>kind===owned,hasOffice:()=>hasOffice};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['bandejaGourmet','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3,0);
+    return agenda.hasActive('bandejaGourmet');
+  };
+  expect(draw(0)).toBe(false);
+  expect(draw(0,'coffee')).toBe(false);
+  expect(draw(0,'coxinha')).toBe(true);
+  expect(draw(.5)).toBe(true);
+  expect(draw(.5,undefined,false)).toBe(false);
+});
+
+test('a pizza-serving mission preserves credited guests and requires enough new guests',()=>{
+  const guests = ['b','c','d'].map(id=>({id,name:id}));
+  const agenda = new PersonalAgenda(metrics,4,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['fatias','cafe','passeio','selfieSolo']);
+  agenda.updateEligibility(metrics,4,true,3,0,guests);
+  expect(agenda.hasActive('fatias')).toBe(true);
+  recordAgendaEvent(agenda,event('slice',{kind:'pizza',target:'b',item:1}));
+  agenda.updateEligibility(metrics,2,true,3,0,[guests[1]]);
+  expect(agenda.view(metrics).active.find(mission=>mission.kind==='fatias')?.current).toBe(1);
+  agenda.updateEligibility(metrics,1,true,3,0,[]);
+  expect(agenda.hasActive('fatias')).toBe(false);
+  expect(agenda.view(metrics).completed).toEqual([]);
+});

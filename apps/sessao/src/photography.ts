@@ -10,7 +10,7 @@ export const PHOTO_LOOK_UP = 19;
 export const PHOTO_LIMIT = 12;
 export const ROOM_PHOTO_LIMIT = 144;
 export type PhotoPerson = Contact & Motion & {
-  character:number; direction:number; moving?:boolean; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:import('./gameplay').PhoneActivity; office?:Office;
+  character:number; direction:number; moving?:boolean; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:import('./gameplay').PhoneActivity; gameSession?:number; office?:Office;
 };
 export type Decoration = Motion & {
   id:number; kind:'portrait'|'vip'|'pizza'|Extract<OfficeGood,'officeTv'|'officeRug'|'officeChair'>; owner:Contact; character:number; marked?:boolean; slices?:number; privateOffice?:string;
