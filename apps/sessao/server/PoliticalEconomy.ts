@@ -59,13 +59,9 @@ export class PoliticalEconomy {
       const agenda = new PersonalAgenda(metrics,contacts.length,random,(reward,completed)=>{
         const account = this.accounts.get(contact.id);
         if (!account) return;
-        const before = progression.view();
-        progression.earn(reward.xp);
-        const after = progression.view();
+        const after = this.earnXp(contact.id,reward.xp)!;
         console.info(JSON.stringify({event:'mission-xp',playerId:contact.id,matchId:after.matchId,
           missions:completed.map(({id,kind})=>({id,kind})),amount:reward.xp,xp:after.xp}));
-        if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:contact.id,
-          matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
         const cash = Math.min(this.rewardReserve,reward.cash ?? 0);
         this.rewardReserve -= cash;
         this.credit(account,cash);
@@ -161,6 +157,23 @@ export class PoliticalEconomy {
     account.wallet = Math.round((account.wallet-amount)*10)/10;
     this.rewardReserve = Math.round((this.rewardReserve+amount)*10)/10;
     this.reserveFees = Math.round((this.reserveFees+amount)*10)/10;
+    return true;
+  }
+
+  earnXp(id:string,amount:number) {
+    const progression = this.accounts.get(id)?.progression;
+    if (!progression) return;
+    const before = progression.view();
+    progression.earn(amount);
+    const after = progression.view();
+    if (after.level>before.level) console.info(JSON.stringify({event:'level-up',playerId:id,
+      matchId:after.matchId,from:before.level,to:after.level,points:after.level-before.level}));
+    return after;
+  }
+
+  settleBet(id:string,stake:number,payout:number,maxPayout:number) {
+    if (Math.round((this.rewardReserve+stake)*10)<Math.round(maxPayout*10) || !this.spend(id,stake)) return false;
+    if (payout) this.rewardFromReserve(id,payout);
     return true;
   }
 

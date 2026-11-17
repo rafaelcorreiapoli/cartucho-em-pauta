@@ -1011,13 +1011,13 @@ button.item-tile:active { transform: translateY(3px); }
 .album-tabs { display: flex; gap: .45rem; width: 100%; }
 .album-tabs button[aria-pressed="true"] { color: #f5e2ff; background: #31243d; border-color: #a990c4; }
 
-.phone-snake { display: grid; gap: .45rem; width: 100%; }
-.phone-snake canvas { width: min(100%,240px); justify-self: center; border: 1px solid #53765b; border-radius: 6px; }
-.snake-readout { display: flex; justify-content: space-between; gap: .45rem; font: 650 .74rem/1.2 system-ui,sans-serif; color: #aef49b; }
-.snake-pad { display: grid; grid-template-columns: repeat(3,34px); justify-content: center; gap: 3px; }
+.phone-snake canvas { display: block; width: 100%; height: auto; border: 1px solid #53765b; border-radius: 6px; }
+.snake-readout { display: flex; align-items: baseline; justify-content: space-between; gap: .65rem; font: 650 .74rem/1.2 system-ui,sans-serif; color: #aef49b; }
+.snake-readout [role="status"] { text-align: right; }
+.snake-pad { display: grid; grid-template-columns: repeat(3,40px); justify-content: center; gap: .3rem; }
 .snake-pad button:first-child { grid-column: 2; }
 .snake-pad button:nth-child(2) { grid-column: 1; }
-.snake-pad button { min-height: 29px; border: 1px solid #4e6153; border-radius: 5px; background: #1a2920; color: #d8f2d4; cursor: pointer; }
+.snake-pad button { min-height: 36px; border: 1px solid #4e6153; border-radius: 5px; background: #1a2920; color: #d8f2d4; cursor: pointer; }
 
 .phone-app-icon { position: relative; }
 .phone-app-icon .action-key { position: absolute; inset: 3px 3px auto auto; }
@@ -1083,11 +1083,22 @@ button.item-tile:active { transform: translateY(3px); }
 .camera-selfie-portrait .phone-contact-face { --portrait-size: clamp(86px, 18vh, 150px); background-color: transparent; }
 .mail-attachment-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .4rem; margin-block: .5rem; }
 .mail-attachment-grid button { display: grid; justify-items: center; gap: .35rem; white-space: normal; overflow-wrap: anywhere; }
-.phone-minigame { display: grid; width: 100%; align-content: start; gap: .65rem; }
+.phone-minigame {
+  display: grid;
+  width: min(100%, 20rem);
+  align-self: flex-start;
+  margin: .3rem auto .65rem;
+  padding: .8rem;
+  gap: .8rem;
+  border-radius: 14px;
+}
+.phone-minigame.phone-snake { width: min(100%, calc(240px + 1.6rem)); }
+.phone-minigame > .hud-button { width: 100%; justify-content: center; }
+.phone-minigame .game-reward { color: #d7dbe2; text-align: center; font-size: .75rem; }
 .phone-minigame header { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
 .phone-minigame p { margin: 0; }
 .phone-minigame header strong { white-space: nowrap; color: #ffdc92; }
-.candy-game { --candy-gap: 4px; }
+.candy-game { --candy-gap: .3rem; background: #1b1521; }
 .phone-candy-board { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: var(--candy-gap); }
 .phone-candy-board button { position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 0;
   border: 1px solid #69446b; border-radius: 9px; background: linear-gradient(145deg,#492747,#251b33); }
@@ -1100,12 +1111,15 @@ button.item-tile:active { transform: translateY(3px); }
   content: ""; position: absolute; inset: 25%; border-radius: 50%; color: #ffdb82;
   box-shadow: 0 -15px 0 -5px, 15px 0 0 -5px, 0 15px 0 -5px, -15px 0 0 -5px;
 }
-.bets-game { padding: .6rem; border-radius: 14px; background: linear-gradient(#482114,#240e0b); }
+.bets-game { background: linear-gradient(#482114,#240e0b); }
 .bets-reels { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .4rem; padding: .5rem;
   border: 2px solid #d79643; border-radius: 12px; background: #241006; }
 .bets-reel { position: relative; overflow: hidden; height: 54px; border-radius: 7px;
   background: linear-gradient(#bc8760,#ffe6ae 24%,#fff0c5 70%,#deae7e); color: #351e17; }
 .bets-reel span { display: grid; place-items: center; height: 54px; font-size: 2rem; }
+.bets-stakes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .35rem; }
+.bets-stakes button { justify-content: center; padding-inline: .25rem; text-align: center; }
+.bets-stakes button[aria-pressed="true"] { border-color: #ffdc92; background: #482914; }
 .bets-result { min-height: 1.5em; text-align: center; color: #ffdc92; }
 @media (prefers-reduced-motion: no-preference) {
   .candy-fruit[data-moving="swap"] { animation: candy-swap 170ms ease-in-out both; }
