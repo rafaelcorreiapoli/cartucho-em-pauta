@@ -58,9 +58,9 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     page = Math.min(page,last);
     let shortcut = 0;
     const actions = new Map<string,()=>void>();
-    const entries:ShortcutEntry[] = [{name:'Fechar vigilância',activate:()=>dialog.close()}];
-    function register(name:string,activate:()=>void,key?:string) {
-      entries.push({name,activate});
+    const entries:ShortcutEntry[] = [{id:'close',name:'Fechar vigilância',activate:()=>dialog.close()}];
+    function register(id:string,name:string,activate:()=>void,key?:string) {
+      entries.push({id,name,activate});
       if (key) actions.set(key,activate);
       return activate;
     }
@@ -69,7 +69,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     const channelList = <>
       <div className="spy-tabs flex gap-2" role="group" aria-label="Tipo de canal">
         {devices.map(tab=><button key={tab.kind} type="button" aria-pressed={tab.kind===device}
-          onClick={register(tab.label,()=>{device = tab.kind;page = 0;update();})}>
+          onClick={register(tab.kind,tab.label,()=>{device = tab.kind;page = 0;update();})}>
           <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+tab.icon}/></svg>
           {tab.label} <small>{allChannels.filter(channel=>channel.kind===tab.kind).length}</small>
         </button>)}
@@ -78,7 +78,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       {channels.slice(page*pageSize,(page+1)*pageSize).map(channel=>{
         const key = channel.removed ? undefined : String(++shortcut);
         const openChannel = () => send({kind:'open',channel:channel.id});
-        if (key) register(channel.name,openChannel,key);
+        if (key) register(`open:${channel.id}`,channel.name,openChannel,key);
         const label = channel.removed ? 'Desconectado' : channel.active ? 'Atividade' : 'Em espera';
         return <button key={channel.id} type="button" className={`hud-button hud-button--secondary spy-channel${channel.active ? ' spy-active' : ''}`}
           disabled={channel.removed} aria-pressed={selected?.id===channel.id || audio?.id===channel.id}
@@ -91,16 +91,16 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       })}
       {last>0 && <div className="flex items-center gap-2">
         <button type="button" className="hud-button hud-button--secondary" disabled={page===0}
-          aria-label="Página anterior" onClick={page>0 ? register('Página anterior',previous) : undefined}>‹</button>
+          aria-label="Página anterior" onClick={page>0 ? register(`previous:${device}:${page}`,'Página anterior',previous) : undefined}>‹</button>
         <span>{page+1} / {last+1}</span>
         <button type="button" className="hud-button hud-button--secondary" disabled={page===last}
-          aria-label="Próxima página" onClick={page<last ? register('Próxima página',nextPage) : undefined}>›</button>
+          aria-label="Próxima página" onClick={page<last ? register(`next:${device}:${page}`,'Próxima página',nextPage) : undefined}>›</button>
       </div>}
     </>;
     const closeEditor = () => { editing = undefined; update(); };
-    const action = (label:string,run:()=>void) => {
+    const action = (id:string,label:string,run:()=>void) => {
       const key = String(++shortcut);
-      register(label,run,key);
+      register(`${id}:${channel?.id}`,label,run,key);
       return <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={key} onClick={run}>
         {label}<kbd className="action-key" aria-hidden="true">{key}</kbd>
       </button>;
@@ -113,11 +113,11 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     const monitor = <>
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
-        {selected && action('Fotografar',()=>send({kind:'capture',channel:selected.id}))}
-        {audio && action(view?.muted ? 'Ouvir grampo' : 'Silenciar grampo',()=>send({kind:'mute',channel:audio.id}))}
-        {action(channel.alerts ? 'Silenciar alertas' : 'Ativar alertas',()=>send({kind:'alerts',channel:channel.id}))}
-        {action('Renomear',()=>{ editing = channel.id; update(); })}
-        {action('Fechar canal',()=>send({kind:'close-channel',channel:channel.id}))}
+        {selected && action('capture','Fotografar',()=>send({kind:'capture',channel:selected.id}))}
+        {audio && action(`mute:${view?.muted}`,view?.muted ? 'Ouvir grampo' : 'Silenciar grampo',()=>send({kind:'mute',channel:audio.id}))}
+        {action(`alerts:${channel.alerts}`,channel.alerts ? 'Silenciar alertas' : 'Ativar alertas',()=>send({kind:'alerts',channel:channel.id}))}
+        {action('edit','Renomear',()=>{ editing = channel.id; update(); })}
+        {action('close-channel','Fechar canal',()=>send({kind:'close-channel',channel:channel.id}))}
         {editing===channel.id && <form key={channel.id} onSubmit={event=>{
           event.preventDefault();
           saveName();
@@ -133,7 +133,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
       </>}
     </>;
     if (channel && editing===channel.id) {
-      register('Nome do canal',()=>nameInput.current?.focus());
+      register(`name:${channel.id}`,'Nome do canal',()=>nameInput.current?.focus());
       entries.push({id:`rename:${channel.id}`,name:'Salvar',activate:saveName});
     }
     root.render(<SurveillanceDialogContent entries={entries} channels={channelList} monitor={monitor} actionForKey={key=>actions.get(key)}
