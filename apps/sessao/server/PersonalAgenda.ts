@@ -121,9 +121,11 @@ function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if (kind==='dinheiroPresencialVinte') return metrics.hasCashLot?.(CASH_HANDOVER_MISSION_AMOUNT)===true;
   if (kind==='heroiInesperado') return metrics.canFightCrisis?.()===true;
   if (kind==='manutencaoEmergencia') return metrics.canRepairOutage?.()===true;
-  if (kind==='escutaAtiva') {
-    return !!metrics.ownsWiretap?.() || (!!metrics.canInstallSpy?.('wiretap') &&
-      (!!metrics.owns?.('wiretap') || agendaProductPrice('equipment','wiretap',metrics)<=metrics.wallet));
+  if (kind==='escutaAtiva' && metrics.ownsWiretap?.()) return true;
+  if (kind==='escutaAtiva' || kind==='instalarGrampo' || kind==='instalarCamera') {
+    const device = kind==='instalarCamera' ? 'spyCamera' : 'wiretap';
+    return !!metrics.canInstallSpy?.(device) &&
+      (!!metrics.owns?.(device) || agendaProductPrice('equipment',device,metrics)<=metrics.wallet);
   }
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
   if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
@@ -164,7 +166,6 @@ export class PersonalAgenda {
     this.progress(metrics,{votacao:Number(first),apoio:Number(firstSupport)});
   }
   private targets:readonly Contact[] = [];
-  private spyAvailability:AgendaMetrics['canInstallSpy'];
   private hasOffice:AgendaMetrics['hasOffice'];
   private availableTargets:ReadonlySet<string>|undefined;
   private visitedTargets = new Set<string>();
@@ -225,7 +226,6 @@ export class PersonalAgenda {
   updateEligibility(metrics:AgendaMetrics, playerCount:number, canVote:boolean, ballotsLeft:number,npcCount=0,targets:readonly Contact[] = [],availableTargets?:ReadonlySet<string>,npcSigners?:ReadonlySet<string>) {
     this.targets = targets;
     this.hasOffice = metrics.hasOffice;
-    this.spyAvailability = metrics.canInstallSpy;
     this.availableTargets = availableTargets;
     this.npcCount = npcCount;
     this.playerCount = playerCount;
@@ -294,10 +294,6 @@ export class PersonalAgenda {
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='flagraGabinete' && !this.hasOffice?.() && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
-    if (kind==='instalarGrampo' || kind==='instalarCamera') {
-      const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
-      if (this.spyAvailability?.(device)===false) return false;
-    }
     if (kind==='votoNpc' && (this.ballotsLeft===0 || metrics?.canAgendaAction?.('votoNpc')===false)) return false;
     if (kind==='presidenteFoto' || kind==='emenda' && this.ballotsLeft===0) return false;
     if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
@@ -561,10 +557,6 @@ export class PersonalAgenda {
     if (kind==='duasCameras' && (metrics.agendaCameras?.(new Set())?.installed ?? 0)<agendaCounts.duasCameras) return false;
     if (kind==='fotoOstentacao' && !metrics.hasLuxuryDecoration?.()) return false;
     if ((kind==='cuecaDinheiro' || kind==='nadaADeclarar') && !metrics.owns?.('mensalUnderwear')) return false;
-    if (kind==='instalarGrampo' || kind==='instalarCamera') {
-      const device = kind==='instalarGrampo' ? 'wiretap' : 'spyCamera';
-      if (!metrics.canInstallSpy?.(device) || metrics.wallet<agendaProductPrice('equipment',device,metrics) && !metrics.owns?.(device)) return false;
-    }
     if (kind==='segurancaParlamentar' && metrics.wallet<agendaProductPrice('equipment','baton',metrics) && !metrics.owns?.('baton')) return false;
     if (kind==='discursoMegafone' && metrics.wallet<agendaProductPrice('equipment','megaphone',metrics) && !metrics.owns?.('megaphone')) return false;
     if (kind==='equipamento' && (metrics.owns?.('binoculars') || metrics.wallet<agendaProductPrice('equipment','binoculars',metrics))) return false;

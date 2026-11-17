@@ -365,13 +365,15 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
+    const changedSpyCustody = (event.kind==='wiretap' || event.kind==='spyCamera') &&
+      (event.type==='collected' || event.type==='dropped' || event.type==='transferred' ||
+        event.type==='stored' || event.type==='recovered' || event.type==='destroyed');
     const changedPizza = event.kind==='pizza' && (event.type==='installed' || event.type==='uninstalled' || event.type==='slice');
     const changedCashCustody = event.kind && cashAmount(event.kind) &&
       (event.type==='npc-robbed' || event.type==='delivered' || event.type==='money-pocketed' ||
         event.type==='cash-received' || event.type==='collected' || event.type==='dropped' ||
         event.type==='stored' || event.type==='recovered');
-    if (changedCashCustody || droppedSpy || changedPizza || event.kind==='xray' || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    if (changedCashCustody || changedSpyCustody || changedPizza || event.kind==='xray' || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
   }

@@ -2255,3 +2255,48 @@ test('the reading mission follows the last project available to study',()=>{
   expect(active(deadline)).toBeUndefined();
   expect(view(deadline).progression.xp).toBe(xp);
 });
+
+test.each([
+  ['instalarGrampo','wiretap'],
+  ['instalarCamera','spyCamera'],
+] as const)('%s follows custody of the last affordable device', (kind,device)=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,x:npcs.vendor.x,y:npcs.vendor.y+11};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const economy = Reflect.get(match,'economy');
+  const account = Reflect.get(economy,'accounts').get(player.id);
+  account.owns = (item:string)=>item===device && game.owns(player.id,device);
+  account.canInstallSpy = (item:string)=>item===device && game.canInstallSpy(player.id,device);
+  Reflect.set(account.agenda,'missions',[]);
+  Reflect.set(account.agenda,'missionDeck',[kind,'cafe','passeio']);
+  match.refreshAgendaEligibility();
+  const at = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
+  const active = (now:number)=>view(now).missions.active.find(mission=>mission.kind===kind);
+  const original = active(0)!;
+  const label = renderToStaticMarkup(<MissionRow mission={original}/>);
+  expect(label).toContain(device==='wiretap' ? 'grampo' : 'câmera');
+
+  game.act(player,{kind:'open-shop',target:'vendor'},at(1));
+  const token = game.view(player,at(1)).dialogue?.token;
+  game.act(player,{kind:'shop-buy',target:device,token},at(1));
+  const item = game.view(player,at(1)).inventory.find(item=>item.kind===device)!;
+  expect(economy.spend(player.id,view(1).wallet)).toBe(true);
+  Object.assign(player,{x:254,y:252});
+  game.act(player,{kind:'drop',item:item.id},at(2));
+  expect(active(2)).toBeUndefined();
+  expect(view(2).progression.xp).toBe(0);
+
+  game.act(player,{kind:'collect',item:item.id},at(3));
+  const replacement = active(3)!;
+  expect(replacement.id).not.toBe(original.id);
+  expect(renderToStaticMarkup(<MissionRow mission={replacement}/>)).toContain(device==='wiretap' ? 'grampo' : 'câmera');
+  game.spyAction(player,{kind:'install',site:'coffee',item:item.id},at(4));
+  const finishedAt = 4+spyRules.install;
+  game.tick(at(finishedAt),true);
+  const complete = view(finishedAt).missions.completed.find(mission=>mission.id===replacement.id)!;
+  expect(renderToStaticMarkup(<MissionRow mission={complete} done/>)).toContain('data-done="true"');
+  expect(view(finishedAt).progression.xp).toBe(missionReward(kind).xp);
+});
