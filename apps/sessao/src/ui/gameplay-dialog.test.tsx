@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {Gameplay} from '../../server/Gameplay';
 import {INVENTORY_SLOTS,hasInventorySpace} from '../gameplay';
-import {decorationActions,installationSites} from '../installations';
+import {decorationActions,decorationInstallMs, installationSites} from '../installations';
 import {npcs} from '../npcs';
 import type {Player} from '../map';
 import type {Decoration} from '../photography';
@@ -43,7 +43,9 @@ test('a full inventory disables public decoration removal until a slot is freed'
   expect(game.act(player,{kind:'shop-buy',target:'vip',token},world)).toBe('Compra guardada no inventário.');
   const [plate] = game.view(player,world).inventory;
   Object.assign(player,installationSites.lobbyVip.point);
-  expect(game.act(player,{kind:'install',place:'lobbyVip',item:plate.id},world)).toBe('Objeto instalado.');
+  expect(game.act(player,{kind:'install',place:'lobbyVip',item:plate.id},world)).toBe('Instalando decoração…');
+  world.now += decorationInstallMs;
+  game.tick(world,true);
   for (let i=0;i<INVENTORY_SLOTS;i++) Reflect.get(game,'create').call(game,'document',{holder:player.id});
   const render = (state:ReturnType<Gameplay['view']>)=>renderToStaticMarkup(
     <DecorationCard decoration={state.decorations.find(item=>item.id===plate.id)!} ownId={player.id}
