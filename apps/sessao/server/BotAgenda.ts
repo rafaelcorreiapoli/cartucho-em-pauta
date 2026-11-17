@@ -3,6 +3,7 @@ import {cashAmount,hasInventorySpace,terminals,type GameplayAction,type Gameplay
 import {canStand,roomAt,type Motion,type Player} from '../src/map';
 import type {Agenda} from '../src/politics';
 import {npcs} from '../src/npcs';
+import {privateOffices} from '../src/private-offices';
 import {canReachStation,stations,type PlenaryView} from '../src/plenary';
 import type {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
@@ -16,11 +17,10 @@ export class BotAgenda {
   private visited = new Set<string>();
   private stop?:Motion;
   private leaveAt = 0;
-  private cashSince?:number;
+  private cashPlan?:{item:number; pocket:boolean; readyAt:number};
   private attemptedPhotoAt = -Infinity;
   private studiedRound?:number;
   private coffeeAt:number;
-  private phoneOpen = false;
 
   constructor(private readonly random:()=>number,now:number) {
     this.coffeeAt = now+15_000+Math.floor(random()*60_000);
@@ -29,30 +29,9 @@ export class BotAgenda {
   tick(player:Player,view:PlenaryView,game:GameplayView,gameplay:Gameplay,world:GameplayWorld,
     go:(point:Motion)=>void,rest:()=>void,act:(action:GameplayAction)=>void,study:()=>void) {
     const {now} = world;
-    const has = (...kinds: Agenda[])=>view.politics?.missions.active.some(mission=>kinds.includes(mission.kind));
+    const has = (...kinds: Agenda[])=>view.politics?.missions.active.some(mission=>kinds.includes(mission.kind)) ?? false;
     this.visited.add(roomAt(player));
-    const cash = game.inventory.find(item=>cashAmount(item));
-    if (cash) this.cashSince ??= now;
-    else this.cashSince = undefined;
-
-    if (cash && has('transporte')) {
-      const office = gameplay.officeSpawn(player.id);
-      if (office && roomAt(office)!==roomAt(player)) {
-        go(office);
-        return;
-      }
-    }
-    if (cash && now-(this.cashSince ?? now)>=15_000) {
-      if (game.locations.includes('treasury')) act({kind:'deliver',place:'treasury',item:cash.id});
-      else go(terminals.treasury.point);
-      return;
-    }
-    const visibleCash = !cash && hasInventorySpace(game.inventory.length+ (game.equipped?.length ?? 0)) && game.ground.find(item=>cashAmount(item.kind));
-    if (visibleCash && (has('transporte','contribuinte','contasTesouraria') || this.leaveAt<=now)) {
-      if (game.nearby.some(item=>item.id===visibleCash.id)) act({kind:'collect',item:visibleCash.id});
-      else go(visibleCash);
-      return;
-    }
+    if (this.handleCash(player,game,now,has,go,rest,act)) return;
 
     if (has('visitaArquivo') && roomAt(player)!=='Arquivo') {
       go(stations.archive);
@@ -104,7 +83,6 @@ export class BotAgenda {
     if (wantsGame) {
       rest();
       act({kind:'phone-open'});
-      this.phoneOpen = true;
       const candy = game.candy;
       if (candy) {
         for (let from=0;from<candy.board.length;from++) {
@@ -120,10 +98,8 @@ export class BotAgenda {
       act({kind:'candy-start'});
       return;
     }
-    if (this.phoneOpen) {
-      act({kind:'phone-close'});
-      this.phoneOpen = false;
-    }
+    const phone = gameplay.phoneActivity(player.id);
+    if (phone==='open' || phone==='game') act({kind:'phone-close'});
 
     if (!this.stop || now>=this.leaveAt) {
       const stops = publicStops.filter(point=>roomAt(point)!==roomAt(player) && canStand(point.x,point.y));
@@ -135,4 +111,51 @@ export class BotAgenda {
     if (this.stop && Math.hypot(player.x-this.stop.x,player.y-this.stop.y)>8) go(this.stop);
     else rest();
   }
+
+  private handleCash(player:Player,game:GameplayView,now:number,has:(...kinds:Agenda[])=>boolean,
+    go:(point:Motion)=>void,rest:()=>void,act:(action:GameplayAction)=>void) {
+    const cash = game.inventory.find(item=>cashAmount(item));
+    if (!cash) {
+      this.cashPlan = undefined;
+      if (!hasInventorySpace(game.inventory.length+(game.equipped?.length ?? 0))) return false;
+      const distance = (point:Motion)=>Math.hypot(point.x-player.x,point.y-player.y);
+      const closest = game.ground.filter(item=>cashAmount(item.kind)).sort((a,b)=>distance(a)-distance(b))[0];
+      if (!closest) return false;
+      if (game.nearby.some(item=>item.id===closest.id)) {
+        rest();
+        act({kind:'collect',item:closest.id});
+      } else go(closest);
+      return true;
+    }
+
+    const office = privateOffices.find(layout=>layout.id===game.ownOffice);
+    if (this.cashPlan?.item!==cash.id) {
+      const pocketChance = has('embolso','reservaCofre') ? .8 : has('contribuinte','contasTesouraria') ? .2 : .5;
+      this.cashPlan = {item:cash.id,pocket:this.random()<pocketChance,readyAt:now+6_000+this.random()*6_000};
+    }
+    if (office && (this.cashPlan.pocket || has('transporte') && roomAt(player)!==office.name)) {
+      const kind = game.officeOptions?.find(option=>option.place===office.id &&
+        (option.kind==='office-open' || option.kind==='office-cash' && option.item===cash.id));
+      if (kind?.kind==='office-open') {
+        rest();
+        act(kind);
+        return true;
+      }
+      if (this.cashPlan.pocket) {
+        if (kind) {
+          rest();
+          if (now>=this.cashPlan.readyAt) act(kind);
+        } else go(office.safe);
+        return true;
+      }
+      go(office.spawn);
+      return true;
+    }
+    if (game.locations.includes('treasury')) {
+      rest();
+      if (now>=this.cashPlan.readyAt) act({kind:'deliver',place:'treasury',item:cash.id});
+    } else go(terminals.treasury.point);
+    return true;
+  }
+
 }

@@ -231,7 +231,7 @@ export class SessionRoom extends Room {
           const {player} = state;
           Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
           this.resetMovement(state);
-          player.speed = characterStats[player.character].speed;
+          if (!player.bot) player.speed = characterStats[player.character].speed;
           player.stamina = MAX_STAMINA;
           player.sprinting = undefined;
         }
@@ -498,7 +498,7 @@ export class SessionRoom extends Room {
         state.player.publicTransport = transport;
         if (freeze && !countingDown) this.resetMovement(state);
         const input = freeze ? undefined : this.movementQueue.get(id)?.shift();
-        if (!freeze && state.player.bot) this.bots.move(state);
+        if (!freeze && state.player.bot) this.bots.move(state,this.gameplay.phoneActivity(id));
         else if (input) applyInput(state,input);
         else {
           restMovement(state.player);
