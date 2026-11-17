@@ -15,7 +15,7 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
   let live:ReturnType<typeof createSurveillanceViewport>|undefined;
 
   function paint() {
-    flushSync(()=>root.render(<SecurityDialogContent camera={selected} ready={ready} send={send}/>));
+    flushSync(()=>root.render(<SecurityDialogContent camera={selected} ready={ready} send={send} close={dismiss}/>));
   }
 
   paint();
@@ -28,15 +28,13 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
     paint();
   }
 
-  function dismiss(event:Event) {
-    event.preventDefault();
+  function dismiss() {
     requested = false;
     dialog.close();
     stop();
     send({kind:'close'});
   }
-  dialog.oncancel = dismiss;
-  dialog.querySelector('form')!.onsubmit = dismiss;
+  dialog.oncancel = event=>{event.preventDefault();dismiss();};
 
   function render(view?:SecurityView) {
     if (!view) requested = false;
@@ -71,7 +69,6 @@ export function createSecurityPanel(send:(action:SecurityAction)=>void) {
     },
     destroy() {
       dialog.oncancel = null;
-      dialog.querySelector('form')!.onsubmit = null;
       dialog.close();
       live?.destroy();
       root.unmount();

@@ -1,3 +1,5 @@
+import {DialogHeader} from './ui/dialog-header';
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -26,8 +28,8 @@ const finaleParticles = Array.from({length:44},(_,index)=>({
   '--particle-duration':`${3+(index%7)*.6}s`,
 }) as CSSProperties);
 
-export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<PlenaryView,'winner'|'reason'|'stability'|'finalRoster'>) {
-  const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || stability===0 ? 'destroyed' : 'ended';
+export function SessionResult({winner,reason,stability,congressDestroyed,finalRoster=[]}:Pick<PlenaryView,'winner'|'reason'|'stability'|'congressDestroyed'|'finalRoster'>) {
+  const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || congressDestroyed || stability===0 ? 'destroyed' : 'ended';
   const headline = outcome==='saved' ? 'O Congresso foi salvo!' :
     outcome==='destroyed' ? 'O Congresso foi destruído!' : 'Sessão encerrada';
   const factions = [
@@ -40,7 +42,10 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
     result:winner===role ? 'won' : winner || outcome==='destroyed' ? 'lost' : 'neutral',
   })).sort((a,b)=>Number(b.result==='won')-Number(a.result==='won'));
 
-  return <section className="session-finale" data-outcome={outcome}>
+  const panel = useDialogKeys<HTMLElement>(()=>undefined,[
+    {name:'Continuar',activate:():void=>{panel.current?.closest('dialog')?.close();}},
+  ]);
+  return <section ref={panel} className="session-finale" data-outcome={outcome}>
     {outcome!=='ended' && <div className="finale-particles" aria-hidden="true">
       {finaleParticles.map((style,index)=><i key={index} style={style}/>)}
     </div>}
@@ -66,12 +71,14 @@ export function SessionResult({winner,reason,stability,finalRoster=[]}:Pick<Plen
 }
 
 export function ResultsContent({children}:{children:ReactNode}) {
+  const dismiss = ():void=>{content.current?.closest('dialog')?.close();};
+  const content = useDialogKeys<HTMLDivElement>(()=>undefined,[
+    {name:'Fechar resultados',activate:dismiss},
+    {name:'Continuar',activate:dismiss},
+  ]);
   return <>
-    <header>
-      <h2 id="result-title">Resultados</h2>
-      <DialogDismiss label="Fechar resultados"/>
-    </header>
-    <div id="result-content">{children}</div>
+    <DialogHeader id="result-title" title="Resultados" dismissLabel="Fechar resultados"/>
+    <div ref={content} id="result-content">{children}</div>
     <DialogDismiss className="hud-button">Continuar</DialogDismiss>
   </>;
 }
@@ -80,7 +87,7 @@ export function CassationResult({text}:{text:string}) {
   return <section><h3>Resultado da cassação</h3><p>{text}</p></section>;
 }
 
-export function mountResults() {
+export function mountResults(closeGameplay:()=>void) {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
   const finaleRoot = createRoot(finale);
@@ -102,7 +109,7 @@ export function mountResults() {
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
         flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));
-        document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
+        closeGameplay();
         if (!dialog.open) dialog.showModal();
       }
       return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged || cassation ? 'election' : undefined;

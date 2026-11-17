@@ -3,7 +3,9 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
-import {NEGOTIATION_MS} from '../plenary';
+import {BALLOT_MS,NEGOTIATION_MS} from '../plenary';
+import {ELECTION_RULES} from '../elections';
+import {ProjectCatalog} from './project-catalog';
 import {ProjectHeading,projectHeading} from './project-heading';
 
 test('the heading displays the active project and switches to the isolation clock',()=>{
@@ -41,4 +43,22 @@ test('the HUD shows the session clock before any filing',()=>{
   const markup = renderToStaticMarkup(<ProjectHeading {...projectHeading(match.view(player.id,[player.id],NEGOTIATION_MS))}/>);
   expect(markup).toContain('Auxílio Churrasco');
   expect(markup).toContain('Protocolado por Rafa');
+});
+
+test('protocol and both project views agree on the exact filing deadline',()=>{
+  const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>0)).toBe(true);
+  const deadline = ELECTION_RULES.matchDuration-NEGOTIATION_MS-BALLOT_MS;
+  const view = (now:number)=>match.view(player.id,[player.id],now);
+  const reason = (now:number)=>match.gameplayWorld([player],now,()=>false).projectFilingError?.(player.id,0);
+  expect(reason(deadline)).toBeUndefined();
+  expect(renderToStaticMarkup(<ProjectCatalog {...view(deadline)}/>)).toContain('Disponível');
+  expect(reason(deadline+1)).toBe('Não há tempo para votar outro projeto nesta partida.');
+  const closed = view(deadline+1);
+  const catalog = renderToStaticMarkup(<ProjectCatalog {...closed}/>);
+  expect(catalog).toContain('Protocolo de projetos encerrado.');
+  expect(catalog).toContain('Fora do prazo');
+  expect(catalog).not.toContain('Solicite um documento');
+  expect(renderToStaticMarkup(<ProjectHeading {...projectHeading(closed)}/>)).toContain('Protocolo de projetos encerrado.');
 });

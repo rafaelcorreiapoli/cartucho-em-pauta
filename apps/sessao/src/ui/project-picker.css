@@ -43,6 +43,7 @@
   display: grid;
   align-content: start;
   gap: .5rem;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: .25rem clamp(.5rem, 3vw, 1rem) .75rem;
@@ -108,8 +109,6 @@
 }
 
 .project-picker-option .action-key { inset: .2rem .3rem auto auto; }
-.project-picker-impact [data-effect="gain"] { color: #a8e796; }
-.project-picker-impact [data-effect="loss"] { color: #ffaaa3; }
 
 .project-picker-banner {
   width: 100%;
@@ -132,6 +131,7 @@
   align-content: start;
   gap: .85rem;
   padding: .75rem 1rem;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -155,4 +155,11 @@
 #project-picker footer {
   justify-content: flex-end;
   border-top: 1px solid var(--color-hud-border);
+}
+
+@media (max-height: 440px) {
+  #project-picker header,
+  #project-picker footer { padding-block: .4rem; }
+  #project-picker .hud-title { font-size: 1.25rem; }
+  #project-picker .project-picker-detail-content { gap: .55rem; }
 }

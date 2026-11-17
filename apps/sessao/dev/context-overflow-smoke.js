@@ -28,6 +28,10 @@ async page => {
     throw Error('Os badges não acompanham os atalhos acessíveis');
   }
   const baseRow = await more.boundingBox();
+  await page.evaluate(()=>{
+    window.contextClicks = 0;
+    document.querySelector('#stations').addEventListener('click',()=>{ window.contextClicks++; });
+  });
   await page.keyboard.press(moreKey);
   await overflow.first().waitFor();
   if (JSON.stringify(await keys())!==initialKeys) throw Error('Expandir mudou os atalhos principais');
@@ -41,8 +45,11 @@ async page => {
   await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
   const coffee = page.getByRole('button',{name:'Pegar Café',exact:true});
   await coffee.waitFor();
-  await coffee.and(page.locator('[aria-keyshortcuts="2"]')).waitFor();
-  if (!(await badge(coffee)).includes('"2"')) throw Error('O item não exibe o atalho do submenu');
+  await coffee.and(page.locator('[aria-keyshortcuts]')).waitFor();
+  const coffeeKey = await coffee.getAttribute('aria-keyshortcuts');
+  if (!/^[1-9]$/.test(coffeeKey) || !(await badge(coffee)).includes(JSON.stringify(coffeeKey))) {
+    throw Error('O item não exibe o atalho do submenu');
+  }
   await overflow.first().waitFor({state:'hidden'});
   if (await more.getAttribute('aria-expanded')!=='false') throw Error('Mais ações ficou aberto junto com Objetos próximos');
   await page.keyboard.press('Escape');
@@ -61,5 +68,133 @@ async page => {
   await deal.waitFor();
   await page.keyboard.press('Escape');
   await deal.waitFor({state:'hidden'});
+  const legacy = page.locator('#voice-dock, #voice-host, #voice-lobby, #open-action-shortcuts');
+  if (await legacy.count()) throw Error('O dock antigo de voz continua montado');
+  await page.keyboard.press('k');
+  const settings = page.getByRole('dialog',{name:'Configurações'});
+  await settings.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await page.keyboard.press('F2');
+  const shortcuts = page.getByRole('dialog',{name:'Atalhos de teclado'});
+  await shortcuts.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await page.keyboard.press('F2');
+  await shortcuts.waitFor({state:'hidden'});
+  await page.keyboard.press('Escape');
+  await settings.waitFor({state:'hidden'});
+  await page.keyboard.press(await nearby.getAttribute('aria-keyshortcuts'));
+  await coffee.waitFor();
+  const paintedKey = await coffee.getAttribute('aria-keyshortcuts');
+  await coffee.evaluate(button=>button.setAttribute('aria-label','Rótulo alterado no DOM'));
+  await page.keyboard.press('F2');
+  await shortcuts.waitFor();
+  const paletteCoffee = shortcuts.getByRole('button',{name:'Pegar Café',exact:true});
+  await paletteCoffee.waitFor();
+  await page.keyboard.press(await paletteCoffee.getAttribute('aria-keyshortcuts'));
+  await shortcuts.waitFor({state:'hidden'});
+  await page.locator('#nearby-items button[aria-keyshortcuts="'+paintedKey+'"]').waitFor({state:'hidden'});
+  await page.setViewportSize({width:800,height:450});
+  await page.keyboard.press('o');
+  const bag = page.getByRole('dialog',{name:'Inventário'});
+  const bagCoffee = bag.getByRole('button',{name:'Café',exact:true});
+  await bagCoffee.waitFor();
+  const bagGeometry = ()=>Promise.all([bag.boundingBox(),bag.locator('.bag-detail').boundingBox(),
+    bag.locator('.bag-preview').boundingBox()]);
+  const emptyGeometry = JSON.stringify(await bagGeometry());
+  await bagCoffee.evaluate(button=>button.setAttribute('aria-label','Retrato original alterado'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Café',exact:true}).click();
+  await bag.getByRole('button',{name:'Retrato original alterado',pressed:true}).evaluate(button=>button.setAttribute('aria-label','Café'));
+  const themedSelection = await page.locator('.bag-storage .item-tile[aria-pressed="true"]').evaluate(button=>{
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue('--hud-item-selection');
+    try {
+      root.style.setProperty('--hud-item-selection','rgb(201, 170, 96)');
+      const style = getComputedStyle(button);
+      return style.borderTopColor==='rgb(201, 170, 96)' && style.borderTopLeftRadius==='12px';
+    } finally {
+      if (previous) root.style.setProperty('--hud-item-selection',previous);
+      else root.style.removeProperty('--hud-item-selection');
+    }
+  });
+  if (!themedSelection) throw Error('A seleção do item não segue o tema compartilhado');
+  const themedDetails = await page.locator('.bag-detail .object-card').evaluate(panel=>{
+    const root = document.documentElement;
+    try {
+      root.style.setProperty('--hud-item-detail-radius','19px');
+      root.style.setProperty('--hud-item-primary-ink','rgb(22, 30, 14)');
+      return getComputedStyle(panel).borderTopLeftRadius==='19px' &&
+        getComputedStyle(panel.querySelector('.bag-pin')).color==='rgb(22, 30, 14)';
+    } finally {
+      root.style.removeProperty('--hud-item-detail-radius');
+      root.style.removeProperty('--hud-item-primary-ink');
+    }
+  });
+  if (!themedDetails) throw Error('Detalhe e ação principal não seguem o tema compartilhado');
+  const selectedGeometry = JSON.stringify(await bagGeometry());
+  if (selectedGeometry!==emptyGeometry) throw Error(`Seleção moveu o layout do inventário: ${emptyGeometry} → ${selectedGeometry}`);
+  const drop = bag.getByRole('button',{name:'Largar no chão',exact:true});
+  await drop.waitFor();
+  const actions = await bag.locator('.bag-item-actions').boundingBox();
+  const dropBounds = await drop.boundingBox();
+  if (!actions || !dropBounds || dropBounds.y+dropBounds.height>actions.y+actions.height) {
+    throw Error('Largar no chão ficou fora da área visível do inventário');
+  }
+  await drop.evaluate(button=>button.setAttribute('aria-label','Ação original alterada'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Largar no chão',exact:true}).click();
+  await bagCoffee.waitFor({state:'hidden'});
+  await bag.getByRole('button',{name:'Pinga ×3',exact:true}).click();
+  const quantity = bag.getByLabel('Quantidade selecionada');
+  await quantity.filter({hasText:'1 / 3'}).waitFor();
+  await bag.getByRole('button',{name:'Aumentar quantidade'}).evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('ArrowRight');
+  await quantity.filter({hasText:'2 / 3'}).waitFor();
+  await bag.getByRole('button',{name:'Vincular ao slot 1'}).evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('Shift+1');
+  await bag.getByRole('button',{name:'Vincular ao slot 1',pressed:true}).waitFor();
+  const dropKey = await drop.getAttribute('aria-keyshortcuts');
+  await drop.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press(dropKey);
+  await bag.getByRole('button',{name:'Pinga',exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await bag.waitFor({state:'hidden'});
+  const hotbarDrink = page.locator('#item-slots [data-kind="pinga"]');
+  await hotbarDrink.waitFor();
+  await hotbarDrink.evaluate(button=>{
+    button.setAttribute('aria-label','Rótulo original alterado');
+    window.hotbarClicks = 0;
+    button.addEventListener('click',()=>{ window.hotbarClicks++; });
+  });
+  await page.keyboard.press('F2');
+  const drink = shortcuts.getByRole('button',{name:'Beber · Pinga',exact:true});
+  const nextPage = shortcuts.getByRole('button',{name:'Próxima página'});
+  while (!await drink.count() && !await nextPage.isDisabled()) await page.keyboard.press('ArrowRight');
+  await drink.waitFor();
+  await page.keyboard.press(await drink.getAttribute('aria-keyshortcuts'));
+  await hotbarDrink.waitFor({state:'hidden'});
+  if (await bag.isVisible() || await page.evaluate(()=>window.hotbarClicks)!==0) {
+    throw Error('Hotbar abriu o inventário ou simulou clique ao consumir');
+  }
+  if (await page.evaluate(()=>window.contextClicks)!==0) throw Error('Atalho disparou um clique no HUD');
+  await page.reload();
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Armário QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.locator('#parliamentarian-count [data-count="0"]').click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.getByRole('button',{name:'Abrir armário',exact:true}).click();
+  const stash = page.getByRole('dialog',{name:'Armário particular'});
+  const deposit = stash.getByRole('button',{name:'Guardar Pinga',exact:true});
+  const withdraw = stash.getByRole('button',{name:'Retirar Pinga',exact:true});
+  await deposit.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+  await page.keyboard.press('Shift+1');
+  await withdraw.waitFor();
+  await deposit.waitFor({state:'hidden'});
+  await withdraw.evaluate(button=>button.setAttribute('aria-label','Ação original alterada'));
+  await page.keyboard.press('F2');
+  await shortcuts.getByRole('button',{name:'Retirar Pinga',exact:true}).click();
+  await deposit.waitFor();
+  await stash.getByRole('button',{name:'Ação original alterada',exact:true}).waitFor({state:'hidden'});
+  await page.keyboard.press('Escape');
+  await stash.waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
+  return {stashDepositViaShift:true,stashWithdrawalViaF2:true};
 }

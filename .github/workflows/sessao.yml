@@ -45,6 +45,7 @@ jobs:
           - legislative-modals
           - context-overflow
           - context-progress
+          - exploration-hud
     env:
       SMOKE_FLOW: ${{ matrix.flow }}
     defaults:
@@ -72,7 +73,13 @@ jobs:
           trap cleanup EXIT
           server_fixture="$SMOKE_FLOW"
           if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then server_fixture=market; fi
-          PORT=26874 SESSAO_LOCAL_SOLO=1 bun "dev/$server_fixture-smoke-server.ts" &
+          server_entry="dev/$server_fixture-smoke-server.ts"
+          flows=("$SMOKE_FLOW")
+          if [[ "$SMOKE_FLOW" == exploration-hud ]]; then
+            server_entry=server/index.ts
+            flows=(room-entrance asset-loading hud-help action-shortcuts floor-plan phone-apps)
+          fi
+          PORT=26874 SESSAO_LOCAL_SOLO=1 bun "$server_entry" &
           pids+=("$!")
           curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:26874/health
           curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:5194/ >/dev/null
@@ -80,8 +87,40 @@ jobs:
           if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then
             url="$url/?captureVoice=1"
           fi
-          browser open "$url" --browser chrome-for-testing --config dev/private-call-chrome.json
-          browser run-code --filename "dev/$SMOKE_FLOW-smoke.js" --json
+          diagnostics=/tmp/sessao-smoke-failures
+          mkdir -p "$diagnostics"
+          for flow in "${flows[@]}"; do
+            browser open "$url" --browser chrome-for-testing --config dev/private-call-chrome.json
+            log="$diagnostics/$flow.json"
+            if browser run-code --filename "dev/$flow-smoke.js" --json 2>&1 | tee "$log"; then
+              rm "$log"
+            else
+              status=$?
+              browser screenshot --filename "$diagnostics/$flow.png" || true
+              exit "$status"
+            fi
+            browser close
+          done
+      - name: Keep browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-${{ matrix.flow }}
+          path: /tmp/sessao-smoke-failures/
+      - name: Keep exploration HUD screenshots
+        if: matrix.flow == 'exploration-hud'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exploration-hud-screenshots
+          path: /tmp/sessao-exploration-*.png
+          if-no-files-found: error
+      - name: Keep full ballot screenshots
+        if: matrix.flow == 'vote-history'
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-ballot-screenshots
+          path: /tmp/sessao-ballot-*.png
+          if-no-files-found: error
       - name: Keep the received megaphone clips
         if: matrix.flow == 'megaphone-speech'
         uses: actions/upload-artifact@v4

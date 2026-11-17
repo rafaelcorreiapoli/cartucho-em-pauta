@@ -4,9 +4,9 @@ type Intent = Vote|'clear';
 const choices = [['yes','Pretendo aprovar'],['no','Pretendo rejeitar'],['clear','Retirar']] as const;
 
 export function ProjectIntents({view,id,declare}:{view:PlenaryView;id:string;declare:(intent:Intent)=>void}) {
-  const summary = view.hearing ? '' : voteIntentSummary(view.voteIntents);
+  const summary = view.hearing || view.projectVoteExpired ? '' : voteIntentSummary(view.voteIntents);
   const ownIntent = view.voteIntents?.find(intent=>intent.id===id)?.vote;
-  const canDeclare = view.phase==='negotiation' && view.project!==undefined && !view.cassationIn && view.mandate && !view.politics?.suspended;
+  const canDeclare = view.phase==='negotiation' && view.project!==undefined && !view.projectVoteExpired && !view.cassationIn && view.mandate && !view.politics?.suspended;
   return <>
     {summary && <p id="intent-summary" aria-label="Intenções de voto">{summary}</p>}
     {canDeclare && <div id="intent-controls" className="flex gap-2" role="group" aria-label="Declarar intenção de voto">
@@ -27,7 +27,7 @@ export function projectDetailsState(view:PlenaryView) {
     view.reportedFraud ? 'Fraude denunciada. O painel mostra os números reais.' :
       view.audit==='fraud' ? 'Fraude encontrada. Vá ao Painel para corrigir os números.' :
       view.audit==='clean' ? 'A auditoria conferiu os valores do painel.' : '',
-    project && view.role==='Infiltrado' && !view.canFraud && !view.reportedFraud &&
+    project && !view.projectVoteExpired && view.role==='Infiltrado' && !view.canFraud && !view.reportedFraud &&
       'Você alterou os números que os outros veem no painel.',
   ].filter(Boolean).join(' ');
   return {

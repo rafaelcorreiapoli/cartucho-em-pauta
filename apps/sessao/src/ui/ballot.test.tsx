@@ -1,9 +1,10 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {Ballot,CassationBallot,hearingBallotState} from './ballot';
+import {Ballot,CassationBallot,ballotPalette,ballotShortcut,hearingBallotState} from './ballot';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {CASSATION_NOTICE_MS,stations} from '../plenary';
 import type {Player} from '../map';
+import {HEARING_MS} from '../politics';
 import {ProjectImpact} from "./project-ballot";
 
 const state = {eligible:true,mandate:true,voted:2,electorate:5,quorum:3,cast:()=>{}};
@@ -33,10 +34,10 @@ test('cassation shows other candidates and the private skip selection',()=>{
 });
 
 test('project impacts signal each number independently of the vote outcome',()=>{
-  const approved = renderToStaticMarkup(<ProjectImpact approved impact={{stability:22,budget:-28}}/>);
+  const approved = renderToStaticMarkup(<ProjectImpact budget={32} approved impact={{stability:22,budget:-28}}/>);
   expect(approved).toContain('data-effect="gain">+22');
   expect(approved).toContain('data-effect="loss">−R$ 280 mil');
-  const rejected = renderToStaticMarkup(<ProjectImpact approved={false} impact={{stability:-14,budget:0}}/>);
+  const rejected = renderToStaticMarkup(<ProjectImpact budget={32} approved={false} impact={{stability:-14,budget:0}}/>);
   expect(rejected).toContain('data-effect="loss">−14');
   expect(rejected).toContain('data-effect="neutral">R$ 0 mil');
 });
@@ -56,12 +57,44 @@ test('the hearing HUD renders the quorum and participation from the gameserver s
   match.vote(host.id,'yes',11);
   const view = match.view(host.id,ids,11);
   expect(view.hearing).toMatchObject({quorum:3,voted:1,vote:'yes'});
+  expect(ballotShortcut(view,host.id,'n',true)).toBeUndefined();
+  expect(ballotPalette(view,host.id,true)).toEqual([{name:'Afastar',vote:'yes'},{name:'Não afastar',vote:'no'}]);
+  expect(ballotPalette({...view,mandate:false},host.id,true)).toEqual([]);
+  expect(ballotShortcut(view,host.id,'r',true)).toEqual({kind:'bill',vote:'no'});
+  expect(ballotShortcut({...view,mandate:false},host.id,'y',true)).toBeUndefined();
   const hearing = hearingBallotState(view)!;
   const html = renderToStaticMarkup(<Ballot {...hearing} cast={()=>{}}/>);
   expect(html).toContain('1/4 votaram · 3 votos a favor para afastar');
   expect(html).toContain('Seu voto: afastar');
   expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:undefined}})?.quorum).toBe(3);
   expect(hearingBallotState({...view,hearing:{...view.hearing!,quorum:4}})?.quorum).toBe(4);
+});
+
+test('a hearing retains votes through reconnect and removes permanently departed voters from the tally',()=>{
+  const players:Player[] = ['Rafa','Bia','Caio','Duda'].map((nick,character)=>({
+    id:nick,nick,character,direction:0,moving:false,...stations.panel,
+  }));
+  const [host,target,departing,other] = players;
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  Reflect.get(match,'economy').changePopularity(host.id,20);
+  match.politics(host,{kind:'hearing',target:target.id},players,10);
+  match.vote(host.id,'yes',11);
+  match.vote(departing.id,'yes',11);
+  match.vote(other.id,'no',11);
+  const render = (now:number)=>renderToStaticMarkup(<Ballot {...hearingBallotState(match.view(host.id,ids,now))!} cast={()=>{}}/>);
+  match.setPlayerConnected(departing.id,false);
+  expect(render(12)).toContain('3/4 votaram · 3 votos a favor para afastar');
+  match.setPlayerConnected(departing.id,true);
+  expect(render(13)).toContain('3/4 votaram · 3 votos a favor para afastar');
+
+  match.leave(departing.id,14);
+  expect(render(14)).toContain('2/3 votaram · 2 votos a favor para afastar');
+  match.advance(10+HEARING_MS);
+  const result = match.view(host.id,ids,10+HEARING_MS);
+  expect(result.hearingResult).toContain('afastamento rejeitado (1 votos pelo afastamento)');
+  expect(match.isolated(target.id)).toBe(false);
 });
 
 test('cassation removes a disconnected target and shows the gameserver participation count',()=>{
@@ -75,13 +108,22 @@ test('cassation removes a disconnected target and shows the gameserver participa
   match.politics(host,{kind:'call-cassation'},players,10);
   const openedAt = 10+CASSATION_NOTICE_MS;
   match.advance(openedAt);
-  match.castCassation(host.id,target.id,openedAt);
-  match.castCassation(observer.id,null,openedAt);
+  const selected = ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true);
+  const skipped = ballotShortcut(match.view(observer.id,ids,openedAt),observer.id,'3',true);
+  expect(selected).toEqual({kind:'cassation',candidate:target.id});
+  expect(skipped).toEqual({kind:'cassation',candidate:null});
+  if (selected?.kind==='cassation') match.castCassation(host.id,selected.candidate,openedAt);
+  if (skipped?.kind==='cassation') match.castCassation(observer.id,skipped.candidate,openedAt);
   const render = ()=>renderToStaticMarkup(<CassationBallot state={match.view(host.id,ids,openedAt).cassation!}
     ownId={host.id} cast={()=>{}}/>);
   expect(render()).toContain('2/3 votaram · 2 votos para cassar');
   expect(render()).toContain('Bia');
   match.setPlayerConnected(target.id,false);
+  expect(ballotPalette(match.view(host.id,ids,openedAt),host.id,true)).toEqual([
+    {name:observer.nick,candidate:observer.id},{name:'Pular voto',candidate:null},
+  ]);
+  expect(ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true))
+    .toEqual({kind:'cassation',candidate:observer.id});
   expect(render()).toContain('1/2 votaram · 2 votos para cassar');
   expect(render()).not.toContain('Bia');
   expect(render()).not.toContain('aria-pressed="true"');

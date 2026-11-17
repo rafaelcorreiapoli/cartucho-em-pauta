@@ -1,12 +1,14 @@
 import type {PlenaryView} from './plenary';
 
+export const settingsApp = {id:'settings',label:'Configurações',icon:'settings',key:'K'} as const;
+
 export const apps = [
   {id:'equipment',label:'Equipamentos',icon:'inventory',key:'E'},
   {id:'attributes',label:'Personagem',icon:'chart',key:'P'},
   {id:'phone',label:'Celular',icon:'phone',key:'C'},
   {id:'surveillance',label:'Vigilância',icon:'camera',key:'V'},
   {id:'microphone',label:'Microfone',icon:'mic',key:'M'},
-  {id:'settings',label:'Configurações',icon:'settings',key:'K'},
+  settingsApp,
 ] as const;
 
 export type HudApp = typeof apps[number]['id']|'bag';

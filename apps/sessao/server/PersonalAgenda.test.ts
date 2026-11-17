@@ -10,7 +10,7 @@ import { terminals, type GameplayEvent } from '../src/gameplay';
 import { rooms, type Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
-import { agendaDurationMs, urgentCallMission } from '../src/politics';
+import { agendaDurationMs, urgentCallMission, LATE_CAMPAIGN_WINDOW_MS } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
@@ -114,6 +114,7 @@ test('the phone only emits play time after input and uses observer visibility th
   const world:GameplayWorld = {players:[player,observer],now:0,voice:()=>true,office:()=>undefined,
     earn:()=>{},hasMission:()=>true,publish:entry=>{if (entry.type==='game-played') samples.push(entry);}};
   const game = new Gameplay();
+  game.act(player,{kind:'phone-open'},world);
   game.act(player,{kind:'game-start'},world);
   world.now = 100;
   game.tick(world,true);
@@ -768,8 +769,11 @@ test('solo signature missions require enough money and payment quota for the NPC
   const world:GameplayWorld = {players:[owner,...members.players],now:1,voice:()=>false,office:()=>undefined,
     earn:()=>{},publish:event=>economy.recordGameplay(event),
     payNpc:(from,to,price)=>economy.transfer(from,to,price,true,1)};
-  game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world);
-  const [document] = game.view(owner,world).inventory;
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toBe('Objeto guardado no inventário.');
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'project-0'},world)).toBe('Objeto guardado no inventário.');
+  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toContain('já está carregando');
+  const [document,project] = game.view(owner,world).inventory;
+  expect(game.signWithNpc(owner,free,project.id,0,world)).toBe('Documento indisponível.');
   for (const npc of [free,paid]) {
     expect(game.signWithNpc(owner,npc,document.id,members.signature(npc.id,owner.id),world)).toBe('Assinatura obtida.');
   }
@@ -869,10 +873,19 @@ test('coffee delivery counts accepted cups for three distinct available human re
   deliver(bia);
   deliver(bia);
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(1);
+  const mission = active().active.find(({kind})=>kind==='entrega');
+  economy.updateAgendaEligibility(new Set([host.id,caio.id,dani.id]),3);
+  expect(active().active.find(({kind})=>kind==='entrega')).toEqual(mission);
   deliver(caio);
   expect(active().active.find(({kind})=>kind==='entrega')?.current).toBe(2);
   deliver(dani);
   expect(active().completed).toContainEqual(expect.objectContaining({kind:'entrega',current:3,target:3}));
+
+  draw();
+  deliver(bia);
+  economy.updateAgendaEligibility(new Set([host.id,bia.id,caio.id]),3);
+  expect(active().active.some(({kind})=>kind==='entrega')).toBe(false);
+  expect(active().completed.filter(({kind})=>kind==='entrega')).toHaveLength(1);
 });
 
 test('solo players with NPCs are not offered human transfer or group photo missions',()=>{
@@ -963,7 +976,6 @@ test('urgent calls are replaced if too few distinct contacts remain to finish',(
 });
 
 test.each([
-  ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b',item:1}),event('called',{target:'b'})],
   ['nadaADeclarar',event('concealed-cash-time',{duration:15_000}),event('concealment-started',{amount:1})],
   ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
@@ -973,9 +985,9 @@ test.each([
   ['fiscalizacaoParalela',event('xray-target-revealed',{place:'safe'}),event('xray-target-revealed',{place:'npc'})],
   ['patrimonioSuspeito',event('xray-target-revealed',{place:'npc'}),event('xray-scanned')],
   ['discursoMegafone',event('megaphone-time',{duration:10_000}),event('megaphone-started')],
-  ['campanhaUltimaHora',event('advertisement-aired',{duration:60_000}),event('advertisement-aired',{duration:60_001,at:2})],
+  ['campanhaUltimaHora',event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS}),event('advertisement-aired',{duration:LATE_CAMPAIGN_WINDOW_MS+1,at:2})],
   ['mensagemComAnexo',event('mail-published',{place:'document'}),event('photo-published')],
-  ['retratacaoOficial',event('mail-published',{place:'report'}),event('mail-published',{place:'document'})],
+  ['retratacaoOficial',event('mail-published',{place:'report',reportNotice:1}),event('mail-published',{place:'document'})],
   ['instalarGrampo',event('spy-installed',{kind:'wiretap'}),event('spy-installed',{kind:'spyCamera'})],
   ['instalarCamera',event('spy-installed',{kind:'spyCamera'}),event('spy-installed',{kind:'wiretap'})],
   ['reuniaoGabinete',event('office-meeting-time',{duration:15_000}),event('public-meeting-time',{duration:15_000})],
@@ -983,7 +995,7 @@ test.each([
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
 ] as const)('%s validates the required event and grants XP once',(kind,valid,wrong)=>{
   const rewards:number[] = [];
-  const options = {...metrics,owns:()=>true,hasOffice:()=>true,hasForensicReport:()=>true,hasKnownForeignSpy:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
+  const options = {...metrics,owns:()=>true,hasOffice:()=>true,agendaReportNotices:()=>[1],hasKnownForeignSpy:()=>true,canInstallSpy:()=>true,canFightCrisis:()=>true,ownsWiretap:()=>true};
   const agenda = new PersonalAgenda(options,4,()=>0,reward=>rewards.push(reward.xp));
   recordAgendaEvent(agenda,{...valid,at:0});
   Reflect.set(agenda,'missions',[]);
@@ -1018,8 +1030,12 @@ test('cash missions require an accepted in-person handover and use the actual am
   economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
   const accounts = Reflect.get(economy,'accounts');
   const game = new Gameplay();
+  const events:GameplayEvent[] = [];
   const world:GameplayWorld = {players,now:10,voice:()=>false,office:()=>undefined,earn:()=>{},
-    takeWallet:()=>2,publish:entry=>economy.recordGameplay(entry)};
+    takeWallet:()=>2,publish:entry=>{
+      events.push(entry);
+      economy.recordGameplay(entry);
+    }};
   accounts.get(sender.id).hasCashLot = (amount:number)=>game.hasCashLot(sender.id,amount);
   const draw = (id:string,kind:'dinheiroPresencialVinte'|'caixaDois')=>{
     const {agenda} = accounts.get(id);
@@ -1036,7 +1052,7 @@ test('cash missions require an accepted in-person handover and use the actual am
   const exact = game.view(sender,world).inventory.find(item=>item.kind==='briefcase')!;
   expect(draw(sender.id,'dinheiroPresencialVinte')).toBe(true);
   expect(draw(recipient.id,'caixaDois')).toBe(true);
-  economy.recordGameplay(event('pix-received',{actor:recipient.id,target:sender.id,amount:2}));
+  expect(economy.transfer(sender.id,recipient.id,2,true,0,'pix')).toBe(true);
   expect(completed(recipient.id,'caixaDois')).toBe(false);
 
   const offer = (item:number)=>{
@@ -1054,9 +1070,14 @@ test('cash missions require an accepted in-person handover and use the actual am
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('O portador ou objeto está fora de alcance.');
   expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(false);
   recipient.x = 148;
+  const beforeAccept = events.length;
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Objeto recebido.');
   expect(completed(sender.id,'dinheiroPresencialVinte')).toBe(true);
   expect(game.act(recipient,{kind:'accept',item:request},world)).toBe('Pedido indisponível.');
+  expect(events.slice(beforeAccept)).toEqual([
+    expect.objectContaining({type:'transferred',actor:sender.id,target:recipient.id,item:exact.id,amount:2}),
+    expect.objectContaining({type:'cash-received',actor:recipient.id,target:sender.id,item:exact.id,amount:2}),
+  ]);
 });
 
 test('Raio X missions require the equipment and the corresponding targets',()=>{
@@ -1325,7 +1346,6 @@ test('an exchange counts accepted different items with the same human and reward
   expect(agenda.hasActive('amizadeInstitucional')).toBe(true);
   const game = new Gameplay();
   const world:GameplayWorld = {players,now:1,voice:()=>false,office:()=>undefined,earn:()=>{},
-    hasMission:(id,kind)=>id===owner.id && agenda.hasActive(kind),
     publish:entry=>{if (entry.actor===owner.id) recordAgendaEvent(agenda,entry);}};
   const give = (from:Player,to:Player,kind:'portrait'|'document',reply:'accept'|'decline'='accept')=>{
     world.now++;
@@ -1651,6 +1671,23 @@ test('one selfie cannot repeatedly pay the publication mission across channels',
   expect(agenda.hasActive('publicouSelfie')).toBe(true);
   recordAgendaEvent(agenda,event('photo-published',{photo:{...photo,id:photo.id+1}}));
   expect(agenda.view(metrics).completed.filter(row=>row.kind==='publicouSelfie')).toHaveLength(2);
+});
+
+test('Escuta Ativa can be drawn with an installed, portable or affordable wiretap',()=>{
+  const draw = (wallet:number,installed:boolean,owned:boolean,siteAvailable:boolean)=>{
+    const state = {...metrics,wallet,ownsWiretap:()=>installed,
+      owns:(kind:string)=>kind==='wiretap' && owned,canInstallSpy:(kind:string)=>kind==='wiretap' && siteAvailable};
+    const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',['escutaAtiva','cafe','passeio','selfieSolo']);
+    agenda.updateEligibility(state,1,true,3);
+    return agenda.hasActive('escutaAtiva');
+  };
+  expect(draw(0,true,false,false)).toBe(true);
+  expect(draw(0,false,true,true)).toBe(true);
+  expect(draw(2,false,false,true)).toBe(true);
+  expect(draw(1.9,false,false,true)).toBe(false);
+  expect(draw(2,false,true,false)).toBe(false);
 });
 
 test('Escuta Ativa keeps its progress only while the player can still use or reinstall a wiretap',()=>{

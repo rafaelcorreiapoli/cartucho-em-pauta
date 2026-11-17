@@ -3,7 +3,7 @@ import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES, type CampaignBroadcast } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
-import { terminals, type GameplayEvent, type InteractionCue } from '../src/gameplay';
+import { terminals, treasuryDeliveries, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
 import type { SpyCameraFrame } from '../src/surveillance';
 import { missionReward } from '../src/politics';
@@ -388,6 +388,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     let visible:Player[] = [];
     const spyFrames = new Map<string,SpyCameraFrame>();
     const unconfirmedSpyFrames:SpyCameraFrame[] = [];
+    const photoViews = new Map<string,PhotoAccessView>();
     const securityFrames = new Map<string,{camera:string;scene:PhotoScene}>();
     const feedback = new Map<string,string[]>();
     carrier.onMessage('players',(players:Player[])=>{visible = players;});
@@ -409,7 +410,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       const notices:string[] = [];
       feedback.set(peer.sessionId,notices);
       peer.onMessage('gameplay-feedback',(message:string)=>notices.push(message));
-      for (const message of ['players','photo-state','item-obtained']) peer.onMessage(message,()=>{});
+      peer.onMessage('photo-state',(view:PhotoAccessView)=>photoViews.set(peer.sessionId,view));
+      for (const message of ['players','item-obtained']) peer.onMessage(message,()=>{});
     }
     const room = matchMaker.getLocalRoomById(carrier.roomId) as InstanceType<typeof SessionRoom>;
     // Set only the fixture position and deadline. Actions and results use the live socket.
@@ -487,8 +489,20 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});
+    const record = Reflect.get(match,'recordGameplay').bind(match);
+    let coffeeEvent:GameplayEvent|undefined;
+    Reflect.set(match,'recordGameplay',(event:GameplayEvent)=>{
+      const accepted = record(event);
+      if (accepted && event.type==='coffee-drunk') coffeeEvent = event;
+      return accepted;
+    });
     passenger.send('room-activity',{activity:'coffee',token:3270});
+    passenger.send('room-activity',{activity:'coffee',token:3270});
+    passenger.send('room-activity',{activity:'coffee',token:3271});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
+    expect(coffeeEvent?.eventId).toBeDefined();
+    Reflect.set(match,'recordGameplay',record);
+    Reflect.get(room,'gameplayWorld').call(room).publish({...coffeeEvent});
     expect(views.get(carrier.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')).toBe(false);
     const gameplaySystem = Reflect.get(room,'gameplay');
     const snack = gameplaySystem.create('coxinha',{holder:passenger.sessionId});
@@ -500,15 +514,25 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(foodCues.get(passenger.sessionId)).toEqual(['drink','eat','drink']);
     expect(foodCues.get(carrier.sessionId)).toEqual([]);
     const briefcase = gameplaySystem.create('briefcase',{holder:passenger.sessionId});
-    const delivery = {kind:'deliver',place:'treasury',item:briefcase.id};
+    const passengerInventory = () => views.get(passenger.sessionId)?.gameplay?.inventory ?? [];
+    await wait(()=>passengerInventory().some(item=>item.id===briefcase.id));
+    const delivery = treasuryDeliveries(passengerInventory()).find(option=>option.action.item===briefcase.id && option.action.target==='partial')!.action;
     passenger.send('gameplay',{action:delivery,token:3283});
     await wait(()=>feedback.get(passenger.sessionId)?.includes('Leve a maleta à Tesouraria.')===true);
     expect(interactionCues.get(passenger.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,terminals.treasury.point);
+    const beforeDelivery = views.get(passenger.sessionId)!.budget;
     passenger.send('gameplay',{action:delivery,token:3284});
-    await wait(()=>interactionCues.get(passenger.sessionId)?.length===1);
+    passenger.send('gameplay',{action:delivery,token:3285});
+    await wait(()=>feedback.get(passenger.sessionId)?.includes('O valor da maleta mudou.')===true);
+    await wait(()=>passengerInventory().some(item=>item.id===briefcase.id && item.cash===1.5));
     expect(interactionCues.get(passenger.sessionId)).toEqual(['cash']);
     expect(interactionCues.get(carrier.sessionId)).toEqual([]);
+    expect(views.get(passenger.sessionId)!.budget).toBeCloseTo(beforeDelivery+1.5);
+    const remainder = treasuryDeliveries(passengerInventory()).find(option=>option.action.item===briefcase.id && !option.action.target)!.action;
+    passenger.send('gameplay',{action:remainder,token:3286});
+    await wait(()=>!passengerInventory().some(item=>item.id===briefcase.id));
+    expect(views.get(passenger.sessionId)!.budget).toBeCloseTo(beforeDelivery+3);
     // Replay a delivered event through the same publisher that sends browser audio cues.
     const playback = Reflect.get(room,'gameplayWorld').call(room);
     const cueEvent:GameplayEvent = {type:'delivered',actor:passenger.sessionId,item:999,place:'treasury',
@@ -518,7 +542,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     // The stamp is an ordering barrier on the same socket.
     playback.publish({...cueEvent,type:'stamped',eventId:playback.nextEventId()});
     await wait(()=>interactionCues.get(passenger.sessionId)?.includes('stamp')===true);
-    expect(interactionCues.get(passenger.sessionId)).toEqual(['cash','cash','stamp']);
+    expect(interactionCues.get(passenger.sessionId)).toEqual(['cash','cash','cash','stamp']);
     expect(interactionCues.get(carrier.sessionId)).toEqual([]);
     Object.assign(positions.get(passenger.sessionId)!.player,{x:npcs.vendor.x+9,y:npcs.vendor.y+11});
     const gameplay = ()=>views.get(carrier.sessionId)?.gameplay;
@@ -540,7 +564,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await wait(()=>gameplay()?.surveillance?.progress!==undefined);
     await Bun.sleep(5100);
     await wait(()=>gameplay()?.surveillance?.channels.length===1);
-    const channel = gameplay()!.surveillance!.channels[0].id;
+    const {id:channel,name:cameraName} = gameplay()!.surveillance!.channels[0];
     Object.assign(positions.get(carrier.sessionId)!.player,{x:631,y:197,direction:1});
     passenger.send('spy',{kind:'open',channel,token:3520});
     carrier.send('spy',{kind:'open',channel,token:3530});
@@ -549,6 +573,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(unconfirmedSpyFrames).toEqual([]);
     expect(spyFrames.has(passenger.sessionId)).toBe(false);
     expect(views.get(passenger.sessionId)?.gameplay?.surveillance?.channels).toEqual([]);
+    expect(photoViews.get(carrier.sessionId)?.album).toEqual([]);
+    expect(photoViews.get(passenger.sessionId)?.album).toEqual([]);
+    carrier.send('spy',{kind:'capture',channel:channel+1,token:3540});
+    await wait(()=>feedback.get(carrier.sessionId)?.includes('O canal da câmera mudou.')===true);
+    expect(photoViews.get(carrier.sessionId)?.album).toEqual([]);
+    passenger.send('spy',{kind:'capture',channel,token:3540});
+    await wait(()=>feedback.get(passenger.sessionId)?.includes('O canal da câmera mudou.')===true);
+    carrier.send('spy',{kind:'capture',channel,token:3550});
+    await wait(()=>photoViews.get(carrier.sessionId)?.album.length===1);
+    expect(photoViews.get(carrier.sessionId)?.album[0].photo.source).toEqual({kind:'surveillance',channel:cameraName});
+    expect(photoViews.get(passenger.sessionId)?.album).toEqual([]);
     carrier.send('spy',{kind:'close',token:3580});
     carrier.send('spy',{kind:'open',channel,token:3530});
     await wait(()=>gameplay()?.surveillance?.selected===undefined);

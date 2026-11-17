@@ -27,6 +27,8 @@ export class Fire {
     this.delay = 0;
   }
 
+  get burning() { return this.active!==undefined; }
+
   get installer() { return this.installation?.actor; }
   get smoke() {
     return this.armed && this.armed.ignites-this.clock<=fireRules.smoke ? this.armed.site : undefined;

@@ -1,5 +1,7 @@
 import {DialogDismiss} from './dialog-dismiss';
-import {useState} from 'react';
+import {useRef,useState} from 'react';
+import {useDialogKeys} from './use-dialog-keys';
+import type {ShortcutEntry} from '../action-shortcuts';
 import {PhoneContactFace} from './phone-call';
 import type {Motion,Player} from '../map';
 import {canReachStation,type PlenaryView} from '../plenary';
@@ -46,18 +48,41 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
   const contact = model.contacts.find(contact=>contact.id===recipient);
   if (recipient!==undefined && !contact) setRecipient(undefined);
   if (evidence!==undefined && selected?.id!==evidence) setEvidence(undefined);
+  const ledger = useRef<HTMLDetailsElement>(null);
+  const maxPrice = Math.floor(Number.MAX_SAFE_INTEGER/10);
+  const adjustPrice = (step:number)=>setPrice(current=>Math.max(0,Math.min(maxPrice,current+step)));
+  const share = ()=>{if (contact && selected) send({kind:'share',to:contact.id,evidence:selected.id,price});};
+  const publish = ()=>{if (selected && model.publishing) send({kind:'publish',evidence:selected.id});};
+  const buy = (offer:number)=>send({kind:'accept',offer});
+  const cancel = (offer:number)=>send({kind:'cancel',offer});
+  const entries:ShortcutEntry[] = close ? [{name:'Fechar dossiê',activate:close}] : [];
+  for (const offer of model.offers) {
+    if (!offer.outgoing && offer.canBuy) entries.push({name:`Comprar de ${offer.name}`,activate:()=>buy(offer.id)});
+    entries.push({name:offer.outgoing ? `Cancelar oferta para ${offer.name}` : `Recusar oferta de ${offer.name}`,
+      activate:()=>cancel(offer.id)});
+  }
+  for (const record of model.evidence) entries.push({name:record.label,activate:()=>setEvidence(record.id)});
+  if (selected && model.trading) {
+    for (const person of model.contacts) entries.push({name:`Selecionar ${person.name}`,activate:()=>setRecipient(person.id)});
+    if (price>0) entries.push({name:'Diminuir valor',activate:()=>adjustPrice(-1)});
+    if (price<maxPrice) entries.push({name:'Aumentar valor',activate:()=>adjustPrice(1)});
+    if (contact) entries.push({name:'Enviar a quem está perto',activate:share});
+    if (model.publishing) entries.push({name:'Divulgar na imprensa',activate:publish});
+  }
+  entries.push({name:'Registro público',activate:()=>{if (ledger.current) ledger.current.open = !ledger.current.open;}});
+  const offers = useDialogKeys<HTMLElement>(()=>undefined,entries);
   return <>
     <header className="social-header">
       <h2 id="dossier-title">Dossiê</h2>
       {close && <DialogDismiss label="Fechar dossiê" onDismiss={close}/>}
     </header>
-    <section aria-label="Ofertas de documentos">
+    <section ref={offers} aria-label="Ofertas de documentos">
       {model.offers.map(offer=><div className="offer" key={offer.id}>
         {offer.outgoing ? `Oferta para ${offer.name} · ${money(offer.price)}` : `${offer.name} oferece um documento por ${money(offer.price)}`}
         {!offer.outgoing && <button className="hud-button" type="button" disabled={!offer.canBuy}
-          onClick={()=>send({kind:'accept',offer:offer.id})}>Comprar</button>}
+          onClick={()=>buy(offer.id)}>Comprar</button>}
         <button className="hud-button hud-button--secondary" type="button"
-          onClick={()=>send({kind:'cancel',offer:offer.id})}>{offer.outgoing ? 'Cancelar' : 'Recusar'}</button>
+          onClick={()=>cancel(offer.id)}>{offer.outgoing ? 'Cancelar' : 'Recusar'}</button>
       </div>)}
     </section>
     <section aria-label="Provas privadas">
@@ -80,16 +105,16 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
           </div>
           <div className="game-stepper" role="group" aria-label="Preço da prova">
             <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir valor"
-              disabled={price===0} onClick={()=>setPrice(price-1)}>−</button>
+              disabled={price===0} onClick={()=>adjustPrice(-1)}>−</button>
             <output>{price ? money(price) : 'Grátis'}</output>
             <button type="button" className="hud-button hud-button--secondary" aria-label="Aumentar valor"
-              disabled={price>=Math.floor(Number.MAX_SAFE_INTEGER/10)} onClick={()=>setPrice(price+1)}>+</button>
+              disabled={price>=maxPrice} onClick={()=>adjustPrice(1)}>+</button>
           </div>
           <div className="economy-row">
             <button className="hud-button hud-button--secondary" type="button" disabled={!contact}
-              onClick={()=>contact && send({kind:'share',to:contact.id,evidence:selected.id,price})}>Enviar a quem está perto</button>
+              onClick={share}>Enviar a quem está perto</button>
             <button className="hud-button hud-button--secondary" type="button" disabled={!model.publishing}
-              onClick={()=>send({kind:'publish',evidence:selected.id})}>Divulgar na imprensa</button>
+              onClick={publish}>Divulgar na imprensa</button>
           </div>
         </div>}
       </> : <div className="social-empty">
@@ -98,7 +123,7 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
         <p>Você pode receber provas de outros jogadores.</p>
       </div>}
     </section>
-    <details>
+    <details ref={ledger}>
       <summary>Registro público</summary>
       {model.publicRecords.length ? <ol className="grid gap-2">
         {model.publicRecords.map(record=><li key={record.id}>{record.detail}</li>)}

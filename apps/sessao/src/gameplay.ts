@@ -65,13 +65,15 @@ export function cashAmount(itemOrKind:ObjectKind | Pick<WorldItem,'kind'|'cash'>
   const item = objects[typeof itemOrKind==='string' ? itemOrKind : itemOrKind.kind];
   return 'amount' in item ? item.amount : undefined;
 }
-export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/2)/10;
+const treasuryPartialDivisor = 2;
+export const minimumPartialDepositLot = treasuryPartialDivisor/10;
+export const treasuryPartialAmount = (amount:number) => Math.floor(Math.round(amount*10)/treasuryPartialDivisor)/10;
 
 export function treasuryDeliveries(inventory:readonly WorldItem[]) {
   return inventory.flatMap(item=>{
     const amount = cashAmount(item);
     if (!amount) return [];
-    const action = {kind:'deliver',place:'treasury',item:item.id} as const;
+    const action = {kind:'deliver',place:'treasury',item:item.id,expectedCash:amount} as const;
     const deliveries:{label:string;action:GameplayAction}[] = [{label:`Entregar ${money(amount)} ao tesoureiro`,action}];
     const portion = treasuryPartialAmount(amount);
     if (portion>0) deliveries.push({label:`Entregar só ${money(portion)}`,action:{...action,target:'partial'}});
@@ -106,7 +108,7 @@ const gameplayActions = ['supply','collect','offer','sign-request','accept','dec
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
   'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
-export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; cells?:[number,number]};
+export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; expectedCash?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
 
 export function isPhoneAction(action:GameplayAction):action is PhoneAction {
@@ -149,8 +151,8 @@ export type GameplayView = {
 export type InteractionCue = 'cash'|'stamp'|'lock'|'pickup';
 
 export type GameplayEvent = {
-  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-handed-over'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'plenary-visit-interrupted'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'pix-sent'|'pix-received'|'power-repaired'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
-  eventId?:number; actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; photo?:Photo; place?:string; replaced?:boolean;
+  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'plenary-visit-interrupted'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'power-repaired'|'fire-extinguished'|'amendment-filed'|'coffee-drunk'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'room-time'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  eventId?:number; actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; reportNotice?:number; photo?:Photo; place?:string; replaced?:boolean;
 };
 
 export function readGameplayAction(raw:unknown):GameplayAction | undefined {
@@ -159,6 +161,8 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
   if (!kind) return;
   const quantity = 'quantity' in raw ? raw.quantity : undefined;
   if (quantity!==undefined && (typeof quantity!=='number' || !Number.isSafeInteger(quantity) || quantity<1)) return;
+  const expectedCash = kind==='deliver' && 'expectedCash' in raw ? raw.expectedCash : undefined;
+  if (expectedCash!==undefined && (typeof expectedCash!=='number' || !Number.isFinite(expectedCash) || expectedCash<=0)) return;
   const cells = 'cells' in raw ? raw.cells : undefined;
   if (kind==='candy-swap' && (!Array.isArray(cells) || cells.length!==2 || !cells.every(Number.isSafeInteger))) return;
   return {
@@ -169,6 +173,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
     place:'place' in raw && typeof raw.place==='string' ? raw.place : undefined,
     token:'token' in raw && typeof raw.token==='number' && Number.isSafeInteger(raw.token) ? raw.token : undefined,
     ...(quantity===undefined ? {} : {quantity}),
+    ...(expectedCash===undefined ? {} : {expectedCash}),
     direction:'direction' in raw ? snakeDirections.find(direction=>direction===raw.direction) : undefined,
   };
 }

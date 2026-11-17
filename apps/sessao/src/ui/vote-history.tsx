@@ -1,5 +1,13 @@
+import {formatImpact,impactTone} from './impact-value';
 import {useState} from 'react';
 import {agendaProject,deficitStabilityLoss,type Outcome} from '../plenary';
+
+function voteParticipation({abstentions=0,absences=0}:Outcome) {
+  return [
+    abstentions ? `${abstentions} ${abstentions===1 ? 'abstenção' : 'abstenções'}` : '',
+    absences ? `${absences} sem voto` : '',
+  ].filter(Boolean).join(' · ');
+}
 
 export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
   const [selection,setSelection] = useState<{count:number;index:number}>();
@@ -8,11 +16,11 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
   const outcome = outcomes[index];
   const recent = outcomes[latest];
   if (!outcome || !recent) return null;
+  const participation = voteParticipation(outcome);
   const step = (delta:number) => setSelection({count:outcomes.length,index:Math.max(0,Math.min(latest,index+delta))});
-  const signed = (value:number) => value>0 ? '+'+value : String(value);
   const threshold = `${outcome.needed} ${outcome.needed===1 ? 'voto' : 'votos'} a favor para passar`;
   const details = [
-    `Estabilidade ${signed(outcome.applied.stability)} · Orçamento ${signed(outcome.applied.budget)}`,
+    `Estabilidade ${formatImpact(outcome.applied.stability)} · Orçamento ${formatImpact(outcome.applied.budget,true)}`,
     outcome.deficit ? `Déficit: −${deficitStabilityLoss(outcome.deficit)} de estabilidade` : '',
     outcome.fraud ? 'O painel foi fraudado' : '',
   ].filter(Boolean).join(' · ');
@@ -37,16 +45,18 @@ export function VoteHistory({outcomes}:{outcomes:readonly Outcome[]}) {
             <span><svg className="hud-glyph" aria-hidden="true"><use href="#icon-cross"/></svg> Contra</span><strong>{outcome.no}</strong>
           </div>
         </div>
-        <p>{outcome.yes+outcome.no===0 ? 'Ninguém votou · ' : ''}{threshold}</p>
+        <p>{outcome.yes+outcome.no+(outcome.abstentions ?? 0)===0 ? 'Ninguém votou · ' : ''}{threshold}</p>
+        {participation && <p>{participation}</p>}
         <p id="outcome">{details}</p>
         {outcome.proposer && <p>Protocolado por {outcome.proposer}</p>}
       </div>
     </section>
-    <div className="sr-only" role="status">{agendaProject(recent).name}: {recent.passed ? 'aprovado' : 'rejeitado'}. {recent.yes} a favor, {recent.no} contra.</div>
+    <div className="sr-only" role="status">{agendaProject(recent).name}: {recent.passed ? 'aprovado' : 'rejeitado'}. {recent.yes} a favor, {recent.no} contra. {voteParticipation(recent)}</div>
   </>;
 }
 
 export function VoteBrief({outcome}:{outcome:Outcome}) {
+  const participation = voteParticipation(outcome);
   const scores = [
     {id:'yes',label:'Votos a favor',icon:'check',value:outcome.yes},
     {id:'no',label:'Votos contra',icon:'cross',value:outcome.no},
@@ -55,10 +65,11 @@ export function VoteBrief({outcome}:{outcome:Outcome}) {
   ];
   return <>
     <div><strong id="brief-verdict">{outcome.passed ? 'Projeto aprovado' : 'Projeto rejeitado'}</strong><span id="brief-project">{agendaProject(outcome).name}</span></div>
+    {participation && <small>{participation}</small>}
     <div className="brief-scores">
       {scores.map(({id,label,icon,value,delta})=><span key={id} title={label}>
         <svg className="hud-glyph" aria-hidden="true"><use href={'#icon-'+icon}/></svg>
-        <strong id={'brief-'+id} data-effect={delta ? value>0 ? 'gain' : value<0 ? 'loss' : 'neutral' : undefined}>{delta && value>0 ? '+' : ''}{value}</strong>
+        <strong id={'brief-'+id} data-effect={delta ? impactTone(value) : undefined}>{delta ? formatImpact(value,id==='budget') : value}</strong>
       </span>)}
     </div>
   </>;

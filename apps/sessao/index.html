@@ -22,18 +22,7 @@
   </svg>
   <main>
     <section id="landing">
-      <div class="hud-panel entrance lobby-card">
-        <h1 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h1>
-        <form id="lobby">
-          <label class="nick-field">Seu nick <input id="nick" maxlength="20" autocomplete="nickname" placeholder="Como vão chamar você?" required></label>
-          <button class="hud-button" id="create" type="button">Criar sala</button>
-          <div class="join-fields">
-            <label>Código da sala <input id="room-id" maxlength="64" autocomplete="off" required></label>
-            <button class="hud-button hud-button--secondary" type="submit">Entrar</button>
-          </div>
-        </form>
-        <p id="connection" role="status"></p>
-      </div>
+      <div id="room-entrance" class="hud-panel entrance lobby-card"></div>
     </section>
     <details id="voice-test" hidden>
       <summary>Testar filtro de voz</summary>
@@ -84,26 +73,14 @@
       </div>
       <div id="context-hud">
         <section id="stations" aria-label="Ações próximas" hidden>
-          <div class="station-actions">
-            <div id="legislative-station-actions" class="station-grid"></div>
-            <div class="station-grid" id="station-election-actions"></div>
-            <div id="office-progress-mount"></div>
-            <div id="nearby-actions" class="context-nearby"></div>
-            <div id="station-shortcuts"></div>
-            <div id="field-actions"></div>
-            <div id="context-overflow"></div>
-          </div>
+          <div class="station-actions" id="context-actions-mount"></div>
         </section>
       </div>
       <section id="plenary" class="hud-panel lobby-card" aria-label="Sessão legislativa">
         <div id="room-setup">
           <h2 class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></h2>
           <p>Escolha seu personagem</p>
-          <div class="lobby-invite">
-            <label>Link da sala <input id="lobby-invite-url" readonly></label>
-            <button id="lobby-copy-invite" class="hud-button hud-button--secondary" type="button">Copiar link</button>
-            <button id="lobby-settings" class="hud-icon-button" type="button" aria-label="Configurações"><svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg></button>
-          </div>
+          <div id="lobby-invite-mount" class="lobby-invite"></div>
           <div id="characters" role="group" aria-label="Personagem"></div>
         </div>
         <div id="lobby-controls"></div>
@@ -123,33 +100,17 @@
         </header>
         <div id="agenda-dock"></div>
         <footer id="command-deck" aria-label="Painel de partida">
-          <button id="plenary-settings" class="hud-icon-button" type="button" aria-label="Configurações" title="Configurações (K)">
-            <svg class="hud-glyph" aria-hidden="true"><use href="#icon-settings"/></svg>
-          </button>
           <section id="legislative-dock" aria-label="Situação legislativa"></section>
           <section class="deck-tools" aria-label="Itens e ferramentas">
             <div id="item-slots" role="group" aria-label="Itens carregados" hidden></div>
             <div class="deck-tool-row">
               <div id="congress-apps"></div>
-              <div id="voice-host"></div>
             </div>
           </section>
         </footer>
       </div>
-      <div id="voice-lobby">
-        <aside id="voice-dock" class="hud-strip" aria-label="Voz da sala">
-          <button class="hud-icon-button" id="open-action-shortcuts" type="button" title="Atalhos de teclado (F2)" aria-label="Atalhos de teclado" aria-keyshortcuts="F2">F2</button>
-        </aside>
-      </div>
       <dialog id="room-settings" class="hud-panel sound-settings-content" aria-labelledby="settings-title"></dialog>
-      <div id="asset-loading" hidden>
-        <div class="hud-panel lobby-card">
-          <div class="lobby-brand"><img src="%BASE_URL%assets/logo-infiltrados.webp" alt="Infiltrados no Congresso"></div>
-          <p id="asset-loading-status" role="status">Carregando o Congresso…</p>
-          <progress id="asset-loading-progress" max="1" value="0" aria-label="Progresso do carregamento"></progress>
-          <button id="asset-loading-back" class="hud-button hud-button--secondary" type="button" hidden>Voltar</button>
-        </div>
-      </div>
+      <div id="asset-loading-mount"></div>
       <div id="floor-plan" hidden></div>
       <dialog id="project-picker" class="hud-panel" aria-labelledby="project-picker-title"></dialog>
       <dialog id="result-dialog" class="hud-panel" aria-labelledby="result-title"></dialog>

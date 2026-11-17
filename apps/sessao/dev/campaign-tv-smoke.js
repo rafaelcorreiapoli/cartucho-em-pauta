@@ -76,7 +76,17 @@ async page => {
 
     await Promise.all([advertiser(page).waitFor(),advertiser(guest).waitFor()]);
     await Promise.all([observeBroadcasts(page,null),observeBroadcasts(guest,await advertiser(guest).elementHandle())]);
-    await advertiser(page).click();
+    const originalAdvertise = advertiser(page);
+    const actionMenu = page.getByRole('dialog',{name:'Atalhos de teclado'});
+    await originalAdvertise.evaluate(button=>{
+      button.setAttribute('aria-label','Ação original da Sala de Imprensa');
+      button.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();},true);
+    });
+    await page.keyboard.press('F2');
+    const campaignShortcut = advertiser(actionMenu);
+    await campaignShortcut.waitFor();
+    await page.keyboard.press(await campaignShortcut.getAttribute('aria-keyshortcuts'));
+    await actionMenu.waitFor({state:'hidden'});
     const broadcasts = await Promise.all([page,guest].map(async client=>{
       await client.waitForFunction(()=>window.campaignAds.length===2);
       return client.evaluate(()=>window.campaignAds);
@@ -96,7 +106,11 @@ async page => {
         throw Error('O anúncio não foi limpo ou o microfone foi solicitado.');
       }
     }
-    return {rafa,bia};
+    await page.keyboard.press('F2');
+    await actionMenu.waitFor();
+    if (await campaignShortcut.count()) throw Error('O atalho voltou a oferecer propaganda no mesmo ciclo.');
+    await page.keyboard.press('Escape');
+    return {rafa,bia,keyboardBroadcast:true,removedAfterUse:true};
   } finally {
     await guest.close();
   }

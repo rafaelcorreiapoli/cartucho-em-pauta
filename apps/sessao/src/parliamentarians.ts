@@ -6,8 +6,17 @@ export const npcRules = {
   speed: 68, robberyMs: 3000, robberyRange: 21,
 } as const;
 
+export type ParliamentarianFieldAction =
+  | {kind:'talk'|'rob';target:string}
+  | {kind:'cancel-robbery'};
+
+export type ParliamentarianAction = ParliamentarianFieldAction
+  | {kind:'close';session:number}
+  | {kind:'sign';session:number;target:string;item:number;amount:number}
+  | {kind:'vote';session:number;target:string;round:number;project:number;vote:Vote;amount:number};
+
 export type ParliamentarianDeal = {
-  id:string; name:string; project?:string; projectIndex?:number; wallet:number; expiresIn:number;
+  session:number; id:string; name:string; project?:string; projectIndex?:number; wallet:number; paymentsLeft:number; expiresIn:number;
   documents:{id:number;title:string;price:number}[];
   minimum:Record<Vote,number>;
 };

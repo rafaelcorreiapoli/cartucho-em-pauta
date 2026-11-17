@@ -1,5 +1,7 @@
+import {formatImpact,impactTone} from './impact-value';
+import {DialogHeader} from './dialog-header';
+import {useDialogKeys} from './use-dialog-keys';
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { DialogDismiss } from './dialog-dismiss';
 import { documentRules } from '../internal-mail';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -10,12 +12,8 @@ import './project-picker.css';
 type Project = (typeof bills)[number];
 
 function budgetImpact(value:number) {
-  return {value:Math.min(0,value),label:value<0 ? `−${money(-value)}` : money(0)};
-}
-
-function stabilityImpact(value:number) {
-  if (value<0) return `−${-value}`;
-  return value>0 ? `+${value}` : '0';
+  const cost = Math.min(0,value);
+  return {value:cost,label:formatImpact(cost,true)};
 }
 
 function approvalBudget(bill:Project) {
@@ -36,14 +34,10 @@ function extraEffect(bill:Project) {
   }
 }
 
-function effectTone(value:number) {
-  return value>0 ? 'gain' : value<0 ? 'loss' : 'neutral';
-}
-
 function ImpactSummary({impact,budget}:{impact:Impact;budget:ReturnType<typeof budgetImpact>}) {
   return <span className="project-picker-impact">
-    <span>Orçamento <b data-effect={effectTone(budget.value)}>{budget.label}</b></span>
-    <span>Estabilidade <b data-effect={effectTone(impact.stability)}>{stabilityImpact(impact.stability)}</b></span>
+    <span>Orçamento <b data-effect={impactTone(budget.value)}>{budget.label}</b></span>
+    <span>Estabilidade <b data-effect={impactTone(impact.stability)}>{formatImpact(impact.stability)}</b></span>
   </span>;
 }
 
@@ -58,11 +52,23 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     setSelected(index);
     if (detail.current) detail.current.scrollTop = 0;
   }
+  function selectAndReveal(index:number) {
+    select(index);
+    const radio = list.current?.querySelector<HTMLInputElement>(`input[value="${index}"]`);
+    radio?.focus({preventScroll:true});
+    radio?.closest('label')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
   function submit() {
     if (selected!==undefined && !unavailable.has(selected)) confirm(selected);
   }
   function onKeyDown(event:KeyboardEvent<HTMLDivElement>) {
     if (event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.key==='PageDown' || event.key==='PageUp') {
+      if (!detail.current) return;
+      event.preventDefault();
+      detail.current.scrollBy({top:detail.current.clientHeight*(event.key==='PageDown' ? 1 : -1)});
+      return;
+    }
     if (event.key==='Enter') {
       if (event.target instanceof HTMLButtonElement) return;
       event.preventDefault();
@@ -77,17 +83,17 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     else return;
     event.preventDefault();
     if (index===undefined) return;
-    select(index);
-    const radio = list.current?.querySelector<HTMLInputElement>(`input[value="${index}"]`);
-    radio?.focus({preventScroll:true});
-    radio?.closest('label')?.scrollIntoView({block:'nearest',inline:'nearest'});
+    selectAndReveal(index);
   }
+  const picker = useDialogKeys<HTMLDivElement>(()=>undefined,[
+    {name:'Fechar',activate:():void=>{picker.current?.closest('dialog')?.close();}},
+    ...(selected===undefined ? [] : [{name:'Confirmar',activate:submit}]),
+    ...choices.map(index=>({name:bills[index]!.name,activate:()=>selectAndReveal(index)})),
+  ]);
   const bill = selected===undefined ? undefined : bills[selected];
   const effect = bill && extraEffect(bill);
-  return <div className="project-picker-content" onKeyDown={onKeyDown}>
-    <header><h2 className="hud-title" id="project-picker-title">{title}</h2>
-      <DialogDismiss label="Fechar"/>
-    </header>
+  return <div ref={picker} className="project-picker-content" onKeyDown={onKeyDown}>
+    <DialogHeader id="project-picker-title" title={title} dismissLabel="Fechar" titleClass="hud-title"/>
     <form className="project-picker-form" onSubmit={event=>{
       event.preventDefault();
       submit();

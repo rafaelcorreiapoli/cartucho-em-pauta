@@ -31,8 +31,8 @@ test('treasury prompts use the carried amount and identity and disappear when re
   const cash = {id:7,kind:'briefcase' as const,cash:8};
   const coffee = {id:8,kind:'coffee' as const};
   expect(treasuryDeliveries([cash,coffee])).toEqual([
-    {label:'Entregar R$ 80 mil ao tesoureiro',action:{kind:'deliver',place:'treasury',item:7}},
-    {label:'Entregar só R$ 40 mil',action:{kind:'deliver',place:'treasury',item:7,target:'partial'}},
+    {label:'Entregar R$ 80 mil ao tesoureiro',action:{kind:'deliver',place:'treasury',item:7,expectedCash:8}},
+    {label:'Entregar só R$ 40 mil',action:{kind:'deliver',place:'treasury',item:7,expectedCash:8,target:'partial'}},
   ]);
   expect(treasuryDeliveries([coffee])).toEqual([]);
   expect(treasuryDeliveries([{...cash,cash:.1}])).toHaveLength(1);

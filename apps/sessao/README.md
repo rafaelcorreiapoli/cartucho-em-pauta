@@ -317,9 +317,14 @@ A gravação `dev/fixtures/megaphone-pt-br.flac` foi sintetizada no macOS com a
 voz Luciana, a 155 palavras por minuto, e convertida para FLAC mono a 24 kHz.
 O workflow também executa o teste em Chrome headless.
 
-O teste usa WebRTC local com sinalização simulada e mede o áudio após o filtro
-no receptor. Compara a relação entre graves e médios com e sem Megafone,
-repetindo a comparação com o Modulador ativo. Também verifica presença de
-sinal, picos abaixo do clipping e uma captura e uma trilha por cliente.
+O teste conecta três clientes ao gameserver e mede o áudio recebido por WebRTC.
+Compara a relação entre graves e médios com e sem Megafone e repete a
+comparação com o Modulador ativo. Também verifica o isolamento da chamada
+privada, o mute e uma única trilha de áudio por conexão.
+
+Para salvar os clipes, abra o Vite com `?captureVoice=1` antes de executar o
+teste. Cada gravação recebe a mesma fala completa, com um ciclo de recarga
+entre os dois modos de Megafone. Os arquivos são gravados em
+`/tmp/sessao-megaphone-*.webm`.
 
 Os efeitos de passos usam quatro recortes de [Footsteps Carpet, de LewisEmmott5](https://freesound.org/people/LewisEmmott5/sounds/732573/) (CC0), com volume ajustado para a caminhada.

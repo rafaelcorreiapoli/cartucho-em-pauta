@@ -1,5 +1,5 @@
 import type {ComplaintProof} from './complaints';
-import {mountNearbyActions,type NearbyItem} from './ui/nearby-items';
+import {createNearbyActions,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
 import { PhonePix } from './ui/phone-pix';
 import type { PoliticsAction } from './politics';
@@ -11,12 +11,15 @@ import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
 import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import type { ReactNode } from 'react';
+import type {ShortcutEntry} from './action-shortcuts';
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
+import { EquipmentPanel } from './ui/equipment-panel';
 import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
-import { paintSnake, snakeDirection } from './phone-snake';
+import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
@@ -48,6 +51,13 @@ function itemName(item:Pick<WorldItem,'kind'|'document'|'quantity'>) {
 
 import type { SpyOption } from "./surveillance";
 
+function InventoryShortcuts({entries,numberActions,children,bag}:{
+  entries:readonly ShortcutEntry[];numberActions:ReadonlyMap<string,()=>void>;children:ReactNode;bag?:boolean;
+}) {
+  const panel = useDialogKeys<HTMLDivElement>(key=>numberActions.get(key),entries);
+  return <div ref={panel} className={bag ? "bag-layout" : undefined}>{children}</div>;
+}
+
 export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:string, notify:(text:string)=>void, drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void, sendSpy:(option:SpyOption)=>void, sendPolitics:(action:PoliticsAction)=>void, resetMail:()=>void, setPhoneInset:(width:number)=>void, submitComplaint:(proof:ComplaintProof)=>void) {
   const dialog = element<HTMLDialogElement>('gameplay-dialog');
   const body = element('gameplay-body');
@@ -61,7 +71,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   const slotsRoot = createRoot(slots);
   const requestBox = element('object-request');
   const requestRoot = createRoot(requestBox);
-  const nearbyActions = mountNearbyActions(element('nearby-actions'));
+  let requestEntries:ShortcutEntry[] = [];
+  const nearbyActions = createNearbyActions();
   let selection: {id:number; source:'inventory'|'filed'} | undefined;
   let nearbyKey = '';
   let inventoryKey = '';
@@ -99,7 +110,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let recipient = '';
   let quantity = 1;
 
-  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false) {
+  function objectCard(item:WorldItem, actions:readonly ObjectAction[] = [], chooseQuantity=false,
+    shortcuts?:{entries:ShortcutEntry[];numberActions?:Map<string,()=>void>}) {
     const definition = objects[item.kind];
     const doc = item.document;
     const cash = cashAmount(item);
@@ -110,6 +122,30 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const rank = (action:ObjectAction) => action.label==='Equipar' || action.label===useLabel ? 0 : action.label==='Largar no chão' ? 1 : 2;
       return rank(first)-rank(second);
     }) : actions;
+    let detail:HTMLDetailsElement|null = null;
+    let recipientSelect:HTMLSelectElement|null = null;
+    const entries = shortcuts?.entries;
+    const detailLabel = isBag ? 'Mais detalhes' : 'Inspecionar';
+    entries?.push({name:detailLabel,activate:()=>{if (detail) detail.open = !detail.open;}});
+    if (chooseQuantity && previous?.gameplay?.contacts.length) {
+      entries?.push({name:'Selecionar jogador',activate:()=>recipientSelect?.focus()});
+    }
+    if (chooseQuantity && itemQuantity(item)>1) {
+      if (selectedItemQuantity(item,quantity)>1) entries?.push({name:'Diminuir quantidade',activate:()=>changeQuantity(item,-1)});
+      if (selectedItemQuantity(item,quantity)<itemQuantity(item)) entries?.push({name:'Aumentar quantidade',activate:()=>changeQuantity(item,1)});
+    }
+    const focusHotbar = ()=>body.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus();
+    if (chooseQuantity && bagOpen && canPinToHotbar(item)) entries?.push({name:'Adicionar à hotbar',activate:focusHotbar});
+    const canPin = chooseQuantity && !bagOpen && canPinToHotbar(item);
+    const pinned = canPin && hotbar.includes(item.id);
+    const updateHotbar = (slots:typeof hotbar) => {
+      hotbar = slots;
+      highlightSlot();
+      renderKey = '';
+      render();
+    };
+    const removeShortcut = ()=>updateHotbar(hotbar.map(id=>id===item.id ? undefined : id));
+    if (pinned) entries?.push({name:'Remover atalho',activate:removeShortcut});
     let shortcut = 0;
     return <article className="object-card" key={item.id}>
       <div className={isBag ? "bag-item-info" : "object-card-content"}>
@@ -118,7 +154,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
           <p className="bag-description">{doc?.description ?? definition.description}</p>
         </>}
-        <details><summary>{bagOpen && chooseQuantity ? 'Mais detalhes' : 'Inspecionar'}</summary>
+        <details ref={node=>{detail=node;}}><summary>{detailLabel}</summary>
           {!(bagOpen && chooseQuantity) && <p>{doc?.description ?? definition.description}</p>}
           {doc && <>
             <p>Assinaturas {doc.signatures.length}/{doc.requiredSignatures} · {doc.signatures.map(person=>person.name).join(', ') || 'nenhuma'}</p>
@@ -129,7 +165,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           {!!cash && <p>{money(cash)}</p>}
         </details>
         {chooseQuantity && !!previous?.gameplay?.contacts.length && <label className={isBag ? 'bag-recipient' : 'object-recipient'}>Jogador
-          <select value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
+          <select ref={node=>{recipientSelect=node;}} value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
             <option value="">Escolha…</option>
             {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
           </select>
@@ -144,20 +180,30 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
         {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
-          disabled={!canPinToHotbar(item)} onClick={()=>document.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus()}>
+          disabled={!canPinToHotbar(item)} onClick={focusHotbar}>
           <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
         {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
-          {hotbar.map((id,index)=><button key={index} type="button" className="hud-button hud-button--secondary"
-            disabled={!canPinToHotbar(item)} aria-label={`Vincular ao slot ${index+1}`} aria-pressed={id===item.id}
-            aria-keyshortcuts={canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
-            onClick={()=>{hotbar = assignHotbarSlot(hotbar,index,item.id);highlightSlot();renderKey = '';render();}}><kbd aria-hidden="true">⇧ {index+1}</kbd></button>)}
-          {hotbar.includes(item.id) && <button type="button" className="hud-button hud-button--secondary"
-            onClick={()=>{hotbar = hotbar.map(id=>id===item.id ? undefined : id);highlightSlot();renderKey = '';render();}}>Remover atalho</button>}
+          {hotbar.map((id,index)=>{
+            const label = `Vincular ao slot ${index+1}`;
+            const key = `Shift+${index+1}`;
+            const assign = ()=>updateHotbar(assignHotbarSlot(hotbar,index,item.id));
+            if (canPin) {
+              entries?.push({name:label,activate:assign});
+              shortcuts?.numberActions?.set(key,assign);
+            }
+            return <button key={index} type="button" className="hud-button hud-button--secondary"
+              disabled={!canPin} aria-label={label} aria-pressed={id===item.id}
+              aria-keyshortcuts={canPin ? key : undefined} onClick={assign}><kbd aria-hidden="true">⇧ {index+1}</kbd></button>;
+          })}
+          {pinned && <button type="button" className="hud-button hud-button--secondary"
+            onClick={removeShortcut}>Remover atalho</button>}
         </div>}
         {controls.map(({label,run,disabled})=>{
           const key = !disabled && shortcut<9 ? String(++shortcut) : undefined;
+          if (!disabled) entries?.push({name:label,activate:run});
+          if (key) shortcuts?.numberActions?.set(key,run);
           return <button type="button" key={label} className="hud-button hud-button--secondary"
             aria-keyshortcuts={key} disabled={disabled} onClick={run}><span>{isBag && (label==='Equipar' || label==='Largar no chão') && <BagIcon name={label==='Equipar' ? 'gear' : 'drop'}/>} {label}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
         })}
@@ -165,7 +211,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     </article>;
   }
   function changeQuantity(item:WorldItem,delta:number) {
-    quantity = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    const next = selectedItemQuantity(item,selectedItemQuantity(item,quantity)+delta);
+    if (next===quantity) return;
+    quantity = next;
     render();
   }
 
@@ -219,6 +267,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
+  const closePhoneApp = ()=>selectApp();
+
   function render() {
     const view = previous;
     const state = view?.gameplay;
@@ -239,9 +289,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const contacts = state.contacts;
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
-    if (phone && !navigationMounted) {
-      navigationMounted = true;
-      navigationRoot.render(<PhoneApps select={selectApp}/>);
+    const showNavigation = phone && !app;
+    if (showNavigation!==navigationMounted) {
+      navigationMounted = showNavigation;
+      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.length);
@@ -249,7 +300,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Denunciar' ? photos.complaintKey(view.complaints) :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
       app==='Câmera' ? photos.count :
-      app==='Projetos' ? [view.project,view.outcomes] :
+      app==='Projetos' ? [view.project,view.outcomes,view.projectFilingClosed,view.projectVoteExpired] :
       app==='Pix' ? [view.politics?.contacts,view.politics?.wallet,view.politics?.paymentsLeft,view.politics?.directory] :
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       [state.game?.status,state.game?.score,state.candy,state.bets,view.politics?.wallet];
@@ -260,35 +311,44 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const previouslyFocused = document.activeElement;
     const focused = body.contains(previouslyFocused);
     let content:ReactNode;
+    const inventoryShortcuts = {
+      entries:[{name:'Fechar',activate:()=>dialog.close()}] as ShortcutEntry[],
+      numberActions:new Map<string,()=>void>(),
+    };
     if (stash) {
-      content = <OfficeStash stash={stash} inventory={state.inventory} send={send}/>;
+      content = <OfficeStash stash={stash} inventory={state.inventory} send={send} close={()=>dialog.close()}/>;
     }
     function renderBag(detail?:ReturnType<typeof objectCard>) {
       const inventory = state!.inventory;
       const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
         (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
-      return <div className="bag-layout">
+      const chooseFilter = (filter:typeof bagFilter)=>{bagFilter = filter;selection = undefined;render();};
+      const chooseItem = (entry:WorldItem)=>{
+        if (assigningSlot!==undefined) {
+          hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
+          dialog.close();
+        } else {
+          selection = {id:entry.id,source:'inventory'};
+          quantity = 1;
+          render();
+        }
+      };
+      const entries = inventoryShortcuts.entries;
+      for (const filter of bagFilters) entries.push({name:filter,activate:()=>chooseFilter(filter)});
+      return <InventoryShortcuts {...inventoryShortcuts} bag>
         <div className="bag-filters flex gap-2" role="group" aria-label="Categoria de itens">
           {bagFilters.map(filter=><button key={filter} type="button" aria-pressed={bagFilter===filter}
-            onClick={()=>{bagFilter = filter;selection = undefined;render();}}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
+            onClick={()=>chooseFilter(filter)}><BagIcon name={filter==='Todos' ? 'bag' : filter==='Equipamentos' ? 'gear' : 'food'}/>{filter}</button>)}
         </div>
         <div className="bag-storage">
           <div className="congress-bag">
             {Array.from({length:INVENTORY_SLOTS},(_,index)=>{
               const entry = filtered[index];
+              const disabled = !!(entry && assigningSlot!==undefined && !canPinToHotbar(entry));
+              if (entry && !disabled) entries.push({name:itemName(entry),activate:()=>chooseItem(entry)});
               return entry ? <button key={entry.id} type="button" className="item-tile" title={itemName(entry)}
                 aria-label={itemName(entry)} aria-pressed={selection?.id===entry.id}
-                disabled={assigningSlot!==undefined && !canPinToHotbar(entry)}
-                onClick={()=>{
-                  if (assigningSlot!==undefined) {
-                    hotbar = assignHotbarSlot(hotbar,assigningSlot,entry.id);
-                    dialog.close();
-                  } else {
-                    selection = {id:entry.id,source:'inventory'};
-                    quantity = 1;
-                    render();
-                  }
-                }}>
+                disabled={disabled} onClick={()=>chooseItem(entry)}>
                 <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
                 {itemQuantity(entry)>1 && <span className="slot-count">×{itemQuantity(entry)}</span>}
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
@@ -302,45 +362,27 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           <div className="bag-preview-slots">
             {hotbar.map((id,index)=>{
               const pinned = inventory.find(entry=>entry.id===id);
+              const pin = ()=>{if (item) pinBagItem(item,index);};
+              const canPin = !!item && canPinToHotbar(item);
+              const label = `Vincular ao slot ${index+1}`;
+              if (canPin) entries.push({name:label,activate:pin});
               return <button type="button" key={index} className="item-tile"
-                disabled={!item || !canPinToHotbar(item)} aria-pressed={!!item && item.id===id}
-                aria-label={`Vincular ao slot ${index+1}`} aria-keyshortcuts={item && canPinToHotbar(item) ? `Shift+${index+1}` : undefined}
-                onClick={()=>{
-                  if (!item) return;
-                  hotbar = id===item.id ? hotbar.map((entry,slot)=>slot===index ? undefined : entry) : assignHotbarSlot(hotbar,index,item.id);
-                  highlightSlot();
-                  renderKey = '';
-                  render();
-                }}>
+                disabled={!canPin} aria-pressed={!!item && item.id===id}
+                aria-label={label} aria-keyshortcuts={canPin ? `Shift+${index+1}` : undefined} onClick={pin}>
                 <kbd className="slot-key" aria-hidden="true">⇧ {index+1}</kbd>
                 {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
               </button>;
             })}
           </div>
         </footer>
-      </div>;
+      </InventoryShortcuts>;
     }
     if (bagOpen && !item) {
       content = renderBag();
     }
     if (equipmentOpen) {
-      const equipped = state.equipped ?? [];
-      content = equipped.length ? <ul className="equipment-list">
-        {equipped.map(gear=><li key={gear.id}>
-          <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[gear.kind].portrait} alt="" draggable={false}/>
-          <strong>{itemName(gear)}</strong>
-          {phase==='negotiation' && !state.vitality?.recovery && <>
-            <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:'unequip',item:gear.id})}>Desequipar</button>
-            {gear.kind==='megaphone' &&
-              <button type="button" className="hud-button hud-button--secondary" disabled={!!state.equipmentCooldowns?.[gear.id]}
-                onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
-                  state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
-            {gear.kind==='voiceModulator' && state.modulator &&
-              <button type="button" className="hud-button hud-button--secondary"
-                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? 'Desligar modulador' : 'Ligar modulador'}</button>}
-          </>}
-        </li>)}
-      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>;
+      content = <EquipmentPanel state={state} available={phase==='negotiation' && !state.vitality?.recovery}
+        send={send} close={()=>dialog.close()}/>;
     }
 
     if (item) {
@@ -382,25 +424,25 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (item.document && canVerifyDocumentAt(place)) act('Verificar documento','verify-document',place);
         }
       }
-      const detail = objectCard(item,actions,selection?.source==='inventory');
-      content = bagOpen ? renderBag(detail) : detail;
+      const detail = objectCard(item,actions,selection?.source==='inventory',inventoryShortcuts);
+      content = bagOpen ? renderBag(detail) : <InventoryShortcuts {...inventoryShortcuts}>{detail}</InventoryShortcuts>;
     }
     if (decoration) {
       content = <DecorationCard decoration={decoration} ownId={ownId}
-        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send}/>;
+        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send} close={()=>dialog.close()}/>;
     }
     const showMail = phone && app==='Correio';
     if (phone && app && !showMail) {
       let application:ReactNode;
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
-        available={phase==='negotiation'} send={send}/>;
-      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>;
+        available={phase==='negotiation'} send={send} close={closePhoneApp}/>;
+      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
-        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum}/>;
-      if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics}/>;
-      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes}/>;
-      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint);
-      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
+        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
+      if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
+      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
+      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
+      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation',closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
     mailHost.hidden = !showMail;
@@ -423,59 +465,96 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     highlightSlot();
   }
 
+  function activateHotbar(index:number) {
+    const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
+    if (!item) {
+      assigningSlot = index;
+      open(undefined,undefined,false,false,true);
+      return;
+    }
+    const use = consumableAction(item);
+    if (use) send(use.action);
+    else open({id:item.id,source:'inventory'});
+  }
+
+  function hotbarControl(index:number) {
+    const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
+    const shortcut = index+1;
+    const use = item && consumableAction(item);
+    const name = item && itemName(item);
+    const label = item ? use ? `${use.label} · ${name}` : `Abrir ${name}` : `Escolher item para o slot ${shortcut}`;
+    return {item,shortcut,use,label};
+  }
+
+  function hotbarVisible() {
+    return !slots.hidden && slots.parentElement?.checkVisibility({visibilityProperty:true,opacityProperty:true});
+  }
+
+  function hotbarShortcuts():ShortcutEntry[] {
+    if (!hotbarVisible()) return [];
+    return Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+      const {item,label} = hotbarControl(index);
+      return {name:label,activate:()=>{
+        if (hotbarVisible() && hotbar[index]===item?.id) activateHotbar(index);
+      }};
+    });
+  }
+
   function highlightSlot() {
     slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
-      const item = inventoryItems.find(entry=>entry.id===hotbar[index]);
-      const shortcut = index+1;
+      const {item,shortcut,use,label} = hotbarControl(index);
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
-        aria-label={`Escolher item para o slot ${shortcut}`} title={`Vincular item (Shift+${shortcut})`}
-        onClick={()=>{assigningSlot = index;open(undefined,undefined,false,false,true);}}>
+        aria-label={label} title={`Vincular item (Shift+${shortcut})`}
+        onClick={()=>activateHotbar(index)}>
         {badge}<span className="slot-plus" aria-hidden="true">+</span>
       </button>;
-      const name = itemName(item);
-      const use = consumableAction(item);
-      const label = use ? `${use.label} · ${name}` : `Abrir ${name}`;
       return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
         aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
-        onClick={()=>use ? send(use.action) : open({id:item.id,source:'inventory'})}>
+        onClick={()=>activateHotbar(index)}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
         {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </button>;
     }));
   }
 
+  function pinBagItem(item:WorldItem,index:number) {
+    if (!canPinToHotbar(item)) return;
+    hotbar = hotbar[index]===item.id ? hotbar.map((id,slot)=>slot===index ? undefined : id) : assignHotbarSlot(hotbar,index,item.id);
+    highlightSlot();
+    renderKey = '';
+    render();
+  }
+
   const onSlotKey = (event:KeyboardEvent) => {
+    if (event.isComposing) return;
     if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
         !event.ctrlKey && !event.altKey && !event.metaKey && !isEditingText(event.target) &&
         (event.key==='ArrowLeft' || event.key==='ArrowRight')) {
-      const control = body.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${event.key}"]`);
-      if (control) {
+      const item = inventoryItems.find(entry=>entry.id===selection?.id);
+      if (item && itemQuantity(item)>1) {
         event.preventDefault();
-        control.click();
+        changeQuantity(item,event.key==='ArrowLeft' ? -1 : 1);
+        return;
+      }
+    }
+    if (bagOpen && dialog.matches('dialog:modal') && dialog.contains(document.activeElement) && selection?.source==='inventory' &&
+        event.shiftKey && !event.defaultPrevented && !event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey &&
+        !isEditingText(event.target) && /^Digit[1-6]$/.test(event.code)) {
+      const item = inventoryItems.find(entry=>entry.id===selection?.id);
+      if (item && canPinToHotbar(item)) {
+        event.preventDefault();
+        pinBagItem(item,Number(event.code.at(-1))-1);
         return;
       }
     }
     if (dialog.open || slots.hidden || !event.shiftKey || event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey ||
       event.metaKey || hudConsumesKeys(event.target) || !/^Digit[1-6]$/.test(event.code)) return;
-    const slot = slots.children[Number(event.code.at(-1))-1];
-    if (!(slot instanceof HTMLButtonElement)) return;
     event.preventDefault();
-    slot.click();
+    activateHotbar(Number(event.code.at(-1))-1);
   };
   document.addEventListener('keydown',onSlotKey);
-  const onSnakeKey = (event:KeyboardEvent) => {
-    if (!dialog.open || dialog.dataset.mode!=='phone' || app!=='Joguinhos' || event.repeat ||
-      event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
-    const status = previous?.gameplay?.game?.status;
-    const direction = snakeDirection(event);
-    if (!direction || (status!=='ready' && status!=='playing')) return;
-    event.preventDefault();
-    send({kind:'game-turn',direction});
-  };
-  document.addEventListener('keydown',onSnakeKey);
-
   function pickUp(area:InteractionArea, action:()=>void) {
     if (pendingPickup) return;
     pendingPickup = area;
@@ -491,7 +570,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     selection = undefined;
     assigningSlot = undefined;
     highlightSlot();
-    if (previous?.gameplay?.game) send({kind:'game-stop'});
     photos.closePresentation();
   };
   dialog.addEventListener('close',closed);
@@ -503,6 +581,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       open();
     },
     openPhone() { app = undefined; open(); },
+    closePhoneApp,
+    close() { dialog.close(); },
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
     openEquipment() { open(undefined,undefined,true); },
@@ -514,6 +594,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       nearbyActions.update([]);
     },
     nearbyActions,
+    requestShortcuts:()=>requestEntries,
+    hotbarShortcuts,
     nearby(player:Motion | undefined, exploring:boolean) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
@@ -565,9 +647,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.close(); }
-      if (document.querySelector('dialog:modal')) nearbyActions.close();
-      if (!view.gameplay && dialog.open) dialog.close();
+      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.update([]); nearbyKey = ''; }
+        if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory);
       if (call?.state==='connected' && old?.call?.state!=='connected' && dialog.dataset.mode==='phone' && app==='Telefone') dialog.close();
@@ -579,19 +660,29 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (requestKey!==requestBox.dataset.request) {
         requestBox.dataset.request = requestKey;
         requestBox.hidden = !incoming && !information;
+        const entries:ShortcutEntry[] = [];
+        const respond = (kind:GameplayAction['kind'],item:number)=>()=>send({kind,item});
         if (information) {
+          const accept = respond('info-accept',information.id);
+          const decline = respond('info-decline',information.id);
+          entries.push({name:'Aceitar fotografia',activate:accept},{name:'Recusar fotografia',activate:decline});
           requestRoot.render(<article className="object-card">
             <p>{information.from.name} quer {information.mode==='copy' ? 'enviar uma cópia de' : 'mostrar'} uma fotografia.</p>
-            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-accept',item:information.id})}>Aceitar</button>
-            <button className="hud-button hud-button--secondary" onClick={()=>send({kind:'info-decline',item:information.id})}>Recusar</button>
+            <button className="hud-button hud-button--secondary" onClick={accept}>Aceitar</button>
+            <button className="hud-button hud-button--secondary" onClick={decline}>Recusar</button>
           </article>);
         } else if (incoming) {
+          const label = incoming.kind==='signature' ? 'Assinar' : 'Aceitar';
+          const accept = respond('accept',incoming.id);
+          const decline = respond('decline',incoming.id);
           requestRoot.render(<><p>{incoming.from.name} {incoming.kind==='signature' ? 'pede uma assinatura' : 'oferece um objeto'}</p>
             {objectCard(incoming.item,[
-              {label:incoming.kind==='signature' ? 'Assinar' : 'Aceitar',run:()=>send({kind:'accept',item:incoming.id})},
-              {label:'Recusar',run:()=>send({kind:'decline',item:incoming.id})},
-            ])}</>);
+              {label,run:accept},{label:'Recusar',run:decline},
+            ],false,{entries})}</>);
         } else requestRoot.render(null);
+        requestEntries = entries.map(({name,activate})=>({
+          name,activate:()=>{if (requestBox.dataset.request===requestKey) activate();},
+        }));
       }
       render();
     },
@@ -615,7 +706,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     destroy() {
       photos.destroy();
       document.removeEventListener('keydown',onSlotKey);
-      document.removeEventListener('keydown',onSnakeKey);
       phoneResize.disconnect();
       setPhoneInset(0);
       dialog.removeEventListener('close',closed);
@@ -629,7 +719,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       slots.hidden = true;
       slotsRoot.unmount();
       requestRoot.unmount();
-      nearbyActions.destroy();
     },
   };
 }

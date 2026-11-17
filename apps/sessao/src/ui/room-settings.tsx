@@ -1,8 +1,9 @@
-import {useSyncExternalStore} from 'react';
+import {DialogHeader} from './dialog-header';
+import {useRef,useSyncExternalStore} from 'react';
+import {useDialogKeys} from './use-dialog-keys';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import type {createAudioPreferences} from '../../../../packages/hud/audio';
-import {DialogDismiss} from './dialog-dismiss';
 
 type Preferences = ReturnType<typeof createAudioPreferences>;
 type SettingsState = {
@@ -19,12 +20,21 @@ export function RoomSettings({preferences,state,actions}:{
   const sound = useSyncExternalStore(preferences.subscribe,preferences.getSnapshot,preferences.getSnapshot);
   const {microphone} = state;
   const voiceLabel = microphone==='live' ? 'Silenciar microfone' : microphone==='muted' ? 'Ativar microfone' : 'Ativar voz';
+  const music = useRef<HTMLInputElement>(null);
+  const effects = useRef<HTMLInputElement>(null);
+  const section = useDialogKeys<HTMLElement>(()=>undefined,[
+    {name:'Fechar configurações',activate:():void=>{section.current?.closest('dialog')?.close();}},
+    {name:'Sair',activate:actions.leave},
+    {name:'Música',activate:()=>music.current?.focus()},
+    {name:'Efeitos e passos',activate:()=>effects.current?.focus()},
+    {name:sound.muted ? 'Ativar som do jogo' : 'Silenciar som do jogo',
+      activate:()=>preferences.update({muted:!sound.muted})},
+    ...(microphone==='starting' ? [] : [{name:voiceLabel,activate:actions.toggleVoice}]),
+    ...(microphone==='live' || microphone==='muted' ? [{name:'Sair da voz',activate:actions.leaveVoice}] : []),
+  ]);
   return <>
-    <header>
-      <h2 id="settings-title">Configurações</h2>
-      <DialogDismiss label="Fechar configurações"/>
-    </header>
-    <section aria-label="Sala">
+    <DialogHeader id="settings-title" title="Configurações" dismissLabel="Fechar configurações"/>
+    <section ref={section} aria-label="Sala">
       <div id="room-bar">
         <span id="room-label" role="status">{state.roomLabel}</span>
         <button id="leave" className="hud-button hud-button--secondary" type="button" onClick={actions.leave}>Sair</button>
@@ -33,10 +43,10 @@ export function RoomSettings({preferences,state,actions}:{
     <section aria-label="Som do jogo">
       <h3>Som do jogo</h3>
       <label htmlFor="music-volume">Música</label>
-      <input id="music-volume" className="hud-range" type="range" min="0" max="100" step="1" value={Math.round(sound.musicVolume*100)}
+      <input ref={music} id="music-volume" className="hud-range" type="range" min="0" max="100" step="1" value={Math.round(sound.musicVolume*100)}
         onChange={event=>preferences.update({musicVolume:event.currentTarget.valueAsNumber/100})}/>
       <label htmlFor="effects-volume">Efeitos e passos</label>
-      <input id="effects-volume" className="hud-range" type="range" min="0" max="100" step="1" value={Math.round(sound.sfxVolume*100)}
+      <input ref={effects} id="effects-volume" className="hud-range" type="range" min="0" max="100" step="1" value={Math.round(sound.sfxVolume*100)}
         onChange={event=>preferences.update({sfxVolume:event.currentTarget.valueAsNumber/100})}/>
       <label className="mute-option"><input id="sound-mute" type="checkbox" checked={sound.muted}
         onChange={event=>preferences.update({muted:event.currentTarget.checked})}/> Silenciar som do jogo</label>

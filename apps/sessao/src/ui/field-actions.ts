@@ -5,6 +5,7 @@ import {decorationActions} from '../installations';
 import {npcs} from '../npcs';
 import {treasuryDeliveries,type GameplayAction} from '../gameplay';
 import {PLENARY_DOORS,type Player} from '../map';
+import type {ParliamentarianFieldAction} from '../parliamentarians';
 import type {PlenaryView} from '../plenary';
 import type {SpyOption} from '../surveillance';
 import {treatmentAction} from './treatment-action';
@@ -14,7 +15,7 @@ export type FieldAction = GameplayAction
   | {kind:'power';option:PowerAction}
   | {kind:'fire';option:FireOption}
   | {kind:'spy';option:SpyOption}
-  | {kind:'npc-deal';command:'talk'|'rob'|'close';target?:string}
+  | {kind:'npc-deal';request:ParliamentarianFieldAction}
   | {kind:'cross-door';door:number}
   | {kind:'inspect-stash'}
   | {kind:'edit-document';item:number;project:number}
@@ -43,7 +44,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   for (const option of spy?.options ?? []) actions.push({
     label:option.label,blocked:option.blocked,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
   });
-  if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',command:'close'}});
+  if (robbery!==undefined) actions.push({label:'Cancelar roubo',icon:'cross',action:{kind:'npc-deal',request:{kind:'cancel-robbery'}}});
   for (const {label,...action} of state?.officeOptions ?? []) {
     actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
   }
@@ -56,7 +57,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
     for (const npc of state.parliamentarians ?? []) {
       actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
-        action:{kind:'npc-deal',command:npc.down ? 'rob' : 'talk',target:npc.id}});
+        action:{kind:'npc-deal',request:{kind:npc.down ? 'rob' : 'talk',target:npc.id}}});
     }
     if (state.locations.includes('treasury')) {
       for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});

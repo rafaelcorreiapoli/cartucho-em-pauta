@@ -1,3 +1,4 @@
+import {mountAssetLoading} from './ui/asset-loading';
 import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
@@ -31,17 +32,18 @@ import { Client, type Room } from '@colyseus/sdk';
 import { createElectionPanel } from './election-panel';
 import { createCampaignTv } from './campaign-tv';
 import { GameAudio } from './game-audio';
-import { installHudHelp } from './hud-help';
 import { createGame } from './game';
 import { createRoomCommandSender } from './room-commands';
 import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
-import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
+import {mountRoomEntrance} from './ui/room-entrance';
+import {mountLobbyInvite} from './ui/lobby-invite';
+import { bills, MAX_PLAYERS, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
 import {voiceModulatorDisguise} from './live-disguise';
-import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
+import { INVALID_NICK, NICK_TAKEN, nickHint } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
 import './match-hud.css';
@@ -52,23 +54,11 @@ import './ui/congress-overlay.css';
 const server = import.meta.env.VITE_GAME_SERVER || `http://${location.hostname}:2568`;
 const client = new Client(server);
 const audio = new GameAudio();
-installHudHelp(document.querySelector('main')!);
-const lobby = document.querySelector<HTMLFormElement>('#lobby')!;
 const landing = document.querySelector<HTMLElement>('#landing')!;
 const setup = document.querySelector<HTMLElement>('#room-setup')!;
-const loadingScreen = document.querySelector<HTMLElement>('#asset-loading')!;
-const loadingProgress = document.querySelector<HTMLProgressElement>('#asset-loading-progress')!;
-const loadingStatus = document.querySelector<HTMLElement>('#asset-loading-status')!;
-const loadingBack = document.querySelector<HTMLButtonElement>('#asset-loading-back')!;
-const lobbyInvite = document.querySelector<HTMLInputElement>('#lobby-invite-url')!;
-const copyLobbyInvite = document.querySelector<HTMLButtonElement>('#lobby-copy-invite')!;
-const nickInput = document.querySelector<HTMLInputElement>('#nick')!;
-const code = document.querySelector<HTMLInputElement>('#room-id')!;
-const status = document.querySelector<HTMLElement>('#connection')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
-const create = document.querySelector<HTMLButtonElement>('#create')!;
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
@@ -81,9 +71,17 @@ let matchRunning = false;
 let room: Room | undefined;
 let game: ReturnType<typeof createGame> | undefined;
 const nicknameStorage = 'cartuchao.sessao.nick';
-try { nickInput.value = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
-nickInput.oninput = () => nickInput.setCustomValidity('');
-code.value = new URL(location.href).searchParams.get('sala') || '';
+let initialNick = '';
+try { initialNick = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
+const entrance = mountRoomEntrance(document.querySelector<HTMLElement>('#room-entrance')!,initialNick,
+  new URL(location.href).searchParams.get('sala') ?? '',(nick,roomId)=>{
+    try { localStorage.setItem(nicknameStorage,nick); } catch {}
+    audio.unlock();
+    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick}));
+  });
+let connecting = false;
+const renderLoading = mountAssetLoading(document.getElementById('asset-loading-mount')!,()=>void room?.leave());
+renderLoading();
 
 const settings = mountRoomSettings(document.querySelector<HTMLDialogElement>('#room-settings')!,audio.preferences,{
   leave:()=>void room?.leave(),
@@ -133,18 +131,16 @@ function showLobby(message: string) {
   game = undefined;
   room = undefined;
   settings.close();
-  document.querySelector<HTMLDialogElement>('#result-dialog')?.close();
-  document.querySelector<HTMLDialogElement>('#session-finale')?.close();
   session.hidden = true;
-  loadingScreen.hidden = true;
+  renderLoading();
   landing.hidden = false;
-  status.textContent = message;
+  entrance.update({message});
 }
 
 async function connect(join: () => Promise<Room>) {
-  if (room || create.disabled) return;
-  create.disabled = true;
-  status.textContent = 'Conectando…';
+  if (room || connecting) return;
+  connecting = true;
+  entrance.update({busy:true,message:'Conectando…'});
   try {
     const joined = await join();
     room = joined;
@@ -156,16 +152,12 @@ async function connect(join: () => Promise<Room>) {
     voice = new RoomVoice(joined, ids => {
       audio.setSpeaking(ids.size>0);
     });
-    code.value = joined.roomId;
+    entrance.setRoomCode(joined.roomId);
     landing.hidden = true;
     session.dataset.phase = 'lobby';
     delete session.dataset.inPlenary;
     session.hidden = false;
     setup.hidden = false;
-    const voiceDock = document.querySelector<HTMLElement>('#voice-dock')!;
-    const voiceLobby = document.querySelector<HTMLElement>('#voice-lobby')!;
-    const voiceHost = document.querySelector<HTMLElement>('#voice-host')!;
-    voiceLobby.append(voiceDock);
     const closeDetails = () => {
       for (const panel of session.querySelectorAll<HTMLDetailsElement>('details[name="game-panels"][open]')) panel.open = false;
     };
@@ -182,12 +174,11 @@ async function connect(join: () => Promise<Room>) {
     settings.update({roomLabel:`Sala ${joined.roomId}`});
     const inviteUrl = new URL(location.href);
     inviteUrl.searchParams.set('sala',joined.roomId);
-    lobbyInvite.value = inviteUrl.href;
-    loadingProgress.value = 0;
-    loadingStatus.textContent = 'Carregando o Congresso…';
-    loadingBack.hidden = true;
-    loadingScreen.hidden = false;
+    const destroyInvite = mountLobbyInvite(document.getElementById('lobby-invite-mount')!,inviteUrl.href,settings.open);
+    hudListeners.signal.addEventListener('abort',destroyInvite,{once:true});
+    let loadingProgress = 0;
     let assetError = false;
+    renderLoading({progress:loadingProgress});
 
     const audioReady = audio.enter();
     let assetsReady = false;
@@ -199,16 +190,18 @@ async function connect(join: () => Promise<Room>) {
         if (room!==joined) return;
         if (progress<0) {
           assetError = true;
-          loadingStatus.textContent = 'Falha ao carregar o cenário. Volte e tente novamente.';
-          loadingBack.hidden = false;
+          renderLoading({progress:loadingProgress,failed:true});
         } else if (!assetError) {
-          loadingProgress.value = progress*.95;
+          loadingProgress = progress*.95;
+          renderLoading({progress:loadingProgress});
           if (progress===1) void Promise.resolve(audioReady).then(()=>{
-            if (room!==joined) return;
+            if (room!==joined || assetError) return;
             assetsReady = true;
-            loadingProgress.value = 1;
-            loadingScreen.hidden = true;
-            if (previousView) panel.render(previousView);
+            renderLoading();
+            if (previousView) {
+              panel.render(previousView);
+              renderApps(previousView);
+            }
           });
         }
       });
@@ -239,7 +232,7 @@ async function connect(join: () => Promise<Room>) {
       map.focus({preventScroll:true});
     },activity => sendCommand('room-activity',{activity}),{...gameplay.nearbyActions,render:gameplay.nearby},action=>{
       if (action.kind!=='attack' && action.kind!=='install' && action.kind!=='uninstall') audio.stationClick();
-      if (action.kind==='npc-deal') { sendCommand('npc-deal',{kind:action.command,target:action.target}); return; }
+      if (action.kind==='npc-deal') { sendCommand('npc-deal',action.request); return; }
       if (action.kind==='power') { sendCommand('power-action',action.option); return; }
       if (action.kind==='fire') { sendCommand('fire-action',action.option); return; }
       if (action.kind==='open-security') { security.open(); return; }
@@ -255,7 +248,7 @@ async function connect(join: () => Promise<Room>) {
     },political,action=>action==='denounce' ? gameplay.openComplaint() : sendCommand('plenary-action',{action}),{
       send:action=>sendCommand('election',action),hasVoice:()=>voice?.active ?? false,
     });
-    const reactHud = mountReactHud();
+    const reactHud = mountReactHud(settings.open);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
@@ -273,6 +266,7 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('item-obtained',(pickup:boolean)=>{
       gameplay.itemObtained(pickup);
+      if (pickup) hud.refreshActions();
       audio.cue('pickup');
     });
     joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
@@ -302,19 +296,24 @@ async function connect(join: () => Promise<Room>) {
     };
     const launchApp = (app:HudApp)=>launchHudApp(appStatus,appCommands,app);
     const appLauncher = mountAppLauncher(launchApp);
-    bindActionShortcuts(session,hudListeners.signal,launchApp,{j:political.toggleDossier,l:election.showPolls});
+    function renderApps(view:PlenaryView) {
+      appStatus = hudAppStatus(view,assetsReady);
+      appLauncher.render(appStatus);
+    }
     const mail = mountInternalMail(message=>sendCommand('mail-publish',message),hud.notify,notice=>sendCommand('mail-examine',{notice}),(canvas,photo)=>game?.drawPhoto(canvas,photo),
-      (id,photo)=>sendCommand('complaint-submit',{id,photo}));
+      (id,photo)=>sendCommand('complaint-submit',{id,photo}),gameplay.closePhoneApp);
     joined.onMessage('mail-reports',(reports:ForensicReport[])=>mail.reports(reports));
     joined.onMessage('mail-state',(notices:InternalNotice[])=>mail.receive(notices));
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
     const projectPicker = mountProjectPicker();
-    const results = mountResults();
+    const results = mountResults(gameplay.close);
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
     },()=>assetsReady,()=>void joined.leave());
+    let inVotingArea = false;
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts(),...appLauncher.shortcuts(),...gameplay.hotbarShortcuts(),...hud.equippedShortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
     let phase: PlenaryView['phase'] = 'lobby';
     let previousView:PlenaryView | undefined;
     let suppressXpEffect = false;
@@ -324,8 +323,7 @@ async function connect(join: () => Promise<Room>) {
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
       const cassationAnnounced = !!view.cassationIn && !previousView?.cassationIn;
-      const projectAnnounced = view.project!==undefined && !view.cassationIn && view.remaining<=projectRules.warningSeconds &&
-        ((previousView?.remaining ?? 0)>projectRules.warningSeconds || !!previousView?.cassation);
+      const projectAnnounced = !!view.projectWarning && !previousView?.projectWarning;
       if (view.phase==='negotiation' && view.project!==undefined && view.proposer && view.project!==previousView?.project) {
         hud.notify('Projeto em pauta',`${view.proposer} protocolou ${bills[view.project].name}. Votação em ${Math.ceil(view.remaining/60)} min.`);
       }
@@ -363,14 +361,12 @@ async function connect(join: () => Promise<Room>) {
       if (gains.xp) hud.showReward('xp',gains.xp,rewardHead);
       suppressXpEffect = false;
       progression.render(view);
-      appStatus = hudAppStatus(view,assetsReady);
-      appLauncher.render(appStatus);
-      game?.setGroundItems(view.gameplay?.ground ?? [],view.gameplay?.decorations ?? []);
+      if (view.phase!==previousView?.phase && (view.phase==='ballot' || view.phase==='hearing')) appLauncher.close();
+      renderApps(view);
       const resultSound = results.render(view,previousView);
       if (resultSound) audio.cue(resultSound);
       previousView = view;
       game?.setPlenaryView(view);
-      game?.setOffices(view.election?.offices ?? []);
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       settings.update({roomLabel:label});
       if (phase===view.phase) {
@@ -386,13 +382,10 @@ async function connect(join: () => Promise<Room>) {
       const negotiating = phase==='negotiation';
       settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
         phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
-      if (phase==='ballot' || phase==='hearing') document.querySelector<HTMLDialogElement>('#gameplay-dialog')?.close();
+      if (phase==='ballot' || phase==='hearing') gameplay.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
-      game?.setMatchPhase(phase);
       setup.hidden = matchRunning;
-      const voiceMount = matchRunning ? voiceHost : voiceLobby;
-      if (voiceDock.parentElement!==voiceMount) voiceMount.append(voiceDock);
       if (negotiating) map.focus({preventScroll:true});
     });
     joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));
@@ -400,7 +393,8 @@ async function connect(join: () => Promise<Room>) {
       hud.notify('Corregedoria',text,critical);
     });
     joined.onMessage('control',(snapshot: ControlState) => {
-      const inside = String(inPlenary(snapshot.player) && !snapshot.isolated);
+      inVotingArea = inPlenary(snapshot.player) && !snapshot.isolated;
+      const inside = String(inVotingArea);
       if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);
@@ -441,48 +435,11 @@ async function connect(join: () => Promise<Room>) {
     const reason = error && typeof error==='object' && 'code' in error ? error.code : undefined;
     showLobby(reason===NICK_TAKEN ? 'Esse nick já está em uso nesta sala. Escolha outro.' :
       reason===INVALID_NICK ? nickHint : 'Não foi possível conectar. Confira o código e se o servidor está rodando.');
-    if (reason===NICK_TAKEN || reason===INVALID_NICK) nickInput.focus();
+    if (reason===NICK_TAKEN || reason===INVALID_NICK) entrance.focusNick();
   } finally {
-    create.disabled = false;
+    connecting = false;
+    entrance.update({busy:false});
   }
 }
-
-function nickname() {
-  const nick = readNick(nickInput.value);
-  nickInput.setCustomValidity(nick ? '' : nickHint);
-  if (!nickInput.reportValidity() || !nick) return;
-  nickInput.value = nick;
-  try { localStorage.setItem(nicknameStorage,nick); } catch {}
-  return nick;
-}
-
-create.onclick = () => {
-  const nick = nickname();
-  if (nick) { audio.unlock(); void connect(() => client.create('plenary',{nick})); }
-};
-lobby.onsubmit = event => {
-  event.preventDefault();
-  const roomId = code.value.trim();
-  const nick = nickname();
-  if (roomId && nick) { audio.unlock(); void connect(() => client.joinById(roomId,{nick})); }
-};
-loadingBack.onclick = () => void room?.leave();
-for (const id of ['lobby-settings','plenary-settings']) {
-  document.getElementById(id)!.onclick = settings.open;
-}
-lobbyInvite.onclick = () => lobbyInvite.select();
-async function copyInvite(button:HTMLButtonElement, label:string) {
-  if (!room) return;
-  const url = new URL(location.href);
-  url.searchParams.set('sala',room.roomId);
-  try {
-    await navigator.clipboard.writeText(url.href);
-    button.textContent = 'Link copiado';
-    setTimeout(() => { button.textContent = label; },1500);
-  } catch {
-    window.prompt('Link da sala',url.href);
-  }
-}
-copyLobbyInvite.onclick = () => void copyInvite(copyLobbyInvite,'Copiar link');
 
 if (import.meta.env.DEV) void import('./voice-test').then(({mountVoiceTest}) => mountVoiceTest());

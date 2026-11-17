@@ -6,6 +6,10 @@ export class Power {
   private operators:[string?,string?] = [];
   private repairAt?:number;
 
+  canFinishBefore(now:number,deadline:number) {
+    return this.active && (this.repairAt ?? now+powerRules.repairMs)<deadline;
+  }
+
   canSabotage(now:number,cooldown:number=powerRules.cooldownMs) {
     return !this.active && now>=this.lastRepairedAt+cooldown;
   }

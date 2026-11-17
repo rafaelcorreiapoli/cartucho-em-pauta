@@ -26,6 +26,8 @@ test('the history renders the latest authoritative result and enables previous p
   expect(markup).toContain('Votação 2 de 2');
   const [first,second] = getOutcomes();
   expect(renderToStaticMarkup(<VoteBrief outcome={first}/>)).toContain('id="brief-yes">1');
+  expect(renderToStaticMarkup(<VoteBrief outcome={first}/>)).toContain('id="brief-budget" data-effect="loss">−R$ 280 mil');
+  expect(markup).toContain('Estabilidade −18 · Orçamento R$ 0 mil');
   const brief = renderToStaticMarkup(<VoteBrief outcome={second}/>);
   expect(brief).toContain('Projeto rejeitado');
   expect(brief).toContain('id="brief-stability" data-effect="loss"');
@@ -35,4 +37,24 @@ test('the history renders the latest authoritative result and enables previous p
   expect(markup).toContain(`Protocolado por ${player.nick}`);
   expect(markup).toContain('aria-label="Votação anterior">');
   expect(markup).toContain('aria-label="Próxima votação" disabled=""');
+});
+
+test('the official result distinguishes an abstention from an uncast vote',()=>{
+  const match = new PlenaryMatch(1);
+  const host:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,x:140,y:146};
+  const players = [host,{...host,id:'b',nick:'B'},{...host,id:'c',nick:'C'}];
+  const ids = players.map(({id})=>id);
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  publishProjectFiling(match,host);
+  match.advance(NEGOTIATION_MS);
+  match.vote(host.id,'abstain',NEGOTIATION_MS+1);
+  match.vote('b','yes',NEGOTIATION_MS+1);
+  match.vote('b','abstain',NEGOTIATION_MS+2);
+  match.advance(NEGOTIATION_MS+BALLOT_MS);
+  const {outcome,outcomes} = match.view(host.id,ids,NEGOTIATION_MS+BALLOT_MS);
+  expect(outcome).toMatchObject({passed:false,yes:0,no:0,abstentions:2,absences:1});
+  const history = renderToStaticMarkup(<VoteHistory outcomes={outcomes}/>);
+  expect(history).not.toContain('Ninguém votou');
+  expect(history).toContain('2 abstenções · 1 sem voto');
+  expect(renderToStaticMarkup(<VoteBrief outcome={outcome!}/>)).toContain('2 abstenções · 1 sem voto');
 });

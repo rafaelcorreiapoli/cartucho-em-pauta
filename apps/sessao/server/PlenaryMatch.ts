@@ -12,15 +12,15 @@ import { npcRules } from '../src/parliamentarians';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
-import type { GameplayEvent } from '../src/gameplay';
+import {cashAmount,type GameplayEvent} from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, deficitStabilityLoss,
+  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, fundedProjectStability,
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
-import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, HEARING_STABILITY_PENALTY, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -31,6 +31,8 @@ export class PlenaryMatch {
   private round = 0;
   private proposal?:{project:number; proposer:string; voteAt:number};
   private protocolOpensAt = 0;
+  private agendaNow = 0;
+  private agendaBallotsLeft = -1;
   private get sessionEndsAt() { return this.started+rules.matchDuration; }
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
@@ -69,14 +71,48 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  canFightCrisis() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT && (this.powerOut || !!this.fire.view(true)); }
+  private get criticalStability() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
 
-  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1]) {
-    this.economy.setAgendaMailAvailability(id=>nextPublicationAt(id)<this.started+rules.matchDuration,agendaSelfies);
+  private get canArticulateBeforeDeadline() {
+    return this.running && this.agendaNow<this.sessionEndsAt &&
+      (this.phase==='negotiation' || this.ends<this.sessionEndsAt);
+  }
+
+  private canFightCrisis(id:string) {
+    return this.criticalStability && this.canArticulateBeforeDeadline && (this.fire.burning || this.canRepairOutage(id));
+  }
+
+  setAgendaMailAvailability(nextPublicationAt:(id:string)=>number,agendaSelfies?:Parameters<PoliticalEconomy['setAgendaMailAvailability']>[1],agendaReportNotices?:(id:string)=>readonly number[]) {
+    this.economy.setAgendaMailAvailability(id=>this.canPublishBeforeDeadline(id,nextPublicationAt(id)),agendaSelfies,agendaReportNotices);
+  }
+
+  private canPublishBeforeDeadline(id:string,nextPublicationAt:number) {
+    if (!this.running || this.expelled.has(id)) return false;
+    let availableAt = Math.max(this.agendaNow,nextPublicationAt,this.economy.suspensionEndsAt(id) ?? 0);
+    const sessionOpensAt = this.phase==='negotiation' ? this.agendaNow : this.ends;
+    availableAt = Math.max(availableAt,sessionOpensAt);
+    const cassationEnd = this.cassationAt===undefined ? sessionOpensAt : this.cassationAt+HEARING_MS;
+    if (this.cassationAt!==undefined && availableAt>=this.cassationAt) {
+      availableAt = Math.max(availableAt,cassationEnd);
+    }
+    if (this.phase!=='ballot' && this.proposal) {
+      const voteAt = Math.max(this.proposal.voteAt,sessionOpensAt,cassationEnd);
+      const voteEnds = voteAt+BALLOT_MS;
+      if (voteEnds<=this.sessionEndsAt && availableAt>=voteAt && availableAt<voteEnds) availableAt = voteEnds;
+    }
+    return availableAt<this.sessionEndsAt;
+  }
+
+  setAgendaCashAvailability(check:Parameters<PoliticalEconomy['setAgendaCashAvailability']>[0]) {
+    this.economy.setAgendaCashAvailability(check);
   }
 
   setAgendaCommerce(now:()=>number) {
     this.economy.setAgendaCommerce(()=>({policies:this.activePolicies(now()),publicBudget:this.budget}));
+  }
+
+  setAgendaXrayAvailability(canUse:(id:string,wallet:number)=>boolean) {
+    this.economy.setAgendaXrayAvailability(canUse);
   }
 
   setAgendaInventory(...inventory:Parameters<PoliticalEconomy['setAgendaInventory']>) {
@@ -94,12 +130,35 @@ export class PlenaryMatch {
     if (this.running) this.refreshAgendaEligibility();
   }
 
-  refreshAgendaEligibility() {
-    const ballotsLeft = bills.length-this.outcomes.length;
-    this.economy.updateAgendaEligibility(this.electorate,ballotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id));
+  private remainingAgendaBallots(now:number) {
+    const blockedUntil = Math.max(now,this.phase==='hearing' ? this.ends : now,
+      this.cassationAt===undefined ? now : this.cassationAt+HEARING_MS);
+    const firstEnd = this.phase==='ballot' ? this.ends :
+      (this.proposal ? Math.max(blockedUntil,this.proposal.voteAt) :
+        Math.max(blockedUntil,this.protocolOpensAt)+projectRules.debateMs)+BALLOT_MS;
+    if (firstEnd>this.sessionEndsAt) return 0;
+    const cycle = projectRules.cooldownMs+projectRules.debateMs+BALLOT_MS;
+    return Math.min(bills.length-this.outcomes.length,1+Math.floor((this.sessionEndsAt-firstEnd)/cycle));
+  }
+
+  refreshAgendaEligibility(now=this.agendaNow) {
+    this.agendaNow = Math.max(this.agendaNow,now);
+    this.agendaBallotsLeft = this.remainingAgendaBallots(this.agendaNow);
+    const agendaPlayers = this.expelled.size
+      ? new Set([...this.electorate].filter(id=>!this.expelled.has(id)))
+      : this.electorate;
+    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.remainingAdvertisements(id,this.agendaNow));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
+
+  private hasFutureVoteNegotiation(now:number) {
+    return this.remainingAgendaBallots(now)>Number(this.phase==='ballot');
+  }
+
+  negotiableProject(now:number) {
+    if (this.phase==='negotiation' && this.hasFutureVoteNegotiation(now)) return this.projectIndex;
+  }
 
   get projectRound() { return this.round; }
 
@@ -171,6 +230,7 @@ export class PlenaryMatch {
   private matchGeneration = 0;
   private readonly receivedEvents = new Set<number>();
   private readonly filedDocuments = new Set<number>();
+  private readonly studiedBills = new Map<number,Set<string>>();
   private hearingTarget?: string;
   private cassationAt?:number;
   private cassationOpen = false;
@@ -187,6 +247,7 @@ export class PlenaryMatch {
   private audits = new Map<string,'clean' | 'fraud'>();
   private outcomes: Outcome[] = [];
   private winner?: Role;
+  private congressDestroyed?: boolean;
   private finalRoster:SessionParticipant[] = [];
   private reason?: string;
 
@@ -225,9 +286,22 @@ export class PlenaryMatch {
     this.eventSequenceAtStart = this.eventSequence;
     this.receivedEvents.clear();
     this.filedDocuments.clear();
+    this.studiedBills.clear();
     let campaignReady = false;
-    this.economy.reset(contacts,random,(id,kind)=>!campaignReady || (kind==='emenda' ? !this.amended : this.election.canCampaignAction(id,kind)));
-    this.economy.setAgendaPowerAvailability(()=>this.powerOut);
+    this.economy.reset(contacts,random,(id,kind)=>{
+      if (!campaignReady) return true;
+      if (kind==='emenda') return !this.amended && this.hasFutureVoteNegotiation(this.agendaNow);
+      if (kind==='emendaFutura') return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || this.amended);
+      if (kind==='leitura') {
+        const project = this.proposal?.project;
+        if (this.phase!=='ballot' && project!==undefined && !this.studiedBills.get(project)?.has(id)) return true;
+        return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || project!==undefined);
+      }
+      if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
+      if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
+      return this.election.canCampaignAction(id,kind);
+    });
+    this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
@@ -243,8 +317,10 @@ export class PlenaryMatch {
     this.budget = rules.startingBudget;
     this.round = 0;
     this.protocolOpensAt = now;
+    this.agendaNow = now;
+    this.agendaBallotsLeft = -1;
     this.outcomes = [];
-    this.winner = this.reason = undefined;
+    this.winner = this.reason = this.congressDestroyed = undefined;
     this.nextRound();
     return true;
   }
@@ -285,13 +361,13 @@ export class PlenaryMatch {
   }
 
   private publishActivity(player:Player,type:GameplayEvent['type'],now:number,
-    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'>) {
-    publishGameplay({players:[],now,nextEventId:()=>++this.eventSequence,publish:event=>this.recordGameplay(event)},
+    details?:Pick<GameplayEvent,'target'|'amount'|'duration'|'place'|'project'>,publish:GameplayWorld['publish']=event=>this.recordGameplay(event)) {
+    publishGameplay({players:[],now,nextEventId:()=>++this.eventSequence,publish},
       player,type,{...details,witnesses:[]});
   }
 
   private recordGameplay(event:GameplayEvent):boolean {
-    if (event.at<this.started) return false;
+    if (!this.running || event.at<this.started) return false;
 
     const project = event.type==='filed' ? event.project : undefined;
     if (project!==undefined && this.projectFilingError(event.actor,project,event.at)) return false;
@@ -299,21 +375,39 @@ export class PlenaryMatch {
       if (event.eventId<=this.eventSequenceAtStart || this.receivedEvents.has(event.eventId)) return false;
       this.receivedEvents.add(event.eventId);
     }
+    if (event.type==='bill-studied') {
+      const studied = event.project;
+      if (studied===undefined || this.phase!=='negotiation' || this.proposal?.project!==studied) return false;
+      const readers = this.studiedBills.get(studied) ?? new Set<string>();
+      if (readers.has(event.actor)) return false;
+      readers.add(event.actor);
+      this.studiedBills.set(studied,readers);
+    }
     if (event.type==='filed' && event.item!==undefined) {
       if (this.filedDocuments.has(event.item)) return false;
       this.filedDocuments.add(event.item);
     }
     if (project!==undefined) {
       this.proposal = {project,proposer:this.economy.name(event.actor),voteAt:event.at+projectRules.debateMs};
-      this.refreshAgendaEligibility();
+      this.refreshAgendaEligibility(event.at);
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
-    const droppedSpy = event.type==='dropped' && (event.kind==='wiretap' || event.kind==='spyCamera');
+    const changedSpyCustody = (event.kind==='wiretap' || event.kind==='spyCamera') &&
+      (event.type==='collected' || event.type==='dropped' || event.type==='transferred' ||
+        event.type==='stored' || event.type==='recovered' || event.type==='destroyed');
     const changedPizza = event.kind==='pizza' && (event.type==='installed' || event.type==='uninstalled' || event.type==='slice');
-    if (droppedSpy || changedPizza || event.type==='photo-published' || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
+    const changedCashCustody = event.kind && cashAmount(event.kind) &&
+      (event.type==='npc-robbed' || event.type==='delivered' || event.type==='money-pocketed' ||
+        event.type==='cash-received' || event.type==='collected' || event.type==='dropped' ||
+        event.type==='stored' || event.type==='recovered');
+    if (changedCashCustody || changedSpyCustody || changedPizza || event.kind==='xray' || event.type==='photo-published' || event.type==='mail-published' && !!event.photo || event.type==='spy-removed' || event.type==='spy-installed' || event.type==='advertisement-aired' ||
         (event.kind==='vip' || event.kind==='portrait') && (event.type==='installed' || event.type==='uninstalled' || event.type==='marked')) this.refreshAgendaEligibility();
     return true;
+  }
+
+  private projectFilingClosed(now:number) {
+    return Math.max(now,this.protocolOpensAt)+projectRules.debateMs+BALLOT_MS>this.sessionEndsAt;
   }
 
   private projectFilingError(id:string,project:number,now:number) {
@@ -321,12 +415,12 @@ export class PlenaryMatch {
     if (this.outcomes.some(outcome=>outcome.project===project)) return 'Esse projeto já foi votado nesta partida.';
     if (this.proposal) return 'Já há um projeto em pauta.';
     if (this.phase!=='negotiation' || this.cassationAt!==undefined) return 'O Protocolo aguarda a liberação do Plenário.';
+    if (this.projectFilingClosed(now)) return 'Não há tempo para votar outro projeto nesta partida.';
     if (now<this.protocolOpensAt) return `Protocolo disponível em ${Math.ceil((this.protocolOpensAt-now)/1000)} s.`;
-    if (now+projectRules.debateMs+BALLOT_MS>this.sessionEndsAt) return 'Não há tempo para votar outro projeto nesta partida.';
   }
 
   act(player:Player, action:Action, now:number) {
-    if (!this.canVote(player.id) || (!this.proposal && action!=='audit')) return;
+    if (!this.canVote(player.id) || (action!=='audit' && (!this.proposal || this.projectVoteExpired(now)))) return;
     if (this.phase!=='negotiation' || now>=this.ends) {
       if (action==='audit') return {text:'A auditoria só pode ser feita durante a articulação.',critical:false};
       return;
@@ -338,6 +432,7 @@ export class PlenaryMatch {
     if (action==='amendment' && !this.amended) {
       this.amended = true;
       this.publishActivity(player,'amendment-filed',now);
+      this.refreshAgendaEligibility(now);
     }
     if (action==='fraud' && this.infiltrators.has(player.id) && !this.economy.suspended(player.id) && !this.fraud) {
       this.fraud = true;
@@ -356,24 +451,28 @@ export class PlenaryMatch {
     if (action==='panel' && this.audits.get(player.id)==='fraud') this.reportedFraud = true;
   }
 
-  roomActivity(player:Player, activity:RoomActivity, now:number):RoomActivityResult | undefined {
+  roomActivity(player:Player, activity:RoomActivity, now:number,publish?:GameplayWorld['publish']):RoomActivityResult | undefined {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
     switch (activity) {
       case 'coffee':
         if (!this.stationCooldowns.take('coffee',now)) return {activity,text:stationRecharge.coffee.feedback,unavailable:true};
-        this.publishActivity(player,'coffee-drunk',now);
+        this.publishActivity(player,'coffee-drunk',now,{place:roomAt(player)},publish);
         return {activity,text:'Cafezinho tomado. De volta à articulação!'};
-      case 'library':
-        if (!this.proposal) return {activity,text:'Nenhum projeto em pauta.'};
-        this.publishActivity(player,'bill-studied',now);
-        return {activity,text:`Você estudou o projeto ${bills[this.proposal.project].name}.`};
+      case 'library': {
+        const project = this.proposal?.project;
+        if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
+        if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
+        this.publishActivity(player,'bill-studied',now,{project},publish);
+        this.refreshAgendaEligibility(now);
+        return {activity,text:`Você estudou o projeto ${bills[project].name}.`};
+      }
     }
   }
 
   gameplayWorld(players:Player[], now:number, voice:(id:string)=>boolean):Omit<GameplayWorld,'publish'> & {publish:(event:GameplayEvent)=>boolean} {
     const generation = this.matchGeneration;
-    const current = ()=>generation===this.matchGeneration;
+    const current = ()=>this.running && generation===this.matchGeneration;
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
@@ -404,6 +503,7 @@ export class PlenaryMatch {
       },
       lootWallet:(id,fraction)=>current() && this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
       takeWallet:id=>current() && this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
+      paymentsLeft:id=>current() ? this.economy.paymentsLeft(id,this.round) : 0,
       payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>{ if (current()) this.economy.earn(id,amount); },
@@ -424,15 +524,25 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
   }
 
-  ballotCountdown(now:number) {
+  private projectVoteExpired(now:number) {
+    return !!this.proposal && Math.max(this.proposal.voteAt,now)+BALLOT_MS>this.sessionEndsAt;
+  }
+
+  private projectWarning(now:number) {
     const at = this.proposal?.voteAt;
-    if (this.phase!=='negotiation' || at===undefined || at-now>5000 ||
-      now+BALLOT_MS>this.sessionEndsAt || this.cassationAt!==undefined) return;
-    return Math.max(1,Math.ceil((at-now)/1000));
+    if (this.phase!=='negotiation' || at===undefined || this.cassationAt!==undefined ||
+        this.projectVoteExpired(now)) return;
+    const seconds = Math.max(1,Math.ceil((at-now)/1000));
+    if (seconds<=projectRules.warningSeconds) return seconds;
+  }
+
+  ballotCountdown(now:number) {
+    const warning = this.projectWarning(now);
+    if (warning!==undefined && warning<=projectRules.countdownSeconds) return warning;
   }
 
   declareVote(id:string,vote:Vote|null,now:number) {
-    if (this.phase!=='negotiation' || !this.proposal || now>=this.ends || !this.canVote(id)) return;
+    if (this.phase!=='negotiation' || !this.proposal || this.projectVoteExpired(now) || now>=this.ends || !this.canVote(id)) return;
     if (vote===null) this.voteIntents.delete(id);
     else this.voteIntents.set(id,vote);
   }
@@ -452,8 +562,17 @@ export class PlenaryMatch {
     return this.canVote(id) && !this.disconnected.has(id);
   }
 
+  private canScheduleHearing(now:number,notice=0) {
+    return this.phase==='negotiation' && this.cassationAt===undefined &&
+      now+notice+HEARING_MS<=this.sessionEndsAt;
+  }
+
+  private canCallHearing(id:string,now:number) {
+    return this.canScheduleHearing(now) && this.canVote(id) && this.votingPlayers()>1 && this.economy.canCall(id);
+  }
+
   private canCallCassation(id:string, now:number) {
-    return this.phase==='negotiation' && now<this.ends && this.cassationAt===undefined &&
+    return this.canScheduleHearing(now,CASSATION_NOTICE_MS) &&
       this.canVoteInCassation(id) && this.popularity(id)>=CASSATION_POPULARITY && this.cassationElectorate().length>=3;
   }
 
@@ -488,6 +607,7 @@ export class PlenaryMatch {
     this.ends = this.sessionEndsAt;
     if (!result) {
       this.cassationResult = {text:'Ninguém foi cassado. Nenhum suspeito recebeu a maioria dos votos.'};
+      if (now<this.sessionEndsAt) this.refreshAgendaEligibility(now);
       return;
     }
     const [target,votes] = result;
@@ -516,6 +636,10 @@ export class PlenaryMatch {
     return this.electorate.has(id) && !this.disconnected.has(id) && !this.isolated(id);
   }
 
+  private canSendPix(id:string, now:number) {
+    return this.canReceivePix(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot');
+  }
+
   contacts(player:Player, players:Player[]): Contact[] {
     return this.phase==='negotiation' || this.phase==='ballot' ? players.filter(other => this.nearby(player,other))
       .map(({id}) => ({id,name:this.economy.name(id)})) : [];
@@ -523,7 +647,11 @@ export class PlenaryMatch {
 
   politics(player:Player, action:PoliticsAction, players:Player[], now:number) {
     const {id} = player;
-    const privateDeal = action.kind==='transfer' || action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
+    if (action.kind==='transfer') {
+      return this.canSendPix(id,now) && this.canReceivePix(action.to) &&
+        this.economy.transfer(id,action.to,action.amount,true,this.round,'pix');
+    }
+    const privateDeal = action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
     if ((this.phase!=='negotiation' && !(this.phase==='ballot' && privateDeal)) ||
       now>=this.ends || !this.electorate.has(id) || this.isolated(id)) return;
     const near = (target:string) => players.some(other => other.id===target && this.nearby(player,other));
@@ -535,16 +663,12 @@ export class PlenaryMatch {
         this.budget -= result.budget;
         this.cash.diverted += action.diverted;
         this.cash.projects += result.budget-action.diverted;
+        const wasCritical = this.criticalStability;
         this.stability = clamp(this.stability+result.stability);
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
+        else if ((this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
         break;
       }
-      case 'transfer':
-        if (!this.canReceivePix(action.to) || !this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round)) return false;
-        this.publishActivity(player,'pix-sent',now,{target:action.to,amount:action.amount});
-        const receiver = players.find(other=>other.id===action.to);
-        if (receiver) this.publishActivity(receiver,'pix-received',now,{target:id,amount:action.amount});
-        return true;
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
         break;
@@ -566,9 +690,10 @@ export class PlenaryMatch {
         if (!this.canCallCassation(id,now) || !this.at(player,'panel')) break;
         if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
         this.cassationAt = now+CASSATION_NOTICE_MS;
+        this.refreshAgendaEligibility(now);
         break;
       case 'hearing':
-        if (this.cassationAt!==undefined || !this.canVote(id) || !this.economy.canCall(id) || !this.canVote(action.target) ||
+        if (!this.canCallHearing(id,now) || !this.canVote(action.target) ||
             (this.hearingImmunity.get(action.target) ?? 0)>now || id===action.target || !this.at(player,'panel')) break;
         if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
         this.hearingTarget = action.target;
@@ -577,13 +702,19 @@ export class PlenaryMatch {
         this.economy.cancelOffers();
         this.economy.interruptPlenaryVisits();
         this.phase = 'hearing';
+        this.refreshAgendaEligibility(now);
         break;
     }
   }
 
+  private canUseCampaignActions(id:string, now:number) {
+    return this.phase==='negotiation' && now<this.ends && this.canVote(id) &&
+      this.election.open(now) && this.ballotCountdown(now)===undefined;
+  }
+
   electionAction(player:Player, action:ElectionAction, now:number, hasVoice:boolean) {
     const {id} = player;
-    if (this.phase!=='negotiation' || now>=this.ends || !this.canVote(id) || !this.election.open(now)) return;
+    if (!this.canUseCampaignActions(id,now)) return;
     const spend = (amount:number) => this.economy.spend(id,amount);
     switch (action.kind) {
       case 'advertise': {
@@ -673,6 +804,23 @@ export class PlenaryMatch {
     return this.energySavingsActive(now) ? energySavings.sabotageCooldown : powerRules.cooldownMs;
   }
 
+  private canFinishOutageRepair(now:number) {
+    if (!this.powerOut) return false;
+    if (this.phase!=='negotiation') return Math.max(now,this.ends)+powerRules.repairMs<this.sessionEndsAt;
+    if (this.proposal && this.cassationAt===undefined && !this.projectVoteExpired(now)) {
+      const {voteAt} = this.proposal;
+      const cutoff = voteAt-projectRules.countdownSeconds*1000;
+      return (now<cutoff && this.power.canFinishBefore(now,cutoff)) ||
+        Math.max(now,voteAt)+BALLOT_MS+powerRules.repairMs<this.sessionEndsAt;
+    }
+    return this.power.canFinishBefore(now,this.sessionEndsAt);
+  }
+
+  private canRepairOutage(id:string) {
+    return this.canArticulateBeforeDeadline && this.canFinishOutageRepair(this.agendaNow) && !this.disconnected.has(id) && !this.isolated(id) &&
+      [...this.electorate].some(other=>other!==id && !this.disconnected.has(other) && !this.isolated(other));
+  }
+
   private canUsePower(now:number) {
     return this.phase==='negotiation' && this.ballotCountdown(now)===undefined;
   }
@@ -690,18 +838,22 @@ export class PlenaryMatch {
   actOnPower(player:Player,action:PowerAction,now:number) {
     if (!this.canOperatePower(player,action.panel,now)) return;
     if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
-    const wasOut = this.powerOut;
+    const couldRepair = this.canFinishOutageRepair(now);
     const result = this.power.act(player.id,action,now,this.powerCooldown(now));
-    if (this.powerOut!==wasOut) this.refreshAgendaEligibility();
+    if (couldRepair!==this.canFinishOutageRepair(now)) this.refreshAgendaEligibility(now);
     return result;
   }
 
   advancePower(now:number,playerAt:(id:string)=>Player|undefined) {
+    const couldRepair = this.canFinishOutageRepair(now);
     const repairedBy = this.power.advance(now,(id,panel)=>{
       const player = playerAt(id);
       return !!player && this.canOperatePower(player,panel,now);
     });
-    if (!repairedBy) return;
+    if (!repairedBy) {
+      if (couldRepair && !this.canFinishOutageRepair(now)) this.refreshAgendaEligibility(now);
+      return;
+    }
     for (const panel of [0,1] as const) {
       const id = repairedBy[panel];
       const player = id && playerAt(id);
@@ -760,6 +912,7 @@ export class PlenaryMatch {
     const insideRoom = roomAt(player)===fireSites[site].name;
     this.publishActivity(player,'fire-extinguished',now,
       {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});
+    this.refreshAgendaEligibility(now);
     return 'Incêndio apagado.';
   }
 
@@ -769,6 +922,12 @@ export class PlenaryMatch {
 
   advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
+    const electionWasOpen = this.election.open(this.agendaNow);
+    const canReturn = this.canArticulateBeforeDeadline;
+    const couldRepair = this.canFinishOutageRepair(this.agendaNow);
+    this.agendaNow = Math.max(this.agendaNow,now);
+    const wasCritical = this.criticalStability;
+    const wasBurning = this.fire.burning;
     const damage = this.fire.advance(now,this.phase==='negotiation');
     if (damage) {
       this.stability = clamp(this.stability-damage);
@@ -777,8 +936,13 @@ export class PlenaryMatch {
         return;
       }
     }
-    if (this.economy.expireSuspensions(now)) this.refreshAgendaEligibility();
-    if (now>=this.sessionEndsAt && !(this.phase==='ballot' && this.ends<=this.sessionEndsAt)) {
+    const expiredSuspensions = this.economy.expireSuspensions(now);
+    const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
+    const crossedCrisisThreshold = (this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability;
+    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold || canReturn!==this.canArticulateBeforeDeadline ||
+        couldRepair!==this.canFinishOutageRepair(this.agendaNow)) this.refreshAgendaEligibility();
+    const closingVote = (this.phase==='ballot' || this.phase==='hearing') && this.ends<=this.sessionEndsAt;
+    if (now>=this.sessionEndsAt && !closingVote) {
       this.finishAtDeadline();
       return;
     }
@@ -786,38 +950,42 @@ export class PlenaryMatch {
       this.renew(now);
       if (!this.running) return;
     }
+    if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft ||
+        (electionWasOpen && !this.election.open(this.agendaNow))) this.refreshAgendaEligibility();
     if (this.cassationAt!==undefined && now>=this.cassationAt) {
       this.cassationAt = undefined;
       this.cassationOpen = true;
-      this.ends = now+HEARING_MS;
+      this.ends = Math.min(now+HEARING_MS,this.sessionEndsAt);
       this.economy.cancelOffers();
       this.economy.interruptPlenaryVisits();
       this.phase = 'hearing';
+      this.refreshAgendaEligibility(now);
       return;
     }
     if (this.phase==='negotiation') {
-      if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || now+BALLOT_MS>this.sessionEndsAt) return;
+      if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || this.projectVoteExpired(now)) return;
       this.economy.cancelOffers();
       this.economy.interruptPlenaryVisits();
       this.phase = 'ballot';
       this.ends = now+BALLOT_MS;
+      if (!this.hasFutureVoteNegotiation(now)) this.refreshAgendaEligibility(now);
       return;
     }
     if (now<this.ends) return;
     if (this.cassationOpen) {
       this.resolveCassation(now);
+      if (this.running && now>=this.sessionEndsAt) this.finishAtDeadline();
       return;
     }
     if (this.phase==='hearing') {
       const target = this.hearingTarget!;
-      const yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-      const removed = this.canVote(target) && yes>=this.quorum();
+      const {yes,quorum} = this.hearingTally();
+      const removed = this.canVote(target) && yes>=quorum;
       if (removed) {
         this.voteIntents.delete(target);
         this.economy.suspend(target,now+SUSPENSION_MS);
         this.hearingImmunity.set(target,now+SUSPENSION_MS+HEARING_IMMUNITY_MS);
-        this.refreshAgendaEligibility();
-        if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-12);
+        if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-HEARING_STABILITY_PENALTY);
       }
       this.hearingResult = `${this.economy.name(target)}: afastamento ${removed ? 'aprovado' : 'rejeitado'} (${yes} votos pelo afastamento).`;
       this.hearingTarget = undefined;
@@ -826,14 +994,19 @@ export class PlenaryMatch {
       else {
         this.phase = 'negotiation';
         this.ends = this.sessionEndsAt;
+        if (now>=this.sessionEndsAt) this.finishAtDeadline();
+        else this.refreshAgendaEligibility(now);
       }
       return;
     }
     if (!this.proposal) return;
     const {project,proposer} = this.proposal;
     const bill = bills[project];
-    let yes = [...this.votes.values()].filter(vote => vote==='yes').length;
-    let no = [...this.votes.values()].filter(vote => vote==='no').length;
+    const votes = [...this.votes.values()];
+    let yes = votes.filter(vote=>vote==='yes').length;
+    let no = votes.filter(vote=>vote==='no').length;
+    const abstentions = votes.filter(vote=>vote==='abstain').length;
+    const absences = Math.max(0,this.votingPlayers()-votes.length);
     const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
     if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
       if (preference>0) yes++;
@@ -857,10 +1030,8 @@ export class PlenaryMatch {
       for (const id of this.electorate) if (this.canVote(id)) this.economy.earn(id,payout);
       this.cash.salaries += previous.budget-this.budget;
     } else this.cash.projects += previous.budget-this.budget;
-    const funding = impact.budget<0 ? Math.min(1,previous.budget/-impact.budget) : 1;
-    const benefit = impact.stability>0 ? Math.floor(impact.stability*funding) : impact.stability;
-    this.stability = clamp(this.stability+benefit-deficitStabilityLoss(-balance));
-    this.outcomes.push({round:this.round,project,proposer,passed,yes,no,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
+    this.stability = clamp(this.stability+fundedProjectStability(impact,previous.budget,balance));
+    this.outcomes.push({round:this.round,project,proposer,passed,yes,no,abstentions,absences,needed,deficit:Math.max(0,-balance),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
     this.economy.cancelOffers();
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
@@ -892,12 +1063,24 @@ export class PlenaryMatch {
     this.treasuryBonus = undefined;
     this.cassationAt = undefined;
     this.cassationOpen = false;
-    this.winner = winner;
+    this.congressDestroyed = winner==='Infiltrado' || this.stability===0 || undefined;
+    this.winner = winner==='Infiltrado' && !this.infiltrators.size ? undefined : winner;
     this.reason = reason;
   }
 
+  private hearingTally() {
+    let voted = 0;
+    let yes = 0;
+    for (const [id,vote] of this.votes) {
+      if (vote==='abstain' || !this.canVote(id)) continue;
+      voted++;
+      if (vote==='yes') yes++;
+    }
+    return {voted,yes,quorum:this.quorum()};
+  }
+
   private hearingVote(id:string) {
-    const vote = this.votes.get(id);
+    const vote = this.canVote(id) ? this.votes.get(id) : undefined;
     return vote==='abstain' ? undefined : vote;
   }
 
@@ -905,6 +1088,8 @@ export class PlenaryMatch {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
+    const projectVoteExpired = this.phase==='negotiation' && this.projectVoteExpired(now);
+    const hearing = this.hearingTarget ? this.hearingTally() : undefined;
     return {
       policies:this.activePolicies(now),
       canCallCassation:this.canCallCassation(id,now),
@@ -914,29 +1099,32 @@ export class PlenaryMatch {
         choice:this.cassationChoice(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),
+      projectWarning:this.projectWarning(now),
+      projectVoteExpired:projectVoteExpired || undefined,
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
+      projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
-      remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? this.proposal?.voteAt ?? this.sessionEndsAt : this.ends)-now)/1000)) : 0,
+      remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt) : this.ends)-now)/1000)) : 0,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),
       billVoters:this.phase==='ballot' ? this.finalRoster.flatMap(({id,name,character}) =>
         this.canVote(id) ? [{id,name,character,vote:this.votes.get(id)}] : []) : undefined,
       electorate:this.votingPlayers(),vote:this.votes.get(id),voted:this.votes.size,
-      amended:this.amended,canFraud:!!this.proposal && role==='Infiltrado' && !this.fraud && this.canVote(id),
+      amended:this.amended,canFraud:!!this.proposal && !projectVoteExpired && role==='Infiltrado' && !this.fraud && this.canVote(id),
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
-      election:role ? this.election.view(id,now,this.popularity,this.phase==='negotiation',this.objection(),this.advertisementMultiplier(now)) : undefined,
-      politics:role ? this.economy.view(id,contacts,this.round,this.canVote(id) && this.votingPlayers()>1 && this.cassationAt===undefined,id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, id=>this.canReceivePix(id)) : undefined,
+      election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
+      politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient)) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
-      hearing:this.hearingTarget ? {target:this.economy.name(this.hearingTarget),voted:this.votes.size,quorum:this.quorum(),vote:this.hearingVote(id)} : undefined,
+      hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,
-      no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,
+      no:this.impact('no'),outcome:this.outcomes.at(-1),outcomes:this.outcomes.slice(),winner:this.winner,reason:this.reason,congressDestroyed:this.congressDestroyed,
       finalRoster:this.phase==='finished' ? this.finalRoster : undefined,
       infiltratorName:this.phase==='finished' ? this.infiltratorName : undefined,
     };
