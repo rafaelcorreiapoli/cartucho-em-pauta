@@ -62,7 +62,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
     if (selected!==undefined && !unavailable.has(selected)) confirm(selected);
   }
   function onKeyDown(event:KeyboardEvent<HTMLDivElement>) {
-    if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.defaultPrevented || event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (event.key==='Enter') {
       if (event.target instanceof HTMLButtonElement) return;
       event.preventDefault();
