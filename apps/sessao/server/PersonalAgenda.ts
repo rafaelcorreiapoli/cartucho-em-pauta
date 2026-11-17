@@ -112,6 +112,7 @@ const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retrataca
 
 function canCompleteMissionNow(kind:Agenda,metrics:AgendaMetrics) {
   if ((kind==='reserva' || kind==='privilegioAdquirido') && metrics.hasAgendaDecoration?.('vipSpace')===false) return false;
+  if (kind==='solenidadeInauguracao') return metrics.hasAgendaDecoration?.('freshForeignPortrait')!==false;
   if (mailMissions.has(kind)) return metrics.canPublishMail?.()!==false;
   if (kind==='propaganda' || kind==='campanhaUltimaHora') return (metrics.remainingAdvertisements?.() ?? 1)>0;
   return true;

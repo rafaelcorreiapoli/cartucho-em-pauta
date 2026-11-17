@@ -198,7 +198,7 @@ export class SessionRoom extends Room {
         this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id));
         this.match.setAgendaCommerce(()=>this.clock.currentTime);
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
-          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement),
+          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
           id=>{
             const project = this.match.projectIndex;
             return project===undefined ? undefined : this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,project);
@@ -479,6 +479,7 @@ export class SessionRoom extends Room {
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }
+      if (this.gameplay.expireRecentPortraits(now)) this.match.refreshAgendaEligibility();
       const project = this.match.projectIndex;
       if (project!==undefined && this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();

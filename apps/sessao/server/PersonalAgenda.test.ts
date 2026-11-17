@@ -1364,8 +1364,15 @@ test('Solenidade de Inauguração credits only a newly installed portrait marked
   expect(install()).toBe('Instalando decoração…');
   world.now += decorationInstallMs;
   game.tick(world,true);
+  expect(game.hasAgendaDecoration(visitor.id,'freshForeignPortrait',false,world.now)).toBe(true);
+  expect(game.hasAgendaDecoration(owner.id,'freshForeignPortrait',false,world.now)).toBe(false);
   expect(game.act(owner,{kind:'mark',item:portrait.id},world)).toBe('Este retrato não pode ser rabiscado.');
-  world.now += 60_001;
+  world.now += 60_000;
+  expect(game.expireRecentPortraits(world.now)).toBe(false);
+  world.now++;
+  expect(game.expireRecentPortraits(world.now)).toBe(true);
+  expect(game.expireRecentPortraits(world.now)).toBe(false);
+  expect(game.hasAgendaDecoration(visitor.id,'freshForeignPortrait',false,world.now)).toBe(false);
   expect(game.act(visitor,{kind:'mark',item:portrait.id},world)).toBe('Retrato rabiscado.');
   expect(rewards).toEqual([]);
   expect(game.act(owner,{kind:'uninstall',item:portrait.id},world)).toBe('Objeto retirado.');
