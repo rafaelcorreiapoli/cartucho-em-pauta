@@ -95,7 +95,7 @@ export function Dossier({model,send,close}:{close?:()=>void;model:NonNullable<Re
       </> : <div className="social-empty">
         <svg className="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg>
         <strong>Nenhuma prova no dossiê</strong>
-        <p>Audite documentos na Corregedoria ou receba provas de outros jogadores.</p>
+        <p>Você pode receber provas de outros jogadores.</p>
       </div>}
     </section>
     <details>
