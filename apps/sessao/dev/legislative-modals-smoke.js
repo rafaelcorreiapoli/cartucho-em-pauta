@@ -110,7 +110,9 @@ async page => {
     const sign = npcDeal.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
     await sign.waitFor();
     if (await npcDeal.getByRole('button',{name:new RegExp(title)}).count()) throw Error('NPC ofereceu assinatura de projeto');
-    await page.keyboard.press(await sign.getAttribute('aria-keyshortcuts'));
+    const shortcut = await sign.getAttribute('aria-keyshortcuts');
+    await sign.evaluate(button=>button.removeAttribute('aria-keyshortcuts'));
+    await page.keyboard.press(shortcut);
     await sign.waitFor({state:'hidden'});
     await page.keyboard.press('Escape');
     await npcDeal.locator('#parliamentarian-title').waitFor({state:'detached'});

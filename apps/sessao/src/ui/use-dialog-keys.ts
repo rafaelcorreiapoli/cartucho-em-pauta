@@ -1,7 +1,7 @@
 import {useEffect,useEffectEvent,useRef} from 'react';
 import {isEditingText} from '../game-keys';
 
-export function usePhoneKeys<T extends HTMLElement>(actionForKey:(key:string)=> (()=>void)|undefined) {
+export function useDialogKeys<T extends HTMLElement>(actionForKey:(key:string)=> (()=>void)|undefined) {
   const panel = useRef<T>(null);
   const currentAction = useEffectEvent(actionForKey);
   useEffect(()=>{
@@ -11,7 +11,7 @@ export function usePhoneKeys<T extends HTMLElement>(actionForKey:(key:string)=> 
       const dialog = panel.current?.closest('dialog:modal');
       if (!dialog) return;
       const active = document.activeElement?.closest('dialog:modal');
-      if (active ? active!==dialog : document.querySelector('dialog:modal:not(#gameplay-dialog)')) return;
+      if (active ? active!==dialog : [...document.querySelectorAll('dialog:modal')].some(open=>open!==dialog)) return;
       const action = currentAction(event.key);
       if (!action) return;
       event.preventDefault();

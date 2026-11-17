@@ -1,3 +1,4 @@
+import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
 import {flushSync} from 'react-dom';
 import {createRoot} from 'react-dom/client';
@@ -15,9 +16,12 @@ type Send = (action:object)=>void;
 export function ParliamentarianDealPanel({deal,round,send}:{deal:ParliamentarianDeal;round:number;send:Send}) {
   const [quote,setQuote] = useState<{vote:Vote;amount:number}>();
   let shortcut = 0;
+  const actions = new Map<string,()=>void>();
+  const panel = useDialogKeys<HTMLDivElement>(key=>actions.get(key));
   const paymentUnavailable = (price:number) => price>0 && (deal.paymentsLeft<=0 || price>deal.wallet);
   function action(label:string,run:()=>void,disabled=false) {
     const key = ++shortcut<=9 ? String(shortcut) : undefined;
+    if (key && !disabled) actions.set(key,run);
     return <button key={label} type="button" className="hud-button hud-button--secondary" onClick={run}
       disabled={disabled} aria-keyshortcuts={key}>{label}{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}</button>;
   }
@@ -28,7 +32,7 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
     <header><h2 id="parliamentarian-title">{deal.name}</h2>
       <DialogDismiss className="hud-button hud-button--secondary">Encerrar</DialogDismiss>
     </header>
-    <div className="parliamentarian-options">
+    <div className="parliamentarian-options" ref={panel}>
       <p>Carteira · {money(deal.wallet)}{deal.paymentsLeft<=0 && ' · Limite de pagamentos atingido'}</p>
       {deal.documents.map(doc=><div className="grid" key={doc.id}>{action(
         `${doc.title} · ${doc.price ? money(doc.price) : 'Assinatura gratuita'}`,

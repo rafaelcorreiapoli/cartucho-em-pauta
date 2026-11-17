@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {usePhoneKeys} from './use-phone-keys';
+import {useDialogKeys} from './use-dialog-keys';
 import {PhoneContactFace} from './phone-call';
 import type {Ref} from 'react';
 import type {GameplayAction} from '../gameplay';
@@ -13,7 +13,7 @@ export function PhoneCamera({count,available,preview,send,openAlbum,character}:{
   const disabled = !available || count>=PHOTO_LIMIT;
   const takePhoto = ()=>{ if (!disabled) send({kind:selfie ? 'selfie' : 'photo'}); };
   const toggleSelfie = ()=>{ if (!disabled) setSelfie(current=>!current); };
-  const panel = usePhoneKeys(key=>key==='1' ? takePhoto : key==='2' ? toggleSelfie : key==='3' ? openAlbum : undefined);
+  const panel = useDialogKeys(key=>key==='1' ? takePhoto : key==='2' ? toggleSelfie : key==='3' ? openAlbum : undefined);
   return <section ref={panel} className="phone-camera">
     <div className="phone-camera-viewfinder">
       {selfie && <div className="camera-selfie-portrait"><PhoneContactFace person={{id:"self",name:"Você",character}}/></div>}

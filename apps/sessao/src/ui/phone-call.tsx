@@ -1,4 +1,4 @@
-import {usePhoneKeys} from './use-phone-keys';
+import {useDialogKeys} from './use-dialog-keys';
 import {HudIcon} from './hud-icon';
 import {CharacterPortrait} from './character-portrait';
 import type {GameplayAction,PhoneCall} from '../gameplay';
@@ -17,7 +17,7 @@ export function PhoneCalls({call,contacts,available,send}:{
   const dial = (id:string)=>send({kind:'call',target:id});
   const answer = ()=>send({kind:'answer'});
   const hangup = ()=>send({kind:'hangup'});
-  const panel = usePhoneKeys<HTMLDivElement>(key=>{
+  const panel = useDialogKeys<HTMLDivElement>(key=>{
     if (call) {
       if (key==='1') return incoming ? answer : hangup;
       if (incoming && key==='2') return hangup;

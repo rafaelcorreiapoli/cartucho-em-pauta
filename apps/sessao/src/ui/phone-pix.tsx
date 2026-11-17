@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {usePhoneKeys} from './use-phone-keys';
+import {useDialogKeys} from './use-dialog-keys';
 import {manualTransfer,money,type PoliticsAction,type PoliticsView} from '../politics';
 import {PhoneContactFace} from './phone-call';
 
@@ -10,7 +10,7 @@ export function PhonePix({politics,ownId,send}:{politics:PoliticsView;ownId:stri
   const target = recipients.find(person=>person.id===recipient);
   const transfer = manualTransfer(target?.id ?? '',amount,politics.wallet,politics.paymentsLeft);
   const submit = ()=>{ if (transfer) send(transfer); };
-  const panel = usePhoneKeys(key=>key==='1' ? submit : undefined);
+  const panel = useDialogKeys(key=>key==='1' ? submit : undefined);
   return <section ref={panel} className="phone-pix" aria-label="Transferência Pix">
     <div className="pix-balance"><small>Saldo disponível</small><strong>{money(politics.wallet)}</strong></div>
     <h4>Para quem?</h4>

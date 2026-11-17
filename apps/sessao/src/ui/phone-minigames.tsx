@@ -1,4 +1,4 @@
-import {usePhoneKeys} from './use-phone-keys';
+import {useDialogKeys} from './use-dialog-keys';
 import {MINIGAME_FRUIT_XP} from '../progression';
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
 
@@ -21,7 +21,7 @@ export function CandyMatch({round,send}:{round?:CandyRound;send:(action:Gameplay
   },[hasBoard]);
   useEffect(()=>()=>clearTimeout(timer.current),[]);
   const restart = ()=>{if (!motion) {setSelected(undefined);send({kind:'candy-start'});}};
-  const panel = usePhoneKeys(key=>key==='1' && round ? restart : undefined);
+  const panel = useDialogKeys(key=>key==='1' && round ? restart : undefined);
   if (!round) return <section className="phone-minigame candy-game" aria-label="Combina Doces">
     <button className="hud-button" type="button" onClick={()=>send({kind:'candy-start'})}>Iniciar tabuleiro</button>
   </section>;
@@ -86,7 +86,7 @@ export function Bets({wallet,round,send}:{wallet:number;round?:BetsRound;send:(a
   const result = shown && (shown.payout ? `Trinca! +${money(shown.payout-shown.stake)}` : `Sem trinca · −${money(shown.stake)}`);
   const disabled = spinning || stake>balance;
   const spin = ()=>{if (!disabled) send({kind:'bets-spin',quantity:stake,token:round?.id ?? 0});};
-  const panel = usePhoneKeys(key=>key==='1' ? spin : undefined);
+  const panel = useDialogKeys(key=>key==='1' ? spin : undefined);
   return <section ref={panel} className="phone-minigame bets-game" aria-label="Bets">
     <header><p>Saldo do personagem</p><strong>{money(wallet)}</strong></header>
     <p>Três símbolos iguais pagam {BET_PAYOUT}× a aposta.</p>
