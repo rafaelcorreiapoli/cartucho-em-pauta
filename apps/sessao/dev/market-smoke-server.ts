@@ -23,7 +23,7 @@ class TestRoom extends SessionRoom {
           for (let slot=0;slot<INVENTORY_SLOTS;slot++) {
             const token = game.view(state.player,world).dialogue?.token;
             const result = game.act(state.player,{kind:'shop-buy',target:'pizza',token},world);
-            if (result!=='Compra guardada no inventário.') throw Error(result);
+            if (result!=='Compra guardada no inventário.') throw Error(result ?? 'Compra de pizza sem confirmação');
           }
           if (game.view(state.player,world).inventory.length!==INVENTORY_SLOTS) throw Error('Mochila do cenário deve estar cheia');
           game.act(state.player,{kind:'dialogue-close'},world);
