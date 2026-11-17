@@ -1,3 +1,4 @@
+import {rewardGains} from './ui/reward-effects';
 import {mountConnectionLatency} from './ui/connection-latency';
 import { mountBallotCountdown } from './ui/ballot-countdown';
 import { mountRoomSettings } from './ui/room-settings';
@@ -327,11 +328,11 @@ async function connect(join: () => Promise<Room>) {
       if (view.phase==='negotiation' && (cassationAnnounced || projectAnnounced)) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
-      const pastIncome = previousView?.politics?.walletIncome ?? 0;
-      const income = (view.politics?.walletIncome ?? 0)-pastIncome;
-      if (previousView?.politics && income>0) {
+      const gains = rewardGains(previousView,view,suppressXpEffect);
+      const rewardHead = gains.income || gains.xp ? game?.playerHead() : undefined;
+      if (gains.income) {
         audio.cue('cash');
-        hud.showIncome(income,game?.playerHead());
+        hud.showReward('income',gains.income,rewardHead);
       }
       panel.render(view);
       const previousOffers = previousView?.politics?.incoming ?? [];
@@ -355,12 +356,7 @@ async function connect(join: () => Promise<Room>) {
       mail.complaints(view.complaints);
       mail.price(mailPublicationFee(view.policies));
       mail.phase(view.phase==='negotiation');
-      const priorProgress = previousView?.politics?.progression;
-      const currentProgress = view.politics?.progression;
-      if (!suppressXpEffect && priorProgress && currentProgress &&
-          priorProgress.matchId===currentProgress.matchId && currentProgress.xp>priorProgress.xp) {
-        hud.showXp(currentProgress.xp-priorProgress.xp,game?.playerHead());
-      }
+      if (gains.xp) hud.showReward('xp',gains.xp,rewardHead);
       suppressXpEffect = false;
       progression.render(view);
       appStatus = hudAppStatus(view,assetsReady);

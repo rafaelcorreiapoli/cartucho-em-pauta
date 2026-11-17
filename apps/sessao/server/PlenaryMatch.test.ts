@@ -120,7 +120,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(host).budget).toBe(32);
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,2);
   match.politics(at(host,'cabinet'),{kind:'grant',diverted:3},people,3);
-  expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11}});
+  expect(view(host)).toMatchObject({budget:28,stability:47,politics:{wallet:11,walletIncome:3}});
   expect(view(honest).politics?.evidence).toEqual([]);
   match.politics(host,{kind:'transfer',to:honest.id,amount:2,clandestine:true},people,4);
   match.politics(host,{kind:'transfer',to:traitor.id,amount:0,clandestine:false},people,5); // Invalid amount.

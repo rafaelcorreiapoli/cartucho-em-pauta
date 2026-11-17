@@ -143,6 +143,15 @@ Abra `http://127.0.0.1:5218/` no Playwright CLI com a configuração
 O teste compra duas propagandas pelas ações da Sala de Imprensa e verifica a
 ordem, os lados da TV e o movimento reduzido em duas abas.
 
+## Teste dos efeitos de recompensa no Chrome
+
+Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/reward-smoke-server.ts`
+e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2607 bun run dev --port 5217`.
+Abra `http://127.0.0.1:5217/` no Playwright CLI com a configuração
+`dev/private-call-chrome.json` e execute `run-code --filename=dev/reward-smoke.js`.
+O gameserver posiciona o jogador diante das estações. O teste clica nas ações reais
+de cafezinho e verba, mede a animação e confirma a remoção dos efeitos.
+
 ## Métricas do gameserver
 
 O Fly coleta os contadores agregados em `/metrics`. No Grafana do Fly, use
