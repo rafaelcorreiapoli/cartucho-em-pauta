@@ -1,3 +1,4 @@
+import {ContextProgress,contextProgress} from './ui/context-progress';
 import {mountRewardEffects} from './ui/reward-effects';
 import {ContextOverflow} from './ui/context-overflow';
 import {contextActionKeys} from './ui/context-action-keys';
@@ -5,7 +6,6 @@ import {mountStationShortcuts} from './ui/station-shortcuts';
 import { equipmentControls, mountEquippedGear, weaponControl, type EquipmentAction } from './ui/equipped-gear';
 import type {FireOption} from './fire';
 import {powerOption,type PowerAction} from './power';
-import { documentRules } from './internal-mail';
 import { mountElectionStationActions } from './ui/election-station-actions';
 import type { ElectionAction } from './elections';
 import { mountLegislativeStationActions } from './ui/legislative-station-actions';
@@ -20,7 +20,6 @@ import { npcs } from './npcs';
 import { hudConsumesKeys } from './game-keys';
 import { treasuryDeliveries, objects, type GameplayAction, type GameplayView } from './gameplay';
 import { PLENARY_DOORS, type Motion, type Player } from './map';
-import { npcRules } from './parliamentarians';
 import { money, type PoliticsAction } from './politics';
 import { projectRules, stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
@@ -83,28 +82,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const fire = view?.fireInteraction;
     if (fire?.option) actions.push({label:fire.option.label,icon:'alert',action:{kind:'fire',option:fire.option}});
     const channel = state?.officeChannel;
-    const installation = state?.installationProgress;
-    const breach = channel && channel.kind!=='office-cash' ? channel : undefined;
     const robbery = state?.robberyProgress;
     const spy = state?.surveillance;
-    const meter = fire?.progress!==undefined ? {value:fire.progress,max:1,label:'Instalando dispositivo',detail:'Instalando dispositivo'} :
-      installation ? {value:installation.elapsed,max:installation.duration,label:'Instalando decoração',detail:'Instalando decoração'} :
-      state?.forgeryRemaining!==undefined ? {value:documentRules.forgeryMs-state.forgeryRemaining,max:documentRules.forgeryMs,label:'Adulterando documento',
-      detail:`Adulterando documento · ${Math.ceil(state.forgeryRemaining/1000)} s`} : channel?.kind==='office-cash' ? {value:channel.elapsed,max:channel.duration,label:'Embolsando dinheiro'} : breach ? {value:breach.elapsed,max:breach.duration,label:breach.label,
-      detail:`${breach.label} · ${Math.ceil((breach.duration-breach.elapsed)/1000)} s`} :
-      robbery!==undefined ? {value:robbery,max:npcRules.robberyMs,label:'Roubando dinheiro'} :
-      spy?.progress!==undefined ? {value:spy.progress,max:1,label:'Interação de espionagem em andamento'} : undefined;
-    const meterKey = JSON.stringify(meter) ?? '';
-    if (progressKey!==meterKey) {
-      progressKey = meterKey;
-      progressRoot.render(meter ? <>
-        {meter.detail && <span id="office-progress-label">{meter.detail}</span>}
-        <div id="office-progress" className="react-meter" data-tone="budget" role="progressbar"
-          aria-label={meter.label} aria-valuenow={meter.value} aria-valuemin={0} aria-valuemax={meter.max}>
-          <span style={{transform:`scaleX(${Math.max(0,Math.min(1,meter.value/meter.max))})`}}/>
-        </div>
-      </> : null);
-    }
     for (const option of spy?.options ?? []) actions.push({
       label:option.label,icon:option.kind==='cancel' ? 'cross' : 'search',action:{kind:'spy',option},
     });
@@ -267,8 +246,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function actions(view:PlenaryView | undefined = previous) {
     const player = own;
     const exploring = view?.phase==='negotiation' && !player?.knockedOut;
-    renderField(exploring ? view : undefined,player);
-    const canInteract = exploring && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
+    const interactionView = exploring ? view : undefined;
+    const installing = !!interactionView?.gameplay?.installationProgress;
+    renderField(installing ? undefined : interactionView,player);
+    const meter = contextProgress(interactionView);
+    const meterKey = JSON.stringify(meter) ?? '';
+    if (progressKey!==meterKey) {
+      progressKey = meterKey;
+      progressRoot.render(meter ? <ContextProgress meter={meter}/> : null);
+    }
+    const canInteract = exploring && !installing && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
     let best = STATION_RADIUS;
     if (canInteract && player) {
@@ -286,7 +273,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const hasShortcut = shortcuts.render(view,player,context);
     const hasAction = hasLegislativeAction || hasElectionAction || hasShortcut;
     if (!exploring || !canInteract) overflowExpanded = false;
-    stations.hidden = !exploring || (!nearby.visible() && !hasAction && view?.fireInteraction?.progress===undefined && !fieldActions.childElementCount);
+    stations.hidden = !exploring || (!nearby.visible() && !hasAction && !meter && !fieldActions.childElementCount);
     refreshActionKeys();
   }
 

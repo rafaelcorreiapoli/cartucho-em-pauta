@@ -1,0 +1,33 @@
+import {expect,test} from 'bun:test';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {Gameplay} from '../../server/Gameplay';
+import {PlenaryMatch} from '../../server/PlenaryMatch';
+import {decorationInstallMs,installationSites} from '../installations';
+import type {Player} from '../map';
+import {npcs} from '../npcs';
+import {ContextProgress,contextProgress} from './context-progress';
+
+test('a decoration installation exposes server progress until it completes and rejects competing requests',()=>{
+  const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...npcs.credentialsVendor.interaction};
+  const match = new PlenaryMatch(1);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  const game = new Gameplay();
+  game.reset(0,()=>.9,[player]);
+  const world = (now:number)=>match.gameplayWorld([player],now,()=>false);
+  const progress = (now:number)=>contextProgress({...match.view(player.id,[player.id],now),gameplay:game.view(player,world(now))});
+  game.act(player,{kind:'open-shop',target:'credentialsVendor'},world(1));
+  const token = game.view(player,world(1)).dialogue?.token;
+  expect(game.act(player,{kind:'shop-buy',target:'portrait',token},world(1))).toBe('Compra guardada no inventário.');
+  const item = game.view(player,world(1)).inventory.find(row=>row.kind==='portrait')!;
+  Object.assign(player,installationSites.hall.point);
+  const action = {kind:'install',place:'hall',item:item.id} as const;
+  expect(game.act(player,action,world(2))).toBe('Instalando decoração…');
+  expect(game.act(player,action,world(3))).toBe('Você já está instalando uma decoração.');
+  const now = 2+decorationInstallMs/2;
+  const meter = progress(now)!;
+  expect(meter).toMatchObject({value:decorationInstallMs/2,max:decorationInstallMs});
+  expect(renderToStaticMarkup(<ContextProgress meter={meter}/>)).toContain('aria-label="Instalando decoração"');
+  expect(renderToStaticMarkup(<ContextProgress meter={meter}/>)).toContain('scaleX(0.5)');
+  game.tick(world(2+decorationInstallMs),true);
+  expect(progress(2+decorationInstallMs)).toBeUndefined();
+});
