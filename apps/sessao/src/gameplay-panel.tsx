@@ -16,7 +16,7 @@ import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
 import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
-import { paintSnake, snakeDirection } from './phone-snake';
+import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
@@ -221,6 +221,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
+  const closePhoneApp = ()=>selectApp();
+
   function render() {
     const view = previous;
     const state = view?.gameplay;
@@ -396,11 +398,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (phone && app && !showMail) {
       let application:ReactNode;
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
-        available={phase==='negotiation'} send={send} close={()=>selectApp()}/>;
-      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send}/>;
+        available={phase==='negotiation'} send={send} close={closePhoneApp}/>;
+      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
-        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={()=>selectApp()}/>;
-      if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={()=>selectApp()}/>;
+        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
+      if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
       if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired}/>;
       if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint);
       if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation');
@@ -479,17 +481,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     activateHotbar(Number(event.code.at(-1))-1);
   };
   document.addEventListener('keydown',onSlotKey);
-  const onSnakeKey = (event:KeyboardEvent) => {
-    if (!dialog.open || dialog.dataset.mode!=='phone' || app!=='Joguinhos' || event.repeat ||
-      event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
-    const status = previous?.gameplay?.game?.status;
-    const direction = snakeDirection(event);
-    if (!direction || (status!=='ready' && status!=='playing')) return;
-    event.preventDefault();
-    send({kind:'game-turn',direction});
-  };
-  document.addEventListener('keydown',onSnakeKey);
-
   function pickUp(area:InteractionArea, action:()=>void) {
     if (pendingPickup) return;
     pendingPickup = area;
@@ -628,7 +619,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     destroy() {
       photos.destroy();
       document.removeEventListener('keydown',onSlotKey);
-      document.removeEventListener('keydown',onSnakeKey);
       phoneResize.disconnect();
       setPhoneInset(0);
       dialog.removeEventListener('close',closed);

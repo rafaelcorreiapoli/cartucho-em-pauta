@@ -5,8 +5,8 @@ const directions = {
   w:'up',d:'right',s:'down',a:'left',
 } as const;
 
-export function snakeDirection(event:KeyboardEvent) {
-  return directions[(event.key.length===1 ? event.key.toLowerCase() : event.key) as keyof typeof directions];
+export function snakeDirection(key:string) {
+  return directions[(key.length===1 ? key.toLowerCase() : key) as keyof typeof directions];
 }
 
 export function paintSnake(board:HTMLCanvasElement, game:SnakeView) {

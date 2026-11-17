@@ -75,8 +75,7 @@ async page => {
   if (!board || !replay || Math.abs(board.x-replay.x)>1 || Math.abs(board.width-replay.width)>1 || replay.y<=board.y+board.height) {
     throw Error('Botão de reinício desalinhado com o tabuleiro');
   }
-  await removeKey(dialog.getByRole('button',{name:'Jogar de novo'}));
-  await page.keyboard.press('1');
+  await viaPalette(dialog.getByRole('button',{name:'Jogar de novo',exact:true}),'Jogar de novo');
   await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
   await dialog.evaluate(node=>{
     window.snakePhoneClosed = new Promise(resolve=>node.addEventListener('close',resolve,{once:true}));
@@ -106,8 +105,7 @@ async page => {
   await candy.getByRole('button',{name:/Fruta 25/}).waitFor();
   await candy.getByRole('button',{name:'Novo tabuleiro'}).locator('kbd',{hasText:/^1$/}).waitFor();
   const previousFruit = await candy.locator('.candy-fruit').allTextContents();
-  await removeKey(candy.getByRole('button',{name:'Novo tabuleiro'}));
-  await page.keyboard.press('1');
+  await viaPalette(candy.getByRole('button',{name:'Novo tabuleiro',exact:true}),'Novo tabuleiro');
   await page.waitForFunction(previous=>[...document.querySelectorAll('.candy-fruit')]
     .some((fruit,index)=>fruit.textContent!==previous[index]),previousFruit);
   const findMove = () => candy.evaluate(async panel=>{
@@ -145,8 +143,7 @@ async page => {
   await bets.getByText('R$ 80 mil',{exact:true}).waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
   await bets.getByRole('button',{name:'R$ 2 mil',exact:true}).click();
-  await removeKey(bets.getByRole('button',{name:/^Apostar/}));
-  await page.keyboard.press('1');
+  await viaPalette(bets.getByRole('button',{name:/^Apostar/}),'Apostar');
   if (await bets.locator('.bets-reel').count()!==3) throw Error('Quantidade de rolos');
   const result = bets.getByRole('status');
   await bets.getByText(/Trinca!|Sem trinca/).waitFor();
