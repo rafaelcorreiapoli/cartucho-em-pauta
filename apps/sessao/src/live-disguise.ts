@@ -1,5 +1,7 @@
 export type Disguise = { pitch:number; style:'preserved'|'shifted'|'radio' };
 
+export const voiceModulatorDisguise:Disguise = {pitch:-6,style:'radio'};
+
 export class LiveDisguise {
   private input: MediaStreamAudioSourceNode;
   readonly output: GainNode;

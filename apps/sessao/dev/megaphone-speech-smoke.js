@@ -15,6 +15,7 @@ async page => {
     const recordings = {};
     const speech = await document.querySelector('#speech-fixture').files[0].arrayBuffer();
     const {RoomVoice} = await import('/src/voice.ts');
+    const {voiceModulatorDisguise} = await import('/src/live-disguise.ts');
     const NativeAudio = AudioContext;
     const devices = [];
     navigator.mediaDevices.getUserMedia = async () => {
@@ -63,31 +64,52 @@ async page => {
         return gain;
       }
     };
-    const rooms = new Map();
-    const peers = ['a','b'].map(sessionId=>{
-      const handlers = new Map();
-      const room = {sessionId,onMessage:(key,fn)=>handlers.set(key,fn),onDrop:()=>{},
-        send(type,body) {if(type==='voice-signal') rooms.get(body.to).get(type)?.({from:sessionId,signal:body.signal});}};
-      rooms.set(sessionId,handlers);
-      return new RoomVoice(room,()=>{});
-    });
+    const {Client,server} = await import('/dev/megaphone-speech-client.ts');
+    const client = new Client(server);
+    const host = await client.create('plenary',{nick:'Emissor'});
+    const listener = await client.joinById(host.roomId,{nick:'Ouvinte'});
+    const rooms = [host,listener];
+    const peers = rooms.map(room=>new RoomVoice(room,()=>{}));
     const pause = ms=>new Promise(resolve=>setTimeout(resolve,ms));
-    const send = (id,key,data)=>rooms.get(id).get(key)?.(data);
+    async function waitFor(predicate,message) {
+      for (let i=0;i<100;i++) {
+        if (predicate()) return;
+        await pause(80);
+      }
+      throw Error(message);
+    }
+    let view;
+    let route;
+    let token = 0;
+    host.onMessage('plenary',snapshot=>{ view = snapshot; });
+    listener.onMessage('voice-range',levels=>{ route = levels.find(([id])=>id===host.sessionId); });
+    for (const room of rooms) room.onMessage('*',()=>{});
+    const act = action=>host.send('gameplay',{action,token:++token});
+    const gear = ()=>view?.gameplay;
+    async function buyAndEquip(kind) {
+      act({kind:'shop-buy',target:kind,token:gear()?.dialogue?.token});
+      await waitFor(()=>gear()?.equipped?.some(item=>item.kind===kind),'Item não comprado e equipado: '+kind);
+    }
     const amplitude = analyser => {
       const buffer = new Float32Array(analyser.fftSize);
       analyser.getFloatTimeDomainData(buffer);
       return Math.sqrt(buffer.reduce((sum,v)=>sum+v*v,0)/buffer.length);
     };
-    for (const peer of peers) await peer.start();
-    send('b','voice-roster',['a','b']);
-    send('a','voice-roster',['a','b']);
-    const heartbeat = setInterval(()=>send('a','voice-send',['b']),70);
     try {
-      for(let i=0;i<50 && !meters.some(m=>amplitude(m)>.01);i++) await pause(150);
+      host.send('start-match',{npcs:0,token:++token});
+      await waitFor(()=>view?.phase==='negotiation','Partida não iniciou');
+      await pause(200);
+      act({kind:'open-shop',target:'vendor'});
+      await waitFor(()=>gear()?.dialogue?.shop,'Loja indisponível');
+      await buyAndEquip('megaphone');
+      await buyAndEquip('voiceModulator');
+      for (const peer of peers) await peer.start();
+      await waitFor(()=>route?.[2]===true,'Rota de proximidade indisponível');
+      await waitFor(()=>meters.some(m=>amplitude(m)>.01),'Áudio WebRTC inaudível');
       const receiver = meters.find(m=>amplitude(m)>.01);
       if (!receiver) throw Error('No WebRTC playback received');
       async function sample(name,broadcast) {
-        send('b','voice-range',[['a',.85,!broadcast,broadcast]]);
+        await waitFor(()=>!!route && (broadcast ? route[3]===true && route[2]===false : route[2]===true && !route[3]),'Rota de áudio inesperada: '+name);
         await pause(250);
         let recorded;
         if (capture) {
@@ -139,10 +161,14 @@ async page => {
         return {peak,activeWindows,bassToMid:bass/mid};
       }
       const normal = await sample('voz-normal',false);
+      act({kind:'toggle-megaphone'});
       const filtered = await sample('megafone',true);
       if (filtered.bassToMid>=normal.bassToMid*.65) throw Error(JSON.stringify({normal,filtered}));
-      await peers[0].setDisguise({pitch:7,style:'shifted'});
+      act({kind:'toggle-modulator'});
+      await waitFor(()=>gear()?.modulator?.active,'Modulador não ativado');
+      await peers[0].setDisguise(voiceModulatorDisguise);
       const combined = await sample('megafone-com-modulador',true);
+      act({kind:'toggle-megaphone'});
       const disguiseOnly = await sample('modulador',false);
       if (combined.bassToMid>=disguiseOnly.bassToMid*.65) throw Error(JSON.stringify({disguiseOnly,combined}));
       const tracksPerConnection = [...receivedTracks.values()];
@@ -151,8 +177,8 @@ async page => {
       }
       return {normal,filtered,combined,disguiseOnly,streams:meters.length,microphoneSources:devices.length,tracksPerConnection,recordings};
     } finally {
-      clearInterval(heartbeat);
-      peers.forEach(peer=>peer.stop(false));
+      peers.forEach(peer=>peer.stop());
+      await Promise.all(rooms.map(room=>room.leave()));
       devices.forEach(device=>device.close());
     }
   });

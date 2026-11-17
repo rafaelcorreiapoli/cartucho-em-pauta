@@ -40,6 +40,7 @@ import { bills, MAX_PLAYERS, projectRules, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
+import {voiceModulatorDisguise} from './live-disguise';
 import { INVALID_NICK, NICK_TAKEN, nickHint, readNick } from './nick';
 import '../../../packages/hud/styles.css';
 import './style.css';
@@ -72,7 +73,7 @@ let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
 function applyVoiceEquipment(current:RoomVoice|undefined) {
-  void current?.setDisguise(disguiseActive ? {pitch:-6,style:'radio'} : undefined)?.catch(()=>{
+  void current?.setDisguise(disguiseActive ? voiceModulatorDisguise : undefined)?.catch(()=>{
     if (current===voice) settings.update({voiceMessage:'Não foi possível ativar o modulador.'});
   });
 }

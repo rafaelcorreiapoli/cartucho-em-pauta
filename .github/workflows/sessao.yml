@@ -70,11 +70,11 @@ jobs:
             kill "${pids[@]}" 2>/dev/null || true
           }
           trap cleanup EXIT
-          if [[ "$SMOKE_FLOW" != megaphone-speech ]]; then
-            PORT=26874 SESSAO_LOCAL_SOLO=1 bun "dev/$SMOKE_FLOW-smoke-server.ts" &
-            pids+=("$!")
-            curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:26874/health
-          fi
+          server_fixture="$SMOKE_FLOW"
+          if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then server_fixture=market; fi
+          PORT=26874 SESSAO_LOCAL_SOLO=1 bun "dev/$server_fixture-smoke-server.ts" &
+          pids+=("$!")
+          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:26874/health
           curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:5194/ >/dev/null
           url=http://127.0.0.1:5194
           if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then
