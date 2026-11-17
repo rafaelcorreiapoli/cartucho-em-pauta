@@ -11,6 +11,11 @@ async page => {
   await page.reload();
   const receiver = await page.context().newPage();
   const dialog = '#gameplay-dialog';
+  async function runShortcut(client, original, name) {
+    await original.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
+    await client.keyboard.press('F2');
+    await client.locator('#action-shortcuts').getByRole('button',{name,exact:false}).click();
+  }
   try {
     await page.getByRole('textbox',{name:'Seu nick'}).fill('Alice');
     await page.getByRole('button',{name:'Criar sala'}).click();
@@ -125,6 +130,27 @@ async page => {
     await receiver.keyboard.press('o');
     await receiver.locator(dialog).getByRole('button',{name:'Café',exact:true}).waitFor();
     await receiver.keyboard.press('Escape');
+
+    await page.keyboard.press('c');
+    await page.keyboard.press('3');
+    await page.locator(dialog).getByRole('button',{name:'Tirar foto',exact:true}).click();
+    const openAlbum = page.locator(dialog).getByRole('button',{name:/Abrir álbum · 1\//});
+    await openAlbum.click();
+    await page.locator(dialog).getByRole('button',{name:/Abrir fotografia/}).click();
+    await page.locator(dialog).getByRole('button',{name:'Bia',exact:true}).click();
+    await runShortcut(page,page.locator(dialog).getByRole('button',{name:'Enviar cópia',exact:true}),'Enviar cópia');
+    const photoRequest = receiver.locator('#object-request');
+    await runShortcut(receiver,photoRequest.getByRole('button',{name:'Aceitar',exact:true}),'Aceitar fotografia');
+    await photoRequest.waitFor({state:'hidden'});
+    await receiver.keyboard.press('c');
+    await receiver.keyboard.press('4');
+    await receiver.locator(dialog).getByRole('button',{name:/Abrir fotografia/}).click();
+    await receiver.locator(dialog).getByText('Cópia verificada',{exact:true}).waitFor();
+    await receiver.locator(dialog).getByRole('img',{name:/Foto em/}).waitFor();
+    await receiver.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    for (const client of [page,receiver]) await client.locator(dialog).waitFor({state:'hidden'});
+
     await page.keyboard.press('c');
     await page.keyboard.press('1');
     const dial = page.locator(dialog).getByRole('button',{name:'Ligar para Bia',exact:true});
@@ -192,11 +218,6 @@ async page => {
       await client.locator(dialog).getByRole('button',{name:'Correio',exact:true}).click();
     }
     const mail = page.locator(dialog).locator('#phone-mail');
-    async function runShortcut(client, original, name) {
-      await original.evaluate(button=>button.setAttribute('aria-label','Rótulo original alterado'));
-      await client.keyboard.press('F2');
-      await client.locator('#action-shortcuts').getByRole('button',{name,exact:false}).click();
-    }
     await runShortcut(page,mail.getByRole('button',{name:'Novo comunicado'}),'Novo comunicado');
     await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
     await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
@@ -262,5 +283,5 @@ async page => {
   } finally {
     await receiver.close();
   }
-  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true,itemOfferAcceptedViaF2:true};
+  return {electionSupportDeclaredAndWithdrawnViaF2:true,pixAndMailReplicated:true,photoComplaintSubmittedViaF2:true,itemOfferAcceptedViaF2:true,photoCopyAcceptedViaF2:true};
 }
