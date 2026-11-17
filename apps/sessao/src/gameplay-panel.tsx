@@ -16,6 +16,7 @@ import {useDialogKeys} from './ui/use-dialog-keys';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { OfficeStash } from './ui/office-stash';
+import { EquipmentPanel } from './ui/equipment-panel';
 import { describeFood, foodDefinition, isFood } from './food';
 import { isGear } from './equipment';
 import { paintSnake } from './phone-snake';
@@ -361,23 +362,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       content = renderBag();
     }
     if (equipmentOpen) {
-      const equipped = state.equipped ?? [];
-      content = equipped.length ? <ul className="equipment-list">
-        {equipped.map(gear=><li key={gear.id}>
-          <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[gear.kind].portrait} alt="" draggable={false}/>
-          <strong>{itemName(gear)}</strong>
-          {phase==='negotiation' && !state.vitality?.recovery && <>
-            <button type="button" className="hud-button hud-button--secondary" onClick={()=>send({kind:'unequip',item:gear.id})}>Desequipar</button>
-            {gear.kind==='megaphone' &&
-              <button type="button" className="hud-button hud-button--secondary" disabled={!!state.equipmentCooldowns?.[gear.id]}
-                onClick={()=>send({kind:'toggle-megaphone'})}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
-                  state.equipmentCooldowns?.[gear.id] ? `Recarga · ${state.equipmentCooldowns[gear.id]}s` : 'Ativar megafone'}</button>}
-            {gear.kind==='voiceModulator' && state.modulator &&
-              <button type="button" className="hud-button hud-button--secondary"
-                onClick={()=>send({kind:'toggle-modulator'})}>{state.modulator.active ? 'Desligar modulador' : 'Ligar modulador'}</button>}
-          </>}
-        </li>)}
-      </ul> : <p className="equipment-empty"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Nenhum item equipado.</p>;
+      content = <EquipmentPanel state={state} available={phase==='negotiation' && !state.vitality?.recovery}
+        send={send} close={()=>dialog.close()}/>;
     }
 
     if (item) {
