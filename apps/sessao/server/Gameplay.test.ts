@@ -6,7 +6,7 @@ import { npcs } from '../src/npcs';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import type { GameplayWorld } from './gameplay-world';
-import { terminals, type GameplayEvent } from '../src/gameplay';
+import { readGameplayAction, terminals, type GameplayEvent } from '../src/gameplay';
 import { canStand, HEIGHT, rooms, WIDTH, type Player } from '../src/map';
 import { photoMissions } from './photo-missions';
 import { findRoute } from '../src/navigation';
@@ -49,6 +49,12 @@ test('custody moves exactly once and requests are private', () => {
   expect(game.view(watcher,world).inventory).toEqual([]);
 });
 
+function submitAtProtocol(game:Gameplay,player:Player,item:number,world:GameplayWorld) {
+  game.act(player,{kind:'talk',target:'protocol'},world);
+  const dialogue = game.view(player,world).dialogue;
+  return game.act(player,{kind:'dialogue-choice',target:`file-${item}`,token:dialogue?.token},world);
+}
+
 test('protocol checks requirements, signatures are unique and filing preserves the record', () => {
   const {alice,bob,game,world} = setup();
   Object.assign(alice,terminals.secretary.point);
@@ -62,12 +68,15 @@ test('protocol checks requirements, signatures are unique and filing preserves t
   expect(doc.document?.signatures).toHaveLength(1);
   game.act(alice,{kind:'stamp',item:doc.id,place:'secretary'},world);
   Object.assign(alice,terminals.protocol.point);
-  expect(game.act(alice,{kind:'file',item:doc.id,place:'protocol'},world)).toBe('Falta: Gabinete.');
+  expect(readGameplayAction({kind:'file',item:doc.id,place:'protocol'})).toBeUndefined();
+  expect(game.act(alice,{kind:'dialogue-choice',target:`file-${doc.id}`,token:1},world)).toBe('Esta conversa já mudou.');
+  expect(submitAtProtocol(game,alice,doc.id,world)).toBe('Falta: Gabinete.');
+  expect(game.view(alice,world).dialogue?.feedback).toBe('Falta: Gabinete.');
   expect(game.view(alice,world).inventory).toHaveLength(1);
   Object.assign(alice,terminals.cabinet.point);
   game.act(alice,{kind:'stamp',item:doc.id,place:'cabinet'},world);
   Object.assign(alice,terminals.protocol.point);
-  expect(game.act(alice,{kind:'file',item:doc.id,place:'protocol'},world)).toBe('Documento protocolado.');
+  expect(submitAtProtocol(game,alice,doc.id,world)).toBe('Documento protocolado.');
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(alice,world).filed).toEqual([doc]);
 });
@@ -734,7 +743,7 @@ test.each([true,false])('only a human mandate can support a legislative project 
   game.act(alice,{kind:'stamp',item:doc.id,place:'secretary'},world);
   Object.assign(alice,terminals.cabinet.point);
   game.act(alice,{kind:'stamp',item:doc.id,place:'cabinet'},world);
-  const file = () => game.act(alice,{kind:'file',item:doc.id,place:'protocol'},world);
+  const file = () => submitAtProtocol(game,alice,doc.id,world);
   if (!solo) {
     Object.assign(alice,terminals.protocol.point);
     expect(file()).toBe('Falta: 1 assinatura(s).');
