@@ -20,6 +20,23 @@ async page => {
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
+    const polls = page.locator('#election-poll-dialog');
+    const receiverPolls = receiver.locator('#election-poll-dialog');
+    await page.keyboard.press('l');
+    await receiver.keyboard.press('l');
+    const bia = polls.getByRole('button',{name:'Bia',exact:true});
+    await bia.locator('.portrait[data-skin]').waitFor();
+    await page.keyboard.press('1');
+    await bia.and(polls.locator('[aria-pressed="true"]')).waitFor();
+    await page.keyboard.press('0');
+    await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor();
+    await page.keyboard.press('9');
+    await page.keyboard.press('0');
+    await receiverPolls.getByText('Apoia Bia',{exact:true}).waitFor({state:'hidden'});
+    for (const client of [page,receiver]) {
+      await client.keyboard.press('Escape');
+      await client.locator('#election-poll-dialog').waitFor({state:'hidden'});
+    }
     const nearby = page.getByRole('button',{name:'Objetos próximos',exact:true});
     await nearby.waitFor();
     const nearbyKey = await nearby.getAttribute('aria-keyshortcuts');

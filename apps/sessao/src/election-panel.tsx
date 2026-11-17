@@ -1,6 +1,7 @@
 import { DialogDismiss } from './ui/dialog-dismiss';
 import { createRoot } from 'react-dom/client';
-import type { CSSProperties, FormEvent } from 'react';
+import {useState} from 'react';
+import {CharacterPortrait} from './ui/character-portrait';
 import { ELECTION_RULES, type ElectionView, type ElectionAction } from './elections';
 import type { PlenaryView } from './plenary';
 import { money } from './politics';
@@ -34,12 +35,9 @@ function ElectionCycle({result}:{result?:ElectionView['result']}) {
 
 export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id:string; onSupport:(candidate:string)=>void}) {
   const name = (candidateId:string)=>election.offices.find(person=>person.id===candidateId)?.name;
-  const candidates = election.offices.filter(candidate=>candidate.id!==id);
+  const candidates = election.polls.filter(candidate=>candidate.id!==id)
+    .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR') || a.id.localeCompare(b.id));
   const current = election.polls.find(candidate=>candidate.id===id)?.supports ?? '';
-  const submit = (event:FormEvent<HTMLFormElement>)=>{
-    event.preventDefault();
-    onSupport(String(new FormData(event.currentTarget).get('candidate') ?? ''));
-  };
   return <>
     <header>
       <h2 id="election-poll-title">Pesquisa eleitoral</h2>
@@ -50,9 +48,8 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
       <section><h4>Classificação projetada</h4><ol role="list">
         {election.polls.map((candidate,index)=>{
           const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
-          const portrait = {'--portrait-column':candidate.character%2,'--portrait-row':Math.floor(candidate.character/2)} as CSSProperties;
           return <li key={candidate.id}><div className="poll-card">
-            <span className="poll-avatar"><span className="portrait" aria-hidden="true" style={portrait}/>
+            <span className="poll-avatar"><CharacterPortrait character={candidate.character}/>
               <span className="poll-rank" data-rank={index+1}>{index+1}º</span></span>
             <div className="poll-details"><div className="poll-label">
               <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
@@ -68,38 +65,70 @@ export function ElectionPolls({election,id,onSupport}:{election:ElectionView; id
     </div></section>
     <div id="election-support">
       {election.canCampaign && election.remaining>0 && candidates.length>0 &&
-        <form id="support-form" onSubmit={submit}>
-          <label>Apoio público <select id="endorsement" name="candidate" key={current} defaultValue={current}>
-            <option value="">Sem apoio</option>
-            {candidates.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
-          </select></label>
-          <button className="hud-button hud-button--secondary">Declarar ou retirar apoio</button>
-        </form>}
+        <ElectionSupport key={current} candidates={candidates} current={current} onSupport={onSupport}/>}
     </div>
   </>;
 }
 
+function ElectionSupport({candidates,current,onSupport}:{
+  candidates:ElectionView['polls']; current:string; onSupport:(candidate:string)=>void;
+}) {
+  const [choice,select] = useState(current);
+  const selected = candidates.some(candidate=>candidate.id===choice) ? choice : '';
+  return <form id="support-form" onSubmit={event=>{event.preventDefault();onSupport(selected);}}>
+    <strong id="support-label">Apoio público</strong>
+    <div className="support-candidates" role="group" aria-labelledby="support-label">
+      {candidates.map(({id,name,character},index)=>{
+        const shortcut = index<8 ? String(index+1) : undefined;
+        return <button key={id} type="button" className="hud-button hud-button--secondary"
+          aria-pressed={selected===id} aria-keyshortcuts={shortcut} onClick={()=>select(id)}>
+          <CharacterPortrait character={character}/>
+          <span>{name}</span>
+          {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
+        </button>;
+      })}
+      <button type="button" className="hud-button hud-button--secondary" aria-pressed={!selected}
+        aria-keyshortcuts="9" onClick={()=>select('')}>Sem apoio<kbd className="action-key" aria-hidden="true">9</kbd></button>
+    </div>
+    <button type="submit" className="hud-button" aria-keyshortcuts="0" disabled={selected===current}>
+      {selected ? 'Declarar apoio' : 'Retirar apoio'} <kbd className="action-key" aria-hidden="true">0</kbd>
+    </button>
+  </form>;
+}
+
+export function ElectionIndicator({summary,urgency,open}:{
+  summary?:Parameters<typeof ElectionSummary>[0]; urgency?:'soon'|'high'; open:()=>boolean;
+}) {
+  return <div id="election-dock" className="hud-strip hud-module" hidden={!summary} data-urgency={urgency}>
+    {summary && <button id="open-election-polls" aria-keyshortcuts="L" className="hud-option" type="button"
+      aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)" onClick={open}>
+      <ElectionSummary {...summary}/>
+    </button>}
+  </div>;
+}
+
 export function createElectionPanel(id:string, send:(action:ElectionAction) => void) {
-  const dock = el('election-dock');
-  const openPolls = el<HTMLButtonElement>('open-election-polls');
+  let available = false;
   const polls = el<HTMLDialogElement>('election-poll-dialog');
-  const summaryRoot = createRoot(openPolls);
+  const summaryRoot = createRoot(el('election-indicator-mount'));
   function showPolls() {
-    if (dock.hidden) return false;
+    if (!available) return false;
     if (!polls.open) polls.showModal();
     return true;
   }
-  openPolls.onclick = showPolls;
   let summaryKey = '';
   let pollsKey = '';
   const pollsRoot = createRoot(polls);
-  dock.hidden = true;
   return {
     showPolls,
     render(view:PlenaryView) {
       const election = view.election;
-      dock.hidden = !election;
+      available = !!election;
       if (!election) {
+        if (summaryKey) {
+          summaryKey = '';
+          summaryRoot.render(<ElectionIndicator open={showPolls}/>);
+        }
         polls.close();
         return;
       }
@@ -109,12 +138,12 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
       const candidate = rank>=0 ? race?.[rank] : undefined;
       const summary = {rank,candidate,atRisk:rank===race.length-1 && race.length>ELECTION_RULES.minimumMandates,
         remaining:view.phase==='finished' ? 0 : remaining};
-      const nextSummaryKey = JSON.stringify(summary);
+      const urgency = view.phase==='finished' ? undefined : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : undefined;
+      const nextSummaryKey = JSON.stringify([summary,urgency]);
       if (nextSummaryKey!==summaryKey) {
         summaryKey = nextSummaryKey;
-        summaryRoot.render(<ElectionSummary {...summary}/>);
+        summaryRoot.render(<ElectionIndicator summary={summary} urgency={urgency} open={showPolls}/>);
       }
-      dock.dataset.urgency = view.phase==='finished' ? '' : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : '';
       const nextPollsKey = JSON.stringify([result,election.canCampaign,remaining>0,election.polls,election.offices]);
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
@@ -123,7 +152,6 @@ export function createElectionPanel(id:string, send:(action:ElectionAction) => v
     },
     destroy() {
       polls.close();
-      openPolls.onclick = null;
       pollsRoot.unmount();
       summaryRoot.unmount();
     },

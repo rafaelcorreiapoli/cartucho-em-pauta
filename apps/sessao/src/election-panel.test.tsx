@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ElectionPolls,ElectionSummary} from './election-panel';
+import {ElectionIndicator,ElectionPolls,ElectionSummary} from './election-panel';
 
 test('the election summary renders the position, trend and remaining time',()=>{
   const markup = renderToStaticMarkup(<ElectionSummary rank={2} atRisk remaining={256}
@@ -24,4 +24,14 @@ test('the polls dialog presents the current candidate and uses the shared native
   expect(markup).toContain('method="dialog"');
   expect(markup).toContain('Rafa (você)');
   expect(markup).toContain('aria-valuenow="73"');
+});
+
+
+test('the election indicator owns the dial and its keyboard shortcut',()=>{
+  const markup = renderToStaticMarkup(<ElectionIndicator urgency="high" open={()=>true}
+    summary={{rank:0,atRisk:false,remaining:29}}/>);
+  expect(markup).toContain('id="election-dock"');
+  expect(markup).toContain('data-urgency="high"');
+  expect(markup).toContain('aria-keyshortcuts="L"');
+  expect(renderToStaticMarkup(<ElectionIndicator open={()=>false}/>)).not.toContain('<button');
 });
