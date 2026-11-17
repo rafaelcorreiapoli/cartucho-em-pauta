@@ -532,11 +532,7 @@ export class PlenaryMatch {
         break;
       }
       case 'transfer':
-        if (!this.canReceivePix(action.to) || !this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round)) return false;
-        this.publishActivity(player,'pix-sent',now,{target:action.to,amount:action.amount});
-        const receiver = players.find(other=>other.id===action.to);
-        if (receiver) this.publishActivity(receiver,'pix-received',now,{target:id,amount:action.amount});
-        return true;
+        return this.canReceivePix(action.to) && this.economy.transfer(id,action.to,action.amount,action.clandestine ?? true,this.round,'pix');
       case 'share':
         if (near(action.to)) this.economy.share(id,action.to,action.evidence,action.price);
         break;

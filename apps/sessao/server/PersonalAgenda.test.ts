@@ -972,7 +972,6 @@ test('urgent calls are replaced if too few distinct contacts remain to finish',(
 });
 
 test.each([
-  ['pixVinte',event('pix-sent',{amount:2,target:'b'}),event('pix-sent',{amount:1,target:'b',at:2})],
   ['debateTelefonico',event('call-time',{duration:20_000,target:'b',item:1}),event('called',{target:'b'})],
   ['nadaADeclarar',event('concealed-cash-time',{duration:15_000}),event('concealment-started',{amount:1})],
   ['produtividade',event('game-played',{duration:30_000,place:'own-office'}),event('game-played',{duration:30_000})],
@@ -1045,7 +1044,7 @@ test('cash missions require an accepted in-person handover and use the actual am
   const exact = game.view(sender,world).inventory.find(item=>item.kind==='briefcase')!;
   expect(draw(sender.id,'dinheiroPresencialVinte')).toBe(true);
   expect(draw(recipient.id,'caixaDois')).toBe(true);
-  economy.recordGameplay(event('pix-received',{actor:recipient.id,target:sender.id,amount:2}));
+  expect(economy.transfer(sender.id,recipient.id,2,true,0,'pix')).toBe(true);
   expect(completed(recipient.id,'caixaDois')).toBe(false);
 
   const offer = (item:number)=>{

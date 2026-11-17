@@ -35,7 +35,6 @@ const activityMissions = {
   fotoOstentacao:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.decorations.some(item=>isOfficeFurniture(item.kind)),
   fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
     person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),
-  pixVinte:(event:GameplayEvent) => event.type==='pix-sent' && event.amount===PIX_MISSION_AMOUNT,
   campanhaUltimaHora:(event:GameplayEvent) => event.type==='advertisement-aired' && (event.duration ?? Infinity)<=LATE_CAMPAIGN_WINDOW_MS,
   cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
   provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
@@ -190,20 +189,22 @@ export class PersonalAgenda {
     this.fillMissions(metrics,true);
   }
 
-  recordPayment(metrics:AgendaMetrics, from:string, transferId:number) {
+  recordPayment(metrics:AgendaMetrics, from:string, transferId:number, pix=false) {
     const key = `payment:${transferId}`;
     if (this.seenEvents.has(key)) return;
     this.seenEvents.add(key);
     const mission = this.missions.find(entry=>entry.kind==='articulacao');
     const articulacao = mission ? this.countFacts(mission,[{value:from}]) : 0;
-    this.progress(metrics,{recebido:1,articulacao});
+    const pixMission = pix ? this.missions.find(entry=>entry.kind==='doisPix') : undefined;
+    const doisPix = pixMission ? this.countFacts(pixMission,[{value:from}]) : 0;
+    this.progress(metrics,{recebido:1,articulacao,doisPix});
   }
 
-  recordTransfer(metrics:AgendaMetrics, amount:number,to:string,transferId:number) {
+  recordTransfer(metrics:AgendaMetrics, amount:number,to:string,transferId:number,pix=false) {
     const key = `transfer:${transferId}`;
     if (this.seenEvents.has(key)) return;
     this.seenEvents.add(key);
-    this.progress(metrics,{pagamento:Number(amount>=AGENDA_TRANSFER_MIN),dinheiroAlvo:Number(amount===TARGET_TRANSFER_AMOUNT &&
+    this.progress(metrics,{pixVinte:Number(pix && amount===PIX_MISSION_AMOUNT),pagamento:Number(amount>=AGENDA_TRANSFER_MIN),dinheiroAlvo:Number(amount===TARGET_TRANSFER_AMOUNT &&
       this.missions.some(m=>m.kind==='dinheiroAlvo' && m.person?.id===to))});
   }
 
@@ -376,8 +377,7 @@ export class PersonalAgenda {
         if (facts?.delete(String(event.item))) mission.current = Math.max(0,...[...facts.values()].map(group=>group.size));
       }
       if (kind==='visitaDoisGabinetes' && event.type==='room-entered' &&
-          this.targets.some(person=>person.id===event.target && this.hasOffice?.(person.id)!==false) ||
-          kind==='doisPix' && event.type==='pix-received' && event.target) {
+          this.targets.some(person=>person.id===event.target && this.hasOffice?.(person.id)!==false)) {
         gains[kind] = this.countFacts(mission,[{value:event.target!}]);
       }
       if (kind==='recolhimentoExtraordinario' && event.item!==undefined) {

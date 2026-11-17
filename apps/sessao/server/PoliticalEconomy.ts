@@ -8,7 +8,8 @@ import { CABINET_GRANT, money, HEARING_POPULARITY, PAYMENTS_PER_ROUND, type Cont
 import type { BillVote, Vote } from '../src/plenary';
 import { PersonalAgenda, type AgendaMetrics } from './PersonalAgenda';
 
-type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number}>;
+type TransferChannel = 'transfer'|'pix';
+type TransferCompleted = Readonly<{id:number;from:string;to:string;amount:number;channel:TransferChannel}>;
 
 type Account = AgendaMetrics & {
   wallet:number; walletIncome:number; popularity:number; agenda:PersonalAgenda; progression:CharacterProgression;
@@ -198,7 +199,7 @@ export class PoliticalEconomy {
     return evidence;
   }
 
-  transfer(from:string, to:string, amount:number, clandestine:boolean, round:number) {
+  transfer(from:string, to:string, amount:number, clandestine:boolean, round:number, channel:TransferChannel='transfer') {
     const source = this.accounts.get(from), recipient = this.accounts.get(to);
     if (!source || !recipient || from===to || !Number.isSafeInteger(amount) || amount<1 || amount>source.wallet) return false;
     if (source.paymentRound!==round) {
@@ -211,17 +212,17 @@ export class PoliticalEconomy {
     source.wallet -= amount;
     this.credit(recipient,amount);
     const evidence = this.record(clandestine ? 'clandestine-transfer' : 'public-transfer',from,amount,round,to);
-    this.recordTransferCompleted({id:evidence.id,from,to,amount});
+    this.recordTransferCompleted({id:evidence.id,from,to,amount,channel});
     return true;
   }
 
   private recordTransferCompleted(event:TransferCompleted) {
-    const {from,to,amount} = event;
+    const {from,to,amount,channel} = event;
     const recipient = this.accounts.get(to);
     const source = this.accounts.get(from);
     if (!source || !recipient) return;
-    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from,event.id);
-    source.agenda.recordTransfer(source,amount,to,event.id);
+    if (!this.npcIds.has(from) && !this.npcIds.has(to)) recipient.agenda.recordPayment(recipient,from,event.id,channel==='pix');
+    source.agenda.recordTransfer(source,amount,to,event.id,channel==='pix');
   }
 
   grant(id:string, diverted:Split, budget:number, round:number) {

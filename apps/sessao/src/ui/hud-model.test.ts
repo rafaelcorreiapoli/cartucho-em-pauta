@@ -335,3 +335,31 @@ test('the megaphone notice follows the phase and the anonymous snapshot flag',()
   expect(updates).toEqual([true,false]);
   expect(hud.broadcast.get()).toBe(false);
 });
+
+
+test('the HUD starts a replacement Pix mission at zero after a transfer completes its predecessor',()=>{
+  const recipient = {...player};
+  const [bia,caio] = ['bia','caio'].map(id=>({...player,id,nick:id}));
+  const players = [recipient,bia,caio];
+  const ids = players.map(({id})=>id);
+  const match = new PlenaryMatch(1);
+  expect(match.start(recipient.id,players,0,()=>.9)).toBe(true);
+  const economy:PoliticalEconomy = Reflect.get(match,'economy');
+  const {agenda} = Reflect.get(economy,'accounts').get(recipient.id);
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['recebido','cafe','passeio','doisPix','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const hud = createHudModel();
+  const pay = (sender:Player,now:number)=>{
+    expect(match.politics(sender,{kind:'transfer',to:recipient.id,amount:1},players,now)).toBe(true);
+    hud.render(match.view(recipient.id,ids,now));
+  };
+  pay(bia,1);
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'recebido',current:1}));
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'doisPix',current:0}));
+  pay(caio,2);
+  expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'doisPix',current:1}));
+  pay(bia,3);
+  expect(hud.agenda.get()?.recent).toContainEqual(expect.objectContaining({kind:'doisPix',current:2}));
+  expect(hud.profile.get()?.xp).toBe(missionReward('recebido').xp+missionReward('doisPix').xp);
+});
