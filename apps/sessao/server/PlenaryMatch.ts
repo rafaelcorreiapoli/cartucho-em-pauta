@@ -19,7 +19,7 @@ import {
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
-import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, HEARING_STABILITY_PENALTY, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
 
@@ -982,18 +982,14 @@ export class PlenaryMatch {
         this.voteIntents.delete(target);
         this.economy.suspend(target,now+SUSPENSION_MS);
         this.hearingImmunity.set(target,now+SUSPENSION_MS+HEARING_IMMUNITY_MS);
-        if (!this.infiltrators.has(target)) this.stability = clamp(this.stability-HEARING_STABILITY_PENALTY);
       }
       this.hearingResult = `${this.economy.name(target)}: afastamento ${removed ? 'aprovado' : 'rejeitado'} (${yes} votos pelo afastamento).`;
       this.hearingTarget = undefined;
       this.votes.clear();
-      if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
-      else {
-        this.phase = 'negotiation';
-        this.ends = this.sessionEndsAt;
-        if (now>=this.sessionEndsAt) this.finishAtDeadline();
-        else this.refreshAgendaEligibility(now);
-      }
+      this.phase = 'negotiation';
+      this.ends = this.sessionEndsAt;
+      if (now>=this.sessionEndsAt) this.finishAtDeadline();
+      else this.refreshAgendaEligibility(now);
       return;
     }
     if (!this.proposal) return;

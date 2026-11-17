@@ -5,7 +5,7 @@ import type {PoliticalEconomy} from '../../server/PoliticalEconomy';
 import type {Player} from '../map';
 import {bills,BALLOT_MS,CASSATION_NOTICE_MS,hearingPolicyFee,NEGOTIATION_MS,stations} from '../plenary';
 import {ELECTION_RULES} from '../elections';
-import {CABINET_GRANT,HEARING_MS,HEARING_STABILITY_PENALTY} from '../politics';
+import {CABINET_GRANT,HEARING_MS} from '../politics';
 import {InstitutionalActions,institutionalActions} from './institutional-actions';
 
 const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
@@ -112,6 +112,6 @@ test.each(['hearing','call-cassation'] as const)('the HUD and gameserver enforce
   if (cassation) expect(finished.cassationResult?.text).toContain('Bia perdeu o mandato com 2 votos');
   else {
     expect(finished.hearingResult).toContain('Bia: afastamento aprovado');
-    expect(finished.stability).toBe(before-HEARING_STABILITY_PENALTY);
+    expect(finished.stability).toBe(before);
   }
 });

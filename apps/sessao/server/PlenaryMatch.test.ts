@@ -188,37 +188,38 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   expect(view(honest).politics?.wallet).toBe(11);
 });
 
-test('popularity unlocks a hearing, then a wrong removal costs stability and isolates the player for sixty seconds', () => {
+test.each([honest,traitor])('an approved temporary hearing isolates the target without changing stability (%s)', target => {
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   const view = (player:Player) => match.view(player.id,ids,0);
-  match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,10);
+  match.politics(at(host,'panel'),{kind:'hearing',target:target.id},people,10);
   expect(view(host).phase).toBe('negotiation');
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
   expect(view(host).politics).toMatchObject({wallet:8,popularity:57,canCallHearing:true});
-  match.politics(at(host,'panel'),{kind:'hearing',target:honest.id},people,50);
-  expect(view(host).hearing?.target).toContain('Bolsonaro');
+  match.politics(at(host,'panel'),{kind:'hearing',target:target.id},people,50);
+  expect(view(host).hearing?.target).toBe(target.nick);
+  const stability = view(host).stability;
   match.vote(host.id,'yes',60);
-  match.vote(traitor.id,'yes',60);
+  match.vote((target===honest ? traitor : honest).id,'yes',60);
   const resumed = 50+HEARING_MS;
   match.advance(resumed);
-  expect(view(host)).toMatchObject({phase:'negotiation',stability:36,electorate:2});
-  expect(view(honest).politics?.suspended).toBe(true);
-  expect(view(honest).role).toBe('Parlamentar');
-  match.politics(honest,{kind:'transfer',to:host.id,amount:1},people,resumed+1);
+  expect(view(host)).toMatchObject({phase:'negotiation',stability,electorate:2});
+  expect(view(target).politics?.suspended).toBe(true);
+  expect(view(target).role).toBe(target===honest ? 'Parlamentar' : 'Infiltrado');
+  match.politics(target,{kind:'transfer',to:host.id,amount:1},people,resumed+1);
   expect(view(host).politics?.wallet).toBe(8);
-  expect(match.view(honest.id,ids,resumed).isolationSeconds).toBe(60);
-  expect(match.canHandleObjects(honest.id,resumed)).toBe(false);
+  expect(match.view(target.id,ids,resumed).isolationSeconds).toBe(60);
+  expect(match.canHandleObjects(target.id,resumed)).toBe(false);
   match.advance(resumed+59_999);
-  expect(match.view(honest.id,ids,resumed+59_999).isolationSeconds).toBe(1);
+  expect(match.view(target.id,ids,resumed+59_999).isolationSeconds).toBe(1);
   match.advance(resumed+60_000);
-  expect(match.view(honest.id,ids,resumed+60_000).isolationSeconds).toBeUndefined();
-  expect(match.canHandleObjects(honest.id,resumed+60_000)).toBe(true);
+  expect(match.view(target.id,ids,resumed+60_000).isolationSeconds).toBeUndefined();
+  expect(match.canHandleObjects(target.id,resumed+60_000)).toBe(true);
   publishProjectFiling(match,host,0,resumed);
   match.advance(resumed+NEGOTIATION_MS);
-  match.vote(honest.id,'yes',resumed+NEGOTIATION_MS);
-  expect(view(honest).vote).toBe('yes');
+  match.vote(target.id,'yes',resumed+NEGOTIATION_MS);
+  expect(view(target).vote).toBe('yes');
 });
 
 test('rooms with at least six players may choose two infiltrators', () => {

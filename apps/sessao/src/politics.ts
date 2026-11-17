@@ -7,7 +7,6 @@ export const CASSATION_POPULARITY = 40;
 export const HEARING_MS = 35_000;
 export const SUSPENSION_MS = 60_000;
 export const HEARING_IMMUNITY_MS = 120_000;
-export const HEARING_STABILITY_PENALTY = 12;
 export const TRADE_RADIUS = 44;
 export const PAYMENTS_PER_ROUND = 6;
 export const splits = [0,1,2,3] as const;
