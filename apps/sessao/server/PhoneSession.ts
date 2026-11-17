@@ -55,7 +55,7 @@ export class PhoneSession {
       const witnesses = world.players.filter(other=>other.id!==id && world.present?.(other.id)!==false &&
         worldVisible(other,player,world.vision?.(other.id))).map(other=>other.id);
       for (const witness of witnesses) game.witnesses.add(witness);
-      if (game.snake.status!=='playing' || game.startedAt===undefined) continue;
+      if (game.startedAt===undefined) continue;
       const deadline = game.startedAt+SNAKE_ROUND_MS;
       const duration = Math.min(100,Math.min(world.now,deadline)-game.sampledAt);
       game.sampledAt = world.now;

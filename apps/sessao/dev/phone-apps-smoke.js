@@ -66,7 +66,11 @@ async page => {
   await removeKey(dialog.getByRole('button',{name:'Jogar de novo'}));
   await page.keyboard.press('1');
   await dialog.getByText('0 / 5 frutas',{exact:true}).waitFor();
+  await dialog.evaluate(node=>{
+    window.snakePhoneClosed = new Promise(resolve=>node.addEventListener('close',resolve,{once:true}));
+  });
   await page.keyboard.press('Escape');
+  await page.evaluate(()=>window.snakePhoneClosed);
   await dialog.waitFor({state:'hidden'});
   await page.keyboard.press('c');
   await dialog.getByRole('heading',{name:'Celular',exact:true}).waitFor();
