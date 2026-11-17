@@ -1,30 +1,18 @@
 import type { Motion, Rect } from './map';
 
-const officeWidth = 129;
-const officeHeight = 87;
-const doorWidth = 36;
-const doorHeight = 11;
-// Offices that touch an existing divider use its inner edge as their boundary.
-type SharedWall = 'west'|'east'|'back';
-const locations = [
-  {x:10,y:10,inside:-1,shared:['west','east','back']},
-  {x:341,y:10,inside:-1,shared:['west','east','back']},
-  {x:341,y:172,inside:1,shared:['east','back']},
-  {x:65,y:541,inside:1,shared:[]},
-  {x:766,y:541,inside:1,shared:[]},
-  {x:960,y:27,inside:-1,shared:['west','east','back']},
-] as const satisfies readonly {x:number;y:number;inside:1|-1;shared:readonly SharedWall[]}[];
+import { circulationBounds, mapDoor, mapPoint, roomBounds } from './congress-layout';
 
-export const eastAnnex = {left:960,right:1089,top:27,bottom:161,opening:[125,161]} as const;
+const offices = [-1,-1,1,1,1,-1] as const;
 
-export const privateOffices = locations.map(({x,y,inside,shared},index)=>{
-  const center = x+64.5;
+const [left,top,width,height] = circulationBounds('Anexo leste');
+export const eastAnnex = {left,right:left+width,top,bottom:top+height};
+
+export const privateOffices = offices.map((inside,index)=>{
+  const id = String(index+1);
+  const name = `Gabinete ${id.padStart(2,'0')}`;
   return {
-    id:String(index+1),name:`Gabinete ${String(index+1).padStart(2,'0')}`,
-    bounds:[x,y,officeWidth,officeHeight] as Rect,
-    door:[center-doorWidth/2,inside===1 ? y-doorHeight : y+officeHeight,doorWidth,doorHeight] as Rect,
-    inside,shared:new Set<SharedWall>(shared),spawn:{x:center,y:y+58},
-    safe:{x:x+22,y:y+42},cabinet:{x:x+107,y:y+42},
+    id,name,bounds:roomBounds(name),door:mapDoor(name),inside,
+    spawn:mapPoint(`${name}: entrada`),safe:mapPoint(`${name}: cofre`),cabinet:mapPoint(`${name}: armário`),
   };
 });
 export const officeFixtures = {
@@ -65,8 +53,8 @@ export type OfficeDecor = typeof decorSlots[number];
 const decorOffsets:Record<OfficeDecor,Motion> = {
   officeTv:{x:23,y:76},
   officeChair:{x:106,y:76},
-  officeRug:{x:officeWidth/2,y:59},
-  portrait:{x:officeWidth/2,y:19},
+  officeRug:{x:64.5,y:59},
+  portrait:{x:64.5,y:19},
 };
 
 export function decorPoint({bounds:[x,y]}:OfficeLayout, kind:OfficeDecor):Motion {

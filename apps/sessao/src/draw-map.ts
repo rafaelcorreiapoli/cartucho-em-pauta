@@ -1,8 +1,8 @@
 import type Phaser from 'phaser';
-import { snackBar, treasurer, treasuryLayout } from './npcs';
-import { eastAnnex, officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
+import { corridorFloors, doors, floorDecor } from './congress-layout';
+import { officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
 import { infirmary } from './medical';
-import { securityRoom, desks, furnishings, rooms, walls, reprographyEntrance, PLENARY_DOORS, WIDTH, HEIGHT, type Rect } from './map';
+import { desks, furnishings, rooms, walls, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
   officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void,
@@ -36,21 +36,17 @@ export function drawMap(scene: Phaser.Scene,
     fill(0x31564b,x+4.5,y+4.5,w-9,h-9);
   };
 
-  fill(0x172722,0,0,960,541);
-  floor([10,108,eastAnnex.right-10,64],0x757f78,23,18);
-  floor([10,259,940,11],0x757f78,23,11);
-  floor([10,392,940,11],0x757f78,23,11);
-  rug(14,130,eastAnnex.right-28,23);
+  const drawFloorDetails = (details:typeof corridorFloors) => {
+    for (const detail of details) {
+      if (detail.kind==='rug') rug(...detail.area);
+      else if (detail.kind==='floor') floor(detail.area,detail.fill,detail.width,detail.height);
+      else fill(detail.fill,...detail.area,detail.opacity);
+    }
+  };
+  drawFloorDetails(corridorFloors);
   rooms.forEach(({bounds,color}) => floor(bounds,color,24,8));
-  rug(156,16,168,95);
-  fill(0x24473e,278,552,404,185);
-  fill(0x355f50,282,556,396,177);
-  fill(0x789383,453,620,54,120,.23);
-  rug(617,418,184,102);
-  const [doorX,doorY,doorW,doorH] = infirmary.door;
-  fill(0x9b8d6d,doorX,doorY,doorW,doorH);
-  rug(78,306,135,75);
-  rug(725,32,197,73);
+  drawFloorDetails(floorDecor);
+  fill(0x9b8d6d,...infirmary.door);
   for (const [x,y,w,h] of walls) {
     fill(0x172723,x,y,w,h);
     if (h>w) {
@@ -62,19 +58,13 @@ export function drawMap(scene: Phaser.Scene,
     if (h>5) fill(0x2c453b,x,y+5,w,h-5);
     fill(0x162b24,x,y+h-1,w,1);
   }
-  const [snackX,snackY,snackWidth] = snackBar.door;
-  for (const [x,y,w] of [
-    [177,114,26],[217,114,46],[277,114,26],...PLENARY_DOORS.map(([x,y,w]) => [x,y,w]),[69,161,36],[218,161,44],
-    [545,114,41],[821,114,43],[550,161,41],[785,161,42],[221,259,40],[658,259,44],
-    [115,392,41],[400,392,46],treasuryLayout.luxuryDoor,reprographyEntrance,[snackX,snackY,snackWidth],
-  ]) {
+  for (const {name,area:[x,y,w,h]} of doors) {
+    if (name===infirmary.name) continue;
+    if (privateOffices.some(office=>office.name===name)) fill(0x757f78,x,y,w,h);
     fill(0x9b8d6d,x,y+3,w,3);
   }
 
   for (const office of privateOffices) {
-    const [dx,dy,dw,dh] = office.door;
-    fill(0x757f78,dx,dy,dw,dh);
-    fill(0x9b8d6d,dx,dy+3,dw,3);
     for (const kind of ['safe','cabinet'] as const) {
       const {x,y} = office[kind];
       const {texture,width,height,footOffset} = officeFixtures[kind];
@@ -88,14 +78,14 @@ export function drawMap(scene: Phaser.Scene,
   graphics.destroy();
   scene.add.image(0,0,backdrop).setOrigin(0).setDepth(-1);
 
-  for (const [x,y] of desks) {
-    if (x===securityRoom.terminal.x-22 && y===securityRoom.terminal.y-20) {
+  for (const {name,x,y} of desks) {
+    if (name==='Terminal de segurança') {
       const terminal = scene.add.image(x,y-14,'furniture-officeTv')
         .setOrigin(0).setDisplaySize(45,34).setDepth(y+20);
       securityTerminal?.(terminal);
       continue;
     }
-    if (x!==treasurer.counter.x || y!==treasurer.counter.y) prop(2,x+13,y-17,19,23,y+1);
+    if (name!=='Balcão da tesouraria') prop(2,x+13,y-17,19,23,y+1);
     prop(1,x,y-3,45,23,y+20);
   }
   for (const furnishing of furnishings) {

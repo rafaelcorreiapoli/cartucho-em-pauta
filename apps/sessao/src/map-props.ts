@@ -1,6 +1,6 @@
 import { installationArt, installationSites } from './installations';
-import { desks, furnishings, securityRoom, walls, type Motion, type Rect } from './map';
-import { mapNpcs, treasurer } from './npcs';
+import { desks, furnishings, walls, type Motion, type Rect } from './map';
+import { mapNpcs } from './npcs';
 import type { Decoration } from './photography';
 import { powerPanels } from './power';
 import { isOfficeFurniture, officeFixtures, officeFurniture, privateOffices } from './private-offices';
@@ -23,9 +23,9 @@ export function installationBounds(point:Motion, kind:'portrait'|'vip') {
 const fixtureBounds:Rect[] = [
   ...walls,
   ...furnishings.map(({area})=>area),
-  ...desks.map(([x,y]):Rect => {
-    if (x===securityRoom.terminal.x-22 && y===securityRoom.terminal.y-20) return [x,y-14,45,34];
-    if (x===treasurer.counter.x && y===treasurer.counter.y) return [x,y-3,45,23];
+  ...desks.map(({name,x,y}):Rect => {
+    if (name==='Terminal de segurança') return [x,y-14,45,34];
+    if (name==='Balcão da tesouraria') return [x,y-3,45,23];
     return [x,y-17,45,37];
   }),
   ...Object.values(mapNpcs).map(npc=>spriteBounds(npc,38,38,1)),
