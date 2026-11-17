@@ -619,7 +619,7 @@ export class PlenaryMatch {
         const wasCritical = this.criticalStability;
         this.stability = clamp(this.stability+result.stability);
         if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
-        else if (wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
+        else if ((this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability) this.refreshAgendaEligibility(now);
         break;
       }
       case 'share':
@@ -872,7 +872,9 @@ export class PlenaryMatch {
       }
     }
     const expiredSuspensions = this.economy.expireSuspensions(now);
-    if (expiredSuspensions || wasCritical!==this.criticalStability || wasBurning!==this.fire.burning) this.refreshAgendaEligibility();
+    const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
+    const crossedCrisisThreshold = (this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability;
+    if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold) this.refreshAgendaEligibility();
     if (now>=this.sessionEndsAt && !(this.phase==='ballot' && this.ends<=this.sessionEndsAt)) {
       this.finishAtDeadline();
       return;
