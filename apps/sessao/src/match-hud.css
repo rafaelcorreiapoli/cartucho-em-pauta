@@ -1147,8 +1147,23 @@ button.item-tile:active { transform: translateY(3px); }
   justify-content: space-between;
 }
 .campaign-picker > .hud-button {
+  --item-art: 48px;
+  display: grid;
+  grid-template-columns: var(--item-art) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
   white-space: normal;
   text-align: left;
+}
+
+.campaign-picker .action-key { position: static; }
+.campaign-option-info { display: grid; gap: 4px; }
+.campaign-option-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: .8rem;
 }
 
 .investment-preview {

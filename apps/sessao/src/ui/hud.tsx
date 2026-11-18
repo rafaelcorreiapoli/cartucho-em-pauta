@@ -1,5 +1,6 @@
 import {HudHelpButton} from './hud-help';
 import {HudIcon} from './hud-icon';
+import {PopularityReward} from './popularity-reward';
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
@@ -115,7 +116,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
         <div className="react-mission-rewards" role="group" aria-label="Prêmios da missão">
           <span data-reward="xp">{reward.xp} XP</span>
           {!!reward.cash && <span data-reward="cash"><HudIcon name="wallet"/>{money(reward.cash)}</span>}
-          {!!reward.popularity && <span data-reward="popularity"><HudIcon name="chart"/>+{reward.popularity} Pop<span className="sr-only">ularidade</span></span>}
+          {!!reward.popularity && <PopularityReward amount={reward.popularity}/>}
         </div>
         {!done && progress && <small>{progress}</small>}
       </div>

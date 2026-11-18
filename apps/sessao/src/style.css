@@ -189,13 +189,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 .hud-glyph { width:1.1em; height:1.1em; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 #map { z-index:0; }
-#map-action-feedback {
-  position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
-  margin:0; width:max-content; max-width:min(28rem,calc(100% - 2rem));
-  padding:.55rem .85rem; border:1px solid #b55758; border-radius:.45rem;
-  background:#241719; color:#ff9c9e; box-shadow:0 3px 14px #0008;
-  font:650 .95rem/1.35 system-ui,sans-serif; text-align:center; pointer-events:none;
-}
 
 #plenary { width:min(365px,calc(100% - 24px)); }
 .match-top, .resource label, .phase-label, .clock-chip, .section-label,

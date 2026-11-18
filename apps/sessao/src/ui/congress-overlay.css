@@ -5,6 +5,7 @@
   --profile-width: clamp(262.5px, 23.25vw, 367.5px);
   --hot-slot: clamp(32px,3.6vw,62px);
   --hot-gap: 5px;
+  --context-bottom: max(var(--hud-edge),env(safe-area-inset-bottom));
 }
 #session:not([data-phase="lobby"]) #world { position: absolute; inset: 0; }
 #command-strip, #command-deck {
@@ -376,16 +377,36 @@
 #context-hud #stations {
   position: absolute;
   --context-side: max(var(--profile-width), calc(4 * var(--hot-slot) + 3 * var(--hot-gap)));
-  inset: auto calc(var(--context-side) + var(--hud-edge) + 8px) max(var(--hud-edge),env(safe-area-inset-bottom));
+  anchor-name: --context-actions;
+  inset: auto calc(var(--context-side) + var(--hud-edge) + 8px) var(--context-bottom);
   padding: 0;
   background: none;
   animation: none;
 }
 @media (max-width: 960px) {
-  #context-hud #stations {
-    inset-inline: var(--hud-edge);
-    bottom: calc(max(var(--hud-edge),env(safe-area-inset-bottom)) + 2 * var(--hot-slot) + var(--hot-gap) + 8px);
+  #session:not([data-phase="lobby"]) {
+    --context-bottom: calc(max(var(--hud-edge),env(safe-area-inset-bottom)) + 2 * var(--hot-slot) + var(--hot-gap) + 8px);
   }
+  #context-hud #stations { inset-inline: var(--hud-edge); }
+}
+#map-action-feedback {
+  position: fixed;
+  position-anchor: --context-actions;
+  inset: auto auto calc(var(--context-bottom, 24px) + 52px) 50%;
+  bottom: calc(anchor(top, calc(var(--context-bottom, 24px) + 42px)) + 10px);
+  translate: -50% 0;
+  width: max-content;
+  max-width: min(28rem, calc(100% - 2rem));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ff9c9e;
+  font: 650 .95rem/1.35 system-ui,sans-serif;
+  -webkit-text-stroke: 2px #241719;
+  paint-order: stroke fill;
+  text-align: center;
+  pointer-events: none;
 }
 #stations .station-actions { align-items: flex-end; gap: 7px; }
 #stations [data-context-overflow="expanded"] { order: -2; }

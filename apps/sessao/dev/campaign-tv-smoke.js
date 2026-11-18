@@ -100,7 +100,18 @@ async page => {
     await actionMenu.waitFor({state:'hidden'});
     const picker = client=>client.getByRole('dialog',{name:'Veicular propaganda'});
     const spot = client=>picker(client).getByRole('button',{name:/Spot eleitoral/});
-    await spot(page).click();
+    await spot(page).waitFor();
+    const offers = await picker(page).locator('button[aria-keyshortcuts]').evaluateAll(async buttons=>
+      Promise.all(buttons.map(async button=>{
+        await button.querySelector('img').decode();
+        return [button.querySelector('kbd').textContent,button.querySelector('[data-reward="popularity"]').textContent];
+      })),
+    );
+    if (JSON.stringify(offers)!==JSON.stringify([['1','+5 Popularidade'],['2','+8 Popularidade'],['3','+12 Popularidade']])) {
+      throw Error('Retratos, ganhos ou teclas incorretos no seletor de propaganda.');
+    }
+    await page.keyboard.press('1');
+    await picker(page).waitFor({state:'hidden'});
     await guest.waitForFunction(()=>window.campaignAds.length===1);
     await advertiser(guest).click();
     await spot(guest).click();
