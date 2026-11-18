@@ -82,7 +82,7 @@ export class PlayerBots {
     bot.routeRequest = undefined;
   }
 
-  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean) {
+  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean,realNow=world.now) {
     if (!this.bots.size) return;
     const {now} = world;
     if (match.phase!=='ballot') this.messages = [];
@@ -90,12 +90,14 @@ export class PlayerBots {
     const players = world.players.filter(player=>!player.npc);
     const ids = players.map(player=>player.id);
     for (const [id,bot] of this.bots) {
-      if (now<bot.nextThink) continue;
-      bot.nextThink = now+thinkMs+bot.tempo;
+      if (match.phase==='negotiation') {
+        if (now<bot.nextThink) continue;
+        bot.nextThink = now+thinkMs+bot.tempo;
+      }
       const {player} = bot.control;
       if (player.knockedOut || player.carried || player.carrying || !match.canHandleObjects(id,now)) continue;
       const visible = world.players.filter(peer=>peer!==player && world.present?.(peer.id)!==false && canSee(bot.control,peer));
-      const view = match.view(id,ids,now,match.contacts(player,visible));
+      const view = match.view(id,ids,realNow,match.contacts(player,visible));
       const canFile = view.phase==='negotiation' && view.project===undefined && !view.protocolCooldown &&
         !view.projectFilingClosed && view.cassationIn===undefined;
       this.filingSince = canFile ? this.filingSince ?? now : undefined;
@@ -109,7 +111,7 @@ export class PlayerBots {
         bot.voteReason = undefined;
       }
       if (view.phase==='ballot') {
-        this.vote(bot,match,view,players,now);
+        this.vote(bot,match,view,players,now,realNow);
         continue;
       }
       this.explore(bot,match,gameplay,world,view,visible);
@@ -155,7 +157,7 @@ export class PlayerBots {
       return;
     }
     const act = (action:GameplayAction)=> {
-      if (canUseGameplayAction(action,true,false)) gameplay.act(player,action,world);
+      if (canUseGameplayAction(action,true)) gameplay.act(player,action,world);
     };
     const infiltrator = view.role==='Infiltrado';
     const witness = visible.find(peer=>!peer.npc && canReachStation(peer,'panel'));
@@ -329,9 +331,10 @@ export class PlayerBots {
     this.messages = [...this.messages.filter(message=>message.name!==name),{name,text}];
   }
 
-  private vote(bot:Bot,match:PlenaryMatch,view:PlenaryView,players:Player[],now:number) {
+  private vote(bot:Bot,match:PlenaryMatch,view:PlenaryView,players:Player[],now:number,realNow:number) {
     if (!view.mandate || view.politics?.suspended) return;
     const {player} = bot.control;
+    if (view.remaining>27-bot.index*2) return;
     const politics = view.politics;
     if (politics?.paymentsLeft && !bot.boughtEvidence) {
       const offer = politics.incoming.find(entry=>entry.price<=Math.min(2,politics.wallet) &&
@@ -342,10 +345,9 @@ export class PlayerBots {
         return;
       }
     }
-    if (view.remaining>27-bot.index*2) return;
     const decision = this.votePreference(bot,view);
     if (view.vote===decision.vote && bot.voteReason===decision.reason) return;
-    if (view.vote!==decision.vote) match.vote(player.id,decision.vote,now);
+    if (view.vote!==decision.vote) match.vote(player.id,decision.vote,realNow);
     bot.voteReason = decision.reason;
     const choice = decision.vote==='yes' ? 'a favor' : 'contra';
     const intro = view.vote===decision.vote ? `Mantenho meu voto ${choice}.` :

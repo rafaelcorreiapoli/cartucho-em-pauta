@@ -122,8 +122,8 @@ const articulationActions = new Set<GameplayActionKind>([
   'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
-export function canUseGameplayAction(action:GameplayAction, articulating:boolean, voting=false) {
-  return articulating || (voting && (action.kind==='attack' || action.kind==='toggle-modulator')) || !articulationActions.has(action.kind);
+export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
+  return articulating || !articulationActions.has(action.kind);
 }
 export type ExposedItem = {id:number; kind:ObjectKind};
 

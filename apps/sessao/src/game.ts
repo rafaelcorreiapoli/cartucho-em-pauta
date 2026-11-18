@@ -88,8 +88,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     keys.clear();
     shiftKeys.clear();
   };
+  const movementPaused = () => phase==='ballot' || phase==='hearing' || plenaryView?.ballotCountdown!==undefined;
   document.addEventListener('keydown', event => {
-    if (plenaryView?.ballotCountdown!==undefined || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
+    if (movementPaused() || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
       (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
     const key = event.key.toLowerCase();
     if (key==='shift') shiftKeys.add(event.code);
@@ -332,7 +333,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
-        if (plenaryView?.ballotCountdown!==undefined) return;
+        if (movementPaused()) return;
         parent.focus({preventScroll:true});
         keys.clear();
         shiftKeys.clear();
@@ -486,7 +487,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
     update(time: number, delta: number) {
       if (this.assetsFailed || inLobby) return;
-      if (plenaryView?.ballotCountdown===undefined && local.state && time>=nextStep) {
+      if (!movementPaused() && local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;
         if (destination) {
@@ -547,7 +548,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const cooldowns = plenaryView?.gameplay?.stationCooldowns;
       if (negotiating && ownPlayer && cooldowns) {
         for (const {station,duration,point,top} of rechargeFixtures) {
-          const remaining = (cooldowns[station] ?? 0)-(now-plenaryViewReceivedAt);
+          const remaining = (cooldowns[station] ?? 0)-(phase==='ballot' || phase==='hearing' ? 0 : now-plenaryViewReceivedAt);
           if (remaining>0 && localPerception(ownPlayer,point,visionRadius).visible) {
             drawProgressBar(this.mapProgress,point.x,top-8,Phaser.Math.Clamp(1-remaining/duration,0,1));
           }
@@ -884,7 +885,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       worldSnapshot = projectWorldSnapshot();
     },
     setPlenaryView(view:PlenaryView) {
-      if (view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined) {
+      const startingCountdown = view.ballotCountdown!==undefined && plenaryView?.ballotCountdown===undefined;
+      const openingBallot = view.phase!==phase && (view.phase==='ballot' || view.phase==='hearing');
+      if (startingCountdown || openingBallot) {
         stop();
         manual = false;
         destination = undefined;

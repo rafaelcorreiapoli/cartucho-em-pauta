@@ -292,8 +292,8 @@ test('transport ends on disconnect, natural recovery and plenary transition', ()
     } else {
       if (reason==='recovery') world.now = 12_140;
       game.tick(world,reason==='recovery');
-      expect(bob.knockedOut).toBeUndefined();
-      expect(events.filter(event=>event.type==='character-recovered')).toHaveLength(1);
+      expect(bob.knockedOut).toBe(reason==='plenary' ? true : undefined);
+      expect(events.filter(event=>event.type==='character-recovered')).toHaveLength(reason==='recovery' ? 1 : 0);
     }
     expect(alice.carrying).toBeUndefined();
     expect(bob.carried).toBeUndefined();
@@ -693,7 +693,7 @@ test('direct shop equips into free slots and swaps only the confirmed accessory'
   expect(balance.get(alice.id)).toBe(18);
 });
 
-test('plenary voting allows weapon hits against players in the chamber',()=>{
+test('opening a ballot interrupts a pending attack',()=>{
   const {alice,bob,game,world,buyGear,events} = setup();
   buyGear(alice,'baton');
   game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
@@ -701,9 +701,9 @@ test('plenary voting allows weapon hits against players in the chamber',()=>{
   Object.assign(bob,{x:484,y:665});
   game.act(alice,{kind:'attack'},world);
   world.now += weapons.baton.impactMs;
-  game.tick(world,false,true);
-  expect(events.filter(event=>event.type==='hit').map(event=>event.target)).toEqual([bob.id]);
-  expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
+  game.tick(world,false);
+  game.tick(world,true);
+  expect(events.filter(event=>event.type==='hit')).toEqual([]);
 });
 
 test('Bolsa Churrasco restores HP once per second while the policy is active',()=>{

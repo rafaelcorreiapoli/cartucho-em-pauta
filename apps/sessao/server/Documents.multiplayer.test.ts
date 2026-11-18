@@ -246,7 +246,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>views.get(bia.sessionId)?.phase==='ballot');
     expect(views.get(bia.sessionId)).toMatchObject({project:1,proposer:'Alice'});
 
-    Reflect.set(match,'ends',room.clock.currentTime);
+    Reflect.set(match,'voteEndsAt',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.phase==='negotiation');
     // A new command token does not make an already filed item available again.
     const replay = await submitAtProtocol(fresh.id,2120);
@@ -351,7 +351,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>views.get(infiltrator.sessionId)?.cassation?.voted===2);
     expect(views.get(infiltrator.sessionId)?.cassation?.choice).toBeUndefined();
     expect(views.get(voters[0].sessionId)?.cassation?.choice).toBe(infiltrator.sessionId);
-    Reflect.set(match,'ends',room.clock.currentTime);
+    Reflect.set(match,'voteEndsAt',room.clock.currentTime);
     await wait(()=>views.get(voters[0].sessionId)?.phase==='finished');
     expect(views.get(voters[0].sessionId)?.winner).toBe('Parlamentar');
     expect(views.get(voters[0].sessionId)?.cassationResult?.text).toContain('perdeu o mandato');

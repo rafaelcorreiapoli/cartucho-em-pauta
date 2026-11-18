@@ -367,8 +367,8 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     rooms:{plenary:defineRoom(SessionRoom)},
   });
   const rooms:Room[] = [];
-  const wait = async (ready:()=>boolean) => {
-    for (let attempt=0;attempt<100;attempt++) {
+  const wait = async (ready:()=>boolean,timeoutMs=3000) => {
+    for (let elapsed=0;elapsed<timeoutMs;elapsed+=30) {
       if (ready()) return;
       await Bun.sleep(30);
     }
@@ -716,14 +716,30 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     expect(views.get(passenger.sessionId)?.ballotCountdown).toBeUndefined();
     expect(snapshots.get(passenger.sessionId)?.carried).toBeUndefined();
     expect(views.get(passenger.sessionId)?.gameplay?.ownOffice).toBe(passengerOffice);
-    expect(snapshots.get(passenger.sessionId)?.knockedOut).toBeUndefined();
+    expect(snapshots.get(passenger.sessionId)?.knockedOut).toBe(true);
+    const openedBallot = views.get(passenger.sessionId)!;
+    const stamina = carrierControl.player.stamina;
+    const ballotAck = carrierControl.ack;
+    carrier.send('input',{seq:ballotAck+1,revision:carrierControl.revision,plenary:true,motion:{x:1,y:0}});
+    carrier.send('gameplay',{action:{kind:'attack'},token:4170});
+    await wait(()=>views.get(passenger.sessionId)!.remaining<openedBallot.remaining);
+    expect(views.get(passenger.sessionId)).toMatchObject({
+      sessionRemaining:openedBallot.sessionRemaining,
+      payroll:openedBallot.payroll,
+      budget:openedBallot.budget,
+    });
+    expect(carrierControl.ack).toBe(ballotAck);
+    expect(carrierControl.player.stamina).toBe(stamina);
+    expect(carrierControl.player.swing).toBeUndefined();
+    expect(views.get(passenger.sessionId)?.gameplay?.vitality).toEqual(openedBallot.gameplay?.vitality);
     passenger.send('bill-vote',{vote:'yes',token:4180});
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
     const infraction = views.get(passenger.sessionId)?.complaints?.available[0];
     expect(infraction).toMatchObject({kind:'hit'});
     expect(views.get(carrier.sessionId)?.complaints?.available).toEqual([]);
-    Reflect.set(match,'ends',room.clock.currentTime);
+    Reflect.set(match,'voteEndsAt',room.clock.currentTime);
     await wait(()=>views.get(passenger.sessionId)?.phase==='negotiation');
+    await wait(()=>!snapshots.get(passenger.sessionId)?.knockedOut,9000);
     Object.assign(positions.get(passenger.sessionId)!.player,stations.audit);
     passenger.send('complaint-submit',{id:infraction!.id,token:4260});
     await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
@@ -745,7 +761,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     await Promise.allSettled(rooms.map(room=>room.leave()));
     await server.gracefullyShutdown(false);
   }
-},25_000);
+},35_000);
 
 test('six human clients can select eight NPCs and fill the available seats when the vote opens',async()=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');

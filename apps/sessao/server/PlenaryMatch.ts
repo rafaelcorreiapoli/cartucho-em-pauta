@@ -33,6 +33,22 @@ export class PlenaryMatch {
   private proposal?:{project:number; proposer:string; voteAt:number};
   private protocolOpensAt = 0;
   private agendaNow = 0;
+  private pausedGameTime?: number;
+  private pausedDuration = 0;
+  private voteEndsAt = 0;
+
+  get voting() { return this.pausedGameTime!==undefined; }
+
+  // Gameplay deadlines exclude time spent on open ballots. Ballot deadlines use the room clock.
+  gameTime(realNow:number) { return this.pausedGameTime ?? realNow-this.pausedDuration; }
+
+  private openVote(phase:'ballot'|'hearing',realNow:number,gameNow:number,duration:number) {
+    this.pausedGameTime = gameNow;
+    this.voteEndsAt = realNow+duration;
+    this.phase = phase;
+    this.economy.interruptPlenaryVisits();
+  }
+
   private agendaBallotsLeft = -1;
   private get sessionEndsAt() { return this.started+rules.matchDuration; }
   private readonly complaints = new Complaints();
@@ -78,8 +94,7 @@ export class PlenaryMatch {
   private get criticalStability() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
 
   private get canArticulateBeforeDeadline() {
-    return this.running && this.agendaNow<this.sessionEndsAt &&
-      (this.phase==='negotiation' || this.ends<this.sessionEndsAt);
+    return this.running && this.agendaNow<this.sessionEndsAt;
   }
 
   private canFightCrisis(id:string) {
@@ -92,19 +107,7 @@ export class PlenaryMatch {
 
   private canPublishBeforeDeadline(id:string,nextPublicationAt:number) {
     if (!this.running || this.expelled.has(id)) return false;
-    let availableAt = Math.max(this.agendaNow,nextPublicationAt,this.economy.suspensionEndsAt(id) ?? 0);
-    const sessionOpensAt = this.phase==='negotiation' ? this.agendaNow : this.ends;
-    availableAt = Math.max(availableAt,sessionOpensAt);
-    const cassationEnd = this.cassationAt===undefined ? sessionOpensAt : this.cassationAt+HEARING_MS;
-    if (this.cassationAt!==undefined && availableAt>=this.cassationAt) {
-      availableAt = Math.max(availableAt,cassationEnd);
-    }
-    if (this.phase!=='ballot' && this.proposal) {
-      const voteAt = Math.max(this.proposal.voteAt,sessionOpensAt,cassationEnd);
-      const voteEnds = voteAt+BALLOT_MS;
-      if (voteEnds<=this.sessionEndsAt && availableAt>=voteAt && availableAt<voteEnds) availableAt = voteEnds;
-    }
-    return availableAt<this.sessionEndsAt;
+    return Math.max(this.agendaNow,nextPublicationAt,this.economy.suspensionEndsAt(id) ?? 0)<this.sessionEndsAt;
   }
 
   setAgendaCashAvailability(check:Parameters<PoliticalEconomy['setAgendaCashAvailability']>[0]) {
@@ -135,14 +138,14 @@ export class PlenaryMatch {
   }
 
   private remainingAgendaBallots(now:number) {
-    const blockedUntil = Math.max(now,this.phase==='hearing' ? this.ends : now,
-      this.cassationAt===undefined ? now : this.cassationAt+HEARING_MS);
-    const firstEnd = this.phase==='ballot' ? this.ends :
-      (this.proposal ? Math.max(blockedUntil,this.proposal.voteAt) :
-        Math.max(blockedUntil,this.protocolOpensAt)+projectRules.debateMs)+BALLOT_MS;
-    if (firstEnd>this.sessionEndsAt) return 0;
-    const cycle = projectRules.cooldownMs+projectRules.debateMs+BALLOT_MS;
-    return Math.min(bills.length-this.outcomes.length,1+Math.floor((this.sessionEndsAt-firstEnd)/cycle));
+    const inBallot = this.phase==='ballot';
+    const freeAt = Math.max(now,this.cassationAt ?? now);
+    const first = inBallot ? now+projectRules.cooldownMs+projectRules.debateMs : this.proposal
+      ? Math.max(freeAt,this.proposal.voteAt)
+      : Math.max(freeAt,this.protocolOpensAt)+projectRules.debateMs;
+    const cycle = projectRules.cooldownMs+projectRules.debateMs;
+    const future = first>=this.sessionEndsAt ? 0 : 1+Math.floor((this.sessionEndsAt-first-1)/cycle);
+    return Math.min(bills.length-this.outcomes.length,future+Number(inBallot));
   }
 
   refreshAgendaEligibility(now=this.agendaNow) {
@@ -282,8 +285,6 @@ export class PlenaryMatch {
   private finalRoster:SessionParticipant[] = [];
   private reason?: string;
 
-  get allowsPlenaryCombat() { return this.phase==='ballot' || this.cassationOpen; }
-
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
   start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false) {
@@ -306,6 +307,8 @@ export class PlenaryMatch {
     }
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
+    this.pausedGameTime = undefined;
+    this.pausedDuration = 0;
     this.started = now;
     this.nextPayrollAt = now+payrollRules.interval;
     this.lastPayroll = undefined;
@@ -439,7 +442,7 @@ export class PlenaryMatch {
   }
 
   private projectFilingClosed(now:number) {
-    return Math.max(now,this.protocolOpensAt)+projectRules.debateMs+BALLOT_MS>this.sessionEndsAt;
+    return Math.max(now,this.protocolOpensAt)+projectRules.debateMs>=this.sessionEndsAt;
   }
 
   private projectFilingError(id:string,project:number,now:number) {
@@ -550,7 +553,7 @@ export class PlenaryMatch {
   }
 
   private projectVoteExpired(now:number) {
-    return !!this.proposal && Math.max(this.proposal.voteAt,now)+BALLOT_MS>this.sessionEndsAt;
+    return !!this.proposal && Math.max(this.proposal.voteAt,now)>=this.sessionEndsAt;
   }
 
   private projectWarning(now:number) {
@@ -573,7 +576,7 @@ export class PlenaryMatch {
   }
 
   vote(id:string, vote:BillVote, now:number) {
-    if (this.cassationOpen || (this.phase!=='ballot' && this.phase!=='hearing') || now>=this.ends || !this.canVote(id)) return;
+    if (this.cassationOpen || (this.phase!=='ballot' && this.phase!=='hearing') || now>=this.voteEndsAt || !this.canVote(id)) return;
     if (this.phase==='hearing' && vote==='abstain') return;
     const previous = this.votes.get(id);
     this.votes.set(id,vote);
@@ -589,7 +592,7 @@ export class PlenaryMatch {
 
   private canScheduleHearing(now:number,notice=0) {
     return this.phase==='negotiation' && this.cassationAt===undefined &&
-      now+notice+HEARING_MS<=this.sessionEndsAt;
+      now+notice<this.sessionEndsAt;
   }
 
   private canCallHearing(id:string,now:number) {
@@ -617,7 +620,7 @@ export class PlenaryMatch {
   }
 
   castCassation(id:string, candidate:string|null, now:number) {
-    if (!this.cassationOpen || now>=this.ends || !this.canVoteInCassation(id) ||
+    if (!this.cassationOpen || now>=this.voteEndsAt || !this.canVoteInCassation(id) ||
         (candidate!==null && (candidate===id || !this.canVoteInCassation(candidate)))) return;
     this.cassationVotes.set(id,candidate);
   }
@@ -731,11 +734,8 @@ export class PlenaryMatch {
         if (!this.canCallHearing(id,now) || !this.canVote(action.target) ||
             (this.hearingImmunity.get(action.target) ?? 0)>now || id===action.target || !this.at(player,'panel')) break;
         this.hearingTarget = action.target;
-        this.ends = now+HEARING_MS;
         this.votes.clear();
-        this.economy.cancelOffers();
-        this.economy.interruptPlenaryVisits();
-        this.phase = 'hearing';
+        this.openVote('hearing',now+this.pausedDuration,now,HEARING_MS);
         this.refreshAgendaEligibility(now);
         break;
     }
@@ -834,12 +834,12 @@ export class PlenaryMatch {
 
   private canFinishOutageRepair(now:number) {
     if (!this.powerOut) return false;
-    if (this.phase!=='negotiation') return Math.max(now,this.ends)+powerRules.repairMs<this.sessionEndsAt;
+    if (this.voting) return now+powerRules.repairMs<this.sessionEndsAt;
     if (this.proposal && this.cassationAt===undefined && !this.projectVoteExpired(now)) {
       const {voteAt} = this.proposal;
       const cutoff = voteAt-projectRules.countdownSeconds*1000;
       return (now<cutoff && this.power.canFinishBefore(now,cutoff)) ||
-        Math.max(now,voteAt)+BALLOT_MS+powerRules.repairMs<this.sessionEndsAt;
+        Math.max(now,voteAt)+powerRules.repairMs<this.sessionEndsAt;
     }
     return this.power.canFinishBefore(now,this.sessionEndsAt);
   }
@@ -962,8 +962,21 @@ export class PlenaryMatch {
 
   private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
 
-  advance(now:number, distributePinga?:(recipients:readonly string[])=>void) {
+  advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void) {
     if (!this.running) return;
+    const gameNow = this.gameTime(realNow);
+    if (this.pausedGameTime!==undefined) {
+      if (realNow<this.voteEndsAt) return;
+      this.pausedDuration = realNow-gameNow;
+      this.pausedGameTime = undefined;
+      this.resolveVote(gameNow,distributePinga);
+      return;
+    }
+    const scheduledVoteAt = this.cassationAt ?? this.proposal?.voteAt;
+    // A tick that arrives after the deadline must still open a ballot already due before it.
+    const now = scheduledVoteAt!==undefined && scheduledVoteAt<this.sessionEndsAt && gameNow>=this.sessionEndsAt
+      ? Math.max(scheduledVoteAt,this.agendaNow)
+      : gameNow;
     const electionWasOpen = this.election.open(this.agendaNow);
     const canReturn = this.canArticulateBeforeDeadline;
     const couldRepair = this.canFinishOutageRepair(this.agendaNow);
@@ -985,8 +998,7 @@ export class PlenaryMatch {
     const crossedCrisisThreshold = (this.fire.burning || this.powerOut) && wasCritical!==this.criticalStability;
     if (expiredSuspensions || changedCriticalFire || crossedCrisisThreshold || canReturn!==this.canArticulateBeforeDeadline ||
         couldRepair!==this.canFinishOutageRepair(this.agendaNow)) this.refreshAgendaEligibility();
-    const closingVote = (this.phase==='ballot' || this.phase==='hearing') && this.ends<=this.sessionEndsAt;
-    if (now>=this.sessionEndsAt && !closingVote) {
+    if (now>=this.sessionEndsAt) {
       this.finishAtDeadline();
       return;
     }
@@ -1000,23 +1012,16 @@ export class PlenaryMatch {
     if (this.cassationAt!==undefined && now>=this.cassationAt) {
       this.cassationAt = undefined;
       this.cassationOpen = true;
-      this.ends = Math.min(now+HEARING_MS,this.sessionEndsAt);
-      this.economy.cancelOffers();
-      this.economy.interruptPlenaryVisits();
-      this.phase = 'hearing';
+      this.openVote('hearing',realNow,now,HEARING_MS);
       this.refreshAgendaEligibility(now);
       return;
     }
-    if (this.phase==='negotiation') {
-      if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || this.projectVoteExpired(now)) return;
-      this.economy.cancelOffers();
-      this.economy.interruptPlenaryVisits();
-      this.phase = 'ballot';
-      this.ends = now+BALLOT_MS;
-      if (!this.hasFutureVoteNegotiation(now)) this.refreshAgendaEligibility(now);
-      return;
-    }
-    if (now<this.ends) return;
+    if (!this.proposal || now<this.proposal.voteAt || this.cassationAt!==undefined || this.projectVoteExpired(now)) return;
+    this.openVote('ballot',realNow,now,BALLOT_MS);
+    if (!this.hasFutureVoteNegotiation(now)) this.refreshAgendaEligibility(now);
+  }
+
+  private resolveVote(now:number,distributePinga?:(recipients:readonly string[])=>void) {
     if (this.cassationOpen) {
       this.resolveCassation(now);
       if (this.running && now>=this.sessionEndsAt) this.finishAtDeadline();
@@ -1098,6 +1103,7 @@ export class PlenaryMatch {
   }
 
   private finish(winner:Role | undefined, reason:string) {
+    this.pausedGameTime = undefined;
     this.phase = 'finished';
     this.policies.clear();
     this.treasuryBonus = undefined;
@@ -1125,7 +1131,8 @@ export class PlenaryMatch {
     return vote==='abstain' ? undefined : vote;
   }
 
-  view(id:string, ids:string[], now:number, contacts:Contact[] = []): PlenaryView {
+  view(id:string, ids:string[], realNow:number, contacts:Contact[] = []): PlenaryView {
+    const now = this.gameTime(realNow);
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
@@ -1136,6 +1143,8 @@ export class PlenaryMatch {
     });
     const projectVoteExpired = this.phase==='negotiation' && this.projectVoteExpired(now);
     const hearing = this.hearingTarget ? this.hearingTally() : undefined;
+    const phaseTimeLeft = this.voting ? this.voteEndsAt-realNow
+      : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
@@ -1152,7 +1161,7 @@ export class PlenaryMatch {
       phase:this.phase,round:this.round,project:this.proposal?.project,proposer:this.proposal?.proposer,
       projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
-      remaining:this.running ? Math.max(0,Math.ceil(((this.phase==='negotiation' ? (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt) : this.ends)-now)/1000)) : 0,
+      remaining:this.running ? Math.max(0,Math.ceil(phaseTimeLeft/1000)) : 0,
       sessionRemaining:this.running ? Math.max(0,Math.ceil((this.sessionEndsAt-now)/1000)) : undefined,
       debtPenaltyIn:this.running && this.nextDebtPenaltyAt!==undefined ? Math.max(0,Math.ceil((this.nextDebtPenaltyAt-now)/1000)) : undefined,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,

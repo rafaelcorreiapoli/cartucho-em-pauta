@@ -14,7 +14,6 @@ import {installationSites} from '../installations';
 import {npcs} from '../npcs';
 import {createHudModel} from './hud-model';
 import {projectHeading} from './project-heading';
-import {legislativeStationActions} from './legislative-station-actions';
 
 const player:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
 
@@ -448,7 +447,7 @@ test('the HUD starts a replacement Pix mission at zero after a transfer complete
   expect(hud.profile.get()?.xp).toBe(missionReward('recebido').xp+missionReward('doisPix').xp);
 });
 
-test('the HUD suppresses a project warning when cassation delays its vote past the deadline',()=>{
+test('a pending project resumes its countdown after cassation',()=>{
   const others = ['bia','caio'].map(id=>({...player,id,nick:id}));
   const players = [player,...others];
   const ids = players.map(({id})=>id);
@@ -474,17 +473,16 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   expect(view.project).toBe(0);
   expect(view.projectWarning).toBeUndefined();
   expect(view.ballotCountdown).toBeUndefined();
-  expect(view.projectVoteExpired).toBe(true);
-  expect(legislativeStationActions(view,'panel')).toEqual([]);
-  match.declareVote(player.id,'yes',hearingEnd);
+  expect(view.projectVoteExpired).toBeUndefined();
+  match.declareVote(player.id,'yes',match.gameTime(hearingEnd));
   const afterAttempt = match.view(player.id,ids,hearingEnd);
-  expect(afterAttempt.voteIntents).toEqual([]);
+  expect(afterAttempt.voteIntents).toMatchObject([{id:player.id,vote:'yes'}]);
   expect(afterAttempt.politics!.progression.xp).toBe(view.politics!.progression.xp);
   expect(projectHeading(view)).toMatchObject({
-    title:'Auxílio Churrasco',clockLabel:'Fim da sessão',seconds:35,hint:'Sem votação nesta sessão.',
+    title:'Auxílio Churrasco',seconds:Math.ceil((voteAt-hearingAt)/1000),
   });
-  match.advance(hearingEnd+1);
-  expect(match.phase).toBe('negotiation');
+  match.advance(voteAt+HEARING_MS);
+  expect(match.phase).toBe('ballot');
   hud.render(view);
   expect(hud.countdown.get()).toBeUndefined();
 });

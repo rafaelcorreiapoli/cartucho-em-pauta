@@ -3,7 +3,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
-import {BALLOT_MS,NEGOTIATION_MS} from '../plenary';
+import {NEGOTIATION_MS} from '../plenary';
 import {ELECTION_RULES} from '../elections';
 import {ProjectCatalog} from './project-catalog';
 import {ProjectHeading,projectHeading} from './project-heading';
@@ -49,7 +49,7 @@ test('protocol and both project views agree on the exact filing deadline',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>0)).toBe(true);
-  const deadline = ELECTION_RULES.matchDuration-NEGOTIATION_MS-BALLOT_MS;
+  const deadline = ELECTION_RULES.matchDuration-NEGOTIATION_MS-1;
   const view = (now:number)=>match.view(player.id,[player.id],now);
   const reason = (now:number)=>match.gameplayWorld([player],now,()=>false).projectFilingError?.(player.id,0);
   expect(reason(deadline)).toBeUndefined();
