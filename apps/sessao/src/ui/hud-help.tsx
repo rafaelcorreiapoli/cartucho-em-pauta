@@ -54,7 +54,7 @@ export function HudHelp({help,as:Tag='button',children,onClick,...props}:Props) 
     ...props,
     ref:anchor,
     type:Tag==='button' ? 'button' : undefined,
-    tabIndex:props.tabIndex ?? 0,
+    tabIndex:props.tabIndex ?? (acts || Tag==='button' ? undefined : 0),
     'data-help':help,
     'aria-describedby':description || undefined,
     onPointerDown:event=>{
