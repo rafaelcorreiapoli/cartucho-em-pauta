@@ -603,7 +603,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible);
       }
       for (const [art,{outline,ready}] of this.interactionTargets) {
-        outline.setVisible(negotiating && art.visible && ready());
+        outline.setVisible(running && art.visible && ready());
       }
 
       for (const [id,view] of this.views) {
