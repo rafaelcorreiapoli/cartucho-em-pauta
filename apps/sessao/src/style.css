@@ -345,3 +345,13 @@ progress.animated-progress::-moz-progress-bar { background: transparent; }
 .tutorial-exit { display:flex; align-items:center; justify-content:center; gap:8px; border:0; background:none; color:#91a69a; font:inherit; font-size:.75rem; cursor:pointer; padding:4px; }
 .tutorial-exit:hover { color:#f3f1dc; }
 @media(max-width:760px) { .tutorial-panel { left:12px; right:auto; top:auto; bottom:110px; width:min(330px,calc(100vw - 84px)); max-height:46dvh; } .tutorial-panel[data-highlight="agenda"] { top:12px; bottom:auto; } .tutorial-content { padding:18px; gap:18px; } }
+
+/* Help is portaled to body, so it must sit above the guided-tour overlay. */
+body:has(.tutorial-spotlight) .hud-help-popover { z-index:1002; }
+.tutorial-focus-border { stroke:#d4ecdd; stroke-width:1.5; stroke-opacity:.8; }
+.tutorial-focus-pulse { stroke:#d4ecdd; stroke-width:2; transform-box:fill-box; transform-origin:center; animation:tutorial-focus-pulse 2s ease-out infinite; }
+@keyframes tutorial-focus-pulse {
+  from { opacity:.75; transform:scale(1); }
+  to { opacity:0; transform:scale(1.06); }
+}
+@media(prefers-reduced-motion:reduce) { .tutorial-focus-pulse { animation:none; opacity:0; } }
