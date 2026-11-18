@@ -858,14 +858,14 @@ test('Pizzada keeps credit for a departed guest only if the same pizza can still
 });
 
 test('coffee delivery counts accepted cups for three distinct available human recipients',()=>{
-  const players:Player[] = ['a','b','c','d'].map(id=>({
-    id,nick:id,character:0,direction:0,moving:false,...terminals.coffee.point,
+  const players:Player[] = ['a','b','c','d','bot'].map(id=>({
+    id,nick:id,character:0,direction:0,moving:false,...terminals.coffee.point,...(id==='bot' ? {bot:true as const} : {}),
   }));
   const [host,bia,caio,dani] = players;
   const ids = new Set(players.map(({id})=>id));
   const game = new Gameplay();
   const economy = new PoliticalEconomy();
-  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0);
+  economy.reset(players.map(({id,nick:name})=>({id,name})),()=>0,undefined,new Set(['bot']));
   const {agenda} = Reflect.get(economy,'accounts').get(host.id);
   const active = ()=>economy.view(host.id,[],0,false,()=>true)!.missions;
   const draw = (disconnected = new Set<string>())=>{
@@ -899,7 +899,7 @@ test('coffee delivery counts accepted cups for three distinct available human re
 
   draw();
   deliver(bia);
-  economy.updateAgendaEligibility(new Set([host.id,bia.id,caio.id]),3);
+  economy.updateAgendaEligibility(new Set([host.id,bia.id,caio.id,'bot']),3);
   expect(active().active.some(({kind})=>kind==='entrega')).toBe(false);
   expect(active().completed.filter(({kind})=>kind==='entrega')).toHaveLength(1);
 });

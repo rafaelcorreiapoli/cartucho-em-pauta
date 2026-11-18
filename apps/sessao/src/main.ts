@@ -247,6 +247,7 @@ async function connect(join: () => Promise<Room>) {
         projectPicker.open('Adulterar documento',index=>sendGameplay({kind:'edit',item:action.item,target:String(index)}),action.project);
         return;
       }
+      if (action.kind==='offer-item') { gameplay.openOffer(action.target); return; }
       if (action.kind==='inspect-stash') { gameplay.openStash(); return; }
       if (action.kind==='cross-door') game?.crossDoor(action.door);
       else sendGameplay(action);

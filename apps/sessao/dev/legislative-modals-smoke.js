@@ -75,7 +75,7 @@ async page => {
   await twoNpcs.and(page.locator('[aria-pressed="true"]')).waitFor();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
-  await page.getByRole('button',{name:'Secretaria · Falar com Dona Sílvia'}).click();
+  await page.getByRole('button',{name:'Secretaria · Falar com Enéas Carneiro'}).click();
   if (await page.getByRole('button',{name:'Pedir documento avulso'}).count()) {
     throw Error('A Secretaria voltou a oferecer documentos avulsos.');
   }
