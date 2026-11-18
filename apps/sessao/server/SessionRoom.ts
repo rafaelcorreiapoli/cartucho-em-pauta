@@ -388,13 +388,24 @@ export class SessionRoom extends Room {
           !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='plant' && raw.kind!=='disarm' && raw.kind!=='extinguish')) return;
       if (!this.consumeRoomCommand(player.id,raw) || this.gameplay.hasOfficeChannel(player.id) ||
           this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
-      const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime,
+      const now = this.clock.currentTime;
+      const result = this.match.actOnFire(player,raw.kind,raw.site,now,
         raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'),
         raw.kind==='plant' ? this.gameplay.incendiaryItem(player.id) : undefined,
         message=>client.send('map-action-failed',message));
       if (!result) return;
       if (raw.kind==='extinguish') {
-        this.broadcast('fire-extinguished',{actor:player.nick,room:fireSites[raw.site].name} satisfies FireExtinguished);
+        const site = fireSites[raw.site];
+        for (const peer of this.clients) {
+          const observer = this.players.get(peer.sessionId)?.player;
+          const vision = this.gameplay.vision(peer.sessionId,now);
+          const seesFire = observer && localPerception(observer,site,vision).visible;
+          const seesActor = observer && characterVisible(observer,player,vision);
+          peer.send('fire-extinguished',{
+            actor:player.nick,room:site.name,
+            effect:seesFire ? {site:raw.site,from:seesActor ? {x:player.x,y:player.y} : undefined} : undefined,
+          } satisfies FireExtinguished);
+        }
       } else client.send('gameplay-feedback',result);
     });
     this.onMessage('gameplay',(client, raw:unknown) => {

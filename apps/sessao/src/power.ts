@@ -5,7 +5,7 @@ export const powerPanels = [
   {name:'Credenciamento',x:260,y:418},
 ] as const;
 
-export const powerRules = {radius:22,visionFactor:.45,repairMs:2000,cooldownMs:45_000} as const;
+export const powerRules = {radius:22,visionFactor:.45,repairMs:2000,cooldownMs:45_000,popularityReward:3} as const;
 
 export type PowerPanel = 0|1;
 export type PowerAction = {kind:'sabotage'|'repair'|'cancel';panel:PowerPanel};
