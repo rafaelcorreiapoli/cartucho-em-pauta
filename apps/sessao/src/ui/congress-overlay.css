@@ -1199,3 +1199,7 @@
 .congress-summary-row { display: flex; justify-content: center; align-items: center; gap: 24px; }
 .congress-summary-row .congress-budget, .congress-summary-row .congress-session-clock { margin-top: 3px; gap: .45em; }
 .congress-summary-row .congress-session-clock strong { font-size: 1.12em; }
+
+@media (max-width: 640px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #payroll-mount { display: none; }
+}
