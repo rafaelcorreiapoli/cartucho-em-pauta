@@ -610,7 +610,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   game.confirmSpyFrame(alice,world);
   Object.assign(alice,{x:240,y:250});
   const freeSlots = INVENTORY_SLOTS-game.view(alice,world).inventory.length;
-  const filler = Array.from({length:freeSlots},()=>Reflect.get(game,'create').call(game,'briefcase',{holder:alice.id}));
+  const filler = Array.from({length:freeSlots},()=>Reflect.get(game,'create').call(game,'lockpick',{holder:alice.id}));
   const options = ()=>game.spyView(alice,world).options;
   expect(options()).not.toContainEqual(expect.objectContaining({kind:'remove',site:'coffee'}));
   expect(options()).toContainEqual(expect.objectContaining({kind:'recover',site:'coffee',blocked:'Inventário cheio'}));
@@ -694,6 +694,35 @@ function buyTechnical(game:Gameplay,player:Player,world:GameplayWorld,kind:'mens
   game.act(player,{kind:'shop-buy',target:kind,token:game.view(player,world).dialogue?.token},world);
   return game.view(player,world).inventory.find(item=>item.kind===kind)!;
 }
+
+test('briefcases can be collected, stolen and transferred with every inventory slot occupied',()=>{
+  const {alice,bob,game,world} = setup();
+  const create = Reflect.get(game,'create').bind(game);
+  const inventory = (player:Player)=>game.view(player,world).inventory;
+  const cash = create('briefcase',{ground:alice});
+  expect(game.act(alice,{kind:'collect',item:cash.id},world)).toBe('Objeto recolhido.');
+
+  for (const player of [alice,bob]) {
+    for (let slot=0;slot<INVENTORY_SLOTS;slot++) {
+      const filler = create('lockpick',{ground:player});
+      expect(game.act(player,{kind:'collect',item:filler.id},world)).toBe('Objeto recolhido.');
+    }
+    const extra = create('lockpick',{ground:player});
+    expect(game.act(player,{kind:'collect',item:extra.id},world)).toBe('Inventário cheio.');
+  }
+
+  world.takeWallet = ()=>12;
+  expect(game.robNpc(alice,{...bob,id:'npc',npc:true},world)).toContain('Maleta roubada');
+  const briefcases = inventory(alice).filter(item=>item.kind==='briefcase');
+  expect(briefcases).toHaveLength(2);
+  const stolen = briefcases.find(item=>item.id!==cash.id)!;
+  expect(stolen.cashStolenFrom).toEqual({name:bob.nick});
+  expect(game.act(alice,{kind:'offer',item:stolen.id,target:bob.id},world)).toBe('Pedido enviado.');
+  const request = game.view(bob,world).requests[0];
+  expect(game.act(bob,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
+  expect(inventory(bob)).toContainEqual(stolen);
+  expect(inventory(alice)).not.toContainEqual(stolen);
+});
 
 test('concealment filters cash from observers and photos through reconnect and cash swaps',()=>{
   const {alice,bob,game,world,events} = setup();

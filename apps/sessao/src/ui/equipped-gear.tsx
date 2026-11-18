@@ -2,8 +2,10 @@ import {createRoot} from 'react-dom/client';
 import type {ShortcutEntry} from '../action-shortcuts';
 import {Hand,Shirt,Footprints,Cpu} from 'lucide';
 import {equippedWeapon,equipmentSlots,xray} from '../equipment';
-import {objects,type GameplayView,type ObjectKind} from '../gameplay';
+import {cashAmount,objects,type GameplayView,type ObjectKind} from '../gameplay';
+import {money} from '../politics';
 import {weapons} from '../weapons';
+import {HudHelpButton} from './hud-help';
 
 export const equipmentControls = {
   xray:{key:'X',action:'scan-xray'},
@@ -52,6 +54,9 @@ export function equippedGearState(state?:GameplayView) {
         hint:control?.key,
       };
     }),
+    briefcases:state.inventory.filter(item=>item.kind==='briefcase').map(item=>({
+      id:item.id,amount:cashAmount(item) ?? 0,stolenFrom:item.cashStolenFrom,
+    })),
     concealment:state.concealmentSeconds,
   };
 }
@@ -77,27 +82,39 @@ function EquippedTile({item,activate}:{item:NonNullable<GearState['slots'][numbe
   </Tile>;
 }
 
-export function EquippedGear({state,activate}:{state:GearState;activate:(action:EquipmentAction)=>void}) {
+export function EquippedGear({state,activate,inspectBriefcase}:{state:GearState;activate:(action:EquipmentAction)=>void;inspectBriefcase:(id:number)=>void}) {
   return <>
-    {slots.map(({label,icon},index)=>{
-      const item = state.slots[index];
-      return <div key={label} className="gear-slot" role="listitem" title={label}>
-        {item ? <EquippedTile item={item} activate={activate}/> : <span className="gear-slot-empty" aria-label={label+' · vazio'}>
-          <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">{icon.map(([tag,attrs],i)=>{
-            const Tag = tag as 'path'|'rect'|'line'|'circle';
-            return <Tag key={i} {...attrs}/>;
-          })}</svg>
-        </span>}
-      </div>;
-    })}
-    {state.concealment ? <span className="equipped-gear-tile" role="listitem" title={`Dinheiro oculto · ${state.concealment} s`}>
-      <GearPortrait kind="mensalUnderwear"/>
-      <span className="equipped-gear-footer"><span className="equipped-gear-timer">{state.concealment} s</span></span>
-    </span> : null}
+    <div className="equipped-gear-slots" role="presentation">
+      {slots.map(({label,icon},index)=>{
+        const item = state.slots[index];
+        return <div key={label} className="gear-slot" role="listitem" title={label}>
+          {item ? <EquippedTile item={item} activate={activate}/> : <span className="gear-slot-empty" aria-label={label+' · vazio'}>
+            <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">{icon.map(([tag,attrs],i)=>{
+              const Tag = tag as 'path'|'rect'|'line'|'circle';
+              return <Tag key={i} {...attrs}/>;
+            })}</svg>
+          </span>}
+        </div>;
+      })}
+      {state.concealment ? <span className="equipped-gear-tile" role="listitem" title={`Dinheiro oculto · ${state.concealment} s`}>
+        <GearPortrait kind="mensalUnderwear"/>
+        <span className="equipped-gear-footer"><span className="equipped-gear-timer">{state.concealment} s</span></span>
+      </span> : null}
+    </div>
+    {state.briefcases.length>0 && <div className="carried-briefcases" role="listitem" aria-label="Maletas carregadas">
+      {state.briefcases.map(({id,amount,stolenFrom})=>{
+        const value = money(amount);
+        const origin = stolenFrom ? ` · Roubada ${stolenFrom.safe ? 'do cofre de' : 'de'} ${stolenFrom.name}` : '';
+        return <HudHelpButton key={id} className="gear-slot carried-briefcase" help={value+origin}
+          aria-label={`${objects.briefcase.name} · ${value}`} onClick={()=>inspectBriefcase(id)}>
+          <GearPortrait kind="briefcase"/>
+        </HudHelpButton>;
+      })}
+    </div>}
   </>;
 }
 
-export function mountEquippedGear(element:HTMLElement,activate:(action:EquipmentAction)=>void) {
+export function mountEquippedGear(element:HTMLElement,activate:(action:EquipmentAction)=>void,inspectBriefcase:(id:number)=>void) {
   const root = createRoot(element);
   let current: string|undefined;
   let state:GearState|undefined;
@@ -110,7 +127,7 @@ export function mountEquippedGear(element:HTMLElement,activate:(action:Equipment
       if (key===current) return;
       current = key;
       state = next;
-      root.render(state ? <EquippedGear state={state} activate={activate}/> : null);
+      root.render(state ? <EquippedGear state={state} activate={activate} inspectBriefcase={inspectBriefcase}/> : null);
     },
     shortcuts():ShortcutEntry[] {
       if (!visible()) return [];

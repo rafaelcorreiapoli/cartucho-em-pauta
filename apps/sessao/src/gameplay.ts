@@ -88,7 +88,7 @@ export type DocumentData = {
   author:string; title:string; edited:boolean; project?:number; description?:string; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
-export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; quantity?:number; document?:DocumentData};
+export type WorldItem = {id:number; kind:ObjectKind; cash?:number; cashStolenFrom?:{name:string; safe?:true}; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foodDefinition(kind));
 export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;
@@ -100,7 +100,8 @@ export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; it
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
 
-export const INVENTORY_SLOTS = 6;
+export const occupiesInventorySlot = (item:Pick<WorldItem,'kind'>) => item.kind!=='briefcase';
+export const INVENTORY_SLOTS = 9;
 export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 export type PhoneActivity = 'open'|'call'|'game';
 const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn','bets-spin','candy-start','candy-swap'] as const;

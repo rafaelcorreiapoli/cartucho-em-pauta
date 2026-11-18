@@ -9,7 +9,7 @@ import { PhoneCalls } from './ui/phone-call';
 import {ProjectCatalog} from './ui/project-catalog';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
-import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
+import {HOTBAR_SLOTS, assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import type { ReactNode } from 'react';
 import type {ShortcutEntry} from './action-shortcuts';
 import {useDialogKeys} from './ui/use-dialog-keys';
@@ -26,7 +26,7 @@ import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
 import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, occupiesInventorySlot, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 
@@ -298,7 +298,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
-    const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.length);
+    const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.filter(occupiesInventorySlot).length);
     const visible = stash ? [stash,state.inventory] : equipmentOpen ? [state.equipped,state.modulator,state.megaphoneSeconds,state.equipmentCooldowns] : selection ? [item,state.locations,contacts,state.installable,state.officeStash?.id,state.officeDecor,state.surveillance?.options] : decoration ? [decoration,canRemoveDecoration] :
       app==='Denunciar' ? photos.complaintKey(view.complaints) :
       app==='Álbum' ? photos.albumKey(contacts,state.locations.includes('press')) :
@@ -322,7 +322,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       content = <OfficeStash stash={stash} inventory={state.inventory} send={send} close={()=>dialog.close()}/>;
     }
     function renderBag(detail?:ReturnType<typeof objectCard>) {
-      const inventory = state!.inventory;
+      const inventory = state!.inventory.filter(occupiesInventorySlot);
       const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
         (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
       const chooseFilter = (filter:typeof bagFilter)=>{bagFilter = filter;selection = undefined;render();};
@@ -357,7 +357,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
             })}
           </div>
-          <p className="bag-capacity"><BagIcon name="bag"/>{inventory.length} / {INVENTORY_SLOTS} slots</p>
+          {offerTarget && bagFilter==='Todos' && state!.inventory.filter(entry=>entry.kind==='briefcase').map(entry=>{
+            const label = `${itemName(entry)} · ${money(cashAmount(entry) ?? 0)}`;
+            entries.push({name:label,activate:()=>chooseItem(entry)});
+            return <button key={entry.id} type="button" className="hud-button hud-button--secondary"
+              aria-pressed={selection?.id===entry.id} onClick={()=>chooseItem(entry)}>{label}</button>;
+          })}
         </div>
         <div className="bag-detail">{offerTarget && !canOffer && <p role="status">Aproxime-se de {offerTarget.name} para oferecer um item.</p>}{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
         {!offerTarget && <footer className="bag-preview">
@@ -504,7 +509,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function hotbarShortcuts():ShortcutEntry[] {
     if (!hotbarVisible()) return [];
-    return Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+    return Array.from({length:HOTBAR_SLOTS},(_,index)=>{
       const {item,label} = hotbarControl(index);
       return {name:label,activate:()=>{
         if (hotbarVisible() && hotbar[index]===item?.id) activateHotbar(index);
@@ -513,7 +518,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   function highlightSlot() {
-    slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+    slotsRoot.render(Array.from({length:HOTBAR_SLOTS},(_,index)=>{
       const {item,shortcut,use,label} = hotbarControl(index);
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
@@ -669,7 +674,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.update([]); nearbyKey = ''; }
         if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
-      if (view.gameplay) renderSlots(view.gameplay.inventory);
+      if (view.gameplay) renderSlots(view.gameplay.inventory.filter(occupiesInventorySlot));
       if (call?.state==='connected' && old?.call?.state!=='connected' && dialog.dataset.mode==='phone' && app==='Telefone') dialog.close();
       if (call?.state==='incoming' && old?.call?.state!=='incoming' && !document.querySelector('dialog:modal')) {
         app = 'Telefone';
@@ -706,6 +711,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       render();
     },
     purchasedConsumable(id:number) { purchases.add(id); },
+    inspectBriefcase(id:number) { open({id,source:'inventory'}); },
     inspectDecoration(id:number) { open(undefined,id); },
     openStash() { if (previous?.gameplay?.officeStash) open(undefined,undefined,false,true); },
     photoState(next:PhotoAccessView) {

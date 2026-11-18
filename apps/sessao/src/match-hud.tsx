@@ -28,7 +28,7 @@ const element = <T extends HTMLElement = HTMLElement>(id:string) => document.que
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
   nearby:{render:(player:Motion | undefined,exploring:boolean,directCollections:readonly number[])=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void},
-  sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
+  sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean},inspectBriefcase:(id:number)=>void) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
   const {notify} = notices;
@@ -64,7 +64,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     actions();
     if (nearbyOpen) element('nearby-items')?.scrollTo(0,0);
   }
-  const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
+  const gear = mountEquippedGear(element('equipped-gear'),useEquipped,inspectBriefcase);
   function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
     if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;

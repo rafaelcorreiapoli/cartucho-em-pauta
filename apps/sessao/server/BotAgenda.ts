@@ -1,5 +1,5 @@
 import {candyWidth,swapCandy} from '../src/candy';
-import {cashAmount,hasInventorySpace,terminals,type GameplayAction,type GameplayView} from '../src/gameplay';
+import {cashAmount,hasInventorySpace,occupiesInventorySlot,terminals,type GameplayAction,type GameplayView} from '../src/gameplay';
 import {canStand,roomAt,type Motion,type Player} from '../src/map';
 import type {Agenda} from '../src/politics';
 import {npcs} from '../src/npcs';
@@ -117,9 +117,9 @@ export class BotAgenda {
     const cash = game.inventory.find(item=>cashAmount(item));
     if (!cash) {
       this.cashPlan = undefined;
-      if (!hasInventorySpace(game.inventory.length+(game.equipped?.length ?? 0))) return false;
+      const space = hasInventorySpace(game.inventory.filter(occupiesInventorySlot).length);
       const distance = (point:Motion)=>Math.hypot(point.x-player.x,point.y-player.y);
-      const closest = game.ground.filter(item=>cashAmount(item.kind)).sort((a,b)=>distance(a)-distance(b))[0];
+      const closest = game.ground.filter(item=>cashAmount(item.kind) && (space || !occupiesInventorySlot(item))).sort((a,b)=>distance(a)-distance(b))[0];
       if (!closest) return false;
       if (game.nearby.some(item=>item.id===closest.id)) {
         rest();
