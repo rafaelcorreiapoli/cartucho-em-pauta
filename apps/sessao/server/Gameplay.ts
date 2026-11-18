@@ -482,9 +482,11 @@ export class Gameplay {
     return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
   }
 
-  private spawnCash({now,cashFlow}:GameplayWorld) {
+  private spawnCash({now,players,present,cashFlow}:GameplayWorld) {
     if (now<this.nextCashSpawn) return;
-    this.nextCashSpawn = now+8000+this.random()*10000;
+    const contenders = players.filter(player=>!player.npc && present?.(player.id)!==false).length;
+    const spawnRate = Math.sqrt(Math.max(1,contenders/3));
+    this.nextCashSpawn = now+(8000+this.random()*10000)/spawnRate;
     const ground = this.groundItems(now);
     const barriers = this.privateOffices.doors(now);
     if (ground.length>=maxGroundItems || ground.filter(item=>cashAmount(item)).length>=8) return;
