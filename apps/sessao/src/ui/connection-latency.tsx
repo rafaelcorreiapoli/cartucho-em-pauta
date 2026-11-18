@@ -1,9 +1,10 @@
+import {HudHelp} from './hud-help';
 import {createRoot} from 'react-dom/client';
 
 export function ConnectionLatency({milliseconds}:{milliseconds?:number}) {
-  return milliseconds===undefined ? null : <span id="connection-latency" title="Latência de ida e volta ao gameserver">
+  return milliseconds===undefined ? null : <HudHelp as="span" id="connection-latency" help="Tempo de resposta do servidor do jogo.">
     {milliseconds} ms
-  </span>;
+  </HudHelp>;
 }
 
 export function observeLatency(ping:(reply:(milliseconds:number)=>void)=>void,update:(milliseconds?:number)=>void) {

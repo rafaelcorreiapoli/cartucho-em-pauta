@@ -1,3 +1,4 @@
+import {HudHelp} from './hud-help';
 import type {CassationView} from '../plenary';
 import {cassationChoices} from './ballot-shortcuts';
 import {HudIcon} from './hud-icon';
@@ -59,12 +60,12 @@ export function CassationBallot({state,ownId,remaining,cast}:{
         const own = ownId===person.id;
         const voters = votes.get(person.id) ?? [];
         return <li key={person.id} className="cassation-candidate" data-selected={state.choice===person.id}>
-          <button type="button" className="cassation-choice" disabled={!state.eligible || own}
+          <HudHelp className="cassation-choice" help={own ? "Este é o seu personagem." : `Vote para cassar o mandato de ${person.name}.`} disabled={!state.eligible || own}
             aria-label={person.name} aria-keyshortcuts={key} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
             <PhoneContactFace person={person}/>
             <span><strong>{person.name}</strong>{own && <small>Você</small>}</span>
             {key && <kbd aria-hidden="true">{key}</kbd>}
-          </button>
+          </HudHelp>
           <div className="cassation-candidate-votes">
             <span>{voters.length} {voters.length===1 ? 'voto' : 'votos'}</span>
             <VoterPortraits voters={voters} label={`Votos em ${person.name}`}/>
@@ -77,10 +78,10 @@ export function CassationBallot({state,ownId,remaining,cast}:{
         ? 'Seu voto: abstenção' : state.choice ? `Seu voto: ${people.get(state.choice)?.name ?? ''}` : 'Escolha um suspeito ou pule o voto.'}</p>
       <div className="cassation-abstentions">
         <VoterPortraits voters={skipped} label="Quem pulou o voto"/>
-        <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
+        <HudHelp className="hud-button hud-button--secondary" help="Registre uma abstenção nesta votação." disabled={!state.eligible}
           aria-keyshortcuts={state.eligible ? skipKey : undefined} aria-pressed={state.choice===null} onClick={()=>cast(null)}>
           Pular voto {state.eligible && <kbd aria-hidden="true">{skipKey}</kbd>}
-        </button>
+        </HudHelp>
       </div>
     </footer>
   </section>;

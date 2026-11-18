@@ -1,3 +1,4 @@
+import {HudHelp} from './ui/hud-help';
 import type {ComplaintProof} from './complaints';
 import {createNearbyActions,type NearbyItem} from './ui/nearby-items';
 import { DecorationCard, GameplayDialogHeader } from './ui/gameplay-dialog';
@@ -521,18 +522,18 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     slotsRoot.render(Array.from({length:HOTBAR_SLOTS},(_,index)=>{
       const {item,shortcut,use,label} = hotbarControl(index);
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
-      if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
-        aria-label={label} title={`Vincular item (Shift+${shortcut})`}
+      if (!item) return <HudHelp className="item-tile item-tile-empty" key={index}
+        aria-label={label} help={`Vincule um item da mochila a este atalho. (Shift+${shortcut})`}
         onClick={()=>activateHotbar(index)}>
         {badge}<span className="slot-plus" aria-hidden="true">+</span>
-      </button>;
-      return <button type="button" key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
-        aria-label={label} title={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
+      </HudHelp>;
+      return <HudHelp key={index} className="item-tile" data-kind={item.kind} data-item={item.id}
+        aria-label={label} help={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
         onClick={()=>activateHotbar(index)}>
         <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
         {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
-      </button>;
+      </HudHelp>;
     }));
   }
 

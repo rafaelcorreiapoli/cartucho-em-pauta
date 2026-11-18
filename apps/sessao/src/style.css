@@ -313,3 +313,12 @@ progress.animated-progress::-moz-progress-bar { background: transparent; }
   font-weight:700;
   font-variant-numeric:tabular-nums;
 }
+
+:is(.character-dock, #world, .election-and-incidents, #agenda-dock, #legislative-dock) [data-help] {
+  pointer-events: auto;
+}
+
+[data-help]:focus-visible {
+  outline: 2px solid var(--color-hud-budget, #f2d89c);
+  outline-offset: 2px;
+}

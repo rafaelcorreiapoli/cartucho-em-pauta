@@ -5,7 +5,7 @@ import {equippedWeapon,equipmentSlots,xray} from '../equipment';
 import {cashAmount,objects,type GameplayView,type ObjectKind} from '../gameplay';
 import {money} from '../politics';
 import {weapons} from '../weapons';
-import {HudHelpButton} from './hud-help';
+import {HudHelp} from './hud-help';
 
 export const equipmentControls = {
   xray:{key:'X',action:'scan-xray'},
@@ -69,9 +69,8 @@ type GearState = NonNullable<ReturnType<typeof equippedGearState>>;
 
 function EquippedTile({item,activate}:{item:NonNullable<GearState['slots'][number]>;activate:(action:EquipmentAction)=>void}) {
   const action = item.control?.action;
-  const Tile = action ? 'button' : 'span';
-  return <Tile className="equipped-gear-tile" type={action ? 'button' : undefined}
-    data-kind={item.kind} data-active={String(item.active)} title={item.tooltip} aria-label={item.label}
+  return <HudHelp as={action ? "button" : "span"} className="equipped-gear-tile"
+    data-kind={item.kind} data-active={String(item.active)} help={item.tooltip} aria-label={item.label}
     aria-pressed={item.pressed} aria-keyshortcuts={item.hint}
     onClick={action ? ()=>activate(action) : undefined}>
     <GearPortrait kind={item.kind}/>
@@ -79,7 +78,7 @@ function EquippedTile({item,activate}:{item:NonNullable<GearState['slots'][numbe
       <span className="equipped-gear-timer" aria-hidden="true" hidden={!item.time}>{item.time}</span>
     </span>
     {item.hint && <kbd className="action-key" aria-hidden="true">{item.hint==='Space' ? 'Espaço' : item.hint.toUpperCase()}</kbd>}
-  </Tile>;
+  </HudHelp>;
 }
 
 export function EquippedGear({state,activate,inspectBriefcase}:{state:GearState;activate:(action:EquipmentAction)=>void;inspectBriefcase:(id:number)=>void}) {
@@ -87,28 +86,28 @@ export function EquippedGear({state,activate,inspectBriefcase}:{state:GearState;
     <div className="equipped-gear-slots" role="presentation">
       {slots.map(({label,icon},index)=>{
         const item = state.slots[index];
-        return <div key={label} className="gear-slot" role="listitem" title={label}>
-          {item ? <EquippedTile item={item} activate={activate}/> : <span className="gear-slot-empty" aria-label={label+' · vazio'}>
+        return <div key={label} className="gear-slot" role="listitem">
+          {item ? <EquippedTile item={item} activate={activate}/> : <HudHelp as="span" help={`${label}: espaço livre para equipar um item.`} className="gear-slot-empty" aria-label={label+' · vazio'}>
             <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">{icon.map(([tag,attrs],i)=>{
               const Tag = tag as 'path'|'rect'|'line'|'circle';
               return <Tag key={i} {...attrs}/>;
             })}</svg>
-          </span>}
+          </HudHelp>}
         </div>;
       })}
-      {state.concealment ? <span className="equipped-gear-tile" role="listitem" title={`Dinheiro oculto · ${state.concealment} s`}>
+      {state.concealment ? <HudHelp as="span" className="equipped-gear-tile" role="listitem" help="Tempo restante com o dinheiro escondido.">
         <GearPortrait kind="mensalUnderwear"/>
         <span className="equipped-gear-footer"><span className="equipped-gear-timer">{state.concealment} s</span></span>
-      </span> : null}
+      </HudHelp> : null}
     </div>
     {state.briefcases.length>0 && <div className="carried-briefcases" role="listitem" aria-label="Maletas carregadas">
       {state.briefcases.map(({id,amount,stolenFrom})=>{
         const value = money(amount);
         const origin = stolenFrom ? ` · Roubada ${stolenFrom.safe ? 'do cofre de' : 'de'} ${stolenFrom.name}` : '';
-        return <HudHelpButton key={id} className="gear-slot carried-briefcase" help={value+origin}
+        return <HudHelp key={id} className="gear-slot carried-briefcase" help={`Veja o conteúdo da maleta. ${value}${origin}`}
           aria-label={`${objects.briefcase.name} · ${value}`} onClick={()=>inspectBriefcase(id)}>
           <GearPortrait kind="briefcase"/>
-        </HudHelpButton>;
+        </HudHelp>;
       })}
     </div>}
   </>;

@@ -1,11 +1,11 @@
-import {HudHelpButton} from './hud-help';
+import {HudHelp} from './hud-help';
 import {HudIcon} from './hud-icon';
 import {PopularityReward} from './popularity-reward';
 import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
 import {settingsApp} from '../hud-apps';
-import { stabilityRules, publicDebtRules, publicDebtStabilityLoss } from '../plenary';
+import { stabilityRules, publicDebtStabilityLoss } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
@@ -36,7 +36,7 @@ function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudM
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   const remaining = useSyncExternalStore(state.subscribe,state.get);
   if (remaining===undefined) return null;
-  return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
+  return <HudHelp as="div" help="Tempo até abrir a votação." className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></HudHelp>;
 }
 
 export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn,payroll}:ReturnType<HudModel['congress']['get']>) {
@@ -46,32 +46,32 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
         <path fill="currentColor" d="M2 16h26v3h-2v8h4v2H0v-2h4v-8H2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM68 16h26v3h-2v8h4v2H66v-2h4v-8h-2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM47 1h2v9l13 4v3h-3v10h4v2H33v-2h4V17h-3v-3l13-4zm-6 16v10h3V17zm6 0v10h3V17zm6 0v10h3V17z"/>
       </svg>
     </div>
-    <HudHelpButton className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      help={`Projetos e decisões afetam a estabilidade. A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelpButton>
-    <div className="congress-meter-track flex items-center">
+    <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp>
+    <HudHelp as="div" help="A marca na barra indica a meta de estabilidade." className="congress-meter-track flex items-center">
       <Laurel/>
       <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
       <strong className="tabular-nums">{stability}</strong>
       <Laurel right/>
-    </div>
-    <HudHelpButton className="congress-budget flex items-center justify-center"
+    </HudHelp>
+    <HudHelp className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
-      help={`Projetos e despesas obrigatórias podem gerar dívida. A cada ${publicDebtRules.interval/1000} s, cada R$ 10 mil de dívida ou fração custa 1 ponto de estabilidade, até ${publicDebtRules.maximumLoss}. Depósitos na Tesouraria abatem a dívida.`}>
+      help={`Projetos e salários usam este saldo. A dívida reduz a estabilidade. Depósitos na Tesouraria abatem a dívida.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
-    </HudHelpButton>
-    {payroll && <div className="congress-payroll" role="timer" aria-label="Próxima distribuição de salários">
+    </HudHelp>
+    {payroll && <HudHelp as="div" help="O orçamento público paga os salários quando o relógio zera." className="congress-payroll" role="timer" aria-label="Próxima distribuição de salários">
       <HudIcon name="wallet"/><span>Salários em</span>
       <strong className="tabular-nums">{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</strong>
       <span>·</span><span>Custo</span><strong className="tabular-nums">{money(payroll.cost)}</strong>
-    </div>}
-    {debtPenaltyIn!==undefined && <div className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
+    </HudHelp>}
+    {debtPenaltyIn!==undefined && <HudHelp as="div" help="Perda de estabilidade prevista pela dívida pública." className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
       <HudIcon name="alert"/><span>Dívida</span><strong>−{publicDebtStabilityLoss(budget)} de estabilidade em {debtPenaltyIn} s</strong>
-    </div>}
-    {sessionRemaining!==undefined && <div className="congress-session-clock" role="timer"
+    </HudHelp>}
+    {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
       <HudIcon name="clock"/><span>Fim da sessão</span>
       <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
-    </div>}
+    </HudHelp>}
   </section>;
 }
 
@@ -84,13 +84,13 @@ function AgendaPanel({state}:{state:HudModel['agenda']}) {
   const agenda = useSyncExternalStore(state.subscribe,state.get);
   if (!agenda) return null;
   return <HudPanel>
-    <header className="flex items-center gap-3">
+    <HudHelp as="header" help="Acompanhe suas missões e recompensas." className="flex items-center gap-3">
       <svg className="hud-glyph agenda-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M9 5H6a2 2 0 0 0-2 2v13h16V7a2 2 0 0 0-2-2h-3M8 11h1m3 0h4m-8 4h1m3 0h4"/>
         <path d="M9 7V5a3 3 0 0 1 6 0v2Z"/>
       </svg>
       <h2 id="agenda-title">Agenda Pessoal</h2>
-    </header>
+    </HudHelp>
     {agenda.recent.length>0 && <ul className="react-missions completed" aria-label="Conclusões recentes">
       {agenda.recent.map(mission=><MissionRow key={mission.id} mission={mission} done/>)}
     </ul>}
@@ -108,7 +108,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
   const target = timed ? mission.target/1000 : mission.target;
   const progress = (mission.kind==='fortuna' || mission.kind==='poupancaInstitucional' || mission.kind==='investimentoPolitico' || mission.kind==='ostentacao' || mission.kind==='reservaCofre' || mission.kind==='contribuinte') ? money(current)+' / '+money(target) :
     target>1 ? current+' / '+target+(timed ? ' s' : '') : '';
-  return <li className="flex items-start gap-2" data-done={done}>
+  return <HudHelp as="li" help="A missão mostra o objetivo, o progresso e os prêmios." className="flex items-start gap-2" data-done={done}>
     <span className="react-mission-check" aria-hidden="true">{done && <HudIcon name="check"/>}</span>
     <div className="min-w-0 flex-1">
       <strong>{missionTitle(mission)}</strong>
@@ -121,7 +121,7 @@ export function MissionRow({mission,done=false}:{mission:Mission;done?:boolean})
         {!done && progress && <small>{progress}</small>}
       </div>
     </div>
-  </li>;
+  </HudHelp>;
 }
 
 function Vitals({profile,stamina}:{profile:HudModel['profile']; stamina:HudModel['stamina']}) {
@@ -132,18 +132,18 @@ function Vitals({profile,stamina}:{profile:HudModel['profile']; stamina:HudModel
   const goal = stats.next===undefined ? 0 : stats.next-stats.start;
   return <div className="react-vitals grid gap-1.5">
     {stats.hp!==undefined && stats.maxHp!==undefined &&
-      <div className="vital-row" data-tone="health"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3.6 13A5.6 5.6 0 0 1 12 5.8 5.6 5.6 0 0 1 20.4 13Z"/></svg>
+      <HudHelp as="div" help="Sua vida atual. Ao zerar, você cai." className="vital-row" data-tone="health"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 3.6 13A5.6 5.6 0 0 1 12 5.8 5.6 5.6 0 0 1 20.4 13Z"/></svg>
         <Meter label="PV" value={stats.hp} max={stats.maxHp} tone="health"/>
         <small>{stats.hp} / {stats.maxHp}</small>
-      </div>}
-    <div className="vital-row" data-tone="stamina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-2 8 11-13h-8l3-7Z"/></svg>
+      </HudHelp>}
+    <HudHelp as="div" help="Sua energia para correr e usar ações físicas." className="vital-row" data-tone="stamina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-9 12h7l-2 8 11-13h-8l3-7Z"/></svg>
       <Meter label="Stamina" value={energy.current} max={energy.max} tone="stamina"/>
       <small>{energy.current} / {energy.max}</small>
-    </div>
-    <div className="vital-row" data-tone="xp"><span aria-hidden="true">XP</span>
+    </HudHelp>
+    <HudHelp as="div" help="Experiência acumulada até o próximo nível." className="vital-row" data-tone="xp"><span aria-hidden="true">XP</span>
       <Meter label="XP" value={goal ? earned : 1} max={goal || 1} tone="xp"/>
       <small>{goal ? `${earned} / ${goal}` : 'MAX'}</small>
-    </div>
+    </HudHelp>
   </div>;
 }
 
@@ -151,14 +151,14 @@ function ProfileResources({state}:{state:HudModel['resources']}) {
   const resources = useSyncExternalStore(state.subscribe,state.get,state.get);
   if (!resources) return null;
   return <div className="profile-resource-row">
-    <span title="Popularidade"><HudIcon name="chart"/>Pop. <strong>{resources.popularity}</strong></span>
-    <span title="Dinheiro na carteira"><HudIcon name="wallet"/><strong>{money(resources.wallet)}</strong></span>
+    <HudHelp as="span" help="Apoio dos eleitores ao seu personagem."><HudIcon name="chart"/>Pop. <strong>{resources.popularity}</strong></HudHelp>
+    <HudHelp as="span" help="Dinheiro disponível na sua carteira."><HudIcon name="wallet"/><strong>{money(resources.wallet)}</strong></HudHelp>
   </div>;
 }
 
 function Level({state}:{state:HudModel['profile']}) {
   const profile = useSyncExternalStore(state.subscribe,state.get,state.get);
-  return profile && <strong className="react-level tabular-nums" aria-label={`Nível ${profile.level}`}>NV {profile.level}</strong>;
+  return profile && <HudHelp as="strong" help="Seu nível sobe quando você ganha experiência." className="react-level tabular-nums" aria-label={`Nível ${profile.level}`}>NV {profile.level}</HudHelp>;
 }
 
 export function CharacterProfile({model}:{model:HudModel}) {
@@ -166,19 +166,19 @@ export function CharacterProfile({model}:{model:HudModel}) {
   const {former,infiltrator,office} = useSyncExternalStore(model.mandate.subscribe,model.mandate.get,model.mandate.get);
   return <>
     <div className="profile-portrait">
-      {person ? <CharacterPortrait id="hud-portrait" character={person.character}/> : null}
+      {person ? <HudHelp as="span" help="Retrato do personagem que você escolheu."><CharacterPortrait id="hud-portrait" character={person.character}/></HudHelp> : null}
       <ProfileReward state={model.profileReward}/>
     </div>
     <div className="deck-identity">
       <div className="profile-name-row">
-        <strong id="hud-nick">{person?.nick}</strong>
-        {infiltrator ? <HudHelpButton id="profile-role" className="resource-help profile-help" aria-label="Infiltrado"
-          help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></HudHelpButton> : null}
+        <HudHelp as="strong" help="Seu apelido nesta sessão." id="hud-nick">{person?.nick}</HudHelp>
+        {infiltrator ? <HudHelp id="profile-role" className="resource-help profile-help" aria-label="Infiltrado"
+          help="Infiltrado. Derrube a estabilidade."><HudIcon name="bug"/></HudHelp> : null}
         <span id="profile-level-mount"><Level state={model.profile}/></span>
       </div>
       <div className="profile-subtitle">
-        <small id="hud-office">{former ? 'Ex-parlamentar' : 'Parlamentar'}</small>
-        {office ? <small id="own-office">Gabinete {office.padStart(2,'0')}</small> : null}
+        <HudHelp as="small" help="Seu cargo atual no Congresso." id="hud-office">{former ? 'Ex-parlamentar' : 'Parlamentar'}</HudHelp>
+        {office ? <HudHelp as="small" help="Número do seu gabinete no mapa." id="own-office">Gabinete {office.padStart(2,'0')}</HudHelp> : null}
       </div>
       <div id="profile-resources"><ProfileResources state={model.resources}/></div>
     </div>
@@ -193,12 +193,12 @@ function ProfileReward({state}:{state:HudModel['profileReward']}) {
 
 function Broadcast({state}:{state:HudModel['broadcast']}) {
   const active = useSyncExternalStore(state.subscribe,state.get);
-  return active && <div className="react-broadcast rounded-hud bg-hud-surface text-hud-ink" role="status">📣 Transmissão por Megafone</div>;
+  return active && <HudHelp as="div" help="Sua voz está sendo transmitida pelo megafone." className="react-broadcast rounded-hud bg-hud-surface text-hud-ink" role="status">📣 Transmissão por Megafone</HudHelp>;
 }
 
 export function FireNotice({fire}:{fire:FireView}) {
   return <aside id="active-fire" className="incident-panel" aria-labelledby="fire-title" data-paused={fire.paused}>
-    <article className="incident-fire">
+    <HudHelp as="article" help="Use um extintor no local para combater o incêndio." className="incident-fire">
       <svg className="hud-glyph incident-flame" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 22a7 7 0 0 0 7-7c0-3-2-5-3-6 0 2-1 3-2 3 1-4-1-8-4-10 0 4-1 6-3 8a7 7 0 0 0 5 12Z"/>
         <path d="M12 22a3 3 0 0 0 3-3c0-2-2-3-3-5-1 2-3 3-3 5a3 3 0 0 0 3 3Z"/>
@@ -206,7 +206,7 @@ export function FireNotice({fire}:{fire:FireView}) {
       <div><strong id="fire-title">Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
       {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
-    </article>
+    </HudHelp>
   </aside>;
 }
 
@@ -216,13 +216,13 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
   const status = outage.paused ? 'Reparo pausado' : outage.seconds ? `Restabelecendo energia · ${outage.seconds} s` :
     outage.operating!==undefined ? 'Aguardando o outro painel. Permaneça no alcance.' : 'Dois jogadores devem operar os painéis juntos.';
   return <aside id="active-outage" className="incident-panel" aria-labelledby="outage-title" data-paused={outage.paused}>
-    <article className="incident-fire">
+    <HudHelp as="article" className="incident-fire" help="Dois jogadores precisam operar os painéis ao mesmo tempo.">
       <HudIcon name="alert"/>
       <div><strong id="outage-title">Pane elétrica</strong>
         {powerPanels.map(({name},index)=><small key={name}>{index===0 ? 'A' : 'B'} · {name} · {outage.occupied[index] ? 'Em uso' : 'Livre'}</small>)}
       </div>
       <p>{status}</p>
-    </article>
+    </HudHelp>
   </aside>;
 }
 
@@ -232,9 +232,9 @@ function ActiveFire({state}:{state:HudModel['fire']}) {
 }
 
 export function TelevisionNotice({name,remaining}:{name:string;remaining:number}) {
-  return <aside id="electoral-notice" className="hud-strip" role="status">
+  return <HudHelp as="aside" help="Tempo restante da entrevista eleitoral ao vivo." id="electoral-notice" className="hud-strip" role="status">
     TV ao vivo: {name} · {remaining}s
-  </aside>;
+  </HudHelp>;
 }
 
 function LiveTelevision({state}:{state:HudModel['television']}) {
@@ -244,10 +244,10 @@ function LiveTelevision({state}:{state:HudModel['television']}) {
 
 export function PlenarySettingsButton({open}:{open:()=>void}) {
   const {label,key,icon} = settingsApp;
-  return <button id="plenary-settings" className="hud-icon-button" type="button" tabIndex={-1}
-    aria-label={label} aria-keyshortcuts={key} title={label+' ('+key+')'} onClick={open}>
+  return <HudHelp id="plenary-settings" className="hud-icon-button" help="Ajuste som e preferências da sessão. (K)"
+    aria-label={label} aria-keyshortcuts={key} onClick={open}>
     <HudIcon name={icon}/>
-  </button>;
+  </HudHelp>;
 }
 
 export function mountReactHud(openSettings:()=>void) {

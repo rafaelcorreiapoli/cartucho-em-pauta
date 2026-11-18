@@ -1,3 +1,4 @@
+import {HudHelp} from './hud-help';
 import {billVoteKeys,cassationChoices,hearingVoteLabels,projectVoteLabels} from './ballot-shortcuts';
 import type {CSSProperties} from 'react';
 import {CassationBallot} from './cassation-ballot';
@@ -23,11 +24,11 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
         style={{'--meter-ratio':Math.min(1,voted/maximum)} as CSSProperties}/>
     </div>
     <div className="station-grid">
-      {(['yes','no'] as const).map(choice=><button key={choice} className={choice==='yes' ? 'hud-button' : 'hud-button hud-button--secondary'}
-        data-vote={choice} aria-pressed={choice===vote} aria-keyshortcuts={billVoteKeys[choice]} type="button" disabled={!eligible} onClick={()=>cast(choice)}>
+      {(['yes','no'] as const).map(choice=><HudHelp help={choice==="yes" ? "Registre seu voto a favor." : "Registre seu voto contra."} key={choice} className={choice==='yes' ? 'hud-button' : 'hud-button hud-button--secondary'}
+        data-vote={choice} aria-pressed={choice===vote} aria-keyshortcuts={billVoteKeys[choice]} disabled={!eligible} onClick={()=>cast(choice)}>
         <svg className="hud-glyph" aria-hidden="true"><use href={choice==='yes' ? '#icon-check' : '#icon-cross'}/></svg>
         <span>{options[choice]}</span>
-      </button>)}
+      </HudHelp>)}
     </div>
   </div>;
 }

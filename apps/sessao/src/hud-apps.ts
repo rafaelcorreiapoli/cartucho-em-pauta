@@ -1,13 +1,13 @@
 import type {PlenaryView} from './plenary';
 
-export const settingsApp = {id:'settings',label:'Configurações',icon:'settings',key:'K'} as const;
+export const settingsApp = {id:'settings',label:'Configurações',help:'Ajuste som e preferências da sessão.',icon:'settings',key:'K'} as const;
 
 export const apps = [
-  {id:'equipment',label:'Equipamentos',icon:'inventory',key:'E'},
-  {id:'attributes',label:'Personagem',icon:'chart',key:'P'},
-  {id:'phone',label:'Celular',icon:'phone',key:'C'},
-  {id:'surveillance',label:'Vigilância',icon:'camera',key:'V'},
-  {id:'microphone',label:'Microfone',icon:'mic',key:'M'},
+  {id:'equipment',label:'Equipamentos',help:'Veja e troque os itens equipados.',icon:'inventory',key:'E'},
+  {id:'attributes',label:'Personagem',help:'Distribua seus pontos de atributo.',icon:'chart',key:'P'},
+  {id:'phone',label:'Celular',help:'Faça ligações, tire fotos e envie Pix.',icon:'phone',key:'C'},
+  {id:'surveillance',label:'Vigilância',help:'Acesse suas câmeras e escutas.',icon:'camera',key:'V'},
+  {id:'microphone',label:'Microfone',help:'Ajuste seu microfone para falar no jogo.',icon:'mic',key:'M'},
   settingsApp,
 ] as const;
 

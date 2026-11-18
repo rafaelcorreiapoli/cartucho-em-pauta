@@ -1,3 +1,4 @@
+import {HudHelp} from './hud-help';
 import {HudIcon} from './hud-icon';
 import {useEffect, type CSSProperties} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -24,28 +25,28 @@ function AppLauncher({status,launch,open,toggle,close}:{status:HudAppStatus;laun
   },[open,close]);
   return <>
     {open && <section id="congress-app-panel" className="congress-app-panel" aria-label="Aplicativos do parlamentar">
-      {apps.filter(app=>status[app.id]).map((app,index)=><button key={app.id} tabIndex={-1} type="button"
-        className="congress-app-toggle congress-app" aria-label={app.label} title={app.label} aria-keyshortcuts={app.key}
+      {apps.filter(app=>status[app.id]).map((app,index)=><HudHelp key={app.id}
+        className="congress-app-toggle congress-app" aria-label={app.label} help={app.help+" ("+app.key+")"} aria-keyshortcuts={app.key}
         style={{'--app-index':index} as CSSProperties}
         onClick={()=>launch(app.id)}>
         <HudIcon name={app.icon}/><span className="congress-app-label">{app.label}</span><kbd className="action-key" aria-hidden="true">{app.key}</kbd>
         {status[app.id]?.badge && <strong className="congress-app-badge">{status[app.id]?.badge}</strong>}
-      </button>)}
+      </HudHelp>)}
     </section>}
-    {status.bag && <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Mochila" title="Mochila (O)" aria-keyshortcuts="O"
+    {status.bag && <HudHelp className="congress-app-toggle" aria-label="Mochila" help="Veja os itens que você carrega. (O)" aria-keyshortcuts="O"
       onClick={()=>launch('bag')}>
       <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M8 7V5a4 4 0 0 1 8 0v2M6 7h12l2 4v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9zM4 13h16M9 12v5h6v-5"/>
       </svg>
       <kbd className="slot-key" aria-hidden="true">O</kbd>
-    </button>}
-    <button type="button" tabIndex={-1} className="congress-app-toggle" aria-label="Aplicativos" title="Aplicativos (U)" aria-keyshortcuts="U" aria-expanded={open}
+    </HudHelp>}
+    <HudHelp className="congress-app-toggle" aria-label="Aplicativos" help="Abra a lista de aplicativos. (U)" aria-keyshortcuts="U" aria-expanded={open}
       aria-controls={open ? 'congress-app-panel' : undefined} onClick={toggle}>
       <svg className="hud-glyph" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
         {[4,13].flatMap(x=>[4,13].map(y=><rect key={x+':'+y} x={x} y={y} width="7" height="7" rx="1.6"/>))}
       </svg>
       <kbd className="slot-key" aria-hidden="true">U</kbd>
-    </button>
+    </HudHelp>
   </>;
 }
 

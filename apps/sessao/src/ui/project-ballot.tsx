@@ -1,3 +1,4 @@
+import {HudHelp} from './hud-help';
 import {billVoteKeys,projectVoteLabels} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
 import {HudIcon} from './hud-icon';
@@ -43,13 +44,13 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
   const self = billVoters.find(person=>person.id===ownId);
   const clock = `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;
   return <section className="project-ballot" aria-label="Votação de projeto">
-    <button className="project-ballot-handle" type="button" aria-expanded={expanded} aria-controls="project-ballot-body"
+    <HudHelp className="project-ballot-handle" help={expanded ? "Recolha o painel de votação." : "Abra o painel para acompanhar e votar."} aria-expanded={expanded} aria-controls="project-ballot-body"
       aria-label={expanded?'Recolher votação':'Expandir votação'} onClick={()=>{ setExpanded(!expanded); onExpansion?.(!expanded); }}>
       <svg className="hud-glyph project-ballot-chevron" viewBox="0 0 12 12" aria-hidden="true">
         <path d="M2 4l4 4 4-4"/>
       </svg>
       {!expanded && <><strong>{bill.name}{proposer && <small> · {proposer}</small>}</strong><time>{clock}</time></>}
-    </button>
+    </HudHelp>
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <div className="project-ballot-project">
         <header className="project-ballot-banner">
@@ -81,10 +82,10 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
             {billVoters.map(person=>{
               const state = person.vote ?? 'pending';
               const label = state==='yes' ? 'SIM' : state==='no' ? 'NÃO' : state==='abstain' ? 'Abstenção' : 'Pendente';
-              return <li key={person.id} data-choice={state} data-vote-state={state} title={`${person.name} · ${label}`}>
+              return <HudHelp as="li" key={person.id} data-choice={state} data-vote-state={state} help={`${person.name} · ${label}`}>
                 <PhoneContactFace person={person}/><span className="project-voter-name">{person.name}</span>
                 <b><span aria-hidden="true">{state==='abstain' ? '○' : state==='pending' ? '?' : label}</span><span className="sr-only">{label}</span></b>
-              </li>;
+              </HudHelp>;
             })}
           </ul>}
         </div>
@@ -93,9 +94,9 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
         <div className="project-ballot-self">{self && <PhoneContactFace person={self}/>}
           <div>Seu voto<strong role="status">{vote ? vote==='abstain'?'Abstenção':vote==='yes'?'SIM':'NÃO' : eligible?'Aguardando…':'Sem direito a voto'}</strong></div>
         </div>
-        {choices.map(choice=><button key={choice.vote} type="button" className="project-vote-button" data-choice={choice.vote}
+        {choices.map(choice=><HudHelp help={choice.vote==="abstain" ? "Registre uma abstenção." : choice.vote==="yes" ? "Vote a favor do projeto." : "Vote contra o projeto."} key={choice.vote} className="project-vote-button" data-choice={choice.vote}
           data-vote={choice.vote} aria-keyshortcuts={choice.key} aria-pressed={vote===choice.vote} disabled={!eligible}
-          onClick={()=>cast(choice.vote)}><b aria-hidden="true">{choice.symbol}</b>{choice.action}<kbd className="action-key" aria-hidden="true">{choice.key}</kbd></button>)}
+          onClick={()=>cast(choice.vote)}><b aria-hidden="true">{choice.symbol}</b>{choice.action}<kbd className="action-key" aria-hidden="true">{choice.key}</kbd></HudHelp>)}
       </footer>
     </div>
   </section>;
