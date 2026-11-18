@@ -42,11 +42,11 @@ infiltrados. Os infiltrados ganham se o Congresso chegar ao fim da sessão abaix
 de 45 de estabilidade ou se a estabilidade cair a zero durante a partida. Cada ponto gasto além do orçamento custa dois de
 estabilidade.
 
-Consulte **Celular → Projetos** e fale com Dona Sílvia no balcão da Secretaria
+Consulte **Celular → Projetos** e fale com Enéas Carneiro no balcão da Secretaria
 para solicitar um documento. Projetos dispensam carimbos e exigem duas
 assinaturas. Você pode pedir assinaturas aos bots quando estiver perto deles.
 O jogador com mandato que entregar
-o documento a Seu Mauro no balcão do Protocolo entra como proponente. Protocolar é gratuito.
+o documento a Ratinho no balcão do Protocolo entra como proponente. Protocolar é gratuito.
 
 O Protocolo aceita um projeto por vez e já avisa todos quem o apresentou.
 A articulação dura dois minutos. Se houver outra votação no Plenário, o projeto
