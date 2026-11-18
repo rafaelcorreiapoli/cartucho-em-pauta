@@ -1154,6 +1154,7 @@ button.item-tile:active { transform: translateY(3px); }
   grid-template-columns: var(--item-art) minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
+  padding-block: 6px;
   white-space: normal;
   text-align: left;
 }
