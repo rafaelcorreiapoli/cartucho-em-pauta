@@ -247,8 +247,8 @@ async page => {
       if (notices && notices.height>0 && notices.y<standing.y+standing.height) {
         throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
       }
-      const ballot = await sheet.boundingBox();
-      if (width<=640 && notices && notices.height>0 && ballot && notices.y+notices.height>ballot.y) {
+      const ballotToggle = await sheet.getByRole('button',{name:'Recolher votação'}).boundingBox();
+      if (width<=640 && notices && notices.height>0 && ballotToggle && notices.y+notices.height>ballotToggle.y) {
         throw Error(`Notificações cobrem a cédula em ${width}×${height}`);
       }
       const portraitOnRight = await election.locator('.election-leader').evaluate(row=>

@@ -1025,7 +1025,7 @@
 }
 @media (max-width: 640px) {
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #hud-notices {
-    max-block-size: 44px;
+    max-block-size: 36px;
     overflow-y: auto;
     overscroll-behavior: contain;
     pointer-events: auto;
