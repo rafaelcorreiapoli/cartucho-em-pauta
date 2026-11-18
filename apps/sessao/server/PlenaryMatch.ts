@@ -924,8 +924,12 @@ export class PlenaryMatch {
     const actor = this.fire.installer;
     if (actor===undefined) return;
     const player = findPlayer(actor);
-    const feedback = this.fire.updateInstallation(player && this.canUseFire(player,now) ? player : undefined,now,owns,consume);
-    if (feedback) return {actor,feedback};
+    let failed = false;
+    const feedback = this.fire.updateInstallation(player && this.canUseFire(player,now) ? player : undefined,now,owns,consume,message=>{
+      failed = true;
+      return message;
+    });
+    if (feedback) return {actor,feedback,failed};
   }
 
   actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false, device?:number,failed?:(message:string)=>void) {

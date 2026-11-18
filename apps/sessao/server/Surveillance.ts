@@ -6,6 +6,7 @@ type Hardware = {id:number; discoveredBy:Set<string>};
 type Device = SpyChannel & {owner:string; hardware:Hardware; site:Hideout; until:number; alertAt:number; installedAt:number};
 type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:number; target?:number; x:number;y:number; ends:number};
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
+  actionFailed?:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>WorldItem|undefined;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
   monitor?:(player:Player,duration:number)=>void;
@@ -165,22 +166,23 @@ export class Surveillance {
       this.discoveries.get(id)?.delete(raw.site);
       return;
     }
-    if (raw.kind!=='recover' && raw.kind!=='install' && raw.kind!=='inspect' && raw.kind!=='remove' || this.jobs.has(id)) return;
+    if (raw.kind!=='recover' && raw.kind!=='install' && raw.kind!=='inspect' && raw.kind!=='remove') return;
+    if (this.jobs.has(id)) return 'Você já está interagindo com um dispositivo.';
     const site = 'site' in raw ? hideouts.find(site=>site.id===raw.site) : undefined;
-    if (!site || !this.near(player,site)) return;
+    if (!site || !this.near(player,site)) return 'Aproxime-se do local.';
     const item = 'item' in raw ? access.inventory(id).find(item=>item.id===raw.item) : undefined;
     const device = this.occupied.get(site.id);
     if (raw.kind==='install') {
       if (device?.owner===id) return 'Você já possui um dispositivo instalado aqui.';
-      if (item?.kind!=='wiretap' && item?.kind!=='spyCamera' || !(site.accepts as readonly SpyDevice[]).includes(item.kind)) return;
+      if (item?.kind!=='wiretap' && item?.kind!=='spyCamera' || !(site.accepts as readonly SpyDevice[]).includes(item.kind)) return 'Dispositivo incompatível com este local.';
     } else if (raw.kind==='inspect') {
-      if (item?.kind!=='bugDetector') return;
+      if (item?.kind!=='bugDetector') return 'Você precisa de um detector de escutas.';
     } else {
-      if (!device || !this.known(id,device)) return;
+      if (!device || !this.known(id,device)) return 'Dispositivo indisponível.';
       if (raw.kind==='recover') {
-        if (device.owner!==id) return;
+        if (device.owner!==id) return 'Este dispositivo pertence a outro jogador.';
         if (!hasInventorySpace(access.inventory(id).length)) return 'Inventário cheio.';
-      } else if (device.owner===id) return;
+      } else if (device.owner===id) return 'Use a ação de recuperar seu dispositivo.';
     }
     this.jobs.set(id,{kind:raw.kind,site,item:item?.id,target:raw.kind==='remove' || raw.kind==='recover' ? device?.id : undefined,
       x:player.x,y:player.y,ends:now+spyRules[raw.kind]});
@@ -192,7 +194,7 @@ export class Surveillance {
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
       if (!player || !present(id) || !this.near(player,job.site) || player.x!==job.x || player.y!==job.y) {
-        this.jobs.delete(id); access.feedback(id,'Interação interrompida.'); continue;
+        this.jobs.delete(id); (access.actionFailed ?? access.feedback)(id,'Interação interrompida.'); continue;
       }
       if (now<job.ends) continue;
       this.jobs.delete(id);
@@ -254,10 +256,10 @@ export class Surveillance {
         access.feedback(id,'Dispositivo instalado.');
       } else {
         access.event?.(player,'spy-install-failed',job.site.id);
-        access.feedback(id,'Não foi possível instalar o dispositivo.');
+        (access.actionFailed ?? access.feedback)(id,'Não foi possível instalar o dispositivo.');
       }
     } else if (job.kind==='inspect') {
-      if (item?.kind!=='bugDetector') return;
+      if (item?.kind!=='bugDetector') return (access.actionFailed ?? access.feedback)(id,'Detector indisponível.');
       if (device) {
         let known = this.discoveries.get(id);
         if (!known) this.discoveries.set(id,known=new Map());
@@ -272,7 +274,7 @@ export class Surveillance {
       if (job.kind==='recover') {
         const recovered = access.restore?.(id,device.kind);
         if (!recovered) {
-          access.feedback(id,'Inventário cheio.');
+          (access.actionFailed ?? access.feedback)(id,'Inventário cheio.');
           return;
         }
         this.recoveredHardware.set(recovered.id,device.hardware);
@@ -285,6 +287,6 @@ export class Surveillance {
       access.event?.(player,'spy-removed',job.site.id,id!==device.owner ? device : undefined);
       access.feedback(id,job.kind==='recover' ? 'Dispositivo recuperado.' : 'Dispositivo removido.');
       if (id!==device.owner) access.feedback(device.owner,'Dispositivo desconectado.');
-    }
+    } else (access.actionFailed ?? access.feedback)(id,'Dispositivo indisponível.');
   }
 }

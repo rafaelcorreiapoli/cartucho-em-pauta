@@ -74,6 +74,7 @@ export class SessionRoom extends Room {
     return {
       ...world,
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
+      actionFailed:(id:string,message:string)=>this.clients.getById(id)?.send('map-action-failed',message),
       vision:(id:string)=>this.gameplay.vision(id,world.now),
       present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.parliamentarians.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
@@ -347,7 +348,11 @@ export class SessionRoom extends Room {
       if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
       const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
-      if (result) client.send('gameplay-feedback',result);
+      if (result) {
+        const fieldAction = raw && typeof raw==='object' && 'kind' in raw &&
+          (raw.kind==='install' || raw.kind==='inspect' || raw.kind==='remove' || raw.kind==='recover');
+        client.send(fieldAction ? 'map-action-failed' : 'gameplay-feedback',result);
+      }
     });
     this.onMessage('security-camera',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
@@ -576,7 +581,7 @@ export class SessionRoom extends Room {
         if (!world.present(id) || this.gameplay.hasOfficeChannel(id) || this.npcTalk.robberyProgress(id,now)!==undefined) return;
         return this.players.get(id)?.player;
       },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
-      if (installation) world.feedback(installation.actor,installation.feedback);
+      if (installation) (installation.failed ? world.actionFailed : world.feedback)(installation.actor,installation.feedback);
       this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now));
       this.match.advancePower(now,id=>world.present(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {

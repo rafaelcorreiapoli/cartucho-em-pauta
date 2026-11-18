@@ -518,7 +518,7 @@ export class Gameplay {
       if (!exploring || !player || world.present?.(id)===false || !item?.document ||
           !canReachObject(player,terminals.reprography.point,{handsFree:true})) {
         this.forgery.delete(id);
-        world.feedback?.(id,'Adulteração interrompida.');
+        (world.actionFailed ?? world.feedback)?.(id,'Adulteração interrompida.');
       } else if (world.now>=operation.end) {
         this.forgery.delete(id);
         const bill = bills[operation.project];
@@ -795,6 +795,7 @@ export class Gameplay {
         return this.create(kind,{holder:id});
       },
       feedback:(id:string,message:string)=>world.feedback?.(id,message),
+      actionFailed:world.actionFailed,
       monitor:(player:Player,duration:number)=>{
         if (world.voice(player.id) && world.hasMission?.(player.id,'escutaAtiva')) {
           publishGameplay(world,player,'wiretap-time',{duration,witnesses:[]});
@@ -915,15 +916,20 @@ export class Gameplay {
       if (!exploring || !player || player.knockedOut || player.carrying || player.carried ||
           world.present?.(id)===false || player.x!==pending.origin.x || player.y!==pending.origin.y) {
         this.pendingInstallations.delete(id);
-        world.feedback?.(id,'Instalação interrompida.');
+        (world.actionFailed ?? world.feedback)?.(id,'Instalação interrompida.');
         continue;
       }
       if (world.now<pending.ends) continue;
       this.pendingInstallations.delete(id);
+      let failed = false;
+      const completionWorld:GameplayWorld = {...world,actionFailed:(actor,message)=>{
+        failed = true;
+        (world.actionFailed ?? world.feedback)?.(actor,message);
+      }};
       const message = pending.action.kind==='office-install'
-        ? this.officeAction(player,pending.action,world,true)
-        : this.changeInstallation(player,pending.action,world,true);
-      if (message) world.feedback?.(id,message);
+        ? this.officeAction(player,pending.action,completionWorld,true)
+        : this.changeInstallation(player,pending.action,completionWorld,true);
+      if (message && !failed) world.feedback?.(id,message);
     }
   }
 
@@ -1020,10 +1026,13 @@ export class Gameplay {
         if (kit && level<officeRules.maxSecurity) add(target==='door' ? 'office-upgrade-door' : target==='safe' ? 'office-upgrade-safe' : 'office-upgrade-cabinet',`Reforçar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · Nv. ${level}`,kit.id);
       };
       const breach = (target:'door'|'cabinet'|'safe')=>{
-        if (!tool || target!=='door' && this.ownerInside(office,players)) return;
-        const duration = this.privateOffices.breachTime(office,target,this.toolLevel(tool),now);
-        if (duration) add(target==='door' ? 'office-breach-door' : target==='safe' ? 'office-breach-safe' : 'office-breach-cabinet',
-          `Arrombar ${target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário'} · ${(interactionDuration(player,duration)/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})} s`,tool.id);
+        if (!owner || target==='cabinet' && office.cabinetUntil>now) return;
+        const duration = tool && (target==='door' || !this.ownerInside(office,players))
+          ? this.privateOffices.breachTime(office,target,this.toolLevel(tool),now) : undefined;
+        const name = target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário';
+        const detail = duration ? ` · ${(interactionDuration(player,duration)/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})} s` : '';
+        add(target==='door' ? 'office-breach-door' : target==='safe' ? 'office-breach-safe' : 'office-breach-cabinet',
+          `Arrombar ${name}${detail}`,tool?.id);
       };
       if (this.privateOffices.near(player,office,'door')) {
         if (office.doorUntil<=now) {
@@ -1141,7 +1150,10 @@ export class Gameplay {
       this.event(world,player,'uninstalled',data,torn ? decoration.owner.id : undefined,{place:office.layout.id});
       return torn ? 'Retrato arrancado e destruído.' : 'Decoração recolhida.';
     }
-    if (!item || !('holder' in item.place) || item.place.holder!==player.id) return this.reject(player,world,'O objeto não está com você.');
+    if (!item || !('holder' in item.place) || item.place.holder!==player.id) {
+      return this.reject(player,world,kind==='office-breach-door' || kind==='office-breach-cabinet' || kind==='office-breach-safe'
+        ? 'Você precisa de uma ferramenta de arrombamento.' : 'O objeto não está com você.');
+    }
     if (kind==='office-install') {
       const decor = decorSlots.find(slot=>slot===item.data.kind);
       if (!decor) return this.reject(player,world,'Decoração incompatível.');
@@ -1168,9 +1180,16 @@ export class Gameplay {
     if (!offices.near(player,office,target)) return this.reject(player,world,'Aproxime-se do alvo.');
     if (!own && target!=='door' && (world.plenary || this.ownerInside(office,world.players))) return this.reject(player,world,'O titular está no gabinete.');
     const level = this.toolLevel(item.data);
+    if (kind!=='office-cash') {
+      if (!office.owner || own) return this.reject(player,world,'Este arrombamento está indisponível.');
+      if (target==='door' && office.doorUntil>now || target==='cabinet' && office.cabinetUntil>now) {
+        return this.reject(player,world,target==='door' ? 'A porta já está arrombada.' : 'O armário já está arrombado.');
+      }
+      if (target==='door' && office.door!=='locked') return this.reject(player,world,'A porta está destrancada.');
+    }
     const duration = kind==='office-cash' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
-    if (!duration) return this.reject(player,world,kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.');
+    if (!duration) return this.reject(player,world,kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente para esta fechadura.');
     offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+interactionDuration(player,duration),baseDuration:duration,level});
     if (kind==='office-cash') {
       player.pocketing = true;
@@ -1203,14 +1222,16 @@ export class Gameplay {
       offices.channels.delete(id);
       if (player) player.pocketing = undefined;
       if (!valid) {
-        world.feedback?.(id,'Interação interrompida.');
+        const label = kind==='office-cash' ? 'Ação interrompida.' : 'Arrombamento interrompido.';
+        const moved = player && (player.moving || player.x!==channel.origin.x || player.y!==channel.origin.y);
+        (world.actionFailed ?? world.feedback)?.(id,moved ? `${label} Fique parado durante a ação.` : label);
         continue;
       }
       if (kind==='office-breach-safe') {
         const owner = office.owner!;
         const amount = world.lootWallet?.(owner,officeRules.safeLootFraction) ?? 0;
         if (!amount) {
-          world.feedback?.(id,'O cofre está vazio.');
+          (world.actionFailed ?? world.feedback)?.(id,'O cofre está vazio.');
           continue;
         }
         this.remove(item);

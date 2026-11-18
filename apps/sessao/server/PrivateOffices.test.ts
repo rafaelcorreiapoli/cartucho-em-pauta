@@ -123,6 +123,16 @@ test('cash can only be converted once at the owners safe, with interruption and 
 test('locked doors block routes and sight, permit exit, and require a separate cabinet breach',()=>{
   const {players:[owner,visitor],game,world,act,tick,buy} = setup();
   const [home] = privateOffices;
+  const failed:{id:string;message:string}[] = [];
+  world.actionFailed = (id,message)=>failed.push({id,message});
+  Object.assign(owner,atDoor(home,true));
+  act(owner,'office-lock',home.id);
+  Object.assign(visitor,atDoor(home,false));
+  const breach = game.view(visitor,world).officeOptions?.find(option=>option.kind==='office-breach-door');
+  expect(breach).toMatchObject({place:home.id,label:'Arrombar porta'});
+  game.act(visitor,breach!,world);
+  expect(failed.pop()).toEqual({id:visitor.id,message:'Você precisa de uma ferramenta de arrombamento.'});
+  act(owner,'office-unlock',home.id);
   const doorTool = buy(visitor,'proLockKit');
   const lowTool = buy(visitor,'lockKit');
   const strongTool = buy(visitor,'decoder');
@@ -146,7 +156,14 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   expect(visitor.y).toBeGreaterThan(officeDoorPoint(home).y);
   Object.assign(visitor,atDoor(home,false));
   act(visitor,'office-breach-door',home.id,doorTool);
+  visitor.y++;
+  tick(1);
+  expect(failed.pop()).toEqual({id:visitor.id,message:'Arrombamento interrompido. Fique parado durante a ação.'});
+  expect(game.view(visitor,world).inventory.some(item=>item.id===doorTool)).toBe(true);
+  Object.assign(visitor,atDoor(home,false));
+  act(visitor,'office-breach-door',home.id,doorTool);
   tick(5000);
+  expect(failed).toEqual([]);
   expect(game.view(visitor,world).offices?.[0].door).toBe('breached');
   expect(findRoute(visitor,atDoor(home,true)).at(-1)).toEqual(atDoor(home,true));
   Object.assign(owner,{x:140,y:146});
