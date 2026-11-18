@@ -32,15 +32,19 @@ export function phoneArt(character:number,time:number,reducedMotion:boolean) {
   return {key:`${skin}-phone`,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
 }
 
-export const safeBreachSheet = {key:'lula-safe-breach',path:'assets/lula-safe-breach.webp'};
+export const safeBreachSheets = Object.values(characterSlugs).map(character=>{
+  const key = safeBreachKey(character);
+  return {key,path:`assets/${key}.webp`};
+});
+
+function safeBreachKey(skin:string) {
+  return `${skin}-safe-breach`;
+}
 
 export function safeBreachArt(character:number,time:number,reducedMotion:boolean) {
   const skin = characterSlugs[NAMES[character]];
-  const frame = reducedMotion ? 0 : Math.floor(time/200)%4;
-  if (skin==='lula') return {key:safeBreachSheet.key,frame};
-  if (skin) return {key:combatSheet(skin,'attack'),frame:8+frame};
-  const idle = characterArt(character);
-  return {key:idle.sheet.key,frame:idle.frame+8};
+  if (!skin) return;
+  return {key:safeBreachKey(skin),frame:reducedMotion ? 0 : Math.floor(time/200)%4};
 }
 
 export const combatSheets = Object.values(characterSlugs).flatMap(character=>

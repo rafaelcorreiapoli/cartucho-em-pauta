@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { attackArt, downedArt, hitArt, phoneArt, phoneSheets } from './character-art';
+import { attackArt, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheets } from './character-art';
 import { NAMES } from './map';
 
 for (const [name,skin] of [
@@ -28,20 +28,25 @@ for (const [name,skin] of [
     expect(downedArt(character,2)).toMatchObject({key:`${skin}-fall`,frame:11,flipX:false});
   });
 
-  test(`${name} uses its own four phone frames and honors reduced motion`, async ()=>{
-    const key = `${skin}-phone`;
-    const path = `assets/${key}.webp`;
-    expect(phoneSheets).toContainEqual({key,path});
-    expect([0,135,270,405,540].map(time=>phoneArt(character,time,false))).toEqual(
-      [0,1,2,3,0].map(frame=>({key,frame})),
-    );
-    expect(phoneArt(character,405,true)).toEqual({key,frame:0});
-    const asset = Bun.file(new URL(`../public/${path}`,import.meta.url));
-    expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
-    const header = new DataView(await asset.slice(21,25).arrayBuffer());
-    const dimensions = header.getUint32(0,true);
-    expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,128]);
-  });
+  for (const {action,interval,sheets,art} of [
+    {action:'phone',interval:135,sheets:phoneSheets,art:phoneArt},
+    {action:'safe-breach',interval:200,sheets:safeBreachSheets,art:safeBreachArt},
+  ]) {
+    test(`${name} uses its own four ${action} frames and honors reduced motion`, async ()=>{
+      const key = `${skin}-${action}`;
+      const path = `assets/${key}.webp`;
+      expect(sheets).toContainEqual({key,path});
+      expect([0,1,2,3,4].map(frame=>art(character,frame*interval,false))).toEqual(
+        [0,1,2,3,0].map(frame=>({key,frame})),
+      );
+      expect(art(character,3*interval,true)).toEqual({key,frame:0});
+      const asset = Bun.file(new URL(`../public/${path}`,import.meta.url));
+      expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
+      const header = new DataView(await asset.slice(21,25).arrayBuffer());
+      const dimensions = header.getUint32(0,true);
+      expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,128]);
+    });
+  }
 }
 
 test('the replacement skins ship all three combat sheets at the Phaser atlas dimensions', async ()=>{
