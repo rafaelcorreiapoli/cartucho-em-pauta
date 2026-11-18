@@ -14,6 +14,15 @@ async page => {
   const tooltip = page.getByRole('tooltip');
   for (const [width,height] of [[1280,720],[800,600]]) {
     await page.setViewportSize({width,height});
+    const portrait = page.locator('#hud-portrait');
+    const portraitBounds = await portrait.boundingBox();
+    if (!portraitBounds || portraitBounds.width<60 || portraitBounds.height<60) {
+      throw Error('Retrato do jogador sem área visível: '+JSON.stringify(portraitBounds));
+    }
+    await portrait.hover();
+    await tooltip.filter({hasText:'Retrato do personagem que você escolheu.'}).waitFor();
+    await page.mouse.click(width-1,height-1);
+    await tooltip.waitFor({state:'hidden'});
     await stability.hover();
     await tooltip.filter({hasText:'Parlamento entra em colapso'}).waitFor();
     const bounds = await tooltip.boundingBox();
