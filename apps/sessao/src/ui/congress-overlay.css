@@ -592,6 +592,7 @@
 .congress-session-clock[data-urgent="true"] strong,
 .congress-budget[data-in-debt="true"] strong, .congress-debt { color: #ffb2a4; }
 
+#command-strip #election-dock { width: 100%; }
 #command-strip #election-dock > #open-election-polls {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -614,6 +615,7 @@
   gap: 6px;
   padding-inline: 5px;
   font-weight: 750;
+  white-space: normal;
 }
 #election-summary { display: grid; gap: 4px; }
 .election-standing {
@@ -970,11 +972,24 @@
   }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
     grid-column: 1;
+    min-width: 0;
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .congress-meter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .congress-meter-label {
+    white-space: normal;
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .congress-payroll {
+    flex-wrap: wrap;
+    column-gap: .35em;
+    row-gap: 0;
   }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .election-and-incidents {
     grid-column: 2;
     grid-row: 1;
     anchor-name: --plenary-election;
+    width: min(220px, 100%);
     max-width: 100%;
   }
 }
