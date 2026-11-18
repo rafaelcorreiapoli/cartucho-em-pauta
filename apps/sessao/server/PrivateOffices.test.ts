@@ -283,11 +283,18 @@ test('the safe protects an incapacitated owner and converts only the current wal
   Object.assign(owner,home.spawn,{knockedOut:true});
   Object.assign(visitor,home.safe);
   expect(act(visitor,'office-breach-safe',home.id,tool)).toContain('titular');
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
   Object.assign(owner,{x:140,y:146,knockedOut:false});
   act(visitor,'office-breach-safe',home.id,tool);
+  expect(game.isBreachingSafe(visitor.id)).toBe(true);
+  act(visitor,'office-cancel',home.id);
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
+  act(visitor,'office-breach-safe',home.id,tool);
   tick(1000);
+  expect(game.isBreachingSafe(visitor.id)).toBe(true);
   balance = 17;
   tick(officeRules.breachTimes[0]);
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
   expect(balance).toBe(0);
   const inventory = game.view(visitor,world).inventory;
   expect(inventory).toHaveLength(1);

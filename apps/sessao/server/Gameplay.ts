@@ -435,6 +435,7 @@ export class Gameplay {
   }
 
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
+  isBreachingSafe(id:string) { return this.privateOffices.channels.get(id)?.kind==='office-breach-safe'; }
 
   hasCashLot(id:string,amount:number) {
     if (this.inventory(id).some(({data})=>cashAmount(data)===amount)) return true;
