@@ -506,7 +506,9 @@
   .legislative-modal .social-empty { padding: 1rem .65rem; gap: .45rem; }
 }
 
-#election-polls ol { list-style: none; padding-left: 0; }
+.election-candidates { list-style: none; padding: 0; margin: .65rem 0; }
+.election-candidates > li { margin-bottom: .75rem; }
+.poll-lost { display: block; }
 .poll-card { display: flex; align-items: center; gap: .8rem; }
 .poll-avatar { position: relative; flex: none; display: block; }
 .poll-avatar .portrait { display: block; }
@@ -572,10 +574,6 @@
 #result-dialog h4 { color: var(--party-gold); }
 #result-content section { margin: .65rem 0; padding: .75rem; border-radius: 8px; background: #142522; }
 #result-content h4:not(:first-child) { margin-top: .6rem; }
-.result-winner { display: flex; align-items: center; gap: .55rem; margin-bottom: .3rem; }
-.result-winner .portrait { --portrait-size: 54px; flex: none; border-radius: 6px; background-color: #294d3d; }
-.result-winner small { display: block; }
-.result-winner strong { margin-left: auto; font: 900 2rem/1 var(--party-display); color: var(--party-gold); }
 #result-content h4 { display: flex; align-items: center; gap: .4rem; }
 #bill-description { margin: .35rem 0; }
 #bill-description:empty { display: none; }
