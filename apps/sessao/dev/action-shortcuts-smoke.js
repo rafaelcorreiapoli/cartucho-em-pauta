@@ -144,7 +144,11 @@ async page => {
   }
   await page.setViewportSize({width:1280,height:720});
   await page.getByRole('timer',{name:'Próxima distribuição de salários'}).getByText('Custo',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'Pesquisa eleitoral',exact:true}).locator('kbd').filter({hasText:'L'}).waitFor();
+  const pollButton = page.getByRole('button',{name:'Pesquisa eleitoral',exact:true});
+  await pollButton.waitFor();
+  if (await pollButton.getAttribute('aria-keyshortcuts')!=='L' || await pollButton.locator('kbd').count()) {
+    throw Error('A Pesquisa Eleitoral deve manter a tecla L sem exibi-la no placar');
+  }
   await page.keyboard.press('l');
   const polls = page.getByRole('dialog',{name:'Pesquisa eleitoral'});
   await polls.getByRole('progressbar',{name:'Intenção de voto de Atalhos QA'}).waitFor();
