@@ -12,7 +12,7 @@ import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, type Motion, type Player } from '../src/map';
+import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
@@ -35,7 +35,7 @@ import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
-type Item = {data:WorldItem; place:Place};
+type Item = {data:WorldItem; place:Place; safeRobber?:string};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number; quantity?:number};
 type PendingInstallation = {action:GameplayAction; origin:Motion; started:number; ends:number};
 const interactionDuration = (player:Player, baseMs:number) =>
@@ -238,6 +238,8 @@ export class Gameplay {
   }
 
   hasAgendaDecoration(id:string, kind:AgendaDecoration, replacement=false, now?:number) {
+    if (kind==='markableForeignPortrait') return [...this.installations.values()].some(item=>
+      item.kind==='portrait' && !item.privateOffice && item.owner.id!==id && !item.marked);
     if (kind==='freshForeignPortrait') return [...this.installations].some(([site,item])=>{
       const installedAt = this.portraitInstalledAt.get(site);
       return item.kind==='portrait' && item.owner.id!==id && !item.marked &&
@@ -283,11 +285,30 @@ export class Gameplay {
     return this.surveillance.cameraAvailability(id,cameras,credited);
   }
 
-  canInstallSpy(id:string,kind:SpyDevice) { return this.surveillance.canInstall(id,kind); }
+  canInstallSpy(id:string,kind:SpyDevice,ownOffice=false) {
+    if (!ownOffice) return this.surveillance.canInstall(id,kind);
+    const office = this.privateOffices.ownedBy(id);
+    return !!office && this.surveillance.canInstall(id,kind,`office-${office.id}`);
+  }
+
+  officeBreachLevel(id:string,target:'door'|'safe'|'cabinet',now:number,eligibleOwner:(id:string)=>boolean,wallet:(id:string)=>number) {
+    let minimum = Infinity;
+    for (const office of this.privateOffices.offices.values()) {
+      if (!office.owner || office.owner===id || !eligibleOwner(office.owner)) continue;
+      if (target==='safe' && wallet(office.owner)<=0) continue;
+      if (target==='cabinet' && !this.officeStash(office.layout.id).length) continue;
+      if (this.privateOffices.breachTime(office,target,officeRules.maxSecurity,now)===undefined) continue;
+      const level = target==='door' ? office.doorLevel : target==='safe' ? office.safeLevel : office.cabinetLevel;
+      minimum = Math.min(minimum,level);
+    }
+    return minimum;
+  }
 
   hasLuxuryDecoration() { return [...this.installations.values()].some(item=>isOfficeFurniture(item.kind)); }
 
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
+
+  ownsOfficeRoom(id:string,room:string) { return this.privateOffices.ownedBy(id)?.name===room; }
 
   officeStock(id:string) {
     const office = this.privateOffices.ownedBy(id);
@@ -461,7 +482,7 @@ export class Gameplay {
   }
 
   private event(world:GameplayWorld, actor:Player, type:GameplayEvent['type'], item?:WorldItem, target?:string,
-    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'duration'|'replaced'|'witnesses'>>) {
+    facts?:Partial<Pick<GameplayEvent,'inventoryItem'|'photo'|'project'|'place'|'amount'|'duration'|'replaced'|'witnesses'|'knockedOutByActor'|'breachedByActor'|'cashFromOwnBreach'>>) {
     publishGameplay(world,actor,type,{target,item:item?.id,kind:item?.kind,...facts});
   }
 
@@ -565,10 +586,12 @@ export class Gameplay {
       canHit:player=>world.present?.(player.id)!==false,
       armored:player=>!!this.wearing(player.id,'vest'),
       hit:(attacker,target,damage)=>{
-        publishGameplay(world,attacker,'hit',{target:target.id,damage});
+        const details = {target:target.id,kind:attacker.swing?.weapon,
+          targetInOwnOffice:this.ownsOfficeRoom(target.id,roomAt(target))};
+        publishGameplay(world,attacker,'hit',{...details,damage});
         if (!target.knockedOut) return;
         this.transport.detach(target,world);
-        publishGameplay(world,attacker,'character-knocked-out',{target:target.id});
+        publishGameplay(world,attacker,'character-knocked-out',{...details,targetInPlenary:inPlenary(target)});
         if (!target.npc) {
           for (const item of this.inventory(target.id)) {
             if (!cashAmount(item.data)) continue;
@@ -680,6 +703,10 @@ export class Gameplay {
           world.players.some(other=>other.id===entry.owner));
         const carryingBriefcase = office?.owner===player.id && this.inventory(player.id).some(item=>item.data.kind==='briefcase');
         publishGameplay(world,player,'room-entered',{place:room,target:office?.owner,kind:carryingBriefcase ? 'briefcase' : undefined});
+        const passenger = this.transport.passenger(player);
+        if (office?.owner===player.id && passenger?.knockedOut && this.combat.knockedOutBy(passenger)===player.id) {
+          publishGameplay(world,player,'character-carried-into-office',{place:room,target:passenger.id});
+        }
       }
     }
   }
@@ -809,8 +836,11 @@ export class Gameplay {
           publishGameplay(world,player,'wiretap-time',{duration,witnesses:[]});
         }
       },
-      event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string,device?:{kind:SpyDevice;id:number})=>
-        publishGameplay(world,player,kind,{place:site,kind:device?.kind,item:device?.id,witnesses:[]}),
+      event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string,device?:{kind:SpyDevice;id:number})=>{
+        const office = this.privateOffices.ownedBy(player.id);
+        publishGameplay(world,player,kind,{place:site,kind:device?.kind,item:device?.id,witnesses:[],
+          ownOffice:kind==='spy-installed' && !!office && site===`office-${office.id}`});
+      },
     };
   }
 
@@ -897,7 +927,9 @@ export class Gameplay {
     if (typeof result==='string') return result;
     const foreignOfficeSubject = result.people.some(person=>person.id!==player.id && world.players.some(other=>other.id===person.id && !other.npc) &&
       [...this.privateOffices.offices.values()].some(office=>office.owner && office.owner!==person.id && office.layout.name===roomAt(person)));
-    this.event(world,player,'photo',undefined,undefined,{photo:result,
+    const breachedByActor = selfie && [...this.privateOffices.offices.values()].some(office=>
+      office.layout.name===result.location && office.doorUntil>world.now && office.doorBreachedBy===player.id);
+    this.event(world,player,'photo',undefined,undefined,{photo:result,breachedByActor,
       place:foreignOfficeSubject ? 'foreign-office-subject' : undefined,witnesses:[...ids].filter(id=>id!==player.id)});
     if (world.hasMission?.(player.id,'visitaCortesia')) {
       const office = [...this.privateOffices.offices.values()].find(office=>this.privateOffices.isInside(player,office));
@@ -1140,7 +1172,8 @@ export class Gameplay {
         if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return this.reject(player,world,'Armário cheio.');
         this.move(item,{storage:`office:${office.layout.id}`});
       }
-      this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id});
+      this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id,
+        breachedByActor:kind==='office-take' && !own && office.cabinetBreachedBy===player.id});
       this.recordGuestInteraction(player,office,world);
       return kind==='office-take' ? 'Objeto retirado do armário.' : 'Objeto guardado no armário.';
     }
@@ -1245,6 +1278,7 @@ export class Gameplay {
         }
         const cash = this.create('briefcase',{holder:id});
         cash.cash = amount;
+        this.items.get(cash.id)!.safeRobber = id;
         this.expose(id,cash.id);
         this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id});
         world.feedback?.(id,`Maleta de ${money(amount)} retirada do cofre.`);
@@ -1253,11 +1287,17 @@ export class Gameplay {
       }
       if (target==='safe') {
         world.earn(id,cashAmount(item.data)!);
-        this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id,amount:cashAmount(item.data)});
+        this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id,
+          amount:cashAmount(item.data),cashFromOwnBreach:item.safeRobber===id});
         world.feedback?.(id,'Dinheiro embolsado.');
       } else {
-        if (target==='door') office.doorUntil = world.now+officeRules.breachMs;
-        else office.cabinetUntil = world.now+officeRules.breachMs;
+        if (target==='door') {
+          office.doorUntil = world.now+officeRules.breachMs;
+          office.doorBreachedBy = id;
+        } else {
+          office.cabinetUntil = world.now+officeRules.breachMs;
+          office.cabinetBreachedBy = id;
+        }
         this.syncOfficeDoors(world.players,world.now);
         this.event(world,player,target==='door' ? 'door-breached' : 'cabinet-breached',item.data,office.owner,{place:office.layout.id,
           witnesses:world.players.filter(other=>other!==player && worldVisible(other,player)).map(other=>other.id)});
@@ -1528,10 +1568,11 @@ export class Gameplay {
     }
     if (action.kind==='aid') {
       const target = world.players.find(person=>person.id===action.target);
+      const knockedOutByActor = !!target && this.combat.knockedOutBy(target)===id;
       if (!target || !this.combat.aid(player,target,world.now)) return this.reject(player,world,'Aproxime-se de um jogador nocauteado.');
       this.transport.detach(target,world);
       publishGameplay(world,target,'character-recovered');
-      this.event(world,player,'aided',undefined,target.id);
+      this.event(world,player,'aided',undefined,target.id,{knockedOutByActor});
       return 'Jogador socorrido.';
     }
     if (action.kind==='attack') {
@@ -1660,7 +1701,9 @@ export class Gameplay {
           if ((this.concealedUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'Você já está ocultando dinheiro.');
           this.remove(item);
           this.concealedUntil.set(id,world.now+concealment.duration);
-          this.event(world,player,'concealment-started',data,undefined,{witnesses:[],amount:Number(this.hasVisibleCash(id,world.now,id))});
+          this.event(world,player,'concealment-started',data,undefined,{witnesses:[],
+            amount:Number(this.hasVisibleCash(id,world.now,id)),
+            cashFromOwnBreach:this.inventory(id).some(item=>item.safeRobber===id)});
           return `Dinheiro oculto por ${concealment.duration/1000} s.`;
         }
         if (data.kind==='firstAidKit') {

@@ -228,7 +228,13 @@ export class SessionRoom extends Room {
           },
           id=>this.gameplay.hasOffice(id),id=>this.gameplay.installedPizza(id),
           id=>this.parliamentarians.players.map(npc=>this.parliamentarians.signature(npc.id,id)),
-          ()=>this.gameplay.hasLuxuryDecoration(),(id,kind)=>this.gameplay.canInstallSpy(id,kind),(id,credited)=>this.gameplay.agendaCameras(id,credited),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id));
+          ()=>this.gameplay.hasLuxuryDecoration(),(id,kind,ownOffice)=>this.gameplay.canInstallSpy(id,kind,ownOffice),(id,credited)=>this.gameplay.agendaCameras(id,credited),id=>this.gameplay.ownsWiretap(id),(id,amount)=>this.gameplay.hasCashLot(id,amount),id=>this.gameplay.hasKnownForeignSpy(id),
+          (id,target)=>{
+            const world = this.gameplayWorld();
+            return this.gameplay.officeBreachLevel(id,target,world.now,
+              owner=>world.present(owner) && world.hasMandate?.(owner)===true && !this.match.isolated(owner),
+              owner=>world.wallet?.(owner) ?? 0);
+          });
         this.match.refreshAgendaEligibility();
         for (const [id,state] of this.players) {
           const {player} = state;
@@ -551,7 +557,7 @@ export class SessionRoom extends Room {
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       this.match.advance(realNow, recipients=>{
         for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,this.gameNow);
-      });
+      },(id,room)=>this.gameplay.ownsOfficeRoom(id,room));
       const now = this.gameNow;
       this.resetFinishedMatch(now);
       const players = [...this.players.values()].map(state => state.player);

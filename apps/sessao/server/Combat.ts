@@ -8,7 +8,7 @@ import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
 type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'>;
 
-type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean};
+type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean; knockedOutBy?:string};
 
 export class Combat {
   private static readonly facingAngles = [Math.PI/2,0,-Math.PI/2,Math.PI];
@@ -51,6 +51,7 @@ export class Combat {
     state.protectedUntil = now+recoveryRules.protectionMs;
     player.recoveryProtected = true;
     state.recoverAt = 0;
+    state.knockedOutBy = undefined;
     player.knockedOut = undefined;
   }
 
@@ -136,12 +137,15 @@ export class Combat {
     victim.hp = Math.max(0,victim.hp-damage);
     target.hit = now+recoveryRules.hitStunMs;
     if (!victim.hp) {
+      victim.knockedOutBy = attacker.id;
       victim.recoverAt = now+recoveryRules.knockoutMs;
       target.knockedOut = true;
       this.interrupt(target);
     }
     return damage;
   }
+
+  knockedOutBy(target:Combatant) { return this.vitality.get(target.id)?.knockedOutBy; }
 
   aid(actor:Combatant, target:Combatant|undefined, now:number) {
     if (!target || !canReachDownedPlayer(actor,target)) return false;

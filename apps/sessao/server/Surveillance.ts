@@ -17,9 +17,9 @@ export class Surveillance {
     return [...this.occupied.values()].filter(device=>device.owner===id && device.kind===kind).length;
   }
 
-  canInstall(id:string,kind:SpyDevice) {
+  canInstall(id:string,kind:SpyDevice,siteId?:string) {
     return this.countInstalled(id,kind)<spyRules.limit &&
-      hideouts.some(site=>(site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
+      hideouts.some(site=>(siteId===undefined || site.id===siteId) && (site.accepts as readonly SpyDevice[]).includes(kind) && !this.occupied.has(site.id));
   }
 
   cameraAvailability(id:string,inventoryIds:readonly number[],credited:ReadonlySet<string>) {

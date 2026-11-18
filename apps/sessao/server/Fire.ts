@@ -9,7 +9,7 @@ type Installation = {
 export class Fire {
   private active?: {site:number; elapsed:number; losses:number};
   private installation?: Installation;
-  private armed?: {site:number; ignites:number};
+  private armed?: {actor:string; site:number; ignites:number};
   private next:number = fireRules.firstAfter;
   private nextSite?:number;
   private random = Math.random;
@@ -78,7 +78,7 @@ export class Fire {
     if (now<job.started+fireRules.install) return;
     this.installation = undefined;
     if (!consume(job.actor,job.item)) return reject('Instalação interrompida.');
-    this.armed = {site:job.site,ignites:this.clock+fireRules.fuse};
+    this.armed = {actor:job.actor,site:job.site,ignites:this.clock+fireRules.fuse};
     return 'Incendiário instalado.';
   }
 
@@ -105,7 +105,7 @@ export class Fire {
     this.next += this.delay;
   }
 
-  advance(now:number, exploring:boolean) {
+  advance(now:number, exploring:boolean, onIgnition?:(actor:string,site:number)=>void) {
     const elapsed = Math.max(0,now-this.last);
     this.last = now;
     if (!exploring) return 0;
@@ -113,8 +113,10 @@ export class Fire {
     const active = this.active;
     if (!active) {
       if (this.armed && this.clock>=this.armed.ignites+this.fundedDelay) {
-        this.active = {site:this.armed.site,elapsed:0,losses:0};
+        const {actor,site} = this.armed;
+        this.active = {site,elapsed:0,losses:0};
         this.armed = undefined;
+        onIgnition?.(actor,site);
       } else if (!this.armed && !this.installation && this.clock>=this.next+this.fundedDelay) {
         const site = this.nextSite ?? Math.floor(this.random()*fireSites.length);
         this.active = {site,elapsed:0,losses:0};

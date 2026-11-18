@@ -10,7 +10,7 @@ import { terminals, type GameplayEvent } from '../src/gameplay';
 import { rooms, type Player } from '../src/map';
 import { decorPoint, officeGoods, privateOffices } from '../src/private-offices';
 import { npcs } from '../src/npcs';
-import { agendaDurationMs, urgentCallMission, LATE_CAMPAIGN_WINDOW_MS } from '../src/politics';
+import { agendaDurationMs, urgentCallMission, LATE_CAMPAIGN_WINDOW_MS, type Agenda } from '../src/politics';
 
 const metrics = {wallet:8,popularity:40};
 
@@ -1729,4 +1729,32 @@ test('a saved group selfie only opens a mission if a publication channel is stil
   expect(draw()).toBe(false);
   photos[0].public = false;
   expect(draw()).toBe(true);
+});
+
+test('the double knockout requires two different targets within a strict ten-second window',()=>{
+  const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+  Reflect.set(agenda,'missions',[{id:100,kind:'nocauteDuplo',current:0,target:1}]);
+  const knockout = (target:string,at:number)=>recordAgendaEvent(agenda,event('character-knocked-out',{kind:'baton',target,at}));
+  knockout('b',1);
+  knockout('b',2);
+  knockout('c',10_002);
+  expect(agenda.view(metrics).completed).toEqual([]);
+  knockout('b',20_001);
+  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'nocauteDuplo'}));
+});
+
+test('the new agenda only draws challenges with their required targets and equipment',()=>{
+  const draw = (kind:Agenda,overrides:Parameters<PersonalAgenda['updateEligibility']>[0]={...metrics,owns:()=>false})=>{
+    const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
+    Reflect.set(agenda,'missions',[]);
+    Reflect.set(agenda,'missionDeck',[kind]);
+    agenda.updateEligibility(overrides,3,true,3,0,[{id:'b',name:'B'},{id:'c',name:'C'}]);
+    return agenda.hasActive(kind);
+  };
+  expect(draw('arrombarPorta')).toBe(false);
+  expect(draw('arrombarPorta',{...metrics,officeBreachLevel:()=>1})).toBe(true);
+  expect(draw('roubarArmario',{...metrics,wallet:1,officeBreachLevel:()=>5})).toBe(false);
+  expect(draw('nocauteGabinete')).toBe(false);
+  expect(draw('nocauteGabinete',{...metrics,owns:()=>false,hasOffice:()=>true})).toBe(true);
+  expect(draw('cameraGabinete',{...metrics,owns:()=>true,hasOffice:()=>true,canInstallSpy:(_,ownOffice)=>!ownOffice})).toBe(false);
 });

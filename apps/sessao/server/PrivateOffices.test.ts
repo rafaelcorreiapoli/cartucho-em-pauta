@@ -121,7 +121,7 @@ test('cash can only be converted once at the owners safe, with interruption and 
 });
 
 test('locked doors block routes and sight, permit exit, and require a separate cabinet breach',()=>{
-  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const {players:[owner,visitor],game,world,events,act,tick,buy} = setup();
   const [home] = privateOffices;
   const failed:{id:string;message:string}[] = [];
   world.actionFailed = (id,message)=>failed.push({id,message});
@@ -165,15 +165,19 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   tick(5000);
   expect(failed).toEqual([]);
   expect(game.view(visitor,world).offices?.[0].door).toBe('breached');
+  expect(events.at(-1)).toMatchObject({type:'door-breached',actor:visitor.id,place:home.id});
   expect(findRoute(visitor,atDoor(home,true)).at(-1)).toEqual(atDoor(home,true));
   Object.assign(owner,{x:140,y:146});
   Object.assign(visitor,home.cabinet);
+  expect(act(visitor,'selfie')).toBe('Foto guardada no álbum.');
+  expect(events.at(-1)).toMatchObject({type:'photo',breachedByActor:true});
   expect(game.view(visitor,world).officeStash).toBeUndefined();
   expect(act(visitor,'office-breach-cabinet',home.id,lowTool)).toContain('insuficiente');
   act(visitor,'office-breach-cabinet',home.id,strongTool);
   tick(15_000);
   expect(game.view(visitor,world).officeStash?.items[0]?.id).toBe(document.id);
   expect(act(visitor,'office-take',home.id,document.id)).toContain('retirado');
+  expect(events.filter(event=>event.type==='recovered').at(-1)).toMatchObject({item:document.id,breachedByActor:true});
   expect(act(visitor,'office-take',home.id,document.id)).toBe('Objeto indisponível.');
   expect(act(visitor,'office-stash',home.id,document.id)).toContain('guardado');
   tick(officeRules.breachMs);
@@ -382,4 +386,33 @@ test('a locked office remains a visit objective and only entry completes it',()=
   Object.assign(visitor,home.spawn);
   tick(1);
   expect(missionState().completed.find(mission=>mission.kind==='visitaAlvo')?.person?.id).toBe(owner.id);
+});
+
+test('only the robber gets mission credit for hiding and pocketing cash from their safe breach',()=>{
+  const {players:[,visitor,peer],game,world,events,act,tick,buy} = setup(3);
+  const [home] = privateOffices;
+  const tool = buy(visitor,'lockpick');
+  const underwear = buy(visitor,'mensalUnderwear');
+  const peerUnderwear = buy(peer,'mensalUnderwear');
+  world.lootWallet = ()=>8;
+  Object.assign(visitor,home.safe);
+  act(visitor,'office-breach-safe',home.id,tool);
+  tick(officeRules.breachTimes[0]);
+  const cash = game.view(visitor,world).inventory.find(item=>item.kind==='briefcase')!;
+  act(visitor,'drop',undefined,cash.id);
+  Object.assign(peer,{x:visitor.x,y:visitor.y});
+  act(peer,'collect',undefined,cash.id);
+  expect(act(peer,'use',undefined,peerUnderwear)).toContain('Dinheiro oculto');
+  expect(events.at(-1)).toMatchObject({actor:peer.id,type:'concealment-started',cashFromOwnBreach:false});
+
+  act(peer,'drop',undefined,cash.id);
+  expect(act(visitor,'collect',undefined,cash.id)).toBe('Objeto recolhido.');
+  expect(act(visitor,'use',undefined,underwear)).toContain('Dinheiro oculto');
+  expect(events.at(-1)).toMatchObject({actor:visitor.id,type:'concealment-started',cashFromOwnBreach:true});
+
+  const ownOffice = privateOffices.find(office=>office.id===game.view(visitor,world).ownOffice)!;
+  Object.assign(visitor,ownOffice.safe);
+  act(visitor,'office-cash',ownOffice.id,cash.id);
+  tick(officeRules.cashMs);
+  expect(events.at(-1)).toMatchObject({actor:visitor.id,type:'money-pocketed',item:cash.id,cashFromOwnBreach:true});
 });

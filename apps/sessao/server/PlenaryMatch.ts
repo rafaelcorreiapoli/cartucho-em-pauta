@@ -965,7 +965,7 @@ export class PlenaryMatch {
 
   private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
 
-  advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void) {
+  advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void, ownsOfficeRoom?:(id:string,room:string)=>boolean) {
     if (!this.running) return;
     const gameNow = this.gameTime(realNow);
     if (this.pausedGameTime!==undefined) {
@@ -986,7 +986,11 @@ export class PlenaryMatch {
     this.agendaNow = Math.max(this.agendaNow,now);
     const wasCritical = this.criticalStability;
     const wasBurning = this.fire.burning;
-    const damage = this.fire.advance(now,this.phase==='negotiation');
+    const damage = this.fire.advance(now,this.phase==='negotiation',(actor,site)=>{
+      const {x,y,name} = fireSites[site];
+      this.recordGameplay({type:'fire-started',actor,position:{x,y},at:now,place:name,witnesses:[],
+        ownOffice:ownsOfficeRoom?.(actor,name)});
+    });
     if (damage) {
       this.stability = clamp(this.stability-damage);
       if (!this.stability) {

@@ -448,7 +448,8 @@ export class PoliticalEconomy {
 
   setAgendaInventory(owns:(id:string,kind:ObjectKind)=>boolean,officeStock?:(id:string)=>readonly OfficeFurniture[],
     hasAgendaDecoration?:(id:string,kind:AgendaDecoration,replacement?:boolean)=>boolean,
-    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera')=>boolean, agendaCameras?:(id:string,credited:ReadonlySet<string>)=>ReturnType<NonNullable<AgendaMetrics['agendaCameras']>>, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean) {
+    npcVotePrice?:(id:string)=>number|undefined,hasOffice?:(id:string)=>boolean,installedPizza?:(id:string)=>ReturnType<NonNullable<AgendaMetrics['installedPizza']>>, npcSignaturePrices?:(id:string)=>number[], hasLuxuryDecoration?:()=>boolean, canInstallSpy?:(id:string,kind:'wiretap'|'spyCamera',ownOffice?:boolean)=>boolean, agendaCameras?:(id:string,credited:ReadonlySet<string>)=>ReturnType<NonNullable<AgendaMetrics['agendaCameras']>>, ownsWiretap?:(id:string)=>boolean, hasCashLot?:(id:string,amount:number)=>boolean, hasKnownForeignSpy?:(id:string)=>boolean,
+    officeBreachLevel?:(id:string,target:'door'|'safe'|'cabinet')=>number) {
     for (const [id,account] of this.accounts) {
       const canAffordNpcSignatures = npcSignaturePrices && ((needed:number)=>{
         const prices = npcSignaturePrices(id).sort((a,b)=>a-b).slice(0,needed);
@@ -456,7 +457,8 @@ export class PoliticalEconomy {
         return prices.length===needed && total<=account.wallet &&
           prices.filter(price=>price>0).length<=this.paymentsLeft(id,this.agendaRound);
       });
-      Object.assign(account,{hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,agendaCameras:agendaCameras && ((credited:ReadonlySet<string>)=>agendaCameras(id,credited)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera')=>canInstallSpy(id,kind)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+      Object.assign(account,{hasKnownForeignSpy:hasKnownForeignSpy && (()=>hasKnownForeignSpy(id)),hasCashLot:hasCashLot && ((amount:number)=>hasCashLot(id,amount)),ownsWiretap:ownsWiretap && (()=>ownsWiretap(id)),hasLuxuryDecoration,agendaCameras:agendaCameras && ((credited:ReadonlySet<string>)=>agendaCameras(id,credited)),canInstallSpy:canInstallSpy && ((kind:'wiretap'|'spyCamera',ownOffice?:boolean)=>canInstallSpy(id,kind,ownOffice)),canAffordNpcSignatures,installedPizza:installedPizza && (()=>installedPizza(id)),hasOffice:hasOffice && ((target=id)=>hasOffice(target)),npcVotePrice:npcVotePrice && (()=>npcVotePrice(id)),owns:(kind:ObjectKind)=>owns(id,kind),officeStock:officeStock && (()=>officeStock(id)),
+        officeBreachLevel:officeBreachLevel && ((target:'door'|'safe'|'cabinet')=>officeBreachLevel(id,target)),
         hasAgendaDecoration:hasAgendaDecoration && ((kind:AgendaDecoration,replacement?:boolean)=>hasAgendaDecoration(id,kind,replacement))});
     }
   }

@@ -47,3 +47,23 @@ test('moving interrupts installation and only completing it spends the device',(
   fire.advance(fireRules.fuse,true);
   expect(fire.view(true)).toBeUndefined();
 });
+
+test('only a device that ignites reports an arsonist, and it reports them once',()=>{
+  const fire = new Fire();
+  const site = fireSites.length-1;
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...fireSites[site]};
+  const ignitions:[string,number][] = [];
+  const onIgnition = (actor:string,index:number)=>ignitions.push([actor,index]);
+  fire.reset(0);
+  expect(fire.plant(player,site,1,0)).toBe(true);
+  fire.updateInstallation(player,fireRules.install,()=>true,()=>true);
+  fire.advance(fireRules.fuse-1,true,onIgnition);
+  expect(ignitions).toEqual([]);
+  fire.advance(fireRules.fuse,true,onIgnition);
+  fire.advance(fireRules.fuse+1,true,onIgnition);
+  expect(ignitions).toEqual([[player.id,site]]);
+
+  fire.reset(0);
+  fire.advance(fireRules.firstAfter,true,onIgnition);
+  expect(ignitions).toEqual([[player.id,site]]);
+});
