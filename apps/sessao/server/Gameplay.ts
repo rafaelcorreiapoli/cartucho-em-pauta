@@ -429,6 +429,24 @@ export class Gameplay {
     } else this.create('pinga',this.groundPlace('pinga',player,now));
   }
 
+  prepareTrainingStep(player:Player,event:GameplayEvent['type']|undefined,world:GameplayWorld) {
+    if (!world.training) return;
+    if (event==='equipped') {
+      const item = this.wearing(player.id,'binoculars');
+      if (item) this.act(player,{kind:'unequip',item:item.id},world);
+    }
+    if (event==='signed') for (const {data} of this.inventory(player.id)) {
+      if (data.document) data.document.signatures = [];
+    }
+    if (event==='spy-installed') this.surveillance.reset();
+  }
+
+  giveTrainingItem(owner:string,kind:ObjectKind) {
+    if (this.owns(owner,kind)) return 0;
+    const item = this.create(kind,{holder:owner});
+    return cashAmount(item) ?? 0;
+  }
+
   private create(kind:ObjectKind, place:Place) {
     const data:WorldItem = {id:++this.serial,kind};
     if (kind==='xray') data.charges = xray.capacity;
@@ -1569,6 +1587,8 @@ export class Gameplay {
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Binóculo em recarga.');
       const activeUntil = world.now+binoculars.duration;
       this.binocularUse.set(id,{activeUntil,readyAt:activeUntil+binoculars.cooldown});
+      const item = this.wearing(id,'binoculars');
+      if (item) this.event(world,player,'used',item);
       return `Binóculo ativo por ${binoculars.duration/1000} s.`;
     }
     if (action.kind==='scan-xray' || action.kind==='recharge-xray') return this.useXray(player,action,world);
@@ -1682,7 +1702,7 @@ export class Gameplay {
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
-        const target = world.players.find(person=>person.id===action.target && !(action.kind==='offer' && person.bot) && this.canRequestItemAction(player,person,world));
+        const target = world.players.find(person=>person.id===action.target && !(action.kind==='offer' && person.bot && !world.training) && this.canRequestItemAction(player,person,world));
         if (!target) return this.reject(player,world,'Aproxime-se do destinatário.');
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return this.reject(player,world,'Este jogador não pode assinar o documento.');

@@ -145,6 +145,7 @@ export type PayrollView = {
 };
 
 export type PlenaryView = {
+  tutorial?:import("./tutorial").TutorialView;
   ballotCountdown?: number;
   projectWarning?: number;
   projectVoteExpired?: boolean;

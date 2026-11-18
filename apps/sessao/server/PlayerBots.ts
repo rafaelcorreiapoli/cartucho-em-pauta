@@ -116,7 +116,20 @@ export class PlayerBots {
         this.vote(bot,match,view,players,now,realNow);
         continue;
       }
-      this.explore(bot,match,gameplay,world,view,visible);
+      if (match.training) {
+        this.stop(bot);
+        const learner = world.players.find(peer=>!peer.bot && !peer.npc);
+        const game = gameplay.view(player,world);
+        if (game.call?.state==='incoming') gameplay.act(player,{kind:'answer'},world);
+        const request = game.requests[0];
+        if (request) gameplay.act(player,{kind:'accept',item:request.id},world);
+        if (match.powerOut && bot.index===0) {
+          this.go(bot,powerPanels[1],now);
+          if (canOperatePanel(player,1)) match.actOnPower(player,{kind:'repair',panel:1},now);
+        } else if (learner && bot.index===0 && Math.hypot(player.x-learner.x,player.y-learner.y)>25) {
+          this.go(bot,learner,now);
+        }
+      } else this.explore(bot,match,gameplay,world,view,visible);
       const phone = gameplay.phoneActivity(id);
       if (bot.routeRequest && (phone==='open' || phone==='game')) {
         gameplay.act(player,{kind:'phone-close'},world);

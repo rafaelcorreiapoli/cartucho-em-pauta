@@ -209,3 +209,31 @@ test.each([{roll:0,expected:'money-pocketed'}, {roll:.9,expected:'delivered'}])(
     expect(events).toContainEqual(expect.objectContaining({actor:bot.id,item:item.id,type:expected}));
     expect(gameplay.hasVisibleCash(bot.id,32_000,human.id)).toBe(false);
   });
+
+test('training bots answer calls, accept offers and sign while leaving projects idle',()=>{
+  const {match,gameplay,human,players,bots,controls,worldAt,events,advance} = gameWithBots(()=>.4);
+  match.training = true;
+  const guide = players.find(person=>person.bot)!;
+  const world = (now:number)=>({...worldAt(now),training:true,voice:()=>true});
+  Object.assign(human,stations.coffee);
+  Object.assign(guide,{x:human.x+8,y:human.y});
+  gameplay.giveTrainingItem(human.id,'coffee');
+  const coffee = gameplay.view(human,world(1)).inventory.find(item=>item.kind==='coffee')!;
+  expect(gameplay.act(human,{kind:'offer',item:coffee.id,target:guide.id},world(1))).toBe('Pedido enviado.');
+  bots.tick(match,gameplay,world(1000),()=>true);
+  expect(gameplay.view(guide,world(1000)).inventory.some(item=>item.kind==='coffee')).toBe(true);
+  expect(events.some(event=>event.type==='transferred' && event.actor===human.id)).toBe(true);
+  expect(gameplay.act(human,{kind:'call',target:guide.id},world(1001))).toBeDefined();
+  bots.tick(match,gameplay,world(2000),()=>true);
+  expect(gameplay.phoneActivity(human.id)).toBe('call');
+  gameplay.act(human,{kind:'hangup'},world(2001));
+  Object.assign(human,stations.secretary);
+  Object.assign(guide,{x:human.x+8,y:human.y});
+  gameplay.act(human,{kind:'supply',place:'secretary'},world(2002));
+  const document = gameplay.view(human,world(2002)).inventory.find(item=>item.kind==='document')!;
+  gameplay.act(human,{kind:'sign-request',item:document.id,target:guide.id},world(2003));
+  bots.tick(match,gameplay,world(3000),()=>true);
+  expect(document.document?.signatures.some(person=>person.id===guide.id)).toBe(true);
+  advance(180_000);
+  expect(match.projectIndex).toBeUndefined();
+});

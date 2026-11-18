@@ -28,6 +28,8 @@ export class Fire {
     this.delay = this.fundedDelay = 0;
   }
 
+  startTraining(site:number) { this.active = {site,elapsed:0,losses:0}; }
+
   get burning() { return this.active!==undefined; }
 
   get installer() { return this.installation?.actor; }
