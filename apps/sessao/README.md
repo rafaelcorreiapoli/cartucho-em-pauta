@@ -63,7 +63,7 @@ aprovar seja menor.
 A convocação aparece quando faltam 30 segundos. Ao abrir a votação, o servidor
 reúne os jogadores nos doze pontos de chegada do Plenário, limpa as rotas anteriores
 e fecha as três portas. Durante os 35 segundos de votação, os jogadores podem
-andar, conversar por voz geral e negociar com quem estiver próximo. Todos na sala
+andar, bater, nocautear, roubar, conversar por voz geral e negociar com quem estiver próximo. Todos na sala
 ficam visíveis entre si e os corredores permanecem sob o fog of war.
 
 A ala sul abriga o Plenário, com mesa diretora, tribuna,

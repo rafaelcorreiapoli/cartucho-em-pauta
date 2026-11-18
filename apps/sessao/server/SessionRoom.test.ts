@@ -723,16 +723,17 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const ballotAck = carrierControl.ack;
     carrier.send('input',{seq:ballotAck+1,revision:carrierControl.revision,plenary:true,motion:{x:1,y:0}});
     carrier.send('gameplay',{action:{kind:'attack'},token:4170});
+    await wait(()=>carrierControl.ack===ballotAck+1 && carrierControl.player.swing!==undefined);
+    expect(carrierControl.player.stamina).toBeLessThan(stamina!);
     await wait(()=>views.get(passenger.sessionId)!.remaining<openedBallot.remaining);
     expect(views.get(passenger.sessionId)).toMatchObject({
       sessionRemaining:openedBallot.sessionRemaining,
       payroll:openedBallot.payroll,
       budget:openedBallot.budget,
     });
-    expect(carrierControl.ack).toBe(ballotAck);
-    expect(carrierControl.player.stamina).toBe(stamina);
-    expect(carrierControl.player.swing).toBeUndefined();
-    expect(views.get(passenger.sessionId)?.gameplay?.vitality).toEqual(openedBallot.gameplay?.vitality);
+    expect(carrierControl.ack).toBe(ballotAck+1);
+    expect(carrierControl.player.x).toBeGreaterThan(PLENARY_SEATS[0].x);
+    expect(views.get(passenger.sessionId)?.gameplay?.vitality).toBeDefined();
     passenger.send('bill-vote',{vote:'yes',token:4180});
     await wait(()=>views.get(passenger.sessionId)?.vote==='yes');
     const infraction = views.get(passenger.sessionId)?.complaints?.available[0];
