@@ -207,6 +207,48 @@ test('spawned and dropped cash share visibility and custody without immediate re
   expect(game.view(bob,world).ground[0]?.id).toBe(item.id);
 });
 
+test('a purchased briefcase tracker privately follows cash custody for ten seconds',()=>{
+  const {alice,bob,game,world} = setup();
+  game.reset(0,()=>0,world.players);
+  world.spend = ()=>true;
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+12});
+  game.act(alice,{kind:'open-shop',target:'vendor'},world);
+  game.act(alice,{kind:'shop-buy',target:'briefcaseTracker',token:game.view(alice,world).dialogue?.token},world);
+  const tracker = game.view(alice,world).inventory.find(item=>item.kind==='briefcaseTracker')!;
+  expect(tracker).toBeDefined();
+
+  const create = Reflect.get(game,'create').bind(game);
+  const ground = {x:140,y:146};
+  const loose = create('briefcase',{ground,expires:5000});
+  const carried = create('briefcase',{holder:bob.id});
+  const archived = create('briefcase',{storage:'archive'});
+  const office = privateOffices[0];
+  const stashed = create('briefcase',{storage:`office:${office.id}`});
+  create('bundle',{ground});
+
+  const use = {kind:'use',item:tracker.id} as const;
+  expect(game.act(bob,use,world)).toBe('O objeto não está com você.');
+  expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
+  expect(game.act(alice,use,world)).toContain('Rastreador ativo');
+  expect(game.view(alice,world).inventory).toEqual([]);
+  expect(game.view(bob,world).briefcaseTracking).toBeUndefined();
+  expect(game.view(alice,world).briefcaseTracking).toEqual({seconds:10,markers:[
+    {id:loose.id,...ground},
+    {id:carried.id,x:bob.x,y:bob.y},
+    {id:archived.id,x:terminals.archive.point.x,y:terminals.archive.point.y},
+    {id:stashed.id,...office.cabinet},
+  ]});
+
+  world.now = 5000;
+  bob.x += 12;
+  expect(game.view(alice,world).briefcaseTracking?.markers).not.toContainEqual({id:loose.id,...ground});
+  expect(game.view(alice,world).briefcaseTracking?.markers).toContainEqual({id:carried.id,x:bob.x,y:bob.y});
+  world.now = 9999;
+  expect(game.view(alice,world).briefcaseTracking?.seconds).toBe(1);
+  world.now = 10_000;
+  expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
+});
+
 test.each([3,12])('cash reappears sooner with %i competing players', contenders=>{
   const {alice,game,world} = setup();
   Object.assign(alice,{x:140,y:146});

@@ -2,7 +2,7 @@ import {investmentRules} from './public-investments';
 import { credentialGoods } from './installations';
 import { incendiary } from './fire';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
-import { concealment, equipment, gearConflict, isGear } from './equipment';
+import { briefcaseTracker, concealment, equipment, gearConflict, isGear } from './equipment';
 import {canStackItem,hasInventorySpace,type ObjectKind,type WorldItem} from './gameplay';
 import { foods } from './food';
 import { documentRules,internalMailRules } from './internal-mail';
@@ -12,6 +12,7 @@ import { spyProducts } from './surveillance';
 
 const supplies = {
   mensalUnderwear:concealment,
+  briefcaseTracker,
   forensicKit:{price:documentRules.kitPrice},
   firstAidKit,
   incendiary,

@@ -19,6 +19,7 @@ export function equippedWeapon(items:readonly {kind:string}[] = []) {
   }
 }
 
+export const briefcaseTracker = {duration:10_000,price:2} as const;
 export const concealment = {duration:45_000,price:2} as const;
 export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as const;
 export const xrayNeedsRecharge = (charges?:number) => (charges ?? 0)<xray.capacity;

@@ -168,7 +168,7 @@ async function connect(join: () => Promise<Room>) {
     };
     closeDetails();
     const hudListeners = new AbortController();
-    const updateFloorPlan = bindFloorPlan(session,hudListeners.signal);
+    const floorPlan = bindFloorPlan(session,hudListeners.signal);
     mountConnectionLatency(document.getElementById('connection-latency-mount')!,joined,hudListeners.signal);
     document.addEventListener('keydown',event=>{
       if (event.defaultPrevented || event.key!=='Escape' || document.querySelector('dialog:modal') ||
@@ -372,6 +372,7 @@ async function connect(join: () => Promise<Room>) {
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
       ballotCountdown.update(view.ballotCountdown);
+      floorPlan.track(view.gameplay?.briefcaseTracking);
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
@@ -454,7 +455,7 @@ async function connect(join: () => Promise<Room>) {
       if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;
       progression.player(snapshot.player);
       reactHud.player(snapshot.player);
-      updateFloorPlan(snapshot.player);
+      floorPlan.player(snapshot.player);
       game?.reconcile(snapshot);
     });
     joined.onMessage('players',(players: Player[]) => {
