@@ -134,10 +134,14 @@ async page => {
     await receiver.keyboard.press('Escape');
     await page.locator(dialog).waitFor({state:'hidden'});
     await receiver.locator(dialog).waitFor({state:'hidden'});
+    const balances = [];
     for (const client of [page,receiver]) {
       await client.keyboard.press('c');
       await client.locator(dialog).getByRole('button',{name:'Pix',exact:true}).click();
-      await client.locator(dialog).locator('.pix-balance').getByText('R$ 80 mil',{exact:true}).waitFor();
+      const balance = await client.locator(dialog).locator('.pix-balance strong').innerText();
+      const amount = /^R\$ (\d+) mil$/.exec(balance)?.[1];
+      if (amount===undefined) throw Error(`Saldo Pix inesperado: ${balance}`);
+      balances.push(Number(amount));
     }
     if (await page.locator('#trade-dock, #trade-contact').count()) throw Error('Legacy transfer controls are still mounted');
     if (!await page.locator('#institutional-dialog #institutional-actions').count()) throw Error('Missing institutional panel');
@@ -145,6 +149,8 @@ async page => {
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
     const cashReward = await receiver.locator('[aria-label="Objetivos ativos"]')
       .getByText('Receba dinheiro de outro parlamentar',{exact:true}).count();
+    const senderReward = await page.locator('[aria-label="Objetivos ativos"]')
+      .getByText('Transfira R$ 10 mil para Bia',{exact:true}).count();
     const transfer = pix.getByRole('button',{name:'Transferir',exact:true});
     if (!await transfer.isDisabled()) throw Error('O Pix deve exigir um destinatário');
     await page.keyboard.press('1');
@@ -168,11 +174,11 @@ async page => {
       page.locator('#wallet-effects .wallet-loss[style]').getByText('−R$ 10 mil',{exact:true}).waitFor(),
       palette.getByRole('button',{name:/Transferir/}).click(),
     ]);
-    await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
+    await pix.locator('.pix-balance').getByText(`R$ ${balances[0]-10+(senderReward ? 20 : 0)} mil`,{exact:true}).waitFor();
     if (await page.evaluate(()=>window.syntheticPixClicks)!==0) throw Error('O atalho simulou clique para transferir');
 
     const receivedBalance = receiver.locator(dialog).locator('.pix-balance');
-    await receivedBalance.getByText(cashReward ? 'R$ 110 mil' : 'R$ 90 mil',{exact:true}).waitFor();
+    await receivedBalance.getByText(`R$ ${balances[1]+10+(cashReward ? 20 : 0)} mil`,{exact:true}).waitFor();
     await receiver.getByText('Pix recebido',{exact:true}).waitFor();
     if (await page.getByText('Pix recebido',{exact:true}).count()) throw Error('Sender received the private Pix notification');
 
