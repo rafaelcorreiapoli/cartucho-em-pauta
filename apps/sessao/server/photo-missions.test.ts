@@ -27,7 +27,7 @@ test('photo rules count distinct people and distinguish a visible briefcase from
 test('the phone photo counts only the two rooms named in the mission',()=>{
   const author = {id:'a',name:'A'};
   const center = {x:240,y:79};
-  const photo:Photo = {id:1,at:0,author,center,selfie:false,location:'Antecâmara',
+  const photo:Photo = {id:1,at:0,author,center,selfie:false,location:'Enfermaria',
     people:[],ground:[],decorations:[],transfers:[]};
   const event:GameplayEvent = {type:'photo',actor:author.id,position:center,at:0,witnesses:['b'],photo};
   const guest = {id:'b',name:'B',character:0,direction:0,phone:'game' as const};
@@ -45,7 +45,7 @@ test('a meeting photo requires the configured number of distinct colleagues in o
   const author = {id:'a',name:'A'};
   const center = {x:240,y:79};
   const guest = {id:'b',name:'B',character:0,direction:0,...center};
-  const photo:Photo = {id:1,at:0,author,center,selfie:false,location:'Antecâmara',
+  const photo:Photo = {id:1,at:0,author,center,selfie:false,location:'Enfermaria',
     people:[guest,{...guest}],ground:[],decorations:[],transfers:[]};
   const event:GameplayEvent = {type:'photo',actor:author.id,position:center,at:0,witnesses:[],photo};
   expect(photoMissions.reuniaoFoto.players).toBe(photoMissionCounts.reuniaoFoto+1);

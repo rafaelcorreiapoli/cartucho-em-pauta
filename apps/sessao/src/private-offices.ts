@@ -1,17 +1,17 @@
 import type { Motion, Rect } from './map';
 
-import { circulationBounds, mapDoor, mapPoint, roomBounds } from './congress-layout';
+import { mapDoor, mapPoint, roomBounds } from './congress-layout';
 
-const offices = [-1,-1,1,1,1,-1] as const;
-
-const [left,top,width,height] = circulationBounds('Anexo leste');
-export const eastAnnex = {left,right:left+width,top,bottom:top+height};
-
-export const privateOffices = offices.map((inside,index)=>{
+export const privateOffices = Array.from({length:6},(_,index)=>{
   const id = String(index+1);
   const name = `Gabinete ${id.padStart(2,'0')}`;
+  const bounds = roomBounds(name);
+  const door = mapDoor(name);
+  const [x,y,width,height] = door;
+  const vertical = height>width;
+  const inside = vertical ? {x:Math.sign(bounds[0]-x),y:0} : {x:0,y:Math.sign(bounds[1]-y)};
   return {
-    id,name,bounds:roomBounds(name),door:mapDoor(name),inside,
+    id,name,bounds,door,inside,
     spawn:mapPoint(`${name}: entrada`),safe:mapPoint(`${name}: cofre`),cabinet:mapPoint(`${name}: armário`),
   };
 });
@@ -76,4 +76,6 @@ export const officeActions:readonly OfficeAction[] = [
   'office-breach-door','office-breach-cabinet','office-upgrade-door','office-upgrade-cabinet','office-install','office-remove','office-cancel',
 ];
 export type OfficeOption = {label:string; kind:OfficeAction; place?:string; item?:number};
-export const officeDoorPoint = ({door:[x,y,w,h]}:OfficeLayout) => ({x:x+w/2,y:y+h/2});
+export function officeDoorPoint({door:[x,y,w,h],inside}:OfficeLayout, offset=0) {
+  return {x:x+w/2+inside.x*offset,y:y+h/2+inside.y*offset};
+}

@@ -460,7 +460,7 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(game.act(visitor,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(completedCeremonial()).toBe(false);
   const {x,y} = installationSites.hall.point;
-  Object.assign(visitor,{x:x-24,y:y+19});
+  Object.assign(visitor,{x:x-24,y:y+12});
   world.now += 2_000;
   expect(game.act(visitor,{kind:'photo'},world)).toBe('Foto guardada no álbum.');
   expect(completedCeremonial()).toBe(false);
@@ -470,7 +470,7 @@ test('photo missions use live portrait and VIP installations when drawing',()=>{
   expect(economy.spend(owner.id,6)).toBe(true);
   install(colleague,'technicalVip');
   expect(draw()).toEqual(['autorretrato','fiscalVip','cafe']);
-  Object.assign(owner,{x:x-24,y:y+19});
+  Object.assign(owner,{x:x-24,y:y+12});
   expect(game.act(owner,{kind:'selfie'},world)).toBe('Foto guardada no álbum.');
   expect(economy.view(owner.id,[],0,false,()=>true)?.missions.completed.some(mission=>mission.kind==='autorretrato')).toBe(true);
   Object.assign(owner,installationSites.technicalVip.point);

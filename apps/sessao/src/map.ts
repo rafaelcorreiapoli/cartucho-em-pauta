@@ -1,8 +1,8 @@
 import {investmentRules} from './public-investments';
 import { equipment } from './equipment';
-import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
+import { officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
-import { carrySpeedFactor, infirmary } from './medical';
+import { carrySpeedFactor } from './medical';
 import { mapNpcs, npcs } from './npcs';
 
 import { desks, furnishings, HEIGHT, mapDoor, mapPoint, roomBounds, rooms, seats, walls, WIDTH } from './congress-layout';
@@ -56,7 +56,7 @@ const [plenaryLeft,plenaryTop,plenaryWidth] = PLENARY_BOUNDS;
 const southRooms = [...privateOffices,isolationRoom].filter(({bounds})=>bounds[1]>=plenaryTop);
 
 export function canStand(x: number, y: number) {
-  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT || (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom))) return false;
+  if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT) return false;
   if (y>plenaryTop && (x<plenaryLeft+6 || x>plenaryLeft+plenaryWidth-6) && !southRooms.some(({bounds:[left,top,width,height]})=> x>=left && x<=left+width && y>=top && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
 }

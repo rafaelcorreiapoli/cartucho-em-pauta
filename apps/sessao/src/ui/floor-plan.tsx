@@ -27,7 +27,7 @@ export function FloorPlan({marker,tracking}:{marker:(element:HTMLDivElement|null
       {tracking && <span>Rastreador de maletas · {tracking.seconds} s</span>}
       <span>Solte <kbd>Tab</kbd> para voltar</span>
     </header>
-    <div className="floor-plan-drawing">
+    <div className="floor-plan-drawing" style={{aspectRatio:WIDTH/HEIGHT}}>
       <FloorPlanLayout/>
       {tracking?.markers.map(({id,x,y})=><img key={id} className="floor-plan-briefcase"
         src={import.meta.env.BASE_URL+'assets/maleta-social.png'} alt="Maleta de dinheiro"

@@ -98,13 +98,14 @@ test('clients share movement and voice, then receive private roles and payments'
     await until(()=>controls.get(first.sessionId)?.ack===seq);
     expect([...acknowledged]).toEqual(Array.from({length:MAX_QUEUED_INPUTS},(_,index)=>firstBurstSeq+index));
     expect(observed.length-visualSnapshotsBeforeBurst).toBeLessThan(MAX_QUEUED_INPUTS);
-    first.send('input',{seq:++seq,destination:{x:240,y:70}});
+    const destination = {x:240,y:94};
+    first.send('input',{seq:++seq,destination});
     for (let step=0;step<55;step++) {
-      if (Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1) break;
+      if (Math.hypot(findFirst()!.x-destination.x,findFirst()!.y-destination.y)<1) break;
       first.send('input',{seq:++seq});
       await Bun.sleep(50);
     }
-    await until(() => Math.hypot(findFirst()!.x-240,findFirst()!.y-70)<1);
+    await until(() => Math.hypot(findFirst()!.x-destination.x,findFirst()!.y-destination.y)<1);
     expect(observed.some(player => player.y>114 && player.y<132)).toBe(true);
     expect(observed.every(player => canStand(player.x,player.y))).toBe(true);
     const roster: string[][] = [];
