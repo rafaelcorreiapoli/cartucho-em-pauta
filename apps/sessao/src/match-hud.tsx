@@ -67,7 +67,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const gear = mountEquippedGear(element('equipped-gear'),useEquipped,inspectBriefcase);
   function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
-    if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
+    if (!previous?.gameplay || previous.ballotCountdown!==undefined || !own || own.knockedOut || own.carrying || own.carried) return false;
     if (kind==='attack' ? !equippedWeapon(equipped) :
         !equipped?.some(item=>equipmentControls[item.kind as keyof typeof equipmentControls]?.action===kind)) return false;
     sendField({kind});
@@ -127,7 +127,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   function actions(view:PlenaryView | undefined = previous) {
     const player = own;
-    const exploring = view?.phase==='negotiation' && !player?.knockedOut;
+    const exploring = !!view?.gameplay && !player?.knockedOut;
     const interactionView = exploring ? view : undefined;
     const installing = !!interactionView?.gameplay?.installationProgress;
     const field = fieldActions(installing ? undefined : interactionView,player,roster);

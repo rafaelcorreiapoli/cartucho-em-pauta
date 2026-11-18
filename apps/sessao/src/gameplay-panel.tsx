@@ -290,7 +290,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
-    const canOffer = !!offerTarget && view.phase==='negotiation' && contacts.some(person=>(view.tutorial || !person.bot) && person.id===offerTarget?.id);
+    const canOffer = !!offerTarget && !!view.gameplay && contacts.some(person=>(view.tutorial || !person.bot) && person.id===offerTarget?.id);
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
@@ -390,7 +390,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       content = renderBag();
     }
     if (equipmentOpen) {
-      content = <EquipmentPanel state={state} available={phase==='negotiation' && !state.vitality?.recovery}
+      content = <EquipmentPanel state={state} available={!!previous?.gameplay && !state.vitality?.recovery}
         send={send} close={()=>dialog.close()}/>;
     }
 
@@ -417,14 +417,14 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
-        if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
+        if (isGear(item.kind) && !!previous?.gameplay) act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
         if (consumable) actions.push({label:consumable.label,run:()=>{
           send(consumable.action);
           if (item.kind==='briefcaseTracker') dialog.close();
         }});
-        if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
+        if (!!previous?.gameplay) for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : item.kind==='vip' ? 'Reservar cadeira' : 'Instalar ou substituir';
           if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
@@ -447,20 +447,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     if (decoration) {
       content = <DecorationCard decoration={decoration} ownId={ownId}
-        exploring={phase==='negotiation'} canRemove={canRemoveDecoration} send={send} close={()=>dialog.close()}/>;
+        exploring={!!previous?.gameplay} canRemove={canRemoveDecoration} send={send} close={()=>dialog.close()}/>;
     }
     const showMail = phone && app==='Correio';
     if (phone && app && !showMail) {
       let application:ReactNode;
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
-        available={phase==='negotiation'} send={send} close={closePhoneApp}/>;
-      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={phase==='negotiation'} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
+        available={!!previous?.gameplay} send={send} close={closePhoneApp}/>;
+      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={!!previous?.gameplay} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
-        available={phase==='negotiation'} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
+        available={!!previous?.gameplay} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
       if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
       if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
-      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && phase==='negotiation',closePhoneApp);
+      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && !!previous?.gameplay,closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
     mailHost.hidden = !showMail;
@@ -672,7 +672,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const information = view.gameplay && photos.request;
       const old = previous?.gameplay;
       previous = view;
-      if (view.phase!=='negotiation') { pendingPickup = undefined; nearbyActions.update([]); nearbyKey = ''; }
+      if (!view.gameplay) { pendingPickup = undefined; nearbyActions.update([]); nearbyKey = ''; }
         if (!view.gameplay && dialog.open) dialog.close();
       slots.hidden = !view.gameplay;
       if (view.gameplay) renderSlots(view.gameplay.inventory.filter(occupiesInventorySlot));

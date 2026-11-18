@@ -559,7 +559,7 @@ export class PlenaryMatch {
   isolated(id:string) { return this.running && (this.expelled.has(id) || this.economy.suspended(id)); }
 
   canHandleObjects(id:string, now:number) {
-    return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.cassationOpen);
+    return this.electorate.has(id) && !this.isolated(id) && now<this.ends && (this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing');
   }
 
   private projectVoteExpired(now:number) {

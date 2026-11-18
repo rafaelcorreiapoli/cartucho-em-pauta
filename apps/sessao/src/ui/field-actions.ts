@@ -78,7 +78,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
     if (player.carrying) {
       actions.push({label:'Soltar jogador',icon:'cross',action:{kind:'release'}});
     } else {
-      if (view?.phase==='negotiation' && view.ballotCountdown===undefined && !player.knockedOut && !player.carried) {
+      if (view?.gameplay && view.ballotCountdown===undefined && !player.knockedOut && !player.carried) {
         for (const option of decorationActions(player.id,state)) {
           actions.push({...option,icon:option.action.kind==='uninstall' ? 'inventory' : 'map'});
         }

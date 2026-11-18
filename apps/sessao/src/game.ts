@@ -88,7 +88,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     keys.clear();
     shiftKeys.clear();
   };
-  const movementPaused = () => phase==='ballot' || phase==='hearing' || plenaryView?.ballotCountdown!==undefined;
+  const movementPaused = () => plenaryView?.ballotCountdown!==undefined;
   document.addEventListener('keydown', event => {
     if (movementPaused() || event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey ||
       (!running && event.target!==parent) || hudConsumesKeys(event.target)) return;
@@ -232,7 +232,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const fixture = this.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
         const option = ()=>{
           const player = local.state?.player;
-          if (!player || !negotiating || !plenaryView?.gameplay || plenaryView.ballotCountdown!==undefined) return;
+          if (!player || !running || !plenaryView?.gameplay || plenaryView.ballotCountdown!==undefined) return;
           return powerOption(player,panel,plenaryView.outage,plenaryView.canSabotagePower);
         };
         this.registerInteraction(fixture,()=>!!option(),()=>{
@@ -612,7 +612,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible);
       }
       for (const [art,{outline,ready}] of this.interactionTargets) {
-        outline.setVisible(negotiating && art.visible && ready());
+        outline.setVisible(running && art.visible && ready());
       }
 
       for (const [id,view] of this.views) {
