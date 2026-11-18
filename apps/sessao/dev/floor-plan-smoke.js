@@ -12,7 +12,7 @@ async page => {
   await page.keyboard.down('Tab');
   const plan = page.getByRole('region',{name:'Planta do Congresso'});
   await plan.waitFor();
-  for (const room of ['Tesouraria','Gabinete de Luxo','Gabinete 06','Enfermaria','Plenário']) {
+  for (const room of ['Tesouraria','Gabinete de Luxo','Gabinete 05','Gabinete 06','Enfermaria','Plenário']) {
     await plan.getByText(room,{exact:true}).waitFor();
   }
   if (!await plan.locator('.floor-plan-wall').count() || await plan.getByText('Planta QA').count()) {

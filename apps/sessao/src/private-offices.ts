@@ -1,6 +1,9 @@
 import type { Motion, Rect } from './map';
 
-import { mapDoor, mapPoint, roomBounds } from './congress-layout';
+import { circulationBounds, mapDoor, mapPoint, roomBounds } from './congress-layout';
+
+const [left,top,width,height] = circulationBounds('Anexo leste');
+export const eastAnnex = {left,right:left+width,top,bottom:top+height};
 
 export const privateOffices = Array.from({length:6},(_,index)=>{
   const id = String(index+1);

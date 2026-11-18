@@ -9,7 +9,7 @@
   pointer-events: auto;
 }
 .floor-plan-panel {
-  width: min(94vw, 108dvh, 75rem);
+  width: min(94vw, 125dvh, 75rem);
 }
 .floor-plan-panel header {
   display: flex;

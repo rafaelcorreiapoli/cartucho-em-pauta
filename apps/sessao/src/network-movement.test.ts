@@ -157,7 +157,7 @@ test('bursty confirmations and a stalled connection do not rewind predicted move
 });
 
 test('a long route across the Congress remains walkable after compressing straight segments',()=>{
-  const start = {x:830.5,y:599};
+  const start = privateOffices[4].spawn;
   const destination = {x:140,y:146};
   const state:ControlState = {
     player:{id:'p',nick:'P',character:0,direction:0,moving:false,...start},route:[],ack:0,
