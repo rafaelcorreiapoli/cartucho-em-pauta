@@ -44,6 +44,7 @@ const interactionDuration = (player:Player, baseMs:number) =>
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
 const cashLifetime = 55_000;
+const baseCashSpawnRate = 1.5;
 const terminalKeys = Object.keys(terminals) as Terminal[];
 const locations = (player:Player) => terminalKeys.filter(key => canReachObject(player,terminals[key].point));
 
@@ -485,7 +486,7 @@ export class Gameplay {
   private spawnCash({now,players,present,cashFlow}:GameplayWorld) {
     if (now<this.nextCashSpawn) return;
     const contenders = players.filter(player=>!player.npc && present?.(player.id)!==false).length;
-    const spawnRate = Math.sqrt(Math.max(1,contenders/3));
+    const spawnRate = baseCashSpawnRate*Math.sqrt(Math.max(1,contenders/3));
     this.nextCashSpawn = now+(8000+this.random()*10000)/spawnRate;
     const ground = this.groundItems(now);
     const barriers = this.privateOffices.doors(now);
