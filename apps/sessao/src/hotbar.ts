@@ -1,5 +1,7 @@
 import {isGear} from './equipment';
-import {INVENTORY_SLOTS, occupiesInventorySlot, type WorldItem} from './gameplay';
+import {occupiesInventorySlot, type WorldItem} from './gameplay';
+
+export const HOTBAR_SLOTS = 6;
 
 export const canPinToHotbar = (item:Pick<WorldItem,'kind'>) => occupiesInventorySlot(item) && !isGear(item.kind);
 
@@ -12,7 +14,7 @@ export function reconcileHotbar(slots:readonly (number|undefined)[], inventory:r
 }
 
 export function emptyHotbar() {
-  return Array<number|undefined>(INVENTORY_SLOTS).fill(undefined);
+  return Array<number|undefined>(HOTBAR_SLOTS).fill(undefined);
 }
 
 export function pinPurchasedConsumable(slots:readonly (number|undefined)[], item:number) {

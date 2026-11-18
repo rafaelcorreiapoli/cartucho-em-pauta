@@ -97,6 +97,14 @@ async page => {
   const bag = page.getByRole('dialog',{name:'Inventário'});
   const bagCoffee = bag.getByRole('button',{name:'Café',exact:true});
   await bagCoffee.waitFor();
+  const bagSlots = bag.locator('.bag-storage .congress-bag > .item-tile');
+  if (await bagSlots.count()!==9) throw Error('O inventário deve ter nove slots.');
+  if (await bag.getByText(/\d+\s*\/\s*9 slots/).count()) throw Error('O contador de slots ainda está visível.');
+  const storage = await bag.locator('.bag-storage').boundingBox();
+  const lastSlot = await bagSlots.last().boundingBox();
+  if (!storage || !lastSlot || Math.abs(storage.y+storage.height-(lastSlot.y+lastSlot.height))>5) {
+    throw Error('A terceira linha deve chegar ao fim da área do inventário.');
+  }
   const bagGeometry = ()=>Promise.all([bag.boundingBox(),bag.locator('.bag-detail').boundingBox(),
     bag.locator('.bag-preview').boundingBox()]);
   const emptyGeometry = JSON.stringify(await bagGeometry());

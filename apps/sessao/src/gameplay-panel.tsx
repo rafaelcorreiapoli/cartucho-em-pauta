@@ -9,7 +9,7 @@ import { PhoneCalls } from './ui/phone-call';
 import {ProjectCatalog} from './ui/project-catalog';
 import { PhoneApps, type PhoneApp } from './ui/phone-apps';
 import { Backpack, Coffee, Grid2X2, Shirt, Download } from 'lucide';
-import {assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
+import {HOTBAR_SLOTS, assignHotbarSlot, canPinToHotbar, emptyHotbar, pinPurchasedConsumable, reconcileHotbar} from './hotbar';
 import type { ReactNode } from 'react';
 import type {ShortcutEntry} from './action-shortcuts';
 import {useDialogKeys} from './ui/use-dialog-keys';
@@ -363,7 +363,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
             return <button key={entry.id} type="button" className="hud-button hud-button--secondary"
               aria-pressed={selection?.id===entry.id} onClick={()=>chooseItem(entry)}>{label}</button>;
           })}
-          <p className="bag-capacity"><BagIcon name="bag"/>{inventory.length} / {INVENTORY_SLOTS} slots</p>
         </div>
         <div className="bag-detail">{offerTarget && !canOffer && <p role="status">Aproxime-se de {offerTarget.name} para oferecer um item.</p>}{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
         {!offerTarget && <footer className="bag-preview">
@@ -507,7 +506,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function hotbarShortcuts():ShortcutEntry[] {
     if (!hotbarVisible()) return [];
-    return Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+    return Array.from({length:HOTBAR_SLOTS},(_,index)=>{
       const {item,label} = hotbarControl(index);
       return {name:label,activate:()=>{
         if (hotbarVisible() && hotbar[index]===item?.id) activateHotbar(index);
@@ -516,7 +515,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   }
 
   function highlightSlot() {
-    slotsRoot.render(Array.from({length:INVENTORY_SLOTS},(_,index)=>{
+    slotsRoot.render(Array.from({length:HOTBAR_SLOTS},(_,index)=>{
       const {item,shortcut,use,label} = hotbarControl(index);
       const badge = <kbd className="slot-key" aria-hidden="true">⇧ + {shortcut}</kbd>;
       if (!item) return <button type="button" className="item-tile item-tile-empty" key={index}
