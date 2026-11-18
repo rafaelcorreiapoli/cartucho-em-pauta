@@ -138,18 +138,23 @@ export class GameAudio {
     this.play(name,.62,0,1);
   }
   progression(cue:'levelUp'|'attribute') {
+    if (cue==='levelUp') this.playNotes([523.25,659.25,783.99,1046.5],.086,.28,.19);
+    else this.playNotes([659.25,880],.055,.12,.085);
+  }
+
+  actionFailed() { this.playNotes([392,294],.066,.105,.085); }
+
+  private playNotes(notes:number[],spacing:number,duration:number,level:number) {
     const {context,effectsGain} = this;
     if (!this.playing || !context || !effectsGain) return;
-    const notes = cue==='levelUp' ? [523.25,659.25,783.99,1046.5] : [659.25,880];
     notes.forEach((frequency,index)=>{
-      const start = context.currentTime+index*(cue==='levelUp' ? .086 : .055);
-      const duration = cue==='levelUp' ? .28 : .12;
+      const start = context.currentTime+index*spacing;
       const tone = context.createOscillator();
       const envelope = context.createGain();
       tone.type = index===0 ? 'triangle' : 'sine';
       tone.frequency.value = frequency;
       envelope.gain.setValueAtTime(.0001,start);
-      envelope.gain.exponentialRampToValueAtTime(cue==='levelUp' ? .19 : .085,start+.014);
+      envelope.gain.exponentialRampToValueAtTime(level,start+.014);
       envelope.gain.exponentialRampToValueAtTime(.0001,start+duration);
       tone.connect(envelope).connect(effectsGain);
       tone.onended = () => { tone.disconnect(); envelope.disconnect(); };

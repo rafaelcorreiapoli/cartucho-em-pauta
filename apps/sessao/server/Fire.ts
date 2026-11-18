@@ -66,17 +66,18 @@ export class Fire {
   }
 
   updateInstallation(player:Player|undefined, now:number,
-    owns:(actor:string,item:number)=>boolean, consume:(actor:string,item:number)=>boolean) {
+    owns:(actor:string,item:number)=>boolean, consume:(actor:string,item:number)=>boolean,
+    reject = (message:string)=>message) {
     const job = this.installation;
     if (!job) return;
     if (!player || player.id!==job.actor || player.moving || player.x!==job.x || player.y!==job.y ||
         player.hit!==job.hit || player.swing!==job.swing || !canActOnFire(player,job.site) || !owns(job.actor,job.item)) {
       this.installation = undefined;
-      return 'Instalação interrompida.';
+      return reject('Instalação interrompida.');
     }
     if (now<job.started+fireRules.install) return;
     this.installation = undefined;
-    if (!consume(job.actor,job.item)) return 'Instalação interrompida.';
+    if (!consume(job.actor,job.item)) return reject('Instalação interrompida.');
     this.armed = {site:job.site,ignites:this.clock+fireRules.fuse};
     return 'Incendiário instalado.';
   }

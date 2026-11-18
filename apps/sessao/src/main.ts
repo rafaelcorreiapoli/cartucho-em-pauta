@@ -282,6 +282,26 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
       hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
+    const actionFeedback = document.querySelector<HTMLElement>('#map-action-feedback')!;
+    let actionFeedbackTimer:ReturnType<typeof setTimeout>|undefined;
+    const clearActionFeedback = () => {
+      clearTimeout(actionFeedbackTimer);
+      actionFeedback.hidePopover();
+      actionFeedback.textContent = '';
+    };
+    hudListeners.signal.addEventListener('abort',clearActionFeedback,{once:true});
+    joined.onMessage('map-action-failed',(message:string)=>{
+      if (room!==joined) return;
+      gameplay.resetPendingPickup();
+      const repeated = actionFeedback.textContent===message;
+      if (!repeated) {
+        actionFeedback.showPopover();
+        actionFeedback.textContent = message;
+        audio.actionFailed();
+      }
+      clearTimeout(actionFeedbackTimer);
+      actionFeedbackTimer = setTimeout(clearActionFeedback,2500);
+    });
     joined.onMessage('gameplay-feedback',(message:string)=>{
       if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
