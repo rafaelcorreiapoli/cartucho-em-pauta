@@ -148,12 +148,7 @@ button.equipped-gear-tile { cursor: pointer; }
 }
 #command-strip #election-dock > #open-election-polls:hover,
 #command-strip #election-dock > #open-election-polls[aria-expanded="true"] { background: #345143; }
-#command-strip #election-dock > #open-election-polls > .hud-glyph { width: 15px; height: 15px; color: var(--party-gold); }
-#open-election-polls > .action-key { position: static; }
-#command-strip .election-summary, #command-strip .election-clock { display: flex; align-items: center; gap: 6px; }
 #command-strip .election-clock { padding: 0 0 0 9px; border-left: 1px solid var(--command-divider); background: transparent; }
-#command-strip :is(#current-office,#election-position,#election-timer,.election-clock small) { font: 600 12px/1 system-ui, sans-serif; }
-#command-strip #election-position { color: var(--command-muted); }
 #command-strip #election-dock[data-urgency="high"] #election-timer { color: #ffac95; }
 #command-strip #election-dock .politics-content { inset: calc(100% + 6px) 0 auto auto; }
 

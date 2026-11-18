@@ -72,8 +72,11 @@ async page => {
   for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
   await page.locator('#congress-dock').waitFor({state:'visible'});
   const election = page.locator('#election-dock');
-  await election.locator('#current-office').filter({hasText:/^1º · Histórico QA$/}).waitFor();
-  await election.locator('#election-position').filter({hasText:/^Você · 1º/}).waitFor();
+  await election.getByText('Pesquisa Eleitoral',{exact:true}).waitFor();
+  const onlyLeader = election.locator('.election-leader');
+  await onlyLeader.getByText('Histórico QA',{exact:true}).waitFor();
+  await onlyLeader.locator('.poll-rank[data-rank="1"]').waitFor();
+  if (await election.locator('.election-personal, kbd').count()) throw Error('Placar mostra uma linha pessoal redundante ou o atalho visual');
   if (await election.getAttribute('data-at-risk')!==null) throw Error('Alerta eleitoral sem risco de eliminação');
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
@@ -190,6 +193,12 @@ async page => {
     await start.click();
     await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
     await sheet.waitFor();
+    const personal = election.locator('.election-personal');
+    await personal.getByText('Votação lotada QA',{exact:true}).waitFor();
+    await personal.getByText('Em risco',{exact:true}).waitFor();
+    const alertGlows = await election.locator('#open-election-polls').evaluate(button=>
+      button.closest('#election-dock').dataset.atRisk==='true' && getComputedStyle(button).boxShadow!=='none');
+    if (!alertGlows) throw Error('O placar não destaca o risco de eliminação');
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});
     await page.evaluate(()=>window.ballotGuests[0].send('bill-vote',{vote:'abstain',token:1}));
@@ -211,6 +220,9 @@ async page => {
       if (width<=760 && notices && notices.height>0 && notices.y<standing.y+standing.height) {
         throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
       }
+      const portraitOnRight = await election.locator('.election-leader').evaluate(row=>
+        row.querySelector('.poll-avatar').getBoundingClientRect().left>=row.querySelector('.election-name').getBoundingClientRect().right);
+      if (!portraitOnRight) throw Error('Retrato do líder desalinhado no placar eleitoral');
       const layout = await roster.evaluate(list=>{
         const bounds = list.getBoundingClientRect();
         const cards = [...list.children].map(card=>card.getBoundingClientRect());

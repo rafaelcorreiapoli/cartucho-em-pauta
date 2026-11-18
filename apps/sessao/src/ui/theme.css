@@ -95,7 +95,6 @@
 @media (min-width:641px) and (max-width:1220px) {
   #command-strip { grid-template-columns:minmax(0,1fr) auto minmax(0,1.2fr); gap:8px; }
   #command-strip #election-dock { min-width:0; }
-  #command-strip .election-summary { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 }
 @media (max-width:380px) {
   .react-resource button { display:none; }
