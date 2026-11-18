@@ -625,15 +625,16 @@
 .congress-session-clock[data-urgent="true"] strong,
 .congress-budget[data-in-debt="true"] strong, .congress-debt { color: #ffb2a4; }
 
-#command-strip #election-dock { width: 100%; }
+#command-strip #election-dock { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: end; width: 100%; }
 #command-strip #election-dock > #open-election-polls {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 5px;
-  width: 220px;
-  max-width: 100%;
-  padding: 7px;
+  width: 100%;
+  max-width: 220px;
+  min-width: 0;
+  padding: 7px 0;
   border: 0;
   background: none;
   text-shadow: 0 1px 4px #030906;
@@ -651,7 +652,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding-inline: 5px;
+  padding-inline: 0;
   font-weight: 750;
   white-space: normal;
 }
@@ -661,7 +662,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  padding: 3px 6px;
+  padding: 3px 0;
 }
 .election-leader {
   padding-block: 5px;

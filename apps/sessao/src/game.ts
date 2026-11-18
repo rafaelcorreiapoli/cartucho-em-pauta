@@ -192,6 +192,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.image('power-panel',import.meta.env.BASE_URL+'assets/painel-eletrico.webp');
       this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
     }
+    private tutorialMarker?:Phaser.GameObjects.Graphics;
     create() {
       if (this.assetsFailed) return;
       this.cameras.main.setVisible(!inLobby);
@@ -563,6 +564,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const gap = visionRadius-this.drawnVisionRadius;
       this.drawnVisionRadius = !negotiating || reducedMotion.matches || Math.abs(gap)<.1
         ? visionRadius : this.drawnVisionRadius+gap*(1-Math.exp(-delta/105));
+      const target = plenaryView?.tutorial?.target;
+      this.tutorialMarker ??= this.add.graphics().setDepth(HEIGHT+32);
+      this.tutorialMarker.clear();
+      if (target && !plenaryView?.tutorial?.complete) {
+        this.tutorialMarker.lineStyle(2,0xffdc75,1).strokeCircle(target.x,target.y,12+Math.sin(time/250)*2);
+        this.tutorialMarker.lineBetween(target.x-5,target.y-21,target.x,target.y-15);
+        this.tutorialMarker.lineBetween(target.x+5,target.y-21,target.x,target.y-15);
+      }
       const fire = plenaryView?.fire;
       this.fuseSmoke(negotiating ? plenaryView?.fireInteraction?.smoke : undefined,reducedMotion.matches);
       this.roomFires.forEach((effect,site)=>{

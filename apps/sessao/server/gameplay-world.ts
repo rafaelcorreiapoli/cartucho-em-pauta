@@ -6,6 +6,7 @@ import type { GameplayEvent } from '../src/gameplay';
 import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
+  training?:boolean;
   nextEventId?:()=>number;
   policies?:BillPolicies;
   publicBudget?:number;

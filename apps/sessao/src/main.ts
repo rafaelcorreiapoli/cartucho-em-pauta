@@ -1,3 +1,4 @@
+import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
 import {rewardGains} from './ui/reward-effects';
@@ -78,10 +79,10 @@ const nicknameStorage = 'cartuchao.sessao.nick';
 let initialNick = '';
 try { initialNick = localStorage.getItem(nicknameStorage) ?? ''; } catch {}
 const entrance = mountRoomEntrance(document.querySelector<HTMLElement>('#room-entrance')!,initialNick,
-  new URL(location.href).searchParams.get('sala') ?? '',(nick,roomId)=>{
+  new URL(location.href).searchParams.get('sala') ?? '',(nick,roomId,tutorial)=>{
     try { localStorage.setItem(nicknameStorage,nick); } catch {}
     audio.unlock();
-    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick}));
+    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick,tutorial}));
   });
 let connecting = false;
 const renderLoading = mountAssetLoading(document.getElementById('asset-loading-mount')!,()=>void room?.leave());
@@ -152,6 +153,7 @@ async function connect(join: () => Promise<Room>) {
     const sendCommand = createRoomCommandSender((channel,command)=>{
       if (!ballotCountdown.open) joined.send(channel,command);
     });
+    const tutorialHud = mountTutorial(action=>joined.send("tutorial",action));
     const characterPicker = mountCharacterPicker(document.querySelector<HTMLElement>('#characters')!,joined.sessionId,
       character=>sendCommand('character',{character}));
     voice = new RoomVoice(joined, ids => {
@@ -356,6 +358,7 @@ async function connect(join: () => Promise<Room>) {
     let previousView:PlenaryView | undefined;
     let roleRevealed = false;
     function revealRole(view:PlenaryView) {
+      if (view.tutorial) { roleRevealed = true; roleIntro.close(); return; }
       if (view.phase==='lobby' || view.phase==='finished') {
         roleRevealed = false;
         roleIntro.close();
@@ -371,6 +374,7 @@ async function connect(join: () => Promise<Room>) {
     }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial);
       ballotCountdown.update(view.ballotCountdown);
       floorPlan.track(view.gameplay?.briefcaseTracking);
       const scan = view.gameplay?.xrayVision;
@@ -468,6 +472,7 @@ async function connect(join: () => Promise<Room>) {
     joined.onLeave((closeCode,reason) => {
       hudListeners.abort();
       panel.destroy();
+      tutorialHud.destroy();
       characterPicker.destroy();
       election.destroy();
       political.destroy();

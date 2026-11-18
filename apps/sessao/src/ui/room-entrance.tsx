@@ -7,14 +7,14 @@ type Props = {
   roomCode:string;
   busy:boolean;
   message:string;
-  onConnect:(nick:string,roomCode?:string)=>void;
+  onConnect:(nick:string,roomCode?:string,tutorial?:boolean)=>void;
   nickRef:Ref<HTMLInputElement>;
 };
 
 export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRef}:Props) {
   const form = useRef<HTMLFormElement>(null);
 
-  function submit(join:boolean) {
+  function submit(join:boolean,tutorial=false) {
     if (busy || !form.current) return;
     const nickInput = form.current.elements.namedItem('nick') as HTMLInputElement;
     const codeInput = form.current.elements.namedItem('room-id') as HTMLInputElement;
@@ -23,7 +23,7 @@ export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRe
     nickInput.setCustomValidity(nick ? '' : nickHint);
     if (!nickInput.reportValidity() || !nick || (join && !code)) return;
     nickInput.value = nick;
-    onConnect(nick,join ? code : undefined);
+    onConnect(nick,join ? code : undefined,tutorial);
   }
 
   return <>
@@ -33,6 +33,7 @@ export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRe
         autoComplete="nickname" placeholder="Como vão chamar você?" defaultValue={initialNick} required
         onInput={event=>event.currentTarget.setCustomValidity('')}/></label>
       <button className="hud-button" id="create" type="button" disabled={busy} onClick={()=>submit(false)}>Criar sala</button>
+      <button className="hud-button hud-button--secondary" type="button" disabled={busy} onClick={()=>submit(false,true)}>Aprender a jogar</button>
       <div className="join-fields">
         <label>Código da sala <input key={roomCode} id="room-id" name="room-id" maxLength={64} autoComplete="off"
           defaultValue={roomCode} required/></label>

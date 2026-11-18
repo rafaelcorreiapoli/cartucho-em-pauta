@@ -1,3 +1,4 @@
+import {tutorialSteps,matchesTutorialEvent,type TutorialView} from '../src/tutorial';
 import { fireSites, type FireExtinguished } from '../src/fire';
 import type { SpyCameraFrame } from '../src/surveillance';
 import { canUseSecurityTerminal, securityCameras, type SecurityCamera } from '../src/security';
@@ -72,7 +73,7 @@ export class SessionRoom extends Room {
 
   private gameplayWorld() {
     const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.gameNow,
-      id=>this.voice.has(id));
+      id=>this.match.training || this.voice.has(id));
     return {
       ...world,
       // Physical actions continue while the legislative clock is paused.
@@ -180,7 +181,66 @@ export class SessionRoom extends Room {
     }
   }
 
-  onCreate() {
+  private tutorial?:TutorialView;
+  private tutorialOwner?:string;
+  private tutorialOrigin?:{x:number;y:number};
+  private prepareTutorial() {
+    if (!this.tutorial || !this.tutorialOwner) return;
+    this.match.clearTrainingCrisis(this.gameNow);
+    let step = tutorialSteps[this.tutorial.step];
+    const learner = this.players.get(this.tutorialOwner)?.player;
+    if (learner && step?.event==='spy-viewed' && !this.gameplay.spyView(learner,this.gameplayWorld()).channels.length) {
+      this.tutorial.step = tutorialSteps.findIndex(entry=>entry.event==='spy-installed');
+      step = tutorialSteps[this.tutorial.step];
+    }
+    if (learner) this.gameplay.prepareTrainingStep(learner,step?.event,this.gameplayWorld());
+    this.tutorial.complete = !step;
+    this.tutorial.target = step?.target;
+    const player = this.players.get(this.tutorialOwner)?.player;
+    if (player) this.tutorialOrigin = {x:player.x,y:player.y};
+    if (step?.item) {
+      const issued = this.gameplay.giveTrainingItem(this.tutorialOwner,step.item);
+      if (issued) this.gameplayWorld().cashFlow?.('spawned',issued);
+    }
+    this.tutorial.guide = [...this.players.values()].find(state=>state.player.bot)?.player.nick;
+    if (step?.event==='fire-extinguished') {
+      this.match.prepareTrainingCrisis('fire');
+      this.tutorial.target = fireSites[0];
+    }
+    if (step?.event==='power-repaired') this.match.prepareTrainingCrisis('power');
+  }
+  private advanceTutorial() {
+    if (!this.tutorial || this.tutorial.complete) return;
+    this.tutorial.step++;
+    this.prepareTutorial();
+  }
+  onCreate(options?:{tutorial?:boolean}) {
+    if (options?.tutorial===true) {
+      this.tutorial = {step:0,complete:false};
+      this.match.training = true;
+      this.maxClients = 1;
+      void this.setPrivate(true);
+      this.match.onTrainingEvent = event=>{
+        const step = this.tutorial && tutorialSteps[this.tutorial.step];
+        if (step && (event.actor===this.tutorialOwner || event.type==='signed' && event.target===this.tutorialOwner) && matchesTutorialEvent(step,event)) {
+          const index = this.tutorial!.step;
+          this.clock.setTimeout(()=>{ if (this.tutorial?.step===index) this.advanceTutorial(); },0);
+        }
+      };
+    }
+    this.onMessage('tutorial',(client,action:unknown)=>{
+      if (!this.tutorial || client.sessionId!==this.tutorialOwner || typeof action!=='string') return;
+      if (action==='exit') { void this.disconnect(); return; }
+      if (action==='restart') this.tutorial.step = 0;
+      else if (action.startsWith('step:')) {
+        const index = Number(action.slice(5));
+        if (!Number.isInteger(index) || index<0 || index>=tutorialSteps.length) return;
+        this.tutorial.step = index;
+      } else if (action==='skip' || action==='next' && tutorialSteps[this.tutorial.step]?.manual) {
+        this.advanceTutorial(); return;
+      } else return;
+      this.prepareTutorial();
+    });
     this.onMessage('voice-join', client => {
       this.voice.add(client.sessionId);
       this.broadcast('voice-roster', [...this.voice]);
@@ -203,7 +263,7 @@ export class SessionRoom extends Room {
     this.onMessage('start-match', (client, countRequest:unknown) => {
       if (!this.consumeRoomCommand(client.sessionId,countRequest) || this.match.running ||
           this.players.keys().next().value!==client.sessionId) return;
-      if (this.match.minimumPlayers===MIN_PLAYERS) this.bots.addTo(this.players,this.clock.currentTime);
+      if (this.tutorial || this.match.minimumPlayers===MIN_PLAYERS) this.bots.addTo(this.players,this.clock.currentTime);
       const players = [...this.players.values()].map(state=>state.player);
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
@@ -213,7 +273,7 @@ export class SessionRoom extends Room {
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
-        const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
+        const count = this.tutorial ? 0 : Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.parliamentarians.reset(count,this.gameNow,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
@@ -238,6 +298,7 @@ export class SessionRoom extends Room {
               owner=>world.wallet?.(owner) ?? 0);
           });
         this.match.refreshAgendaEligibility();
+        if (this.tutorial) { this.tutorialOwner = client.sessionId; this.prepareTutorial(); }
         for (const [id,state] of this.players) {
           const {player} = state;
           Object.assign(player,this.gameplay.officeSpawn(id),{moving:false});
@@ -607,6 +668,14 @@ export class SessionRoom extends Room {
         return this.players.get(id)?.player;
       },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
       if (installation) (installation.failed ? world.actionFailed : world.feedback)(installation.actor,installation.feedback);
+      if (this.tutorial && !this.tutorial.complete && this.tutorialOwner) {
+        const step = tutorialSteps[this.tutorial.step];
+        const player = this.players.get(this.tutorialOwner)?.player;
+        if (player && step.event==='call-time' && this.gameplay.phoneActivity(player.id)==='call') this.advanceTutorial();
+        else if (player && step.target && !step.event && !step.manual && this.tutorialOrigin &&
+            Math.hypot(player.x-step.target.x,player.y-step.target.y)<30 &&
+            Math.hypot(player.x-this.tutorialOrigin.x,player.y-this.tutorialOrigin.y)>10) this.advanceTutorial();
+      }
       this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now),realNow);
       this.match.advancePower(now,id=>world.present(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {
@@ -666,6 +735,7 @@ export class SessionRoom extends Room {
         }
         const securityFeed = this.securityFeeds.get(id);
         if (atTerminal && view.gameplay) view.gameplay.security = {camera:securityFeed?.camera.id};
+        if (this.tutorial) view.tutorial = {...this.tutorial};
         const key = JSON.stringify(view);
         if (this.lastMatchView.get(id)!==key) {
           client.send('plenary',view);
