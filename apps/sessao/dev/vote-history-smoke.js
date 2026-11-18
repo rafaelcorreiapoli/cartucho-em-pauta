@@ -78,11 +78,11 @@ async page => {
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
   await settings.getByLabel('Música').waitFor();
-  await settings.getByRole('button',{name:'Ativar voz'}).waitFor({state:'hidden'});
+  await settings.getByRole('button',{name:'Ativar voz'}).waitFor();
   await page.keyboard.press('F2');
   const settingsShortcuts = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await settingsShortcuts.waitFor();
-  if (await settingsShortcuts.getByRole('button',{name:'Ativar voz'}).count()) throw Error('Atalho de voz disponível durante a votação');
+  await settingsShortcuts.getByRole('button',{name:'Ativar voz'}).waitFor();
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
@@ -91,7 +91,6 @@ async page => {
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
   await page.locator('.plenary-countdown').waitFor({state:'hidden'});
-  await page.keyboard.press('m');
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   await page.locator('[data-vote="yes"]').waitFor();
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
