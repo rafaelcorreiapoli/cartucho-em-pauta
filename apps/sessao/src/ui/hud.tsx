@@ -43,7 +43,7 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
-        <path fill="currentColor" d="M2 16h26v3h-2v8h4v2H0v-2h4v-8H2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM68 16h26v3h-2v8h4v2H66v-2h4v-8h-2zm6 3v8h3v-8zm6 0v8h3v-8zm6 0v8h3v-8zM47 1h2v9l13 4v3h-3v10h4v2H33v-2h4V17h-3v-3l13-4zm-6 16v10h3V17zm6 0v10h3V17zm6 0v10h3V17z"/>
+        <path fill="currentColor" d="M39 2h6v25h-6zm9 0h6v25h-6zM2 26a16 11 0 0 1 32 0zm60-9h32a16 10 0 0 1-32 0zM0 28h96v2H0z"/>
       </svg>
     </div>
     <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
@@ -54,16 +54,18 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
       <strong className="tabular-nums">{stability}</strong>
       <Laurel right/>
     </HudHelp>
-    <HudHelp className="congress-budget flex items-center justify-center"
+    <div className="congress-summary-row">
+    <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
-      <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
+      <HudIcon name="coins"/><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelp>
     {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
-      <HudIcon name="clock"/><span>Fim da sessão</span>
+      <HudIcon name="clock"/>
       <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
     </HudHelp>}
+    </div>
   </section>;
 }
 

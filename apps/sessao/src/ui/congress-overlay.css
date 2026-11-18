@@ -1184,3 +1184,18 @@
   .right-hud > #election-indicator-mount { grid-column: 1; }
   .right-hud > #payroll-mount { grid-row: 2; justify-self: end; }
 }
+
+.congress-meter-track { padding: 5px 6px; }
+.congress-meter-track > strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(13px, 1.2vw, 20px);
+  color: #fff9e8;
+  text-shadow: 0 1px 3px #000, 0 0 3px #000;
+  pointer-events: none;
+}
+.congress-summary-row { display: flex; justify-content: center; align-items: center; gap: 24px; }
+.congress-summary-row .congress-budget, .congress-summary-row .congress-session-clock { margin-top: 3px; gap: .45em; }
+.congress-summary-row .congress-session-clock strong { font-size: 1.12em; }
