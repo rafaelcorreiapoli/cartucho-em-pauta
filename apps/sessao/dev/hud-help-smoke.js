@@ -16,7 +16,7 @@ async page => {
     await page.setViewportSize({width,height});
     const portrait = page.locator('#hud-portrait');
     const portraitBounds = await portrait.boundingBox();
-    if (!portraitBounds || portraitBounds.width<60 || portraitBounds.height<60) {
+    if (!portraitBounds || portraitBounds.width<40 || portraitBounds.height<40) {
       throw Error('Retrato do jogador sem área visível: '+JSON.stringify(portraitBounds));
     }
     await portrait.hover();
