@@ -19,7 +19,8 @@ export type FieldAction = GameplayAction
   | {kind:'cross-door';door:number}
   | {kind:'inspect-stash'}
   | {kind:'edit-document';item:number;project:number}
-  | {kind:'open-security'};
+  | {kind:'open-security'}
+  | {kind:'offer-item';target:string};
 
 export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[]) {
   const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean;target?:{id:string;name:string;verb:string}}[] = [];
@@ -80,6 +81,12 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
       if (view?.phase==='negotiation' && view.ballotCountdown===undefined && !player.knockedOut && !player.carried) {
         for (const option of decorationActions(player.id,state)) {
           actions.push({...option,icon:option.action.kind==='uninstall' ? 'inventory' : 'map'});
+        }
+      }
+      if (!player.carried && state.inventory.length) {
+        for (const contact of state.contacts) {
+          actions.push({label:`Oferecer item · ${contact.name}`,icon:'inventory',
+            target:{id:contact.id,name:contact.name,verb:'Oferecer item'},action:{kind:'offer-item',target:contact.id}});
         }
       }
       for (const target of state.npcNearby ?? []) {

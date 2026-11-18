@@ -595,6 +595,10 @@ export class Gameplay {
     if (item) this.modulator.deactivate(item.id);
   }
 
+  private canRequestItemAction(player:Player,target:Player,world:GameplayWorld) {
+    return target.id!==player.id && !target.npc && !target.bot && world.present?.(target.id)!==false && canReachObject(player,target);
+  }
+
   private nearbyParliamentarian(player:Player,world:GameplayWorld,previous?:string,eligible?:(other:Player)=>boolean) {
     const nearby = world.players.filter(other=>other.id!==player.id && !other.knockedOut && !other.carried &&
       world.present?.(other.id)!==false && world.hasMandate?.(other.id)!==false && canReachObject(player,other) && (!eligible || eligible(other)));
@@ -770,7 +774,7 @@ export class Gameplay {
       interactive:[...this.installations.values()].filter(item=>item.kind==='portrait' && !item.privateOffice
         ? canReachInstallation(player,item,'portrait') : canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([key,site])=>canReachInstallation(player,site.point,site.kind) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
-      contacts:world.players.filter(other => !other.npc && other.id!==id && canReachObject(player,other)).map(other => ({id:other.id,name:other.nick})),
+      contacts:world.players.filter(other=>this.canRequestItemAction(player,other,world)).map(other => ({id:other.id,name:other.nick})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
       ground:ground.map(({id,kind,x,y,document}) => ({id,kind,x,y,title:document?.title})),
@@ -1606,7 +1610,7 @@ export class Gameplay {
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
-        const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id && canReachObject(player,person));
+        const target = world.players.find(person=>person.id===action.target && this.canRequestItemAction(player,person,world));
         if (!target) return this.reject(player,world,'Aproxime-se do destinatário.');
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return this.reject(player,world,'Este jogador não pode assinar o documento.');

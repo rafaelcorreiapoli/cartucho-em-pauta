@@ -24,7 +24,7 @@ import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
 import type { PhotoAccessView, PhotoScene } from './photography';
-import { money } from './politics';
+import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
@@ -87,6 +87,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let equipmentOpen = false;
   let stashOpen = false;
   let bagOpen = false;
+  let offerTarget:Contact|undefined;
   const bagFilters = ['Todos','Equipamentos','Consumíveis'] as const;
   let bagFilter:typeof bagFilters[number] = 'Todos';
   let snakeBoard:HTMLCanvasElement|null = null;
@@ -127,7 +128,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const entries = shortcuts?.entries;
     const detailLabel = isBag ? 'Mais detalhes' : 'Inspecionar';
     entries?.push({name:detailLabel,activate:()=>{if (detail) detail.open = !detail.open;}});
-    if (chooseQuantity && previous?.gameplay?.contacts.length) {
+    if (chooseQuantity && !offerTarget && previous?.gameplay?.contacts.length) {
       entries?.push({name:'Selecionar jogador',activate:()=>recipientSelect?.focus()});
     }
     if (chooseQuantity && itemQuantity(item)>1) {
@@ -135,7 +136,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (selectedItemQuantity(item,quantity)<itemQuantity(item)) entries?.push({name:'Aumentar quantidade',activate:()=>changeQuantity(item,1)});
     }
     const focusHotbar = ()=>body.querySelector<HTMLButtonElement>('.bag-preview button:not(:disabled)')?.focus();
-    if (chooseQuantity && bagOpen && canPinToHotbar(item)) entries?.push({name:'Adicionar à hotbar',activate:focusHotbar});
+    if (chooseQuantity && bagOpen && !offerTarget && canPinToHotbar(item)) entries?.push({name:'Adicionar à hotbar',activate:focusHotbar});
     const canPin = chooseQuantity && !bagOpen && canPinToHotbar(item);
     const pinned = canPin && hotbar.includes(item.id);
     const updateHotbar = (slots:typeof hotbar) => {
@@ -164,13 +165,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           {food && <p>{itemQuantity(item)} un. · {food.category} · {describeFood(food.effect)}</p>}
           {!!cash && <p>{money(cash)}</p>}
         </details>
-        {chooseQuantity && !!previous?.gameplay?.contacts.length && <label className={isBag ? 'bag-recipient' : 'object-recipient'}>Jogador
+        {chooseQuantity && !offerTarget && !!previous?.gameplay?.contacts.length && <label className={isBag ? 'bag-recipient' : 'object-recipient'}>Jogador
           <select ref={node=>{recipientSelect=node;}} value={recipient} onChange={event=>{recipient = event.currentTarget.value; render();}}>
             <option value="">Escolha…</option>
             {previous.gameplay.contacts.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
           </select>
         </label>}
-        {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label="Quantidade para oferecer ou largar">
+        {chooseQuantity && itemQuantity(item)>1 && <div role="group" aria-label={offerTarget ? 'Quantidade para oferecer' : 'Quantidade para oferecer ou largar'}>
           <button type="button" className="hud-button hud-button--secondary" aria-label="Diminuir quantidade" aria-keyshortcuts="ArrowLeft"
             disabled={selectedItemQuantity(item,quantity)===1} onClick={()=>changeQuantity(item,-1)}>− <kbd className="action-key" aria-hidden="true">←</kbd></button>
           <output aria-label="Quantidade selecionada"> {selectedItemQuantity(item,quantity)} / {itemQuantity(item)} </output>
@@ -179,7 +180,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </div>}
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
-        {chooseQuantity && bagOpen && <button type="button" className="bag-pin hud-button"
+        {chooseQuantity && bagOpen && !offerTarget && <button type="button" className="bag-pin hud-button"
           disabled={!canPinToHotbar(item)} onClick={focusHotbar}>
           <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
@@ -221,19 +222,20 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   function renderHeader() {
     const mode = dialog.dataset.mode;
-    const title = mode==='phone' ? app ?? 'Celular' : mode==='bag' ? 'Inventário' :
+    const title = mode==='phone' ? app ?? 'Celular' : mode==='bag' ? offerTarget ? `Oferecer item a ${offerTarget.name}` : 'Inventário' :
       stashOpen ? 'Armário particular' : mode==='equipment' ? 'Equipamentos' : 'Objeto';
     flushSync(()=>headerRoot.render(<GameplayDialogHeader title={title} bag={mode==='bag'}
       back={mode==='phone' && app && app!=='Denunciar' ? ()=>selectApp() : undefined}/>));
   }
 
-  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false) {
+  function open(item?:typeof selection, decoration?:number, equipment=false, stash=false, bag=false, target?:Contact) {
     selection = item;
     quantity = 1;
     decorationId = decoration;
     equipmentOpen = equipment;
     stashOpen = stash;
     bagOpen = bag;
+    offerTarget = target;
     if (bag) bagFilter = 'Todos';
     if (!bag) assigningSlot = undefined;
     const object = !!item || decoration!==undefined;
@@ -287,6 +289,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
+    const canOffer = !!offerTarget && view.phase==='negotiation' && contacts.some(person=>person.id===offerTarget?.id);
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
@@ -305,7 +308,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       app==='Telefone' ? [state.call,directory.map(({id,name,character})=>({id,name,character}))] :
       [state.game?.status,state.game?.score,state.candy,state.bets,view.politics?.wallet];
     if (phone && app==='Joguinhos' && state.game && snakeBoard) paintSnake(snakeBoard,state.game);
-    const nextKey = JSON.stringify([selection,recipient,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
+    const nextKey = JSON.stringify([selection,recipient,canOffer,quantity,decorationId,equipmentOpen,stashOpen,bagOpen,bagFilter,assigningSlot,app,phase,visible,bagOpen ? state.inventory : undefined]);
     if (nextKey===renderKey) return;
     renderKey = nextKey;
     const previouslyFocused = document.activeElement;
@@ -356,8 +359,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           </div>
           <p className="bag-capacity"><BagIcon name="bag"/>{inventory.length} / {INVENTORY_SLOTS} slots</p>
         </div>
-        <div className="bag-detail">{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
-        <footer className="bag-preview">
+        <div className="bag-detail">{offerTarget && !canOffer && <p role="status">Aproxime-se de {offerTarget.name} para oferecer um item.</p>}{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
+        {!offerTarget && <footer className="bag-preview">
           <strong>Hotbar <span>(atalhos rápidos)</span></strong>
           <div className="bag-preview-slots">
             {hotbar.map((id,index)=>{
@@ -374,7 +377,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               </button>;
             })}
           </div>
-        </footer>
+        </footer>}
       </InventoryShortcuts>;
     }
     if (bagOpen && !item) {
@@ -392,7 +395,13 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           ? {quantity:selectedItemQuantity(item,quantity)} : {};
         actions.push({label,run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
       };
-      if (selection?.source==='inventory') {
+      if (offerTarget) {
+        const target = offerTarget.id;
+        actions.push({label:'Oferecer',disabled:!canOffer,run:()=>{
+          send({kind:'offer',item:item.id,target,quantity:selectedItemQuantity(item,quantity)});
+          dialog.close();
+        }});
+      } else if (selection?.source==='inventory') {
         const definition = objects[item.kind];
         if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
@@ -539,7 +548,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         return;
       }
     }
-    if (bagOpen && dialog.matches('dialog:modal') && dialog.contains(document.activeElement) && selection?.source==='inventory' &&
+    if (bagOpen && !offerTarget && dialog.matches('dialog:modal') && dialog.contains(document.activeElement) && selection?.source==='inventory' &&
         event.shiftKey && !event.defaultPrevented && !event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey &&
         !isEditingText(event.target) && /^Digit[1-6]$/.test(event.code)) {
       const item = inventoryItems.find(entry=>entry.id===selection?.id);
@@ -585,6 +594,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     close() { dialog.close(); },
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
+    openOffer(id:string) {
+      const target = previous?.gameplay?.contacts.find(contact=>contact.id===id);
+      if (!target) return;
+      assigningSlot = undefined;
+      open(undefined,undefined,false,false,true,target);
+    },
     openEquipment() { open(undefined,undefined,true); },
     itemObtained(pickup:boolean) {
       if (!pickup || !pendingPickup) return;

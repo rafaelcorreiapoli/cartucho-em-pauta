@@ -331,7 +331,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.election.canCampaignAction(id,kind);
-    });
+    }, new Set(players.filter(player=>player.bot).map(player=>player.id)));
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};

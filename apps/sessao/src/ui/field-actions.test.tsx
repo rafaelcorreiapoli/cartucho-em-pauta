@@ -3,6 +3,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {Gameplay} from '../../server/Gameplay';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {Player} from '../map';
+import {terminals} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {ContextActionButton} from './context-action-button';
 import {fieldActions} from './field-actions';
@@ -51,4 +52,29 @@ test('a blocked context button renders its reason and disabled state',()=>{
     blocked="Sem espaço" activate={()=>{}}/>);
   expect(html).toContain('disabled=""');
   expect(html).toContain('Instalar escuta<small> · Sem espaço</small>');
+});
+
+
+test('offering an inventory item targets nearby human recipients in the field',()=>{
+  const host:Player = {id:'host',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
+  const guest = {...host,id:'guest',nick:'Bia'};
+  const bot:Player = {...host,id:'bot',nick:'Bot',bot:true};
+  const players = [host,guest,bot];
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  expect(match.start(host.id,players,0,()=>.9)).toBe(true);
+  const ids = players.map(({id})=>id);
+  const world = match.gameplayWorld(players,0,()=>false);
+  const offers = ()=>fieldActions({...match.view(host.id,ids,0),gameplay:game.view(host,world)},host,players)
+    .filter(({action})=>action.kind==='offer-item');
+
+  expect(offers()).toEqual([]);
+  expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  expect(offers()).toEqual([expect.objectContaining({
+    label:'Oferecer item · Bia',action:{kind:'offer-item',target:guest.id},
+  })]);
+  const [coffee] = game.view(host,world).inventory;
+  expect(game.act(host,{kind:'offer',item:coffee.id,target:bot.id},world)).toBe('Aproxime-se do destinatário.');
+  guest.x += 100;
+  expect(offers()).toEqual([]);
 });
