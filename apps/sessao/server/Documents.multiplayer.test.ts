@@ -316,8 +316,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2290});
     await wait(()=>rooms.every(peer=>fireNotices.has(peer.sessionId)));
     for (const notice of fireNotices.values()) {
-      expect(notice).toEqual({actor:players.get(firefighter.sessionId)!.player.nick,room:site.name});
+      expect(notice).toMatchObject({actor:players.get(firefighter.sessionId)!.player.nick,room:site.name});
     }
+    expect(fireNotices.get(firefighter.sessionId)?.effect).toEqual({site:0,from:{x:site.x,y:site.y}});
+    expect(fireNotices.get(remote.sessionId)?.effect).toBeUndefined();
     await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
     move(firefighter,extinguisherSpawns[0]);
     firefighter.send('gameplay',{action:{kind:'drop',item:extinguisher.id},token:2292});

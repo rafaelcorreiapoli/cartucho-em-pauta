@@ -2,8 +2,8 @@ import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
-import {canActOnFire,fireSites,type FireCommand} from './fire';
-import {createRoomFires,createFuseSmoke} from './fire-effects';
+import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
+import {createRoomFires,createFuseSmoke,createExtinguishEffect} from './fire-effects';
 import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
 import { decorPoint, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -148,6 +148,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private fogInSession = false;
     private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
     private roomFires!:ReturnType<typeof createRoomFires>;
+    extinguishEffect!:ReturnType<typeof createExtinguishEffect>;
     private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
     private marker!: Phaser.GameObjects.Ellipse;
     private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
@@ -246,6 +247,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.photoRenderer.loadMap(this.children.getChildren());
       this.roomFires = createRoomFires(this);
       this.fuseSmoke = createFuseSmoke(this);
+      this.extinguishEffect = createExtinguishEffect(this);
       const extinguishOption = (site:number)=>{
         const player = local.state?.player;
         const option = plenaryView?.fireInteraction?.option;
@@ -876,6 +878,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         ground:worldSnapshot.ground.filter(item=>inPhotoFrame(center,item)),
         decorations:worldSnapshot.decorations.filter(item=>inPhotoFrame(center,item)),
       });
+    },
+    showExtinguishEffect(effect:ExtinguishEffect) {
+      if (scene.sys.isActive() && !reducedMotion.matches) scene.extinguishEffect?.(effect);
     },
     pulseStation(key:Station) { if (scene.sys.isActive()) scene.pulseStation(key); },
     playerHead() { return scene.sys.isActive() ? scene.playerHead() : undefined; },
