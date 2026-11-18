@@ -67,7 +67,6 @@ export class PlenaryMatch {
   }
 
   private treasuryBonus?:{until:number;amount:number};
-  private treasuryReputation = new Map<string,number>();
   private npcVotes = new Map<string,Vote>();
   private npcIds = new Set<string>();
 
@@ -232,7 +231,6 @@ export class PlenaryMatch {
       const publicDuty = rules.publicDuty-(this.energySavingsActive(now) ? energySavings.publicDutyDiscount : 0);
       this.changeBudget(-publicDuty,now);
       this.cash.publicDuty += publicDuty;
-      this.treasuryReputation.clear();
       this.refreshAgendaEligibility();
     }
     if (this.infiltrators.size && [...this.infiltrators].every(id=>!this.election.office(id))) {
@@ -293,7 +291,6 @@ export class PlenaryMatch {
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.electorate = new Set(ids);
     this.disconnected.clear();
-    this.treasuryReputation.clear();
     this.npcIds.clear();
     this.npcVotes.clear();
     this.initialPlayers = ids.length;
@@ -516,11 +513,9 @@ export class PlenaryMatch {
         if (!current() || !this.running || !this.electorate.has(id) || amount<=0) return false;
         this.cash.treasury += amount;
         this.changeBudget(amount,now);
-        const credited = this.treasuryReputation.get(id) ?? 0;
-        const gain = Math.max(0,Math.min(rules.treasuryReputationCap-credited,Math.floor(amount)));
-        this.treasuryReputation.set(id,credited+gain);
-        const bonus = this.treasuryBonus && now<this.treasuryBonus.until ? this.treasuryBonus.amount : 0;
-        this.economy.changePopularity(id,gain+Math.min(gain,bonus));
+        if (this.treasuryBonus && now<this.treasuryBonus.until) {
+          this.economy.earnXp(id,Math.min(Math.floor(amount),this.treasuryBonus.amount));
+        }
         return true;
       },
       lootWallet:(id,fraction)=>current() && this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
@@ -1073,7 +1068,7 @@ export class PlenaryMatch {
     const cost = effect?.kind==='pinga-distribution' && !servesPinga ? 0 : Math.min(0,impact.budget);
     if (servesPinga) servesPinga(this.pingaRecipients());
     if (effect?.kind==='fire-safety') this.fire.increaseSafety();
-    if (effect?.kind==='treasury-reputation') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
+    if (effect?.kind==='treasury-xp') this.treasuryBonus = {until:now+effect.duration,amount:effect.bonus};
     if (effect?.kind==='policy') this.policies.set(effect.policy,now+(effect.duration ?? policyDuration));
     const payout = effect?.kind==='allowance' ? effect.perMandate : 0;
     this.economy.billResult(this.votes,passed,bill.yes.stability>0);

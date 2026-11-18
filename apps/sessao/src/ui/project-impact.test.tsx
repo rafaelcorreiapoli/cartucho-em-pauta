@@ -65,8 +65,8 @@ test('the ballot displays the catalog icon, policy details and gameserver-funded
       expect(view.yes.budget).toBe(-3);
       expect(markup).toContain('Mais tempo entre incêndios até o fim da partida');
     } else {
-      expect(bill.effect?.kind).toBe('treasury-reputation');
-      expect(markup).toContain('Até +2 popularidade por entrega · 90 s');
+      expect(bill.effect?.kind).toBe('treasury-xp');
+      expect(markup).toContain('Até +2 XP por entrega · 90 s');
     }
   }
 });

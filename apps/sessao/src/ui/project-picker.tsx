@@ -30,7 +30,7 @@ function extraEffect(bill:Project) {
     case 'pinga-distribution': return pingaProgram.detail;
     case 'policy': return effect.detail;
     case 'fire-safety': return 'Aumenta o intervalo entre incêndios até o fim da partida.';
-    case 'treasury-reputation': return `Até +${effect.bonus} de popularidade por entrega à Tesouraria durante ${effect.duration/1000} s.`;
+    case 'treasury-xp': return `Até +${effect.bonus} XP por entrega à Tesouraria durante ${effect.duration/1000} s.`;
   }
 }
 

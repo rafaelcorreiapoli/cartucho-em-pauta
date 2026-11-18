@@ -2,10 +2,11 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ElectionIndicator,ElectionPolls,ElectionSummary} from './election-panel';
 
-test('the election summary renders the position, trend and remaining time',()=>{
-  const markup = renderToStaticMarkup(<ElectionSummary rank={3} atRisk remaining={256}
+test('the election summary renders the lead, personal position and remaining time',()=>{
+  const markup = renderToStaticMarkup(<ElectionSummary rank={3} leaders="Bia, Duda" atRisk remaining={256}
     candidate={{id:'a',name:'Rafa',character:0,race:'deputy',estimate:20,trend:-2}}/>);
-  expect(markup).toContain('3º · 20% · Em risco · -2 pp');
+  expect(markup).toContain('1º · Bia, Duda');
+  expect(markup).toContain('Você · 3º · 20% · Em risco · -2 pp');
   expect(markup).toContain('4:16');
 });
 
@@ -49,4 +50,11 @@ test('the election indicator owns the dial and its keyboard shortcut',()=>{
   expect(markup).toContain('aria-keyshortcuts="L"');
   expect(markup).toContain('>L</kbd>');
   expect(renderToStaticMarkup(<ElectionIndicator open={()=>false}/>)).not.toContain('<button');
+});
+
+test('only the electoral risk state marks the dock for the red glow',()=>{
+  const indicator = (atRisk:boolean)=>renderToStaticMarkup(<ElectionIndicator urgency="high" open={()=>true}
+    summary={{rank:4,atRisk,remaining:29}}/>);
+  expect(indicator(true)).toContain('data-at-risk="true"');
+  expect(indicator(false)).not.toContain('data-at-risk=');
 });

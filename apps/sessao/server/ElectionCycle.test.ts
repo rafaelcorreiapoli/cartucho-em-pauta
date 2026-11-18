@@ -99,8 +99,10 @@ test('eliminating both infiltrators wins without stability damage',()=>{
   const view = (id:string,now:number)=>match.view(id,ids,now);
   const world = match.gameplayWorld(humans,0,()=>false);
   // Break the initial tie so the two infiltrators finish last in succession.
-  for (const player of humans.slice(2)) world.deposit!(player.id,4);
-  world.deposit!('1',1);
+  for (const player of humans.slice(1)) {
+    world.publish({type:'installed',kind:player.id==='1' ? 'vip' : 'portrait',actor:player.id,
+      item:Number(player.id),position:player,at:0,witnesses:[]});
+  }
   match.advance(fireRules.firstAfter);
   const site = view('2',fireRules.firstAfter).fire!.site;
   expect(match.actOnFire({...humans[2],...fireSites[site]},'extinguish',site,fireRules.firstAfter,true)).toBe('Incêndio apagado.');
