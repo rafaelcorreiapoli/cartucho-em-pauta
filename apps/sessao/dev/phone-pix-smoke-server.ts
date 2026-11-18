@@ -30,6 +30,7 @@ class TestRoom extends SessionRoom {
         const game = Reflect.get(this,'gameplay');
         const holder = state.player.id;
         if (state.player.nick==='Alice') {
+          Reflect.get(game,'create').call(game,'coffee',{ground:{...stations.coffee}});
           const document:WorldItem = Reflect.get(game,'create').call(game,'document',{holder});
           document.document = {
             author:holder,title:'Projeto de teste',description:'Anexo de teste',edited:false,project:0,
