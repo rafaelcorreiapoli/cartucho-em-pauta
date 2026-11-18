@@ -56,7 +56,7 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
           <img className="project-ballot-art" src={import.meta.env.BASE_URL+'assets/'+bill.icon} width="72" height="72" alt=""/>
           <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
           <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
-            bill.effect?.kind==='treasury-reputation' ? `Até +${bill.effect.bonus} popularidade por entrega · ${bill.effect.duration/1000} s` :
+            bill.effect?.kind==='treasury-xp' ? `Até +${bill.effect.bonus} XP por entrega · ${bill.effect.duration/1000} s` :
             bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
           <ProjectImpact impact={no} budget={budget} approved={false}/>
         </header>

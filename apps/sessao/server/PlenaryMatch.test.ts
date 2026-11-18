@@ -522,11 +522,13 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   expect(world.spend!(player.id,1.5)).toBe(true);
   expect(match.economySummary(game.physicalCash())).toMatchObject({transferred:3,reserveFees:1.5,discrepancy:0});
   Object.assign(player,terminals.treasury.point);
+  const popularity = match.view(player.id,ids,4001).politics!.popularity;
   expect(game.act(player,{kind:'deliver',item:item.id,place:'treasury',target:'partial'},world)).toContain('R$ 15 mil');
   expect(match.economySummary(game.physicalCash())).toMatchObject({treasury:1.5,physical:1.5,discrepancy:0});
   expect(game.view(player,world).inventory).toContainEqual(expect.objectContaining({id:item.id,cash:1.5}));
   expect(game.act(player,{kind:'deliver',item:item.id,place:'treasury'},world)).toContain('Tesouraria');
   expect(match.economySummary(game.physicalCash())).toMatchObject({treasury:3,physical:0,discrepancy:0});
+  expect(match.view(player.id,ids,4001).politics!.popularity).toBe(popularity);
   match.advance(NEGOTIATION_MS);
   match.vote(host.id,'yes',NEGOTIATION_MS+1);
   match.vote(honest.id,'yes',NEGOTIATION_MS+1);
@@ -949,7 +951,7 @@ test.each(['PROJ-N04','PROJ-N12','PROJ-N13'])('%s pays only on approval with a b
   }
 });
 
-test.each([true,false])('treasury deposits respect the vote and bonus deadline, approval=%s',approved=>{
+test.each([true,false])('treasury deposits grant only the XP bonus from an active approved bill, approval=%s',approved=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
   const project = bills.findIndex(bill=>bill.id==='PROJ-N17');
@@ -961,14 +963,18 @@ test.each([true,false])('treasury deposits respect the vote and bonus deadline, 
   const passedAt = NEGOTIATION_MS+BALLOT_MS;
   match.advance(passedAt);
   expect(match.view(host.id,ids,passedAt).outcome?.passed).toBe(approved);
-  const popularity = (id:string,at:number)=>match.view(id,ids,at).politics!.popularity;
-  const before = popularity(host.id,passedAt);
-  match.gameplayWorld(people,passedAt+1,()=>false).deposit!(host.id,1);
-  expect(popularity(host.id,passedAt+1)).toBe(before+(approved ? 2 : 1));
+  const politics = (id:string,at:number)=>match.view(id,ids,at).politics!;
+  const before = politics(host.id,passedAt);
+  expect(match.gameplayWorld(people,passedAt+1,()=>false).deposit!(host.id,3)).toBe(true);
+  const after = politics(host.id,passedAt+1);
+  expect(after.popularity).toBe(before.popularity);
+  expect(after.progression.xp).toBe(before.progression.xp+(approved ? 2 : 0));
   const expired = passedAt+90_000;
-  const honestBefore = popularity(honest.id,expired);
-  match.gameplayWorld(people,expired,()=>false).deposit!(honest.id,1);
-  expect(popularity(honest.id,expired)).toBe(honestBefore+1);
+  const honestBefore = politics(honest.id,expired);
+  expect(match.gameplayWorld(people,expired,()=>false).deposit!(honest.id,1)).toBe(true);
+  const honestAfter = politics(honest.id,expired);
+  expect(honestAfter.popularity).toBe(honestBefore.popularity);
+  expect(honestAfter.progression.xp).toBe(honestBefore.progression.xp);
 });
 
 test('the extintor bill delays the next ignition only when approved and funded',()=>{

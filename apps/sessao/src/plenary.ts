@@ -61,7 +61,7 @@ export const bankAuditCost = (policies?:BillPolicies) => policies?.bankAudit!==u
 
 type Bill = {
   id:string; name:string; icon:string; description:string; yes:Impact; no:Impact;
-  effect?:{kind:'policy';policy:BillPolicy;detail:string;duration?:number}|{kind:'pinga-distribution'}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-reputation';duration:number;bonus:number};
+  effect?:{kind:'policy';policy:BillPolicy;detail:string;duration?:number}|{kind:'pinga-distribution'}|{kind:'fire-safety'}|{kind:'allowance';perMandate:number}|{kind:'treasury-xp';duration:number;bonus:number};
 };
 
 export const bills:readonly Bill[] = [
@@ -78,8 +78,8 @@ export const bills:readonly Bill[] = [
     description:'O Congresso agradece ao Congresso pelos serviços prestados ao Congresso.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'allowance',perMandate:2}},
   {id:'PROJ-N17',icon:'projetos/proj-n17.webp',name:'Mutirão de Regularização Patrimonial',
-    description:`Por ${treasuryPolicy.duration/1_000} segundos, cada entrega à Tesouraria rende até ${treasuryPolicy.bonus} pontos extras de popularidade.`,
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-reputation',...treasuryPolicy}},
+    description:`Por ${treasuryPolicy.duration/1_000} segundos, cada entrega à Tesouraria rende até ${treasuryPolicy.bonus} XP.`,
+    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'treasury-xp',...treasuryPolicy}},
   {id:'PROJ-N03',icon:'projetos/proj-n03.webp',name:'Bolsa Churrasco',
     description:'Uma rodada de churrasco para recompor as forças parlamentares.',
     yes:{stability:0,budget:-4},no:{stability:0,budget:0},effect:{kind:'policy',policy:'recovery',detail:`Parlamentares ativos recuperam ${recoveryPolicy.hpPerTick} PV a cada ${recoveryPolicy.tickMs/1_000} s durante ${policySeconds} s`}},

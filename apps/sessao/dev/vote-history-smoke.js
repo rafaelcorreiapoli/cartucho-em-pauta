@@ -68,9 +68,13 @@ async page => {
   await page.locator('#session[data-phase="ballot"]').waitFor();
   await countdown.waitFor({state:'hidden'});
   await phone.waitFor({state:'hidden'});
-  const exploring = ['.character-dock','#agenda-dock','.deck-tools','#election-dock','#context-hud'];
+  const exploring = ['.character-dock','#agenda-dock','.deck-tools','#context-hud'];
   for (const selector of exploring) await page.locator(selector).waitFor({state:'hidden'});
   await page.locator('#congress-dock').waitFor({state:'visible'});
+  const election = page.locator('#election-dock');
+  await election.locator('#current-office').filter({hasText:/^1º · Histórico QA$/}).waitFor();
+  await election.locator('#election-position').filter({hasText:/^Você · 1º/}).waitFor();
+  if (await election.getAttribute('data-at-risk')!==null) throw Error('Alerta eleitoral sem risco de eliminação');
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
   await settings.getByLabel('Música').waitFor();
@@ -197,6 +201,16 @@ async page => {
     const roster = sheet.getByRole('list',{name:'Votos dos parlamentares'});
     for (const [width,height] of [[1280,720],[800,600],[360,640]]) {
       await page.setViewportSize({width,height});
+      const standing = await election.boundingBox();
+      const congress = await page.locator('#congress-dock').boundingBox();
+      if (!standing || !congress || standing.x<0 || standing.x+standing.width>width ||
+          (standing.x<congress.x+congress.width && standing.y<congress.y+congress.height)) {
+        throw Error(`Placar eleitoral encobre o Congresso ou sai da tela em ${width}×${height}`);
+      }
+      const notices = await page.locator('#hud-notices').boundingBox();
+      if (width<=760 && notices && notices.height>0 && notices.y<standing.y+standing.height) {
+        throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
+      }
       const layout = await roster.evaluate(list=>{
         const bounds = list.getBoundingClientRect();
         const cards = [...list.children].map(card=>card.getBoundingClientRect());

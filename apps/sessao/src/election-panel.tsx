@@ -20,14 +20,15 @@ function pollStandings(polls:ElectionView['polls']) {
   });
 }
 
-export function ElectionSummary({rank,candidate,atRisk,remaining,tied=false}:{
-  rank:number; candidate?:ElectionView['polls'][number]; atRisk:boolean; remaining:number; tied?:boolean;
+export function ElectionSummary({rank,candidate,leaders,atRisk,remaining,tied=false}:{
+  rank:number; candidate?:ElectionView['polls'][number]; leaders?:string; atRisk:boolean; remaining:number; tied?:boolean;
 }) {
   const trend = candidate?.trend ?? 0;
   return <>
     <svg className="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg>
-    <span className="election-summary"><span id="current-office">Renovação de Mandato</span>
-      <strong id="election-position">{candidate && `${rank}º · ${candidate.estimate}%${tied ? ' · Empate' : ''}${atRisk ? ' · Em risco' : ''}${trend ? ` · ${trend>0 ? '+' : ''}${trend} pp` : ''}`}</strong>
+    <span className="election-summary">
+      <span id="current-office" title={leaders}>{leaders ? `1º · ${leaders}` : 'Renovação de Mandato'}</span>
+      <strong id="election-position">{candidate ? `Você · ${rank}º · ${candidate.estimate}%${tied ? ' · Empate' : ''}${atRisk ? ' · Em risco' : ''}${trend ? ` · ${trend>0 ? '+' : ''}${trend} pp` : ''}` : 'Sem mandato'}</strong>
     </span>
     <span className="election-clock" hidden={!remaining}><small className="sr-only">Renovação em</small>
       <strong id="election-timer">{Math.floor(remaining/60)}:{String(remaining%60).padStart(2,'0')}</strong>
@@ -71,9 +72,9 @@ export function ElectionPolls({election,id}:{election:ElectionView; id:string}) 
 export function ElectionIndicator({summary,urgency,open}:{
   summary?:Parameters<typeof ElectionSummary>[0]; urgency?:'soon'|'high'; open:()=>boolean;
 }) {
-  return <div id="election-dock" className="hud-strip hud-module" hidden={!summary} data-urgency={urgency}>
+  return <div id="election-dock" className="hud-strip hud-module" hidden={!summary} data-urgency={urgency} data-at-risk={summary?.atRisk || undefined}>
     {summary && <button id="open-election-polls" aria-keyshortcuts="L" className="hud-option" type="button"
-      aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Abrir ranking eleitoral (L)" onClick={open}>
+      aria-label="Pesquisa eleitoral" aria-describedby="current-office election-position" aria-haspopup="dialog" title="Abrir ranking eleitoral (L)" onClick={open}>
       <ElectionSummary {...summary}/>
       <kbd className="action-key" aria-hidden="true">L</kbd>
     </button>}
@@ -108,8 +109,9 @@ export function createElectionPanel(id:string) {
       const {remaining} = election;
       const standings = pollStandings(election.polls);
       const standing = standings.find(({candidate})=>candidate.id===id);
-      const atRisk = !!standing && standing.rank===standings.at(-1)?.rank && standings.length>ELECTION_RULES.minimumMandates;
-      const summary = {rank:standing?.rank ?? 0,candidate:standing?.candidate,tied:standing?.tied,atRisk,
+      const leaders = standings.filter(({rank})=>rank===1).map(({candidate})=>candidate.name).join(', ');
+      const atRisk = view.phase!=='finished' && remaining>0 && !!standing && standing.rank===standings.at(-1)?.rank && standings.length>ELECTION_RULES.minimumMandates;
+      const summary = {rank:standing?.rank ?? 0,candidate:standing?.candidate,tied:standing?.tied,leaders,atRisk,
         remaining:view.phase==='finished' ? 0 : remaining};
       const urgency = view.phase==='finished' ? undefined : remaining<=30 ? 'high' : remaining<=60 ? 'soon' : undefined;
       const nextSummaryKey = JSON.stringify([summary,urgency]);

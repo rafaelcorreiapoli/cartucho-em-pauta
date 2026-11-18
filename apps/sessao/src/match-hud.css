@@ -1061,6 +1061,7 @@ button.item-tile:active { transform: translateY(3px); }
 
 #campaign-picker {
   width: min(440px, calc(100vw - 32px));
+  padding: 0;
 }
 .campaign-picker {
   display: grid;
@@ -1072,9 +1073,26 @@ button.item-tile:active { transform: translateY(3px); }
   align-items: center;
   justify-content: space-between;
 }
+.campaign-picker :is(h2, p) { margin: 0; }
 .campaign-picker > .hud-button {
+  --item-art: 48px;
+  display: grid;
+  grid-template-columns: var(--item-art) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-block: 6px;
   white-space: normal;
   text-align: left;
+}
+
+.campaign-picker .action-key { position: static; }
+.campaign-option-info { display: grid; gap: 4px; }
+.campaign-option-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: .8rem;
 }
 
 .investment-preview {
