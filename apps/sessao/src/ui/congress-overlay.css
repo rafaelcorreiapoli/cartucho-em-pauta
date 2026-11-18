@@ -927,9 +927,9 @@
   pointer-events: none;
 }
 
-/* Keep the vote and institutional stability visible while the player is in the chamber. */
+/* Keep the vote, electoral standing and institutional stability visible in the chamber. */
 #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(
-  .character-dock, #agenda-dock, .deck-tools, .election-and-incidents,
+  .character-dock, #agenda-dock, .deck-tools, #active-fire-mount, #active-outage-mount,
   #context-hud, #connection-latency, #electoral-notice-mount
 ) { display: none; }
 
@@ -937,6 +937,11 @@
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
     grid-column: 1 / -1;
     justify-self: center;
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .election-and-incidents {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: min(100%, 300px);
   }
 }
 #command-deck #legislative-dock {
@@ -948,13 +953,13 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+  #session :is(.character-dock, #agenda-dock, .deck-tools, #active-fire-mount, #active-outage-mount, #context-hud, #legislative-dock) {
     transition: translate 220ms ease, opacity 180ms ease, display 220ms allow-discrete;
   }
-  #session :is(.character-dock, .election-and-incidents) { --hud-slide: 0 -24px; }
+  #session :is(.character-dock, #active-fire-mount, #active-outage-mount) { --hud-slide: 0 -24px; }
   #session :is(#agenda-dock, .deck-tools, #context-hud, #legislative-dock) { --hud-slide: 0 24px; }
 
-  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud),
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] :is(.character-dock, #agenda-dock, .deck-tools, #active-fire-mount, #active-outage-mount, #context-hud),
   #session:not([data-in-plenary="true"]) #legislative-dock,
   #session[data-phase="negotiation"] #legislative-dock {
     translate: var(--hud-slide);
@@ -963,7 +968,7 @@
   }
 
   @starting-style {
-    #session :is(.character-dock, #agenda-dock, .deck-tools, .election-and-incidents, #context-hud, #legislative-dock) {
+    #session :is(.character-dock, #agenda-dock, .deck-tools, #active-fire-mount, #active-outage-mount, #context-hud, #legislative-dock) {
       translate: var(--hud-slide);
       opacity: 0;
     }
