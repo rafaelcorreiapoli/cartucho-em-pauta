@@ -177,7 +177,7 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   tick(15_000);
   expect(game.view(visitor,world).officeStash?.items[0]?.id).toBe(document.id);
   expect(act(visitor,'office-take',home.id,document.id)).toContain('retirado');
-  expect(events.findLast(event=>event.type==='recovered')).toMatchObject({item:document.id,breachedByActor:true});
+  expect(events.filter(event=>event.type==='recovered').at(-1)).toMatchObject({item:document.id,breachedByActor:true});
   expect(act(visitor,'office-take',home.id,document.id)).toBe('Objeto indisponível.');
   expect(act(visitor,'office-stash',home.id,document.id)).toContain('guardado');
   tick(officeRules.breachMs);

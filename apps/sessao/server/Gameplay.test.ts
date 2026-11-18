@@ -912,7 +912,7 @@ test('carrying a colleague to your own office and aiding them identify the playe
     world.now += weapons.baton.impactMs;
     game.tick(world,true);
   }
-  expect(events.findLast(event=>event.type==='character-knocked-out')).toMatchObject({
+  expect(events.filter(event=>event.type==='character-knocked-out').at(-1)).toMatchObject({
     actor:alice.id,target:bob.id,kind:'baton',
   });
   expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
@@ -925,12 +925,12 @@ test('carrying a colleague to your own office and aiding them identify the playe
   Object.assign(alice,game.officeSpawn(alice.id));
   world.now++;
   game.tick(world,true);
-  expect(events.findLast(event=>event.type==='character-carried-into-office')).toMatchObject({
+  expect(events.filter(event=>event.type==='character-carried-into-office').at(-1)).toMatchObject({
     actor:alice.id,target:bob.id,
   });
   game.act(alice,{kind:'release'},world);
   expect(game.act(alice,{kind:'aid',target:bob.id},world)).toBe('Jogador socorrido.');
-  expect(events.findLast(event=>event.type==='aided')).toMatchObject({
+  expect(events.filter(event=>event.type==='aided').at(-1)).toMatchObject({
     actor:alice.id,target:bob.id,knockedOutByActor:true,
   });
 });
