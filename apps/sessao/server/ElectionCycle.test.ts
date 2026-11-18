@@ -109,10 +109,10 @@ test('eliminating both infiltrators wins without stability damage',()=>{
   match.advance(rules.interval);
   const after = view('2',rules.interval);
   expect(after.election?.result?.eliminated).toBe('0');
-  expect(view('0',rules.interval)).toMatchObject({mandate:false,phase:'negotiation',payroll:{next:{remaining:30,cost:15}}});
+  expect(view('0',rules.interval)).toMatchObject({mandate:false,phase:'negotiation',payroll:{next:{remaining:60,cost:5}}});
   expect(after.stability).toBe(before.stability);
-  expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty);
-  expect(after.payroll?.last).toBeUndefined();
+  expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty-5*payrollRules.salary);
+  expect(after.payroll?.last?.at).toBe(rules.interval);
   expect(match.gameplayWorld(humans,rules.interval,()=>false).projectFilingError?.('0',1)).toContain('mandato');
   match.advance(rules.interval*2);
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
@@ -125,26 +125,28 @@ test('a short budget pays full salaries to remaining mandates and NPCs by borrow
   match.start('0',humans,0,()=>0);
   match.addParliamentarian({...players[0],id:'npc',npc:true});
   publishProjectFiling(match,humans[0]);
+  match.advance(payrollRules.interval-1);
+  expect(match.view('0',ids,payrollRules.interval-1).payroll).toEqual({next:{remaining:1,cost:7},last:undefined});
+  match.advance(payrollRules.interval);
+  expect(match.view('0',ids,payrollRules.interval).payroll).toEqual({
+    next:{remaining:60,cost:7},last:{at:payrollRules.interval,received:payrollRules.salary},
+  });
   match.advance(NEGOTIATION_MS);
   for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
-  const budget = match.view('0',ids,rules.interval).budget;
   const world = match.gameplayWorld(humans,0,()=>false);
   const npcBefore = world.wallet!('npc');
-  match.advance(rules.interval);
-  const beforePayment = match.view('0',ids,payrollRules.firstAt-1);
-  expect(budget).toBe(4);
-  expect(beforePayment).toMatchObject({budget:-2,payroll:{next:{remaining:1,cost:18}}});
-  expect(beforePayment.payroll?.last).toBeUndefined();
-  expect(world.wallet!('npc')).toBe(npcBefore);
+  const beforePayment = match.view('0',ids,rules.interval-1);
+  expect(beforePayment).toMatchObject({budget:-10,payroll:{next:{remaining:1,cost:7}}});
+  expect(beforePayment.payroll?.last?.at).toBe(2*payrollRules.interval);
 
-  match.advance(payrollRules.firstAt);
-  const next = match.view('0',ids,payrollRules.firstAt);
-  expect(next).toMatchObject({budget:-20,payroll:{last:{received:payrollRules.salary},next:{remaining:180,cost:18}}});
+  match.advance(rules.interval);
+  const next = match.view('0',ids,rules.interval);
+  expect(next).toMatchObject({budget:-22,payroll:{last:{received:payrollRules.salary},next:{remaining:60,cost:6}}});
   expect(match.economySummary(0).discrepancy).toBe(0);
   expect(world.wallet!('npc')).toBeCloseTo(npcBefore+payrollRules.salary);
-  expect(match.view('5',ids,payrollRules.firstAt).payroll?.last?.received).toBe(0);
+  expect(match.view('5',ids,rules.interval).payroll?.last?.received).toBe(0);
   const paid = world.wallet!('npc');
-  match.advance(payrollRules.firstAt);
+  match.advance(rules.interval);
   expect(world.wallet!('npc')).toBe(paid);
 });

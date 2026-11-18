@@ -132,7 +132,7 @@ export type Action = 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; abstentions?:number; absences?:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
-export const payrollRules = {firstAt:210_000,interval:180_000,salary:3} as const;
+export const payrollRules = {interval:60_000,salary:1} as const;
 export type PayrollView = {
   next?:{remaining:number;cost:number};
   last?:{at:number;received:number};

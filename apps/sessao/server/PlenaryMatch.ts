@@ -305,7 +305,7 @@ export class PlenaryMatch {
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
-    this.nextPayrollAt = now+payrollRules.firstAt;
+    this.nextPayrollAt = now+payrollRules.interval;
     this.lastPayroll = undefined;
     this.fire.reset(now,random);
     this.power = new Power();

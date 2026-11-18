@@ -107,7 +107,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
     expect(view.outcome?.passed).toBe(round===0);
     expect(view.outcomes.map(result => result.round)).toEqual(Array.from({length:round+1},(_,index) => index));
     if (round===0) {
-      expect(view.budget).toBe(4);
+      expect(view.budget).toBe(-2);
       expect(view.outcome?.applied).toEqual({budget:-28,stability:22});
     }
     now+=60_000;
@@ -186,7 +186,7 @@ test('diversion, transfers, and evidence sales affect balances without binding v
   match.advance(NEGOTIATION_MS);
   match.vote(honest.id,'no',NEGOTIATION_MS+1);
   expect(view(honest).vote).toBe('no');
-  expect(view(honest).politics?.wallet).toBe(11);
+  expect(view(honest).politics?.wallet).toBe(12);
 });
 
 test('investments authorize only the selected amount, apply proportional bonuses, and recharge per player',()=>{
@@ -533,7 +533,6 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.economySummary(game.physicalCash())).toMatchObject({projects:28,discrepancy:0});
   match.advance(ELECTION_RULES.interval);
-  match.advance(payrollRules.firstAt);
   expect(match.economySummary(game.physicalCash())).toMatchObject({budget:-8,publicDuty:6,salaries:9,discrepancy:0});
 });
 
@@ -677,8 +676,8 @@ test('a project applies its full impact and public debt drains stability until r
   const firstPenalty = passedAt+publicDebtRules.interval;
   match.advance(passedAt);
   const view = (now:number)=>match.view(host.id,ids,now);
-  expect(view(passedAt)).toMatchObject({budget:-3.3,stability:70,debtPenaltyIn:30,outcome:{
-    passed:true,deficit:3.3,applied:{budget:-28,stability:22},
+  expect(view(passedAt)).toMatchObject({budget:-5.3,stability:70,debtPenaltyIn:30,outcome:{
+    passed:true,deficit:5.3,applied:{budget:-28,stability:22},
   }});
 
   match.advance(firstPenalty-1);
@@ -686,20 +685,19 @@ test('a project applies its full impact and public debt drains stability until r
   match.advance(firstPenalty);
   expect(view(firstPenalty)).toMatchObject({stability:66,debtPenaltyIn:30});
   const deposit = (amount:number,now:number)=>match.gameplayWorld([host],now,()=>false).deposit!(host.id,amount);
-  expect(deposit(2.4,firstPenalty+1)).toBe(true);
+  expect(deposit(4.4,firstPenalty+1)).toBe(true);
   expect(view(firstPenalty+1)).toMatchObject({budget:-.9,debtPenaltyIn:30});
   expect(publicDebtStabilityLoss(view(firstPenalty+1).budget)).toBe(1);
   expect(deposit(.9,firstPenalty+2)).toBe(true);
   expect(view(firstPenalty+2).debtPenaltyIn).toBeUndefined();
   expect(view(ELECTION_RULES.interval-1)).toMatchObject({budget:0});
   match.advance(ELECTION_RULES.interval);
-  expect(view(ELECTION_RULES.interval)).toMatchObject({budget:-6,debtPenaltyIn:30,stability:66});
-  expect(view(ELECTION_RULES.interval).payroll?.last).toBeUndefined();
+  expect(view(ELECTION_RULES.interval)).toMatchObject({budget:-7,debtPenaltyIn:30,stability:66});
   match.advance(firstPenalty+publicDebtRules.interval);
   expect(view(firstPenalty+publicDebtRules.interval).stability).toBe(66);
   const nextPenalty = ELECTION_RULES.interval+publicDebtRules.interval;
   match.advance(nextPenalty);
-  expect(view(nextPenalty)).toMatchObject({budget:-9,stability:62,payroll:{last:{received:payrollRules.salary}}});
+  expect(view(nextPenalty)).toMatchObject({budget:-7,stability:62,payroll:{last:{received:payrollRules.salary}}});
   Reflect.set(match,'stability',4);
   const collapseAt = nextPenalty+publicDebtRules.interval;
   match.advance(collapseAt);
@@ -855,8 +853,8 @@ test.each(['PROJ-N04','PROJ-N12','PROJ-N13'])('%s pays only on approval with a b
     match.advance(NEGOTIATION_MS+BALLOT_MS);
     const after = view(NEGOTIATION_MS+BALLOT_MS);
     expect(after.outcome?.passed).toBe(approved);
-    expect(after.budget).toBe(before.budget-(approved ? cost : 0));
-    expect(after.politics!.wallet).toBe(before.politics!.wallet+(approved ? cost/3 : 0));
+    expect(after.budget).toBe(before.budget-2*people.length*payrollRules.salary-(approved ? cost : 0));
+    expect(after.politics!.wallet).toBe(before.politics!.wallet+2*payrollRules.salary+(approved ? cost/3 : 0));
     expect(match.economySummary(0).discrepancy).toBe(0);
   }
 });
@@ -1189,7 +1187,7 @@ test.each(['approved','rejected','borrowed'] as const)('Minha Pinga, Minha Vida:
   match.advance(at,deliver);
   const result = match.view(rafa.id,ids,at);
   expect(result.outcome?.passed).toBe(scenario!=='rejected');
-  expect(result.budget).toBe(before-(scenario==='rejected' ? 0 : 1));
+  expect(result.budget).toBe(before-match.economySummary(0).salaries-(scenario==='rejected' ? 0 : 1));
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
   const doses = inventory(rafa,at).filter(item=>item.kind==='pinga');
   expect(doses).toHaveLength(scenario==='rejected' ? 0 : 1);
@@ -1295,7 +1293,7 @@ test('successive shop and mail policies keep their own deadlines and public cost
   for (const voter of [host,honest]) match.vote(voter.id,'yes',NEGOTIATION_MS+1);
   match.advance(first);
   expect(view(first).outcome).toMatchObject({passed:true,applied:{budget:coffee.yes.budget}});
-  expect(view(first).budget).toBe(coffee.budget+coffee.yes.budget);
+  expect(view(first).budget).toBe(coffee.budget+coffee.yes.budget-people.length*payrollRules.salary);
   expect(view(first).policies).toEqual({coffee:first+policyDuration});
 
   publishProjectFiling(match,host,mail,nextFiling);
@@ -1305,7 +1303,7 @@ test('successive shop and mail policies keep their own deadlines and public cost
   for (const voter of [host,honest]) match.vote(voter.id,'yes',nextVote+1);
   match.advance(second);
   expect(view(second).outcomes.map(result=>result.passed)).toEqual([true,true]);
-  expect(view(second).budget).toBe(mailBallot.budget+mailBallot.yes.budget);
+  expect(view(second).budget).toBe(mailBallot.budget+mailBallot.yes.budget-people.length*payrollRules.salary);
   expect(view(second).policies).toEqual({mail:second+policyDuration});
   expect(view(second+policyDuration).policies).toEqual({});
   expect(match.economySummary(0).discrepancy).toBe(0);
