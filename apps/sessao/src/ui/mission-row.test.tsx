@@ -1,3 +1,4 @@
+import {cassationFee} from '../npcs';
 import {fireRules,fireSites} from '../fire';
 import {minimumPartialDepositLot,terminals,treasuryDeliveries,type GameplayEvent} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
@@ -1922,7 +1923,8 @@ test.each([false,true])('Pix missions and recipients reflect cassation with prio
     expect(render(2)).toContain('1 / 2');
   }
 
-  match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
+  match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation({...host,...stations.audit},50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);
   expect(phone(host,open)).toContain('Nenhum destinatário disponível.');

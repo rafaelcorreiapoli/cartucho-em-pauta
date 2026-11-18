@@ -157,58 +157,6 @@ async page => {
   await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor({state:'hidden'});
 
   await page.reload();
-  const guest = await page.context().newPage();
-  try {
-    await page.getByRole('textbox',{name:'Seu nick'}).fill('Rafa');
-    await page.getByRole('button',{name:'Criar sala'}).click();
-    await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
-    const roomCode = (await page.locator('#room-label').textContent()).trim().split(' ')[1];
-
-    await guest.goto(page.url());
-    await guest.getByRole('textbox',{name:'Seu nick'}).fill('Bia');
-    await guest.getByRole('textbox',{name:'Código da sala'}).fill(roomCode);
-    await guest.getByRole('button',{name:'Entrar',exact:true}).click();
-    await guest.locator('#lobby-back').waitFor();
-    await page.locator('#parliamentarian-count [data-count="0"]').click();
-    await page.getByRole('button',{name:'Iniciar sessão'}).click();
-
-    await page.getByRole('button',{name:'Pedir afastamento',exact:true}).click();
-    const submit = institution.getByRole('button',{name:'Convocar votação',exact:true});
-    await submit.waitFor();
-    if (await submit.isEnabled()) throw Error('É possível convocar votação sem escolher um alvo');
-    const actionMenu = page.locator('#action-shortcuts');
-    await page.keyboard.press('F2');
-    await actionMenu.waitFor();
-    if (await actionMenu.getByRole('button',{name:/Convocar votação/}).count()) {
-      throw Error('O F2 permite convocar votação sem escolher um alvo');
-    }
-    await page.keyboard.press('Escape');
-    await actionMenu.waitFor({state:'hidden'});
-    await runShortcut(institution.getByRole('button',{name:/^Bia ·/}),/^Bia ·/);
-    await runShortcut(submit,/Convocar votação/);
-    await institution.waitFor({state:'hidden'});
-
-    for (const client of [page,guest]) {
-      await client.locator('#session[data-phase="hearing"]').waitFor();
-      await client.locator('#ballot').getByText(/0\/2 votaram/).waitFor();
-    }
-    const originalVote = page.locator('#ballot').getByRole('button',{name:'Afastar',exact:true});
-    await originalVote.evaluate(button=>button.setAttribute('aria-label','Botão original oculto do F2'));
-    await page.keyboard.press('F2');
-    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
-    const vote = palette.getByRole('button',{name:'Afastar',exact:true});
-    await vote.waitFor();
-    await page.keyboard.press(await vote.getAttribute('aria-keyshortcuts'));
-    await palette.waitFor({state:'hidden'});
-    await page.locator('#ballot').getByText('Seu voto: afastar',{exact:true}).waitFor();
-    await guest.locator('#ballot').getByText(/1\/2 votaram/).waitFor();
-    if (await guest.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
-
-  } finally {
-    await guest.close();
-  }
-
-  await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Cassação QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
@@ -226,7 +174,8 @@ async page => {
     }
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
-    await page.getByRole('button',{name:/^Convocar cassação/}).click();
+    await page.getByRole('button',{name:/Falar com Chapolin Colorado/}).click();
+    await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · R\$ 100 mil/}).click();
     const ballot = page.getByRole('region',{name:'Votação de cassação'});
     await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor();
     const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
@@ -278,6 +227,6 @@ async page => {
   await runShortcut(finale.getByRole('button',{name:'Continuar',exact:true}),/^Continuar$/);
   await finale.waitFor({state:'hidden'});
   await page.locator('#session[data-phase="finished"]').waitFor();
-  return {resolutions:3,projectPickerResolutions:2,hearingVoteReplicatedViaF2:true,cassationVoteReplicatedViaF2:true,
+  return {resolutions:3,projectPickerResolutions:2,cassationVoteReplicatedViaF2:true,
     staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true,hotbarDocumentInspectedAndDroppedByKeyboard:true};
 }

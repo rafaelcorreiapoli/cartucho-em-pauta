@@ -218,8 +218,7 @@ export type PoliticsAction =
   | {kind:'share'; to:string; evidence:number; price:number}
   | {kind:'publish'; evidence:number}
   | {kind:'accept' | 'cancel'; offer:number}
-  | {kind:'hearing'; target:string}
-  | {kind:'call-cassation'};
+  | {kind:'hearing'; target:string};
 
 
 export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
@@ -249,9 +248,6 @@ export function readPoliticsAction(data:unknown): PoliticsAction | undefined {
     case 'cancel':
       if ('offer' in data && integer(data.offer)) return {kind:data.kind,offer:data.offer as number};
       break;
-    case 'call-cassation': return {kind:'call-cassation'};
-    case 'hearing':
-      if ('target' in data && typeof data.target==='string') return {kind:'hearing',target:data.target};
   }
 }
 

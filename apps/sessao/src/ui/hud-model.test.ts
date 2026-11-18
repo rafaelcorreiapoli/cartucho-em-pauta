@@ -1,3 +1,4 @@
+import {cassationFee} from '../npcs';
 import {publishProjectFiling} from '../../server/project-test-fixture';
 import {Gameplay} from '../../server/Gameplay';
 import {expect,test} from 'bun:test';
@@ -460,7 +461,8 @@ test('the HUD suppresses a project warning when cassation delays its vote past t
   const hearingEnd = voteAt+1;
   const hearingAt = hearingEnd-HEARING_MS;
   const noticeAt = hearingAt-CASSATION_NOTICE_MS;
-  match.politics({...player,...stations.panel},{kind:'call-cassation'},players,noticeAt);
+  match.gameplayWorld([],0,()=>false).earn(player.id,cassationFee);
+  expect(match.callCassation({...player,...stations.audit},noticeAt)).toBeUndefined();
   const hud = createHudModel();
   hud.render(match.view(player.id,ids,noticeAt));
   expect(hud.countdown.get()).toEqual({kind:'cassation',seconds:30});

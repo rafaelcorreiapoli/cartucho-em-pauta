@@ -18,7 +18,7 @@ import { flushSync } from 'react-dom';
 import { equippedWeapon } from './equipment';
 import { hudConsumesKeys } from './game-keys';
 import type { Motion, Player } from './map';
-import { money, type PoliticsAction } from './politics';
+import { money } from './politics';
 import { stations as stationPoints, canReachStation, stabilityRules, STATION_RADIUS, type Action, type PlenaryView, type Station } from './plenary';
 import { roomActivities, type RoomActivity, type RoomActivityResult } from './room-activities';
 
@@ -27,7 +27,7 @@ const noNearbyItems:readonly NearbyItem[] = [];
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
 export function createMatchHud(id:string, stationFeedback:(station:Station) => void, sendActivity:(activity:RoomActivity) => void,
-  nearby:{render:(player:Motion | undefined,exploring:boolean,directCollections:readonly number[])=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void;sendInstitutional:(action:PoliticsAction)=>void},
+  nearby:{render:(player:Motion | undefined,exploring:boolean,directCollections:readonly number[])=>void;get:()=>readonly NearbyItem[]}, sendField:(action:FieldAction)=>void, institutional:{openInstitutional:()=>void;openDossier:()=>void},
   sendLegislative:(action:Exclude<Action,'audit'> | 'denounce')=>void,election:{send:(action:ElectionAction)=>void;hasVoice:()=>boolean}) {
   const rewards = mountRewardEffects(element('wallet-effects'));
   const notices = mountNotices(element('hud-notices'));
@@ -48,9 +48,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
   function selectShortcut(kind:Shortcut['kind']) {
     switch (kind) {
-      case 'grant':
-      case 'hearing': institutional.openInstitutional(); return;
-      case 'cassation': institutional.sendInstitutional({kind:'call-cassation'}); return;
+      case 'grant': institutional.openInstitutional(); return;
       case 'publish': institutional.openDossier(); return;
       default: sendActivity(kind);
     }

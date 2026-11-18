@@ -1458,6 +1458,7 @@ export class Gameplay {
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,
       this.dialogueEligibility(id,world),this.documentsForProtocol(id),{
         file:item=>this.fileDocument(player,item,world),
+        callCassation:()=>world.callCassation ? world.callCassation(player) : 'Cassação indisponível.',
         swapMissions:()=>world.swapMissions?.(id) ?? 'unavailable',
       });
     if (action.kind==='use-binoculars') {

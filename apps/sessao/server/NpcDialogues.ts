@@ -50,7 +50,7 @@ export class NpcDialogues {
   }
 
   choose(player:Player, choice:string|undefined, token:number|undefined, eligible:Eligibility,
-    documents:readonly Document[], effects:{file:(item:number)=>string;swapMissions:()=>MissionSwapResult}) {
+    documents:readonly Document[], effects:{file:(item:number)=>string;swapMissions:()=>MissionSwapResult;callCassation:()=>string|undefined}) {
     const session = this.active(player);
     if (!session || token!==session.token) return 'Esta conversa já mudou.';
     const option = this.options(session,eligible,documents).find(entry=>entry.id===choice);
@@ -59,6 +59,16 @@ export class NpcDialogues {
       session.token = ++this.serial;
       session.feedback = effects.file(option.fileItem);
       return session.feedback;
+    }
+    if (option.action==='call-cassation') {
+      const error = effects.callCassation();
+      if (!error) {
+        this.close(player.id);
+        return;
+      }
+      session.feedback = error;
+      session.token = ++this.serial;
+      return error;
     }
     if (option.action==='close') {
       this.close(player.id);

@@ -31,7 +31,7 @@ export const stations = {
   cabinet:treasurer.interaction,
   secretary:npcs.secretary.interaction,
   archive:{x:128,y:364},
-  audit: {x:808,y:93},
+  audit: npcs.corregedor.interaction,
   panel: {x:548,y:620},
   press: {x:863,y:245},
   tv: {x:915,y:200},
@@ -41,8 +41,7 @@ export const STATION_RADIUS = 23;
 export function canReachStation(player:InteractionActor, station:Station, radius=STATION_RADIUS) {
   return canInteract(player,stations[station],{radius,handsFree:true});
 }
-export type BillPolicy = 'supplies'|'transport'|'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'hearing'|'campaign'|'energySavings'|'bankAudit';
-export const hearingPolicyFee = 2;
+export type BillPolicy = 'supplies'|'transport'|'recovery'|'coffee'|'furniture'|'equipment'|'mail'|'campaign'|'energySavings'|'bankAudit';
 export const bankAuditFee = 1;
 export const campaignPolicyMultiplier = 2;
 export const policyDiscountPercent = 40;
@@ -87,9 +86,6 @@ export const bills:readonly Bill[] = [
   {id:'PROJ-N05',icon:'projetos/proj-n05.webp',name:'Lei do Cafezinho Ininterrupto',
     description:'O cafezinho ganhou desconto na Lanchonete.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'coffee',detail:`Café com ${policyDiscountPercent}% de desconto na Lanchonete por ${policySeconds} s, enquanto houver orçamento`}},
-  {id:'PROJ-N06',icon:'projetos/proj-n06.webp',name:'PEC do Foro Ultra-Privilegiado',
-    description:`Convocar afastamento ou cassação custa ${money(hearingPolicyFee)} por ${policySeconds} s.`,
-    yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'hearing',detail:`Taxa de convocação de ${money(hearingPolicyFee)} por ${policySeconds} s`}},
   {id:'PROJ-N07',icon:'projetos/proj-n07.webp',name:'Minha Mansão, Minha Vida',
     description:'Verba para dar um trato nos gabinetes.',
     yes:{stability:0,budget:0},no:{stability:0,budget:0},effect:{kind:'policy',policy:'furniture',detail:`Móveis com ${policyDiscountPercent}% de desconto por ${policySeconds} s, enquanto houver orçamento`}},
@@ -150,7 +146,7 @@ export type PlenaryView = {
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   payroll?:PayrollView; election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
-  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; canCallCassation?:boolean; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
+  complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; congressDestroyed?:boolean; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };
 

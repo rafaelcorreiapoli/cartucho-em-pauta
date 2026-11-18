@@ -1,5 +1,5 @@
 import {discountedPrice,marketProduct} from '../src/market-catalog';
-import {npcs} from '../src/npcs';
+import {cassationFee,npcs} from '../src/npcs';
 import {pinga} from '../src/food';
 import {restMovement,STEP_MS} from '../src/movement';
 
@@ -737,17 +737,16 @@ test('cassation requires at least three eligible players to be called',()=>{
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
-  const call = () => match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  economy.earn(host.id,cassationFee);
+  const call = () => match.callCassation(at(host,'audit'),50);
   const view = () => match.view(host.id,ids,50);
 
   match.setPlayerConnected(honest.id,false);
-  expect(view().canCallCassation).toBe(false);
   expect(view().politics?.canCallHearing).toBe(true);
   call();
   expect(view().cassationIn).toBeUndefined();
 
   match.setPlayerConnected(honest.id,true);
-  expect(view().canCallCassation).toBe(true);
   call();
   expect(view().cassationIn).toBe(30);
 });
@@ -756,17 +755,16 @@ test('cassation can be called at 40 popularity',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
-  const call = () => match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  economy.earn(host.id,cassationFee);
+  const call = () => match.callCassation(at(host,'audit'),50);
   const view = () => match.view(host.id,ids,50);
 
   economy.changePopularity(host.id,-1);
   expect(view().politics?.popularity).toBe(39);
-  expect(view().canCallCassation).toBe(false);
   call();
   expect(view().cassationIn).toBeUndefined();
 
   economy.changePopularity(host.id,1);
-  expect(view().canCallCassation).toBe(true);
   expect(view().politics?.canCallHearing).toBe(false);
   call();
   expect(view().cassationIn).toBe(30);
@@ -778,7 +776,8 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   publishProjectFiling(match,host);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
-  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation(at(host,'audit'),50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   const view = (now:number)=>match.view(host.id,ids,now);
   expect(view(50).cassationIn).toBe(30);
@@ -794,10 +793,62 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
+test('cassation charges the caller once and can be called again after an inconclusive vote',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const caller = at(host,'audit');
+  expect(readPoliticsAction({kind:'hearing',target:traitor.id})).toBeUndefined();
+  expect(readPoliticsAction({kind:'call-cassation'})).toBeUndefined();
+  expect(canStand(caller.x,caller.y)).toBe(true);
+  economy.earn(host.id,cassationFee-1-economy.wallet(host.id));
+  expect(match.callCassation(caller,1)).toContain('Saldo insuficiente');
+  expect(economy.wallet(host.id)).toBe(cassationFee-1);
+  expect(match.view(host.id,ids,1).cassationIn).toBeUndefined();
+
+  economy.earn(host.id,cassationFee+1);
+  expect(match.callCassation(at(host,'panel'),2)).toContain('Corregedoria');
+  expect(economy.wallet(host.id)).toBe(2*cassationFee);
+  expect(match.callCassation(caller,3)).toBeUndefined();
+  expect(match.callCassation(caller,4)).toContain('indisponível');
+  expect(economy.wallet(host.id)).toBe(cassationFee);
+
+  const openedAt = 3+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  const resolvedAt = openedAt+HEARING_MS;
+  match.advance(resolvedAt);
+  expect(match.view(host.id,ids,resolvedAt).cassationResult?.text).toContain('Ninguém foi cassado');
+  const walletAfterPayroll = economy.wallet(host.id);
+  expect(match.callCassation(caller,resolvedAt+1)).toBeUndefined();
+  expect(economy.wallet(host.id)).toBe(walletAfterPayroll-cassationFee);
+  expect(match.economySummary(0).cassationFees).toBe(2*cassationFee);
+});
+
+test('a cassation called at the last possible instant resolves before the session ends',()=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(host.id,people,0,()=>.9)).toBe(true);
+  const caller = at(host,'audit');
+  const deadline = ELECTION_RULES.matchDuration;
+  const lastCall = deadline-CASSATION_NOTICE_MS-HEARING_MS;
+  const wallet = match.view(host.id,ids,0).politics!.wallet;
+  expect(match.callCassation(caller,lastCall+1)).toContain('indisponível');
+  expect(match.view(host.id,ids,lastCall+1).politics!.wallet).toBe(wallet);
+  match.gameplayWorld([],lastCall,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation(caller,lastCall)).toBeUndefined();
+  const openedAt = lastCall+CASSATION_NOTICE_MS;
+  match.advance(openedAt);
+  for (const voter of [host,honest]) match.castCassation(voter.id,traitor.id,openedAt);
+  match.advance(deadline);
+  const result = match.view(host.id,ids,deadline);
+  expect(result.phase).toBe('finished');
+  expect(result.cassationResult?.text).toContain('Clodovil perdeu o mandato com 2 votos');
+});
+
 test('cassation counts the same connected votes in the HUD and the final tally',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
-  match.politics(at(host,'panel'),{kind:'call-cassation'},people,50);
+  match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation(at(host,'audit'),50)).toBeUndefined();
   const openedAt = 50+CASSATION_NOTICE_MS;
   match.advance(openedAt);
   match.castCassation(host.id,traitor.id,openedAt);
@@ -899,7 +950,7 @@ test('the extintor bill delays the next ignition only when approved and funded',
   }
 });
 
-test.each(['recovery','coffee','hearing','furniture','equipment','mail','campaign'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
+test.each(['recovery','coffee','furniture','equipment','mail','campaign'] as const)('the %s policy only persists after a successful vote and expires',policy=>{
   const project = bills.findIndex(bill=>bill.effect?.kind==='policy' && bill.effect.policy===policy);
   for (const approved of [false,true]) {
     const match = new PlenaryMatch(1);

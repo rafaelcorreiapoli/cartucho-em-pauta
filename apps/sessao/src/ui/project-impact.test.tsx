@@ -32,7 +32,7 @@ test('zero has no sign or gain styling',()=>{
 
 test('the ballot displays the catalog icon, policy details and gameserver-funded allowance',()=>{
   const player:Player = {id:'a',nick:'Rafa',x:140,y:146,character:0,direction:0,moving:false};
-  expect(bills.filter(bill=>bill.id.startsWith('PROJ-N'))).toHaveLength(15);
+  expect(bills.filter(bill=>bill.id.startsWith('PROJ-N'))).toHaveLength(14);
   for (const bill of bills.filter(entry=>entry.id.startsWith('PROJ-N'))) {
     const match = new PlenaryMatch(1);
     expect(match.start(player.id,[player],0,()=>0)).toBe(true);

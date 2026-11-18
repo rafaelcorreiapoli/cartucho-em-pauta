@@ -2,7 +2,7 @@ import {DialogDismiss} from './dialog-dismiss';
 import {useState} from 'react';
 import {useDialogKeys} from './use-dialog-keys';
 import type {Player} from '../map';
-import {canReachStation,hearingPolicyFee,type PlenaryView} from '../plenary';
+import {canReachStation,type PlenaryView} from '../plenary';
 import {money,type PoliticsAction} from '../politics';
 import {diversionPercentages,investmentAmounts,investmentAreas,investmentImpact,investmentRules,
   type DiversionPercentage,type InvestmentAmount,type InvestmentArea} from '../public-investments';
@@ -12,29 +12,14 @@ export function institutionalActions(view?:PlenaryView,player?:Player) {
   if (!politics || view.phase!=='negotiation' || !player) return {};
   const grant = canReachStation(player,'cabinet') && view.mandate && !politics.suspended && view.ballotCountdown===undefined
     ? {budget:view.budget,cooldown:politics.grantCooldown} : undefined;
-  const fee = view.policies?.hearing ? hearingPolicyFee : 0;
-  const atPanel = canReachStation(player,'panel');
-  const summons = {fee,affordable:politics.wallet>=fee};
-  const cassation = atPanel && view.canCallCassation ? summons : undefined;
-  const hearing = atPanel && politics.canCallHearing ? {
-    ...summons,
-    candidates:politics.directory.filter(contact=>contact.id!==player.id && contact.eligible)
-      .map(({id,name,popularity})=>({id,name,popularity})),
-  } : undefined;
-  return {grant,hearing,cassation};
-}
-
-export function cassationLabel(fee:number) {
-  return 'Convocar cassação'+(fee ? ' · '+money(fee) : '');
+  return {grant};
 }
 
 export function InstitutionalActions({model,send,close}:{close?:()=>void;model:ReturnType<typeof institutionalActions>;send:(action:PoliticsAction)=>void}) {
   const [area,setArea] = useState<InvestmentArea>('health');
   const [amount,setAmount] = useState<InvestmentAmount>(investmentAmounts[0]);
   const [diversion,setDiversion] = useState<DiversionPercentage>(0);
-  const [target,setTarget] = useState('');
-  const {grant,hearing,cassation} = model;
-  const nominee = hearing?.candidates.find(candidate=>candidate.id===target);
+  const {grant} = model;
   const canApply = !!grant && !grant.cooldown && grant.budget>=amount;
   const applyGrant = ()=>{
     if (!canApply) return;
@@ -58,18 +43,11 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
   const diversionChoices = diversionPercentages.map(value=>({
     label:`Desviar ${value}%`,selected:value===diversion,activate:()=>setDiversion(value),
   }));
-  const callCassation = ()=>{if (cassation?.affordable) send({kind:'call-cassation'});};
-  const callHearing = ()=>{if (nominee && hearing?.affordable) send({kind:'hearing',target:nominee.id});};
   const grantLabel = 'Aplicar verba de '+money(amount);
-  const hearingLabel = 'Convocar votação'+(hearing?.fee ? ' · '+money(hearing.fee) : '');
   const actions = useDialogKeys<HTMLDivElement>(()=>undefined,[
     ...(close ? [{name:'Fechar ações institucionais',activate:close}] : []),
     ...(grant ? [...areaChoices,...amountChoices,...diversionChoices].map(({label,activate})=>({name:label,activate})) : []),
     ...(canApply ? [{name:grantLabel,activate:applyGrant}] : []),
-    ...(cassation?.affordable ? [{name:cassationLabel(cassation.fee),activate:callCassation}] : []),
-    ...(hearing?.candidates.map(candidate=>({name:candidate.name+' · '+candidate.popularity+' pop.',
-      activate:()=>setTarget(candidate.id)})) ?? []),
-    ...(nominee && hearing?.affordable ? [{name:hearingLabel,activate:callHearing}] : []),
   ]);
   return <div id="politics-actions" ref={actions}>
     <header className="social-header">
@@ -94,21 +72,6 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
       {grant.cooldown>0 ? <p role="status">Disponível em {grant.cooldown} s</p> :
         grant.budget<amount && <p role="status">Orçamento insuficiente</p>}
       <button className="hud-button" type="submit" disabled={!canApply}>{grantLabel}</button>
-    </form>}
-    {cassation && <button className="hud-button" type="button" disabled={!cassation.affordable}
-      onClick={callCassation}>{cassationLabel(cassation.fee)}</button>}
-    {hearing && <form id="hearing-form" onSubmit={event=>{
-      event.preventDefault();
-      callHearing();
-    }}>
-      <div className="section-label">Afastamento temporário</div>
-      <div className="choice-grid" role="group" aria-label="Alvo do afastamento">
-        {hearing.candidates.map(candidate=><button key={candidate.id} type="button" className="hud-button hud-button--secondary game-choice"
-          aria-pressed={candidate===nominee} onClick={()=>setTarget(candidate.id)}>{candidate.name} · {candidate.popularity} pop.</button>)}
-      </div>
-      <button className="hud-button" type="submit" disabled={!nominee || !hearing.affordable}>
-        {hearingLabel}
-      </button>
     </form>}
   </div>;
 }
