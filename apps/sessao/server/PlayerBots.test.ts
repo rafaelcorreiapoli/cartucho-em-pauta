@@ -249,10 +249,10 @@ test('training guide approaches only for interactions and keeps space around the
   Object.assign(human,stations.coffee);
   Object.assign(guide,{x:human.x+80,y:human.y});
   bots.tick(match,gameplay,worldAt(1000),()=>true);
-  bots.move(controls.get(guide.id)!);
+  bots.move(controls.get(guide.id)!,undefined);
   expect(controls.get(guide.id)!.route).toEqual([]);
   bots.tick(match,gameplay,worldAt(2000),()=>true,2000,true);
-  bots.move(controls.get(guide.id)!);
+  bots.move(controls.get(guide.id)!,undefined);
   const destination = controls.get(guide.id)!.route.at(-1)!;
   expect(destination).toBeDefined();
   expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeGreaterThanOrEqual(30);
