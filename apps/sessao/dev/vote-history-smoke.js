@@ -247,6 +247,10 @@ async page => {
       if (notices && notices.height>0 && notices.y<standing.y+standing.height) {
         throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
       }
+      const ballot = await sheet.boundingBox();
+      if (width<=640 && notices && notices.height>0 && ballot && notices.y+notices.height>ballot.y) {
+        throw Error(`Notificações cobrem a cédula em ${width}×${height}`);
+      }
       const portraitOnRight = await election.locator('.election-leader').evaluate(row=>
         row.querySelector('.poll-avatar').getBoundingClientRect().left>=row.querySelector('.election-name').getBoundingClientRect().right);
       if (!portraitOnRight) throw Error('Retrato do líder desalinhado no placar eleitoral');

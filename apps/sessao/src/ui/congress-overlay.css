@@ -1023,6 +1023,19 @@
     max-width: 100%;
   }
 }
+@media (max-width: 640px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #hud-notices {
+    max-block-size: 44px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: auto;
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .hud-notice {
+    padding: .25rem .4rem;
+    gap: .1rem;
+    font-size: 11px;
+  }
+}
 #command-deck #legislative-dock {
   position: absolute;
   inset: auto 0 0;
