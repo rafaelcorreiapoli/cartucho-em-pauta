@@ -717,6 +717,7 @@
 .bag-storage { display: flex; flex-direction: column; min-height: 0; overflow: auto; padding: 3px; }
 .bag-layout .congress-bag {
   flex: 1;
+  min-height: 0;
   grid-template-columns: repeat(3,minmax(0,1fr));
   grid-template-rows: repeat(3,minmax(32px,1fr));
   gap: 9px;
