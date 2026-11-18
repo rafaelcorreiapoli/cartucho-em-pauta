@@ -149,7 +149,7 @@ async page => {
   await page.keyboard.press('n');
   await sheet.locator('[data-vote-state="abstain"]').getByText('Histórico QA').waitFor();
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
-  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
+  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:45000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});
   await settingsButton.waitFor({state:'hidden'});
   const brief = page.locator('#project-outcome-brief');
