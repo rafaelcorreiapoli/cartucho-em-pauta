@@ -255,5 +255,6 @@ test('training guide approaches only for interactions and keeps space around the
   bots.move(controls.get(guide.id)!,undefined);
   const destination = controls.get(guide.id)!.route.at(-1)!;
   expect(destination).toBeDefined();
-  expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeGreaterThanOrEqual(30);
+  expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeGreaterThanOrEqual(18);
+  expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeLessThanOrEqual(24);
 });

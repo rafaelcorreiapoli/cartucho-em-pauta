@@ -128,7 +128,7 @@ export class PlayerBots {
           if (canOperatePanel(player,1)) match.actOnPower(player,{kind:'repair',panel:1},now);
         } else if (approachLearner && learner && bot.index===0) {
           const distance = Math.hypot(player.x-learner.x,player.y-learner.y);
-          if (distance>40) this.go(bot,{x:learner.x+(player.x-learner.x)*32/distance,y:learner.y+(player.y-learner.y)*32/distance},now);
+          if (distance>22) this.go(bot,{x:learner.x+(player.x-learner.x)*20/distance,y:learner.y+(player.y-learner.y)*20/distance},now);
         }
       } else this.explore(bot,match,gameplay,world,view,visible);
       const phone = gameplay.phoneActivity(id);
