@@ -1061,6 +1061,12 @@
   display: grid;
   place-items: center;
   position: fixed;
-  inset: var(--hud-edge) var(--hud-edge) auto auto;
+  inset: var(--hud-edge) auto auto var(--hud-edge);
   pointer-events: auto;
+}
+
+@media (max-width: 760px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #plenary-settings {
+    inset-inline: auto var(--hud-edge);
+  }
 }
