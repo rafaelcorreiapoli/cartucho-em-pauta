@@ -897,3 +897,40 @@ test('a knocked-out player bot drops its carried briefcase for another player to
   expect(game.view(alice,world).inventory).toContainEqual(cash);
   expect(game.physicalCash()).toBe(12);
 });
+
+test('carrying a colleague to your own office and aiding them identify the player who knocked them out',()=>{
+  const {alice,bob,watcher,game,world,events} = setup();
+  game.reset(0,()=>0,world.players,()=>0);
+  world.spend = ()=>true;
+  const baton = buyTechnical(game,alice,world,'baton');
+  game.act(alice,{kind:'equip',item:baton.id},world);
+  Object.assign(alice,{x:240,y:250,direction:1});
+  Object.assign(bob,{x:249,y:250});
+  for (let strike=0;strike<8 && !bob.knockedOut;strike++) {
+    world.now += weapons.baton.swingMs;
+    game.act(alice,{kind:'attack'},world);
+    world.now += weapons.baton.impactMs;
+    game.tick(world,true);
+  }
+  expect(events.findLast(event=>event.type==='character-knocked-out')).toMatchObject({
+    actor:alice.id,target:bob.id,kind:'baton',
+  });
+  expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
+  game.tick(world,true);
+  Object.assign(alice,game.officeSpawn(watcher.id));
+  world.now++;
+  game.tick(world,true);
+  expect(events.some(event=>event.type==='character-carried-into-office')).toBe(false);
+
+  Object.assign(alice,game.officeSpawn(alice.id));
+  world.now++;
+  game.tick(world,true);
+  expect(events.findLast(event=>event.type==='character-carried-into-office')).toMatchObject({
+    actor:alice.id,target:bob.id,
+  });
+  game.act(alice,{kind:'release'},world);
+  expect(game.act(alice,{kind:'aid',target:bob.id},world)).toBe('Jogador socorrido.');
+  expect(events.findLast(event=>event.type==='aided')).toMatchObject({
+    actor:alice.id,target:bob.id,knockedOutByActor:true,
+  });
+});

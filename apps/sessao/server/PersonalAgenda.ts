@@ -4,22 +4,39 @@ import { inPlenary } from '../src/map';
 import type { credentialGoods, AgendaDecoration } from '../src/installations';
 import { isFood } from '../src/food';
 import { ELECTION_RULES } from '../src/elections';
-import { isOfficeFurniture, officeFurniture, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
+import { isOfficeFurniture, officeFurniture, officeGoodKinds, officeGoods, privateOffices, type OfficeFurniture } from '../src/private-offices';
 import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind} from '../src/gameplay';
-import { CRISIS_MISSION_STABILITY_LIMIT, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
+import { CRISIS_MISSION_STABILITY_LIMIT, doubleKnockoutWindowMs, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
 export type MissionSwapResult = 'swapped'|'used'|'unavailable';
 
 export type AgendaAction = 'propaganda'|'discurso'|'votoNpc'|'leitura'|'responderCrise';
 
-export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera')=>boolean; owns?: (kind:ObjectKind)=>boolean;
+export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera',ownOffice?:boolean)=>boolean;
+  officeBreachLevel?:(target:'door'|'safe'|'cabinet')=>number; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; hasFutureAdvertising?:()=>boolean; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const drankCoffee = (event:GameplayEvent) => event.type==='used' && event.kind==='coffee';
 
+const humanTarget = (event:GameplayEvent) => !!event.target && !event.target.startsWith('npc-parliamentarian-');
 const activityMissions = {
+  arrombarPorta:(event:GameplayEvent) => event.type==='door-breached',
+  roubarCofre:(event:GameplayEvent) => event.type==='money-pocketed' && event.cashFromOwnBreach===true,
+  roubarArmario:(event:GameplayEvent) => event.type==='recovered' && humanTarget(event) && event.breachedByActor===true,
+  selfieArrombamento:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.selfie && event.breachedByActor===true,
+  cuecaCofre:(event:GameplayEvent) => event.type==='concealment-started' && event.cashFromOwnBreach===true,
+  carregarGabinete:(event:GameplayEvent) => event.type==='character-carried-into-office' && humanTarget(event),
+  porretadaGabinete:(event:GameplayEvent) => event.type==='hit' && event.kind==='baton' && humanTarget(event) && event.targetInOwnOffice===true,
+  nocauteGabinete:(event:GameplayEvent) => event.type==='character-knocked-out' && humanTarget(event) && event.targetInOwnOffice===true,
+  nocautePlenario:(event:GameplayEvent) => event.type==='character-knocked-out' && humanTarget(event) && event.targetInPlenary===true,
+  socorroNocaute:(event:GameplayEvent) => event.type==='aided' && humanTarget(event) && event.knockedOutByActor===true,
+  fotoNocaute:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
+    person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.knockedOut),
+  incendiarGabinete:(event:GameplayEvent) => event.type==='fire-started' && event.ownOffice===true,
+  rabiscarRetrato:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && humanTarget(event),
+  cameraGabinete:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera' && event.ownOffice===true,
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
   privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
   plantaoEmergencia:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.place==='inside-crisis-room',
@@ -80,6 +97,8 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
+  arrombarPorta:2,roubarCofre:2,roubarArmario:2,selfieArrombamento:2,cuecaCofre:2,carregarGabinete:2,
+  porretadaGabinete:2,nocauteGabinete:2,nocautePlenario:2,socorroNocaute:2,fotoNocaute:2,rabiscarRetrato:2,
   varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:PUBLIC_MEETING_PEERS+1,fotoDinheiro:2,chamadasUrgentes:urgentCallMission.contacts+1,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:agendaCounts.articulacao+1, escandalo:3, entrega:COFFEE_DELIVERY_RECIPIENTS+1, assinar:2,
   recebido:2, pagamento:2, visitaGabinete:2, jogarOculto:2,
 };
@@ -106,7 +125,11 @@ const decorationRequirements = {
   privilegioAdquirido:'vip',reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof credentialGoods>>;
 
-const ownOfficeMissions = new Set<Agenda>(['doisMoveis','bandejaGourmet','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['carregarGabinete','roubarCofre','incendiarGabinete','cameraGabinete','doisMoveis','bandejaGourmet','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const batonMissions = new Set<Agenda>(['nocauteDuplo','carregarGabinete','porretadaGabinete','nocauteGabinete','nocautePlenario','socorroNocaute']);
+const breachTargets:Partial<Record<Agenda,'door'|'safe'|'cabinet'>> = {
+  arrombarPorta:'door',selfieArrombamento:'door',roubarCofre:'safe',cuecaCofre:'safe',roubarArmario:'cabinet',
+};
 const activeMissionCount = 3;
 const photoPublicationKey = (id:number,channel?:string) => JSON.stringify(['photo-published',id,channel]);
 const mailMissions = new Set<Agenda>(['jornalismo','mensagemComAnexo','retratacaoOficial']);
@@ -148,6 +171,7 @@ export class PersonalAgenda {
   private seenEvents = new Set<string>();
   private rewardedReportNotices = new Set<number>();
   private acquired = new Set<NonNullable<GameplayEvent['kind']>>();
+  private lastBatonKnockout?:{mission:number; target:string; at:number};
   private npcCount = 0;
   private cannotVote = false;
   private ballotsLeft = 3;
@@ -295,6 +319,8 @@ export class PersonalAgenda {
     if (kind==='visitaDoisGabinetes' && this.targets.filter(person=>this.hasOffice?.(person.id)!==false).length<remaining) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='fiscalizacaoParalela' && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
+    if ((kind==='porretadaGabinete' || kind==='nocauteGabinete') &&
+        !this.targets.some(person=>this.hasOffice?.(person.id) && (!drawing || this.targetAvailable(kind,person.id)))) return false;
     if (kind==='flagraGabinete' && !this.hasOffice?.() && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
     if (kind==='votoNpc' && (this.ballotsLeft===0 || metrics?.canAgendaAction?.('votoNpc')===false)) return false;
     if (kind==='presidenteFoto') return false;
@@ -307,6 +333,7 @@ export class PersonalAgenda {
     const humans = usesAvailablePlayers
       ? this.availableTargets ? 1+this.targets.filter(person=>this.availableTargets?.has(person.id)).length : this.playerCount
       : this.playerCount;
+    if (kind==='nocauteDuplo' && humans-1+this.npcCount<2) return false;
     if ((kind==='segurancaParlamentar' || kind==='reuniaoVip') && humans<2 && !this.npcCount) return false;
     if (kind==='assinaturas' || kind==='comissaoImprovisada') {
       const available = this.availableTargets;
@@ -383,6 +410,12 @@ export class PersonalAgenda {
         if (kind==='visitaAlvo' && event.type==='room-entered' && event.target===target) gains[kind] = 1;
         if (kind==='selfieAlvo' && event.type==='photo' && event.photo?.selfie &&
             event.photo.people.some(person=>person.id===target)) gains[kind] = 1;
+      }
+      if (kind==='nocauteDuplo' && event.type==='character-knocked-out' && event.kind==='baton' && event.target) {
+        const previous = this.lastBatonKnockout;
+        if (previous?.mission===mission.id && previous.target!==event.target &&
+            event.at>=previous.at && event.at-previous.at<doubleKnockoutWindowMs) gains[kind] = 1;
+        this.lastBatonKnockout = {mission:mission.id,target:event.target,at:event.at};
       }
       const matches = activityMissions[kind as keyof typeof activityMissions];
       if (matches?.(event)) {
@@ -501,6 +534,24 @@ export class PersonalAgenda {
   }
 
   private eligible(kind:Agenda, metrics:AgendaMetrics) {
+    const canGetEquipment = (item:ObjectKind) => !!metrics.owns &&
+      (metrics.owns(item) || agendaProductPrice('equipment',item,metrics)<=metrics.wallet);
+    if (batonMissions.has(kind) && !canGetEquipment('baton')) return false;
+    if (kind==='incendiarGabinete' && (!this.hasOffice?.() || !canGetEquipment('incendiary'))) return false;
+    if (kind==='cameraGabinete' && (!metrics.canInstallSpy?.('spyCamera',true) || !canGetEquipment('spyCamera'))) return false;
+    if (kind==='rabiscarRetrato' && !metrics.hasAgendaDecoration?.('markableForeignPortrait')) return false;
+    const breach = breachTargets[kind];
+    if (breach) {
+      const level = metrics.officeBreachLevel?.(breach) ?? Infinity;
+      const underwearPrice = kind==='cuecaCofre' && !metrics.owns?.('mensalUnderwear')
+        ? agendaProductPrice('equipment','mensalUnderwear',metrics) : 0;
+      const canGetTool = officeGoodKinds.some(item=>{
+        const tool = officeGoods[item];
+        return 'attack' in tool && tool.attack>=level &&
+          (metrics.owns?.(item) || agendaProductPrice('equipment',item,metrics)<=metrics.wallet-underwearPrice);
+      });
+      if (underwearPrice>metrics.wallet || !canGetTool) return false;
+    }
     if (kind==='investimentoPolitico' && (!this.canMeetCampaignTarget(metrics) ||
         metrics.wallet<Math.ceil(CAMPAIGN_SPENDING_TARGET/ELECTION_RULES.advertisementCost)*ELECTION_RULES.advertisementCost)) return false;
     if (kind==='recebido' || kind==='articulacao' || kind==='doisPix') {

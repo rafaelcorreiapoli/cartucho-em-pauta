@@ -51,6 +51,8 @@ export const photoMissionCounts = {
 
 const countWord = (count:number,feminine=false) => count===2 ? feminine ? 'duas' : 'dois' : count===3 ? 'três' : String(count);
 
+export const doubleKnockoutWindowMs = 10_000;
+
 export const agendas = {
   ...targetedAgendas,
   protocolo:'Protocole um documento válido',
@@ -171,11 +173,29 @@ export const agendas = {
   campanhaUltimaHora:`Veicule propaganda nos últimos ${LATE_CAMPAIGN_WINDOW_MS/1000} segundos antes da eleição`,
   bandejaGourmet:`Consuma ${countWord(agendaCounts.bandejaGourmet)} alimentos diferentes no seu gabinete`,
   provaDocumental:'Fotografe um documento físico visível',
+  arrombarPorta:'Arrombe a porta do gabinete de um colega',
+  roubarCofre:'Arrombe o cofre de um colega e embolse o dinheiro',
+  roubarArmario:'Arrombe o armário de um colega e pegue um item',
+  selfieArrombamento:'Arrombe um gabinete e tire uma selfie lá dentro',
+  cuecaCofre:'Use a Cueca do Mensalão com dinheiro roubado de um cofre',
+  nocauteDuplo:`Nocauteie 2 parlamentares com o Porrete em menos de ${doubleKnockoutWindowMs/1000} segundos`,
+  carregarGabinete:'Nocauteie um colega e carregue-o para dentro do seu gabinete',
+  porretadaGabinete:'Dê uma porretada em um parlamentar dentro do gabinete dele',
+  nocauteGabinete:'Nocauteie um colega dentro do gabinete dele',
+  nocautePlenario:'Nocauteie um colega no Plenário',
+  socorroNocaute:'Socorra o colega que você acabou de nocautear',
+  fotoNocaute:'Fotografe um colega nocauteado',
+  incendiarGabinete:'Incendeie o seu próprio gabinete',
+  rabiscarRetrato:'Rabisque o Retrato Oficial de um colega',
+  cameraGabinete:'Instale uma câmera escondida no seu próprio gabinete',
 } as const;
 export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};
 
 const xpOnly:Partial<Record<Agenda,number>> = {
+  arrombarPorta:35,roubarCofre:50,roubarArmario:40,selfieArrombamento:40,cuecaCofre:45,
+  nocauteDuplo:50,carregarGabinete:45,porretadaGabinete:25,nocauteGabinete:35,nocautePlenario:35,
+  socorroNocaute:40,fotoNocaute:30,incendiarGabinete:40,rabiscarRetrato:25,cameraGabinete:35,
   privilegioAdquirido:25,amizadeInstitucional:35,solenidadeInauguracao:30,
   produtividade:35,cafeEstrategico:25,contasTesouraria:40,contribuinte:45,registroHistorico:30,
   comissaoImprovisada:65,flagraGabinete:45,presencaPlenario:25,reuniaoGabinete:35,reuniaoPublica:45,tresSelfies:35,plantaoEmergencia:45,heroiInesperado:55,
