@@ -128,6 +128,12 @@ export type Action = 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; abstentions?:number; absences?:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
 export type SessionParticipant = {id:string; name:string; character:number; role:Role};
 
+export const payrollRules = {interval:60_000,salary:1} as const;
+export type PayrollView = {
+  next?:{remaining:number;cost:number};
+  last?:{at:number;received:number};
+};
+
 export type PlenaryView = {
   ballotCountdown?: number;
   projectWarning?: number;
@@ -138,7 +144,7 @@ export type PlenaryView = {
   botMessages?:readonly {name:string; text:string}[];
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
-  election?:ElectionView; billQuorum:number;
+  payroll?:PayrollView; election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
   complaints?:ComplaintView; fire?:FireView; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; congressDestroyed?:boolean; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];

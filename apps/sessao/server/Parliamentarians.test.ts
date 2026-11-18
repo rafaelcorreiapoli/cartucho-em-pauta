@@ -8,10 +8,9 @@ import { ParliamentarianTalk } from './ParliamentarianTalk';
 import { PlenaryMatch } from './PlenaryMatch';
 import { npcRules } from '../src/parliamentarians';
 import { NAMES, canStand, roomAt, type Player } from '../src/map';
-import { BALLOT_MS, NEGOTIATION_MS } from '../src/plenary';
+import { BALLOT_MS, payrollRules, NEGOTIATION_MS } from '../src/plenary';
 import { terminals } from '../src/gameplay';
 import { privateOffices, officeRules } from '../src/private-offices';
-import { ELECTION_RULES } from '../src/elections';
 
 function fixture() {
   const humans:Player[] = ['a','b'].map(id=>({id,nick:id,character:0,direction:0,moving:false,x:140,y:146}));
@@ -92,8 +91,7 @@ test('signature and competing vote offers transfer existing money and the commit
   match.vote(b.id,'no',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.view(a.id,[a.id,b.id],0).outcome).toMatchObject({yes:1,no:2,passed:false});
-  match.advance(ELECTION_RULES.interval);
-  expect(world(ELECTION_RULES.interval).wallet!(npc.id)).toBe(ELECTION_RULES.salary);
+  expect(world(NEGOTIATION_MS+BALLOT_MS).wallet!(npc.id)).toBe(2*payrollRules.salary);
 });
 
 test('NPC routes stay on valid floor and stop for a negotiation',()=>{

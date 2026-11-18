@@ -417,7 +417,7 @@ test('transfer mission eligibility follows isolation and the remaining quota of 
   for (let payment=1;payment<PAYMENTS_PER_ROUND;payment++) {
     expect(match.politics(bia,{kind:'transfer',to:caio.id,amount:1},players,SUSPENSION_MS+2)).toBe(true);
   }
-  expect(match.view(bia.id,ids,SUSPENSION_MS+2).politics).toMatchObject({wallet:2,paymentsLeft:0});
+  expect(match.view(bia.id,ids,SUSPENSION_MS+2).politics).toMatchObject({wallet:3,paymentsLeft:0});
   expect(draw(SUSPENSION_MS+2)).not.toContain('doisPix');
 });
 

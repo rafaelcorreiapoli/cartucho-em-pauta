@@ -254,10 +254,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
 
       if (previous) {
         const past = previous.politics;
-        const payroll = view.election?.result;
-        if (payroll?.expectedSalary && payroll.cycle!==previous.election?.result?.cycle) {
-          const percent = Math.round(100*payroll.salary/payroll.expectedSalary);
-          notify('Salário parlamentar',`${money(payroll.salary)} de ${money(payroll.expectedSalary)} · ${percent}%${percent<100 ? ' · Orçamento insuficiente' : ''}`);
+        const payment = view.payroll?.last;
+        if (payment?.received && payment.at!==previous.payroll?.last?.at) {
+          notify('Salário parlamentar',`${money(payment.received)} recebidos.`);
         }
         const notice = view.election?.notice;
         if (notice && notice.seq!==previous.election?.notice?.seq && !view.election?.broadcast) {
