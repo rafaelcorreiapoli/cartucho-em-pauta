@@ -110,6 +110,12 @@ async page => {
     if (JSON.stringify(offers)!==JSON.stringify([['1','+5 Popularidade'],['2','+8 Popularidade'],['3','+12 Popularidade']])) {
       throw Error('Retratos, ganhos ou teclas incorretos no seletor de propaganda.');
     }
+    const desktopViewport = page.viewportSize();
+    await page.setViewportSize({width:800,height:360});
+    if (await picker(page).evaluate(dialog=>dialog.scrollHeight>dialog.clientHeight)) {
+      throw Error('O seletor corta as opções na tela baixa.');
+    }
+    await page.setViewportSize(desktopViewport);
     await page.keyboard.press('1');
     await picker(page).waitFor({state:'hidden'});
     await guest.waitForFunction(()=>window.campaignAds.length===1);

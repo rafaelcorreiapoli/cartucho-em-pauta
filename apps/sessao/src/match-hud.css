@@ -1135,6 +1135,7 @@ button.item-tile:active { transform: translateY(3px); }
 
 #campaign-picker {
   width: min(440px, calc(100vw - 32px));
+  padding: 0;
 }
 .campaign-picker {
   display: grid;
@@ -1146,6 +1147,7 @@ button.item-tile:active { transform: translateY(3px); }
   align-items: center;
   justify-content: space-between;
 }
+.campaign-picker :is(h2, p) { margin: 0; }
 .campaign-picker > .hud-button {
   --item-art: 48px;
   display: grid;
