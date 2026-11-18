@@ -15,11 +15,11 @@ export const npcs = {
   vendor:{name:'Daniel Vorcaro',sprite:'daniel-vorcaro.webp',portrait:'retrato-daniel-vorcaro.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   furnitureVendor:{name:'Roberto Justus',sprite:'roberto-justus.webp',portrait:'retrato-roberto-justus.webp',x:525,y:451,direction:0,
     interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
-  credentialsVendor:{name:'Carmem Carimbo',sprite:'carmem-carimbo.webp',portrait:'retrato-carmem-carimbo.webp',x:160,y:473,direction:0,
+  credentialsVendor:{name:'Donald Trump',sprite:'donald-trump.webp',portrait:'retrato-donald-trump.webp',x:160,y:473,direction:0,
     interaction:{x:149,y:493},dialogue:'credentials',label:'Credenciamento',catalog:'credentials'},
-  secretary:{name:'Dona Sílvia',sprite:'silvia-secretaria.webp',x:85,y:221,direction:0,
+  secretary:{name:'Enéas Carneiro',sprite:'eneas-carneiro.webp',x:85,y:221,direction:0,
     interaction:{x:83,y:247},dialogue:'secretary',label:'Secretaria',catalog:undefined},
-  protocol:{name:'Seu Mauro',sprite:'mauro-protocolo.webp',x:548,y:64,direction:0,
+  protocol:{name:'Ratinho',sprite:'ratinho.webp',x:548,y:64,direction:0,
     interaction:{x:550,y:91},dialogue:'protocol',label:'Protocolo',catalog:undefined},
   silvio:{name:'Silvio Santos',sprite:'silvio-santos.webp',...mapPoint('Silvio Santos'),direction:0,
     interaction:mapPoint('Balcão do Topa ou Não Topa: atendimento'),dialogue:'topa',label:'Topa ou Não Topa',catalog:undefined},
@@ -63,13 +63,13 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
   },
   secretary:{
     start:{
-      text:'Escolha um projeto. Confira no inventário quantas assinaturas você precisa pedir a outros jogadores antes de levar o documento ao Protocolo.',
+      text:'Escolha um projeto! Confira no inventário quantas assinaturas faltam antes de ir ao Protocolo. MEU NOME É ENÉAS!',
       options:[{id:'projects',label:'Solicitar documento'},{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
   protocol:{
     start:{
-      text:'Qual documento você quer protocolar? Projetos só precisam das assinaturas exigidas.',
+      text:'Atenção, produção! Qual documento vai entrar? Se for projeto, deixa eu conferir as assinaturas!',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
   },
@@ -103,7 +103,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
   },
   credentials:{
     start:{
-      text:'Retratos oficiais e placas para reservar uma cadeira, Excelência.',
+      text:'Temos os melhores retratos oficiais. Tremendos! E placas para reservar sua cadeira, Excelência.',
       options:[{id:'products',label:'Ver produtos',action:'shop'},{id:'leave',label:'Voltar depois',action:'close'}],
     },
   },
