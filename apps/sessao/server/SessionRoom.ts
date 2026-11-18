@@ -40,6 +40,8 @@ export class SessionRoom extends Room {
   maxClients = MAX_PLAYERS;
   maxMessagesPerSecond = 100;
   autoBatchMessages = true;
+  private get gameNow() { return this.match.gameTime(this.clock.currentTime); }
+
   private players = new Map<string, ControlState>();
   private readonly bots = new PlayerBots();
   private movementQueue = new Map<string, MovementInput[]>();
@@ -60,7 +62,7 @@ export class SessionRoom extends Room {
     const token = readRoomCommandToken(raw);
     if (token===undefined || token<=(this.lastRoomCommandToken.get(id) ?? 0)) return false;
     this.lastRoomCommandToken.set(id,token);
-    return this.match.ballotCountdown(this.clock.currentTime)===undefined;
+    return this.match.ballotCountdown(this.gameNow)===undefined;
   }
 
   private sees(state:ControlState,player:Player,now:number) {
@@ -69,7 +71,7 @@ export class SessionRoom extends Room {
   }
 
   private gameplayWorld() {
-    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.clock.currentTime,
+    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.parliamentarians.players),this.gameNow,
       id=>this.voice.has(id));
     return {
       ...world,
@@ -139,7 +141,7 @@ export class SessionRoom extends Room {
     const world = this.gameplayWorld();
     this.gameplay.disconnectCall(id,world);
     this.gameplay.stopMegaphone(id,world);
-    this.match.stopBroadcast(id,this.clock.currentTime);
+    this.match.stopBroadcast(id,this.gameNow);
     if (this.voice.delete(id)) this.broadcast('voice-roster', [...this.voice]);
   }
 
@@ -208,18 +210,18 @@ export class SessionRoom extends Room {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
-        this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        this.gameplay.reset(this.gameNow,Math.random,players);
         const count = Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
-        this.parliamentarians.reset(count,this.clock.currentTime,new Set(players.map(player=>player.character)));
+        this.parliamentarians.reset(count,this.gameNow,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
         for (const npc of this.parliamentarians.players) this.match.addParliamentarian(npc);
         this.match.setAgendaMailAvailability(id=>this.internalMail.nextPublicationAt(id),id=>this.gameplay.agendaSelfies(id),
           id=>this.internalMail.reportsFor(id).map(report=>report.notice));
         this.match.setAgendaCashAvailability(itemId=>this.gameplay.canPartiallyDepositCash(itemId));
-        this.match.setAgendaCommerce(()=>this.clock.currentTime);
-        this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.clock.currentTime));
+        this.match.setAgendaCommerce(()=>this.gameNow);
+        this.match.setAgendaXrayAvailability((id,wallet)=>this.gameplay.canUseAgendaXray(id,wallet,this.gameNow));
         this.match.setAgendaInventory((id,kind)=>this.gameplay.owns(id,kind),id=>this.gameplay.officeStock(id),
-          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.clock.currentTime),
+          (id,kind,replacement)=>this.gameplay.hasAgendaDecoration(id,kind,replacement,this.gameNow),
           id=>{
             const project = this.match.projectIndex;
             return project===undefined ? undefined : this.parliamentarians.cheapestPaidVote(id,this.match.projectRound,project);
@@ -249,12 +251,12 @@ export class SessionRoom extends Room {
       if (id===undefined || !this.consumeRoomCommand(player.id,raw)) return;
       const photoId = 'photo' in raw ? raw.photo : undefined;
       const photo = photoId===undefined ? undefined :
-        this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===photoId)?.photo;
+        this.gameplay.photoView(player.id,this.gameNow).album.find(entry=>entry.photo.id===photoId)?.photo;
       if (photoId!==undefined && !photo) {
         client.send('gameplay-feedback','Fotografia indisponível no seu álbum.');
         return;
       }
-      const error = this.match.submitComplaint(player,id,this.clock.currentTime,photo);
+      const error = this.match.submitComplaint(player,id,this.gameNow,photo);
       if (error) client.send('gameplay-feedback',error);
       else {
         const [decision] = this.match.complaintView(player.id).history;
@@ -274,14 +276,14 @@ export class SessionRoom extends Room {
       const error = this.internalMail.examine(id,raw.notice,()=>this.gameplay.consumeForensicKit(id));
       if (error) client.send('gameplay-feedback',error);
       else {
-        this.match.refreshAgendaEligibility(this.clock.currentTime);
+        this.match.refreshAgendaEligibility(this.gameNow);
         client.send('mail-reports',this.internalMail.reportsFor(id));
       }
     });
     this.onMessage('mail-publish',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !this.consumeRoomCommand(player.id,raw)) return;
-      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.gameNow) ||
           player.knockedOut || player.carrying || player.carried) {
         client.send('mail-result','Publicação indisponível nesta fase.');
         return;
@@ -293,7 +295,7 @@ export class SessionRoom extends Room {
           if (snapshot) return {attachment:{kind:'document',document:snapshot.document},authentic:snapshot.authentic};
         }
         if (ref.kind==='photo') {
-          const photo = this.gameplay.photoView(player.id,this.clock.currentTime).album.find(entry=>entry.photo.id===ref.id)?.photo;
+          const photo = this.gameplay.photoView(player.id,this.gameNow).album.find(entry=>entry.photo.id===ref.id)?.photo;
           if (photo) return {attachment:{kind:'photo',photo}};
         }
         if (ref.kind==='report') {
@@ -312,7 +314,7 @@ export class SessionRoom extends Room {
       const {action} = raw;
       const player = this.players.get(client.sessionId)?.player;
       if (player && this.consumeRoomCommand(player.id,raw) && !player.knockedOut && !player.carrying && (action==='audit' || action==='panel' || action==='fraud')) {
-        const result = this.match.act(player,action,this.clock.currentTime);
+        const result = this.match.act(player,action,this.gameNow);
         if (result) client.send('audit-result',result);
       }
     });
@@ -341,12 +343,12 @@ export class SessionRoom extends Room {
       if (result) client.send('room-activity-result',result);
     });
     this.onMessage('voice-activity',client=>{
-      if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.clock.currentTime);
+      if (this.voice.has(client.sessionId)) this.gameplay.spySound(client.sessionId,this.gameNow);
     });
     this.onMessage('spy',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
-          this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
+      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.gameNow) ||
+          this.npcTalk.robberyProgress(player.id,this.gameNow)!==undefined) return;
       const result = this.gameplay.spyAction(player,raw,this.gameplayWorld());
       if (result) {
         const fieldAction = raw && typeof raw==='object' && 'kind' in raw &&
@@ -361,7 +363,7 @@ export class SessionRoom extends Room {
         this.securityFeeds.delete(player.id);
         return;
       }
-      if (!this.atSecurityTerminal(player,this.clock.currentTime)) return;
+      if (!this.atSecurityTerminal(player,this.gameNow)) return;
       if (raw.kind==='open' && !this.securityFeeds.has(player.id)) {
         this.securityFeeds.set(player.id,{camera:securityCameras[0],delivered:false});
       } else if (raw.kind==='select' && 'camera' in raw && this.securityFeeds.has(player.id)) {
@@ -378,7 +380,7 @@ export class SessionRoom extends Room {
         (raw.panel!==0 && raw.panel!==1) || !('kind' in raw) ||
         (raw.kind!=='sabotage' && raw.kind!=='repair' && raw.kind!=='cancel') ||
         !this.consumeRoomCommand(player.id,raw)) return;
-      const result = this.match.actOnPower(player,{kind:raw.kind,panel:raw.panel},this.clock.currentTime,
+      const result = this.match.actOnPower(player,{kind:raw.kind,panel:raw.panel},this.gameNow,
         message=>client.send('map-action-failed',message));
       if (result) client.send('gameplay-feedback',result);
     });
@@ -386,9 +388,9 @@ export class SessionRoom extends Room {
       const player = this.players.get(client.sessionId)?.player;
       if (!player || !raw || typeof raw!=='object' || !('site' in raw) || typeof raw.site!=='number' ||
           !Number.isInteger(raw.site) || !('kind' in raw) || (raw.kind!=='plant' && raw.kind!=='disarm' && raw.kind!=='extinguish')) return;
+      const now = this.gameNow;
       if (!this.consumeRoomCommand(player.id,raw) || this.gameplay.hasOfficeChannel(player.id) ||
-          this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
-      const now = this.clock.currentTime;
+          this.npcTalk.robberyProgress(player.id,now)!==undefined) return;
       const result = this.match.actOnFire(player,raw.kind,raw.site,now,
         raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'),
         raw.kind==='plant' ? this.gameplay.incendiaryItem(player.id) : undefined,
@@ -413,13 +415,13 @@ export class SessionRoom extends Room {
       const action = readGameplayAction(raw.action);
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw)) return;
-      if (this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) {
+      if (this.npcTalk.robberyProgress(player.id,this.gameNow)!==undefined) {
         client.send('map-action-failed','Você já está realizando outra ação.');
         return;
       }
-      if (!this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (!this.match.canHandleObjects(player.id,this.gameNow) ||
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
-          !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) {
+          !canUseGameplayAction(action,this.match.phase==='negotiation')) {
         if (action.kind!=='dialogue-close') client.send('map-action-failed','Esta ação está indisponível neste momento.');
         return;
       }
@@ -437,7 +439,7 @@ export class SessionRoom extends Room {
     });
     this.onMessage('npc-deal',(client,raw:unknown)=>{
       const player = this.players.get(client.sessionId)?.player;
-      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.clock.currentTime)) return;
+      if (!player || !this.consumeRoomCommand(player.id,raw) || this.match.phase!=='negotiation' || !this.match.canHandleObjects(player.id,this.gameNow)) return;
       if (this.gameplay.hasOfficeChannel(player.id)) return;
       const result = this.npcTalk.act(player,raw,this.gameplayWorld());
       if (result) client.send('gameplay-feedback',result);
@@ -446,7 +448,7 @@ export class SessionRoom extends Room {
       const request = readAttributeRequest(raw);
       const player = this.players.get(client.sessionId)?.player;
       if (!request || !player) return;
-      if (this.match.allocateAttribute(player,request,this.clock.currentTime)) {
+      if (this.match.allocateAttribute(player,request,this.gameNow)) {
         this.gameplay.applyAttribute(player,request.attribute);
       }
     });
@@ -454,7 +456,7 @@ export class SessionRoom extends Room {
       const action = readPoliticsAction(raw);
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
-      const now = this.clock.currentTime;
+      const now = this.gameNow;
       const players = [...this.players.values()].map(state=>state.player);
       const result = this.match.politics(player,action,players,now);
       if (result && typeof result==='object') {
@@ -475,7 +477,7 @@ export class SessionRoom extends Room {
       const action = readElectionAction(raw);
       const player = this.players.get(client.sessionId)?.player;
       if (!action || !player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying) return;
-      const advertisement = this.match.electionAction(player,action,this.clock.currentTime,this.voice.has(player.id));
+      const advertisement = this.match.electionAction(player,action,this.gameNow,this.voice.has(player.id));
       if (advertisement) {
         const broadcast:CampaignBroadcast = {...advertisement,advertiserId:player.id};
         this.broadcast('campaign-advertisement',broadcast);
@@ -485,7 +487,7 @@ export class SessionRoom extends Room {
       if (!raw || typeof raw!=='object' || !('vote' in raw)) return;
       const {vote} = raw;
       if ((vote==='yes' || vote==='no' || vote==='clear') && this.consumeRoomCommand(client.sessionId,raw)) {
-        this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.clock.currentTime);
+        this.match.declareVote(client.sessionId,vote==='clear' ? null : vote,this.gameNow);
       }
     });
     this.onMessage('cassation-vote',(client,raw:unknown)=>{
@@ -507,7 +509,7 @@ export class SessionRoom extends Room {
       const input = readInput(data);
       const state = this.players.get(client.sessionId);
       const queue = this.movementQueue.get(client.sessionId);
-      if (this.match.ballotCountdown(this.clock.currentTime)!==undefined) return;
+      if (this.match.voting || this.match.ballotCountdown(this.gameNow)!==undefined) return;
       if (!input || !state || !queue || input.revision!==state.revision || !!input.plenary!==!!state.plenary || input.seq <= (queue.at(-1)?.seq ?? state.ack)) return;
       if (queue.length >= MAX_QUEUED_INPUTS) queue.shift();
       queue.push(input);
@@ -529,13 +531,14 @@ export class SessionRoom extends Room {
       const active = this.match.running && this.clients.length>0;
       const gap = active && previousActiveTick!==undefined ? startedAt-previousActiveTick : undefined;
       previousActiveTick = active ? startedAt : undefined;
-      const now = this.clock.currentTime;
-      const freeze = this.match.ballotCountdown(now)!==undefined;
+      const realNow = this.clock.currentTime;
+      const freeze = this.match.ballotCountdown(this.gameNow)!==undefined;
       if (freeze && !countingDown) this.parliamentarians.stopRoutes();
-      const transport = this.match.transportActive(now) || undefined;
+      const transport = this.match.transportActive(this.gameNow) || undefined;
       for (const [id,state] of this.players) {
         state.player.publicTransport = transport;
         if (freeze && !countingDown) this.resetMovement(state);
+        if (this.match.voting) continue;
         const input = freeze ? undefined : this.movementQueue.get(id)?.shift();
         if (!freeze && state.player.bot) this.bots.move(state,this.gameplay.phoneActivity(id));
         else if (input) applyInput(state,input);
@@ -546,21 +549,22 @@ export class SessionRoom extends Room {
       }
       countingDown = freeze;
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
-      const wasVoting = this.match.allowsPlenaryCombat;
-      this.match.advance(now, recipients=>{
-        for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,now);
+      this.match.advance(realNow, recipients=>{
+        for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,this.gameNow);
       });
+      const now = this.gameNow;
       this.resetFinishedMatch(now);
       const players = [...this.players.values()].map(state => state.player);
       const world = this.gameplayWorld();
-      if (!freeze || this.match.phase!=='negotiation') {
-        const exploring = this.match.phase==='negotiation';
-        const endedXray = this.gameplay.tick(world,exploring,wasVoting && this.match.allowsPlenaryCombat);
+      const exploring = this.match.phase==='negotiation';
+      const enteredVote = this.match.voting && projectedPhase!==this.match.phase;
+      if (exploring && !freeze || enteredVote) {
+        const endedXray = this.gameplay.tick(world,exploring);
         if (endedXray) this.match.refreshAgendaEligibility(now);
         const paused = this.npcTalk.tick(world,exploring);
         this.parliamentarians.tick(now,STEP_MS/1000,paused,exploring);
       }
-      if (this.gameplay.expireRecentPortraits(now)) this.match.refreshAgendaEligibility();
+      if (exploring && this.gameplay.expireRecentPortraits(now)) this.match.refreshAgendaEligibility();
       const project = this.match.projectIndex;
       if (project!==undefined && this.match.phase==='ballot' && this.match.projectRound!==previousProject) {
         this.parliamentarians.stopRoutes();
@@ -594,7 +598,7 @@ export class SessionRoom extends Room {
         return this.players.get(id)?.player;
       },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
       if (installation) (installation.failed ? world.actionFailed : world.feedback)(installation.actor,installation.feedback);
-      this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now));
+      this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now),realNow);
       this.match.advancePower(now,id=>world.present(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {
         player.handlingObject = this.match.fireHandlingDirection(player);
@@ -619,7 +623,7 @@ export class SessionRoom extends Room {
           client.send('control',state);
           continue;
         }
-        const view = this.match.view(id,ids,now,this.match.contacts(state.player,players));
+        const view = this.match.view(id,ids,realNow,this.match.contacts(state.player,players));
         if (broadcaster && broadcaster!==id) view.megaphoneActive = true;
         if (this.match.running) {
           const atDesk = this.match.canFileComplaint(state.player,now);
@@ -730,8 +734,8 @@ export class SessionRoom extends Room {
     this.npcTalk.leave(client.sessionId);
     const player = this.players.get(client.sessionId)?.player;
     if (player) this.gameplay.leave(player,this.gameplayWorld(),true);
-    this.match.leave(client.sessionId,this.clock.currentTime);
-    this.resetFinishedMatch(this.clock.currentTime);
+    this.match.leave(client.sessionId,this.gameNow);
+    this.resetFinishedMatch(this.gameNow);
     this.players.delete(client.sessionId);
     this.lastRoomCommandToken.delete(client.sessionId);
     this.movementQueue.delete(client.sessionId);

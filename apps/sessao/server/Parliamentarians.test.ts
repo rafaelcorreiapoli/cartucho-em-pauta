@@ -91,7 +91,7 @@ test('signature and competing vote offers transfer existing money and the commit
   match.vote(b.id,'no',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.view(a.id,[a.id,b.id],0).outcome).toMatchObject({yes:1,no:2,passed:false});
-  expect(world(NEGOTIATION_MS+BALLOT_MS).wallet!(npc.id)).toBe(2*payrollRules.salary);
+  expect(world(NEGOTIATION_MS).wallet!(npc.id)).toBe(payrollRules.salary);
 });
 
 test('NPC routes stay on valid floor and stop for a negotiation',()=>{

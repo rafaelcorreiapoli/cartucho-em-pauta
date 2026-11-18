@@ -135,18 +135,20 @@ test('a short budget pays full salaries to remaining mandates and NPCs by borrow
   for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   const world = match.gameplayWorld(humans,0,()=>false);
+  const renewal = rules.interval+BALLOT_MS;
+  match.advance(renewal-1);
   const npcBefore = world.wallet!('npc');
-  const beforePayment = match.view('0',ids,rules.interval-1);
+  const beforePayment = match.view('0',ids,renewal-1);
   expect(beforePayment).toMatchObject({budget:-10,payroll:{next:{remaining:1,cost:7}}});
   expect(beforePayment.payroll?.last?.at).toBe(2*payrollRules.interval);
 
-  match.advance(rules.interval);
-  const next = match.view('0',ids,rules.interval);
+  match.advance(renewal);
+  const next = match.view('0',ids,renewal);
   expect(next).toMatchObject({budget:-22,payroll:{last:{received:payrollRules.salary},next:{remaining:60,cost:6}}});
   expect(match.economySummary(0).discrepancy).toBe(0);
   expect(world.wallet!('npc')).toBeCloseTo(npcBefore+payrollRules.salary);
-  expect(match.view('5',ids,rules.interval).payroll?.last?.received).toBe(0);
+  expect(match.view('5',ids,renewal).payroll?.last?.received).toBe(0);
   const paid = world.wallet!('npc');
-  match.advance(rules.interval);
+  match.advance(renewal);
   expect(world.wallet!('npc')).toBe(paid);
 });

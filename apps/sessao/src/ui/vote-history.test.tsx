@@ -19,7 +19,7 @@ test('the history renders the latest authoritative result and enables previous p
   match.advance(firstEnd);
   expect(renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>)).toContain('Auxílio Churrasco: aprovado. 1 a favor, 0 contra.');
   const nextFiling = firstEnd+60_000;
-  publishProjectFiling(match,player,1,nextFiling);
+  publishProjectFiling(match,player,1,match.gameTime(nextFiling));
   match.advance(nextFiling+NEGOTIATION_MS);
   match.advance(nextFiling+NEGOTIATION_MS+BALLOT_MS);
   const markup = renderToStaticMarkup(<VoteHistory outcomes={getOutcomes()}/>);

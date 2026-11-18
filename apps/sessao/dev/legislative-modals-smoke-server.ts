@@ -18,7 +18,7 @@ class LegislativeModalsRoom extends SessionRoom {
       const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
       if (shortenedCassation && !shortenedCassationBallot && Reflect.get(match,'cassationVotes').size>0) {
         shortenedCassationBallot = true;
-        Reflect.set(match,'ends',this.clock.currentTime+4_000);
+        Reflect.set(match,'voteEndsAt',this.clock.currentTime+4_000);
       }
       if (match.phase!=='negotiation') return;
       const players:Map<string,{player:import('../src/map').Player}> = Reflect.get(this,'players');

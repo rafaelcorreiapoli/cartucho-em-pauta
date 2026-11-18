@@ -94,8 +94,8 @@ test('an authoritative mandate renewal renders inside the shared results dialog'
   match.advance(NEGOTIATION_MS);
   match.vote(player.id,'yes',NEGOTIATION_MS+1);
   match.advance(NEGOTIATION_MS+BALLOT_MS);
-  match.advance(ELECTION_RULES.interval);
-  const result = match.view(player.id,[player.id],ELECTION_RULES.interval).election?.result;
+  match.advance(ELECTION_RULES.interval+BALLOT_MS);
+  const result = match.view(player.id,[player.id],ELECTION_RULES.interval+BALLOT_MS).election?.result;
   expect(result?.cycle).toBe(1);
   const html = renderToStaticMarkup(<ResultsContent><ElectionResult result={result!}/></ResultsContent>);
   expect(html).toContain('Renovação de Mandato 1');
