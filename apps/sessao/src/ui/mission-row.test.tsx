@@ -83,7 +83,10 @@ test('the parliament HUD uses the configured threshold and explains the budget p
   expect(atTarget).toContain('Depósitos na Tesouraria abatem a dívida');
   const inDebt = renderToStaticMarkup(<ParliamentMetrics stability={48} budget={-3} debtPenaltyIn={12}/>);
   expect(inDebt).toContain('−R$ 30 mil');
-  expect(inDebt).toContain('−3 de estabilidade em 12 s');
+  expect(inDebt).toContain('data-in-debt="true"');
+  expect(inDebt).toContain('a dívida reduz a estabilidade em 3 a cada 30 s. Próxima perda em 12 s.');
+  expect(inDebt).not.toContain('class="congress-debt"');
+  expect(atTarget).not.toContain('Próxima perda');
 });
 
 

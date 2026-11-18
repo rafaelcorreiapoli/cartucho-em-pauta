@@ -5,7 +5,7 @@ import {CharacterPortrait} from './character-portrait';
 import {fireRules,fireSites,type FireView} from '../fire';
 import {powerPanels} from '../power';
 import {settingsApp} from '../hud-apps';
-import { stabilityRules, publicDebtStabilityLoss } from '../plenary';
+import { stabilityRules, publicDebtRules, publicDebtStabilityLoss } from '../plenary';
 import { createRoot } from 'react-dom/client';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
@@ -56,16 +56,13 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
     </HudHelp>
     <HudHelp className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
-      help={`Projetos e salários usam este saldo. A dívida reduz a estabilidade. Depósitos na Tesouraria abatem a dívida.`}>
+      help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelp>
     {payroll && <HudHelp as="div" help="O orçamento público paga os salários quando o relógio zera." className="congress-payroll" role="timer" aria-label="Próxima distribuição de salários">
       <HudIcon name="wallet"/><span>Salários em</span>
       <strong className="tabular-nums">{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</strong>
       <span>·</span><span>Custo</span><strong className="tabular-nums">{money(payroll.cost)}</strong>
-    </HudHelp>}
-    {debtPenaltyIn!==undefined && <HudHelp as="div" help="Perda de estabilidade prevista pela dívida pública." className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
-      <HudIcon name="alert"/><span>Dívida</span><strong>−{publicDebtStabilityLoss(budget)} de estabilidade em {debtPenaltyIn} s</strong>
     </HudHelp>}
     {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
