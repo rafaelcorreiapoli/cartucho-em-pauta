@@ -1,13 +1,18 @@
-import {useId,useLayoutEffect,useRef,useState,type ComponentPropsWithoutRef} from 'react';
+import {createElement,useId,useLayoutEffect,useRef,useState,type ButtonHTMLAttributes,type RefAttributes} from 'react';
 import {createPortal} from 'react-dom';
 
-type Props = Omit<ComponentPropsWithoutRef<'button'>,'type'> & {help:string};
+type Anchor = 'button'|'div'|'span'|'aside'|'header'|'li'|'strong'|'small'|'article'|'summary';
+type Props = ButtonHTMLAttributes<HTMLElement> & {help:string;as?:Anchor};
 
-export function HudHelpButton({help,children,onClick,...props}:Props) {
+export function HudHelp({help,as:Tag='button',children,onClick,...props}:Props) {
   const id = useId();
-  const anchor = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<HTMLElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   const [mode,setMode] = useState<'preview'|'pinned'>();
+  const hold = useRef<number>(undefined);
+  const held = useRef(false);
+  const clearHold = ()=>window.clearTimeout(hold.current);
+  useLayoutEffect(()=>clearHold,[]);
   const open = mode!==undefined;
 
   useLayoutEffect(()=>{
@@ -32,6 +37,7 @@ export function HudHelpButton({help,children,onClick,...props}:Props) {
     move();
     const observer = new ResizeObserver(move);
     observer.observe(button);
+    observer.observe(tip);
     window.addEventListener('resize',move,{signal});
     window.addEventListener('scroll',move,{signal,capture:true});
     document.addEventListener('keydown',event=>{ if (event.key==='Escape') close(); },{signal});
@@ -42,18 +48,55 @@ export function HudHelpButton({help,children,onClick,...props}:Props) {
     };
   },[open,help]);
 
+  const acts = onClick || Tag==='summary';
+  const description = [props['aria-describedby'],open ? id : undefined].filter(Boolean).join(' ');
+  const anchorProps: ButtonHTMLAttributes<HTMLElement> & RefAttributes<HTMLElement> & {'data-help':string} = {
+    ...props,
+    ref:anchor,
+    type:Tag==='button' ? 'button' : undefined,
+    tabIndex:props.tabIndex ?? (acts || Tag==='button' ? undefined : 0),
+    'data-help':help,
+    'aria-describedby':description || undefined,
+    onPointerDown:event=>{
+      clearHold();
+      held.current = false;
+      if (event.pointerType==='touch' && acts) hold.current = window.setTimeout(()=>{
+        held.current = true;
+        setMode('pinned');
+      },500);
+    },
+    onPointerUp:clearHold,
+    onPointerCancel:clearHold,
+    onContextMenu:event=>{if (held.current) event.preventDefault();},
+    onKeyDown:event=>{
+      if (Tag!=='button' && !acts && (event.key==='Enter' || event.key===' ')) {
+        event.preventDefault();
+        setMode(mode==='pinned' ? undefined : 'pinned');
+      }
+    },
+    onPointerEnter:event=>{
+      if (event.pointerType!=='touch' && mode!=='pinned') setMode('preview');
+    },
+    onPointerLeave:event=>{
+      clearHold();
+      if (mode==='preview' && document.activeElement!==event.currentTarget) setMode(undefined);
+    },
+    onFocus:()=>{ if (mode!=='pinned') setMode('preview'); },
+    onBlur:()=>{ if (mode==='preview') setMode(undefined); },
+    onClick:event=>{
+      if (held.current && event.detail) {
+        event.preventDefault();
+        held.current = false;
+        return;
+      }
+      if (acts) {
+        setMode(undefined);
+        onClick?.(event);
+      } else setMode(mode==='pinned' ? undefined : 'pinned');
+    },
+  };
   return <>
-    <button {...props} ref={anchor} type="button" data-help={help} aria-describedby={open?id:undefined}
-      onPointerEnter={event=>{ if (event.pointerType!=='touch' && mode!=='pinned') setMode('preview'); }}
-      onPointerLeave={event=>{ if (mode==='preview' && document.activeElement!==event.currentTarget) setMode(undefined); }}
-      onFocus={()=>{ if (mode!=='pinned') setMode('preview'); }}
-      onBlur={()=>{ if (mode==='preview') setMode(undefined); }}
-      onClick={event=>{
-        if (onClick) {
-          setMode(undefined);
-          onClick(event);
-        } else setMode(mode==='pinned' ? undefined : 'pinned');
-      }}>{children}</button>
+    {createElement(Tag,anchorProps,children)}
     {open && createPortal(<div ref={popover} id={id} className="hud-panel hud-help-popover" role="tooltip">{help}</div>,document.body)}
   </>;
 }

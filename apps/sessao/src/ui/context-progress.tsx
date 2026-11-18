@@ -1,3 +1,4 @@
+import {HudHelp} from './hud-help';
 import {documentRules} from '../internal-mail';
 import {npcRules} from '../parliamentarians';
 import type {PlenaryView} from '../plenary';
@@ -22,9 +23,9 @@ export function contextProgress(view:PlenaryView|undefined) {
 export function ContextProgress({meter}:{meter:NonNullable<ReturnType<typeof contextProgress>>}) {
   return <>
     {meter.detail && <span id="office-progress-label">{meter.detail}</span>}
-    <div id="office-progress" className="react-meter" data-tone="budget" role="progressbar"
+    <HudHelp as="div" help="A barra mostra quanto falta para concluir a ação." id="office-progress" className="react-meter" data-tone="budget" role="progressbar"
       aria-label={meter.label} aria-valuenow={meter.value} aria-valuemin={0} aria-valuemax={meter.max}>
       <span style={{transform:`scaleX(${Math.max(0,Math.min(1,meter.value/meter.max))})`}}/>
-    </div>
+    </HudHelp>
   </>;
 }

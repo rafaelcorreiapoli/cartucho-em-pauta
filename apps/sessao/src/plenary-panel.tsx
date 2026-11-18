@@ -1,3 +1,4 @@
+import {HudHelp} from './ui/hud-help';
 import {createRoot} from 'react-dom/client';
 import {ProjectDetails,projectDetailsState} from './ui/project-intents';
 import {ProjectHeading,projectHeading} from './ui/project-heading';
@@ -21,17 +22,17 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
   const ballot = sessionBallotState(view);
   const impact = showImpact(view);
   return <>
-    <div id="project-outcome-brief" role="status" hidden={!brief} data-passed={brief ? String(brief.passed) : undefined}>
+    <HudHelp as="div" help="Resultado da última votação." id="project-outcome-brief" role="status" hidden={!brief} data-passed={brief ? String(brief.passed) : undefined}>
       {brief && <VoteBrief outcome={brief}/>}
-    </div>
+    </HudHelp>
     <div id="proposal" hidden={!showProposal(view.phase)}>
-      <div id="project-heading" className="deck-project-heading">
+      <HudHelp as="div" help="Projeto em pauta nesta sessão." id="project-heading" className="deck-project-heading">
         {view.phase!=='ballot' && !view.cassation && <ProjectHeading {...projectHeading(view)}/>}
-      </div>
+      </HudHelp>
       <div className="deck-project-controls">
-        <div id="impact" aria-label="Impacto de cada decisão" hidden={!impact}>
+        <HudHelp as="div" help="Veja como aprovar ou rejeitar o projeto afeta o Congresso." id="impact" aria-label="Impacto de cada decisão" hidden={!impact}>
           {impact && <ProjectImpact yes={view.yes} no={view.no}/>}
-        </div>
+        </HudHelp>
         <div id="ballot-host" hidden={!ballot}>
           {ballot && <SessionBallot key={matchId} state={ballot} ownId={id} onExpansion={onExpansion}
             cast={vote=>command('bill-vote',{vote})}
@@ -41,7 +42,7 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
     </div>
     <div className="deck-project-links">
       <details id="project-details" name="game-panels">
-        <summary><svg className="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Detalhes</span></summary>
+        <HudHelp as="summary" help="Consulte o projeto e declare sua intenção de voto."><svg className="hud-glyph" aria-hidden="true"><use href="#icon-document"/></svg><span>Detalhes</span></HudHelp>
         <div id="project-details-content" className="hud-panel deck-popover">
           <ProjectDetails view={view} id={id} declare={vote=>command('bill-intent',{vote})}/>
         </div>

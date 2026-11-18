@@ -31,7 +31,7 @@ test('cassation shows the local candidate with voting disabled and their skip se
   }}/>);
   expect(html).toContain('disabled="" aria-label="Meu nick"');
   expect(html).toContain('Outro nick');
-  expect(html).toContain('aria-keyshortcuts="2" aria-pressed="true">Pular voto');
+  expect(html).toMatch(/aria-keyshortcuts="2" aria-pressed="true"[^>]*>Pular voto/);
 });
 
 test('project impacts signal each number independently of the vote outcome',()=>{

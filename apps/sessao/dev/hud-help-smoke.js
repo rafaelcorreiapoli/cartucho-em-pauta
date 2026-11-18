@@ -31,5 +31,20 @@ async page => {
     await page.mouse.click(width-1,height-1);
     await tooltip.waitFor({state:'hidden'});
   }
-  return {sizes:2,hover:true,pin:true,keyboard:true};
+  const wallet = page.locator('#profile-resources [data-help]').last();
+  await wallet.hover();
+  await tooltip.filter({hasText:'Dinheiro disponível na sua carteira.'}).waitFor();
+  await wallet.click();
+  await page.keyboard.press('Escape');
+  await tooltip.waitFor({state:'hidden'});
+
+  const apps = page.getByRole('button',{name:'Aplicativos',exact:true});
+  await apps.dispatchEvent('pointerdown',{pointerType:'touch'});
+  await tooltip.filter({hasText:'Abra a lista de aplicativos.'}).waitFor();
+  await apps.dispatchEvent('pointerup',{pointerType:'touch'});
+  await apps.dispatchEvent('click',{detail:1});
+  if (await apps.getAttribute('aria-expanded')!=='false') throw Error('Pressionar para ver ajuda abriu os aplicativos');
+  await apps.click();
+  await page.getByRole('button',{name:'Configurações',exact:true}).last().waitFor();
+  return {sizes:2,hover:true,pin:true,keyboard:true,touchHold:true};
 }

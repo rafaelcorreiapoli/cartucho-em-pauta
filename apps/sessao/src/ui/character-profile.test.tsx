@@ -24,13 +24,13 @@ test('the player profile draws the private role and assigned office from server 
     return renderToStaticMarkup(<CharacterProfile model={model}/>);
   };
   const parliamentary = render(players[0]);
-  expect(parliamentary).toContain('id="hud-nick">Rafa');
+  expect(parliamentary).toMatch(/id="hud-nick"[^>]*>Rafa/);
   expect(parliamentary).toContain('data-skin="0"');
   expect(parliamentary).toMatch(/Gabinete 0[1-6]/);
   expect(parliamentary).not.toContain('id="profile-role"');
   model.profileReward.update('+20 XP');
   const infiltrator = render(players[2]);
-  expect(infiltrator).toContain('id="hud-nick">Caio');
+  expect(infiltrator).toMatch(/id="hud-nick"[^>]*>Caio/);
   expect(infiltrator).toContain('data-skin="2"');
   expect(infiltrator).toContain('aria-label="Infiltrado"');
   expect(infiltrator).toContain('id="profile-xp-reward" role="status">+20 XP');

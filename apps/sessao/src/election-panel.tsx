@@ -1,3 +1,4 @@
+import {HudHelp} from './ui/hud-help';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
@@ -93,10 +94,10 @@ export function ElectionIndicator({summary,urgency,open}:{
   summary?:Parameters<typeof ElectionSummary>[0]; urgency?:'soon'|'high'; open:()=>boolean;
 }) {
   return <div id="election-dock" className="hud-strip hud-module" hidden={!summary} data-urgency={urgency} data-at-risk={summary?.atRisk || undefined}>
-    {summary && <button id="open-election-polls" aria-keyshortcuts="L" className="hud-option" type="button"
+    {summary && <HudHelp id="open-election-polls" help="Veja a intenção de voto e quem corre risco de perder o mandato. (L)" aria-keyshortcuts="L" className="hud-option"
       dir="rtl" aria-label="Pesquisa eleitoral" aria-describedby="election-summary" aria-haspopup="dialog" onClick={open}>
       <ElectionSummary {...summary}/>
-    </button>}
+    </HudHelp>}
   </div>;
 }
 
