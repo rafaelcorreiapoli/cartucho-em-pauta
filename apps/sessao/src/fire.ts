@@ -13,6 +13,7 @@ export const fireRules = {
   install:3000,
   fuse:15_000,
   smoke:5000,
+  popularityReward:3,
 } as const;
 
 export const incendiary = {
@@ -57,7 +58,8 @@ export const fireSites = targets.map(target=>{
 export type FireAction = 'plant'|'disarm'|'extinguish';
 export type FireCommand = {kind:FireAction;site:number};
 export type FireOption = FireCommand & {label:string};
-export type FireExtinguished = {actor:string; room:string};
+export type ExtinguishEffect = {site:number; from?:{x:number;y:number}};
+export type FireExtinguished = {actor:string; room:string; effect?:ExtinguishEffect};
 export type FireView = {site:number; remaining:number; damage:number; paused:boolean};
 export type FireInteraction = {option?:FireOption; smoke?:number; progress?:number};
 

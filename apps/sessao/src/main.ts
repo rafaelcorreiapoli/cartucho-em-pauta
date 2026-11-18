@@ -285,8 +285,10 @@ async function connect(join: () => Promise<Room>) {
       audio.cue('cash');
       hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`);
     });
-    joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
-      hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
+    joined.onMessage('fire-extinguished',({actor,room,effect}:import('./fire').FireExtinguished)=>{
+      hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`);
+      if (effect) game?.showExtinguishEffect(effect);
+    });
     const actionFeedback = document.querySelector<HTMLElement>('#map-action-feedback')!;
     let actionFeedbackTimer:ReturnType<typeof setTimeout>|undefined;
     const clearActionFeedback = () => {

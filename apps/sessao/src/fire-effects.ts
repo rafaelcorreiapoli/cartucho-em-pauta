@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import {fireSites} from './fire';
+import {fireSites,type ExtinguishEffect} from './fire';
 
 const flameSize = 80;
 const flameFrames = 16;
@@ -67,6 +67,7 @@ function drawFlames(scene:Phaser.Scene) {
 
 export function createRoomFires(scene:Phaser.Scene) {
   drawFlames(scene);
+  const smokeKey = smokeTexture(scene);
   return fireSites.map(({x,y,bounds:[left,top,width,height]},index)=>{
     const glowKey = `room-fire-glow-${index}`;
     const glow = scene.textures.createCanvas(glowKey,width,height)!;
@@ -93,6 +94,12 @@ export function createRoomFires(scene:Phaser.Scene) {
       tint:[0xd84221,0xff8b35,0xffda83], scale:{start:.48,end:.09}, alpha:{start:.95,end:0},
     }).setDepth(y+2);
 
+    const smoke = scene.add.particles(x,y-19,smokeKey,{
+      emitting:false,frequency:125,lifespan:{min:650,max:1100},
+      x:{min:-10,max:10},speedX:{min:-8,max:8},speedY:{min:-22,max:-12},
+      scale:{start:.27,end:.77},alpha:{start:.5,end:0},tint:0x666977,maxAliveParticles:12,
+    }).setDepth(y+.5);
+
     return {
       flame,
       update(time:number,active:boolean,visible:boolean,reduced:boolean) {
@@ -100,14 +107,19 @@ export function createRoomFires(scene:Phaser.Scene) {
         flame.setVisible(visible).setFrame(reduced ? 0 : Math.floor(time/62)%flameFrames);
         if (visible && !reduced) {
           if (!embers.emitting) embers.start();
-        } else if (embers.emitting) embers.stop(true);
+          if (!smoke.emitting) smoke.start();
+        } else {
+          if (embers.emitting) embers.stop(true);
+          if (smoke.emitting) smoke.stop(true);
+        }
       },
     };
   });
 }
 
-export function createFuseSmoke(scene:Phaser.Scene) {
-  const key = 'incendiary-smoke';
+function smokeTexture(scene:Phaser.Scene) {
+  const key = 'fire-smoke-puff';
+  if (scene.textures.exists(key)) return key;
   const texture = scene.textures.createCanvas(key,32,32)!;
   const ctx = texture.context;
   const gradient = ctx.createRadialGradient(16,16,0,16,16,16);
@@ -118,6 +130,11 @@ export function createFuseSmoke(scene:Phaser.Scene) {
   ctx.fillRect(0,0,32,32);
   texture.refresh();
 
+  return key;
+}
+
+export function createFuseSmoke(scene:Phaser.Scene) {
+  const key = smokeTexture(scene);
   const plume = scene.add.particles(0,0,key,{
     emitting:false,frequency:95,lifespan:1150,
     speedX:{min:-6,max:6},speedY:{min:-24,max:-18},
@@ -137,5 +154,29 @@ export function createFuseSmoke(scene:Phaser.Scene) {
     } else if (!plume.emitting) {
       plume.setPosition(x,y-31).setDepth(y+2).start();
     }
+  };
+}
+
+export function createExtinguishEffect(scene:Phaser.Scene) {
+  const key = smokeTexture(scene);
+  const spray = scene.add.particles(0,0,key,{
+    emitting:false,angle:{min:-15,max:15},speed:{min:45,max:100},
+    lifespan:{min:200,max:410},scale:{start:.13,end:.48},alpha:{start:.95,end:0},
+    tint:[0xffffff,0xddf6ff,0xc2dce8],maxAliveParticles:24,
+  });
+  const cloud = scene.add.particles(0,0,key,{
+    emitting:false,x:{min:-12,max:12},y:{min:-7,max:5},
+    speedX:{min:-18,max:18},speedY:{min:-26,max:-8},lifespan:{min:520,max:1150},
+    scale:{start:.31,end:.86},alpha:{start:.65,end:0},tint:0x92929c,maxAliveParticles:18,
+  });
+  return ({site,from}:ExtinguishEffect)=>{
+    const target = fireSites[site];
+    if (!target) return;
+    const {x,y} = target;
+    cloud.killAll().setPosition(x,y-14).setDepth(y+3).explode(15);
+    if (!from) return;
+    const nozzleY = from.y-7;
+    const angle = Math.atan2(y-14-nozzleY,x-from.x);
+    spray.killAll().setPosition(from.x,nozzleY).setRotation(angle).setDepth(y+4).explode(24);
   };
 }

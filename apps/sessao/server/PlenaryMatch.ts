@@ -5,7 +5,7 @@ import {Complaints} from './Complaints';
 import {complaintRules} from '../src/complaints';
 import type {Photo} from '../src/photography';
 import {Fire} from './Fire';
-import {canActOnFire,fireSites,type FireAction,type FireInteraction} from '../src/fire';
+import {canActOnFire,fireRules,fireSites,type FireAction,type FireInteraction} from '../src/fire';
 import {Power} from './Power';
 import {canOperatePanel,powerPanels,powerRules,type PowerAction,type PowerPanel} from '../src/power';
 import { npcRules } from '../src/parliamentarians';
@@ -891,7 +891,9 @@ export class PlenaryMatch {
     for (const panel of [0,1] as const) {
       const id = repairedBy[panel];
       const player = id && playerAt(id);
-      if (player) this.publishActivity(player,'power-repaired',now,{
+      if (!player) continue;
+      this.economy.changePopularity(player.id,powerRules.popularityReward);
+      this.publishActivity(player,'power-repaired',now,{
         amount:this.stability,place:roomAt(player)===powerPanels[panel].name ? 'inside-crisis-room' : undefined,
       });
     }
@@ -951,6 +953,7 @@ export class PlenaryMatch {
     }
     if (!hasExtinguisher) return failed?.('Você precisa de um extintor.');
     if (!this.fire.extinguish(site)) return failed?.('Já não há incêndio neste local.');
+    this.economy.changePopularity(player.id,fireRules.popularityReward);
     const insideRoom = roomAt(player)===fireSites[site].name;
     this.publishActivity(player,'fire-extinguished',now,
       {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});

@@ -1012,14 +1012,17 @@ test('Plantão de Emergência credits extinguishing from inside the affected roo
   const outside = {...player,y:point.y+fireRules.radius};
   const missions = ()=>match.view(honest.id,ids,now).politics!.missions;
   expect(missions().active.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
+  const popularity = economy.popularity(honest.id);
   expect(match.actOnFire(player,'extinguish',site,now,true)).toBeUndefined();
   match.advance(now);
   expect(match.actOnFire(outside,'extinguish',site,now,true)).toBeUndefined();
   expect(match.actOnFire(player,'extinguish',site,now,false)).toBeUndefined();
   expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(false);
+  expect(economy.popularity(honest.id)).toBe(popularity);
   expect(match.actOnFire(player,'extinguish',site,now,true)).toBe('Incêndio apagado.');
   expect(missions().completed.some(mission=>mission.kind==='plantaoEmergencia')).toBe(true);
   expect(match.actOnFire(player,'extinguish',site,now+1,true)).toBeUndefined();
+  expect(economy.popularity(honest.id)).toBe(popularity+fireRules.popularityReward);
 });
 
 test('Plantão de Emergência cannot be claimed after the fire has expired',()=>{
@@ -1426,7 +1429,9 @@ test('a project waits for an overlapping hearing and keeps the original proposer
 test('emergency maintenance is assigned during an outage and rewards both repair operators',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
-  const accounts = Reflect.get(Reflect.get(match,'economy'),'accounts');
+  const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  const accounts = Reflect.get(economy,'accounts');
+  const initialPopularity = new Map(people.map(({id})=>[id,economy.popularity(id)]));
   for (const player of people) {
     const {agenda} = accounts.get(player.id);
     Reflect.set(agenda,'missions',[]);
@@ -1445,7 +1450,11 @@ test('emergency maintenance is assigned during an outage and rewards both repair
   const findOperator = (id:string)=>operators.find(player=>player.id===id);
   match.advancePower(end-1,findOperator);
   expect(missions(host.id,end-1).completed.some(isMaintenance)).toBe(false);
+  for (const {id} of people) expect(economy.popularity(id)).toBe(initialPopularity.get(id)!);
   match.advancePower(end,findOperator);
+  match.advancePower(end+1,findOperator);
+  for (const {id} of operators) expect(economy.popularity(id)).toBe(initialPopularity.get(id)!+powerRules.popularityReward);
+  expect(economy.popularity(traitor.id)).toBe(initialPopularity.get(traitor.id)!);
   for (const player of operators) expect(missions(player.id,end).completed.filter(isMaintenance)).toHaveLength(1);
   expect(missions(traitor.id,end).active.some(isMaintenance)).toBe(false);
   expect(missions(traitor.id,end).completed.some(isMaintenance)).toBe(false);
