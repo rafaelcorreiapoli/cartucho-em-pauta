@@ -12,7 +12,7 @@ const region = ([x,y,width,height]:Rect) => ({
 export function FloorPlan({marker}:{marker:(element:HTMLDivElement|null)=>void}) {
   return <section className="floor-plan-panel" aria-label="Planta do Congresso">
     <header><h2>Planta do Congresso</h2><span>Solte <kbd>Tab</kbd> para voltar</span></header>
-    <div className="floor-plan-drawing">
+    <div className="floor-plan-drawing" style={{aspectRatio:WIDTH/HEIGHT}}>
       {rooms.map(({name,bounds})=><div className="floor-plan-room" style={region(bounds)} key={name}>{name}</div>)}
       {walls.map((wall,index)=><div className="floor-plan-wall" style={region(wall)} key={index} aria-hidden="true"/>)}
       <div ref={marker} className="floor-plan-marker" role="img" aria-label="Sua posição" hidden>

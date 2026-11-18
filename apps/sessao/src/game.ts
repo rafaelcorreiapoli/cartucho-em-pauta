@@ -521,8 +521,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const [x,y,w,h] = layout.door;
           const status = office?.door ?? 'open';
           if (status!=='open') {
-            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1)
-              .fillRect(x,y+3,w,status==='breached' ? 2 : h-3);
+            const vertical = h>w;
+            const inset = vertical ? 1 : 3;
+            const thickness = status==='breached' ? 2 : (vertical ? w : h)-inset;
+            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1);
+            if (vertical) this.officeDoors.fillRect(x+inset,y,thickness,h);
+            else this.officeDoors.fillRect(x,y+inset,w,thickness);
           }
           if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
             .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
