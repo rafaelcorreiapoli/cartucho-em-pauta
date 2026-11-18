@@ -34,9 +34,11 @@ test('slots keep their positions while displaying the server-confirmed equipment
   expect(render(3+binoculars.duration+binoculars.cooldown)).not.toContain('Recarga:');
   const cash = Reflect.get(game,'create').call(game,'briefcase',{holder:player.id});
   cash.cash = 12;
+  cash.cashStolenFrom = {name:'Alice',safe:true};
   const carrying = render(4);
   expect(carrying.indexOf('carried-briefcases')).toBeGreaterThan(carrying.indexOf('Acessório 2'));
   expect(carrying).toContain('Maleta de dinheiro · R$ 120 mil');
+  expect(carrying).toContain('R$ 120 mil · Roubada do cofre de Alice');
   game.act(player,{kind:'drop',item:cash.id},at(5));
   expect(render(5)).not.toContain('carried-briefcases');
 });

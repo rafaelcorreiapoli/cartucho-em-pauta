@@ -671,12 +671,15 @@ test('briefcases can be collected, stolen and transferred with every inventory s
 
   world.takeWallet = ()=>12;
   expect(game.robNpc(alice,{...bob,id:'npc',npc:true},world)).toContain('Maleta roubada');
-  expect(inventory(alice).filter(item=>item.kind==='briefcase')).toHaveLength(2);
-  expect(game.act(alice,{kind:'offer',item:cash.id,target:bob.id},world)).toBe('Pedido enviado.');
+  const briefcases = inventory(alice).filter(item=>item.kind==='briefcase');
+  expect(briefcases).toHaveLength(2);
+  const stolen = briefcases.find(item=>item.id!==cash.id)!;
+  expect(stolen.cashStolenFrom).toEqual({name:bob.nick});
+  expect(game.act(alice,{kind:'offer',item:stolen.id,target:bob.id},world)).toBe('Pedido enviado.');
   const request = game.view(bob,world).requests[0];
   expect(game.act(bob,{kind:'accept',item:request.id},world)).toBe('Objeto recebido.');
-  expect(inventory(bob)).toContainEqual(cash);
-  expect(inventory(alice)).not.toContainEqual(cash);
+  expect(inventory(bob)).toContainEqual(stolen);
+  expect(inventory(alice)).not.toContainEqual(stolen);
 });
 
 test('concealment filters cash from observers and photos through reconnect and cash swaps',()=>{

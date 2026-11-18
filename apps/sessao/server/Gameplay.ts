@@ -474,6 +474,7 @@ export class Gameplay {
     if (!amount) return 'O parlamentar está sem dinheiro.';
     const cash = this.create('briefcase',{holder:player.id});
     cash.cash = amount;
+    cash.cashStolenFrom = {name:npc.nick};
     this.expose(player.id,cash.id);
     publishGameplay(world,player,'npc-robbed',{target:npc.id,item:cash.id,kind:cash.kind,amount});
     console.info(JSON.stringify({event:'npc-robbery',from:npc.id,to:player.id,amount,item:cash.id}));
@@ -1277,6 +1278,8 @@ export class Gameplay {
         }
         const cash = this.create('briefcase',{holder:id});
         cash.cash = amount;
+        const victim = world.players.find(person=>person.id===owner)?.nick ?? office.nick;
+        if (victim) cash.cashStolenFrom = {name:victim,safe:true};
         this.items.get(cash.id)!.safeRobber = id;
         this.expose(id,cash.id);
         this.event(world,player,'safe-robbed',cash,owner,{place:office.layout.id});

@@ -5,6 +5,7 @@ import {equippedWeapon,equipmentSlots,xray} from '../equipment';
 import {cashAmount,objects,type GameplayView,type ObjectKind} from '../gameplay';
 import {money} from '../politics';
 import {weapons} from '../weapons';
+import {HudHelpButton} from './hud-help';
 
 export const equipmentControls = {
   xray:{key:'X',action:'scan-xray'},
@@ -53,7 +54,9 @@ export function equippedGearState(state?:GameplayView) {
         hint:control?.key,
       };
     }),
-    briefcases:state.inventory.filter(item=>item.kind==='briefcase').map(item=>({id:item.id,amount:cashAmount(item) ?? 0})),
+    briefcases:state.inventory.filter(item=>item.kind==='briefcase').map(item=>({
+      id:item.id,amount:cashAmount(item) ?? 0,stolenFrom:item.cashStolenFrom,
+    })),
     concealment:state.concealmentSeconds,
   };
 }
@@ -99,12 +102,13 @@ export function EquippedGear({state,activate,inspectBriefcase}:{state:GearState;
       </span> : null}
     </div>
     {state.briefcases.length>0 && <div className="carried-briefcases" role="listitem" aria-label="Maletas carregadas">
-      {state.briefcases.map(({id,amount})=>{
-        const label = `${objects.briefcase.name} · ${money(amount)}`;
-        return <button key={id} type="button" className="gear-slot carried-briefcase" title={label}
-          aria-label={label} onClick={()=>inspectBriefcase(id)}>
+      {state.briefcases.map(({id,amount,stolenFrom})=>{
+        const value = money(amount);
+        const origin = stolenFrom ? ` · Roubada ${stolenFrom.safe ? 'do cofre de' : 'de'} ${stolenFrom.name}` : '';
+        return <HudHelpButton key={id} className="gear-slot carried-briefcase" help={value+origin}
+          aria-label={`${objects.briefcase.name} · ${value}`} onClick={()=>inspectBriefcase(id)}>
           <GearPortrait kind="briefcase"/>
-        </button>;
+        </HudHelpButton>;
       })}
     </div>}
   </>;

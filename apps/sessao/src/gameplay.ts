@@ -87,7 +87,7 @@ export type DocumentData = {
   author:string; title:string; edited:boolean; project?:number; description?:string; signatures:Contact[]; stamps:string[];
   requiredStamps:string[]; requiredSignatures:number; requiredOffice?:Office;
 };
-export type WorldItem = {id:number; kind:ObjectKind; cash?:number; charges?:number; quantity?:number; document?:DocumentData};
+export type WorldItem = {id:number; kind:ObjectKind; cash?:number; cashStolenFrom?:{name:string; safe?:true}; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
 export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foodDefinition(kind));
 export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;

@@ -292,7 +292,7 @@ test('the safe protects an incapacitated owner and converts only the current wal
   expect(balance).toBe(0);
   const inventory = game.view(visitor,world).inventory;
   expect(inventory).toHaveLength(1);
-  expect(inventory[0]).toMatchObject({kind:'briefcase',cash:17});
+  expect(inventory[0]).toMatchObject({kind:'briefcase',cash:17,cashStolenFrom:{name:owner.nick,safe:true}});
   expect(game.view(owner,world).ownOffice).toBe(home.id);
   expect(game.physicalCash()).toBeGreaterThanOrEqual(17);
 

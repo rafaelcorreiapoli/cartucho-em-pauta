@@ -3,7 +3,7 @@ import {createPortal} from 'react-dom';
 
 type Props = Omit<ComponentPropsWithoutRef<'button'>,'type'> & {help:string};
 
-export function HudHelpButton({help,children,...props}:Props) {
+export function HudHelpButton({help,children,onClick,...props}:Props) {
   const id = useId();
   const anchor = useRef<HTMLButtonElement>(null);
   const popover = useRef<HTMLDivElement>(null);
@@ -48,7 +48,12 @@ export function HudHelpButton({help,children,...props}:Props) {
       onPointerLeave={event=>{ if (mode==='preview' && document.activeElement!==event.currentTarget) setMode(undefined); }}
       onFocus={()=>{ if (mode!=='pinned') setMode('preview'); }}
       onBlur={()=>{ if (mode==='preview') setMode(undefined); }}
-      onClick={()=>setMode(mode==='pinned'?undefined:'pinned')}>{children}</button>
+      onClick={event=>{
+        if (onClick) {
+          setMode(undefined);
+          onClick(event);
+        } else setMode(mode==='pinned' ? undefined : 'pinned');
+      }}>{children}</button>
     {open && createPortal(<div ref={popover} id={id} className="hud-panel hud-help-popover" role="tooltip">{help}</div>,document.body)}
   </>;
 }
