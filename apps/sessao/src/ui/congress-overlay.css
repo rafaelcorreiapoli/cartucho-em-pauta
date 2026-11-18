@@ -166,9 +166,10 @@
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -10px -7px -10px -20px;
-  background: linear-gradient(to left, #09150ff0 20%, #09150fdd 60%, transparent);
-  mask-image: linear-gradient(transparent, #000 16% 84%, transparent);
+  inset: -14px calc(-1 * var(--hud-edge)) -24px -48px;
+  background: linear-gradient(#070f0beb, #080f0b00);
+  mask-image: linear-gradient(to right, transparent, #000 38%);
+  pointer-events: none;
 }
 #hud-notices { display: grid; gap: .3rem; }
 .right-hud :is(.hud-notice, #electoral-notice) {
@@ -676,6 +677,7 @@
   left: -.3rem;
   min-width: 18px;
   padding: 2px 3px;
+  text-shadow: none;
 }
 .election-standing-label { display: grid; min-width: 0; }
 .election-name {
@@ -1000,6 +1002,9 @@
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #command-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-block-start: calc(var(--hud-edge) + 26px);
+  }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .right-hud::before {
+    top: calc(-1 * (var(--hud-edge) + 26px));
   }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
     grid-column: 1;
