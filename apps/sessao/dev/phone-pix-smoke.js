@@ -98,6 +98,16 @@ async page => {
     await receiver.keyboard.press('o');
     await receiver.locator(dialog).getByRole('button',{name:'Café',exact:true}).waitFor();
     await receiver.keyboard.press('Escape');
+    await receiver.getByRole('button',{name:'Oferecer item · Alice',exact:true}).click();
+    const offer = receiver.getByRole('dialog',{name:'Oferecer item a Alice',exact:true});
+    await offer.getByRole('button',{name:'Café',exact:true}).click();
+    await offer.getByRole('button',{name:'Oferecer',exact:true}).click();
+    await offer.waitFor({state:'hidden'});
+    await page.locator('#object-request').getByRole('button',{name:'Aceitar',exact:true}).click();
+    await page.locator('#object-request').waitFor({state:'hidden'});
+    await page.keyboard.press('o');
+    await bag.getByRole('button',{name:'Café',exact:true}).waitFor();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('c');
     await page.locator(dialog).getByRole('button',{name:'Câmera',exact:true}).waitFor();
@@ -150,8 +160,9 @@ async page => {
     const pix = page.locator(dialog).getByRole('region',{name:'Transferência Pix'});
     const cashReward = await receiver.locator('[aria-label="Objetivos ativos"]')
       .getByText('Receba dinheiro de outro parlamentar',{exact:true}).count();
-    const senderReward = await page.locator('[aria-label="Objetivos ativos"]')
+    const senderReward = ()=>page.locator('[aria-label="Objetivos ativos"]')
       .getByText('Transfira R$ 10 mil para Bia',{exact:true}).count();
+    const afterFirstTransfer = balances[0]-10+(await senderReward() ? 20 : 0);
     const transfer = pix.getByRole('button',{name:'Transferir',exact:true});
     if (!await transfer.isDisabled()) throw Error('O Pix deve exigir um destinatário');
     await page.keyboard.press('1');
@@ -175,7 +186,7 @@ async page => {
       page.locator('#wallet-effects .wallet-loss[style]').getByText('−R$ 10 mil',{exact:true}).waitFor(),
       palette.getByRole('button',{name:/Transferir/}).click(),
     ]);
-    await pix.locator('.pix-balance').getByText(`R$ ${balances[0]-10+(senderReward ? 20 : 0)} mil`,{exact:true}).waitFor();
+    await pix.locator('.pix-balance').getByText(`R$ ${afterFirstTransfer} mil`,{exact:true}).waitFor();
     if (await page.evaluate(()=>window.syntheticPixClicks)!==0) throw Error('O atalho simulou clique para transferir');
 
     const receivedBalance = receiver.locator(dialog).locator('.pix-balance');
@@ -190,8 +201,9 @@ async page => {
     await receiver.keyboard.down('ArrowDown');
     await receiver.waitForTimeout(900);
     await receiver.keyboard.up('ArrowDown');
+    const afterSecondTransfer = afterFirstTransfer-10+(await senderReward() ? 20 : 0);
     await page.keyboard.press('1');
-    await pix.locator('.pix-balance').getByText('R$ 60 mil',{exact:true}).waitFor();
+    await pix.locator('.pix-balance').getByText(`R$ ${afterSecondTransfer} mil`,{exact:true}).waitFor();
     await page.locator(dialog).getByRole('button',{name:'Fechar aplicativo'}).click();
     await receiver.keyboard.press('c');
     for (const client of [page,receiver]) {

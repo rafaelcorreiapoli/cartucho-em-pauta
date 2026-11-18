@@ -80,8 +80,11 @@ const activityMissions = {
 } satisfies Partial<Record<Agenda,(event:GameplayEvent)=>boolean>>;
 
 const minimumPlayers:Partial<Record<Agenda,number>> = {
-  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,amizadeInstitucional:2,dinheiroPresencialVinte:2,caixaDois:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:PUBLIC_MEETING_PEERS+1,fotoDinheiro:2,chamadasUrgentes:urgentCallMission.contacts+1,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:agendaCounts.articulacao+1, escandalo:3, entrega:COFFEE_DELIVERY_RECIPIENTS+1, assinar:2,
+  varredura:2,manutencaoEmergencia:2,solenidadeInauguracao:2,flagraGabinete:2,reuniaoGabinete:2,reuniaoPublica:PUBLIC_MEETING_PEERS+1,fotoDinheiro:2,chamadasUrgentes:urgentCallMission.contacts+1,debateTelefonico:2,pixVinte:2,socorro:2, articulacao:agendaCounts.articulacao+1, escandalo:3, assinar:2,
   recebido:2, pagamento:2, visitaGabinete:2, jogarOculto:2,
+};
+const tradeMissionPeers:Partial<Record<Agenda,number>> = {
+  entrega:COFFEE_DELIVERY_RECIPIENTS,entregaFoto:2,amizadeInstitucional:1,dinheiroPresencialVinte:1,caixaDois:1,documentoAlvo:1,pizzaAlvo:1,
 };
 const missionTargets:Partial<Record<Agenda,number>> = {
   investimentoPolitico:CAMPAIGN_SPENDING_TARGET,poupancaInstitucional:SAVINGS_MISSION_AMOUNT,recolhimentoExtraordinario:2,
@@ -181,13 +184,14 @@ export class PersonalAgenda {
   }
 
   private targetAvailable(kind:Agenda,id:string) {
+    if (tradeMissionPeers[kind] && this.botIds.has(id)) return false;
     if (kind==='visitaCortesia') return this.hasOffice?.(id)===true;
     if (kind==='visitaAlvo') return this.hasOffice?.(id)!==false;
     return !this.availableTargets || this.availableTargets.has(id);
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(reward:MissionReward, completed:Mission[])=>void) {
+    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set()) {
     const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria');
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
@@ -240,7 +244,8 @@ export class PersonalAgenda {
         const credited = this.factsByMission.get(mission.id)?.get('');
         const remaining = mission.target-mission.current;
         const canContribute = ({id}:Contact) => !credited?.has(id) &&
-          (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false);
+          (mission.kind!=='visitaDoisGabinetes' || this.hasOffice?.(id)!==false) &&
+          (mission.kind!=='entrega' || !this.botIds.has(id));
         if (targets.filter(canContribute).length>=remaining) return true;
       } else if (mission.kind==='recolhimentoExtraordinario' && metrics.canPartiallyDepositCash) {
         const lots = this.factsByMission.get(mission.id)?.get('');
@@ -291,6 +296,13 @@ export class PersonalAgenda {
 
   private availableInMatch(kind:Agenda, remaining:number, metrics?:AgendaMetrics) {
     const drawing = metrics!==undefined;
+    const tradePeers = tradeMissionPeers[kind];
+    if (tradePeers) {
+      const peers = this.availableTargets
+        ? this.targets.filter(({id})=>!this.botIds.has(id) && (!drawing || this.availableTargets?.has(id))).length
+        : this.playerCount-this.botIds.size-1;
+      if (peers<tradePeers) return false;
+    }
     if (ownOfficeMissions.has(kind) && this.hasOffice?.()===false) return false;
     if (kind==='visitaDoisGabinetes' && this.targets.filter(person=>this.hasOffice?.(person.id)!==false).length<remaining) return false;
     if (kind==='visitaGabinete' && this.hasOffice && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
