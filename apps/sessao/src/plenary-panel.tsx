@@ -1,8 +1,7 @@
 import {createRoot} from 'react-dom/client';
-import {memo} from 'react';
 import {ProjectDetails,projectDetailsState} from './ui/project-intents';
 import {ProjectHeading,projectHeading} from './ui/project-heading';
-import {VoteBrief,VoteHistory} from './ui/vote-history';
+import {VoteBrief} from './ui/vote-brief';
 import {ProjectImpact} from './ui/project-impact';
 import {SessionBallot,ballotPalette,ballotShortcut,sessionBallotState} from './ui/ballot';
 import type {createRoomCommandSender} from './room-commands';
@@ -10,13 +9,12 @@ import {mountLobbyControls} from './ui/lobby-controls';
 import type {Outcome,PlenaryView} from './plenary';
 
 const element = (id:string) => document.getElementById(id)!;
-const History = memo(VoteHistory);
 const showProposal = (phase:PlenaryView['phase']) => phase==='negotiation' || phase==='ballot' || phase==='hearing';
 const showImpact = (view:PlenaryView) => showProposal(view.phase) && view.project!==undefined &&
   view.phase!=='ballot' && !view.hearing && !view.cassation;
 
-export function LegislativeDock({view,brief,outcomes,id,command,onExpansion}:{
-  view:PlenaryView; brief?:Outcome; outcomes:readonly Outcome[];
+export function LegislativeDock({view,brief,id,command,onExpansion}:{
+  view:PlenaryView; brief?:Outcome;
   id:string; command:ReturnType<typeof createRoomCommandSender>; onExpansion?:(expanded:boolean)=>void;
 }) {
   const matchId = view.politics?.progression.matchId;
@@ -48,9 +46,6 @@ export function LegislativeDock({view,brief,outcomes,id,command,onExpansion}:{
           <ProjectDetails view={view} id={id} declare={vote=>command('bill-intent',{vote})}/>
         </div>
       </details>
-      <details id="vote-history" className="hud-module" name="game-panels" hidden={!outcomes.length} key={matchId}>
-        {outcomes.length>0 && <History outcomes={outcomes}/>}
-      </details>
     </div>
   </>;
 }
@@ -64,7 +59,6 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   const root = createRoot(element('legislative-dock'));
   const match = element('match');
   let view:PlenaryView|undefined;
-  let outcomes:readonly Outcome[] = [];
   let brief:Outcome|undefined;
   let timer:number|undefined;
   let key = '';
@@ -77,12 +71,12 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   }
 
   function renderDock(next:PlenaryView) {
-    const nextKey = JSON.stringify([next.politics?.progression.matchId,brief?.round,outcomes.length,
+    const nextKey = JSON.stringify([next.politics?.progression.matchId,brief?.round,
       next.phase,projectHeading(next),projectDetailsState(next),next.mandate,next.politics?.suspended,next.voteIntents,
       next.project,next.cassationIn,showImpact(next) && [next.yes,next.no],sessionBallotState(next)]);
     if (nextKey===key) return;
     key = nextKey;
-    root.render(<LegislativeDock view={next} brief={brief} outcomes={outcomes} id={id} command={command} onExpansion={onExpansion}/>);
+    root.render(<LegislativeDock view={next} brief={brief} id={id} command={command} onExpansion={onExpansion}/>);
   }
 
   const ballotIdentity = (current:PlenaryView) => JSON.stringify([current.politics?.progression.matchId,
@@ -109,9 +103,8 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
     },
     render(next:PlenaryView) {
       const sameMatch = next.politics?.progression.matchId===view?.politics?.progression.matchId;
-      const historyChanged = !sameMatch || next.outcomes.length!==outcomes.length;
       if (!sameMatch || !next.outcomes.length || next.phase==='ballot' || next.phase==='hearing' && view?.phase!=='hearing') clearBrief();
-      if (sameMatch && view && next.outcomes.length>outcomes.length && next.outcome &&
+      if (sameMatch && view && next.outcomes.length>view.outcomes.length && next.outcome &&
           (next.phase==='negotiation' || next.phase==='finished')) {
         clearBrief();
         brief = next.outcome;
@@ -121,7 +114,6 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
         },8500);
       }
       if (!sameMatch || view?.phase!==next.phase || view.round!==next.round) expanded = true;
-      if (historyChanged) outcomes = next.outcomes;
       view = next;
       lobby.render(next,assetsReady());
       match.hidden = next.phase==='lobby';

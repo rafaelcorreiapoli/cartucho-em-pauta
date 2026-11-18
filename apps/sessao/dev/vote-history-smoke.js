@@ -73,7 +73,13 @@ async page => {
   await page.locator('#congress-dock').waitFor({state:'visible'});
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
-  await settings.getByRole('button',{name:'Ativar voz'}).waitFor();
+  await settings.getByLabel('Música').waitFor();
+  await settings.getByRole('button',{name:'Ativar voz'}).waitFor({state:'hidden'});
+  await page.keyboard.press('F2');
+  const settingsShortcuts = page.getByRole('dialog',{name:'Atalhos de teclado'});
+  await settingsShortcuts.waitFor();
+  if (await settingsShortcuts.getByRole('button',{name:'Ativar voz'}).count()) throw Error('Atalho de voz disponível durante a votação');
+  await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('k');
@@ -81,6 +87,7 @@ async page => {
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
   await page.locator('.plenary-countdown').waitFor({state:'hidden'});
+  await page.keyboard.press('m');
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   await page.locator('[data-vote="yes"]').waitFor();
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
@@ -142,7 +149,7 @@ async page => {
   await page.keyboard.press('n');
   await sheet.locator('[data-vote-state="abstain"]').getByText('Histórico QA').waitFor();
   await page.evaluate(()=>{ window.hudSlides.length = 0; });
-  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
+  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:45000});
   await page.locator('#legislative-dock').waitFor({state:'hidden'});
   await settingsButton.waitFor({state:'hidden'});
   const brief = page.locator('#project-outcome-brief');
@@ -156,25 +163,7 @@ async page => {
   await page.waitForFunction(()=>['agenda-dock','legislative-dock'].every(id=>window.hudSlides.includes(id)));
   for (const selector of exploring.slice(0,3)) await page.locator(selector).waitFor({state:'visible'});
   await page.locator('#session[data-phase="ballot"]').waitFor();
-  await page.locator('#session[data-phase="negotiation"]').waitFor({timeout:35000});
-  await page.locator('#session[data-phase="ballot"]').waitFor();
-  const history = page.locator('#vote-history');
-  await history.locator('summary').click();
-  const pages = history.locator('#vote-pages');
-  if (await pages.getAttribute('aria-label')!=='Votação 2 de 2') throw Error('Latest ballot was not selected');
-  if (await history.locator('#outcome-bill').textContent()!=='Wi-Fi na Praça') throw Error('Wrong latest project');
-  await history.getByRole('button',{name:'Votação anterior'}).click();
-  if (await pages.getAttribute('aria-label')!=='Votação 1 de 2') throw Error('Previous arrow did not update page');
-  if (await history.locator('#outcome-bill').textContent()!=='Auxílio Churrasco') throw Error('Wrong previous project');
-  const ballotClock = await sheet.locator('#project-ballot-body time').textContent();
-  await page.waitForFunction(previous=>{
-    const clock = document.querySelector('#project-ballot-body time');
-    return clock && clock.textContent!==previous;
-  },ballotClock);
-  if (await pages.getAttribute('aria-label')!=='Votação 1 de 2') throw Error('A clock tick reset vote history');
-  if (!await history.getByRole('button',{name:'Votação anterior'}).isDisabled()) throw Error('Previous arrow exceeded bounds');
-  await history.getByRole('button',{name:'Próxima votação'}).click();
-  if (!await history.getByRole('button',{name:'Próxima votação'}).isDisabled()) throw Error('Next arrow exceeded bounds');
+  if (await page.locator('#vote-history').count()) throw Error('Histórico presente após a primeira votação');
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Votação lotada QA');

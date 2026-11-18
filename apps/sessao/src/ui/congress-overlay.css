@@ -286,7 +286,6 @@
 .congress-bag .item-tile { min-height: 78px; }
 #command-deck .deck-tools { align-self: end; margin-block-end: var(--hud-edge); }
 #command-deck #legislative-dock { grid-column: 2; overflow: visible; }
-#command-deck #last-vote { pointer-events: auto; z-index: 5; }
 #command-deck .deck-tools { grid-column: 3; }
 #session:not([data-in-plenary="true"]) #command-deck #legislative-dock,
 #session[data-phase="negotiation"] #command-deck #legislative-dock { display: none; }

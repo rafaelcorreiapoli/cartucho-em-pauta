@@ -11,6 +11,8 @@ import type {GameplayWorld} from './gameplay-world';
 import type {PlenaryMatch} from './PlenaryMatch';
 
 const thinkMs = 650;
+const firstFilingDelayMs = 30_000;
+const subsequentFilingDelayMs = 120_000;
 const walkingSpeedFactor = .8;
 const safeDifference = 6;
 
@@ -197,15 +199,16 @@ export class PlayerBots {
       act({kind:'destroy',item:document.id});
       return;
     }
-    const filingElapsed = this.filingSince===undefined ? -Infinity : now-this.filingSince;
-    if (filingElapsed>=8_000) {
-      const first = (view.round+this.bots.size-1+Math.floor((filingElapsed-8_000)/32_000))%this.bots.size;
+    const filingDelay = view.outcomes.length ? subsequentFilingDelayMs : firstFilingDelayMs;
+    const filingElapsed = this.filingSince===undefined ? -Infinity : now-this.filingSince-filingDelay;
+    if (filingElapsed>=0) {
+      const first = (view.round+this.bots.size-1+Math.floor(filingElapsed/32_000))%this.bots.size;
       const filingOrder = (bot.index-first+this.bots.size)%this.bots.size;
       if (filingOrder===0) {
         this.file(bot,view,game,visible,now,act);
         return;
       }
-      if (filingOrder<=2 && filingElapsed>=13_000) {
+      if (filingOrder<=2 && filingElapsed>=5_000) {
         this.meetAtSecretary(bot,now);
         return;
       }

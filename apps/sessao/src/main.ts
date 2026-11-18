@@ -131,7 +131,7 @@ function showLobby(message: string) {
   voice = undefined;
   disguiseActive = false;
   matchRunning = false;
-  settings.update({microphone:'off',voiceMessage:'',voiceDescription:undefined,roomLabel:''});
+  settings.update({microphone:'off',voiceMessage:'',voiceDescription:undefined,hideVoice:false,roomLabel:''});
   game?.destroy();
   game = undefined;
   room = undefined;
@@ -432,12 +432,12 @@ async function connect(join: () => Promise<Room>) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished') audio.cue('end');
       phase = view.phase;
-      audio.setScore(phase==='ballot' ? 'ballotMusic' : phase==='hearing' ? 'hearingMusic' : 'music');
+      audio.setScore(phase==='hearing' ? 'hearingMusic' : 'music');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
-      settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
-        phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
+      settings.update({hideVoice:phase==='ballot',voiceDescription:negotiating ? 'Voz por proximidade' :
+        phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
       if (phase==='ballot' || phase==='hearing') gameplay.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';

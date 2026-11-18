@@ -198,7 +198,7 @@ button.equipped-gear-tile { cursor: pointer; }
 #command-deck .profile-office { gap: 5px; font-size: 13px; }
 #command-deck #hud-office { color: var(--party-gold); font-size: 12px; }
 .deck-profile-links, .deck-project-links { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#command-deck :is(#vote-history,#project-details) {
+#command-deck #project-details {
   position: relative;
   inset: auto;
   transform: none;
@@ -209,7 +209,7 @@ button.equipped-gear-tile { cursor: pointer; }
   box-shadow: none;
   background: none;
 }
-#command-deck :is(#vote-history,#project-details) > summary {
+#command-deck #project-details > summary {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -221,10 +221,10 @@ button.equipped-gear-tile { cursor: pointer; }
   white-space: nowrap;
   cursor: pointer;
 }
-#command-deck :is(#vote-history,#project-details) > summary::-webkit-details-marker { display: none; }
-#command-deck :is(#vote-history,#project-details) > summary:hover,
-#command-deck :is(#vote-history,#project-details)[open] > summary { color: var(--party-gold); }
-#command-deck .deck-popover, #command-deck #last-vote {
+#command-deck #project-details > summary::-webkit-details-marker { display: none; }
+#command-deck #project-details > summary:hover,
+#command-deck #project-details[open] > summary { color: var(--party-gold); }
+#command-deck .deck-popover {
   position: absolute;
   inset: auto auto calc(100% + 12px) 0;
   z-index: 3;

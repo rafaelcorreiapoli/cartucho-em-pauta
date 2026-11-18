@@ -14,7 +14,7 @@ test('the legislative dock presents the authoritative project, current vote and 
   const markup = (now:number,showBrief=false)=>{
     const view = match.view(player.id,[player.id],now);
     return renderToStaticMarkup(<LegislativeDock view={view} id={player.id} command={()=>{}}
-      outcomes={view.outcomes} brief={showBrief ? view.outcome : undefined}/>);
+      brief={showBrief ? view.outcome : undefined}/>);
   };
 
   const proposal = markup(1);
@@ -33,6 +33,6 @@ test('the legislative dock presents the authoritative project, current vote and 
   match.advance(finished);
   const result = markup(finished,true);
   expect(result).toContain('Projeto aprovado');
-  expect(result).toContain('aria-label="Votação 1 de 1"');
+  expect(result).not.toContain('id="vote-history"');
   expect(result).not.toContain('data-vote="yes"');
 });
