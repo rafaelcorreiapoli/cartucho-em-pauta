@@ -126,6 +126,7 @@ async page => {
   await page.locator('[data-vote="yes"]').waitFor();
   const sheet = page.getByRole('region',{name:'Votação de projeto'});
   await sheet.getByRole('heading',{name:'Auxílio Churrasco'}).waitFor();
+  if (await sheet.getByRole('list',{name:'Falas dos bots no Plenário'}).count()) throw Error('Chat escrito presente na votação');
   await sheet.getByText('Protocolado por Histórico QA').waitFor();
   await sheet.locator('.project-ballot-art').evaluate(async image=>{
     await image.decode();

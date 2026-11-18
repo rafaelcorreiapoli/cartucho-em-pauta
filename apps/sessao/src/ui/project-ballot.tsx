@@ -29,11 +29,11 @@ export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;bud
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'|'botMessages'> & {
+type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
   ownId:string; eligible:boolean; onExpansion?:(expanded:boolean)=>void; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,botMessages,ownId,eligible,cast,onExpansion}:Props) {
+export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -60,9 +60,7 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
             bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
           <ProjectImpact impact={no} budget={budget} approved={false}/>
         </header>
-        {botMessages?.length ? <ul className="project-ballot-discussion" aria-label="Falas dos bots no Plenário" aria-live="polite">
-          {botMessages.map(({name,text})=><li key={name}><strong>{name}</strong> {text}</li>)}
-        </ul> : null}
+
       </div>
       <div className="project-ballot-content">
         <div className="project-ballot-timer">
