@@ -10,11 +10,28 @@ async page => {
   await page.getByRole('button',{name:'Iniciar tutorial',exact:true}).click();
   const panel = page.getByRole('complementary',{name:'Tutorial',exact:true});
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
-  const outline = await page.locator('#profile-vitals').evaluate(node=>getComputedStyle(node).outlineStyle);
-  if (outline!=='solid') throw Error('Indicadores do HUD sem destaque');
-  await panel.getByRole('button',{name:'Recolher',exact:true}).click();
-  if (await panel.getByRole('combobox').isVisible()) throw Error('Tutorial não recolheu');
-  await panel.getByRole('button',{name:'Expandir',exact:true}).click();
+  const spotlight = page.locator('.tutorial-spotlight');
+  await spotlight.waitFor();
+  if (await panel.getByRole('combobox').count()) throw Error('Tutorial ainda usa select');
+  if (!await panel.getByRole('button',{name:'Etapa anterior',exact:true}).isDisabled()) throw Error('Primeira etapa permite voltar');
+  const hint = panel.locator('summary');
+  if (await hint.evaluate(node=>getComputedStyle(node).cursor)!=='pointer') throw Error('Dica sem cursor clicável');
+  await hint.click();
+  await panel.getByText('Leia os indicadores e use a seta à direita para avançar.',{exact:true}).waitFor();
+  await page.waitForFunction(()=>{
+    const vitals = document.querySelector('#profile-vitals').getBoundingClientRect();
+    return [...document.querySelectorAll('[data-spotlight-opening]')].some(node=>{
+      const x=+node.getAttribute('x'),y=+node.getAttribute('y');
+      return x<=vitals.x && y<=vitals.y && x+(+node.getAttribute('width'))>=vitals.right && y+(+node.getAttribute('height'))>=vitals.bottom;
+    });
+  });
+  if (await spotlight.evaluate(node=>getComputedStyle(node).pointerEvents)!=='none') throw Error('Foco bloqueia interação');
+  await page.screenshot({path:'/tmp/tutorial-focus-desktop.png'});
+  await panel.getByRole('button',{name:'Recolher tutorial',exact:true}).click();
+  if (await panel.getByRole('heading',{name:'Conheça seu HUD'}).isVisible()) throw Error('Tutorial não recolheu');
+  await spotlight.waitFor({state:'hidden'});
+  await panel.getByRole('button',{name:'Expandir tutorial',exact:true}).click();
+  await spotlight.waitFor();
   const beforeMove = await panel.boundingBox();
   await panel.getByRole('button',{name:'Mover tutorial',exact:true}).focus();
   await page.keyboard.press('ArrowLeft');
@@ -31,18 +48,29 @@ async page => {
   await page.getByRole('dialog',{name:'Pesquisa Eleitoral',exact:true}).waitFor();
   await page.keyboard.press('l');
   await page.getByRole('dialog',{name:'Pesquisa Eleitoral',exact:true}).waitFor({state:'hidden'});
-  await panel.getByRole('button',{name:'Continuar',exact:true}).click();
+  await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
   await panel.getByRole('heading',{name:'Caminhe pelo Congresso'}).waitFor();
-  if (await panel.getByRole('button',{name:'Continuar',exact:true}).count()) throw Error('Etapa prática permite avançar sem executar');
-  await panel.getByRole('combobox').selectOption('3');
+  await spotlight.waitFor({state:'hidden'});
+  await panel.getByRole('button',{name:'Etapa anterior',exact:true}).click();
+  await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
+  await spotlight.waitFor();
+  for (let i=0;i<3;i++) {
+    const current = await panel.locator('.tutorial-progress').textContent();
+    await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
+    await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);
+  }
   await panel.getByRole('heading',{name:'Equipe um acessório'}).waitFor();
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
   await page.getByRole('dialog').filter({visible:true}).waitFor();
   await page.keyboard.press('Escape');
-  const options = await panel.getByRole('combobox').locator('option').count();
-  await panel.getByRole('combobox').selectOption(String(options-1));
+  const options = Number((await panel.locator('.tutorial-progress').textContent()).split('/')[1]);
+  for (let i=3;i<options-1;i++) {
+    const current = await panel.locator('.tutorial-progress').textContent();
+    await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
+    await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);
+  }
   await panel.getByRole('heading',{name:'Repare a energia'}).waitFor();
-  await panel.getByRole('button',{name:'Pular etapa',exact:true}).click();
+  await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
   await panel.getByRole('heading',{name:'Treino concluído'}).waitFor();
   await panel.getByRole('button',{name:'Recomeçar treino',exact:true}).click();
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
@@ -58,5 +86,5 @@ async page => {
   }
   await panel.getByRole('button',{name:'Sair do treino',exact:true}).click();
   await page.getByRole('button',{name:'Aprender a jogar',exact:true}).waitFor();
-  return {entry:true,chapters:options,practiceGated:true,restart:true,exit:true};
+  return {entry:true,chapters:options,navigation:true,restart:true,exit:true};
 }

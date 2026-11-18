@@ -1,3 +1,4 @@
+import {matchesTutorialEvent,tutorialSteps} from '../src/tutorial';
 import {PlenaryMatch} from './PlenaryMatch';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
@@ -442,4 +443,24 @@ test('tutorial recognizes a briefcase in the learners own cabinet',()=>{
   expect(act(owner,'office-stash',home.id,briefcase.id)).toBe('Objeto guardado no armário.');
   expect(game.hasBriefcaseInOwnCabinet(owner.id)).toBe(true);
   expect(game.hasBriefcaseInOwnCabinet(players[1].id)).toBe(false);
+});
+
+
+test('tutorial advances after cashing a briefcase in the learners safe',()=>{
+  const {players,game,world,events,act,tick} = setup();
+  const owner = players[0];
+  const home = privateOffices.find(office=>office.id===game.view(owner,world).ownOffice)!;
+  const other = privateOffices.find(office=>office.id===game.view(players[1],world).ownOffice)!;
+  const step = tutorialSteps.find(step=>step.event==='stored' && step.kind==='briefcase')!;
+  game.giveTrainingItem(owner.id,'briefcase');
+  const cash = game.view(owner,world).inventory.find(item=>item.kind==='briefcase')!;
+  Object.assign(owner,other.safe);
+  expect(act(owner,'office-cash',other.id,cash.id)).toContain('titular');
+  expect(events.some(event=>matchesTutorialEvent(step,event))).toBe(false);
+  Object.assign(owner,home.safe);
+  act(owner,'office-cash',home.id,cash.id);
+  tick(officeRules.cashMs-1);
+  expect(events.some(event=>matchesTutorialEvent(step,event))).toBe(false);
+  tick(1);
+  expect(events.some(event=>event.actor===owner.id && matchesTutorialEvent(step,event))).toBe(true);
 });

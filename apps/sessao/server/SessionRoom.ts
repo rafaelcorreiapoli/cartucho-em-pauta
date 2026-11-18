@@ -187,12 +187,8 @@ export class SessionRoom extends Room {
   private prepareTutorial() {
     if (!this.tutorial || !this.tutorialOwner) return;
     this.match.clearTrainingCrisis(this.gameNow);
-    let step = tutorialSteps[this.tutorial.step];
+    const step = tutorialSteps[this.tutorial.step];
     const learner = this.players.get(this.tutorialOwner)?.player;
-    if (learner && step?.event==='spy-viewed' && !this.gameplay.spyView(learner,this.gameplayWorld()).channels.length) {
-      this.tutorial.step = tutorialSteps.findIndex(entry=>entry.event==='spy-installed');
-      step = tutorialSteps[this.tutorial.step];
-    }
     if (learner) this.gameplay.prepareTrainingStep(learner,step?.event,this.gameplayWorld());
     this.tutorial.complete = !step;
     this.tutorial.target = step?.target;
