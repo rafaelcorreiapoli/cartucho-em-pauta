@@ -101,11 +101,10 @@ test('a scandal objective identifies the two kinds of proof the player can publi
   expect(markup).toContain('Divulgue uma prova de desvio ou pagamento clandestino');
 });
 
-test('the pizza mission shows the shared table as a way to complete it',()=>{
+test('the pizza mission asks the player to eat a pizza',()=>{
   const mission:Mission = {id:6,kind:'pizza',current:0,target:1};
   const markup = renderToStaticMarkup(<MissionRow mission={mission}/>);
-  expect(markup).toContain('Coma uma pizza do inventário');
-  expect(markup).toContain('pegue uma fatia da mesa do Cafezinho');
+  expect(markup).toContain('>Coma uma pizza</');
 });
 
 test('the signature objective identifies the same-document requirement and shows distinct signer progress',()=>{

@@ -67,7 +67,7 @@ export const agendas = {
   transporte:'Leve uma maleta ao seu gabinete',
   equipamento:'Compre um binóculo no Apoio Técnico',
   visitaArquivo:'Visite o Arquivo',
-  pizza:'Coma uma pizza do inventário ou pegue uma fatia da mesa do Cafezinho',
+  pizza:'Coma uma pizza',
   lagosta:'Coma uma lagosta',
   comprarLagosta:'Compre uma lagosta',
   bombom:'Coma uma caixa de bombom',
