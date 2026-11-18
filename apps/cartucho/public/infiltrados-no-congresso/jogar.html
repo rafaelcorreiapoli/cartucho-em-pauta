@@ -7,19 +7,18 @@
   <meta name="description" content="Jogue Infiltrados no Congresso no Cartuchão.">
   <title>Jogar Infiltrados no Congresso | Cartuchão</title>
   <link rel="icon" href="/assets/cartucho.png">
-  <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/jogar/player.css">
-  <script type="module" src="/jogar/player.js"></script>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #172219; }
+    main { width: 100%; height: 100vh; height: 100dvh; }
+    iframe { display: block; width: 100%; height: 100%; border: 0; }
+  </style>
+  <script type="module">
+    import { registerOpening } from '/ranking-api.js';
+    registerOpening('sessao').catch(() => {});
+  </script>
 </head>
 <body>
   <main class="player" data-game="sessao">
-    <header class="player-bar">
-      <a class="player-control" href="/infiltrados-no-congresso/"><span aria-hidden="true">←</span> <span>Sobre o jogo</span></a>
-      <h1>Infiltrados no Congresso</h1>
-      <button class="player-control" type="button" aria-pressed="false" hidden>
-        <span aria-hidden="true">⛶</span> <span data-screen-label>Tela cheia</span>
-      </button>
-    </header>
     <iframe title="Infiltrados no Congresso" src="https://presidente-sessao-poc--brwars.netlify.app/" allow="fullscreen; autoplay; microphone" allowfullscreen></iframe>
   </main>
 </body>
