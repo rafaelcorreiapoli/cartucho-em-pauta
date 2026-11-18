@@ -44,8 +44,8 @@ export function hearingBallotState(view:PlenaryView):BallotState|null {
 
 export function sessionBallotState(view:PlenaryView) {
   if (view.phase==='ballot') {
-    const {round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,mandate,politics,botMessages} = view;
-    return {kind:'project' as const,state:{round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,botMessages,
+    const {round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
+    return {kind:'project' as const,state:{round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,
       eligible:!!mandate && !politics?.suspended}};
   }
   if (view.cassation) return {kind:'cassation' as const,state:view.cassation,remaining:view.remaining};
