@@ -324,7 +324,7 @@ test('pizza earns XP only on consumption after assignment', () => {
   expect(view().missions.active.some(mission=>mission.kind==='pizza')).toBe(false);
 });
 
-test('the coffee machine shares its recharge between players and both coffee actions',()=>{
+test('the coffee machine shares its drinking recharge between players',()=>{
   const cooldowns = new StationCooldowns();
   const match = new PlenaryMatch(1,cooldowns);
   const game = new Gameplay(cooldowns);
@@ -333,14 +333,13 @@ test('the coffee machine shares its recharge between players and both coffee act
   const players = [cafe,visitor];
   match.start(host.id,players,0);
   const world = (now:number) => match.gameplayWorld(players,now,()=>false);
-  const supply = {kind:'supply',place:'coffee'} as const;
   const {duration,feedback} = stationRecharge.coffee;
 
   expect(game.drinkStationCoffee(cafe,world(1))).toBe('Café bebido.');
-  expect(game.act(visitor,supply,world(1))).toBe(feedback);
+  expect(game.drinkStationCoffee(visitor,world(1))).toBe(feedback);
   expect(game.view(visitor,world(2)).stationCooldowns).toEqual({coffee:duration-1});
   expect(game.view(visitor,world(1+duration)).stationCooldowns).toEqual({});
-  expect(game.act(visitor,supply,world(1+duration))).toBe('Objeto guardado no inventário.');
+  expect(game.drinkStationCoffee(visitor,world(1+duration))).toBe('Café bebido.');
   expect(game.drinkStationCoffee(cafe,world(1+duration))).toBe(feedback);
   expect(game.drinkStationCoffee(cafe,world(1+2*duration))).toBe('Café bebido.');
 });

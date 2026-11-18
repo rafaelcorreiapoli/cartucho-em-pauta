@@ -188,7 +188,7 @@ export function readGameplayAction(raw:unknown):GameplayAction | undefined {
 export const terminals = {
   reprography:{point:reprography,title:reprography.title},
   press:{point:stations.press,title:'Imprensa'},
-  coffee:{point:stations.coffee,title:'Cafezinho',supply:'coffee'},
+  coffee:{point:stations.coffee,title:'Cafezinho'},
   secretary:{point:stations.secretary,title:'Secretaria',supply:'document',stamp:'Secretaria'},
   cabinet:{point:stations.cabinet,title:'Mesa de Verbas',stamp:'Gabinete'},
   archive:{point:stations.archive,title:'Arquivo',storage:true},

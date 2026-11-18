@@ -3,7 +3,7 @@ import {tutorialSteps,type TutorialView} from '../tutorial';
 
 export function TutorialPanel({view,send}:{view:TutorialView;send:(action:string)=>void}) {
   const step = tutorialSteps[view.step];
-  return <aside className="tutorial-panel hud-panel" aria-label="Tutorial">
+  return <aside className="tutorial-panel hud-panel" aria-label="Tutorial" data-highlight={view.complete ? undefined : step.highlight}>
     {view.complete ? <>
       <h2>Treino concluído</h2>
       <p>Você percorreu as dinâmicas deste treino. Pode continuar explorando ou voltar para o início.</p>

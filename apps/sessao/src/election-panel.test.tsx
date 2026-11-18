@@ -40,6 +40,7 @@ test('the polls dialog presents the current candidate and uses the shared native
   expect(markup).not.toContain('Classificação projetada');
   expect(markup).not.toContain('Os percentuais');
   expect(markup).toContain('73,12%');
+  expect(markup).toContain('Ninguém corre risco');
   expect(markup).toContain('+1,23 pp');
   expect(markup).toContain('aria-valuenow="73.12"');
 });
@@ -55,6 +56,7 @@ test('the polls give candidates with the same displayed percentage a shared posi
   expect([...markup.matchAll(/data-rank="(\d+)"/g)].map(match=>match[1])).toEqual(['1','2','2','3','3','3']);
   expect(markup.match(/class="poll-tie"> \(Empate\)</g)).toHaveLength(5);
   expect(markup).not.toContain('Apoio público');
+  expect(markup.match(/Em risco de perder o mandato/g)).toHaveLength(3);
 });
 
 test('the election indicator owns the dial and its keyboard shortcut',()=>{

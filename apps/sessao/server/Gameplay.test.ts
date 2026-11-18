@@ -89,7 +89,7 @@ test('Silvio trades three missions once per player and keeps the copier reachabl
 
 test('custody moves exactly once and requests are private', () => {
   const {alice,bob,watcher,events,game,world} = setup();
-  game.act(alice,{kind:'supply',place:'coffee'},world);
+  game.giveTrainingItem(alice.id,'coffee');
   const [coffee] = game.view(alice,world).inventory;
   game.act(alice,{kind:'offer',item:coffee.id,target:bob.id},world);
   expect(game.view(watcher,world).requests).toEqual([]);
@@ -1004,4 +1004,12 @@ test('carrying a colleague to your own office and aiding them identify the playe
   expect(events.filter(event=>event.type==='aided').at(-1)).toMatchObject({
     actor:alice.id,target:bob.id,knockedOutByActor:true,
   });
+});
+
+
+test('Cafezinho only serves drinks and cannot supply takeaway coffee',()=>{
+  const {alice,game,world} = setup();
+  expect(game.act(alice,{kind:'supply',place:'coffee'},world)).toBe('Aproxime-se do balcão.');
+  expect(game.view(alice,world).inventory.some(item=>item.kind==='coffee')).toBe(false);
+  expect(game.drinkStationCoffee(alice,world)).toBe('Café bebido.');
 });

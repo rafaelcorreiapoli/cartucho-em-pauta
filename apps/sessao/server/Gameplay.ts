@@ -441,6 +441,11 @@ export class Gameplay {
     if (event==='spy-installed') this.surveillance.reset();
   }
 
+  hasBriefcaseInOwnCabinet(owner:string) {
+    const office = this.privateOffices.ownedBy(owner);
+    return !!office && this.officeStash(office.id).some(item=>item.data.kind==='briefcase');
+  }
+
   giveTrainingItem(owner:string,kind:ObjectKind) {
     if (this.owns(owner,kind)) return 0;
     const item = this.create(kind,{holder:owner});
@@ -1656,7 +1661,6 @@ export class Gameplay {
       if (!projectDocument && this.inventory(id).some(({data})=>data.kind===terminal.supply)) {
         return this.reject(player,world,'Você já está carregando um desse balcão.');
       }
-      if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return this.reject(player,world,stationRecharge.coffee.feedback);
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
         const project = action.target?.startsWith('project-') ? Number(action.target.slice(8)) : undefined;
@@ -1702,7 +1706,7 @@ export class Gameplay {
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
-        const target = world.players.find(person=>person.id===action.target && !(action.kind==='offer' && person.bot && !world.training) && this.canRequestItemAction(player,person,world));
+        const target = world.players.find(person=>person.id===action.target && this.canRequestItemAction(player,person,world));
         if (!target) return this.reject(player,world,'Aproxime-se do destinatário.');
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
           return this.reject(player,world,'Este jogador não pode assinar o documento.');

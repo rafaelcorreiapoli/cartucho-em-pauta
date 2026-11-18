@@ -429,3 +429,17 @@ test('only the robber gets mission credit for hiding and pocketing cash from the
   tick(officeRules.cashMs);
   expect(events.at(-1)).toMatchObject({actor:visitor.id,type:'money-pocketed',item:cash.id,cashFromOwnBreach:true});
 });
+
+
+test('tutorial recognizes a briefcase in the learners own cabinet',()=>{
+  const {players,game,world,act} = setup();
+  const owner = players[0];
+  const home = privateOffices.find(office=>office.id===game.view(owner,world).ownOffice)!;
+  game.giveTrainingItem(owner.id,'briefcase');
+  const briefcase = game.view(owner,world).inventory.find(item=>item.kind==='briefcase')!;
+  expect(game.hasBriefcaseInOwnCabinet(owner.id)).toBe(false);
+  Object.assign(owner,home.cabinet);
+  expect(act(owner,'office-stash',home.id,briefcase.id)).toBe('Objeto guardado no armário.');
+  expect(game.hasBriefcaseInOwnCabinet(owner.id)).toBe(true);
+  expect(game.hasBriefcaseInOwnCabinet(players[1].id)).toBe(false);
+});

@@ -9,10 +9,16 @@ async page => {
   await page.getByRole('button',{name:'Iniciar tutorial',exact:true}).click();
   const panel = page.getByRole('complementary',{name:'Tutorial',exact:true});
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
+  const outline = await page.locator('#profile-vitals').evaluate(node=>getComputedStyle(node).outlineStyle);
+  if (outline!=='solid') throw Error('Indicadores do HUD sem destaque');
+  await page.keyboard.press('l');
+  await page.getByRole('dialog',{name:'Pesquisa Eleitoral',exact:true}).waitFor();
+  await page.keyboard.press('l');
+  await page.getByRole('dialog',{name:'Pesquisa Eleitoral',exact:true}).waitFor({state:'hidden'});
   await panel.getByRole('button',{name:'Continuar',exact:true}).click();
   await panel.getByRole('heading',{name:'Caminhe pelo Congresso'}).waitFor();
   if (await panel.getByRole('button',{name:'Continuar',exact:true}).count()) throw Error('Etapa prática permite avançar sem executar');
-  await panel.getByRole('combobox').selectOption('4');
+  await panel.getByRole('combobox').selectOption('3');
   await panel.getByRole('heading',{name:'Equipe um acessório'}).waitFor();
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
   await page.getByRole('dialog').filter({visible:true}).waitFor();

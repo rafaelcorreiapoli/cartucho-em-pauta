@@ -53,18 +53,21 @@ export function ElectionSummary({leader,personal,atRisk,remaining}:{
 }
 
 export function ElectionPolls({election,id}:{election:ElectionView; id:string}) {
-  const readOnly = useDialogKeys<HTMLDivElement>(()=>undefined,[
+  const readOnly = useDialogKeys<HTMLDivElement>(key=>key.toLowerCase()==='l' ? ()=>readOnly.current?.closest('dialog')?.close() : undefined,[
     {name:'Fechar pesquisa eleitoral',activate:()=>readOnly.current?.closest('dialog')?.close()},
   ]);
+  const standings = pollStandings(election.polls);
+  const risk = election.remaining>0 && standings.length>ELECTION_RULES.minimumMandates;
   return <>
     <DialogHeader id="election-poll-title" title="Pesquisa Eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
     <div ref={readOnly} className="election-poll-content">
       <section id="election-polls" aria-labelledby="election-poll-title">
+        <p>{risk ? 'A menor intenção de voto indica risco de perder o mandato. Empatados na última posição compartilham esse risco.' : standings.length<=ELECTION_RULES.minimumMandates ? 'Ninguém corre risco: o Congresso já está no mínimo de mandatos.' : 'Não há renovação de mandatos pendente.'}</p>
         <ol className="election-candidates" role="list">
-          {pollStandings(election.polls).map(({candidate,rank,tied})=><li key={candidate.id}>
+          {standings.map(({candidate,rank,tied})=><li key={candidate.id}>
             <ElectionCandidateCard character={candidate.character} rank={rank}
               name={candidate.name+(candidate.id===id ? ' (você)' : '')} percentage={candidate.estimate}
-              trend={candidate.trend} note={tied && <small className="poll-tie"> (Empate)</small>}/>
+              trend={candidate.trend} note={<>{tied && <small className="poll-tie"> (Empate)</small>}{risk && rank===standings.at(-1)?.rank && <small className="poll-lost"> · Em risco de perder o mandato</small>}</>}/>
           </li>)}
         </ol>
       </section>

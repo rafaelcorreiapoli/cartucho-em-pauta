@@ -326,3 +326,16 @@ progress.animated-progress::-moz-progress-bar { background: transparent; }
 .tutorial-controls { display:flex; gap:8px; flex-wrap:wrap; }
 .tutorial-panel select { width:100%; }
 @media(max-width:760px) { .tutorial-panel { left:12px; right:auto; top:auto; bottom:110px; max-height:36dvh; } }
+
+/* Keep tutorial targets interactive while outlining the relevant HUD. */
+body:has(.tutorial-panel[data-highlight="stats"]) #profile-vitals,
+body:has(.tutorial-panel[data-highlight="stats"]) #profile-resources,
+body:has(.tutorial-panel[data-highlight="energy"]) .vital-row[data-tone="stamina"],
+body:has(.tutorial-panel[data-highlight="bag"]) button[aria-label="Mochila"],
+body:has(.tutorial-panel[data-highlight="equipment"]) .equipped-gear-slots,
+body:has(.tutorial-panel[data-highlight="agenda"]) .react-agenda,
+body:has(.tutorial-panel[data-highlight="profile"]) .deck-identity,
+body:has(.tutorial-panel[data-highlight="apps"]) button[aria-label="Aplicativos"],
+body:has(.tutorial-panel[data-highlight="apps"]) button[aria-label="Celular"],
+body:has(.tutorial-panel[data-highlight="fire"]) #active-fire,
+body:has(.tutorial-panel[data-highlight="power"]) #active-outage { outline:3px solid #ffdc75; outline-offset:4px; box-shadow:0 0 18px #ffdc7566; border-radius:8px; }
