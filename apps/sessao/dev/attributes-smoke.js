@@ -16,6 +16,7 @@ async page => {
     await client.getByRole('button',{name:'Criar sala'}).click();
     await client.locator('#parliamentarian-count [data-count="0"]').click();
     await client.getByRole('button',{name:'Iniciar sessão'}).click();
+    await client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
     await client.locator('#session[data-phase="negotiation"]').waitFor();
   }
   await start(page,'Atributos QA');

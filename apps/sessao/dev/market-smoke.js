@@ -12,6 +12,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
   const dialog = page.locator('#market-dialog');
   const slots = dialog.locator('.market-products > *');
@@ -142,6 +143,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Mercado Lotado');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
 
   const selectProduct = async name =>{

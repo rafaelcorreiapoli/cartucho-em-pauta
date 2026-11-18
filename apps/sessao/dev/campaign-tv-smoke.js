@@ -80,6 +80,7 @@ async page => {
     await guest.locator('#lobby-back').waitFor();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    await Promise.all([page,guest].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
 
     await Promise.all([advertiser(page).waitFor(),advertiser(guest).waitFor()]);
     await Promise.all([observeBroadcasts(page),observeBroadcasts(guest)]);

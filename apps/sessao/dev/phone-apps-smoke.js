@@ -8,6 +8,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Celular QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.locator('#session[data-phase=negotiation]').waitFor();
   await page.keyboard.press('c');
   const dialog = page.locator('#gameplay-dialog');

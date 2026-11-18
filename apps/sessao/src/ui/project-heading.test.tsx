@@ -30,7 +30,7 @@ test('the HUD shows the session clock before any filing',()=>{
   match.start(player.id,[player],0,()=>0);
   const initial = renderToStaticMarkup(<ProjectHeading {...projectHeading(match.view(player.id,[player.id],0))}/>);
   expect(initial).toContain('Nenhum projeto em pauta');
-  expect(initial).toContain('0/3 projetos votados');
+  expect(initial).toContain('0 projetos votados');
   expect(initial).toContain('Fim da sessão');
   const world = match.gameplayWorld([player],10,()=>false);
   const file = (item:number,project:number)=>world.publish({

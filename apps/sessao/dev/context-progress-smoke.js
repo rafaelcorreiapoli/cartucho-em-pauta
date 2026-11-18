@@ -12,6 +12,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Progresso QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const install = page.getByRole('button',{name:'Pendurar retrato',exact:true});
   await install.waitFor();
   await page.evaluate(()=>{

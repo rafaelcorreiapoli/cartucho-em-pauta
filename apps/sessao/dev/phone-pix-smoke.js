@@ -39,6 +39,7 @@ async page => {
     await receiver.locator('#lobby-back').waitFor();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    await Promise.all([page,receiver].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
     await page.getByLabel('Link da sala').waitFor({state:'hidden'});
     const polls = page.locator('#election-poll-dialog');
@@ -231,6 +232,7 @@ async page => {
     await receiver.locator('#lobby-back').waitFor();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    await Promise.all([page,receiver].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
     const denounce = page.getByRole('button',{name:'Denunciar',exact:true});
     await denounce.waitFor();

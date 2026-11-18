@@ -30,8 +30,12 @@ async page => {
 
   await page.unroute(asset);
   await create.click();
-  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.getByRole('button',{name:'Iniciar como infiltrado'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   await loader.waitFor({state:'hidden'});
-  return {recovered:true,startedMatch:true};
+  const role = page.getByRole('dialog',{name:'Infiltrado',exact:true});
+  await role.getByText(/Sabote o Congresso.*abaixo de 45/).waitFor();
+  await role.getByRole('button',{name:'Entendi',exact:true}).click();
+  await role.waitFor({state:'hidden'});
+  return {recovered:true,startedMatch:true,role:'Infiltrado'};
 }

@@ -1,6 +1,6 @@
 import {useRef} from 'react';
 import {useDialogKeys} from './use-dialog-keys';
-import {bills, pingaProgram, projectRules, type PlenaryView} from '../plenary';
+import {bills, pingaProgram,  type PlenaryView} from '../plenary';
 import {money} from '../politics';
 
 const signed = (value:number) => value>0 ? `+${value}` : String(value);
@@ -18,7 +18,7 @@ export function ProjectCatalog({project,outcomes,projectFilingClosed,projectVote
     }})),
   ]);
   return <section ref={panel} aria-label="Catálogo de projetos" className="grid gap-3">
-    <p><strong>{outcomes.length}/{projectRules.requiredVotes} projetos votados.</strong> {projectFilingClosed ? 'Protocolo de projetos encerrado.' : 'Solicite um documento na Secretaria e leve ao Protocolo.'}</p>
+    <p><strong>{outcomes.length} {outcomes.length===1 ? 'projeto votado' : 'projetos votados'}.</strong> {projectFilingClosed ? 'Protocolo de projetos encerrado.' : 'Solicite um documento na Secretaria e leve ao Protocolo.'}</p>
     {bills.map((bill,index)=>{
       const result = voted.get(index);
       const effect = bill.effect;

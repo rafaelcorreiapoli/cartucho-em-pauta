@@ -1,4 +1,4 @@
-import {agendaProject,projectRules,type PlenaryView} from '../plenary';
+import {agendaProject,type PlenaryView} from '../plenary';
 
 export function projectHeading(view:PlenaryView) {
   const hearing = view.hearing;
@@ -6,7 +6,7 @@ export function projectHeading(view:PlenaryView) {
   const negotiating = view.phase==='negotiation';
   return {
     title:view.cassation ? 'Quem é o infiltrado?' : hearing?.target ?? (waiting ? 'Nenhum projeto em pauta' : agendaProject(view).name),
-    round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `${view.outcomes.length}/${projectRules.requiredVotes} projetos votados`,
+    round:view.cassation ? 'Votação de cassação' : hearing ? 'Votação de afastamento' : `${view.outcomes.length} ${view.outcomes.length===1 ? 'projeto votado' : 'projetos votados'}`,
     phase:negotiating ? waiting || view.projectVoteExpired ? 'Jogo livre' : 'Articulação' : view.cassation ? 'Cassação' : hearing ? 'Afastamento' : 'Votação',
     clockLabel:view.isolationSeconds ? 'Isolamento' : negotiating ? view.cassationIn ? 'Cassação em' : waiting || view.projectVoteExpired ? 'Fim da sessão' : 'Votação em' : 'Tempo de voto',
     hint:view.projectVoteExpired ? 'Sem votação nesta sessão.' : waiting ? view.projectFilingClosed ? 'Protocolo de projetos encerrado.' : view.protocolCooldown ? `Protocolo reabre em ${view.protocolCooldown} s` : 'Consulte Projetos no celular.' : view.proposer && negotiating ? `Protocolado por ${view.proposer}` : undefined,

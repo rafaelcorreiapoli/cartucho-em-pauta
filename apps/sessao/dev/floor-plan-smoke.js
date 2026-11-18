@@ -7,6 +7,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Planta QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   await page.keyboard.down('Tab');
   const plan = page.getByRole('region',{name:'Planta do Congresso'});

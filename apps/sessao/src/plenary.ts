@@ -13,7 +13,7 @@ import { roomActivities } from './room-activities';
 
 export const MIN_PLAYERS = 6;
 export const MAX_PLAYERS = privateOffices.length;
-export const projectRules = {debateMs:90_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5, requiredVotes:3} as const;
+export const projectRules = {debateMs:90_000, cooldownMs:60_000, warningSeconds:30, countdownSeconds:5} as const;
 export const NEGOTIATION_MS = projectRules.debateMs;
 export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;

@@ -39,7 +39,7 @@ import { createPoliticsPanel } from './politics-panel';
 import { createPlenaryPanel } from './plenary-panel';
 import {mountRoomEntrance} from './ui/room-entrance';
 import {mountLobbyInvite} from './ui/lobby-invite';
-import { bills, MAX_PLAYERS, type PlenaryView } from './plenary';
+import { bills, MAX_PLAYERS, stabilityRules, type PlenaryView } from './plenary';
 import type { ControlState } from './movement';
 import { inPlenary, type Player } from './map';
 import { RoomVoice } from './voice';
@@ -60,6 +60,9 @@ const setup = document.querySelector<HTMLElement>('#room-setup')!;
 const session = document.querySelector<HTMLElement>('#session')!;
 const map = document.querySelector<HTMLElement>('#map')!;
 const ballotCountdown = mountBallotCountdown(document.querySelector<HTMLDialogElement>('#ballot-countdown')!);
+const roleIntro = document.querySelector<HTMLDialogElement>('#role-intro')!;
+const roleTitle = document.querySelector<HTMLElement>('#role-intro-title')!;
+const roleObjective = document.querySelector<HTMLElement>('#role-intro-objective')!;
 let voice: RoomVoice | undefined;
 let disguiseActive = false;
 
@@ -122,6 +125,7 @@ async function toggleVoice() {
 
 function showLobby(message: string) {
   ballotCountdown.update();
+  roleIntro.close();
   audio.leave();
   voice?.stop(false);
   voice = undefined;
@@ -202,6 +206,7 @@ async function connect(join: () => Promise<Room>) {
             if (previousView) {
               panel.render(previousView);
               renderApps(previousView);
+              revealRole(previousView);
             }
           });
         }
@@ -346,6 +351,21 @@ async function connect(join: () => Promise<Room>) {
     bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts(),...appLauncher.shortcuts(),...gameplay.hotbarShortcuts(),...hud.equippedShortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
     let phase: PlenaryView['phase'] = 'lobby';
     let previousView:PlenaryView | undefined;
+    let roleRevealed = false;
+    function revealRole(view:PlenaryView) {
+      if (view.phase==='lobby' || view.phase==='finished') {
+        roleRevealed = false;
+        roleIntro.close();
+      } else if (assetsReady && !roleRevealed && view.role) {
+        roleRevealed = true;
+        roleIntro.dataset.role = view.role;
+        roleTitle.textContent = view.role;
+        roleObjective.textContent = view.role==='Infiltrado'
+          ? `Sabote o Congresso sem revelar seu papel. Faça a estabilidade cair a zero ou terminar a sessão abaixo de ${stabilityRules.target}.`
+          : `Proteja o Congresso. Termine a sessão com pelo menos ${stabilityRules.target} de estabilidade ou tire de jogo todos os infiltrados.`;
+        roleIntro.showModal();
+      }
+    }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
       ballotCountdown.update(view.ballotCountdown);
@@ -401,6 +421,7 @@ async function connect(join: () => Promise<Room>) {
       const label = `Sala ${joined.roomId} · ${view.players}/${MAX_PLAYERS}`;
       settings.update({roomLabel:label});
       if (phase===view.phase) {
+        revealRole(view);
         return;
       }
       if ((phase==='lobby' || phase==='finished') && view.phase==='negotiation') audio.cue('session');
@@ -418,6 +439,7 @@ async function connect(join: () => Promise<Room>) {
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       setup.hidden = matchRunning;
       if (negotiating) map.focus({preventScroll:true});
+      revealRole(view);
     });
     joined.onMessage('room-activity-result',(result:RoomActivityResult) => hud.activityResult(result));
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
