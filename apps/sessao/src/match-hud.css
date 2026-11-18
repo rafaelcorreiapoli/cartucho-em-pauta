@@ -209,6 +209,12 @@
   animation: wallet-rise 1250ms ease-out both;
 }
 .wallet-gain .hud-glyph { width: 1.2em; height: 1.2em; color: #ffda7a; }
+.wallet-loss {
+  border-color: #e98486;
+  background: #482127;
+  color: #ffd0cf;
+}
+.wallet-loss .hud-glyph { color: #ff9d9e; }
 @keyframes wallet-rise {
   from { opacity: 1; translate: 0 0; }
   35% { opacity: 1; }
@@ -883,17 +889,20 @@ button.item-tile:active { transform: translateY(3px); }
 #gameplay-dialog[data-mode="phone"] :is(#gameplay-body,#phone-mail) h3 { font: 850 1.25rem/1.15 var(--party-display); }
 .phone-contacts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  gap: .55rem;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .phone-contact {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  min-width: 0;
-  gap: .3rem;
-  padding: .55rem .3rem .45rem;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: .6rem;
+  padding: .4rem .55rem;
+  text-align: left;
   border: 1px solid #6a987c;
   border-radius: 10px;
   background: #1c3d31;
@@ -901,7 +910,7 @@ button.item-tile:active { transform: translateY(3px); }
   cursor: pointer;
 }
 .phone-contact:hover { background: #295b42; }
-.phone-contact strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phone-contact strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .phone-contact-face {
   --portrait-size: 60px;
   display: grid;
@@ -912,10 +921,9 @@ button.item-tile:active { transform: translateY(3px); }
   background-color: #345948;
   font: 850 1.5rem/1 var(--party-display);
 }
+.phone-contact .phone-contact-face { --portrait-size: 36px; flex: none; }
 .phone-contact .phone-contact-dial {
-  position: absolute;
-  top: .4rem;
-  right: .4rem;
+  flex: none;
   width: 1rem;
   height: 1rem;
   color: var(--party-mint);
@@ -1000,7 +1008,7 @@ button.item-tile:active { transform: translateY(3px); }
 .phone-app-icon { position: relative; }
 .phone-app-icon .action-key { inset: 3px 3px auto auto; }
 .phone-app-content { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: .55rem; }
-.phone-app-content .phone-contact > .action-key { inset: 5px 5px auto auto; }
+.phone-contact > .action-key { position: static; flex: none; }
 
 #gameplay-dialog[data-mode="phone"] { grid-template-rows: auto minmax(0,1fr) auto; }
 #gameplay-dialog[data-mode="phone"] > header { grid-row: 1; border-bottom: 1px solid #ffffff14; }
@@ -1052,7 +1060,10 @@ button.item-tile:active { transform: translateY(3px); }
 .pix-balance strong { font-size: 1.35rem; }
 .pix-amount { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .pix-amount output { font-weight: 750; }
-.phone-pix .phone-contact[aria-pressed="true"] { border-color: #85e6dc; }
+#gameplay-dialog[data-mode="phone"] .phone-pix .phone-contact[aria-pressed="true"] {
+  border-color: #85e6dc;
+  background: #143b39;
+}
 #phone-mail > * { width: 100%; min-width: 0; }
 
 #phone-apps .action-key { display: inline-grid; }

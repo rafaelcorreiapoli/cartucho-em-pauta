@@ -31,13 +31,15 @@ export function PhonePix({politics,ownId,send,close}:{politics:PoliticsView;ownI
     <div className="pix-balance"><small>Saldo disponível</small><strong>{money(politics.wallet)}</strong></div>
     <h4>Para quem?</h4>
     {recipients.length===0 && <p>Nenhum destinatário disponível.</p>}
-    <div className="phone-contacts">
-      {options.map(({person,choose,shortcut})=><button className="phone-contact" type="button" key={person.id}
+    {options.length>0 && <ul className="phone-contacts" aria-label="Contatos para Pix">
+      {options.map(({person,choose,shortcut})=><li key={person.id}>
+        <button className="phone-contact" type="button"
           aria-pressed={target?.id===person.id} aria-keyshortcuts={shortcut} onClick={choose}>
-        <PhoneContactFace person={person}/><strong>{person.name}</strong>
-        {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
-      </button>)}
-    </div>
+          <PhoneContactFace person={person}/><strong>{person.name}</strong>
+          {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
+        </button>
+      </li>)}
+    </ul>}
     <footer>
       <div className="pix-amount" aria-label="Valor da transferência">
         <button type="button" className="hud-icon-button" aria-label="Diminuir valor" aria-keyshortcuts="ArrowLeft" disabled={!decrease} onClick={decrease}>−</button>

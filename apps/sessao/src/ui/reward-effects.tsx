@@ -2,7 +2,7 @@ import {createRoot} from 'react-dom/client';
 import type {PlenaryView} from '../plenary';
 import {money} from '../politics';
 
-type RewardKind = 'income' | 'xp' | 'popularity';
+type RewardKind = 'income' | 'expense' | 'xp' | 'popularity';
 type ScreenPoint = {x:number;y:number};
 type RewardEffect = {kind:RewardKind;amount:number;sequence:number;head?:ScreenPoint};
 
@@ -30,9 +30,10 @@ export function RewardEffects({effects,finish}:{effects:RewardEffect[];finish:(e
       return <strong key={sequence} className="wallet-gain xp-gain" aria-hidden="true" style={style}
         onAnimationEnd={onAnimationEnd}>+{amount} XP</strong>;
     }
-    return <div key={sequence} className="wallet-gain" style={style} onAnimationEnd={onAnimationEnd}>
+    const expense = kind==='expense';
+    return <div key={sequence} className={expense ? 'wallet-gain wallet-loss' : 'wallet-gain'} style={style} onAnimationEnd={onAnimationEnd}>
       <svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>
-      <strong>+{money(amount)}</strong>
+      <strong>{expense ? '−' : '+'}{money(amount)}</strong>
     </div>;
   });
 }
@@ -53,7 +54,7 @@ export function mountRewardEffects(host:HTMLElement) {
   return {
     show(kind:RewardKind,amount:number,head?:ScreenPoint) {
       if (kind!=='income' && !head) return;
-      const total = kind==='income' ? amount+(effects.get(kind)?.amount ?? 0) : amount;
+      const total = kind==='income' || kind==='expense' ? amount+(effects.get(kind)?.amount ?? 0) : amount;
       effects.set(kind,{kind,amount:total,sequence:++sequence,head});
       render();
     },

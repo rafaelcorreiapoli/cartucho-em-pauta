@@ -428,6 +428,7 @@ export class SessionRoom extends Room {
         this.broadcast('public-investment',result.announcement);
       }
       if (action.kind==='transfer' && result===true) {
+        client.send('pix-sent',{amount:action.amount});
         this.clients.getById(action.to)?.send('pix-received',{from:player.nick,amount:action.amount});
       }
       this.resetFinishedMatch(now);
