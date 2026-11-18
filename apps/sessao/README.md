@@ -150,14 +150,14 @@ Sirva o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2605 bun run dev --port 5
 Abra a página no Playwright CLI com `dev/private-call-chrome.json` e execute
 `run-code --filename=dev/market-smoke.js`.
 
-## Teste do histórico de votações no Chrome
+## Teste do HUD da votação no Chrome
 
 Execute o servidor de teste com `PORT=2604 SESSAO_LOCAL_SOLO=1 bun dev/vote-history-smoke-server.ts`
 e o cliente com `VITE_GAME_SERVER=http://127.0.0.1:2604 bun run dev --port 5211`.
 Abra `http://127.0.0.1:5211/` no Playwright CLI com a configuração
 `dev/private-call-chrome.json` e execute `run-code --filename=dev/vote-history-smoke.js`.
 O servidor de teste simula protocolos em nome do jogador local. O teste confere o
-proponente no HUD e usa as setas reais do histórico.
+proponente, os controles da cédula e o resumo da apuração.
 
 ## Teste da TV de campanha no Chrome
 
