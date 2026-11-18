@@ -17,9 +17,10 @@ import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
   BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, publicDebtRules, publicDebtStabilityLoss,
-  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
+  campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
+import { cassationFee } from '../src/npcs';
 import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -64,12 +65,12 @@ export class PlenaryMatch {
     this.election.addDeputy(player.id);
   }
 
-  private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
+  private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
 
   economySummary(physical:number) {
     const totals = this.economy.totals();
     const issued = this.cash.initial+this.cash.npcIssued+this.cash.spawned;
-    const spent = this.cash.expired+this.cash.publicDuty+this.cash.projects;
+    const spent = this.cash.expired+this.cash.publicDuty+this.cash.projects+this.cash.cassationFees;
     const held = totals.humans+totals.npcs+totals.reserve+physical+this.budget;
     return {...totals,...this.cash,physical,budget:this.budget,issued,spent,
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
@@ -311,7 +312,7 @@ export class PlenaryMatch {
     });
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
-    this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
+    this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     campaignReady = true;
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -501,6 +502,7 @@ export class PlenaryMatch {
       paymentsLeft:id=>current() ? this.economy.paymentsLeft(id,this.round) : 0,
       payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
+      callCassation:player=>current() ? this.callCassation(player,now) : 'Partida encerrada.',
       missionSwapUsed:id=>current() && this.economy.missionSwapUsed(id),
       swapMissions:id=>{
         if (!current() || this.phase!=='negotiation' || !this.canHandleObjects(id,now)) return 'unavailable';
@@ -571,9 +573,19 @@ export class PlenaryMatch {
     return this.canScheduleHearing(now) && this.canVote(id) && this.votingPlayers()>1 && this.economy.canCall(id);
   }
 
-  private canCallCassation(id:string, now:number) {
-    return this.canScheduleHearing(now,CASSATION_NOTICE_MS) &&
-      this.canVoteInCassation(id) && this.popularity(id)>=CASSATION_POPULARITY && this.cassationElectorate().length>=3;
+  callCassation(player:Player, now:number) {
+    const {id} = player;
+    if (!canInteract(player,stations.audit,{handsFree:true})) return 'Aproxime-se do balcão da Corregedoria.';
+    if (!this.canScheduleHearing(now,CASSATION_NOTICE_MS) || this.ballotCountdown(now)!==undefined) {
+      return 'Cassação indisponível neste momento.';
+    }
+    if (!this.canVoteInCassation(id)) return 'Você precisa de um mandato ativo para convocar.';
+    if (this.popularity(id)<CASSATION_POPULARITY) return `Você precisa de ${CASSATION_POPULARITY} de popularidade.`;
+    if (this.cassationElectorate().length<3) return 'São necessários pelo menos três eleitores elegíveis.';
+    if (!this.economy.spend(id,cassationFee)) return 'Saldo insuficiente para convocar cassação.';
+    this.cash.cassationFees += cassationFee;
+    this.cassationAt = now+CASSATION_NOTICE_MS;
+    this.refreshAgendaEligibility(now);
   }
 
   private cassationElectorate() {
@@ -690,16 +702,9 @@ export class PlenaryMatch {
         if (published) this.election.scandal(published.from);
         break;
       }
-      case 'call-cassation':
-        if (!this.canCallCassation(id,now) || !this.at(player,'panel')) break;
-        if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
-        this.cassationAt = now+CASSATION_NOTICE_MS;
-        this.refreshAgendaEligibility(now);
-        break;
       case 'hearing':
         if (!this.canCallHearing(id,now) || !this.canVote(action.target) ||
             (this.hearingImmunity.get(action.target) ?? 0)>now || id===action.target || !this.at(player,'panel')) break;
-        if (this.activePolicies(now).hearing && !this.economy.spend(id,hearingPolicyFee)) break;
         this.hearingTarget = action.target;
         this.ends = now+HEARING_MS;
         this.votes.clear();
@@ -1089,7 +1094,6 @@ export class PlenaryMatch {
     return {
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
-      canCallCassation:this.canCallCassation(id,now),
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
       cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
         quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationChoice(candidate.id)!==undefined).length,

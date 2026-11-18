@@ -98,10 +98,12 @@ rastro. Um ponto do orçamento equivale a R$ 10 mil.
 A Controladoria pode revelar um documento por rodada. Compartilhe uma prova
 de graça, ofereça uma venda a alguém próximo ou divulgue o documento na
 Imprensa. Divulgação de escândalos e campanhas afetam a popularidade.
-Com 55 de popularidade, um parlamentar com mandato pode convocar, no Painel,
-a única votação de cassação da sessão. A voz é geral durante a reunião.
-Cassar um parlamentar custa 12 de estabilidade. A pessoa cassada fica como
-assessora: conversa, negocia e investiga, mas perde voto, verba e sabotagem.
+Com 40 de popularidade, mandato ativo e três eleitores elegíveis na sessão,
+fale com Chapolin Colorado no balcão da Corregedoria para convocar uma cassação.
+Cada convocação custa R$ 100 mil da sua carteira. Após o aviso de 30 segundos,
+o Plenário tem 35 segundos para votar. A maioria absoluta pode cassar um
+suspeito. A pessoa cassada fica como assessora e perde voto, verba e sabotagem.
+É possível convocar outra votação após a apuração, se ainda houver tempo.
 
 ## Mercado e equipamentos
 

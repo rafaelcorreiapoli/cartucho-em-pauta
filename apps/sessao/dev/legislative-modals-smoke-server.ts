@@ -2,6 +2,7 @@ import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
 import {publishProjectFiling} from '../server/project-test-fixture';
+import {cassationFee} from '../src/npcs';
 import {stations} from '../src/plenary';
 import {ELECTION_RULES} from '../src/elections';
 import type {Parliamentarians} from '../server/Parliamentarians';
@@ -28,9 +29,10 @@ class LegislativeModalsRoom extends SessionRoom {
           if (player.nick==='Final QA') {
             this.clock.setTimeout(()=>match.advance(this.clock.currentTime+ELECTION_RULES.matchDuration),500);
           }
-          Object.assign(player,plenaryTest ? stations.panel : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
+          Object.assign(player,plenaryTest ? stations.audit : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
           const economy = Reflect.get(match,'economy');
           if (plenaryTest) economy.changePopularity(player.id,20);
+          if (player.nick==='Cassação QA') economy.earn(player.id,cassationFee);
           if (player.nick==='Projetos QA') {
             const {agenda} = Reflect.get(economy,'accounts').get(player.id);
             Reflect.set(agenda,'missions',[]);

@@ -16,6 +16,7 @@ export type GameplayWorld = {
   plenary?:boolean;
   projectFilingError?:(id:string,project:number)=>string|undefined;
   projectSignatures?:number;
+  callCassation?:(player:Player)=>string|undefined;
   missionSwapUsed?:(id:string)=>boolean;
   swapMissions?:(id:string)=>MissionSwapResult;
   hasMandate?:(id:string)=>boolean;

@@ -1,13 +1,17 @@
 import { mapDoor, mapPoint, roomBounds } from './congress-layout';
 import type { Office } from './elections';
 import type { ObjectKind } from './gameplay';
-import type { Agenda, EvidenceKind } from './politics';
+import { money, type Agenda, type EvidenceKind } from './politics';
 
 export const snackBar = {
   name:'Lanchonete', bounds:roomBounds('Lanchonete'), door:mapDoor('Lanchonete'),
 } as const;
 
+export const cassationFee = 10;
+
 export const npcs = {
+  corregedor:{name:'Chapolin Colorado',sprite:'chapolin-colorado.webp',x:808,y:72,direction:0,
+    interaction:{x:808,y:93},dialogue:'corregedoria',label:'Corregedoria',catalog:undefined},
   vendor:{name:'Daniel Vorcaro',sprite:'daniel-vorcaro.webp',portrait:'retrato-daniel-vorcaro.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
   furnitureVendor:{name:'Roberto Justus',sprite:'roberto-justus.webp',portrait:'retrato-roberto-justus.webp',x:525,y:451,direction:0,
     interaction:{x:530,y:466},dialogue:'furniture',label:'Gabinete de Luxo',catalog:'furniture'},
@@ -44,12 +48,19 @@ export type DialogueOption = {
   id:string;
   label:string;
   next?:string;
-  action?:'shop'|'close'|'swap-missions';
+  action?:'shop'|'close'|'swap-missions'|'call-cassation';
   requires?:DialogueCondition;
   fileItem?:number;
 };
 export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
+  corregedoria:{
+    start:{
+      text:'A convocação avisa o Plenário. Cada eleitor poderá votar em quem suspeita ser infiltrado.',
+      options:[{id:'cassation',label:'Convocar cassação · '+money(cassationFee),action:'call-cassation'},
+        {id:'leave',label:'Encerrar',action:'close'}],
+    },
+  },
   secretary:{
     start:{
       text:'Escolha um projeto. Confira no inventário quantas assinaturas você precisa pedir a outros jogadores antes de levar o documento ao Protocolo.',

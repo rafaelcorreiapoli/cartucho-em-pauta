@@ -1,3 +1,4 @@
+import {cassationFee} from '../npcs';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {Ballot,CassationBallot,ballotPalette,ballotShortcut,hearingBallotState} from './ballot';
@@ -105,7 +106,8 @@ test('cassation removes a disconnected target and shows the gameserver participa
   const ids = players.map(player=>player.id);
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,players,0,()=>.9)).toBe(true);
-  match.politics(host,{kind:'call-cassation'},players,10);
+  match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation({...host,...stations.audit},10)).toBeUndefined();
   const openedAt = 10+CASSATION_NOTICE_MS;
   match.advance(openedAt);
   const selected = ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true);

@@ -1,3 +1,4 @@
+import {cassationFee} from './npcs';
 import {publishProjectFiling} from '../server/project-test-fixture';
 import type {PoliticalEconomy} from '../server/PoliticalEconomy';
 import {expect,test} from 'bun:test';
@@ -111,7 +112,8 @@ test('an authoritative cassation without a majority renders its verdict',()=>{
   match.start(host.id,players,0,()=>.9);
   const economy:PoliticalEconomy = Reflect.get(match,'economy');
   economy.changePopularity(host.id,17);
-  match.politics({...host,...stations.panel},{kind:'call-cassation'},players,50);
+  match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  expect(match.callCassation({...host,...stations.audit},50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);
   match.castCassation(host.id,first.id,open);

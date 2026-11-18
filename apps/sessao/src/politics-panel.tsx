@@ -26,7 +26,7 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
 
   function sendInstitutional(action:PoliticsAction) {
     send(action);
-    if (action.kind==='call-cassation' || action.kind==='grant') institutional.close();
+    if (action.kind==='grant') institutional.close();
     restoreFocus();
   }
 
@@ -48,7 +48,7 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
     }
 
     const model = institutionalActions(view,players.find(player=>player.id===id));
-    hasInstitutionalActions = !!(model.grant || model.hearing || model.cassation);
+    hasInstitutionalActions = !!model.grant;
     if (!hasInstitutionalActions && institutional.open) closeInstitutional();
     const key = JSON.stringify(model);
     if (key===institutionalKey) return;
@@ -57,7 +57,6 @@ export function createPoliticsPanel(id:string,send:(action:PoliticsAction)=>void
   }
 
   return {
-    sendInstitutional,
     openInstitutional() {
       if (!hasInstitutionalActions || institutional.open) return;
       institutional.showModal();
