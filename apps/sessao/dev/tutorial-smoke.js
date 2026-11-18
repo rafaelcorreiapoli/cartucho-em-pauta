@@ -11,6 +11,10 @@ async page => {
   const panel = page.getByRole('complementary',{name:'Tutorial',exact:true});
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
   const spotlight = page.locator('.tutorial-spotlight');
+  const worldSteps = new Set(['Caminhe pelo Congresso','Beba um café','Faça uma entrega pública','Guarde dinheiro no gabinete','Ofereça um café','Consiga uma assinatura','Instale uma câmera','Apague o incêndio','Repare a energia']);
+  async function checkWorldLighting() {
+    if (worldSteps.has(await panel.getByRole('heading').textContent())) await spotlight.waitFor({state:'hidden'});
+  }
   await spotlight.waitFor();
   if (await panel.getByRole('combobox').count()) throw Error('Tutorial ainda usa select');
   if (!await panel.getByRole('button',{name:'Etapa anterior',exact:true}).isDisabled()) throw Error('Primeira etapa permite voltar');
@@ -58,6 +62,7 @@ async page => {
     const current = await panel.locator('.tutorial-progress').textContent();
     await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
     await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);
+    await checkWorldLighting();
   }
   await panel.getByRole('heading',{name:'Equipe um acessório'}).waitFor();
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
@@ -68,6 +73,7 @@ async page => {
     const current = await panel.locator('.tutorial-progress').textContent();
     await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
     await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);
+    await checkWorldLighting();
   }
   await panel.getByRole('heading',{name:'Repare a energia'}).waitFor();
   await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
