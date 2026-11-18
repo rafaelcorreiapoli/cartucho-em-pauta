@@ -322,9 +322,17 @@ export class SessionRoom extends Room {
       if (!player || !this.consumeRoomCommand(player.id,raw) || player.knockedOut || player.carrying || typeof activity!=='string' || !Object.hasOwn(roomActivities,activity)) return;
       const world = this.gameplayWorld();
       if (activity==='coffee') {
-        if (!this.match.canHandleObjects(player.id,world.now)) return;
-        const text = this.gameplay.drinkStationCoffee(player,world);
-        if (text) client.send('room-activity-result',{activity,text});
+        if (!this.match.canHandleObjects(player.id,world.now)) {
+          client.send('map-action-failed','A cafeteira está indisponível neste momento.');
+          return;
+        }
+        let failed = false;
+        const text = this.gameplay.drinkStationCoffee(player,{...world,actionFailed:(_id,message)=>{
+          failed = true;
+          client.send('map-action-failed',message);
+        }});
+        if (!text) client.send('map-action-failed','Aproxime-se da cafeteira.');
+        else if (!failed) client.send('room-activity-result',{activity,text});
         return;
       }
       if (activity!=='library') return;
@@ -365,7 +373,8 @@ export class SessionRoom extends Room {
         (raw.panel!==0 && raw.panel!==1) || !('kind' in raw) ||
         (raw.kind!=='sabotage' && raw.kind!=='repair' && raw.kind!=='cancel') ||
         !this.consumeRoomCommand(player.id,raw)) return;
-      const result = this.match.actOnPower(player,{kind:raw.kind,panel:raw.panel},this.clock.currentTime);
+      const result = this.match.actOnPower(player,{kind:raw.kind,panel:raw.panel},this.clock.currentTime,
+        message=>client.send('map-action-failed',message));
       if (result) client.send('gameplay-feedback',result);
     });
     this.onMessage('fire-action',(client,raw:unknown)=>{
@@ -376,7 +385,8 @@ export class SessionRoom extends Room {
           this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) return;
       const result = this.match.actOnFire(player,raw.kind,raw.site,this.clock.currentTime,
         raw.kind==='extinguish' && this.gameplay.owns(player.id,'extinguisher'),
-        raw.kind==='plant' ? this.gameplay.incendiaryItem(player.id) : undefined);
+        raw.kind==='plant' ? this.gameplay.incendiaryItem(player.id) : undefined,
+        message=>client.send('map-action-failed',message));
       if (!result) return;
       if (raw.kind==='extinguish') {
         this.broadcast('fire-extinguished',{actor:player.nick,room:fireSites[raw.site].name} satisfies FireExtinguished);
@@ -386,12 +396,24 @@ export class SessionRoom extends Room {
       if (!raw || typeof raw!=='object' || !('action' in raw)) return;
       const action = readGameplayAction(raw.action);
       const player = this.players.get(client.sessionId)?.player;
-      if (!action || !player || !this.consumeRoomCommand(player.id,raw) || this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined || !this.match.canHandleObjects(player.id,this.clock.currentTime) ||
+      if (!action || !player || !this.consumeRoomCommand(player.id,raw)) return;
+      if (this.npcTalk.robberyProgress(player.id,this.clock.currentTime)!==undefined) {
+        client.send('map-action-failed','Você já está realizando outra ação.');
+        return;
+      }
+      if (!this.match.canHandleObjects(player.id,this.clock.currentTime) ||
           (this.match.phase==='hearing' && action.kind!=='attack' && action.kind!=='toggle-modulator') ||
-          !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) return;
-      const text = this.gameplay.act(player,action,this.gameplayWorld());
+          !canUseGameplayAction(action,this.match.phase==='negotiation',this.match.allowsPlenaryCombat && inPlenary(player))) {
+        if (action.kind!=='dialogue-close') client.send('map-action-failed','Esta ação está indisponível neste momento.');
+        return;
+      }
+      let failed = false;
+      const text = this.gameplay.act(player,action,{...this.gameplayWorld(),actionFailed:(_id,message)=>{
+        failed = true;
+        client.send('map-action-failed',message);
+      }});
       if (action.kind==='photo-delete' || action.kind==='scan-xray') this.match.refreshAgendaEligibility();
-      if (text) client.send('gameplay-feedback',text);
+      if (text && !failed) client.send('gameplay-feedback',text);
       if (action.kind==='office-open' && text==='Você saiu do gabinete.') {
         const state = this.players.get(client.sessionId);
         if (state) this.resetMovement(state);

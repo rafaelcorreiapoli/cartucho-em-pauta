@@ -700,6 +700,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (captured) photos.flash();
       return captured;
     },
+    resetPendingPickup() { pendingPickup = undefined; },
     feedback(text:string) {
       pendingPickup = undefined;
       notify(text);

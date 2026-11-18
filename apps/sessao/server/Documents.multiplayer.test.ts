@@ -298,8 +298,10 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     firefighter.send('gameplay',{action:collect,token:2280});
     await wait(()=>state(firefighter)?.inventory.some(item=>item.id===extinguisher.id));
     await wait(()=>!state(infiltrator)?.ground.some(item=>item.id===extinguisher.id));
+    const failedActions:string[] = [];
+    infiltrator.onMessage('map-action-failed',(message:string)=>failedActions.push(message));
     infiltrator.send('gameplay',{action:collect,token:2281});
-    await wait(()=>feedback.get(infiltrator.sessionId)==='Objeto fora de alcance ou inventário cheio.');
+    await wait(()=>failedActions.includes('Objeto fora de alcance.'));
     expect(state(infiltrator)?.inventory.some(item=>item.id===extinguisher.id)).toBe(false);
     await wait(()=>snapshots.get(firefighter.sessionId)?.some(player=>player.id===firefighter.sessionId &&
       player.exposed?.some(item=>item.kind==='extinguisher')));

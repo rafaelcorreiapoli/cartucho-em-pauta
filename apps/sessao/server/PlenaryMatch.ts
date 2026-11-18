@@ -859,12 +859,18 @@ export class PlenaryMatch {
       !this.disconnected.has(player.id) && !player.carried && canOperatePanel(player,panel);
   }
 
-  actOnPower(player:Player,action:PowerAction,now:number) {
-    if (!this.canOperatePower(player,action.panel,now)) return;
-    if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) return;
+  actOnPower(player:Player,action:PowerAction,now:number,failed?:(message:string)=>void) {
+    if (!this.canOperatePower(player,action.panel,now)) {
+      return failed?.('Aproxime-se do painel em condições de operá-lo.');
+    }
+    if (action.kind==='sabotage' && !this.canSabotagePower(player.id,now)) {
+      return failed?.(this.power.active ? 'A energia já está cortada.' :
+        this.power.canSabotage(now,this.powerCooldown(now)) ? 'O corte de energia está indisponível.' : 'O painel está em recarga.');
+    }
     const couldRepair = this.canFinishOutageRepair(now);
     const result = this.power.act(player.id,action,now,this.powerCooldown(now));
     if (couldRepair!==this.canFinishOutageRepair(now)) this.refreshAgendaEligibility(now);
+    if (!result) failed?.(this.power.active ? 'O painel não está disponível para esta ação.' : 'A energia já foi restaurada.');
     return result;
   }
 
@@ -922,17 +928,21 @@ export class PlenaryMatch {
     if (feedback) return {actor,feedback};
   }
 
-  actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false, device?:number) {
-    if (!this.canUseFire(player,now) || !canActOnFire(player,site)) return;
+  actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false, device?:number,failed?:(message:string)=>void) {
+    if (!this.canUseFire(player,now)) return failed?.('Esta ação está indisponível neste momento.');
+    if (!canActOnFire(player,site)) return failed?.('Aproxime-se do local.');
     if (action==='plant') {
-      if (device!==undefined && this.fire.plant(player,site,device,now)) return 'Instalando dispositivo…';
-      return;
+      if (device===undefined) return failed?.('Você precisa de um dispositivo incendiário.');
+      if (player.moving) return failed?.('Pare para instalar o dispositivo.');
+      if (this.fire.plant(player,site,device,now)) return 'Instalando dispositivo…';
+      return failed?.('Já existe um dispositivo em uso ou um incêndio ativo.');
     }
     if (action==='disarm') {
       if (this.fire.disarm(site)) return 'Dispositivo desarmado.';
-      return;
+      return failed?.('O dispositivo já não está armado neste local.');
     }
-    if (!hasExtinguisher || !this.fire.extinguish(site)) return;
+    if (!hasExtinguisher) return failed?.('Você precisa de um extintor.');
+    if (!this.fire.extinguish(site)) return failed?.('Já não há incêndio neste local.');
     const insideRoom = roomAt(player)===fireSites[site].name;
     this.publishActivity(player,'fire-extinguished',now,
       {amount:this.stability,place:insideRoom ? 'inside-crisis-room' : undefined});

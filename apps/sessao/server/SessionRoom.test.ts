@@ -3,7 +3,8 @@ import {MAX_QUEUED_INPUTS,type ControlState} from '../src/movement';
 import { ELECTION_RULES, type CampaignBroadcast } from '../src/elections';
 import {MAX_PLAYERS,stations} from '../src/plenary';
 import { npcs } from '../src/npcs';
-import { terminals, treasuryDeliveries, type GameplayEvent, type InteractionCue } from '../src/gameplay';
+import { stationRecharge } from '../src/station-recharge';
+import { INVENTORY_SLOTS, terminals, treasuryDeliveries, type GameplayEvent, type InteractionCue } from '../src/gameplay';
 import type { PhotoScene } from '../src/photography';
 import type { SpyCameraFrame } from '../src/surveillance';
 import { missionReward } from '../src/politics';
@@ -133,7 +134,7 @@ test('clients share movement and voice, then receive private roles and payments'
     let secondPhotos:PhotoAccessView | undefined;
     let thirdPhotos:PhotoAccessView | undefined;
     const feedback:string[] = [];
-    first.onMessage('gameplay-feedback',(message:string) => feedback.push(message));
+    first.onMessage('map-action-failed',(message:string) => feedback.push(message));
     first.onMessage('photo-state',(view:PhotoAccessView) => { firstPhotos = view; });
     second.onMessage('gameplay-feedback',() => {});
     second.onMessage('photo-state',(view:PhotoAccessView) => { secondPhotos = view; });
@@ -410,6 +411,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       const notices:string[] = [];
       feedback.set(peer.sessionId,notices);
       peer.onMessage('gameplay-feedback',(message:string)=>notices.push(message));
+      peer.onMessage('map-action-failed',(message:string)=>notices.push(message));
       peer.onMessage('photo-state',(view:PhotoAccessView)=>photoViews.set(peer.sessionId,view));
       for (const message of ['players','item-obtained']) peer.onMessage(message,()=>{});
     }
@@ -496,10 +498,15 @@ test('transport is released on an actual socket reconnect and on plenary admissi
       if (accepted && event.type==='used' && event.kind==='coffee') coffeeEvent = event;
       return accepted;
     });
+    const coffeeResults:string[] = [];
+    passenger.onMessage('room-activity-result',({text}:{text:string})=>coffeeResults.push(text));
     passenger.send('room-activity',{activity:'coffee',token:3270});
     passenger.send('room-activity',{activity:'coffee',token:3270});
     passenger.send('room-activity',{activity:'coffee',token:3271});
     await wait(()=>views.get(passenger.sessionId)?.politics?.missions.completed.some(mission=>mission.kind==='cafe')===true);
+    await wait(()=>feedback.get(passenger.sessionId)?.includes(stationRecharge.coffee.feedback)===true);
+    expect(coffeeResults).toEqual(['Café bebido.']);
+    expect(feedback.get(carrier.sessionId)).not.toContain(stationRecharge.coffee.feedback);
     expect(coffeeEvent?.eventId).toBeDefined();
     Reflect.set(match,'recordGameplay',record);
     Reflect.get(room,'gameplayWorld').call(room).publish({...coffeeEvent});
@@ -721,6 +728,18 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     passenger.send('complaint-submit',{id:infraction!.id,token:4260});
     await wait(()=>views.get(carrier.sessionId)?.complaints?.history.some(entry=>entry.id===infraction!.id)===true);
     expect(views.get(carrier.sessionId)?.complaints?.history[0]).toMatchObject({kind:'hit',accused:positions.get(carrier.sessionId)!.player.nick});
+
+    Object.assign(carrierControl.player,stations.coffee);
+    for (let slot=gameplay()?.inventory.length ?? 0;slot<INVENTORY_SLOTS;slot++) {
+      gameplaySystem.create('portrait',{holder:carrier.sessionId});
+    }
+    const onFloor = gameplaySystem.create('extinguisher',{ground:stations.coffee});
+    await wait(()=>gameplay()?.nearby.some(item=>item.id===onFloor.id)===true);
+    carrier.send('gameplay',{action:{kind:'collect',item:onFloor.id},token:4302});
+    await wait(()=>feedback.get(carrier.sessionId)?.includes('Inventário cheio.')===true);
+    expect(gameplay()?.inventory.some(item=>item.id===onFloor.id)).toBe(false);
+    expect(gameplay()?.nearby.some(item=>item.id===onFloor.id)).toBe(true);
+    expect(feedback.get(passenger.sessionId)).not.toContain('Inventário cheio.');
 
   } finally {
     await Promise.allSettled(rooms.map(room=>room.leave()));

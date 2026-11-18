@@ -58,15 +58,15 @@ export class PrivateOffices {
     return this.near(player,office,'cabinet') && (office.owner===player.id || office.cabinetUntil>now);
   }
 
-  doorAction(player:Player, office:OfficeState, kind:OfficeAction, now:number) {
-    if (!this.near(player,office,'door')) return 'Aproxime-se da porta.';
+  doorAction(player:Player, office:OfficeState, kind:OfficeAction, now:number, reject = (message:string)=>message) {
+    if (!this.near(player,office,'door')) return reject('Aproxime-se da porta.');
     const inside = this.inside(player,office.layout);
-    if (office.doorUntil>now) return 'A porta está arrombada.';
+    if (office.doorUntil>now) return reject('A porta está arrombada.');
     if (kind==='office-open' && office.door==='locked' && player.id!==office.owner) {
-      if (!inside) return 'Porta trancada.';
+      if (!inside) return reject('Porta trancada.');
       const point = officeDoorPoint(office.layout);
       const exit = {x:point.x,y:point.y-office.layout.inside*15};
-      if (!canStand(exit.x,exit.y)) return 'Saída obstruída.';
+      if (!canStand(exit.x,exit.y)) return reject('Saída obstruída.');
       Object.assign(player,exit,{moving:false});
       return 'Você saiu do gabinete.';
     }
@@ -74,7 +74,7 @@ export class PrivateOffices {
       office.door = 'open';
       return 'Porta aberta.';
     }
-    if (office.owner!==player.id) return 'Somente o titular pode controlar a porta.';
+    if (office.owner!==player.id) return reject('Somente o titular pode controlar a porta.');
     if (kind==='office-close') office.door = 'closed';
     if (kind==='office-lock') office.door = 'locked';
     if (kind==='office-unlock') office.door = 'closed';

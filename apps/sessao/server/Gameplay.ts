@@ -929,15 +929,15 @@ export class Gameplay {
 
   private changeInstallation(player:Player,action:GameplayAction,world:GameplayWorld,complete = false) {
     const siteKey = action.kind==='install' ? action.place : [...this.installations].find(([,item])=>item.id===action.item)?.[0];
-    if (!siteKey || !Object.hasOwn(installationSites,siteKey)) return 'Aproxime-se do local.';
+    if (!siteKey || !Object.hasOwn(installationSites,siteKey)) return this.reject(player,world,'Aproxime-se do local.');
     const site = installationSites[siteKey as keyof typeof installationSites];
-    if (!canReachInstallation(player,site.point,site.kind)) return 'Aproxime-se do local.';
+    if (!canReachInstallation(player,site.point,site.kind)) return this.reject(player,world,'Aproxime-se do local.');
     const placed = this.installations.get(siteKey);
     if (action.kind==='install') {
       const item = this.items.get(action.item ?? -1);
-      if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return 'Objeto indisponível.';
+      if (!item || !('holder' in item.place) || item.place.holder!==player.id || item.data.kind!==site.kind) return this.reject(player,world,'Objeto indisponível.');
       const conflict = installationConflict(placed,player.id);
-      if (conflict) return conflict;
+      if (conflict) return this.reject(player,world,conflict);
       if (!complete && site.kind!=="pizza") return this.startInstallation(player,action,world.now);
       this.remove(item);
       const cleared = this.clearedSites.get(siteKey);
@@ -949,13 +949,13 @@ export class Gameplay {
       this.event(world,player,'installed',item.data,replaced,{place:siteKey,replaced:!!replaced});
       return placed ? 'Objeto substituído.' : 'Objeto instalado.';
     }
-    if (!placed) return 'Objeto indisponível.';
+    if (!placed) return this.reject(player,world,'Objeto indisponível.');
     const data = {id:placed.id,kind:placed.kind};
     if (action.kind==='slice') {
-      if (placed.kind!=='pizza' || !placed.slices) return 'A pizza acabou.';
+      if (placed.kind!=='pizza' || !placed.slices) return this.reject(player,world,'A pizza acabou.');
       let served = this.servings.get(placed.id);
       if (!served) this.servings.set(placed.id,served=new Set());
-      if (served.has(player.id)) return 'Você já pegou uma fatia desta pizza.';
+      if (served.has(player.id)) return this.reject(player,world,'Você já pegou uma fatia desta pizza.');
       served.add(player.id);
       placed.slices--;
       const host = world.players.find(person=>person.id===placed.owner.id);
@@ -969,7 +969,7 @@ export class Gameplay {
       return 'Fatia servida.';
     }
     if (action.kind==='mark') {
-      if (placed.kind!=='portrait' || placed.marked || placed.owner.id===player.id) return 'Este retrato não pode ser rabiscado.';
+      if (placed.kind!=='portrait' || placed.marked || placed.owner.id===player.id) return this.reject(player,world,'Este retrato não pode ser rabiscado.');
       placed.marked = true;
       const installedAt = this.portraitInstalledAt.get(siteKey);
       this.event(world,player,'marked',data,placed.owner.id,{place:siteKey,
@@ -977,7 +977,7 @@ export class Gameplay {
       return 'Retrato rabiscado.';
     }
     const torn = placed.kind==='portrait' && placed.owner.id!==player.id;
-    if (!torn && !this.available(player.id)) return 'Inventário cheio.';
+    if (!torn && !this.available(player.id)) return this.reject(player,world,'Inventário cheio.');
     this.installations.delete(siteKey);
     this.portraitInstalledAt.delete(siteKey);
     this.servings.delete(placed.id);
@@ -1100,27 +1100,27 @@ export class Gameplay {
       return 'Interação cancelada.';
     }
     const office = offices.offices.get(action.place ?? '');
-    if (!office) return 'Gabinete indisponível.';
+    if (!office) return this.reject(player,world,'Gabinete indisponível.');
     const own = office.owner===player.id;
     if (kind==='office-open' || kind==='office-close' || kind==='office-lock' || kind==='office-unlock') {
-      if ((kind==='office-close' || kind==='office-lock') && world.players.some(other=>blockedBy(office.layout.door,other.x,other.y))) return 'A passagem está ocupada.';
+      if ((kind==='office-close' || kind==='office-lock') && world.players.some(other=>blockedBy(office.layout.door,other.x,other.y))) return this.reject(player,world,'A passagem está ocupada.');
       const previousDoor = office.door;
-      const result = offices.doorAction(player,office,kind,now);
+      const result = offices.doorAction(player,office,kind,now,message=>this.reject(player,world,message));
       if (office.door!==previousDoor) this.recordGuestInteraction(player,office,world);
       this.syncOfficeDoors(world.players,now);
       return result;
     }
     const item = this.items.get(action.item ?? -1);
     if (kind==='office-take' || kind==='office-stash') {
-      if ((!own && (world.plenary || this.ownerInside(office,world.players))) || !offices.stashAccess(player,office,now)) return 'Armário protegido.';
-      if (!item) return 'Objeto indisponível.';
+      if ((!own && (world.plenary || this.ownerInside(office,world.players))) || !offices.stashAccess(player,office,now)) return this.reject(player,world,'Armário protegido.');
+      if (!item) return this.reject(player,world,'Objeto indisponível.');
       if (kind==='office-take') {
-        if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return 'Objeto indisponível.';
-        if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+        if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return this.reject(player,world,'Objeto indisponível.');
+        if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
         this.addToInventory(item,player.id);
       } else {
-        if (!('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
-        if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return 'Armário cheio.';
+        if (!('holder' in item.place) || item.place.holder!==player.id) return this.reject(player,world,'O objeto não está com você.');
+        if (this.officeStash(office.layout.id).length>=officeRules.stashSlots) return this.reject(player,world,'Armário cheio.');
         this.move(item,{storage:`office:${office.layout.id}`});
       }
       this.event(world,player,kind==='office-take' ? 'recovered' : 'stored',item.data,own ? undefined : office.owner,{place:office.layout.id});
@@ -1129,10 +1129,10 @@ export class Gameplay {
     }
     if (kind==='office-remove') {
       const slot = decorSlots.find(slot=>this.installations.get(`office:${office.layout.id}:${slot}`)?.id===action.item);
-      if (!slot) return 'Decoração indisponível.';
+      if (!slot) return this.reject(player,world,'Decoração indisponível.');
       const torn = !own && slot==='portrait';
-      if ((!own && !torn) || !offices.near(player,office,decorPoint(office.layout,slot))) return 'Use o ponto de decoração do seu gabinete.';
-      if (!torn && !this.available(player.id)) return 'Inventário cheio.';
+      if ((!own && !torn) || !offices.near(player,office,decorPoint(office.layout,slot))) return this.reject(player,world,'Use o ponto de decoração do seu gabinete.');
+      if (!torn && !this.available(player.id)) return this.reject(player,world,'Inventário cheio.');
       const key = `office:${office.layout.id}:${slot}`;
       const decoration = this.installations.get(key)!;
       this.installations.delete(key);
@@ -1141,12 +1141,12 @@ export class Gameplay {
       this.event(world,player,'uninstalled',data,torn ? decoration.owner.id : undefined,{place:office.layout.id});
       return torn ? 'Retrato arrancado e destruído.' : 'Decoração recolhida.';
     }
-    if (!item || !('holder' in item.place) || item.place.holder!==player.id) return 'O objeto não está com você.';
+    if (!item || !('holder' in item.place) || item.place.holder!==player.id) return this.reject(player,world,'O objeto não está com você.');
     if (kind==='office-install') {
       const decor = decorSlots.find(slot=>slot===item.data.kind);
-      if (!decor) return 'Decoração incompatível.';
+      if (!decor) return this.reject(player,world,'Decoração incompatível.');
       const point = decorPoint(office.layout,decor);
-      if (!own || !offices.near(player,office,point)) return 'Use o ponto de decoração do seu gabinete.';
+      if (!own || !offices.near(player,office,point)) return this.reject(player,world,'Use o ponto de decoração do seu gabinete.');
       if (!complete) return this.startInstallation(player,action,now);
       this.remove(item);
       return this.installOfficeDecor(player,office.layout,decor,item.data,world);
@@ -1154,23 +1154,23 @@ export class Gameplay {
     if (kind==='office-upgrade-door' || kind==='office-upgrade-cabinet' || kind==='office-upgrade-safe') {
       const target = kind==='office-upgrade-door' ? 'door' : kind==='office-upgrade-safe' ? 'safe' : 'cabinet';
       const level = target==='door' ? 'doorLevel' : target==='safe' ? 'safeLevel' : 'cabinetLevel';
-      if (!own || !offices.near(player,office,target)) return 'Use o reforço no seu gabinete.';
-      if (item.data.kind!==(target==='door' ? 'doorLock' : 'cabinetLock')) return 'Reforço incompatível.';
-      if (office[level]>=officeRules.maxSecurity) return 'Segurança no nível máximo.';
+      if (!own || !offices.near(player,office,target)) return this.reject(player,world,'Use o reforço no seu gabinete.');
+      if (item.data.kind!==(target==='door' ? 'doorLock' : 'cabinetLock')) return this.reject(player,world,'Reforço incompatível.');
+      if (office[level]>=officeRules.maxSecurity) return this.reject(player,world,'Segurança no nível máximo.');
       office[level]++;
       this.remove(item);
       this.event(world,player,'security-upgraded',item.data,undefined,{place:office.layout.id});
       return `Segurança nível ${office[level]}.`;
     }
-    if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return 'Ação indisponível.';
-    if (offices.channels.has(player.id)) return 'Já existe uma interação em andamento.';
+    if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return this.reject(player,world,'Ação indisponível.');
+    if (offices.channels.has(player.id)) return this.reject(player,world,'Já existe uma interação em andamento.');
     const target = kind==='office-cash' || kind==='office-breach-safe' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
-    if (!offices.near(player,office,target)) return 'Aproxime-se do alvo.';
-    if (!own && target!=='door' && (world.plenary || this.ownerInside(office,world.players))) return 'O titular está no gabinete.';
+    if (!offices.near(player,office,target)) return this.reject(player,world,'Aproxime-se do alvo.');
+    if (!own && target!=='door' && (world.plenary || this.ownerInside(office,world.players))) return this.reject(player,world,'O titular está no gabinete.');
     const level = this.toolLevel(item.data);
     const duration = kind==='office-cash' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
-    if (!duration) return kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.';
+    if (!duration) return this.reject(player,world,kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente ou fechadura indisponível.');
     offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+interactionDuration(player,duration),baseDuration:duration,level});
     if (kind==='office-cash') {
       player.pocketing = true;
@@ -1240,7 +1240,7 @@ export class Gameplay {
 
   drinkStationCoffee(player:Player,world:GameplayWorld) {
     if (world.plenary || player.carried || !canReachStation(player,'coffee')) return;
-    if (!this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;
+    if (!this.stationCooldowns.take('coffee',world.now)) return this.reject(player,world,stationRecharge.coffee.feedback);
     return this.drinkCoffee(player,world);
   }
 
@@ -1380,21 +1380,21 @@ export class Gameplay {
   private changeGear(player:Player, itemId:number|undefined, equip:boolean, world:GameplayWorld, replacement?:number) {
     const {id} = player;
     const item = itemId===undefined ? undefined : this.items.get(itemId);
-    if (!item || !isGear(item.data.kind)) return 'Equipamento indisponível.';
+    if (!item || !isGear(item.data.kind)) return this.reject(player,world,'Equipamento indisponível.');
     if (equip) {
-      if (!('holder' in item.place) || item.place.holder!==id) return 'O equipamento não está com você.';
+      if (!('holder' in item.place) || item.place.holder!==id) return this.reject(player,world,'O equipamento não está com você.');
       const conflict = gearConflict(item.data.kind,this.equipped(id).map(({data})=>data));
-      if (replacement!==undefined && replacement!==conflict?.id) return 'O equipamento neste espaço mudou.';
-      if (conflict && replacement===undefined) return equipment[item.data.kind].slot===equipment[conflict.kind as Gear].slot
-        ? 'Este espaço já está ocupado.' : 'Os dois espaços de acessórios estão ocupados.';
+      if (replacement!==undefined && replacement!==conflict?.id) return this.reject(player,world,'O equipamento neste espaço mudou.');
+      if (conflict && replacement===undefined) return this.reject(player,world,equipment[item.data.kind].slot===equipment[conflict.kind as Gear].slot
+        ? 'Este espaço já está ocupado.' : 'Os dois espaços de acessórios estão ocupados.');
       this.move(item,{equipped:id});
       if (conflict) this.changeGear(player,conflict.id,false,world);
       if (item.data.kind==='runningShoes') player.runningShoes = true;
       this.event(world,player,'equipped',item.data);
       return 'Equipado.';
     }
-    if (!('equipped' in item.place) || item.place.equipped!==id) return 'Equipamento indisponível.';
-    if (!this.available(id)) return 'Inventário cheio.';
+    if (!('equipped' in item.place) || item.place.equipped!==id) return this.reject(player,world,'Equipamento indisponível.');
+    if (!this.available(id)) return this.reject(player,world,'Inventário cheio.');
     this.move(item,{holder:id});
     if (item.data.kind==='binoculars') this.stopBinoculars(id);
     if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
@@ -1418,7 +1418,7 @@ export class Gameplay {
 
   private treat(player:Player, world:GameplayWorld) {
     const patient = this.treatmentPatient(player,world.now);
-    if (!patient) return 'Atendimento indisponível.';
+    if (!patient) return this.reject(player,world,'Atendimento indisponível.');
     const recovering = patient.knockedOut;
     this.transport.detach(patient,world);
     this.combat.treat(patient,world.now);
@@ -1427,32 +1427,37 @@ export class Gameplay {
     return 'Atendimento concluído.';
   }
 
+  private reject(player:Player,world:GameplayWorld,message:string) {
+    world.actionFailed?.(player.id,message);
+    return message;
+  }
+
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
     const {id} = player;
     if (action.kind==='dialogue-close') return this.dialogues.close(id);
-    if (player.knockedOut) return 'Você está nocauteado.';
+    if (player.knockedOut) return this.reject(player,world,'Você está nocauteado.');
     const officeChannel = this.privateOffices.channels.get(id);
-    if (officeChannel?.kind==='office-cash' && action.kind!=='office-cancel') return 'Você já está embolsando dinheiro.';
-    if (this.pendingInstallations.has(id)) return 'Você já está instalando uma decoração.';
-    if (officeChannel && (action.kind==='install' || action.kind==='office-install')) return 'Já existe uma interação em andamento.';
+    if (officeChannel?.kind==='office-cash' && action.kind!=='office-cancel') return this.reject(player,world,'Você já está embolsando dinheiro.');
+    if (this.pendingInstallations.has(id)) return this.reject(player,world,'Você já está instalando uma decoração.');
+    if (officeChannel && (action.kind==='install' || action.kind==='office-install')) return this.reject(player,world,'Já existe uma interação em andamento.');
     if (action.kind==='release') return this.transport.drop(player,world) ? 'Jogador colocado no chão.' : undefined;
     if (action.kind==='treat') return this.treat(player,world);
-    if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return 'Solte o jogador primeiro.';
+    if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return this.reject(player,world,'Solte o jogador primeiro.');
     if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
     if (action.kind==='talk' || action.kind==='open-shop') {
       const error = this.dialogues.open(player,action.target,action.kind==='open-shop',action.target==='silvio' && world.missionSwapUsed?.(id));
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
-      return error;
+      return error ? this.reject(player,world,error) : undefined;
     }
     if (action.kind==='carry' || action.kind==='inspect-down') {
       const target = world.players.find(person=>person.id===action.target);
       if (action.kind==='carry') {
-        if (!this.transport.carry(player,target,world)) return 'Esse jogador não pode ser carregado agora.';
+        if (!this.transport.carry(player,target,world)) return this.reject(player,world,'Esse jogador não pode ser carregado agora.');
         this.dialogues.close(id);
         this.phone.leave(player,world);
         return 'Jogador carregado.';
       }
-      if (!target || !canReachDownedPlayer(player,target)) return 'Aproxime-se do jogador nocauteado.';
+      if (!target || !canReachDownedPlayer(player,target)) return this.reject(player,world,'Aproxime-se do jogador nocauteado.');
       return target.carried ? 'Nocauteado · em transporte.' : 'Nocauteado · pode ser socorrido ou carregado.';
     }
     if (action.kind==='dialogue-choice') return this.dialogues.choose(player,action.target,action.token,
@@ -1462,8 +1467,8 @@ export class Gameplay {
         swapMissions:()=>world.swapMissions?.(id) ?? 'unavailable',
       });
     if (action.kind==='use-binoculars') {
-      if (!this.wearing(id,'binoculars')) return 'Equipe o Binóculo.';
-      if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return 'Binóculo em recarga.';
+      if (!this.wearing(id,'binoculars')) return this.reject(player,world,'Equipe o Binóculo.');
+      if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Binóculo em recarga.');
       const activeUntil = world.now+binoculars.duration;
       this.binocularUse.set(id,{activeUntil,readyAt:activeUntil+binoculars.cooldown});
       return `Binóculo ativo por ${binoculars.duration/1000} s.`;
@@ -1478,16 +1483,16 @@ export class Gameplay {
         return;
       }
       const item = this.wearing(id,'megaphone');
-      if (!item || !world.voice(id)) return 'Equipe o Megafone e ative a voz.';
-      if (this.megaphoneBroadcast) return 'Canal de Megafone ocupado.';
-      if ((this.megaphoneRecharge.get(item.id)?.until ?? 0)>world.now) return 'Megafone em recarga.';
+      if (!item || !world.voice(id)) return this.reject(player,world,'Equipe o Megafone e ative a voz.');
+      if (this.megaphoneBroadcast) return this.reject(player,world,'Canal de Megafone ocupado.');
+      if ((this.megaphoneRecharge.get(item.id)?.until ?? 0)>world.now) return this.reject(player,world,'Megafone em recarga.');
       this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration,sampledAt:world.now};
       this.event(world,player,'megaphone-started',item,undefined,{witnesses:[]});
       return 'Megafone ativo.';
     }
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');
-      if (!item) return 'Equipe o modulador de voz.';
+      if (!item) return this.reject(player,world,'Equipe o modulador de voz.');
       const before = this.modulator.view(item.id).active;
       const message = this.modulator.toggle(item.id);
       if (!before && this.modulator.view(item.id).active) this.event(world,player,'used',item);
@@ -1495,7 +1500,7 @@ export class Gameplay {
     }
     if (action.kind==='aid') {
       const target = world.players.find(person=>person.id===action.target);
-      if (!target || !this.combat.aid(player,target,world.now)) return 'Aproxime-se de um jogador nocauteado.';
+      if (!target || !this.combat.aid(player,target,world.now)) return this.reject(player,world,'Aproxime-se de um jogador nocauteado.');
       this.transport.detach(target,world);
       publishGameplay(world,target,'character-recovered');
       this.event(world,player,'aided',undefined,target.id);
@@ -1503,14 +1508,14 @@ export class Gameplay {
     }
     if (action.kind==='attack') {
       const weapon = equippedWeapon(this.equipped(id).map(item=>item.data));
-      if (!weapon) return 'Equipe uma arma.';
+      if (!weapon) return this.reject(player,world,'Equipe uma arma.');
       const result = this.combat.attack(player,world.now,weapon);
       const sample = this.roomSamples.get(id);
       if (!result && sample?.securityPeer) {
         sample.securityPeer = undefined;
         publishGameplay(world,player,'security-watch-interrupted',{witnesses:[]});
       }
-      return result;
+      return result ? this.reject(player,world,result) : undefined;
     }
     if (action.kind==='photo' || action.kind==='selfie') return this.capture(player,action.kind==='selfie',world);
     if (action.kind.startsWith('info-') || action.kind==='photo-delete' || action.kind==='photo-publish') {
@@ -1518,7 +1523,7 @@ export class Gameplay {
         (type,photo,actor,target)=>this.event(world,actor,type,undefined,target,{photo}));
     }
     if (action.kind==='conceal') {
-      if (action.item===undefined || !this.exposed.get(id)?.delete(action.item)) return 'Objeto não está exposto.';
+      if (action.item===undefined || !this.exposed.get(id)?.delete(action.item)) return this.reject(player,world,'Objeto não está exposto.');
       return 'Objeto guardado.';
     }
     if (['install','uninstall','mark','slice'].includes(action.kind)) return this.changeInstallation(player,action,world);
@@ -1526,18 +1531,18 @@ export class Gameplay {
     const place = locations(player).find(key => key===action.place);
     const terminal = place && terminals[place];
     if (action.kind==='supply') {
-      if (!terminal || !('supply' in terminal)) return 'Aproxime-se do balcão.';
-      if (!this.available(id)) return 'Inventário cheio.';
+      if (!terminal || !('supply' in terminal)) return this.reject(player,world,'Aproxime-se do balcão.');
+      if (!this.available(id)) return this.reject(player,world,'Inventário cheio.');
       const projectDocument = terminal.supply==='document' && action.target?.startsWith('project-');
       if (!projectDocument && this.inventory(id).some(({data})=>data.kind===terminal.supply)) {
-        return 'Você já está carregando um desse balcão.';
+        return this.reject(player,world,'Você já está carregando um desse balcão.');
       }
-      if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return stationRecharge.coffee.feedback;
+      if (terminal.supply==='coffee' && !this.stationCooldowns.take('coffee',world.now)) return this.reject(player,world,stationRecharge.coffee.feedback);
       const data = this.create(terminal.supply,{holder:id});
       if (data.kind==='document') {
         const project = action.target?.startsWith('project-') ? Number(action.target.slice(8)) : undefined;
         const bill = project===undefined ? undefined : bills[project];
-        if (project!==undefined && (!action.target || !/^project-[0-9]+$/.test(action.target) || !bill)) { this.remove(this.items.get(data.id)!); return 'Projeto indisponível.'; }
+        if (project!==undefined && (!action.target || !/^project-[0-9]+$/.test(action.target) || !bill)) { this.remove(this.items.get(data.id)!); return this.reject(player,world,'Projeto indisponível.'); }
         const template = action.target==='queue' ? documentTemplates.queue : documentTemplates.elevator;
         const requiredOffice = !bill && 'office' in template && world.players.some(person => person.id!==id && (world.hasMandate?.(person.id) ?? world.office(person.id)===template.office)) ?
           template.office : undefined;
@@ -1552,35 +1557,36 @@ export class Gameplay {
     }
     if (action.kind==='accept' || action.kind==='decline') return this.respond(player,action,world);
     const item = action.item===undefined ? undefined : this.items.get(action.item);
-    if (!item || ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now)) return 'Objeto indisponível.';
+    if (!item || ('ground' in item.place && (item.place.expires ?? Infinity)<=world.now)) return this.reject(player,world,'Objeto indisponível.');
     const {data} = item;
     if (action.kind==='collect' || action.kind==='recover') {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
-      if (!accessible || !this.available(id) && !this.stack(id,data.kind)) return 'Objeto fora de alcance ou inventário cheio.';
+      if (!accessible) return this.reject(player,world,'Objeto fora de alcance.');
+      if (!this.available(id) && !this.stack(id,data.kind)) return this.reject(player,world,'Inventário cheio.');
       this.addToInventory(item,id);
       if (cashAmount(data)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
       return 'Objeto recolhido.';
     }
-    if (!('holder' in item.place) || item.place.holder!==id) return 'O objeto não está com você.';
+    if (!('holder' in item.place) || item.place.holder!==id) return this.reject(player,world,'O objeto não está com você.');
     const definition = objects[data.kind];
     const quantity = action.quantity ?? itemQuantity(data);
     if ((action.kind==='offer' || action.kind==='drop') &&
-      (!Number.isSafeInteger(quantity) || quantity<1 || quantity>itemQuantity(data))) return 'Quantidade indisponível.';
+      (!Number.isSafeInteger(quantity) || quantity<1 || quantity>itemQuantity(data))) return this.reject(player,world,'Quantidade indisponível.');
     switch (action.kind) {
       case 'expose':
-        if (!('exposable' in definition)) return 'Este objeto fica guardado.';
-        if (this.exposed.get(id)?.has(data.id)) return 'Objeto já exposto.';
+        if (!('exposable' in definition)) return this.reject(player,world,'Este objeto fica guardado.');
+        if (this.exposed.get(id)?.has(data.id)) return this.reject(player,world,'Objeto já exposto.');
         this.expose(id,data.id);
         this.event(world,player,'exposed',data);
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
         const target = world.players.find(person => !person.npc && person.id===action.target && person.id!==id && canReachObject(player,person));
-        if (!target) return 'Aproxime-se do destinatário.';
+        if (!target) return this.reject(player,world,'Aproxime-se do destinatário.');
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
-          return 'Este jogador não pode assinar o documento.';
+          return this.reject(player,world,'Este jogador não pode assinar o documento.');
         }
         this.clearRequests(data.id);
         const key = ++this.serial;
@@ -1589,15 +1595,15 @@ export class Gameplay {
         return 'Pedido enviado.';
       }
       case 'drop': {
-        if (this.groundItems(world.now).length>=maxGroundItems) return 'Há objetos demais no chão.';
+        if (this.groundItems(world.now).length>=maxGroundItems) return this.reject(player,world,'Há objetos demais no chão.');
         const dropped = this.takeUnits(item,quantity);
         this.dropItem(player,dropped,world);
         return 'Objeto largado.';
       }
       case 'store':
-        if (!place || !terminal || !('storage' in terminal)) return 'Aproxime-se de um armário.';
+        if (!place || !terminal || !('storage' in terminal)) return this.reject(player,world,'Aproxime-se de um armário.');
         if ([...this.items.values()].filter(({place:location})=>'storage' in location && location.storage===place).length>=12) {
-          return 'O armário está cheio.';
+          return this.reject(player,world,'O armário está cheio.');
         }
         this.move(item,{storage:place});
         this.event(world,player,'stored',data);
@@ -1606,9 +1612,9 @@ export class Gameplay {
         const total = cashAmount(data);
         const partial = action.target==='partial';
         const amount = partial ? treasuryPartialAmount(total ?? 0) : total;
-        if (place!=='treasury' || !terminal || !total) return 'Leve a maleta à Tesouraria.';
-        if (action.expectedCash!==undefined && action.expectedCash!==total) return 'O valor da maleta mudou.';
-        if (!amount || !world.deposit?.(id,amount)) return 'Leve a maleta à Tesouraria.';
+        if (place!=='treasury' || !terminal || !total) return this.reject(player,world,'Leve a maleta à Tesouraria.');
+        if (action.expectedCash!==undefined && action.expectedCash!==total) return this.reject(player,world,'O valor da maleta mudou.');
+        if (!amount || !world.deposit?.(id,amount)) return this.reject(player,world,'Leve a maleta à Tesouraria.');
         if (partial) {
           data.cash = Math.round((total!-amount)*10)/10;
           this.clearRequests(data.id);
@@ -1620,17 +1626,17 @@ export class Gameplay {
         return `${money(amount)} entregues à Tesouraria.`;
       }
       case 'use':
-        if (cashAmount(data)) return 'Leve o dinheiro ao cofre do seu gabinete.';
-        if (!('use' in definition)) return 'Este objeto não pode ser usado dessa forma.';
+        if (cashAmount(data)) return this.reject(player,world,'Leve o dinheiro ao cofre do seu gabinete.');
+        if (!('use' in definition)) return this.reject(player,world,'Este objeto não pode ser usado dessa forma.');
         if (data.kind==='mensalUnderwear') {
-          if ((this.concealedUntil.get(id) ?? 0)>world.now) return 'Você já está ocultando dinheiro.';
+          if ((this.concealedUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'Você já está ocultando dinheiro.');
           this.remove(item);
           this.concealedUntil.set(id,world.now+concealment.duration);
           this.event(world,player,'concealment-started',data,undefined,{witnesses:[],amount:Number(this.hasVisibleCash(id,world.now,id))});
           return `Dinheiro oculto por ${concealment.duration/1000} s.`;
         }
         if (data.kind==='firstAidKit') {
-          if (this.healthFraction(player,world.now)>=1) return 'Seus PV já estão cheios.';
+          if (this.healthFraction(player,world.now)>=1) return this.reject(player,world,'Seus PV já estão cheios.');
           this.combat.heal(player,firstAidKit.healing);
         }
         const consumed = this.takeUnits(item,1);
@@ -1642,28 +1648,28 @@ export class Gameplay {
         this.event(world,player,'used',consumed.data,ownOffice ? id : undefined,{place:consumptionRoom});
         return data.kind==='firstAidKit' ? 'Primeiros socorros aplicados.' : 'Objeto utilizado.';
       case 'destroy':
-        if (!('destructible' in definition)) return 'Este objeto não pode ser destruído.';
+        if (!('destructible' in definition)) return this.reject(player,world,'Este objeto não pode ser destruído.');
         this.remove(item);
         this.event(world,player,'destroyed',data);
         return 'Objeto destruído.';
       case 'edit': {
-        if (!data.document || data.document.project===undefined) return 'Selecione um documento de projeto.';
+        if (!data.document || data.document.project===undefined) return this.reject(player,world,'Selecione um documento de projeto.');
         const project = Number(action.target);
-        if (!action.target || !/^[0-9]+$/.test(action.target) || !Number.isInteger(project) || !bills[project] || project===data.document.project) return 'Escolha outro projeto.';
-        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return 'Aproxime-se da copiadora da Central de Expediente.';
-        if (this.forgery.has(id)) return 'Adulteração em andamento.';
+        if (!action.target || !/^[0-9]+$/.test(action.target) || !Number.isInteger(project) || !bills[project] || project===data.document.project) return this.reject(player,world,'Escolha outro projeto.');
+        if (!canReachObject(player,terminals.reprography.point,{handsFree:true})) return this.reject(player,world,'Aproxime-se da copiadora da Central de Expediente.');
+        if (this.forgery.has(id)) return this.reject(player,world,'Adulteração em andamento.');
         this.forgery.set(id,{item:data.id,project,end:world.now+documentRules.forgeryMs});
         return 'Adulteração iniciada.';
       }
       case 'stamp':
-        if (!data.document || !terminal || !('stamp' in terminal)) return 'Aproxime-se de um balcão com carimbo.';
-        if (data.document.project!==undefined) return 'Projetos não exigem carimbos.';
-        if (data.document.stamps.includes(terminal.stamp)) return 'Este carimbo já consta no documento.';
+        if (!data.document || !terminal || !('stamp' in terminal)) return this.reject(player,world,'Aproxime-se de um balcão com carimbo.');
+        if (data.document.project!==undefined) return this.reject(player,world,'Projetos não exigem carimbos.');
+        if (data.document.stamps.includes(terminal.stamp)) return this.reject(player,world,'Este carimbo já consta no documento.');
         data.document.stamps.push(terminal.stamp);
         this.event(world,player,'stamped',data);
         return 'Documento carimbado.';
       case 'verify-document':
-        if (!data.document || !terminal || !canVerifyDocumentAt(place)) return 'Leve o documento à Secretaria ou ao Protocolo.';
+        if (!data.document || !terminal || !canVerifyDocumentAt(place)) return this.reject(player,world,'Leve o documento à Secretaria ou ao Protocolo.');
         return this.documentRequirements(data,id) ?? 'Documento atende aos requisitos formais.';
     }
   }
@@ -1694,7 +1700,7 @@ export class Gameplay {
 
   private respond(player:Player, action:GameplayAction, world:GameplayWorld) {
     const request = this.requests.get(action.item ?? -1);
-    if (!request || request.to!==player.id || request.expires<=world.now) return 'Pedido indisponível.';
+    if (!request || request.to!==player.id || request.expires<=world.now) return this.reject(player,world,'Pedido indisponível.');
     if (action.kind==='decline') {
       this.requests.delete(request.id);
       return 'Pedido recusado.';
@@ -1702,12 +1708,12 @@ export class Gameplay {
     const owner = world.players.find(person => person.id===request.from);
     const item = this.items.get(request.item);
     if (!owner || !item || !('holder' in item.place) || item.place.holder!==owner.id || !canReachObject(player,owner)) {
-      return 'O portador ou objeto está fora de alcance.';
+      return this.reject(player,world,'O portador ou objeto está fora de alcance.');
     }
     if (request.kind==='offer') {
-      if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return 'Inventário cheio.';
+      if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
       const quantity = request.quantity ?? itemQuantity(item.data);
-      if (quantity>itemQuantity(item.data)) return 'Quantidade indisponível.';
+      if (quantity>itemQuantity(item.data)) return this.reject(player,world,'Quantidade indisponível.');
       const transferred = this.takeUnits(item,quantity);
       if (this.exposed.get(owner.id)?.has(item.data.id)) {
         this.transfers.push({from:owner.id,to:player.id,item:item.data.id,kind:item.data.kind,at:world.now,point:{x:owner.x,y:owner.y},destination:{x:player.x,y:player.y}});
@@ -1729,7 +1735,7 @@ export class Gameplay {
     const doc = item.data.document;
     if (!doc || doc.signatures.some(person => person.id===player.id) ||
       (doc.project!==undefined && player.npc) ||
-      (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return 'Assinatura inválida.';
+      (doc.requiredOffice && !(world.hasMandate?.(player.id) ?? world.office(player.id)===doc.requiredOffice))) return this.reject(player,world,'Assinatura inválida.');
     this.requests.delete(request.id);
     doc.signatures.push({id:player.id,name:player.nick});
     this.signProject(item.data,player,world.now);
