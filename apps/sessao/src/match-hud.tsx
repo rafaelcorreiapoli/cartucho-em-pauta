@@ -67,8 +67,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   const gear = mountEquippedGear(element('equipped-gear'),useEquipped);
   function useEquipped(kind:EquipmentAction) {
     const equipped = previous?.gameplay?.equipped;
-    const voting = previous?.phase==='ballot' || !!previous?.cassation;
-    if ((previous?.phase!=='negotiation' && !(voting && (kind==='attack' || kind==='toggle-modulator'))) || !own || own.knockedOut || own.carrying || own.carried) return false;
+    if (previous?.phase!=='negotiation' || !own || own.knockedOut || own.carrying || own.carried) return false;
     if (kind==='attack' ? !equippedWeapon(equipped) :
         !equipped?.some(item=>equipmentControls[item.kind as keyof typeof equipmentControls]?.action===kind)) return false;
     sendField({kind});

@@ -21,7 +21,7 @@ class TestRoom extends SessionRoom {
       const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
       const player:import('../src/map').Player|undefined = Reflect.get(this,'players').values().next().value?.player;
       if (!player || match.phase!=='negotiation' || match.projectIndex!==undefined || match.projectRound>=3) return;
-      const now = this.clock.currentTime;
+      const now = match.gameTime(this.clock.currentTime);
       if (match.gameplayWorld([player],now,()=>false).projectFilingError?.(player.id,match.projectRound)) return;
       publishProjectFiling(match,player,match.projectRound,now);
     },500);

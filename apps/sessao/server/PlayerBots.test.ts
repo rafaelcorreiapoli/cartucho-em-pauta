@@ -41,7 +41,7 @@ function gameWithBots(random:()=>number) {
   return {human,controls,bots,players,match,view,gameplay,worldAt,events,
     advance(until:number) {
       for (;now<=until && match.running;now+=STEP_MS) {
-        if (match.ballotCountdown(now)===undefined) {
+        if (match.ballotCountdown(match.gameTime(now))===undefined) {
           for (const state of controls.values()) if (state.player.bot) bots.move(state,gameplay.phoneActivity(state.player.id));
         }
         match.advance(now);
@@ -53,12 +53,12 @@ function gameWithBots(random:()=>number) {
             if (control.plenary) Object.assign(control.player,PLENARY_SEATS[index]);
           });
         }
-        const world = worldAt(now);
-        gameplay.tick(world,match.phase==='negotiation',match.phase==='ballot');
+        const world = worldAt(match.gameTime(now));
+        gameplay.tick(world,match.phase==='negotiation');
         bots.tick(match,gameplay,world,(state,peer)=>
           (!state.plenary || inPlenary(peer)) &&
-          (state.plenary && !match.powerOut || characterVisible(state.player,peer,world.vision(state.player.id))));
-        match.advancePower(now,id=>controls.get(id)?.player);
+          (state.plenary && !match.powerOut || characterVisible(state.player,peer,world.vision(state.player.id))),now);
+        match.advancePower(world.now,id=>controls.get(id)?.player);
       }
     },
   };
