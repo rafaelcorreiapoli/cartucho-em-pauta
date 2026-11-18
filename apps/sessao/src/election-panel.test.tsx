@@ -17,11 +17,13 @@ test('the election summary hides the countdown after the match ends',()=>{
 test('the polls dialog presents the current candidate and uses the shared native close',()=>{
   const candidate = {id:'a',name:'Rafa',character:0,race:'deputy' as const,estimate:73,trend:1};
   const markup = renderToStaticMarkup(<ElectionPolls id="a" election={{
-    cycle:1,remaining:85,offices:[],polls:[candidate],canObject:false,canCampaign:true,canInterview:false,
+    cycle:2,remaining:85,offices:[],polls:[candidate],result:{cycle:1,offices:[]},canObject:false,canCampaign:true,canInterview:false,
   }}/>);
   expect(markup).toContain('id="election-poll-title"');
   expect(markup).toContain('aria-label="Fechar pesquisa eleitoral"');
   expect(markup).toContain('method="dialog"');
+  expect(markup).not.toContain('Renovação 1');
+  expect(markup.match(/<section\b/g)).toHaveLength(1);
   expect(markup).toContain('Rafa (você)');
   expect(markup).toContain('aria-valuenow="73"');
 });
