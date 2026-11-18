@@ -198,6 +198,7 @@
   box-shadow: inset 0 0 18px #76c8990d;
 }
 #command-strip #profile-dock .portrait {
+  display: block;
   --portrait-size: clamp(68px, 6.1vw, 98px);
   border-color: #6da382;
   border-radius: 16px;
@@ -611,7 +612,7 @@
 .congress-laurel-right { right: auto; left: calc(100% + 8px); scale: -1 1; }
 .congress-budget { gap: 12px; margin-top: 5px; font-size: clamp(12px,1.15vw,18px); }
 .congress-budget strong { font-size: 1.12em; }
-.congress-session-clock, .congress-debt, .congress-payroll {
+.congress-session-clock, .congress-payroll {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -623,7 +624,7 @@
 .congress-payroll strong { color: var(--color-hud-budget); white-space: nowrap; }
 .congress-session-clock strong { color: var(--color-hud-budget); font-size: 1.25em; }
 .congress-session-clock[data-urgent="true"] strong,
-.congress-budget[data-in-debt="true"] strong, .congress-debt { color: #ffb2a4; }
+.congress-budget[data-in-debt="true"] { color: #ffb2a4; }
 
 #command-strip #election-dock { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: end; width: 100%; }
 #command-strip #election-dock > #open-election-polls {
@@ -650,8 +651,9 @@
 .election-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  direction: ltr;
+  justify-content: flex-end;
+  gap: 8px;
   padding-inline: 0;
   font-weight: 750;
   white-space: normal;
@@ -1157,4 +1159,47 @@
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #plenary-settings {
     inset-inline: auto var(--hud-edge);
   }
+}
+
+/* Keep the public payroll beside the election area without covering the world. */
+#command-strip .right-hud {
+  width: min(440px, 100%);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
+  column-gap: 16px;
+}
+.right-hud > * { grid-column: 1 / -1; }
+.right-hud > #payroll-mount { grid-column: 1; grid-row: 1; justify-self: start; }
+.right-hud > #election-indicator-mount { grid-column: 2; grid-row: 1; width: 100%; margin-block-start: 0; }
+#payroll-mount .congress-payroll { display: grid; justify-items: start; justify-content: start; gap: 4px; margin-top: 7px; }
+.payroll-label, .payroll-countdown { display: flex; align-items: center; gap: .4em; white-space: nowrap; }
+.payroll-label { font-size: .85em; }
+#payroll-mount .congress-payroll > strong { font-size: 1.1em; }
+@media (min-width: 761px) and (max-width: 1200px) {
+  #command-strip .right-hud { grid-template-columns: minmax(0, 1fr); }
+  .right-hud > #election-indicator-mount { grid-column: 1; }
+  .right-hud > #payroll-mount { grid-row: 2; justify-self: end; }
+}
+@media (max-width: 760px) {
+  #command-strip .right-hud { grid-template-columns: minmax(0, 1fr); }
+  .right-hud > #election-indicator-mount { grid-column: 1; }
+  .right-hud > #payroll-mount { grid-row: 2; justify-self: end; }
+}
+
+.congress-meter-track { padding: 5px 6px; }
+.congress-meter-track > strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(13px, 1.2vw, 20px);
+  color: #fff9e8;
+  text-shadow: 0 1px 3px #000, 0 0 3px #000;
+  pointer-events: none;
+}
+.congress-summary-row { display: flex; justify-content: center; align-items: center; gap: 24px; }
+.congress-summary-row .congress-budget, .congress-summary-row .congress-session-clock { margin-top: 3px; gap: .45em; }
+.congress-summary-row .congress-session-clock strong { font-size: 1.12em; }
+
+@media (max-width: 640px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #payroll-mount { display: none; }
 }

@@ -143,7 +143,7 @@ async page => {
     await dossier.waitFor({state:'hidden'});
   }
   await page.setViewportSize({width:1280,height:720});
-  await page.getByRole('timer',{name:'Próxima distribuição de salários'}).getByText('Custo',{exact:true}).waitFor();
+  await page.locator('#payroll-mount').getByText('Folha salarial',{exact:true}).waitFor();
   const pollButton = page.getByRole('button',{name:'Pesquisa eleitoral',exact:true});
   await pollButton.waitFor();
   if (await pollButton.getAttribute('aria-keyshortcuts')!=='L' || await pollButton.locator('kbd').count()) {
