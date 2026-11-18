@@ -6,7 +6,7 @@ export const offices = {
 export type Office = keyof typeof offices;
 export const officeKeys = Object.keys(offices) as Office[];
 export const ELECTION_RULES = {
-  interval:180_000, cycles:3, matchDuration:600_000, minimumMandates:3, startingBudget:32, salary:3, publicDuty:6, treasuryReputationCap:4, advertisementCost:2,
+  interval:180_000, cycles:3, matchDuration:600_000, minimumMandates:3, startingBudget:32, publicDuty:6, treasuryReputationCap:4, advertisementCost:2,
   interviewLength:15_000, interviewGap:15_000,
 } as const;
 export const advertisements = {
@@ -29,8 +29,8 @@ export type Poll = {id:string; name:string; character:number; race:Office; estim
 export type ElectionView = {
   cycle:number; remaining:number;
   offices:Assignment[]; polls:Poll[];
-  personal?:{office:Office; race:Office; advertised:boolean; spoke:boolean; interviewed:boolean; salary:number; lost?:boolean};
-  result?:{cycle:number; offices:Elected[]; salary:number; eliminated?:string; expectedSalary?:number};
+  personal?:{office:Office; race:Office; advertised:boolean; spoke:boolean; interviewed:boolean; lost?:boolean};
+  result?:{cycle:number; offices:Elected[]; eliminated?:string};
   broadcast?:{id:string; name:string; remaining:number};
   notice?:{seq:number; text:string};
   objection?:string;

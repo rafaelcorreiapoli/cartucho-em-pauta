@@ -45,5 +45,6 @@ test('the election indicator owns the dial and its keyboard shortcut',()=>{
   expect(markup).toContain('id="election-dock"');
   expect(markup).toContain('data-urgency="high"');
   expect(markup).toContain('aria-keyshortcuts="L"');
+  expect(markup).toContain('>L</kbd>');
   expect(renderToStaticMarkup(<ElectionIndicator open={()=>false}/>)).not.toContain('<button');
 });

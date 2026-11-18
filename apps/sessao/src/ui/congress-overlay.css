@@ -558,7 +558,7 @@
 .congress-laurel-right { right: auto; left: calc(100% + 8px); scale: -1 1; }
 .congress-budget { gap: 12px; margin-top: 5px; font-size: clamp(12px,1.15vw,18px); }
 .congress-budget strong { font-size: 1.12em; }
-.congress-session-clock, .congress-debt {
+.congress-session-clock, .congress-debt, .congress-payroll {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -567,6 +567,7 @@
   color: var(--color-hud-muted);
   font-size: clamp(12px,1.15vw,18px);
 }
+.congress-payroll strong { color: var(--color-hud-budget); white-space: nowrap; }
 .congress-session-clock strong { color: var(--color-hud-budget); font-size: 1.25em; }
 .congress-session-clock[data-urgent="true"] strong,
 .congress-budget[data-in-debt="true"] strong, .congress-debt { color: #ffb2a4; }

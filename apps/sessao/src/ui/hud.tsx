@@ -38,7 +38,7 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <div className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></div>;
 }
 
-export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn,payroll}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -58,6 +58,11 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
       help={`Projetos e despesas obrigatórias podem gerar dívida. A cada ${publicDebtRules.interval/1000} s, cada R$ 10 mil de dívida ou fração custa 1 ponto de estabilidade, até ${publicDebtRules.maximumLoss}. Depósitos na Tesouraria abatem a dívida.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelpButton>
+    {payroll && <div className="congress-payroll" role="timer" aria-label="Próxima distribuição de salários">
+      <HudIcon name="wallet"/><span>Salários em</span>
+      <strong className="tabular-nums">{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</strong>
+      <span>·</span><span>Custo</span><strong className="tabular-nums">{money(payroll.cost)}</strong>
+    </div>}
     {debtPenaltyIn!==undefined && <div className="congress-debt" role="timer" aria-label="Próxima perda de estabilidade por dívida">
       <HudIcon name="alert"/><span>Dívida</span><strong>−{publicDebtStabilityLoss(budget)} de estabilidade em {debtPenaltyIn} s</strong>
     </div>}

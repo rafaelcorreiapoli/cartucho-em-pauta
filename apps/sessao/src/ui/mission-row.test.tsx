@@ -66,6 +66,13 @@ test('an opposition mission shows progress across successive ballots',()=>{
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
 });
 
+test('the parliament HUD shows the next payroll countdown and cost',()=>{
+  const markup = renderToStaticMarkup(<ParliamentMetrics stability={48} budget={32} payroll={{remaining:125,cost:18}}/>);
+  expect(markup).toContain('Próxima distribuição de salários');
+  expect(markup).toContain('2:05');
+  expect(markup).toContain('R$ 180 mil');
+});
+
 test('the parliament HUD uses the configured threshold and explains the budget penalty',()=>{
   const atTarget = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target} budget={32}/>);
   const below = renderToStaticMarkup(<ParliamentMetrics stability={stabilityRules.target-1} budget={32}/>);
@@ -586,7 +593,7 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   match.setAgendaCommerce(()=>now);
   match.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
   const economy = Reflect.get(match,'economy');
-  expect(economy.spend(limited.id,5.5)).toBe(true);
+  expect(economy.spend(limited.id,6.5)).toBe(true);
   const view = (player:Player)=>match.view(player.id,ids,now);
   const draw = (player:Player,kind:Mission['kind'])=>{
     const {agenda} = Reflect.get(economy,'accounts').get(player.id);
@@ -1730,7 +1737,7 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   match.vote(player.id,'yes',now+1);
   now += BALLOT_MS;
   match.advance(now,recipients=>{ for (const id of recipients) if (id===player.id) game.distributePinga(player,now); });
-  expect(view().wallet).toBe(0);
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
   expect(draw()).toBeDefined();
 
   const world = match.gameplayWorld([player],++now,()=>false);

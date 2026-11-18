@@ -9,7 +9,10 @@ class TestRoom extends SessionRoom {
     const positioned = new WeakSet();
     const voice:Set<string> = Reflect.get(this,'voice');
     this.clock.setInterval(()=>{
-      if (Reflect.get(this,'match').phase!=='negotiation') return;
+      const match = Reflect.get(this,'match');
+      if (match.phase!=='negotiation') return;
+      // Keep the starting balances and transfers deterministic for this flow.
+      Reflect.set(match,'nextPayrollAt',Infinity);
       for (const state of Reflect.get(this,'players').values()) {
         if (positioned.has(state)) continue;
         positioned.add(state);
