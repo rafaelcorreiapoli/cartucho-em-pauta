@@ -964,15 +964,18 @@
 ) { display: none; }
 
 @media (max-width: 760px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #command-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-block-start: calc(var(--hud-edge) + 26px);
+  }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #congress-dock {
-    grid-column: 1 / -1;
-    justify-self: center;
+    grid-column: 1;
   }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] .election-and-incidents {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-column: 2;
+    grid-row: 1;
     anchor-name: --plenary-election;
-    max-width: min(100%, 300px);
+    max-width: 100%;
   }
 }
 #command-deck #legislative-dock {
@@ -1011,7 +1014,7 @@
   margin-block-start: 8px;
 }
 #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #world #hud-notices {
-  inset-block-start: 88px;
+  inset-block-start: 154px;
   margin-block-start: 0;
 }
 @media (max-width: 760px) {
