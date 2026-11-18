@@ -166,21 +166,19 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 .evidence-tools { display:grid; gap:.45rem; }
 #politics-hint:empty { display:none; }
 
-#election-dock, #electoral-notice {
+#election-dock {
   position:absolute; right:max(12px,env(safe-area-inset-right)); top:max(12px,env(safe-area-inset-top));
   z-index:3; padding:.3rem; font-size:.8rem;
 }
 #election-dock > #open-election-polls { font-size:.78rem; gap:.6rem; }
 #election-timer { color:var(--hud-gold); font-variant-numeric:tabular-nums; }
 #election-dock .politics-content { bottom:auto; top:calc(100% + 6px); }
-#electoral-notice { top:66px; z-index:2; max-width:min(350px,calc(100% - 24px)); padding:.55rem .7rem; }
 #bill-objection { color:var(--hud-gold); }
 #election-polls h3 { margin:.5rem 0 .2rem; }
 #election-polls ol { margin:.25rem 0; padding-left:1.3rem; }
 @media (max-width:740px) {
   #election-dock { top:auto; bottom:max(111px,calc(100px + env(safe-area-inset-bottom))); }
   #election-dock .politics-content { top:auto; bottom:calc(100% + 6px); max-height:53dvh; }
-  #electoral-notice { top:auto; bottom:max(163px,calc(155px + env(safe-area-inset-bottom))); }
 }
 @media (max-width:740px) {
 }
@@ -245,7 +243,7 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
   #session:is([data-phase="negotiation"],[data-phase="ballot"],[data-phase="hearing"]) #plenary {
     left:auto; right:max(12px,env(safe-area-inset-right));
   }
-  #election-dock, #electoral-notice { right:auto; left:max(12px,env(safe-area-inset-left)); }
+  #election-dock { right:auto; left:max(12px,env(safe-area-inset-left)); }
   #election-dock .politics-content { right:auto; left:0; }
 }
 
