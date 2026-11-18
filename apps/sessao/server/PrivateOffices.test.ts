@@ -3,10 +3,10 @@ import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { decorationInstallMs } from '../src/installations';
 import type { GameplayWorld } from './gameplay-world';
-import { decorPoint, decorSlots, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
+import { decorPoint, decorSlots, eastAnnex, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
 import { canStand, localPerception, roomAt, wallBetween, type Player } from '../src/map';
 import { MAX_PLAYERS } from '../src/plenary';
-import { findRoute } from '../src/navigation';
+import { clearSegment, findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
 import { npcs, treasurer } from '../src/npcs';
 import { INVENTORY_SLOTS, terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
@@ -65,13 +65,20 @@ test('every seat has a unique reachable office, independent of office in Congres
   expect(game.view(owner,world).ownOffice).toBe(id);
 },15_000);
 
-test('office 06 opens onto the Central de Expediente and the old annex is closed',()=>{
-  const office = privateOffices[5];
+test('office 05 opens onto the Central de Expediente and its old space is closed',()=>{
+  const office = privateOffices[4];
   expect(roomAt(atDoor(office,false))).toBe('Central de Expediente');
-  expect(roomAt(atDoor(office,true))).toBe('Gabinete 06');
+  expect(roomAt(atDoor(office,true))).toBe('Gabinete 05');
   expect(wallBetween(atDoor(office,false),atDoor(office,true))).toBe(false);
-  expect(wallBetween({x:930,y:143},{x:970,y:143})).toBe(true);
-  expect(canStand(1024.5,85)).toBe(false);
+  expect(wallBetween({x:830.5,y:520},{x:830.5,y:550})).toBe(true);
+  expect(canStand(830.5,599)).toBe(false);
+});
+
+test('office 06 is accessible through the restored east annex',()=>{
+  expect(roomAt({x:1024.5,y:85})).toBe('Gabinete 06');
+  for (const y of [132,143,154]) {
+    expect(clearSegment({x:930,y},{x:eastAnnex.right-6,y},canStand)).toBe(true);
+  }
 });
 
 test('cash can only be converted once at the owners safe, with interruption and photo evidence',()=>{
@@ -119,7 +126,7 @@ test('cash can only be converted once at the owners safe, with interruption and 
   expect(events.filter(event=>event.type==='money-pocketed')).toHaveLength(1);
 });
 
-test.each([0,5])('office %i locks, permits exit and requires a separate cabinet breach',index=>{
+test.each([0,4])('office %i locks, permits exit and requires a separate cabinet breach',index=>{
   const {players:[owner,visitor],game,world,events,act,tick,buy} = setup(2,()=>index/privateOffices.length);
   const home = privateOffices[index];
   const failed:{id:string;message:string}[] = [];

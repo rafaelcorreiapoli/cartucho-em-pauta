@@ -43,6 +43,7 @@ function named(layer:string, name:string) {
 const property = (object:MapObject,name:string) => object.properties?.find(entry=>entry.name===name)?.value;
 export const mapPoint = (name:string) => position(named('Pontos',name));
 export const mapDoor = (name:string) => bounds(named('Portas',name));
+export const circulationBounds = (name:string) => bounds(named('Limites de circulação',name));
 export const roomBounds = (name:string) => bounds(named('Salas',name));
 export const seats = objects('Pontos').filter(({name})=>name==='Assento').map(position);
 export const doors = objects('Portas').map(object=>({name:object.name, area:bounds(object)}));

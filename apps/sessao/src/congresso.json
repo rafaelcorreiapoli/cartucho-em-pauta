@@ -7,7 +7,7 @@
   "infinite": false,
   "tilewidth": 1,
   "tileheight": 1,
-  "width": 960,
+  "width": 1136,
   "height": 759,
   "nextlayerid": 10,
   "nextobjectid": 194,
@@ -96,10 +96,10 @@
           ]
         },
         {
-          "id": 5,
-          "name": "Gabinete 05",
-          "x": 766,
-          "y": 541,
+          "id": 6,
+          "name": "Gabinete 06",
+          "x": 960,
+          "y": 27,
           "width": 129,
           "height": 87,
           "rotation": 0,
@@ -421,7 +421,7 @@
         },
         {
           "id": 24,
-          "name": "Gabinete 06",
+          "name": "Gabinete 05",
           "x": 812,
           "y": 403,
           "width": 138,
@@ -478,7 +478,18 @@
           "x": 950,
           "y": 10,
           "width": 10,
-          "height": 520,
+          "height": 115,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        },
+        {
+          "id": 28,
+          "name": "",
+          "x": 950,
+          "y": 161,
+          "width": 10,
+          "height": 369,
           "rotation": 0,
           "visible": true,
           "type": ""
@@ -671,6 +682,39 @@
           "type": ""
         },
         {
+          "id": 46,
+          "name": "",
+          "x": 960,
+          "y": 17,
+          "width": 139,
+          "height": 10,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        },
+        {
+          "id": 47,
+          "name": "",
+          "x": 1089,
+          "y": 27,
+          "width": 10,
+          "height": 134,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        },
+        {
+          "id": 48,
+          "name": "",
+          "x": 960,
+          "y": 161,
+          "width": 139,
+          "height": 11,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        },
+        {
           "id": 49,
           "name": "",
           "x": 139,
@@ -792,39 +836,6 @@
           "type": ""
         },
         {
-          "id": 61,
-          "name": "",
-          "x": 760,
-          "y": 541,
-          "width": 6,
-          "height": 87,
-          "rotation": 0,
-          "visible": true,
-          "type": ""
-        },
-        {
-          "id": 62,
-          "name": "",
-          "x": 895,
-          "y": 541,
-          "width": 6,
-          "height": 87,
-          "rotation": 0,
-          "visible": true,
-          "type": ""
-        },
-        {
-          "id": 63,
-          "name": "",
-          "x": 760,
-          "y": 628,
-          "width": 141,
-          "height": 10,
-          "rotation": 0,
-          "visible": true,
-          "type": ""
-        },
-        {
           "id": 64,
           "name": "",
           "x": 139,
@@ -929,6 +940,17 @@
           "x": 0,
           "y": 530,
           "width": 960,
+          "height": 11,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        },
+        {
+          "id": 74,
+          "name": "",
+          "x": 960,
+          "y": 114,
+          "width": 129,
           "height": 11,
           "rotation": 0,
           "visible": true,
@@ -1103,7 +1125,7 @@
         },
         {
           "id": 91,
-          "name": "Gabinete 06",
+          "name": "Gabinete 05",
           "x": 806,
           "y": 468,
           "width": 6,
@@ -1190,10 +1212,10 @@
           "type": ""
         },
         {
-          "id": 99,
-          "name": "Gabinete 05",
-          "x": 812.5,
-          "y": 530,
+          "id": 100,
+          "name": "Gabinete 06",
+          "x": 1006.5,
+          "y": 114,
           "width": 36,
           "height": 11,
           "rotation": 0,
@@ -1867,6 +1889,18 @@
           "point": true
         },
         {
+          "id": 119,
+          "name": "Balcão da tesouraria",
+          "x": 404,
+          "y": 331,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
+        {
           "id": 142,
           "name": "Terminal de segurança",
           "x": 788,
@@ -2193,42 +2227,6 @@
         {
           "id": 169,
           "name": "Gabinete 05: entrada",
-          "x": 830.5,
-          "y": 599,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
-          "id": 170,
-          "name": "Gabinete 05: cofre",
-          "x": 788,
-          "y": 583,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
-          "id": 171,
-          "name": "Gabinete 05: armário",
-          "x": 873,
-          "y": 583,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
-          "id": 172,
-          "name": "Gabinete 06: entrada",
           "x": 842,
           "y": 485.5,
           "width": 0,
@@ -2239,8 +2237,8 @@
           "point": true
         },
         {
-          "id": 173,
-          "name": "Gabinete 06: cofre",
+          "id": 170,
+          "name": "Gabinete 05: cofre",
           "x": 837,
           "y": 445,
           "width": 0,
@@ -2251,8 +2249,8 @@
           "point": true
         },
         {
-          "id": 174,
-          "name": "Gabinete 06: armário",
+          "id": 171,
+          "name": "Gabinete 05: armário",
           "x": 928,
           "y": 445,
           "width": 0,
@@ -2263,10 +2261,34 @@
           "point": true
         },
         {
-          "id": 119,
-          "name": "Balcão da tesouraria",
-          "x": 404,
-          "y": 331,
+          "id": 172,
+          "name": "Gabinete 06: entrada",
+          "x": 1024.5,
+          "y": 85,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
+        {
+          "id": 173,
+          "name": "Gabinete 06: cofre",
+          "x": 982,
+          "y": 69,
+          "width": 0,
+          "height": 0,
+          "rotation": 0,
+          "visible": true,
+          "type": "",
+          "point": true
+        },
+        {
+          "id": 174,
+          "name": "Gabinete 06: armário",
+          "x": 1067,
+          "y": 69,
           "width": 0,
           "height": 0,
           "rotation": 0,
@@ -2346,7 +2368,7 @@
           "name": "Piso",
           "x": 10,
           "y": 108,
-          "width": 940,
+          "width": 1079,
           "height": 64,
           "rotation": 0,
           "visible": true,
@@ -2430,7 +2452,7 @@
           "name": "Tapete",
           "x": 14,
           "y": 130,
-          "width": 932,
+          "width": 1061,
           "height": 23,
           "rotation": 0,
           "visible": true,
@@ -2537,6 +2559,30 @@
           "y": 32,
           "width": 197,
           "height": 73,
+          "rotation": 0,
+          "visible": true,
+          "type": ""
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Limites de circulação",
+      "color": "#7a9caa",
+      "type": "objectgroup",
+      "opacity": 1,
+      "visible": true,
+      "draworder": "index",
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 187,
+          "name": "Anexo leste",
+          "x": 960,
+          "y": 27,
+          "width": 129,
+          "height": 134,
           "rotation": 0,
           "visible": true,
           "type": ""

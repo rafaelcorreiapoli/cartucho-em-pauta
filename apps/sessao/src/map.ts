@@ -1,6 +1,6 @@
 import {investmentRules} from './public-investments';
 import { equipment } from './equipment';
-import { officeFixtures, privateOffices } from './private-offices';
+import { eastAnnex, officeFixtures, privateOffices } from './private-offices';
 import type { WeaponSwing } from './weapons';
 import { carrySpeedFactor } from './medical';
 import { mapNpcs, npcs } from './npcs';
@@ -57,6 +57,7 @@ const southRooms = [...privateOffices,isolationRoom].filter(({bounds})=>bounds[1
 
 export function canStand(x: number, y: number) {
   if (x<6 || x>WIDTH-6 || y<7 || y>HEIGHT) return false;
+  if (x>=eastAnnex.left && (x>eastAnnex.right || y<eastAnnex.top || y>eastAnnex.bottom)) return false;
   if (y>plenaryTop && (x<plenaryLeft+6 || x>plenaryLeft+plenaryWidth-6) && !southRooms.some(({bounds:[left,top,width,height]})=> x>=left && x<=left+width && y>=top && y<=top+height)) return false;
   return obstacles.every(rect=>!blockedBy(rect,x,y));
 }
