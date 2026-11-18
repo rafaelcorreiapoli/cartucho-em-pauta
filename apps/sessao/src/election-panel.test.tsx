@@ -2,17 +2,27 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ElectionIndicator,ElectionPolls,ElectionSummary} from './election-panel';
 
-test('the election summary renders the lead, personal position and remaining time',()=>{
-  const markup = renderToStaticMarkup(<ElectionSummary rank={3} leaders="Bia, Duda" atRisk remaining={256}
-    candidate={{id:'a',name:'Rafa',character:0,race:'deputy',estimate:20,trend:-2}}/>);
-  expect(markup).toContain('1º · Bia, Duda');
-  expect(markup).toContain('Você · 3º · 20% · Em risco · -2 pp');
+test('the election summary renders the header and a ranked portrait for each visible player',()=>{
+  const markup = renderToStaticMarkup(<ElectionSummary atRisk remaining={256}
+    leader={{name:'Bia',character:1,rank:1}} personal={{name:'Rafa',character:0,rank:3}}/>);
+  expect(markup).toContain('Pesquisa Eleitoral');
   expect(markup).toContain('4:16');
+  expect(markup).toContain('data-skin="1"');
+  expect(markup).toContain('data-rank="1">1º');
+  expect(markup).toContain('>Bia</bdi>');
+  expect(markup).toContain('data-skin="0"');
+  expect(markup).toContain('data-rank="3">3º');
+  expect(markup).toContain('>Rafa</bdi>');
+  expect(markup).toContain('Em risco');
 });
 
-test('the election summary hides the countdown after the match ends',()=>{
-  const markup = renderToStaticMarkup(<ElectionSummary rank={0} atRisk={false} remaining={0}/>);
-  expect(markup).toContain('class="election-clock" hidden=""');
+test('the election summary displays only the leader when there is no separate personal standing',()=>{
+  const markup = renderToStaticMarkup(<ElectionSummary leader={{name:'Rafa',character:0,rank:1}}
+    atRisk={false} remaining={0}/>);
+  expect(markup).toContain('class="election-clock" dir="ltr" hidden=""');
+  expect(markup).toContain('>Rafa</bdi>');
+  expect(markup.match(/data-rank=/g)).toHaveLength(1);
+  expect(markup).not.toContain('election-personal');
 });
 
 test('the polls dialog presents the current candidate and uses the shared native close',()=>{
@@ -44,17 +54,17 @@ test('the polls give candidates with the same displayed percentage a shared posi
 
 test('the election indicator owns the dial and its keyboard shortcut',()=>{
   const markup = renderToStaticMarkup(<ElectionIndicator urgency="high" open={()=>true}
-    summary={{rank:1,atRisk:false,remaining:29}}/>);
+    summary={{atRisk:false,remaining:29}}/>);
   expect(markup).toContain('id="election-dock"');
   expect(markup).toContain('data-urgency="high"');
   expect(markup).toContain('aria-keyshortcuts="L"');
-  expect(markup).toContain('>L</kbd>');
+  expect(markup).not.toContain('<kbd');
   expect(renderToStaticMarkup(<ElectionIndicator open={()=>false}/>)).not.toContain('<button');
 });
 
 test('only the electoral risk state marks the dock for the red glow',()=>{
   const indicator = (atRisk:boolean)=>renderToStaticMarkup(<ElectionIndicator urgency="high" open={()=>true}
-    summary={{rank:4,atRisk,remaining:29}}/>);
+    summary={{atRisk,remaining:29}}/>);
   expect(indicator(true)).toContain('data-at-risk="true"');
   expect(indicator(false)).not.toContain('data-at-risk=');
 });

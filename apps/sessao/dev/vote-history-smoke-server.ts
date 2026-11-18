@@ -12,6 +12,7 @@ Bun.plugin({
 const {defineRoom,defineServer} = await import('colyseus');
 const {BunWebSockets} = await import('@colyseus/bun-websockets');
 const {SessionRoom} = await import('../server/SessionRoom');
+const {ELECTION_RULES} = await import('../src/elections');
 const {publishProjectFiling} = await import('../server/project-test-fixture');
 
 class TestRoom extends SessionRoom {
@@ -19,10 +20,15 @@ class TestRoom extends SessionRoom {
     super.onCreate();
     this.clock.setInterval(()=>{
       const match:import('../server/PlenaryMatch').PlenaryMatch = Reflect.get(this,'match');
-      const player:import('../src/map').Player|undefined = Reflect.get(this,'players').values().next().value?.player;
+      const players = Reflect.get(this,'players');
+      const player:import('../src/map').Player|undefined = players.values().next().value?.player;
       if (!player || match.phase!=='negotiation' || match.projectIndex!==undefined || match.projectRound>=3) return;
       const now = match.gameTime(this.clock.currentTime);
       if (match.gameplayWorld([player],now,()=>false).projectFilingError?.(player.id,match.projectRound)) return;
+      if (match.projectRound===0 && players.size>ELECTION_RULES.minimumMandates) {
+        const economy:import('../server/PoliticalEconomy').PoliticalEconomy = Reflect.get(match,'economy');
+        economy.changePopularity(player.id,-30);
+      }
       publishProjectFiling(match,player,match.projectRound,now);
     },500);
   }

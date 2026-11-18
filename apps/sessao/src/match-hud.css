@@ -120,9 +120,6 @@
   width: var(--hud-side);
 }
 #session #election-dock .politics-content { inset: calc(100% + 6px) 0 auto auto; }
-.election-summary { display: grid; min-width: 0; gap: .12rem; }
-#current-office { color: #d6cfb5; font-size: .69rem; }
-#election-position { font-variant-numeric: tabular-nums; }
 .election-clock { display: grid; justify-items: end; gap: .1rem; margin-left: auto; white-space: nowrap; }
 .election-clock small { color: #d6cfb5; font-size: .66rem; }
 #election-timer { line-height: 1; font-variant-numeric: tabular-nums; }
@@ -483,9 +480,6 @@
   .stability-resource:has([data-low="true"]) #stability { color: var(--party-coral); }
   #congress-dock .resource progress { height: 8px; }
   #session #election-dock > #open-election-polls { padding: .65rem .7rem; gap: .6rem; }
-  #session #election-dock > #open-election-polls > .hud-glyph { width: 24px; height: 24px; }
-  #current-office { font-size: .78rem; }
-  #election-position { font: 850 1.17rem/1.1 var(--party-display); }
   #election-timer { font-size: 1.22rem; }
 }
 
