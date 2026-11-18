@@ -1,7 +1,7 @@
 import {useDialogKeys} from './use-dialog-keys';
 import type {ShortcutEntry} from '../action-shortcuts';
 import {officeRules} from '../private-offices';
-import {INVENTORY_SLOTS,objects,type GameplayAction,type GameplayView,type WorldItem} from '../gameplay';
+import {canStackItem,INVENTORY_SLOTS,objects,occupiesInventorySlot,type GameplayAction,type GameplayView,type WorldItem} from '../gameplay';
 
 type Props = {
   stash:NonNullable<GameplayView['officeStash']>;
@@ -11,21 +11,24 @@ type Props = {
 };
 
 export function OfficeStash({stash,inventory,send,close}:Props) {
+  const bag = inventory.filter(occupiesInventorySlot);
   const grids = [
-    {name:'Armário',items:stash.items,size:officeRules.stashSlots,verb:'Retirar',kind:'office-take',blocked:inventory.length>=INVENTORY_SLOTS},
-    {name:'Inventário',items:inventory,size:INVENTORY_SLOTS,verb:'Guardar',kind:'office-stash',blocked:stash.items.length>=officeRules.stashSlots},
+    {name:'Armário',items:stash.items,size:officeRules.stashSlots,verb:'Retirar',kind:'office-take',full:bag.length>=INVENTORY_SLOTS},
+    {name:'Inventário',items:bag,size:INVENTORY_SLOTS,verb:'Guardar',kind:'office-stash',full:stash.items.length>=officeRules.stashSlots},
   ] as const;
   const entries:ShortcutEntry[] = [{name:'Fechar',activate:close}];
   const actions = new Map<string,()=>void>();
   const panel = useDialogKeys<HTMLDivElement>(key=>actions.get(key),entries);
   return <div ref={panel} className="grid gap-4">
     <p>{stash.level ? 'Segurança nível '+stash.level : 'Armário arrombado'}</p>
-    {grids.map(({name,items,size,verb,kind,blocked})=><section key={name}>
+    {grids.map(({name,items,size,verb,kind,full})=><section key={name}>
       <h3>{name} <small>{items.length}/{size}</small></h3>
       <div className="office-stash-grid">
         {Array.from({length:size},(_,index)=>{
           const item = items[index];
           if (!item) return <span key={index} className="item-tile item-tile-empty" aria-hidden="true"/>;
+          const blocked = full && (kind==='office-stash' || occupiesInventorySlot(item) &&
+            !(canStackItem(item.kind) && bag.some(entry=>entry.kind===item.kind)));
           const definition = objects[item.kind];
           const name = item.document?.title ?? definition.name;
           const key = kind==='office-take' ? String(index+1) : 'Shift+'+(index+1);

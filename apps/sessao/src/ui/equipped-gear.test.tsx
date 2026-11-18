@@ -15,7 +15,7 @@ test('slots keep their positions while displaying the server-confirmed equipment
   game.reset(0,()=>.9,[player]);
   const at = (now:number)=>match.gameplayWorld([player],now,()=>false);
   const render = (now:number)=>renderToStaticMarkup(
-    <EquippedGear state={equippedGearState(game.view(player,at(now)))!} activate={()=>{}}/>,
+    <EquippedGear state={equippedGearState(game.view(player,at(now)))!} activate={()=>{}} inspectBriefcase={()=>{}}/>,
   );
   const before = render(0);
   expect(before.match(/class="gear-slot"/g)).toHaveLength(5);
@@ -32,4 +32,11 @@ test('slots keep their positions while displaying the server-confirmed equipment
   expect(render(3+binoculars.duration)).toContain(`Recarga: ${binoculars.cooldown/1000} s`);
   expect(render(3+binoculars.duration)).toContain('data-active="false"');
   expect(render(3+binoculars.duration+binoculars.cooldown)).not.toContain('Recarga:');
+  const cash = Reflect.get(game,'create').call(game,'briefcase',{holder:player.id});
+  cash.cash = 12;
+  const carrying = render(4);
+  expect(carrying.indexOf('carried-briefcases')).toBeGreaterThan(carrying.indexOf('Acessório 2'));
+  expect(carrying).toContain('Maleta de dinheiro · R$ 120 mil');
+  game.act(player,{kind:'drop',item:cash.id},at(5));
+  expect(render(5)).not.toContain('carried-briefcases');
 });

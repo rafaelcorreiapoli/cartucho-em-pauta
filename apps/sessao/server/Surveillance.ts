@@ -1,4 +1,4 @@
-import { canReachObject, hasInventorySpace, type WorldItem } from '../src/gameplay';
+import { canReachObject, hasInventorySpace, occupiesInventorySlot, type WorldItem } from '../src/gameplay';
 import { localPerception, type Motion, type Player, type Rect } from '../src/map';
 import { cameraSees, hideouts, spyRules, type Hideout, type SpyChannel, type SpyDevice, type SpyView } from '../src/surveillance';
 
@@ -114,7 +114,7 @@ export class Surveillance {
       const known = device && this.known(id,device);
       const inventory = access.inventory(id);
       if (known && device.owner===id) {
-        const blocked = hasInventorySpace(inventory.length) ? undefined : 'Inventário cheio';
+        const blocked = hasInventorySpace(inventory.filter(occupiesInventorySlot).length) ? undefined : 'Inventário cheio';
         options.push({label:`Recuperar dispositivo · ${site.name}`,kind:'recover',site:site.id,blocked});
       } else if (known) {
         options.push({label:`Remover dispositivo · ${site.name}`,kind:'remove',site:site.id});
@@ -181,7 +181,7 @@ export class Surveillance {
       if (!device || !this.known(id,device)) return 'Dispositivo indisponível.';
       if (raw.kind==='recover') {
         if (device.owner!==id) return 'Este dispositivo pertence a outro jogador.';
-        if (!hasInventorySpace(access.inventory(id).length)) return 'Inventário cheio.';
+        if (!hasInventorySpace(access.inventory(id).filter(occupiesInventorySlot).length)) return 'Inventário cheio.';
       } else if (device.owner===id) return 'Use a ação de recuperar seu dispositivo.';
     }
     this.jobs.set(id,{kind:raw.kind,site,item:item?.id,target:raw.kind==='remove' || raw.kind==='recover' ? device?.id : undefined,

@@ -3,7 +3,7 @@ import { credentialGoods } from './installations';
 import { incendiary } from './fire';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
 import { concealment, equipment, gearConflict, isGear } from './equipment';
-import {canStackItem,hasInventorySpace,type ObjectKind,type WorldItem} from './gameplay';
+import {canStackItem,hasInventorySpace,occupiesInventorySlot,type ObjectKind,type WorldItem} from './gameplay';
 import { foods } from './food';
 import { documentRules,internalMailRules } from './internal-mail';
 import { firstAidKit } from './medical';
@@ -62,5 +62,5 @@ export function marketPurchaseSlot(kind:ObjectKind,inventory:readonly Pick<World
   equipped:readonly Pick<WorldItem,'kind'>[],direct:boolean) {
   if (isOfficeFurniture(kind)) return 'office';
   if (direct && isGear(kind) && !gearConflict(kind,equipped)) return 'equipped';
-  if (hasInventorySpace(inventory.length) || canStackItem(kind) && inventory.some(item=>item.kind===kind)) return 'inventory';
+  if (hasInventorySpace(inventory.filter(occupiesInventorySlot).length) || canStackItem(kind) && inventory.some(item=>item.kind===kind)) return 'inventory';
 }

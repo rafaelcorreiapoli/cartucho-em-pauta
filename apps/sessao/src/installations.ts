@@ -1,4 +1,4 @@
-import { hasInventorySpace, type GameplayAction, type GameplayView } from './gameplay';
+import { hasInventorySpace, occupiesInventorySlot, type GameplayAction, type GameplayView } from './gameplay';
 import { canInteract, type InteractionActor } from './interactions';
 import type { Motion } from './map';
 import { roomActivities } from './room-activities';
@@ -43,7 +43,7 @@ export function decorationActions(playerId:string, state:Pick<GameplayView,'inte
         (portrait ? 'Pendurar retrato' : 'Reservar cadeira');
       actions.push({label,action:{kind:'install',item:item.id,place}});
     }
-    if (placed && (portrait && placed.owner.id!==playerId || hasInventorySpace(state.inventory.length))) actions.push({
+    if (placed && (portrait && placed.owner.id!==playerId || hasInventorySpace(state.inventory.filter(occupiesInventorySlot).length))) actions.push({
       label:portrait ? (placed.owner.id===playerId ? 'Retirar retrato' : 'Arrancar retrato') : 'Retirar placa VIP',
       action:{kind:'uninstall',item:placed.id},
     });

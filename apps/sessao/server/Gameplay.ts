@@ -11,7 +11,7 @@ import { money, NEW_PORTRAIT_MS, PUBLIC_MEETING_PEERS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, occupiesInventorySlot, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
@@ -348,7 +348,7 @@ export class Gameplay {
     for (const player of players) player.barriers = doors;
   }
 
-  private available(id:string) { return hasInventorySpace(this.inventory(id).length); }
+  private available(id:string) { return hasInventorySpace(this.inventory(id).filter(({data})=>occupiesInventorySlot(data)).length); }
 
   private stack(id:string,kind:ObjectKind,except?:number) {
     return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
@@ -470,7 +470,6 @@ export class Gameplay {
   }
 
   robNpc(player:Player,npc:Player,world:GameplayWorld) {
-    if (!this.available(player.id)) return 'Inventário cheio.';
     const amount = world.takeWallet?.(npc.id) ?? 0;
     if (!amount) return 'O parlamentar está sem dinheiro.';
     const cash = this.create('briefcase',{holder:player.id});
@@ -1165,7 +1164,7 @@ export class Gameplay {
       if (!item) return this.reject(player,world,'Objeto indisponível.');
       if (kind==='office-take') {
         if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return this.reject(player,world,'Objeto indisponível.');
-        if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
+        if (occupiesInventorySlot(item.data) && !this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
         this.addToInventory(item,player.id);
       } else {
         if (!('holder' in item.place) || item.place.holder!==player.id) return this.reject(player,world,'O objeto não está com você.');
@@ -1632,7 +1631,7 @@ export class Gameplay {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
       if (!accessible) return this.reject(player,world,'Objeto fora de alcance.');
-      if (!this.available(id) && !this.stack(id,data.kind)) return this.reject(player,world,'Inventário cheio.');
+      if (occupiesInventorySlot(data) && !this.available(id) && !this.stack(id,data.kind)) return this.reject(player,world,'Inventário cheio.');
       this.addToInventory(item,id);
       if (cashAmount(data)) this.expose(id,data.id);
       this.event(world,player,action.kind==='collect' ? 'collected' : 'recovered',data);
@@ -1782,7 +1781,7 @@ export class Gameplay {
       return this.reject(player,world,'O portador ou objeto está fora de alcance.');
     }
     if (request.kind==='offer') {
-      if (!this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
+      if (occupiesInventorySlot(item.data) && !this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
       const quantity = request.quantity ?? itemQuantity(item.data);
       if (quantity>itemQuantity(item.data)) return this.reject(player,world,'Quantidade indisponível.');
       const transferred = this.takeUnits(item,quantity);

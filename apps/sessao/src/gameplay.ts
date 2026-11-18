@@ -99,6 +99,7 @@ export type ItemRequest = {id:number; kind:'offer'|'signature'; from:Contact; it
 export type PhoneCall = {peer:Contact; state:'incoming'|'outgoing'|'connected'};
 export { canInteract as canReachObject } from './interactions';
 
+export const occupiesInventorySlot = (item:Pick<WorldItem,'kind'>) => item.kind!=='briefcase';
 export const INVENTORY_SLOTS = 6;
 export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 export type PhoneActivity = 'open'|'call'|'game';

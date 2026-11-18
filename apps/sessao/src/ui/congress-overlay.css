@@ -611,7 +611,30 @@
 
 #equipped-gear:not([hidden]) {
   --gear-size: clamp(42px,4.3vw,65px);
+  flex-direction: column;
   z-index: 4;
+}
+.equipped-gear-slots,
+.carried-briefcases {
+  display: flex;
+  gap: 8px;
+}
+.carried-briefcases {
+  flex-wrap: wrap;
+  max-width: calc(5 * var(--gear-size) + 32px);
+}
+.carried-briefcases .carried-briefcase {
+  display: grid;
+  place-items: center;
+  width: calc(var(--gear-size) * .8);
+  height: calc(var(--gear-size) * .8);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.carried-briefcase .item-portrait {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }
 .gear-slot {
   position: relative;
