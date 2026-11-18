@@ -134,7 +134,7 @@ export type GameplayView = {
   forgeryRemaining?:number;
   surveillance?:SpyView;
   security?:SecurityView;
-  contacts:Contact[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
+  contacts:(Contact & {bot?:true})[]; inventory:WorldItem[]; equipped?:WorldItem[]; nearby:(WorldItem & Motion)[]; ground:GroundItem[]; stored:WorldItem[]; filed:WorldItem[];
   npcNearby?:NpcId[]; dialogue?:DialogueView; treatment?:{target?:string};
   vitality?:{hp:number; max:number; recovery:number};
   offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];

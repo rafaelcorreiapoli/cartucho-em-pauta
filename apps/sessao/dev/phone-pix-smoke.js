@@ -98,6 +98,16 @@ async page => {
     await receiver.keyboard.press('o');
     await receiver.locator(dialog).getByRole('button',{name:'Café',exact:true}).waitFor();
     await receiver.keyboard.press('Escape');
+    await receiver.getByRole('button',{name:'Oferecer item · Alice',exact:true}).click();
+    const offer = receiver.getByRole('dialog',{name:'Oferecer item a Alice',exact:true});
+    await offer.getByRole('button',{name:'Café',exact:true}).click();
+    await offer.getByRole('button',{name:'Oferecer',exact:true}).click();
+    await offer.waitFor({state:'hidden'});
+    await page.locator('#object-request').getByRole('button',{name:'Aceitar',exact:true}).click();
+    await page.locator('#object-request').waitFor({state:'hidden'});
+    await page.keyboard.press('o');
+    await bag.getByRole('button',{name:'Café',exact:true}).waitFor();
+    await page.keyboard.press('Escape');
 
     await page.keyboard.press('c');
     await page.locator(dialog).getByRole('button',{name:'Câmera',exact:true}).waitFor();

@@ -85,6 +85,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
       }
       if (!player.carried && state.inventory.length) {
         for (const contact of state.contacts) {
+          if (contact.bot) continue;
           actions.push({label:`Oferecer item · ${contact.name}`,icon:'inventory',
             target:{id:contact.id,name:contact.name,verb:'Oferecer item'},action:{kind:'offer-item',target:contact.id}});
         }

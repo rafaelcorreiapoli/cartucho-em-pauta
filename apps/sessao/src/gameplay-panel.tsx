@@ -289,7 +289,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
-    const canOffer = !!offerTarget && view.phase==='negotiation' && contacts.some(person=>person.id===offerTarget?.id);
+    const canOffer = !!offerTarget && view.phase==='negotiation' && contacts.some(person=>!person.bot && person.id===offerTarget?.id);
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
@@ -421,7 +421,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
         }
         if (contacts.length) {
-          act('Oferecer','offer');
+          if (contacts.some(person=>!person.bot) && !contacts.some(person=>person.id===recipient && person.bot)) act('Oferecer','offer');
           if (item.document && (item.document.project===undefined || item.document.requiredSignatures>0)) act('Pedir assinatura','sign-request');
         }
         act('Largar no chão','drop');
@@ -595,7 +595,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
     openOffer(id:string) {
-      const target = previous?.gameplay?.contacts.find(contact=>contact.id===id);
+      const target = previous?.gameplay?.contacts.find(contact=>!contact.bot && contact.id===id);
       if (!target) return;
       assigningSlot = undefined;
       open(undefined,undefined,false,false,true,target);
