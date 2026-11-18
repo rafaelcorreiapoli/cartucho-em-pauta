@@ -104,7 +104,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
           const position = choices.indexOf(index);
           const shortcut = position>=0 && position<9 ? String(position+1) : undefined;
           return <label key={project.id} className="project-picker-option">
-            <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/documento-legislativo.webp'} alt=""/>
+            <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/'+project.icon} alt=""/>
             <span className="project-picker-copy">
               <strong id={`project-picker-name-${index}`}>{project.name}{unavailable.has(index) && ' · Já votado'}</strong>
               <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary impact={project.yes} budget={approvalBudget(project)}/></span>
