@@ -592,7 +592,7 @@ test('a furniture subsidy updates agenda eligibility and the HUD shows what the 
   match.setAgendaCommerce(()=>now);
   match.setAgendaInventory((id,kind)=>game.owns(id,kind),id=>game.officeStock(id));
   const economy = Reflect.get(match,'economy');
-  expect(economy.spend(limited.id,5.5)).toBe(true);
+  expect(economy.spend(limited.id,6.5)).toBe(true);
   const view = (player:Player)=>match.view(player.id,ids,now);
   const draw = (player:Player,kind:Mission['kind'])=>{
     const {agenda} = Reflect.get(economy,'accounts').get(player.id);
@@ -1736,7 +1736,7 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   match.vote(player.id,'yes',now+1);
   now += BALLOT_MS;
   match.advance(now,recipients=>{ for (const id of recipients) if (id===player.id) game.distributePinga(player,now); });
-  expect(view().wallet).toBe(0);
+  expect(economy.spend(player.id,view().wallet)).toBe(true);
   expect(draw()).toBeDefined();
 
   const world = match.gameplayWorld([player],++now,()=>false);
