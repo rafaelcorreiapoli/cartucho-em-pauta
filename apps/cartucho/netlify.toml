@@ -23,3 +23,8 @@
   from = "/jogar/cartas-marcadas"
   to = "/jogar/cartas-marcadas.html"
   status = 200
+
+[[redirects]]
+  from = "/infiltrados-no-congresso/jogar"
+  to = "/infiltrados-no-congresso/jogar.html"
+  status = 200

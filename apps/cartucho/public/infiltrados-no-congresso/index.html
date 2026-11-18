@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3eedf">
+  <meta name="description" content="Jogue Infiltrados no Congresso de graça, online com seus amigos, direto no navegador do computador. Crie uma sala, compartilhe o link e descubra quem está sabotando a sessão.">
+  <title>Infiltrados no Congresso | Cartuchão</title>
+  <link rel="icon" href="../assets/cartucho.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip" href="#inicio">Pular para o conteúdo</a>
+  <header class="top wrap">
+    <a class="brand" href="../" aria-label="Voltar ao Cartuchão"><img src="../assets/cartucho.png" width="32" height="32" alt=""> Cartuchão</a>
+    <nav aria-label="Seções"><a href="#regras">Regras</a><a href="#elenco">Elenco</a><a href="#galeria">Galeria</a></nav>
+    <a class="button small" href="/infiltrados-no-congresso/jogar">Jogar grátis ↗</a>
+  </header>
+  <main class="wrap" id="inicio">
+    <section class="hero">
+      <div class="lead">
+        <p class="label">Grátis · Online · Até 12 jogadores</p>
+        <h1>Infiltrados<br><em>no Congresso</em></h1>
+        <p>Reúna os amigos e transforme o Congresso em uma disputa de blefe, negociação e sabotagem. Jogue de graça, online e direto no navegador do computador.</p>
+        <p>Crie uma sala, compartilhe o link e descubra em quem dá para confiar. A conversa por voz acompanha vocês pelos corredores.</p>
+        <a class="button" href="/infiltrados-no-congresso/jogar">Jogar grátis com os amigos ↗</a>
+      </div>
+      <figure class="front-page">
+        <a href="media/partida.webp"><img src="media/partida.webp" width="1440" height="900" alt="Partida em andamento, com o mapa do Congresso e os indicadores da sessão"></a>
+        <figcaption>Em jogo <span>Mapa do Congresso</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="rules" id="regras">
+      <p class="label">Como jogar</p>
+      <h2>Entre amigos.<br>Desconfie de todos.</h2>
+      <div class="sides">
+        <article><h3>Parlamentares</h3><p>Vocês vencem se mantiverem o Congresso estável até o fim da sessão ou se todos os infiltrados perderem o mandato. Negociem votos, investiguem as sabotagens e descubram quem está jogando contra vocês.</p></article>
+        <article><h3>Infiltrados</h3><p>Vocês vencem se provocarem o colapso do Congresso durante a partida ou deixarem a instituição instável até o fim da sessão. Misturem-se aos parlamentares e sabotem os planos da turma sem revelar seu papel.</p></article>
+      </div>
+      <div class="field-guide">
+        <details><summary>É grátis? Preciso instalar alguma coisa?</summary><p>É grátis e roda direto no navegador do computador. Abra o jogo, escolha um nick e entre na sua sala.</p></details>
+        <details><summary>As partidas são abertas ou por sala?</summary><p>Você cria uma sala e compartilha o link ou o código com os amigos. Quem recebe o convite pode entrar na mesma partida.</p></details>
+        <details><summary>Quanto tempo dura uma partida?</summary><p>A sessão tem um relógio de 10 minutos de jogo. Ele pausa durante votações e audiências, então reserve um pouco mais de tempo. A partida também pode terminar antes se um dos lados vencer.</p></details>
+        <details><summary>Quantas pessoas podem jogar? Dá para jogar sozinho?</summary><p>De uma a 12 pessoas. Você pode começar sozinho ou reunir os amigos. Com menos de seis pessoas, bots completam as vagas e também podem ser infiltrados.</p></details>
+        <details><summary>Já funciona no celular?</summary><p>Ainda não. Por enquanto, o jogo é para desktop. Use o navegador do computador para jogar.</p></details>
+        <details><summary>Dá para conversar com os amigos dentro do jogo?</summary><p>Sim, o jogo tem conversa por voz. Ative o microfone e permita o acesso no navegador. A voz acompanha a distância entre os personagens e as paredes, então chegar perto faz parte da conversa.</p></details>
+        <details><summary>Como alguém é eliminado da disputa?</summary><p>Perdendo o mandato. Isso pode acontecer por cassação, quando a maioria absoluta dos eleitores aptos vota contra um suspeito, ou na renovação eleitoral, quando quem tem menos força eleitoral perde a vaga, enquanto houver mais de três mandatos em disputa.</p><p>Quem perde o mandato continua no mapa como assessor, mas perde o voto, a verba do cargo e a capacidade de sabotar. Se todos os infiltrados perderem seus mandatos, os parlamentares vencem.</p></details>
+        <details><summary>Como descubro quem é infiltrado?</summary><p>Cada pessoa recebe seu papel em segredo no começo da sessão. Observe as atitudes, converse com a turma e investigue as sabotagens. A caricatura escolhida não revela de que lado alguém está.</p></details>
+      </div>
+    </section>
+
+    <section class="cast" id="elenco">
+      <p class="label">Elenco jogável</p>
+      <h2>Escolha sua caricatura.</h2>
+      <p>O papel é sorteado no início da sessão, independentemente da caricatura escolhida.</p>
+      <ul class="portraits">
+        <li><span style="--x:0%;--y:0%"></span>Lula</li>
+        <li><span style="--x:100%;--y:0%"></span>Bolsonaro</li>
+        <li><span style="--x:0%;--y:33.333%"></span>Clodovil</li>
+        <li><span style="--x:100%;--y:33.333%"></span>Tiririca</li>
+        <li><span style="--x:0%;--y:66.667%"></span>Sikêra Jr.</li>
+        <li><span style="--x:100%;--y:66.667%"></span>Alexandre Frota</li>
+        <li><span style="--x:0%;--y:100%"></span>Sergio Moro</li>
+        <li><span style="--x:100%;--y:100%"></span>Inês Brasil</li>
+      </ul>
+    </section>
+
+    <section id="galeria">
+      <p class="label">Capturas do jogo</p>
+      <h2>Por dentro da sessão.</h2>
+      <div class="gallery">
+        <figure><a href="media/lobby.webp"><img src="media/lobby.webp" width="1440" height="900" alt="Lobby com as oito caricaturas disponíveis para seleção" loading="lazy"></a><figcaption>Escolha de personagem</figcaption></figure>
+        <figure><a href="media/pesquisa.webp"><img src="media/pesquisa.webp" width="1440" height="900" alt="Painel de pesquisa eleitoral durante uma partida" loading="lazy"></a><figcaption>Pesquisa eleitoral</figcaption></figure>
+      </div>
+    </section>
+    <section class="closing">
+      <h2>Chame os amigos.<br>Abra a sessão.</h2>
+      <p>Entre pelo navegador, crie sua sala e envie o link para a turma.</p>
+      <a class="button" href="/infiltrados-no-congresso/jogar">Jogar grátis com os amigos ↗</a>
+    </section>
+  </main>
+  <footer class="wrap"><a href="../">← Cartuchão</a><p>Jogo de sátira política brasileira.</p></footer>
+</body>
+</html>
