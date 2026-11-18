@@ -9,12 +9,12 @@ export const portraitInteractionRadius = 38;
 export const decorationInstallMs = 2000;
 
 export const installationSites = {
-  hall:{kind:'portrait',point:{x:210,y:96},label:'Antecâmara'},
+  hall:{kind:'portrait',point:{x:210,y:96},label:'Enfermaria'},
   archivePortrait:{kind:'portrait',point:{x:280,y:291},label:'Arquivo'},
   protocolPortrait:{kind:'portrait',point:{x:530,y:27},label:'Protocolo'},
   libraryPortrait:{kind:'portrait',point:{x:406,y:438},label:'Biblioteca'},
   technicalVip:{kind:'vip',point:{x:600,y:232},label:'Apoio Técnico'},
-  lobbyVip:{kind:'vip',point:{x:240,y:79},label:'Antecâmara'},
+  lobbyVip:{kind:'vip',point:{x:310,y:94},label:'Enfermaria'},
   libraryVip:{kind:'vip',point:{x:433,y:511},label:'Biblioteca'},
   pressVip:{kind:'vip',point:{x:898,y:240},label:'Sala de Imprensa'},
   pizza:{kind:'pizza',point:roomActivities.coffee,label:'Mesa do Cafezinho'},

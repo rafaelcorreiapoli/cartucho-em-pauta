@@ -17,7 +17,7 @@ const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.
 const portraitNear = (photo:Photo,owner?:string) => photo.decorations.some(item=>
   item.kind==='portrait' && (owner===undefined || item.owner.id===owner) &&
   Math.hypot(item.x-photo.center.x,item.y-photo.center.y)<=portraitInteractionRadius);
-const privateRooms = new Set(['Antecâmara',...privateOffices.map(office=>office.name)]);
+const privateRooms = new Set(['Enfermaria',...privateOffices.map(office=>office.name)]);
 const capture = (test:(photo:Photo,actor:string)=>Fact[]) => (event:GameplayEvent) =>
   event.type==='photo' && event.photo ? test(event.photo,event.actor) : [];
 
@@ -30,7 +30,7 @@ export const photoMissions = {
   presidenteFoto:{target:1,players:2,facts:capture((photo,actor)=>
     photo.selfie && people(photo,actor).some(person=>person.office==='president') ? fact(photo.id) : [])},
   celularFoto:{target:1,players:2,facts:capture((photo,actor)=>
-    people(photo,actor).some(person=>person.phone==='game' && [securityRoom.name,'Antecâmara'].includes(roomAt(person))) ? fact(photo.id) : [])},
+    people(photo,actor).some(person=>person.phone==='game' && [securityRoom.name,'Enfermaria'].includes(roomAt(person))) ? fact(photo.id) : [])},
   reuniaoFoto:{target:1,players:photoMissionCounts.reuniaoFoto+1,facts:capture((photo,actor)=>{
     const rooms = new Map<string,Set<string>>();
     for (const person of people(photo,actor)) {

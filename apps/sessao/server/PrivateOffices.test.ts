@@ -3,20 +3,19 @@ import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { decorationInstallMs } from '../src/installations';
 import type { GameplayWorld } from './gameplay-world';
-import { decorPoint, decorSlots, eastAnnex, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
-import { canStand, localPerception, wallBetween, type Player } from '../src/map';
+import { decorPoint, decorSlots, privateOffices, officeDoorPoint, officeRules, type OfficeLayout } from '../src/private-offices';
+import { canStand, localPerception, roomAt, wallBetween, type Player } from '../src/map';
 import { MAX_PLAYERS } from '../src/plenary';
-import { clearSegment, findRoute } from '../src/navigation';
+import { findRoute } from '../src/navigation';
 import { applyInput, type ControlState } from '../src/movement';
 import { npcs, treasurer } from '../src/npcs';
 import { INVENTORY_SLOTS, terminals, type GameplayAction, type GameplayEvent } from '../src/gameplay';
 
 function atDoor(office:OfficeLayout,inside:boolean) {
-  const {x,y} = officeDoorPoint(office);
-  return {x,y:y+office.inside*(inside ? 15 : -15)};
+  return officeDoorPoint(office,inside ? 15 : -15);
 }
 
-function setup(count=2) {
+function setup(count=2,officeRandom=()=>0) {
   const players:Player[] = Array.from({length:count},(_,i)=>({id:String(i),nick:`Pessoa ${i}`,character:0,x:140,y:146,direction:0,moving:false}));
   const game = new Gameplay();
   const events:GameplayEvent[] = [];
@@ -24,7 +23,7 @@ function setup(count=2) {
   const random = [0,0,.117,.172,0];
   const world:GameplayWorld = {players,now:0,voice:()=>true,office:()=>undefined,spend:()=>true,
     earn:(id,amount)=>credit.set(id,(credit.get(id) ?? 0)+amount),publish:event=>events.push(event)};
-  game.reset(0,()=>random.shift() ?? .5,players,()=>0);
+  game.reset(0,()=>random.shift() ?? .5,players,officeRandom);
   function act(player:Player, kind:GameplayAction['kind'], place?:string, item?:number) {
     return game.act(player,{kind,place,item},world);
   }
@@ -52,7 +51,6 @@ test('every seat has a unique reachable office, independent of office in Congres
     }
   }
   for (const office of privateOffices) {
-    expect(office.bounds.slice(2)).toEqual([129,87]);
     const player = {...players[0],...office.spawn};
     const control:ControlState = {player,route:[],ack:0};
     applyInput(control,{seq:1,destination:{x:140,y:146}});
@@ -67,12 +65,13 @@ test('every seat has a unique reachable office, independent of office in Congres
   expect(game.view(owner,world).ownOffice).toBe(id);
 },15_000);
 
-test('the main corridor keeps its full opening through the east annex',()=>{
-  for (const y of [132,143,154]) {
-    const corridor = {x:930,y}, end = {x:eastAnnex.right-6,y};
-    expect(clearSegment(corridor,end,canStand)).toBe(true);
-    expect(wallBetween(corridor,end)).toBe(false);
-  }
+test('office 06 opens onto the Central de Expediente and the old annex is closed',()=>{
+  const office = privateOffices[5];
+  expect(roomAt(atDoor(office,false))).toBe('Central de Expediente');
+  expect(roomAt(atDoor(office,true))).toBe('Gabinete 06');
+  expect(wallBetween(atDoor(office,false),atDoor(office,true))).toBe(false);
+  expect(wallBetween({x:930,y:143},{x:970,y:143})).toBe(true);
+  expect(canStand(1024.5,85)).toBe(false);
 });
 
 test('cash can only be converted once at the owners safe, with interruption and photo evidence',()=>{
@@ -120,9 +119,9 @@ test('cash can only be converted once at the owners safe, with interruption and 
   expect(events.filter(event=>event.type==='money-pocketed')).toHaveLength(1);
 });
 
-test('locked doors block routes and sight, permit exit, and require a separate cabinet breach',()=>{
-  const {players:[owner,visitor],game,world,events,act,tick,buy} = setup();
-  const [home] = privateOffices;
+test.each([0,5])('office %i locks, permits exit and requires a separate cabinet breach',index=>{
+  const {players:[owner,visitor],game,world,events,act,tick,buy} = setup(2,()=>index/privateOffices.length);
+  const home = privateOffices[index];
   const failed:{id:string;message:string}[] = [];
   world.actionFailed = (id,message)=>failed.push({id,message});
   Object.assign(owner,atDoor(home,true));
@@ -152,8 +151,8 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   expect(localPerception(visitor,owner)).toMatchObject({visible:false});
   expect(findRoute(visitor,atDoor(home,true)).at(-1)).not.toEqual(atDoor(home,true));
   const control = {player:visitor,route:[],ack:0};
-  for (let seq=1;seq<=8;seq++) applyInput(control,{seq,motion:{x:0,y:home.inside}});
-  expect(visitor.y).toBeGreaterThan(officeDoorPoint(home).y);
+  for (let seq=1;seq<=8;seq++) applyInput(control,{seq,motion:home.inside});
+  expect(roomAt(visitor)).not.toBe(home.name);
   Object.assign(visitor,atDoor(home,false));
   act(visitor,'office-breach-door',home.id,doorTool);
   visitor.y++;
@@ -164,7 +163,7 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   act(visitor,'office-breach-door',home.id,doorTool);
   tick(5000);
   expect(failed).toEqual([]);
-  expect(game.view(visitor,world).offices?.[0].door).toBe('breached');
+  expect(game.view(visitor,world).offices?.[index].door).toBe('breached');
   expect(events.at(-1)).toMatchObject({type:'door-breached',actor:visitor.id,place:home.id});
   expect(findRoute(visitor,atDoor(home,true)).at(-1)).toEqual(atDoor(home,true));
   Object.assign(owner,{x:140,y:146});
@@ -186,8 +185,8 @@ test('locked doors block routes and sight, permit exit, and require a separate c
   expect(game.view(owner,world).officeStash?.items[0]?.id).toBe(document.id);
   Object.assign(visitor,atDoor(home,true));
   expect(act(visitor,'office-open',home.id)).toBe('Você saiu do gabinete.');
-  expect(visitor.y).toBeGreaterThan(officeDoorPoint(home).y);
-  expect(game.view(visitor,world).offices?.[0].door).toBe('locked');
+  expect(visitor).toMatchObject(atDoor(home,false));
+  expect(game.view(visitor,world).offices?.[index].door).toBe('locked');
 });
 
 test('shop purchases furnish the correct office slots even when the inventory is full',()=>{
@@ -284,11 +283,18 @@ test('the safe protects an incapacitated owner and converts only the current wal
   Object.assign(owner,home.spawn,{knockedOut:true});
   Object.assign(visitor,home.safe);
   expect(act(visitor,'office-breach-safe',home.id,tool)).toContain('titular');
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
   Object.assign(owner,{x:140,y:146,knockedOut:false});
   act(visitor,'office-breach-safe',home.id,tool);
+  expect(game.isBreachingSafe(visitor.id)).toBe(true);
+  act(visitor,'office-cancel',home.id);
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
+  act(visitor,'office-breach-safe',home.id,tool);
   tick(1000);
+  expect(game.isBreachingSafe(visitor.id)).toBe(true);
   balance = 17;
   tick(officeRules.breachTimes[0]);
+  expect(game.isBreachingSafe(visitor.id)).toBe(false);
   expect(balance).toBe(0);
   const inventory = game.view(visitor,world).inventory;
   expect(inventory).toHaveLength(1);

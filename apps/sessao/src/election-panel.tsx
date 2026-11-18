@@ -1,7 +1,6 @@
 import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
-import {useRef,type Ref} from 'react';
 import {CharacterPortrait} from './ui/character-portrait';
 import { ELECTION_RULES, type ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
@@ -36,31 +35,17 @@ export function ElectionSummary({rank,candidate,atRisk,remaining,tied=false}:{
   </>;
 }
 
-function ElectionCycle({result,details}:{result?:ElectionView['result'];details:Ref<HTMLDetailsElement>}) {
-  const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
-  return result ? <details ref={details} id="election-result" key={result.cycle}>
-      <summary>Renovação {result.cycle}</summary>
-      <p>{eliminated ? `${eliminated} perdeu o mandato.` : 'Mandatos preservados.'}</p>
-    </details> : null;
-}
-
 export function ElectionPolls({election,id}:{election:ElectionView; id:string}) {
-  const details = useRef<HTMLDetailsElement>(null);
-  const cycle = election.result?.cycle;
-  const toggleCycle = ()=>{if (details.current) details.current.open = !details.current.open;};
-  const cycleAction = cycle===undefined ? undefined : {name:'Renovação '+cycle,activate:toggleCycle};
   const readOnly = useDialogKeys<HTMLDivElement>(()=>undefined,[
     {name:'Fechar pesquisa eleitoral',activate:()=>readOnly.current?.closest('dialog')?.close()},
-    ...(cycleAction ? [cycleAction] : []),
   ]);
   return <>
     <DialogHeader id="election-poll-title" title="Pesquisa eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
     <div ref={readOnly} className="election-poll-content">
-      <div id="election-cycle"><ElectionCycle result={election.result} details={details}/></div>
-      <section aria-label="Pesquisa eleitoral"><div id="election-polls">
-        <section><h4>Classificação projetada</h4>
-          <p>Os percentuais são arredondados. A apuração pode mudar a ordem.</p>
-          <ol role="list">
+      <section id="election-polls" aria-labelledby="election-standings-title">
+        <h3 id="election-standings-title">Classificação projetada</h3>
+        <p>Os percentuais são arredondados. A apuração pode mudar a ordem.</p>
+        <ol role="list">
           {pollStandings(election.polls).map(({candidate,rank,tied})=>{
             const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
             return <li key={candidate.id}><div className="poll-card">
@@ -77,8 +62,8 @@ export function ElectionPolls({election,id}:{election:ElectionView; id:string}) 
               </div>
             </div></li>;
           })}
-        </ol></section>
-      </div></section>
+        </ol>
+      </section>
     </div>
   </>;
 }
@@ -120,7 +105,7 @@ export function createElectionPanel(id:string) {
         polls.close();
         return;
       }
-      const {remaining,result} = election;
+      const {remaining} = election;
       const standings = pollStandings(election.polls);
       const standing = standings.find(({candidate})=>candidate.id===id);
       const atRisk = !!standing && standing.rank===standings.at(-1)?.rank && standings.length>ELECTION_RULES.minimumMandates;
@@ -132,7 +117,7 @@ export function createElectionPanel(id:string) {
         summaryKey = nextSummaryKey;
         summaryRoot.render(<ElectionIndicator summary={summary} urgency={urgency} open={showPolls}/>);
       }
-      const nextPollsKey = JSON.stringify([result,election.polls]);
+      const nextPollsKey = JSON.stringify(election.polls);
       if (pollsKey!==nextPollsKey) {
         pollsKey = nextPollsKey;
         pollsRoot.render(<ElectionPolls election={election} id={id}/>);

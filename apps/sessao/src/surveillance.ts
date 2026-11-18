@@ -1,3 +1,4 @@
+import { infirmary } from './medical';
 import type { PhotoScene } from './photography';
 import { privateOffices } from './private-offices';
 import { obstacleBetween, securityRoom, type Motion } from './map';
@@ -16,7 +17,7 @@ export const hideouts = [
   {id:'coffee',name:'Cafeteira',room:'Cafezinho',x:247,y:243,accepts:both},
   {id:'press',name:'Vaso',room:'Sala de Imprensa',x:933,y:244,accepts:both},
   {id:'security-terminal',name:'Terminal',room:securityRoom.name,...securityRoom.terminal,y:securityRoom.terminal.y+2,accepts:both},
-  {id:'meeting',name:'Mesa',room:'Antecâmara',x:307,y:66,accepts:['wiretap'] as readonly SpyDevice[]},
+  {id:'meeting',name:'Maca',room:infirmary.name,...infirmary.stretcher,accepts:['wiretap'] as readonly SpyDevice[]},
   {id:'library',name:'Estante',room:'Biblioteca',x:433,y:465,accepts:both},
   ...privateOffices.map(office=>({id:'office-'+office.id,name:'Armário',room:office.name,...office.cabinet,accepts:both})),
 ];

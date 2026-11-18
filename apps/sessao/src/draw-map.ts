@@ -61,7 +61,8 @@ export function drawMap(scene: Phaser.Scene,
   for (const {name,area:[x,y,w,h]} of doors) {
     if (name===infirmary.name) continue;
     if (privateOffices.some(office=>office.name===name)) fill(0x757f78,x,y,w,h);
-    fill(0x9b8d6d,x,y+3,w,3);
+    if (h>w) fill(0x9b8d6d,x+1,y,3,h);
+    else fill(0x9b8d6d,x,y+3,w,3);
   }
 
   for (const office of privateOffices) {

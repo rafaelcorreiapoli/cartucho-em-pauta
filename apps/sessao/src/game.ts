@@ -14,7 +14,7 @@ import { binoculars, xray } from './equipment';
 import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheets } from './character-art';
+import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheet } from './character-art';
 import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
@@ -170,7 +170,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,...combatSheets,...phoneSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...combatSheets,...phoneSheets,safeBreachSheet]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
         this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
@@ -521,8 +521,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const [x,y,w,h] = layout.door;
           const status = office?.door ?? 'open';
           if (status!=='open') {
-            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1)
-              .fillRect(x,y+3,w,status==='breached' ? 2 : h-3);
+            const vertical = h>w;
+            const inset = vertical ? 1 : 3;
+            const thickness = status==='breached' ? 2 : (vertical ? w : h)-inset;
+            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1);
+            if (vertical) this.officeDoors.fillRect(x+inset,y,thickness,h);
+            else this.officeDoors.fillRect(x,y+inset,w,thickness);
           }
           if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
             .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
@@ -698,8 +702,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!downed) view.fallAt = undefined;
         const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt);
         const combatArt = downed ?? recoil ?? attack;
+        const breachArt = latest.breachingSafe && !combatArt && !pose && !latest.carrying
+          ? safeBreachArt(character,time,reducedMotion.matches) : undefined;
         const phone = latest.phone;
-        const usingPhone = (phone==='open' || phone==='game') && !player.moving &&
+        const usingPhone = !breachArt && (phone==='open' || phone==='game') && !player.moving &&
           handling===undefined && !combatArt && !pose && !latest.carrying;
         const handsetArt = usingPhone ? phoneArt(character,time,reducedMotion.matches) : undefined;
         const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
@@ -712,7 +718,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const spriteDepth = y+(latest.carried ? 1 : 0);
         if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
-          .setFlipX(downed?.flipX ?? recoil?.flipX ?? (!handsetArt && facing===3));
+          .setFlipX(downed?.flipX ?? recoil?.flipX ?? (!handsetArt && !breachArt && facing===3));
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
@@ -724,8 +730,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
-        // The phone pose faces south and keeps the briefcase at the idle grip.
-        const grip = briefcaseGrip[NAMES[character]]?.[handsetArt ? 0 : row];
+        const handsBusy = !!(handsetArt || breachArt);
+        const grip = briefcaseGrip[NAMES[character]]?.[breachArt ? 2 : handsetArt ? 0 : row];
         const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
         const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
@@ -750,20 +756,21 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           .setPosition(x,labelY+6).setText(status);
         const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
         if (office.style.color!==officeColor) office.setColor(officeColor);
-        if (moving && !pose && !combatArt) {
+        if (moving && !pose && !combatArt && !breachArt) {
           sprite.play(`${character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
         } else {
           sprite.anims.stop();
-          const art = combatArt ?? handsetArt;
+          const art = combatArt ?? breachArt ?? handsetArt;
           sprite.setTexture(art?.key ?? sheet.key,art?.frame ?? frame+row*4);
         }
         if (grip && latest.cashInHand && !pose && !combatArt) {
-          const walkFrame = !handsetArt && typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
+          const walkFrame = !handsBusy && typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
           const [handX,handY] = grip[walkFrame];
-          const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setOrigin(.5,.12).setScale(12/128);
+          const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setScale(12/128);
           const side = sprite.flipX ? -1 : 1;
-          briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
+          briefcase.setOrigin(.5,breachArt ? 1 : .12)
+            .setPosition(spriteX+(handX-64)*sprite.scaleX*side,breachArt ? y : spriteY+(handY-128)*sprite.scaleY)
             .setFlipX(sprite.flipX).setAlpha(concealed ? .38*opacity : opacity).setVisible(true)
             .setDepth(spriteDepth+.1);
         } else view.briefcase?.setVisible(false);

@@ -30,7 +30,11 @@ export class PrivateOffices {
 
   spawnFor(id:string) {
     const layout = this.ownedBy(id);
-    if (layout) return {...layout.spawn,direction:layout.inside===1 ? 2 : 0};
+    if (layout) {
+      const {x,y} = layout.inside;
+      const direction = x===1 ? 3 : x===-1 ? 1 : y===1 ? 2 : 0;
+      return {...layout.spawn,direction};
+    }
   }
 
   doors(now:number) {
@@ -64,8 +68,7 @@ export class PrivateOffices {
     if (office.doorUntil>now) return reject('A porta está arrombada.');
     if (kind==='office-open' && office.door==='locked' && player.id!==office.owner) {
       if (!inside) return reject('Porta trancada.');
-      const point = officeDoorPoint(office.layout);
-      const exit = {x:point.x,y:point.y-office.layout.inside*15};
+      const exit = officeDoorPoint(office.layout,-15);
       if (!canStand(exit.x,exit.y)) return reject('Saída obstruída.');
       Object.assign(player,exit,{moving:false});
       return 'Você saiu do gabinete.';
@@ -93,8 +96,7 @@ export class PrivateOffices {
       office.doorUntil = 0;
       for (const player of players) {
         if (blockedBy(office.layout.door,player.x,player.y)) {
-          const point = officeDoorPoint(office.layout);
-          Object.assign(player,{x:point.x,y:point.y+office.layout.inside*15,moving:false});
+          Object.assign(player,officeDoorPoint(office.layout,15),{moving:false});
         }
       }
     }

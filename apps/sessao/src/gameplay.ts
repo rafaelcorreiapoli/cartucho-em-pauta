@@ -8,7 +8,7 @@ import { money } from './politics';
 import { reprography } from './room-activities';
 import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
-import { binoculars, concealment, equipment, megaphone, xray } from './equipment';
+import { binoculars, briefcaseTracker, concealment, equipment, megaphone, xray } from './equipment';
 import { foodDefinition, foods, isDrink, isFood, pinga } from './food';
 import { treasurer, type DialogueView, type NpcId } from './npcs';
 import { stations } from './plenary';
@@ -33,6 +33,7 @@ export const objects = {
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
+  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Uso único.`,use:'consume'},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
   xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
@@ -57,7 +58,7 @@ export type ObjectKind = keyof typeof objects;
 export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
   const {kind} = item;
   if (!('use' in objects[kind])) return;
-  const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' ? 'Usar' :
+  const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' || kind==='briefcaseTracker' ? 'Usar' :
     isDrink(kind) ? 'Beber' : 'Comer';
   return {label,action:{kind:'use',item:item.id}} as const;
 }
@@ -142,6 +143,7 @@ export type GameplayView = {
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   installationProgress?:{elapsed:number;duration:number};
   officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
+  briefcaseTracking?:{seconds:number; markers:(Motion & {id:number})[]};
   concealmentSeconds?:number;
   binocularSeconds?:number;
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};

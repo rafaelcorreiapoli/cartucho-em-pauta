@@ -116,7 +116,7 @@ Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica
 
 Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
 
-A Enfermaria fica no lado direito da Central de Expediente. Use **Tratar ferimentos** para recuperar até 35 PV por R$ 10 mil. Ao chegar carregando alguém nocauteado, o atendimento acorda o paciente e recupera até 35 PV adicionais. O carregador paga pelo atendimento.
+A Enfermaria fica ao norte do corredor principal, entre os Gabinetes 01 e 02. O Gabinete 06 tem entrada pela Central de Expediente. Drauzio Varella trata ferimentos gratuitamente e restaura todos os PV. Ao chegar carregando alguém nocauteado, o atendimento acorda e trata o paciente.
 
 ## Voz da sala
 

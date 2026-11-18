@@ -1,5 +1,6 @@
 import {canInteract,type InteractionActor} from './interactions';
 import {furnishings,roomAt,rooms,securityRoom} from './map';
+import {infirmary} from './medical';
 import {privateOffices} from './private-offices';
 
 export const fireRules = {
@@ -32,7 +33,7 @@ const pots = furnishings.filter(prop=>'fireTarget' in prop).map(({area:[x,y,w,h]
 const targets = [
   ...pots,
   {x:527,y:335,object:'Estante'},
-  {x:240,y:62,object:'Mesa'},
+  {...infirmary.stretcher,object:'Maca'},
   {x:570,y:616,object:'Tribuna'},
   {x:30.5,y:222,object:'Armário'},
   {x:666,y:73,object:'Armário'},
@@ -46,7 +47,6 @@ const targets = [
   {x:402,y:476,object:'Balcão'},
   {x:554,y:519,object:'Vaso'},
   {x:735,y:480,object:'Mesa'},
-  {x:860,y:469,object:'Maca'},
   ...privateOffices.map(({cabinet})=>({...cabinet,object:'Armário'})),
 ];
 
