@@ -36,18 +36,18 @@ test('advertising supports repeated purchases with different costs and a tempora
     return true;
   };
 
-  expect(lead(0)).toMatchObject({id:'b',estimate:55});
+  expect(lead(0)).toMatchObject({id:'b',estimate:54.55});
   expect(election.advertise('a',spend)).toBeUndefined();
   wallet = 8;
   expect(election.advertise('a',spend)?.offer.popularity).toBe(5);
-  expect(lead(1)).toMatchObject({id:'a',estimate:56});
+  expect(lead(1)).toMatchObject({id:'a',estimate:55.56});
   expect(election.advertise('a',spend,'feature')?.offer.popularity).toBe(8);
   expect(election.advertise('a',spend,'feature')).toBeUndefined();
   expect(wallet).toBe(2);
 
   election.advance(rules.interval,popularity,2);
-  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:66});
-  expect(lead(rules.interval)).toMatchObject({id:'b',estimate:55});
+  expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:65.71});
+  expect(lead(rules.interval)).toMatchObject({id:'b',estimate:54.55});
   expect(election.advertise('a',spend)).toBeDefined();
   expect(wallet).toBe(0);
 });
@@ -153,4 +153,20 @@ test('a short budget pays full salaries to remaining mandates and NPCs by borrow
   const paid = world.wallet!('npc');
   match.advance(renewal);
   expect(world.wallet!('npc')).toBe(paid);
+});
+
+test('polls and renewal retain hundredths and resolve rounded ties consistently',()=>{
+  const election = new ElectionCycle();
+  // Give B the tie-break advantage while A has a lead smaller than one hundredth.
+  const random = [0.5,0.9,0.5,0.1];
+  election.reset(people.slice(0,2),0,()=>random.shift() ?? .5);
+  const popularity = (id:string)=>id==='a' ? 50.001 : 50;
+  const polls = election.view('a',0,popularity,true).polls;
+  expect(polls.map(({id,estimate})=>({id,estimate}))).toEqual([
+    {id:'b',estimate:50},{id:'a',estimate:50},
+  ]);
+  election.advance(rules.interval,popularity);
+  expect(election.view('a',rules.interval,popularity,true).result?.offices.map(({id,percentage})=>({id,percentage}))).toEqual([
+    {id:'b',percentage:50},{id:'a',percentage:50},
+  ]);
 });

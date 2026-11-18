@@ -52,3 +52,6 @@ export function readElectionAction(raw:unknown):ElectionAction|undefined {
     case 'object': return {kind:raw.kind};
   }
 }
+
+export const electionPercentage = (score:number,total:number) => Math.round(score/total*10_000)/100;
+export const formatElectionPercentage = (value:number) => value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});

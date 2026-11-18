@@ -4,7 +4,7 @@ import { DialogDismiss } from './ui/dialog-dismiss';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties, ReactNode } from 'react';
-import type { ElectionView } from './elections';
+import { formatElectionPercentage, type ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
 
 export function ElectionResult({result}:{result:NonNullable<ElectionView['result']>}) {
@@ -16,7 +16,7 @@ export function ElectionResult({result}:{result:NonNullable<ElectionView['result
       return <div className="result-winner" key={person.id} data-effect={lost ? 'loss' : 'neutral'}>
         <span className="portrait" aria-hidden="true" style={portrait}/>
         <span>{index+1}º · {person.name}{lost && <small>Mandato perdido</small>}</span>
-        <strong className="tabular-nums">{person.percentage}%</strong>
+        <strong className="tabular-nums">{formatElectionPercentage(person.percentage)}%</strong>
       </div>;
     })}
   </section>;

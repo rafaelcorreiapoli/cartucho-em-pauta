@@ -26,7 +26,7 @@ test('the election summary displays only the leader when there is no separate pe
 });
 
 test('the polls dialog presents the current candidate and uses the shared native close',()=>{
-  const candidate = {id:'a',name:'Rafa',character:0,race:'deputy' as const,estimate:73,trend:1};
+  const candidate = {id:'a',name:'Rafa',character:0,race:'deputy' as const,estimate:73.12,trend:1.23};
   const markup = renderToStaticMarkup(<ElectionPolls id="a" election={{
     cycle:2,remaining:85,offices:[],polls:[candidate],result:{cycle:1,offices:[]},canObject:false,canCampaign:true,canInterview:false,
   }}/>);
@@ -36,7 +36,12 @@ test('the polls dialog presents the current candidate and uses the shared native
   expect(markup).not.toContain('Renovação 1');
   expect(markup.match(/<section\b/g)).toHaveLength(1);
   expect(markup).toContain('Rafa (você)');
-  expect(markup).toContain('aria-valuenow="73"');
+  expect(markup).toContain('Pesquisa Eleitoral');
+  expect(markup).not.toContain('Classificação projetada');
+  expect(markup).not.toContain('Os percentuais');
+  expect(markup).toContain('73,12%');
+  expect(markup).toContain('+1,23 pp');
+  expect(markup).toContain('aria-valuenow="73.12"');
 });
 
 
@@ -48,7 +53,7 @@ test('the polls give candidates with the same displayed percentage a shared posi
     cycle:1,remaining:85,offices:[],polls,canObject:false,canCampaign:true,canInterview:false,
   }}/>);
   expect([...markup.matchAll(/data-rank="(\d+)"/g)].map(match=>match[1])).toEqual(['1','2','2','3','3','3']);
-  expect(markup.match(/>Empate</g)).toHaveLength(5);
+  expect(markup.match(/class="poll-tie"> \(Empate\)</g)).toHaveLength(5);
   expect(markup).not.toContain('Apoio público');
 });
 

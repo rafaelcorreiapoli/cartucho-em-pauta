@@ -3,7 +3,7 @@ import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
 import { createRoot } from 'react-dom/client';
 import {CharacterPortrait} from './ui/character-portrait';
-import { ELECTION_RULES, type ElectionView } from './elections';
+import { ELECTION_RULES, formatElectionPercentage, type ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
@@ -63,21 +63,18 @@ export function ElectionPolls({election,id}:{election:ElectionView; id:string}) 
     {name:'Fechar pesquisa eleitoral',activate:()=>readOnly.current?.closest('dialog')?.close()},
   ]);
   return <>
-    <DialogHeader id="election-poll-title" title="Pesquisa eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
+    <DialogHeader id="election-poll-title" title="Pesquisa Eleitoral" dismissLabel="Fechar pesquisa eleitoral"/>
     <div ref={readOnly} className="election-poll-content">
-      <section id="election-polls" aria-labelledby="election-standings-title">
-        <h3 id="election-standings-title">Classificação projetada</h3>
-        <p>Os percentuais são arredondados. A apuração pode mudar a ordem.</p>
+      <section id="election-polls" aria-labelledby="election-poll-title">
         <ol role="list">
           {pollStandings(election.polls).map(({candidate,rank,tied})=>{
             const tone = candidate.trend>0 ? 'gain' : candidate.trend<0 ? 'loss' : 'neutral';
             return <li key={candidate.id}><div className="poll-card">
               <RankedPortrait character={candidate.character} rank={rank}/>
               <div className="poll-details"><div className="poll-label">
-                <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}</span>
-                <strong data-effect={tone}>{candidate.estimate}%</strong>
-                {tied && <small>Empate</small>}
-                {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{candidate.trend} pp</small>}
+                <span>{candidate.name}{candidate.id===id ? ' (você)' : ''}{tied && <small className="poll-tie"> (Empate)</small>}</span>
+                <strong data-effect={tone}>{formatElectionPercentage(candidate.estimate)}%</strong>
+                {!!candidate.trend && <small data-effect={tone}>{candidate.trend>0 ? '+' : ''}{formatElectionPercentage(candidate.trend)} pp</small>}
               </div><div className="react-meter" data-tone="budget" role="progressbar" aria-label={'Intenção de voto de '+candidate.name}
                 aria-valuenow={candidate.estimate} aria-valuemin={0} aria-valuemax={100}>
                 <span style={{transform:`scaleX(${candidate.estimate/100})`}}/></div>
