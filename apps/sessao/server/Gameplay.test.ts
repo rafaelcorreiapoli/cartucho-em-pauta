@@ -220,7 +220,7 @@ test.each([3,12])('cash reappears sooner with %i competing players', contenders=
   const [first] = game.view(alice,world).nearby;
   expect(game.act(alice,{kind:'collect',item:first.id},world)).toBe('Objeto recolhido.');
 
-  const nextAt = contenders===3 ? 12_000 : 8_000;
+  const nextAt = contenders===3 ? 9_334 : 6_667;
   world.now = nextAt-1;
   game.tick(world,true);
   expect(game.view(alice,world).nearby).toEqual([]);
