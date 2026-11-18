@@ -337,6 +337,9 @@ body:has(.tutorial-panel[data-highlight="agenda"]) .react-agenda,
 body:has(.tutorial-panel[data-highlight="profile"]) .deck-identity,
 body:has(.tutorial-panel[data-highlight="apps"]) button[aria-label="Aplicativos"],
 body:has(.tutorial-panel[data-highlight="apps"]) button[aria-label="Celular"],
+body:has(.tutorial-panel[data-highlight="surveillance"]) button[aria-label="Aplicativos"],
+body:has(.tutorial-panel[data-highlight="surveillance"]) button[aria-label="Vigilância"],
+body:has(.tutorial-panel[data-highlight="polls"]) #election-dock,
 body:has(.tutorial-panel[data-highlight="fire"]) #active-fire,
 body:has(.tutorial-panel[data-highlight="power"]) #active-outage { outline:3px solid #ffdc75; outline-offset:4px; box-shadow:0 0 18px #ffdc7566; border-radius:8px; }
 

@@ -3,7 +3,7 @@ import {stations} from './plenary';
 import {terminals} from './gameplay';
 import type {Motion} from './map';
 
-type Step = {highlight?:'stats'|'energy'|'bag'|'equipment'|'agenda'|'profile'|'apps'|'fire'|'power';chapter:string;title:string;text:string;hint:string;target?:Motion;item?:ObjectKind;event?:GameplayEvent['type'];kind?:ObjectKind;manual?:boolean};
+type Step = {highlight?:'stats'|'energy'|'bag'|'equipment'|'agenda'|'profile'|'apps'|'surveillance'|'polls'|'fire'|'power';chapter:string;title:string;text:string;hint:string;target?:Motion;item?:ObjectKind;event?:GameplayEvent['type'];kind?:ObjectKind;manual?:boolean};
 export const tutorialSteps:readonly Step[] = [
   {chapter:'Primeiros passos',title:'Conheça seu HUD',highlight:'stats',text:'No alto ficam vida, energia, experiência e dinheiro. Passe o mouse ou toque nos indicadores para ler a ajuda.',hint:'Leia os indicadores e escolha Continuar.',manual:true},
   {chapter:'Primeiros passos',title:'Caminhe pelo Congresso',text:'Clique no chão para andar. Vá até o Cafezinho.',hint:'A planta do mapa abre com Tab.',target:stations.coffee},
@@ -20,9 +20,9 @@ export const tutorialSteps:readonly Step[] = [
   {chapter:'Celular e interação',title:'Ofereça um café',highlight:'bag',text:'O guia se aproxima. Na mochila, selecione o café e ofereça-o a Bot 1.',hint:'Fique perto do guia para enviar o pedido. Ele aceitará.',event:'transferred',kind:'coffee',item:'coffee'},
   {chapter:'Documentos e provas',title:'Consiga uma assinatura',highlight:'bag',text:'Pegue um documento na Secretaria, caso ainda não tenha. Na mochila, peça a assinatura de Bot 1.',hint:'O guia assina quando você está perto dele.',event:'signed',target:stations.secretary},
   {chapter:'Documentos e provas',title:'Publique um comunicado',highlight:'apps',text:'Abra o Correio Interno no celular e publique um comunicado. Você pode anexar uma foto ou documento.',hint:'Escreva um assunto e uma mensagem antes de publicar.',event:'mail-published'},
-  {chapter:'Popularidade e eleição',title:'Consulte a pesquisa',highlight:'profile',text:'A popularidade influencia a disputa eleitoral. Abra a pesquisa pelo indicador eleitoral ou pela tecla L.',hint:'Observe quem lidera e quem corre risco de perder o mandato.',manual:true},
+  {chapter:'Popularidade e eleição',title:'Consulte a pesquisa',highlight:'polls',text:'A popularidade influencia a disputa eleitoral. Abra a pesquisa pelo indicador eleitoral ou pela tecla L.',hint:'Observe quem lidera e quem corre risco de perder o mandato.',manual:true},
   {chapter:'Espionagem',title:'Instale uma câmera',highlight:'bag',text:'Você recebeu uma câmera de espionagem. Entre no seu gabinete e instale-a usando as ações disponíveis.',hint:'Escolha a câmera na mochila para consultar as condições de instalação.',event:'spy-installed',item:'spyCamera'},
-  {chapter:'Espionagem',title:'Monitore sua câmera',highlight:'apps',text:'Abra Vigilância pelo menu de aplicativos e consulte a câmera instalada.',hint:'O aplicativo Vigilância também abre com V.',event:'spy-viewed'},
+  {chapter:'Espionagem',title:'Monitore sua câmera',highlight:'surveillance',text:'Abra Vigilância pelo menu de aplicativos e consulte a câmera instalada.',hint:'O aplicativo Vigilância também abre com V.',event:'spy-viewed'},
   {chapter:'Crises',title:'Apague o incêndio',highlight:'fire',text:'Há um incêndio de treino. Você recebeu um extintor. Vá ao local e use Apagar incêndio.',hint:'Consulte o aviso de incêndio para encontrar a sala.',event:'fire-extinguished',item:'extinguisher'},
   {chapter:'Crises',title:'Repare a energia',highlight:'power',text:'Vá ao painel do Apoio Técnico e opere-o. Bot 1 cuida do segundo painel.',hint:'Os dois painéis precisam ser operados ao mesmo tempo.',event:'power-repaired',target:{x:510,y:183}},
 ];
