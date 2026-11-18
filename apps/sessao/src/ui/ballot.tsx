@@ -1,8 +1,9 @@
 import {billVoteKeys,cassationChoices,hearingVoteLabels,projectVoteLabels} from './ballot-shortcuts';
 import type {CSSProperties} from 'react';
-import {PhoneContactFace} from './phone-call';
+import {CassationBallot} from './cassation-ballot';
+export {CassationBallot} from './cassation-ballot';
 import {ProjectBallot} from './project-ballot';
-import {majorityQuorum,type BillVote,type CassationView,type PlenaryView,type Vote} from '../plenary';
+import {majorityQuorum,type BillVote,type PlenaryView,type Vote} from '../plenary';
 
 type BallotState = {
   hearing:boolean; eligible:boolean; mandate:boolean; voted:number;
@@ -31,25 +32,6 @@ export function Ballot({hearing,eligible,mandate,voted,electorate,quorum,vote,ca
   </div>;
 }
 
-export function CassationBallot({state,ownId,cast}:{
-  state:CassationView; ownId:string; cast:(candidate:string|null)=>void;
-}) {
-  const {candidates,skipKey} = cassationChoices(state,ownId);
-  return <section className="cassation-ballot" aria-label="Votação de cassação">
-    <p>{state.voted}/{state.electorate} votaram · {state.quorum} votos para cassar</p>
-    <div className="cassation-candidates">
-      {candidates.map(({person,key})=><button key={person.id}
-        type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-        aria-keyshortcuts={key} aria-pressed={state.choice===person.id} onClick={()=>cast(person.id)}>
-        <PhoneContactFace person={person}/><span>{person.name}</span>{key && <kbd className="action-key" aria-hidden="true">{key}</kbd>}
-      </button>)}
-    </div>
-    <button type="button" className="hud-button hud-button--secondary" disabled={!state.eligible}
-      aria-keyshortcuts={skipKey} aria-pressed={state.choice===null} onClick={()=>cast(null)}>Pular voto <kbd className="action-key" aria-hidden="true">{skipKey}</kbd></button>
-    {!state.eligible && <p>Você pode acompanhar a votação.</p>}
-  </section>;
-}
-
 export function hearingBallotState(view:PlenaryView):BallotState|null {
   const {hearing,mandate,politics,electorate} = view;
   if (!hearing) return null;
@@ -65,7 +47,7 @@ export function sessionBallotState(view:PlenaryView) {
     return {kind:'project' as const,state:{round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,botMessages,
       eligible:!!mandate && !politics?.suspended}};
   }
-  if (view.cassation) return {kind:'cassation' as const,state:view.cassation};
+  if (view.cassation) return {kind:'cassation' as const,state:view.cassation,remaining:view.remaining};
   const hearing = hearingBallotState(view);
   return hearing && {kind:'hearing' as const,state:hearing};
 }
@@ -75,7 +57,7 @@ export function SessionBallot({state,ownId,cast,castCassation,onExpansion}:{
   ownId:string; onExpansion?:(expanded:boolean)=>void; cast:(vote:BillVote)=>void; castCassation:(candidate:string|null)=>void;
 }) {
   if (state.kind==='project') return <ProjectBallot key={state.state.round} {...state.state} ownId={ownId} cast={cast} onExpansion={onExpansion}/>;
-  if (state.kind==='cassation') return <CassationBallot state={state.state} ownId={ownId} cast={castCassation}/>;
+  if (state.kind==='cassation') return <CassationBallot state={state.state} ownId={ownId} remaining={state.remaining} cast={castCassation}/>;
   return <Ballot {...state.state} cast={cast}/>;
 }
 

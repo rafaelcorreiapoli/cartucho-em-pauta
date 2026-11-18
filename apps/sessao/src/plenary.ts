@@ -122,7 +122,17 @@ export type VoteIntent = {id:string; name:string; vote:Vote};
 export type Vote = 'yes' | 'no';
 export type BillVote = Vote | 'abstain';
 export type BillVoter = Omit<SessionParticipant,'role'> & {vote?:BillVote};
-export type CassationView = {candidates:Omit<SessionParticipant,'role'>[]; eligible:boolean; voted:number; electorate:number; quorum:number; choice?:string|null};
+export type CassationView = {
+  candidates:Omit<SessionParticipant,'role'>[];
+  caller?:Omit<SessionParticipant,'role'>;
+  calledAt?:number;
+  votes?:{voter:string;candidate:string|null}[];
+  eligible:boolean;
+  voted:number;
+  electorate:number;
+  quorum:number;
+  choice?:string|null;
+};
 export type Phase = 'lobby' | 'negotiation' | 'ballot' | 'hearing' | 'finished';
 export type Action = 'audit' | 'panel' | 'fraud';
 export type Outcome = {round:number; project?:number; proposer?:string; passed:boolean; yes:number; no:number; abstentions?:number; absences?:number; needed:number; deficit:number; fraud:boolean; applied:Impact};
