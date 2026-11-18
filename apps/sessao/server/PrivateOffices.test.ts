@@ -291,6 +291,21 @@ test('the safe protects an incapacitated owner and converts only the current wal
   expect(inventory[0]).toMatchObject({kind:'briefcase',cash:17});
   expect(game.view(owner,world).ownOffice).toBe(home.id);
   expect(game.physicalCash()).toBeGreaterThanOrEqual(17);
+
+  act(visitor,'drop',undefined,inventory[0].id);
+  const spareTool = buy(visitor,'lockpick');
+  Object.assign(visitor,home.safe);
+  const messages:string[] = [];
+  world.actionFailed = (id,message)=>{ if (id===visitor.id) messages.push(message); };
+  const emptySafe = game.view(visitor,world).officeOptions?.find(option=>option.kind==='office-breach-safe');
+  expect(emptySafe).toMatchObject({place:home.id,item:spareTool,label:'Arrombar cofre · 15 s'});
+  game.act(visitor,emptySafe!,world);
+  expect(messages).toEqual([]);
+  expect(game.view(visitor,world).inventory.some(item=>item.id===spareTool)).toBe(true);
+  tick(officeRules.breachTimes[0]);
+  expect(messages).toEqual(['O cofre está vazio.']);
+  expect(game.view(visitor,world).inventory).toEqual([]);
+  expect(balance).toBe(0);
 });
 
 test('the treasury redeems a physical briefcase exactly once',()=>{

@@ -1227,6 +1227,7 @@ export class Gameplay {
         (world.actionFailed ?? world.feedback)?.(id,moved ? `${label} Fique parado durante a ação.` : label);
         continue;
       }
+      this.remove(item);
       if (kind==='office-breach-safe') {
         const owner = office.owner!;
         const amount = world.lootWallet?.(owner,officeRules.safeLootFraction) ?? 0;
@@ -1234,7 +1235,6 @@ export class Gameplay {
           (world.actionFailed ?? world.feedback)?.(id,'O cofre está vazio.');
           continue;
         }
-        this.remove(item);
         const cash = this.create('briefcase',{holder:id});
         cash.cash = amount;
         this.expose(id,cash.id);
@@ -1243,7 +1243,6 @@ export class Gameplay {
         world.feedback?.(owner,'Seu cofre foi saqueado.');
         continue;
       }
-      this.remove(item);
       if (target==='safe') {
         world.earn(id,cashAmount(item.data)!);
         this.event(world,player,'money-pocketed',item.data,undefined,{place:office.layout.id,amount:cashAmount(item.data)});
