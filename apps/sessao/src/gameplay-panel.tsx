@@ -414,7 +414,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (isGear(item.kind) && phase==='negotiation') act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
-        if (consumable) actions.push({label:consumable.label,run:()=>send(consumable.action)});
+        if (consumable) actions.push({label:consumable.label,run:()=>{
+          send(consumable.action);
+          if (item.kind==='briefcaseTracker') dialog.close();
+        }});
         if (phase==='negotiation') for (const [key,site] of Object.entries(installationSites)) {
           if (item.kind!==site.kind) continue;
           const label = item.kind==='pizza' ? 'Servir na mesa' : item.kind==='vip' ? 'Reservar cadeira' : 'Instalar ou substituir';

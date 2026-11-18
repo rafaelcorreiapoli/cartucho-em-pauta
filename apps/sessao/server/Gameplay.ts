@@ -25,7 +25,7 @@ import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { gearConflict, binoculars, equippedWeapon, equipment, megaphone, isGear, concealment, xray, xrayNeedsRecharge, type Gear } from '../src/equipment';
+import { gearConflict, binoculars, briefcaseTracker, equippedWeapon, equipment, megaphone, isGear, concealment, xray, xrayNeedsRecharge, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -70,6 +70,7 @@ export class Gameplay {
   private serial = 0;
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
+  private briefcaseTrackingUntil = new Map<string,number>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
   private album = new PhotoAlbum();
@@ -187,6 +188,7 @@ export class Gameplay {
     this.album.reset();
     this.exposed.clear();
     this.concealedUntil.clear();
+    this.briefcaseTrackingUntil.clear();
     this.scanning.clear();
     this.binocularUse.clear();
     this.pendingInstallations.clear();
@@ -500,6 +502,29 @@ export class Gameplay {
       'ground' in place && (place.expires ?? Infinity)>now ? [{...data,...place.ground}] : []);
   }
 
+  private briefcaseTracking(id:string, world:GameplayWorld):GameplayView['briefcaseTracking'] {
+    const remaining = (this.briefcaseTrackingUntil.get(id) ?? 0)-world.now;
+    if (remaining<=0) return;
+    const players = new Map(world.players.map(player=>[player.id,player]));
+    const markers = [...this.items.values()].flatMap(({data,place})=>{
+      if (data.kind!=='briefcase') return [];
+      let point:Motion|undefined;
+      if ('ground' in place && (place.expires ?? Infinity)>world.now) point = place.ground;
+      if ('holder' in place) point = players.get(place.holder);
+      if ('storage' in place) {
+        const storage = place.storage;
+        if (storage.startsWith('office:')) {
+          point = this.privateOffices.offices.get(storage.slice('office:'.length))?.layout.cabinet;
+        } else {
+          const terminal = terminalKeys.find(key=>key===storage);
+          if (terminal) point = terminals[terminal].point;
+        }
+      }
+      return point ? [{id:data.id,x:point.x,y:point.y}] : [];
+    });
+    return {seconds:Math.ceil(remaining/1000),markers};
+  }
+
   private visibleGround(player:Player,now:number) {
     return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
   }
@@ -736,6 +761,7 @@ export class Gameplay {
     this.stopModulator(player.id);
     if (!permanent) return;
     this.concealedUntil.delete(player.id);
+    this.briefcaseTrackingUntil.delete(player.id);
     this.combat.leave(player);
     for (const item of [...this.inventory(player.id),...this.equipped(player.id)]) this.move(item,this.groundPlace(item.data,player,world.now));
     for (const [id,request] of this.requests) {
@@ -791,6 +817,7 @@ export class Gameplay {
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
+      briefcaseTracking:this.briefcaseTracking(id,world),
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
       dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
@@ -1697,6 +1724,13 @@ export class Gameplay {
       case 'use':
         if (cashAmount(data)) return this.reject(player,world,'Leve o dinheiro ao cofre do seu gabinete.');
         if (!('use' in definition)) return this.reject(player,world,'Este objeto não pode ser usado dessa forma.');
+        if (data.kind==='briefcaseTracker') {
+          if ((this.briefcaseTrackingUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'O rastreador já está ativo.');
+          this.remove(item);
+          this.briefcaseTrackingUntil.set(id,world.now+briefcaseTracker.duration);
+          this.event(world,player,'used',data,undefined,{witnesses:[]});
+          return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
+        }
         if (data.kind==='mensalUnderwear') {
           if ((this.concealedUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'Você já está ocultando dinheiro.');
           this.remove(item);
