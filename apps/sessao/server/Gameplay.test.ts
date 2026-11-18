@@ -177,7 +177,7 @@ test('phone sessions keep Snake private and clear it when a player disconnects',
 
 test('spawned and dropped cash share visibility and custody without immediate redemption', () => {
   const {alice,bob,watcher,game,world} = setup();
-  const values = [0,0,.117,.172,0];
+  const values = [0,0,.14,.172,0];
   const credits:number[] = [];
   world.earn = (_id,amount) => credits.push(amount);
   Object.assign(alice,{x:140,y:146});

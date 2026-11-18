@@ -1,8 +1,9 @@
-import { mapDoor, roomBounds } from './congress-layout';
+import { mapDoor, mapPoint, roomBounds } from './congress-layout';
 export const infirmary = {
-  x:913,y:486,
+  ...mapPoint('Atendimento da Enfermaria'),
+  stretcher:mapPoint('Maca da Enfermaria'),
   door:mapDoor('Enfermaria'),
-  doctor:{name:'Drauzio Varella',x:928,y:475},
+  doctor:{name:'Drauzio Varella',...mapPoint('Médico da Enfermaria')},
   name:'Enfermaria',
   bounds:roomBounds('Enfermaria'),
 } as const;
