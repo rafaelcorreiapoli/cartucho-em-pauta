@@ -175,7 +175,6 @@ body:has(#session:not([hidden])) #voice-test { display:none; }
 #election-dock .politics-content { bottom:auto; top:calc(100% + 6px); }
 #bill-objection { color:var(--hud-gold); }
 #election-polls h3 { margin:.5rem 0 .2rem; }
-#election-polls ol { margin:.25rem 0; padding-left:1.3rem; }
 @media (max-width:740px) {
   #election-dock { top:auto; bottom:max(111px,calc(100px + env(safe-area-inset-bottom))); }
   #election-dock .politics-content { top:auto; bottom:calc(100% + 6px); max-height:53dvh; }
@@ -229,7 +228,6 @@ progress::-moz-progress-bar { background:var(--bar-color,#f2c77f); }
 .hud-feedback { padding:.3rem .45rem; border-left:2px solid var(--hud-gold); background:#203331; }
 .agenda-card { border:1px solid #9e927a88; padding:.4rem .5rem; border-radius:5px; }
 .agenda-card p { margin:.3rem 0 0; }
-#election-polls li { margin-bottom:.45rem; }
 .poll-label { display:flex; justify-content:space-between; gap:.45rem; }
 @media (max-width:680px) {
   #plenary { max-height:42dvh; }

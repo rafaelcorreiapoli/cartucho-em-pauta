@@ -5,21 +5,16 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { CSSProperties, ReactNode } from 'react';
 import type { ElectionView } from './elections';
+import {ElectionCandidateCard} from './ui/election-candidate-card';
 import type { PlenaryView } from './plenary';
 
 export function ElectionResult({result}:{result:NonNullable<ElectionView['result']>}) {
-  return <section className="grid gap-2">
-    <h3>Renovação de Mandato {result.cycle}</h3>
-    {result.offices.map((person,index)=>{
-      const lost = person.id===result.eliminated;
-      const portrait = {'--portrait-column':person.character%2,'--portrait-row':Math.floor(person.character/2)} as CSSProperties;
-      return <div className="result-winner" key={person.id} data-effect={lost ? 'loss' : 'neutral'}>
-        <span className="portrait" aria-hidden="true" style={portrait}/>
-        <span>{index+1}º · {person.name}{lost && <small>Mandato perdido</small>}</span>
-        <strong className="tabular-nums">{person.percentage}%</strong>
-      </div>;
-    })}
-  </section>;
+  return <ol className="election-candidates" role="list" aria-label="Classificação final">
+    {result.offices.map((person,index)=><li key={person.id}>
+      <ElectionCandidateCard character={person.character} rank={index+1} name={person.name}
+        percentage={person.percentage} lost={person.id===result.eliminated}/>
+    </li>)}
+  </ol>;
 }
 
 const finaleParticles = Array.from({length:44},(_,index)=>({
@@ -70,14 +65,14 @@ export function SessionResult({winner,reason,stability,congressDestroyed,finalRo
   </section>;
 }
 
-export function ResultsContent({children}:{children:ReactNode}) {
+export function ResultsContent({children,title="Resultados"}:{children:ReactNode;title?:string}) {
   const dismiss = ():void=>{content.current?.closest('dialog')?.close();};
   const content = useDialogKeys<HTMLDivElement>(()=>undefined,[
     {name:'Fechar resultados',activate:dismiss},
     {name:'Continuar',activate:dismiss},
   ]);
   return <>
-    <DialogHeader id="result-title" title="Resultados" dismissLabel="Fechar resultados"/>
+    <DialogHeader id="result-title" title={title} dismissLabel="Fechar resultados"/>
     <div ref={content} id="result-content">{children}</div>
     <DialogDismiss className="hud-button">Continuar</DialogDismiss>
   </>;
@@ -108,7 +103,7 @@ export function mountResults(closeGameplay:()=>void) {
         flushSync(()=>root.render(<ResultsContent><CassationResult text={cassation.text}/></ResultsContent>));
         if (!dialog.open) dialog.showModal();
       } else if (electionChanged) {
-        flushSync(()=>root.render(<ResultsContent><ElectionResult result={election}/></ResultsContent>));
+        flushSync(()=>root.render(<ResultsContent title="Resultados da Eleição"><ElectionResult result={election}/></ResultsContent>));
         closeGameplay();
         if (!dialog.open) dialog.showModal();
       }

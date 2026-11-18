@@ -1,4 +1,4 @@
-import { ELECTION_RULES as rules, officeKeys, advertisements, type Advertisement, type Assignment, type CampaignAdvertisement, type ElectionView, type Elected, type Office } from '../src/elections';
+import { ELECTION_RULES as rules, officeKeys, advertisements, electionPercentage, type Advertisement, type Assignment, type CampaignAdvertisement, type ElectionView, type Elected, type Office } from '../src/elections';
 import type { Contact } from '../src/politics';
 
 type Candidate = Contact & {
@@ -132,7 +132,9 @@ export class ElectionCycle {
   }
 
   private rank(popularity:(id:string)=>number,advertisementMultiplier:number) {
-    const score = (person:Candidate) => this.tallyScore(person,popularity,advertisementMultiplier);
+    const scores = new Map([...this.people.values()].map(person => [person,Math.max(.01,this.tallyScore(person,popularity,advertisementMultiplier))]));
+    const total = [...scores.values()].reduce((sum,score)=>sum+score,0);
+    const score = (person:Candidate) => electionPercentage(scores.get(person)!,total);
     return [...this.people.values()].sort((a,b) => score(b)-score(a) || a.tie-b.tie || a.id.localeCompare(b.id));
   }
 
@@ -141,9 +143,9 @@ export class ElectionCycle {
       const group = [...this.people.values()].filter(person => person.race===race);
       const estimates = group.map(person => ({person,score:Math.max(1,this.strength(person,popularity,advertisementMultiplier)-person.noise)}));
       const sum = estimates.reduce((total,{score}) => total+score,0);
-      return estimates.sort((a,b) => b.score-a.score || a.person.tie-b.person.tie).map(({person,score}) => {
-        const estimate = Math.round(score/sum*100);
-        return {id:person.id,name:person.name,character:person.character,race,estimate,trend:estimate-(this.previousPoll.get(person.id) ?? estimate)};
+      return estimates.map(({person,score}) => ({person,estimate:electionPercentage(score,sum)}))
+        .sort((a,b) => b.estimate-a.estimate || a.person.tie-b.person.tie || a.person.id.localeCompare(b.person.id)).map(({person,estimate}) => {
+        return {id:person.id,name:person.name,character:person.character,race,estimate,trend:Math.round((estimate-(this.previousPoll.get(person.id) ?? estimate))*100)/100};
       });
     });
   }
@@ -156,7 +158,7 @@ export class ElectionCycle {
       const eliminated = ranked.length>rules.minimumMandates ? ranked.at(-1) : undefined;
       if (eliminated) this.leave(eliminated.id,now);
       const offices = ranked.map((person,index)=>({id:person.id,name:person.name,character:person.character,
-        office:person.office,race:person.race,percentage:Math.round(100*scores[index]/total)}));
+        office:person.office,race:person.race,percentage:electionPercentage(scores[index],total)}));
       this.announce(eliminated ? `${eliminated.name} perdeu o mandato.` : 'Renovação concluída. Mandatos preservados.');
       this.objected = false;
       for (const person of this.people.values()) {
