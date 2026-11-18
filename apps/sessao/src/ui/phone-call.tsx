@@ -51,13 +51,13 @@ export function PhoneCalls({call,contacts,available,send,close}:{
   }
   if (!available) return <p ref={attach}>Ligações ficam disponíveis durante a articulação.</p>;
   if (!contacts.length) return <p ref={attach}>Ninguém mais na sala.</p>;
-  return <div ref={attach} className="phone-contacts">
-    {options.map(({person,shortcut,activate})=>{
-      return <button key={person.id} type="button" className="phone-contact" aria-label={`Ligar para ${person.name}`}
+  return <ul ref={attach} className="phone-contacts" aria-label="Contatos para ligar">
+    {options.map(({person,shortcut,activate})=><li key={person.id}>
+      <button type="button" className="phone-contact" aria-label={`Ligar para ${person.name}`}
         aria-keyshortcuts={shortcut} onClick={activate}>
         <PhoneContactFace person={person}/><strong>{person.name}</strong><HudIcon name="handset" className="phone-contact-dial"/>
         {shortcut && <kbd className="action-key" aria-hidden="true">{shortcut}</kbd>}
-      </button>;
-    })}
-  </div>;
+      </button>
+    </li>)}
+  </ul>;
 }

@@ -107,8 +107,11 @@
   color: #ffdf88;
   font-family: system-ui, sans-serif;
 }
-#wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain,.popularity-gain)) .xp-gain { transform: translate(5px,-100%); }
-#wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain,.popularity-gain) { transform: translate(calc(-100% - 5px),-100%); }
+#wallet-effects:has(.xp-gain):has(.wallet-gain:not(.xp-gain,.popularity-gain,.wallet-loss)) .xp-gain { transform: translate(5px,-100%); }
+#wallet-effects:has(.xp-gain) .wallet-gain:not(.xp-gain,.popularity-gain,.wallet-loss) { transform: translate(calc(-100% - 5px),-100%); }
+#wallet-effects:has(.wallet-gain:not(.wallet-loss)) .wallet-loss {
+  transform: translate(-50%,calc(-100% - 4.2em));
+}
 
 .wallet-gain.popularity-gain {
   border-color: #bdabff;

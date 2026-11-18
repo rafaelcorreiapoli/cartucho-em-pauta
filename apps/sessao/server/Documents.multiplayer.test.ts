@@ -47,7 +47,9 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const snapshots = new Map<string,Player[]>();
     const reports = new Map<string,ForensicReport[]>();
     const pixNotices = new Map<string,{from:string;amount:number}>();
+    const pixSent = new Map<string,{amount:number}>();
     for (const peer of rooms) {
+      peer.onMessage('pix-sent',(notice:{amount:number})=>pixSent.set(peer.sessionId,notice));
       peer.onMessage('pix-received',(notice:{from:string;amount:number})=>pixNotices.set(peer.sessionId,notice));
       peer.onMessage('audit-result',()=>{});
       peer.onMessage('plenary',(view:PlenaryView)=>views.set(peer.sessionId,view));
@@ -147,6 +149,8 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     caio.send('politics',{kind:'transfer',to:bia.sessionId,amount:4,clandestine:false,token:1320});
     const pix = await wait(()=>views.get(bia.sessionId)?.politics?.evidence.find(entry=>
       entry.kind==='clandestine-transfer' && entry.from===caio.sessionId && entry.to===bia.sessionId && entry.amount===4));
+    expect(await wait(()=>pixSent.get(caio.sessionId))).toEqual({amount:4});
+    expect([...pixSent.keys()]).toEqual([caio.sessionId]);
     expect([...pixNotices]).toEqual([[bia.sessionId,{from:'Caio',amount:4}]]);
     const alicePolitics = () => views.get(alice.sessionId)?.politics;
     expect(alicePolitics()?.evidence.some(entry=>entry.id===pix.id)).toBe(false);

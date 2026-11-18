@@ -121,7 +121,8 @@ async page => {
 
     await page.keyboard.press('c');
     await page.keyboard.press('1');
-    const dial = page.locator(dialog).getByRole('button',{name:'Ligar para Bia',exact:true});
+    const dial = page.locator(dialog).getByRole('list',{name:'Contatos para ligar'})
+      .getByRole('listitem').getByRole('button',{name:'Ligar para Bia',exact:true});
     await dial.evaluate(button=>button.setAttribute('aria-label','Contato original oculto'));
     await page.keyboard.press('F2');
     await palette.getByRole('button',{name:/Ligar para Bia/}).click();
@@ -148,7 +149,8 @@ async page => {
     if (!await transfer.isDisabled()) throw Error('O Pix deve exigir um destinatário');
     await page.keyboard.press('1');
     await page.keyboard.press('2');
-    await pix.getByRole('button',{name:'Bia',exact:true,pressed:true}).waitFor();
+    await pix.getByRole('list',{name:'Contatos para Pix'}).getByRole('listitem')
+      .getByRole('button',{name:'Bia',exact:true,pressed:true}).waitFor();
     await page.keyboard.press('ArrowRight');
     await pix.getByText('R$ 20 mil',{exact:true}).waitFor();
     await page.keyboard.press('ArrowLeft');
@@ -162,7 +164,10 @@ async page => {
       button.setAttribute('aria-label','Transferência original oculta do F2');
     });
     await page.keyboard.press('F2');
-    await palette.getByRole('button',{name:/Transferir/}).click();
+    await Promise.all([
+      page.locator('#wallet-effects .wallet-loss[style]').getByText('−R$ 10 mil',{exact:true}).waitFor(),
+      palette.getByRole('button',{name:/Transferir/}).click(),
+    ]);
     await pix.locator('.pix-balance').getByText('R$ 70 mil',{exact:true}).waitFor();
     if (await page.evaluate(()=>window.syntheticPixClicks)!==0) throw Error('O atalho simulou clique para transferir');
 

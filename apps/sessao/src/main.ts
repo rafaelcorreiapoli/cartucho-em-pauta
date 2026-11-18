@@ -272,7 +272,14 @@ async function connect(join: () => Promise<Room>) {
     });
     joined.onMessage('public-investment',({author,area,amount}:InvestmentAnnouncement)=>
       hud.notify('Verba aplicada',`${author} aplicou ${money(amount)} em ${investmentAreas[area]}.`,true));
-    joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`));
+    joined.onMessage('pix-sent',({amount}:{amount:number})=>{
+      audio.cue('cash');
+      hud.showReward('expense',amount,game?.playerHead());
+    });
+    joined.onMessage('pix-received',({from,amount}:{from:string;amount:number})=>{
+      audio.cue('cash');
+      hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`);
+    });
     joined.onMessage('fire-extinguished',({actor,room}:import('./fire').FireExtinguished)=>
       hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`));
     joined.onMessage('gameplay-feedback',(message:string)=>{
