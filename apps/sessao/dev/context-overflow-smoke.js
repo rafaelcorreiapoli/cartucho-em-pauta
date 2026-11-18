@@ -14,6 +14,7 @@ async page => {
   await page.locator('#parliamentarian-count [data-count="3"]').click();
   await page.locator('#parliamentarian-count [data-count="3"][aria-pressed="true"]').waitFor();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const more = page.getByRole('button',{name:'Mais ações'});
   await more.waitFor();
   const ordinary = page.locator('#stations [data-context-overflow="false"]');
@@ -180,6 +181,7 @@ async page => {
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.locator('#parliamentarian-count [data-count="0"]').click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:'Abrir armário',exact:true}).click();
   const stash = page.getByRole('dialog',{name:'Armário particular'});
   const deposit = stash.getByRole('button',{name:'Guardar Pinga',exact:true});

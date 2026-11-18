@@ -301,7 +301,7 @@ export class PlayerBots {
     const yesStability = stability+yes.stability;
     const noStability = stability+no.stability;
     const difference = impactScore(yes,budget)-impactScore(no,budget);
-    const threshold = view.outcomes.length+1>=projectRules.requiredVotes ? stabilityRules.target : 0;
+    const threshold = stabilityRules.target;
     const decisive = (yesStability>=threshold)!==(noStability>=threshold) || (yesStability<=0)!==(noStability<=0);
     const infiltrator = view.role==='Infiltrado';
     if (decisive || Math.abs(difference)>safeDifference) {

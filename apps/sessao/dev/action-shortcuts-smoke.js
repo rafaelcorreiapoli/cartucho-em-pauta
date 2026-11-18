@@ -18,6 +18,15 @@ async page => {
   await page.keyboard.press('Escape');
   await settings.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  const role = page.getByRole('dialog',{name:'Parlamentar',exact:true});
+  await role.getByText(/Proteja o Congresso.*45 de estabilidade/).waitFor();
+  await role.evaluate(dialog=>{
+    const {x,y,width,height} = dialog.getBoundingClientRect();
+    if (Math.abs(x+width/2-innerWidth/2)>2 || Math.abs(y+height/2-innerHeight/2)>2) {
+      throw Error('O aviso de papel saiu do centro da tela.');
+    }
+  });
+  await role.getByRole('button',{name:'Entendi',exact:true}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   const launcher = page.getByRole('button',{name:'Aplicativos',exact:true});
   const apps = page.locator('#congress-app-panel');

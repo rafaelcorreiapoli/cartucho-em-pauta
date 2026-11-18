@@ -62,6 +62,12 @@
     </details>
     <section id="session" data-phase="lobby" aria-label="Sala multiplayer" hidden>
       <div id="map-action-feedback" popover="manual" role="status"></div>
+      <dialog id="role-intro" aria-labelledby="role-intro-title" aria-describedby="role-intro-objective">
+        <small>Seu papel secreto</small>
+        <h2 id="role-intro-title"></h2>
+        <p id="role-intro-objective"></p>
+        <form method="dialog"><button class="hud-button" autofocus>Entendi</button></form>
+      </dialog>
       <dialog id="ballot-countdown" aria-labelledby="ballot-countdown-message"></dialog>
       <div id="world">
         <div id="map" tabindex="0" aria-label="Mapa do Congresso"></div>

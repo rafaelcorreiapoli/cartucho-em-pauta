@@ -600,7 +600,7 @@ test('failed mail payments and expired cash preserve the ledger across retries',
   expect(summary()).toMatchObject({reserveFees:8.5,transferred:1,expired:3,discrepancy:0});
 });
 
-test.each([0,2,3])('the deadline counts rejected projects toward the three-vote goal (%i)',count=>{
+test.each([0,2,3])('stable Parliament wins regardless of how many projects were voted (%i)',count=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,[host],0,()=>.9);
   Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
@@ -619,8 +619,22 @@ test.each([0,2,3])('the deadline counts rejected projects toward the three-vote 
   match.advance(ELECTION_RULES.matchDuration);
   const result = match.view(host.id,[host.id],ELECTION_RULES.matchDuration);
   expect(result.outcomes.map(outcome=>outcome.passed)).toEqual(Array(count).fill(false));
-  expect(result.winner).toBe(count===3 ? 'Parlamentar' : undefined);
-  expect(result.congressDestroyed).toBe(count<3 ? true : undefined);
+  expect(result.winner).toBe('Parlamentar');
+  expect(result.congressDestroyed).toBeUndefined();
+});
+
+test.each([
+  [stabilityRules.target,'Parlamentar'],
+  [stabilityRules.target-1,'Infiltrado'],
+] as const)('with no ballots, %i stability at the deadline gives victory to %s',(stability,winner)=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  Reflect.set(match,'stability',stability);
+  match.advance(ELECTION_RULES.matchDuration);
+  expect(match.view(host.id,ids,ELECTION_RULES.matchDuration)).toMatchObject({
+    phase:'finished',outcomes:[],stability,winner,
+  });
 });
 
 test('the speech mission returns after renewal and propaganda stays available',()=>{

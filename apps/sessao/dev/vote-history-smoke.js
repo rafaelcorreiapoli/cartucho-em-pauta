@@ -49,6 +49,7 @@ async page => {
   await npcs.click();
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   const settingsButton = page.locator('#plenary-settings');
   await settingsButton.waitFor({state:'hidden'});
@@ -194,6 +195,7 @@ async page => {
   },roomId);
   try {
     await start.click();
+    await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
     await sheet.waitFor();
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});

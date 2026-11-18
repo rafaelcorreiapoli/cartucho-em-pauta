@@ -11,6 +11,7 @@ async page => {
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Modais QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const grant = page.getByRole('button',{name:/^Aplicar verba$/});
   await grant.waitFor();
   const dossier = page.getByRole('dialog',{name:'Dossiê'});
@@ -73,6 +74,7 @@ async page => {
   await twoNpcs.click();
   await twoNpcs.and(page.locator('[aria-pressed="true"]')).waitFor();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:'Secretaria · Falar com Dona Sílvia'}).click();
   if (await page.getByRole('button',{name:'Pedir documento avulso'}).count()) {
     throw Error('A Secretaria voltou a oferecer documentos avulsos.');
@@ -174,6 +176,7 @@ async page => {
     }
     await page.locator('#parliamentarian-count [data-count="0"]').click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
+    await Promise.all([page,disconnected,witness,fourth].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     await page.getByRole('button',{name:/Falar com Chapolin Colorado/}).click();
     await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · R\$ 100 mil/}).click();
     const ballot = page.getByRole('region',{name:'Votação de cassação'});

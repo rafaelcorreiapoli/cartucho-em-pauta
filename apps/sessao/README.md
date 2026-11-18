@@ -35,11 +35,12 @@ O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
 Entre com um nick e crie a sala ou use o link de convite. A caricatura é
 uma skin: o mapa, a voz e os avisos usam o nick. O anfitrião pode iniciar
 sozinho ou convidar até onze amigos. O papel secreto é sorteado entre pessoas
-e bots, independentemente da skin. Os
-parlamentares ganham se chegarem ao fim da sessão com pelo menos três projetos
-votados e 45 de estabilidade. Projetos rejeitados contam. Se a meta não for
-atingida, o infiltrado ganha. Se a estabilidade chegar a zero, a partida termina
-na hora. Cada ponto gasto além do orçamento custa dois de estabilidade.
+e bots, independentemente da skin. No início da sessão, cada jogador recebe um
+aviso privado com seu papel e objetivo. Os parlamentares ganham se chegarem ao
+fim da sessão com pelo menos 45 de estabilidade ou se tirarem de jogo todos os
+infiltrados. Os infiltrados ganham se o Congresso chegar ao fim da sessão abaixo
+de 45 de estabilidade ou se a estabilidade cair a zero durante a partida. Cada ponto gasto além do orçamento custa dois de
+estabilidade.
 
 Consulte **Celular → Projetos** e fale com Dona Sílvia no balcão da Secretaria
 para solicitar um documento. Projetos dispensam carimbos e exigem duas

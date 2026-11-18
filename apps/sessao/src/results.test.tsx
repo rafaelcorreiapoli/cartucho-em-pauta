@@ -7,7 +7,7 @@ import {CassationResult,ElectionResult,ResultsContent,SessionResult} from './res
 import {PlenaryMatch} from '../server/PlenaryMatch';
 import {ELECTION_RULES} from './elections';
 import {HEARING_MS} from './politics';
-import {NEGOTIATION_MS,BALLOT_MS,CASSATION_NOTICE_MS,projectRules,stations} from './plenary';
+import {NEGOTIATION_MS,BALLOT_MS,CASSATION_NOTICE_MS,stabilityRules,stations} from './plenary';
 import type {Player} from './map';
 
 test('a player outside the plenary receives the final result in the modal content',()=>{
@@ -15,6 +15,7 @@ test('a player outside the plenary receives the final result in the modal conten
   const match = new PlenaryMatch(1);
   match.start(player.id,[player],0,()=>0);
   Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
+  Reflect.set(match,'stability',stabilityRules.target-1);
   const deadline = ELECTION_RULES.matchDuration;
   match.advance(NEGOTIATION_MS);
   expect(match.phase).toBe('negotiation');
@@ -25,7 +26,7 @@ test('a player outside the plenary receives the final result in the modal conten
   expect(view.outcomes).toEqual([]);
   expect(view.winner).toBeUndefined();
   expect(view.congressDestroyed).toBe(true);
-  expect(markup).toContain(`0 de ${projectRules.requiredVotes} projetos votados`);
+  expect(markup).toContain('O Congresso terminou abaixo da meta de estabilidade.');
   expect(markup).toContain('aria-label="Parlamentares" data-result="lost"');
   expect(markup).toContain('Sem vencedores');
   expect(markup).not.toContain('data-result="won"');

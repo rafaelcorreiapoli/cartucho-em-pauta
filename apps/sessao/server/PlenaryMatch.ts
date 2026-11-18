@@ -1091,11 +1091,10 @@ export class PlenaryMatch {
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
   private finishAtDeadline() {
-    const enoughVotes = this.outcomes.length>=projectRules.requiredVotes;
-    const won = enoughVotes && this.stability>=stabilityRules.target;
-    this.finish(won ? 'Parlamentar' : 'Infiltrado', !enoughVotes
-      ? `A sessão terminou com ${this.outcomes.length} de ${projectRules.requiredVotes} projetos votados.`
-      : won ? 'O Congresso cumpriu a meta de votações.' : 'O Congresso terminou abaixo da meta de estabilidade.');
+    const won = this.stability>=stabilityRules.target;
+    this.finish(won ? 'Parlamentar' : 'Infiltrado', won
+      ? 'O Congresso manteve a estabilidade até o fim da sessão.'
+      : 'O Congresso terminou abaixo da meta de estabilidade.');
   }
 
   private finish(winner:Role | undefined, reason:string) {
