@@ -697,7 +697,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const combatArt = downed ?? recoil ?? attack;
         const phone = latest.phone;
         const usingPhone = (phone==='open' || phone==='game') && !player.moving &&
-          handling===undefined && !combatArt && !pose && !latest.carrying && !latest.cashInHand;
+          handling===undefined && !combatArt && !pose && !latest.carrying;
         const handsetArt = usingPhone ? phoneArt(character,time,reducedMotion.matches) : undefined;
         const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
         const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? -reach);
@@ -721,7 +721,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
-        const grip = briefcaseGrip[NAMES[character]]?.[row];
+        // The phone pose faces south and keeps the briefcase at the idle grip.
+        const grip = briefcaseGrip[NAMES[character]]?.[handsetArt ? 0 : row];
         const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
         const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
@@ -755,12 +756,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           sprite.setTexture(art?.key ?? sheet.key,art?.frame ?? frame+row*4);
         }
         if (grip && latest.cashInHand && !pose && !combatArt) {
-          const walkFrame = typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
+          const walkFrame = !handsetArt && typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
           const [handX,handY] = grip[walkFrame];
           const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setOrigin(.5,.12).setScale(12/128);
-          const side = facing===3 ? -1 : 1;
+          const side = sprite.flipX ? -1 : 1;
           briefcase.setPosition(spriteX+(handX-64)*sprite.scaleX*side,spriteY+(handY-128)*sprite.scaleY)
-            .setFlipX(facing===3).setAlpha(concealed ? .38*opacity : opacity).setVisible(true)
+            .setFlipX(sprite.flipX).setAlpha(concealed ? .38*opacity : opacity).setVisible(true)
             .setDepth(spriteDepth+.1);
         } else view.briefcase?.setVisible(false);
         if (own) {
