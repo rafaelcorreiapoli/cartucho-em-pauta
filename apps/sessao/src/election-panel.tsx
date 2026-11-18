@@ -5,7 +5,6 @@ import {useRef,type Ref} from 'react';
 import {CharacterPortrait} from './ui/character-portrait';
 import { ELECTION_RULES, type ElectionView } from './elections';
 import type { PlenaryView } from './plenary';
-import { money } from './politics';
 
 const el = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 
@@ -41,9 +40,7 @@ function ElectionCycle({result,details}:{result?:ElectionView['result'];details:
   const eliminated = result?.offices.find(person=>person.id===result.eliminated)?.name;
   return result ? <details ref={details} id="election-result" key={result.cycle}>
       <summary>Renovação {result.cycle}</summary>
-      <p>{eliminated && `${eliminated} perdeu o mandato. `}
-        {!!result.expectedSalary && `Salário: ${money(result.salary)} de ${money(result.expectedSalary)} (${Math.round(result.salary/result.expectedSalary*100)}%).`}
-      </p>
+      <p>{eliminated ? `${eliminated} perdeu o mandato.` : 'Mandatos preservados.'}</p>
     </details> : null;
 }
 
@@ -91,8 +88,9 @@ export function ElectionIndicator({summary,urgency,open}:{
 }) {
   return <div id="election-dock" className="hud-strip hud-module" hidden={!summary} data-urgency={urgency}>
     {summary && <button id="open-election-polls" aria-keyshortcuts="L" className="hud-option" type="button"
-      aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Pesquisa eleitoral (L)" onClick={open}>
+      aria-label="Pesquisa eleitoral" aria-haspopup="dialog" title="Abrir ranking eleitoral (L)" onClick={open}>
       <ElectionSummary {...summary}/>
+      <kbd className="action-key" aria-hidden="true">L</kbd>
     </button>}
   </div>;
 }

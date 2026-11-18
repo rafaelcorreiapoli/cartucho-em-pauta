@@ -2,7 +2,7 @@ import {publishProjectFiling} from './project-test-fixture';
 import {fireRules,fireSites} from '../src/fire';
 import { expect, test } from 'bun:test';
 import { ELECTION_RULES as rules } from '../src/elections';
-import { stations, NEGOTIATION_MS, BALLOT_MS } from '../src/plenary';
+import { stations, NEGOTIATION_MS, BALLOT_MS, payrollRules } from '../src/plenary';
 import type { Player } from '../src/map';
 import { ElectionCycle } from './ElectionCycle';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -12,25 +12,16 @@ const players = people.slice(0,3).map(({id,name},character):Player => ({id,nick:
 const ids = players.map(({id}) => id);
 const at = (player:Player, key:keyof typeof stations):Player => ({...player,...stations[key]});
 
-test('one human loses their mandate, payroll excludes them, and the floor is preserved',()=>{
+test('renewal removes one mandate per election and preserves the floor',()=>{
   const election = new ElectionCycle();
   election.reset(Array.from({length:6},(_,index)=>({id:String(index),name:String(index)})),0,()=>.5);
-  election.addDeputy('npc');
-  const payroll:string[][] = [];
-  const settle = (ids:string[])=>{
-    payroll.push(ids);
-    return new Map(ids.map(id=>[id,rules.salary]));
-  };
   const popularity = (id:string)=>Number(id)*10;
-  election.advance(rules.interval,popularity,settle);
-  election.advance(rules.interval,popularity,settle);
-  expect(payroll).toHaveLength(1);
-  expect(payroll[0]).toEqual(['1','2','3','4','5','npc']);
-  expect(election.view('0',rules.interval,popularity,true)).toMatchObject({mandate:false,result:{eliminated:'0',salary:0}});
-  expect(election.view('1',rules.interval,popularity,true).polls.some(person=>person.id==='npc')).toBe(false);
-  for (let cycle=2;cycle<=4;cycle++) election.advance(cycle*rules.interval,popularity,settle);
-  expect(payroll).toHaveLength(3);
-  expect(payroll.at(-1)).toEqual(['3','4','5','npc']);
+  election.advance(rules.interval,popularity);
+  election.advance(rules.interval,popularity);
+  expect([...election.mandateIds()]).toEqual(['1','2','3','4','5']);
+  expect(election.view('0',rules.interval,popularity,true)).toMatchObject({mandate:false,result:{eliminated:'0'}});
+  for (let cycle=2;cycle<=4;cycle++) election.advance(cycle*rules.interval,popularity);
+  expect([...election.mandateIds()]).toEqual(['3','4','5']);
 });
 
 test('advertising supports repeated purchases with different costs and a temporary policy bonus',()=>{
@@ -54,7 +45,7 @@ test('advertising supports repeated purchases with different costs and a tempora
   expect(election.advertise('a',spend,'feature')).toBeUndefined();
   expect(wallet).toBe(2);
 
-  election.advance(rules.interval,popularity,()=>new Map(),2);
+  election.advance(rules.interval,popularity,2);
   expect(election.view('a',rules.interval,popularity,true).result?.offices[0]).toMatchObject({id:'a',percentage:66});
   expect(lead(rules.interval)).toMatchObject({id:'b',estimate:55});
   expect(election.advertise('a',spend)).toBeDefined();
@@ -100,7 +91,7 @@ test('private discovery leaves the race intact until the evidence is published',
   expect(match.view('c',ids,0).politics!.ledger).toContainEqual(record);
 });
 
-test('payroll is funded by the budget and eliminating both infiltrators wins without stability damage',()=>{
+test('eliminating both infiltrators wins without stability damage',()=>{
   const match = new PlenaryMatch();
   const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
   const ids = humans.map(player=>player.id);
@@ -118,10 +109,10 @@ test('payroll is funded by the budget and eliminating both infiltrators wins wit
   match.advance(rules.interval);
   const after = view('2',rules.interval);
   expect(after.election?.result?.eliminated).toBe('0');
-  expect(view('0',rules.interval)).toMatchObject({mandate:false,phase:'negotiation',election:{result:{salary:0}}});
+  expect(view('0',rules.interval)).toMatchObject({mandate:false,phase:'negotiation',payroll:{next:{remaining:30,cost:15}}});
   expect(after.stability).toBe(before.stability);
-  expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty-rules.salary*5);
-  expect(after.election?.result?.salary).toBe(rules.salary);
+  expect(after.budget).toBeCloseTo(before.budget-rules.publicDuty);
+  expect(after.payroll?.last).toBeUndefined();
   expect(match.gameplayWorld(humans,rules.interval,()=>false).projectFilingError?.('0',1)).toContain('mandato');
   match.advance(rules.interval*2);
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
@@ -141,14 +132,19 @@ test('a short budget pays full salaries to remaining mandates and NPCs by borrow
   const world = match.gameplayWorld(humans,0,()=>false);
   const npcBefore = world.wallet!('npc');
   match.advance(rules.interval);
-  const next = match.view('0',ids,rules.interval);
+  const beforePayment = match.view('0',ids,payrollRules.firstAt-1);
   expect(budget).toBe(4);
-  expect(next.election?.result?.salary).toBe(rules.salary);
-  expect(next).toMatchObject({budget:-20,debtPenaltyIn:30});
+  expect(beforePayment).toMatchObject({budget:-2,payroll:{next:{remaining:1,cost:18}}});
+  expect(beforePayment.payroll?.last).toBeUndefined();
+  expect(world.wallet!('npc')).toBe(npcBefore);
+
+  match.advance(payrollRules.firstAt);
+  const next = match.view('0',ids,payrollRules.firstAt);
+  expect(next).toMatchObject({budget:-20,payroll:{last:{received:payrollRules.salary},next:{remaining:180,cost:18}}});
   expect(match.economySummary(0).discrepancy).toBe(0);
-  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+rules.salary);
-  expect(match.view('5',ids,rules.interval).election?.result?.salary).toBe(0);
+  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+payrollRules.salary);
+  expect(match.view('5',ids,payrollRules.firstAt).payroll?.last?.received).toBe(0);
   const paid = world.wallet!('npc');
-  match.advance(rules.interval);
+  match.advance(payrollRules.firstAt);
   expect(world.wallet!('npc')).toBe(paid);
 });

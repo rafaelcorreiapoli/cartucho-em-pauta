@@ -8,11 +8,10 @@ type Candidate = Contact & {
   interviewed:boolean; scandal:number;
   noise:number; tie:number;
 };
-type Result = {cycle:number; offices:Elected[]; salaries:Map<string,number>; eliminated?:string};
+type Result = {cycle:number; offices:Elected[]; eliminated?:string};
 
 export class ElectionCycle {
   private people = new Map<string,Candidate>();
-  private paidDeputies = new Set<string>();
   private cycle = 1;
   private due = 0;
   private result?:Result;
@@ -27,7 +26,6 @@ export class ElectionCycle {
 
   reset(contacts:(Contact & {character?:number})[], now:number, random:()=>number) {
     this.people.clear();
-    this.paidDeputies.clear();
     this.cycle = 1;
     this.due = now+rules.interval;
     this.result = this.broadcast = this.notice = undefined;
@@ -42,7 +40,7 @@ export class ElectionCycle {
     }
   }
 
-  addDeputy(id:string) { this.paidDeputies.add(id); }
+  mandateIds() { return this.people.keys(); }
 
   private noise() { return (this.random()-.5)*4; }
   get currentCycle() { return this.cycle; }
@@ -150,7 +148,7 @@ export class ElectionCycle {
     });
   }
 
-  advance(now:number,popularity:(id:string)=>number,settle:(ids:string[])=>Map<string,number>,advertisementMultiplier=1) {
+  advance(now:number,popularity:(id:string)=>number,advertisementMultiplier=1) {
     if (now>=this.due && this.cycle<=rules.cycles) {
       const ranked = this.rank(popularity,advertisementMultiplier);
       const scores = ranked.map(person=>Math.max(.01,this.tallyScore(person,popularity,advertisementMultiplier)));
@@ -167,8 +165,7 @@ export class ElectionCycle {
         person.spoke = person.interviewed = false;
         person.noise = this.noise();
       }
-      const salaries = settle([...this.people.keys(),...this.paidDeputies]);
-      this.result = {cycle:this.cycle,offices,salaries,eliminated:eliminated?.id};
+      this.result = {cycle:this.cycle,offices,eliminated:eliminated?.id};
       this.cycle++;
       this.due += rules.interval;
       this.previousPoll.clear();
@@ -192,9 +189,9 @@ export class ElectionCycle {
       cycle:this.cycle,remaining:Math.max(0,Math.ceil(((this.cycle<=rules.cycles ? this.due : now)-now)/1000)),
       mandate:!!person,offices:this.assignments(),polls:this.polls(popularity,advertisementMultiplier),
       personal:person && {office:person.office,race:person.race,advertised:person.advertisementPopularity>0,
-        spoke:person.spoke,interviewed:person.interviewed,salary:rules.salary},
+        spoke:person.spoke,interviewed:person.interviewed},
       result:this.result && {cycle:this.result.cycle,offices:this.result.offices,
-        eliminated:this.result.eliminated,expectedSalary:this.people.has(id) ? rules.salary : 0,salary:this.result.salaries.get(id) ?? 0},
+        eliminated:this.result.eliminated},
       broadcast:speaker && this.broadcast ? {id:speaker,name:this.people.get(speaker)!.name,
         remaining:Math.ceil((this.broadcast.until-now)/1000)} : undefined,
       notice:this.notice,objection,canObject:!objection && this.canObject(id),canCampaign:canCampaign && !!person,canInterview:canCampaign && this.canInterview(id,now),

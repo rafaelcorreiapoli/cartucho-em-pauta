@@ -17,7 +17,7 @@ import { ELECTION_RULES, readElectionAction } from '../src/elections';
 import { expect, test } from 'bun:test';
 import { CRISIS_MISSION_STABILITY_LIMIT, HEARING_MS, PIX_MISSION_AMOUNT, readPoliticsAction } from '../src/politics';
 
-import { BALLOT_MS, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, publicDebtStabilityLoss, publicDebtRules } from '../src/plenary';
+import { BALLOT_MS, payrollRules, policyDuration, projectRules, energySavings, CASSATION_NOTICE_MS, NEGOTIATION_MS, bills, stations, stabilityRules, publicDebtStabilityLoss, publicDebtRules } from '../src/plenary';
 import {movementSpeed, canStand, localPerception, characterVisible, type Player } from '../src/map';
 import { findRoute } from '../src/navigation';
 import { PlenaryMatch } from './PlenaryMatch';
@@ -533,6 +533,7 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   match.advance(NEGOTIATION_MS+BALLOT_MS);
   expect(match.economySummary(game.physicalCash())).toMatchObject({projects:28,discrepancy:0});
   match.advance(ELECTION_RULES.interval);
+  match.advance(payrollRules.firstAt);
   expect(match.economySummary(game.physicalCash())).toMatchObject({budget:-8,publicDuty:6,salaries:9,discrepancy:0});
 });
 
@@ -692,13 +693,13 @@ test('a project applies its full impact and public debt drains stability until r
   expect(view(firstPenalty+2).debtPenaltyIn).toBeUndefined();
   expect(view(ELECTION_RULES.interval-1)).toMatchObject({budget:0});
   match.advance(ELECTION_RULES.interval);
-  expect(view(ELECTION_RULES.interval)).toMatchObject({budget:-9,debtPenaltyIn:30,stability:66});
-  expect(view(ELECTION_RULES.interval).election?.result?.salary).toBe(3);
+  expect(view(ELECTION_RULES.interval)).toMatchObject({budget:-6,debtPenaltyIn:30,stability:66});
+  expect(view(ELECTION_RULES.interval).payroll?.last).toBeUndefined();
   match.advance(firstPenalty+publicDebtRules.interval);
   expect(view(firstPenalty+publicDebtRules.interval).stability).toBe(66);
   const nextPenalty = ELECTION_RULES.interval+publicDebtRules.interval;
   match.advance(nextPenalty);
-  expect(view(nextPenalty).stability).toBe(62);
+  expect(view(nextPenalty)).toMatchObject({budget:-9,stability:62,payroll:{last:{received:payrollRules.salary}}});
   Reflect.set(match,'stability',4);
   const collapseAt = nextPenalty+publicDebtRules.interval;
   match.advance(collapseAt);

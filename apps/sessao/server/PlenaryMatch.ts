@@ -16,7 +16,7 @@ import {cashAmount,type GameplayEvent} from '../src/gameplay';
 import { ELECTION_RULES as rules, type ElectionAction } from '../src/elections';
 import { ElectionCycle } from './ElectionCycle';
 import {
-  BALLOT_MS, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, publicDebtRules, publicDebtStabilityLoss,
+  BALLOT_MS, payrollRules, type PayrollView, majorityQuorum, CASSATION_NOTICE_MS, bills, MIN_PLAYERS, projectRules, stations, canReachStation, stabilityRules, publicDebtRules, publicDebtStabilityLoss,
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, hearingPolicyFee, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
@@ -61,7 +61,6 @@ export class PlenaryMatch {
     const wallet = min+Math.floor(Math.random()*(max-min+1));
     this.economy.addParliamentarian({id:player.id,name:player.nick,character:player.character},wallet);
     this.cash.npcIssued += wallet;
-    this.election.addDeputy(player.id);
   }
 
   private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,diverted:0};
@@ -184,19 +183,33 @@ export class PlenaryMatch {
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'A dívida pública derrubou a estabilidade.');
   }
 
-  private settleBudget(ids:string[],now:number) {
-    const publicDuty = rules.publicDuty-(this.energySavingsActive(now) ? energySavings.publicDutyDiscount : 0);
-    const payments = new Map<string,number>();
-    for (const id of ids) {
-      this.economy.earn(id,rules.salary);
-      payments.set(id,rules.salary);
+  private nextPayrollAt = 0;
+  private lastPayroll?:{at:number;recipients:Set<string>};
+
+  private payrollRecipients() {
+    return new Set([...this.election.mandateIds(),...this.npcIds]);
+  }
+
+  private payrollView(id:string,now:number):PayrollView {
+    return {
+      next:this.running && this.nextPayrollAt<this.sessionEndsAt ? {
+        remaining:Math.max(0,Math.ceil((this.nextPayrollAt-now)/1000)),
+        cost:this.payrollRecipients().size*payrollRules.salary,
+      } : undefined,
+      last:this.lastPayroll && {at:this.lastPayroll.at,received:this.lastPayroll.recipients.has(id) ? payrollRules.salary : 0},
+    };
+  }
+
+  private distributeSalaries(now:number) {
+    while (this.nextPayrollAt<=now && this.nextPayrollAt<this.sessionEndsAt) {
+      const recipients = this.payrollRecipients();
+      for (const id of recipients) this.economy.earn(id,payrollRules.salary);
+      const cost = recipients.size*payrollRules.salary;
+      this.changeBudget(-cost,now);
+      this.cash.salaries += cost;
+      this.lastPayroll = {at:this.nextPayrollAt,recipients};
+      this.nextPayrollAt += payrollRules.interval;
     }
-    const payroll = ids.length*rules.salary;
-    this.changeBudget(-publicDuty-payroll,now);
-    this.cash.publicDuty += publicDuty;
-    this.cash.salaries += payroll;
-    this.treasuryReputation.clear();
-    return payments;
   }
 
   private advertisementMultiplier(now:number) {
@@ -206,12 +219,18 @@ export class PlenaryMatch {
   private renew(now:number) {
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
-    this.election.advance(now,this.popularity,ids=>this.settleBudget(ids,now),this.advertisementMultiplier(now));
+    this.election.advance(now,this.popularity,this.advertisementMultiplier(now));
     const eliminated = this.election.eliminated;
     if (eliminated && eliminated!==previous) {
       this.votes.delete(eliminated);
     }
-    if (cycle!==this.election.currentCycle) this.refreshAgendaEligibility();
+    if (cycle!==this.election.currentCycle) {
+      const publicDuty = rules.publicDuty-(this.energySavingsActive(now) ? energySavings.publicDutyDiscount : 0);
+      this.changeBudget(-publicDuty,now);
+      this.cash.publicDuty += publicDuty;
+      this.treasuryReputation.clear();
+      this.refreshAgendaEligibility();
+    }
     if (this.infiltrators.size && [...this.infiltrators].every(id=>!this.election.office(id))) {
       this.finish('Parlamentar','Todos os infiltrados perderam o mandato.');
     }
@@ -286,6 +305,8 @@ export class PlenaryMatch {
     const contacts = players.map(player => ({id:player.id,name:player.nick,character:player.character}));
     this.finalRoster = contacts.map(contact=>({...contact,role:this.infiltrators.has(contact.id) ? 'Infiltrado' : 'Parlamentar'}));
     this.started = now;
+    this.nextPayrollAt = now+payrollRules.firstAt;
+    this.lastPayroll = undefined;
     this.fire.reset(now,random);
     this.power = new Power();
     this.stationCooldowns.reset();
@@ -950,6 +971,7 @@ export class PlenaryMatch {
       this.renew(now);
       if (!this.running) return;
     }
+    if (now<this.sessionEndsAt) this.distributeSalaries(now);
     if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft ||
         (electionWasOpen && !this.election.open(this.agendaNow))) this.refreshAgendaEligibility();
     if (this.cassationAt!==undefined && now>=this.cassationAt) {
@@ -1113,6 +1135,7 @@ export class PlenaryMatch {
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
+      payroll:role ? this.payrollView(id,now) : undefined,
       election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient),now) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
