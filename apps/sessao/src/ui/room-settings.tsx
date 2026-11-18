@@ -11,6 +11,7 @@ type SettingsState = {
   microphone:'off'|'starting'|'live'|'muted';
   voiceMessage:string;
   voiceDescription?:string;
+  hideVoice?:boolean;
 };
 type SettingsActions = {leave:()=>void; toggleVoice:()=>void; leaveVoice:()=>void};
 
@@ -18,7 +19,7 @@ export function RoomSettings({preferences,state,actions}:{
   preferences:Preferences;state:SettingsState;actions:SettingsActions;
 }) {
   const sound = useSyncExternalStore(preferences.subscribe,preferences.getSnapshot,preferences.getSnapshot);
-  const {microphone} = state;
+  const {microphone,hideVoice} = state;
   const voiceLabel = microphone==='live' ? 'Silenciar microfone' : microphone==='muted' ? 'Ativar microfone' : 'Ativar voz';
   const music = useRef<HTMLInputElement>(null);
   const effects = useRef<HTMLInputElement>(null);
@@ -29,8 +30,8 @@ export function RoomSettings({preferences,state,actions}:{
     {name:'Efeitos e passos',activate:()=>effects.current?.focus()},
     {name:sound.muted ? 'Ativar som do jogo' : 'Silenciar som do jogo',
       activate:()=>preferences.update({muted:!sound.muted})},
-    ...(microphone==='starting' ? [] : [{name:voiceLabel,activate:actions.toggleVoice}]),
-    ...(microphone==='live' || microphone==='muted' ? [{name:'Sair da voz',activate:actions.leaveVoice}] : []),
+    ...(hideVoice || microphone==='starting' ? [] : [{name:voiceLabel,activate:actions.toggleVoice}]),
+    ...(!hideVoice && (microphone==='live' || microphone==='muted') ? [{name:'Sair da voz',activate:actions.leaveVoice}] : []),
   ]);
   return <>
     <DialogHeader id="settings-title" title="Configurações" dismissLabel="Fechar configurações"/>
@@ -51,7 +52,7 @@ export function RoomSettings({preferences,state,actions}:{
       <label className="mute-option"><input id="sound-mute" type="checkbox" checked={sound.muted}
         onChange={event=>preferences.update({muted:event.currentTarget.checked})}/> Silenciar som do jogo</label>
     </section>
-    <section aria-label="Microfone">
+    <section aria-label="Microfone" hidden={hideVoice}>
       <h3>Microfone</h3>
       <button className="hud-button" id="voice-toggle" type="button" disabled={microphone==='starting'}
         data-voice={microphone==='starting' ? 'off' : microphone} title={voiceLabel} aria-description={state.voiceDescription}

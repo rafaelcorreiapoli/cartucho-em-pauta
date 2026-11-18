@@ -13,13 +13,6 @@
 #session[data-phase="ballot"] #command-deck #project-details { display: none; }
 #session[data-phase="ballot"] #command-deck #proposal { display: block; }
 #session[data-phase="ballot"] .deck-project-controls { display: block; margin: 0; }
-#session[data-phase="ballot"] #command-deck .deck-project-links {
-  position: absolute;
-  inset: auto 12px 4px auto;
-  z-index: 1;
-}
-#session[data-phase="ballot"] #command-deck #last-vote { inset-inline: auto 0; }
-
 .project-ballot {
   position: relative;
   container-type: inline-size;
@@ -66,7 +59,6 @@
   grid-template-rows: minmax(0, auto) minmax(0, auto) auto;
   padding: 4px 8px 8px;
 }
-#legislative-dock:has(#vote-history:not([hidden])) .project-ballot-body { padding-bottom: 36px; }
 .project-ballot-body[hidden] { display: none; }
 .project-ballot-project, .project-ballot-content {
   display: grid;

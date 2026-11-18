@@ -23,7 +23,8 @@ export function appForKey(key:string):HudApp|undefined {
 
 export function hudAppStatus(view:PlenaryView,ready:boolean):HudAppStatus {
   if (!ready || view.phase==='lobby') return {};
-  const status:HudAppStatus = {settings:{},microphone:{}};
+  const status:HudAppStatus = {settings:{}};
+  if (view.phase!=='ballot') status.microphone = {};
   const {gameplay,politics} = view;
   if (gameplay) {
     status.equipment = {};
