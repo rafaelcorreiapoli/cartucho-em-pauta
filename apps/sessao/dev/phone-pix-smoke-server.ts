@@ -3,6 +3,7 @@ import {BunWebSockets} from '@colyseus/bun-websockets';
 import {SessionRoom} from '../server/SessionRoom';
 import type {WorldItem} from '../src/gameplay';
 import {stations} from '../src/plenary';
+import {ELECTION_RULES} from '../src/elections';
 class TestRoom extends SessionRoom {
   onCreate() {
     super.onCreate();
@@ -13,6 +14,8 @@ class TestRoom extends SessionRoom {
       if (match.phase!=='negotiation') return;
       // Keep the starting balances and transfers deterministic for this flow.
       Reflect.set(match,'nextPayrollAt',Infinity);
+      // Keep the renewal dialog from interrupting the phone flow on slower runners.
+      Reflect.set(Reflect.get(match,'election'),'due',Reflect.get(match,'started')+ELECTION_RULES.matchDuration);
       for (const state of Reflect.get(this,'players').values()) {
         if (positioned.has(state)) continue;
         positioned.add(state);
