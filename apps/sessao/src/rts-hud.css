@@ -370,20 +370,6 @@ button.equipped-gear-tile { cursor: pointer; }
 #world #nearby-items .item-tile { flex-basis: 76px; --item-art: 47px; padding-bottom: 15px; }
 #world #nearby-items .item-caption { font-size: 10px; }
 #world #nearby-items button[aria-keyshortcuts]::after { min-width: 17px; min-height: 17px; font-size: 10px; }
-#world #hud-notices {
-  position: absolute;
-  inset: calc(var(--strip-height) + 10px) max(12px, env(safe-area-inset-right)) auto auto;
-  transform: none;
-  width: min(280px,35vw);
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  overflow: visible;
-}
-#world .hud-notice { font: 550 12px/1.25 system-ui,sans-serif; }
-#world #electoral-notice { inset: 10px auto auto 12px; font-size: 12px; }
 #world #object-request { inset: auto 12px 12px auto; width: min(315px,33%); }
 #world #interview-hint { display: inline-block; background: #152e23ee; padding: 4px 8px; border-radius: 5px; }
 #session[data-phase="finished"] #command-deck { grid-template-columns: 1fr; }

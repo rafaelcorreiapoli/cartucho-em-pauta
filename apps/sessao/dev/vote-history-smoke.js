@@ -57,6 +57,28 @@ async page => {
   await page.waitForFunction(()=>!document.querySelector('.character-dock').getAnimations().length);
 
   for (const [width,height] of [[1280,720],[1024,600],[800,600]]) await measureHud(width,height);
+  const rightHudStacked = await page.locator('.right-hud').evaluate(stack=>{
+    const samples = [
+      ['#active-fire-mount','incident-panel','Incêndio no Plenário'],
+      ['#active-outage-mount','incident-panel','Pane elétrica'],
+      ['#hud-notices','hud-module hud-notice','Evento da sessão'],
+    ].map(([target,className,message])=>{
+      const sample = document.createElement('div');
+      sample.className = className;
+      sample.textContent = message;
+      stack.querySelector(target).append(sample);
+      return sample;
+    });
+    try {
+      const boxes = [stack.querySelector('#election-dock'),...samples].map(node=>node.getBoundingClientRect());
+      return boxes.every((box,index)=>box.width>0 && box.height>0 && (!index || boxes[index-1].bottom<box.top)) &&
+        getComputedStyle(stack).isolation==='isolate' && getComputedStyle(stack,'::before').zIndex==='-1';
+    } finally {
+      samples.forEach(sample=>sample.remove());
+    }
+  });
+  if (!rightHudStacked) throw Error('Placar, incidentes e notificações devem ocupar linhas separadas à frente do degradê');
+
   await page.setViewportSize({width:1280,height:720});
   await page.keyboard.press('c');
   const phone = page.locator('#gameplay-dialog[data-mode="phone"]');
@@ -77,6 +99,12 @@ async page => {
   await onlyLeader.getByText('Histórico QA',{exact:true}).waitFor();
   await onlyLeader.locator('.poll-rank[data-rank="1"]').waitFor();
   if (await election.locator('.election-personal, kbd').count()) throw Error('Placar mostra uma linha pessoal redundante ou o atalho visual');
+  const hasBackdrop = await election.locator('#open-election-polls').evaluate(button=>
+    getComputedStyle(button).backgroundColor==='rgba(0, 0, 0, 0)' &&
+    getComputedStyle(button.closest('.right-hud'),'::before').backgroundImage.includes('linear-gradient') &&
+    getComputedStyle(button.closest('.right-hud'),'::before').zIndex==='-1' &&
+    getComputedStyle(button.querySelector('.election-leader')).backgroundImage==='none');
+  if (!hasBackdrop) throw Error('O placar deve usar um fundo em degradê sem caixas opacas');
   if (await election.getAttribute('data-at-risk')!==null) throw Error('Alerta eleitoral sem risco de eliminação');
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
@@ -195,8 +223,8 @@ async page => {
     const personal = election.locator('.election-personal');
     await personal.getByText('Votação lotada QA',{exact:true}).waitFor();
     await personal.getByText('Em risco',{exact:true}).waitFor();
-    const alertGlows = await election.locator('#open-election-polls').evaluate(button=>
-      button.closest('#election-dock').dataset.atRisk==='true' && getComputedStyle(button).boxShadow!=='none');
+    const alertGlows = await personal.locator('.portrait').evaluate(portrait=>
+      portrait.closest('#election-dock').dataset.atRisk==='true' && getComputedStyle(portrait).boxShadow!=='none');
     if (!alertGlows) throw Error('O placar não destaca o risco de eliminação');
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});
@@ -218,6 +246,10 @@ async page => {
       const notices = await page.locator('#hud-notices').boundingBox();
       if (notices && notices.height>0 && notices.y<standing.y+standing.height) {
         throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
+      }
+      const ballotToggle = await sheet.getByRole('button',{name:'Recolher votação'}).boundingBox();
+      if (width<=640 && notices && notices.height>0 && ballotToggle && notices.y+notices.height>ballotToggle.y) {
+        throw Error(`Notificações cobrem a cédula em ${width}×${height}`);
       }
       const portraitOnRight = await election.locator('.election-leader').evaluate(row=>
         row.querySelector('.poll-avatar').getBoundingClientRect().left>=row.querySelector('.election-name').getBoundingClientRect().right);
