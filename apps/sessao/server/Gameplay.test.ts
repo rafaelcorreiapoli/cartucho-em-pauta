@@ -207,6 +207,28 @@ test('spawned and dropped cash share visibility and custody without immediate re
   expect(game.view(bob,world).ground[0]?.id).toBe(item.id);
 });
 
+test.each([3,12])('cash reappears sooner with %i competing players', contenders=>{
+  const {alice,game,world} = setup();
+  Object.assign(alice,{x:140,y:146});
+  const otherPlayers = Array.from({length:contenders-1},(_,index)=>({...alice,id:'contender-'+index}));
+  world.players = [alice,...otherPlayers,{...alice,id:'npc',npc:true},{...alice,id:'disconnected'}];
+  world.present = id=>id!=='disconnected';
+  const values = [0,0,.117,.172,0,.117,.172];
+  game.reset(0,()=>values.shift() ?? .5);
+  world.now = 4000;
+  game.tick(world,true);
+  const [first] = game.view(alice,world).nearby;
+  expect(game.act(alice,{kind:'collect',item:first.id},world)).toBe('Objeto recolhido.');
+
+  const nextAt = contenders===3 ? 12_000 : 8_000;
+  world.now = nextAt-1;
+  game.tick(world,true);
+  expect(game.view(alice,world).nearby).toEqual([]);
+  world.now = nextAt;
+  game.tick(world,true);
+  expect(game.view(alice,world).nearby).toEqual([expect.objectContaining({kind:'briefcase'})]);
+});
+
 test('cash skips reachable floor where the sprite would overlap a map prop', () => {
   const {alice,game,world} = setup();
   const blocked = [
