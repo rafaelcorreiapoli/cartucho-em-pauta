@@ -207,6 +207,10 @@ async page => {
           (standing.x<congress.x+congress.width && standing.y<congress.y+congress.height)) {
         throw Error(`Placar eleitoral encobre o Congresso ou sai da tela em ${width}×${height}`);
       }
+      const notices = await page.locator('#hud-notices').boundingBox();
+      if (width<=760 && notices && notices.height>0 && notices.y<standing.y+standing.height) {
+        throw Error(`Notificações cobrem o placar eleitoral em ${width}×${height}`);
+      }
       const layout = await roster.evaluate(list=>{
         const bounds = list.getBoundingClientRect();
         const cards = [...list.children].map(card=>card.getBoundingClientRect());
