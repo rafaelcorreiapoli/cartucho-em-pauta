@@ -33,7 +33,7 @@ export const objects = {
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
-  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-raio-x.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Uso único.`,use:'consume'},
+  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Uso único.`,use:'consume'},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
   xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
