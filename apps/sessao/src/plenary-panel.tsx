@@ -28,7 +28,7 @@ export function LegislativeDock({view,brief,outcomes,id,command,onExpansion}:{
     </div>
     <div id="proposal" hidden={!showProposal(view.phase)}>
       <div id="project-heading" className="deck-project-heading">
-        {view.phase!=='ballot' && <ProjectHeading {...projectHeading(view)}/>}
+        {view.phase!=='ballot' && !view.cassation && <ProjectHeading {...projectHeading(view)}/>}
       </div>
       <div className="deck-project-controls">
         <div id="impact" aria-label="Impacto de cada decisão" hidden={!impact}>
@@ -86,7 +86,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
   }
 
   const ballotIdentity = (current:PlenaryView) => JSON.stringify([current.politics?.progression.matchId,
-    current.phase,current.round,current.project,current.hearing?.target,!!current.cassation]);
+    current.phase,current.round,current.project,current.hearing?.target,current.cassation?.calledAt,!!current.cassation]);
 
   return {
     votingShortcuts(canVote:()=>boolean) {

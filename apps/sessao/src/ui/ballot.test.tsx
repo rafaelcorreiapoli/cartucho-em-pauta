@@ -24,12 +24,12 @@ test('the hearing ballot disables voting for a suspended player',()=>{
   expect(html.match(/disabled=""/g)).toHaveLength(2);
 });
 
-test('cassation shows other candidates and the private skip selection',()=>{
+test('cassation shows the local candidate with voting disabled and their skip selection',()=>{
   const html = renderToStaticMarkup(<CassationBallot ownId="self" cast={()=>{}} state={{
     candidates:[{id:'self',name:'Meu nick',character:0},{id:'other',name:'Outro nick',character:1}],
     eligible:true,voted:1,electorate:2,quorum:2,choice:null,
   }}/>);
-  expect(html).not.toContain('Meu nick');
+  expect(html).toContain('disabled="" aria-label="Meu nick"');
   expect(html).toContain('Outro nick');
   expect(html).toContain('aria-keyshortcuts="2" aria-pressed="true">Pular voto');
 });
@@ -118,15 +118,23 @@ test('cassation removes a disconnected target and shows the gameserver participa
   if (skipped?.kind==='cassation') match.castCassation(observer.id,skipped.candidate,openedAt);
   const render = ()=>renderToStaticMarkup(<CassationBallot state={match.view(host.id,ids,openedAt).cassation!}
     ownId={host.id} cast={()=>{}}/>);
-  expect(render()).toContain('2/3 votaram · 2 votos para cassar');
-  expect(render()).toContain('Bia');
+  expect(render()).toContain('2/3</strong> votaram · 2 votos para cassar');
+  expect(render()).toContain('Convocada por');
+  expect(render()).toContain('aria-label="Votos em Bia"');
+  expect(render()).toContain('aria-label="Quem pulou o voto"');
+  expect(match.view(target.id,ids,openedAt).cassation).toMatchObject({
+    caller:{id:host.id,name:host.nick,character:host.character},
+    votes:[{voter:host.id,candidate:target.id},{voter:observer.id,candidate:null}],
+  });
+  expect(match.view(target.id,ids,openedAt).cassation?.caller).not.toHaveProperty('role');
   match.setPlayerConnected(target.id,false);
   expect(ballotPalette(match.view(host.id,ids,openedAt),host.id,true)).toEqual([
     {name:observer.nick,candidate:observer.id},{name:'Pular voto',candidate:null},
   ]);
   expect(ballotShortcut(match.view(host.id,ids,openedAt),host.id,'1',true))
     .toEqual({kind:'cassation',candidate:observer.id});
-  expect(render()).toContain('1/2 votaram · 2 votos para cassar');
+  expect(render()).toContain('1/2</strong> votaram · 2 votos para cassar');
   expect(render()).not.toContain('Bia');
+  expect(match.view(host.id,ids,openedAt).cassation?.votes).toEqual([{voter:observer.id,candidate:null}]);
   expect(render()).not.toContain('aria-pressed="true"');
 });

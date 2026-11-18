@@ -264,6 +264,7 @@ export class PlenaryMatch {
   private readonly studiedBills = new Map<number,Set<string>>();
   private hearingTarget?: string;
   private cassationAt?:number;
+  private cassationCall?:{caller:string;calledAt:number};
   private cassationOpen = false;
   private readonly cassationVotes = new Map<string,string|null>();
   private readonly expelled = new Set<string>();
@@ -340,6 +341,7 @@ export class PlenaryMatch {
     this.hearingImmunity.clear();
     this.hearingTarget = this.hearingResult = undefined;
     this.cassationAt = this.cassationResult = undefined;
+    this.cassationCall = undefined;
     this.cassationOpen = false;
     this.cassationVotes.clear();
     this.expelled.clear();
@@ -606,6 +608,7 @@ export class PlenaryMatch {
     if (!this.economy.spend(id,cassationFee)) return 'Saldo insuficiente para convocar cassação.';
     this.cash.cassationFees += cassationFee;
     this.cassationAt = now+CASSATION_NOTICE_MS;
+    this.cassationCall = {caller:id,calledAt:now};
     this.refreshAgendaEligibility(now);
   }
 
@@ -634,6 +637,7 @@ export class PlenaryMatch {
     }
     const majority = majorityQuorum(electorate.length);
     const result = [...tally].find(([,votes])=>votes>=majority);
+    this.cassationCall = undefined;
     this.cassationOpen = false;
     this.cassationVotes.clear();
     this.phase = 'negotiation';
@@ -1099,6 +1103,7 @@ export class PlenaryMatch {
     this.policies.clear();
     this.treasuryBonus = undefined;
     this.cassationAt = undefined;
+    this.cassationCall = undefined;
     this.cassationOpen = false;
     this.congressDestroyed = winner==='Infiltrado' || this.stability===0 || undefined;
     this.winner = winner==='Infiltrado' && !this.infiltrators.size ? undefined : winner;
@@ -1125,14 +1130,21 @@ export class PlenaryMatch {
     const role = this.electorate.has(id) ? this.infiltrators.has(id) ? 'Infiltrado' : 'Parlamentar' : undefined;
     const candidates = this.cassationOpen ? this.finalRoster.flatMap(({id,name,character}) =>
       this.canVoteInCassation(id) ? [{id,name,character}] : []) : undefined;
+    const caller = this.finalRoster.find(person=>person.id===this.cassationCall?.caller);
+    const votes = candidates?.flatMap(({id:voter})=>{
+      const candidate = this.cassationChoice(voter);
+      return candidate===undefined ? [] : [{voter,candidate}];
+    });
     const projectVoteExpired = this.phase==='negotiation' && this.projectVoteExpired(now);
     const hearing = this.hearingTarget ? this.hearingTally() : undefined;
     return {
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
-      cassation:candidates && {candidates,eligible:this.canVoteInCassation(id),electorate:candidates.length,
-        quorum:majorityQuorum(candidates.length),voted:candidates.filter(candidate=>this.cassationChoice(candidate.id)!==undefined).length,
+      cassation:candidates && votes && {candidates,votes,
+        caller:caller && {id:caller.id,name:caller.name,character:caller.character},calledAt:this.cassationCall?.calledAt,
+        eligible:this.canVoteInCassation(id),electorate:candidates.length,
+        quorum:majorityQuorum(candidates.length),voted:votes.length,
         choice:this.cassationChoice(id)},
       cassationResult:this.cassationResult,
       ballotCountdown:this.ballotCountdown(now),

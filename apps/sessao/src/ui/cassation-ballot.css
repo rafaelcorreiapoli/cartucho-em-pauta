@@ -1,0 +1,182 @@
+/* The cassation ballot opens above the other HUD panels. */
+#command-deck:has(.cassation-ballot) { z-index: 5; }
+
+#session #command-deck #legislative-dock:has(.cassation-ballot) {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(780px, calc(100% - 2 * var(--hud-edge)));
+  height: max-content;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#legislative-dock:has(.cassation-ballot) :is(#project-heading, .deck-project-links) {
+  display: none;
+}
+
+#legislative-dock:has(.cassation-ballot) .deck-project-controls { display: block; margin: 0; }
+
+.cassation-ballot {
+  display: grid;
+  gap: 14px;
+  max-height: 85dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: clamp(12px, 2.5vw, 24px);
+  border: 1px solid #a98d56;
+  border-top: 3px solid #d4ad66;
+  border-radius: 12px;
+  background: #152720;
+  box-shadow: 0 16px 50px #07120dcc;
+  color: #f6ead0;
+  pointer-events: auto;
+}
+
+.cassation-ballot :is(p, h2, ul) { margin: 0; }
+.cassation-ballot ul { padding: 0; list-style: none; }
+
+.cassation-header,
+.cassation-summary,
+.cassation-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cassation-header h2 {
+  color: #fff1cf;
+  font: 850 clamp(1.2rem, 3vw, 1.8rem)/1.1 var(--party-display);
+}
+
+.cassation-header p,
+.cassation-footer p,
+.cassation-summary span,
+.cassation-clock span {
+  color: #c3cfc3;
+  font-size: .8rem;
+}
+
+.cassation-header p { margin-top: 5px; }
+
+.cassation-clock {
+  display: grid;
+  justify-items: end;
+  flex: none;
+  color: #f6cc81;
+}
+
+.cassation-clock[data-urgent="true"] { color: #ffab97; }
+.cassation-clock time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 850 1.55rem/1.1 var(--party-display);
+  font-variant-numeric: tabular-nums;
+}
+.cassation-clock .hud-glyph { width: 16px; height: 16px; }
+
+.cassation-summary {
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: 9px 12px;
+  background: #20372d;
+  border: 1px solid #42564a;
+  border-radius: 7px;
+}
+
+.cassation-caller { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.cassation-caller .portrait { --portrait-size: 36px; flex: none; border-radius: 5px; }
+.cassation-caller strong { display: block; overflow-wrap: anywhere; color: #ffe0a1; }
+.cassation-participation { flex: 1 1 175px; max-width: 245px; font-size: .8rem; }
+.cassation-participation progress { display: block; width: 100%; height: 5px; margin-top: 6px; accent-color: #dcb873; }
+
+.cassation-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 158px), 1fr));
+  gap: 8px;
+}
+
+.cassation-candidate {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  border: 1px solid #4b6655;
+  border-radius: 8px;
+  background: #20372d;
+}
+.cassation-candidate[data-selected="true"] { border-color: #e5b975; background: #364035; }
+
+.cassation-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  text-align: start;
+  gap: 7px;
+  min-height: 56px;
+  padding: 7px;
+  border: 0;
+  border-radius: 7px 7px 0 0;
+  background: #294536;
+  color: #fff0cb;
+  cursor: pointer;
+}
+.cassation-choice[aria-pressed="true"] { background: #634e34; }
+.cassation-choice:hover:enabled { background: #395c49; }
+.cassation-choice[aria-pressed="true"]:hover:enabled { background: #755a3b; }
+.cassation-choice:disabled { cursor: default; }
+.cassation-choice:focus-visible, .cassation-footer button:focus-visible {
+  outline: 2px solid #ffe2a3;
+  outline-offset: 2px;
+}
+.cassation-choice .portrait { --portrait-size: 40px; border-radius: 5px; }
+.cassation-choice strong, .cassation-choice small { display: block; overflow-wrap: anywhere; }
+.cassation-choice small { color: #c3cfc3; }
+
+.cassation-ballot kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4em;
+  padding: 1px 3px;
+  border: 1px solid #857952;
+  border-radius: 4px;
+  background: #192a22;
+  color: #ffe0a1;
+  font-size: .72rem;
+}
+
+.cassation-candidate-votes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  align-items: center;
+  min-height: 36px;
+  padding: 5px 7px;
+  color: #f0dbac;
+  font-size: .76rem;
+}
+
+.cassation-ballot .cassation-voters { display: flex; flex-wrap: wrap; gap: 3px; }
+.cassation-voters .portrait { --portrait-size: 23px; display: block; border: 1px solid #8b9979; border-radius: 4px; }
+
+.cassation-footer {
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid #475c4c;
+}
+.cassation-abstentions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cassation-footer button { display: inline-flex; align-items: center; gap: 6px; }
+.cassation-footer button[aria-pressed="true"] { border-color: #e5b975; background: #634e34; }
+
+@media (max-width: 540px) {
+  .cassation-ballot { gap: 9px; }
+  .cassation-summary { padding: 6px 9px; gap: 7px; }
+  .cassation-candidates { grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr)); }
+  .cassation-choice .portrait { --portrait-size: 31px; }
+  .cassation-choice { min-height: 46px; }
+}

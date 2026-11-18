@@ -178,6 +178,29 @@ async page => {
     await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · R\$ 100 mil/}).click();
     const ballot = page.getByRole('region',{name:'Votação de cassação'});
     await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor();
+    await ballot.getByText('Convocada por').waitFor();
+    await ballot.locator('.cassation-caller').getByText('Cassação QA').waitFor();
+    const checkCentered = async client=>{
+      const panel = client.getByRole('region',{name:'Votação de cassação'});
+      await panel.evaluate(async element=>{
+        await Promise.all(element.closest('#legislative-dock').getAnimations().map(animation=>animation.finished));
+        const {x,y,width,height} = element.getBoundingClientRect();
+        if (Math.abs(x+width/2-innerWidth/2)>2 || Math.abs(y+height/2-innerHeight/2)>2) {
+          throw Error('A cédula de cassação saiu do centro da tela: '+JSON.stringify({x,y,width,height,viewport:[innerWidth,innerHeight]}));
+        }
+        const title = element.querySelector('h2').getBoundingClientRect();
+        if (!element.contains(document.elementFromPoint(title.x+title.width/2,title.y+title.height/2))) {
+          throw Error('Outro painel está cobrindo o título da cédula.');
+        }
+        if (getComputedStyle(element).backgroundColor !== 'rgb(21, 39, 32)') {
+          throw Error('A cédula de cassação precisa de um fundo opaco.');
+        }
+      });
+    };
+    await checkCentered(page);
+    await fourth.setViewportSize({width:390,height:640});
+    await fourth.getByRole('region',{name:'Votação de cassação'}).waitFor();
+    await checkCentered(fourth);
     const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
     await page.keyboard.press('F2');
     const stale = palette.getByRole('button',{name:'Bia',exact:true});
@@ -196,7 +219,8 @@ async page => {
     await candidate.waitFor();
     await page.keyboard.press(await candidate.getAttribute('aria-keyshortcuts'));
     await ballot.getByRole('button',{name:'Caio',pressed:true}).waitFor();
-    await witness.getByRole('region',{name:'Votação de cassação'}).getByText(/1\/3 votaram/).waitFor();
+    const witnessBallot = witness.getByRole('region',{name:'Votação de cassação'});
+    await witnessBallot.getByLabel('Votos em Caio').locator('li[title="Cassação QA"] .portrait').waitFor();
     const result = page.getByRole('dialog',{name:'Resultados'});
     const witnessResult = witness.getByRole('dialog',{name:'Resultados'});
     for (const modal of [result,witnessResult]) {
