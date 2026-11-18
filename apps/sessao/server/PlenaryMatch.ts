@@ -28,6 +28,18 @@ import { PoliticalEconomy } from './PoliticalEconomy';
 const clamp = (value:number) => Math.max(0,Math.min(stabilityRules.maximum,value));
 
 export class PlenaryMatch {
+  training = false;
+  onTrainingEvent?:(event:GameplayEvent)=>void;
+  clearTrainingCrisis(now:number) {
+    if (!this.training) return;
+    this.fire.reset(now);
+    this.power = new Power();
+  }
+  prepareTrainingCrisis(kind:'fire'|'power') {
+    if (!this.training) return;
+    if (kind==='fire') this.fire.startTraining(0);
+    else this.power.act('training',{kind:'sabotage',panel:0},this.agendaNow,0);
+  }
   phase: Phase = 'lobby';
   private round = 0;
   private proposal?:{project:number; proposer:string; voteAt:number};
@@ -50,7 +62,7 @@ export class PlenaryMatch {
   }
 
   private agendaBallotsLeft = -1;
-  private get sessionEndsAt() { return this.started+rules.matchDuration; }
+  private get sessionEndsAt() { return this.training ? Number.MAX_SAFE_INTEGER : this.started+rules.matchDuration; }
   private readonly complaints = new Complaints();
   private readonly fire = new Fire();
   private power = new Power();
@@ -294,9 +306,9 @@ export class PlenaryMatch {
     this.npcIds.clear();
     this.npcVotes.clear();
     this.initialPlayers = ids.length;
-    const forceHost = this.localSolo && asInfiltrator;
+    const forceHost = !this.training && this.localSolo && asInfiltrator;
     const candidates = forceHost ? players.slice(1) : [...players];
-    const count = ids.length===1 && !forceHost ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
+    const count = this.training ? 0 : ids.length===1 && !forceHost ? 0 : ids.length>=6 && requested===2 ? 2 : 1;
     this.infiltrators.clear();
     if (forceHost) this.infiltrators.add(requester);
     while (this.infiltrators.size<count) {
@@ -425,6 +437,7 @@ export class PlenaryMatch {
     }
     this.complaints.record(event,this.started);
     this.economy.recordGameplay(event);
+    this.onTrainingEvent?.(event);
     const changedSpyCustody = (event.kind==='wiretap' || event.kind==='spyCamera') &&
       (event.type==='collected' || event.type==='dropped' || event.type==='transferred' ||
         event.type==='stored' || event.type==='recovered' || event.type==='destroyed');
@@ -443,6 +456,7 @@ export class PlenaryMatch {
   }
 
   private projectFilingError(id:string,project:number,now:number) {
+    if (this.training) return "Projetos ficam para uma próxima versão do tutorial.";
     if (!bills[project] || !this.canVote(id)) return 'Somente jogadores com mandato podem protocolar projetos.';
     if (this.outcomes.some(outcome=>outcome.project===project)) return 'Esse projeto já foi votado nesta partida.';
     if (this.proposal) return 'Já há um projeto em pauta.';
@@ -529,6 +543,7 @@ export class PlenaryMatch {
         if (!current() || this.phase!=='negotiation' || !this.canHandleObjects(id,now)) return 'unavailable';
         return this.economy.swapMissions(id);
       },
+      training:this.training,
       hasMission:(id,mission)=>this.economy.hasMission(id,mission),voice,earn:(id,amount)=>{ if (current()) this.economy.earn(id,amount); },
       // An obsolete world must not mint an ID the next match would accept.
       nextEventId:()=>current() ? ++this.eventSequence : this.eventSequenceAtStart,
@@ -591,10 +606,12 @@ export class PlenaryMatch {
   }
 
   private canCallHearing(id:string,now:number) {
+    if (this.training) return false;
     return this.canScheduleHearing(now) && this.canVote(id) && this.votingPlayers()>1 && this.economy.canCall(id);
   }
 
   callCassation(player:Player, now:number) {
+    if (this.training) return 'Esta dinâmica fica para uma próxima versão do tutorial.';
     const {id} = player;
     if (!canInteract(player,stations.audit,{handsFree:true})) return 'Aproxime-se do balcão da Corregedoria.';
     if (!this.canScheduleHearing(now,CASSATION_NOTICE_MS) || this.ballotCountdown(now)!==undefined) {
@@ -683,8 +700,13 @@ export class PlenaryMatch {
   politics(player:Player, action:PoliticsAction, players:Player[], now:number) {
     const {id} = player;
     if (action.kind==='transfer') {
-      return this.canSendPix(id,now) && this.canReceivePix(action.to) &&
+      const transferred = this.canSendPix(id,now) && this.canReceivePix(action.to) &&
         this.economy.transfer(id,action.to,action.amount,true,this.round,'pix');
+      if (transferred && this.training) this.onTrainingEvent?.({
+        type:'cash-received',actor:id,target:action.to,amount:action.amount,
+        position:{x:player.x,y:player.y},at:now,witnesses:[],
+      });
+      return transferred;
     }
     const privateDeal = action.kind==='share' || action.kind==='accept' || action.kind==='cancel';
     if ((this.phase!=='negotiation' && !(this.phase==='ballot' && privateDeal)) ||
@@ -963,6 +985,7 @@ export class PlenaryMatch {
   advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void, ownsOfficeRoom?:(id:string,room:string)=>boolean) {
     if (!this.running) return;
     const gameNow = this.gameTime(realNow);
+    if (this.training) { this.agendaNow = gameNow; return; }
     if (this.pausedGameTime!==undefined) {
       if (realNow<this.voteEndsAt) return;
       this.pausedDuration = realNow-gameNow;
@@ -1164,7 +1187,7 @@ export class PlenaryMatch {
       projectFilingClosed:this.running && this.projectFilingClosed(now) || undefined,
       protocolCooldown:this.protocolOpensAt>now ? Math.ceil((this.protocolOpensAt-now)/1000) : undefined,
       remaining:this.running ? Math.max(0,Math.ceil(phaseTimeLeft/1000)) : 0,
-      sessionRemaining:this.running ? Math.max(0,Math.ceil((this.sessionEndsAt-now)/1000)) : undefined,
+      sessionRemaining:this.running && !this.training ? Math.max(0,Math.ceil((this.sessionEndsAt-now)/1000)) : undefined,
       debtPenaltyIn:this.running && this.nextDebtPenaltyAt!==undefined ? Math.max(0,Math.ceil((this.nextDebtPenaltyAt-now)/1000)) : undefined,
       stability:this.stability,budget:this.budget,host:ids[0],role,mandate:role ? !!this.election.office(id) : undefined,solo:this.initialPlayers===1,players:ids.length,minimumPlayers:this.minimumPlayers,
       voteIntents:[...this.voteIntents].filter(([player])=>this.canVote(player)).map(([id,vote])=>({id,name:this.economy.name(id),vote})),

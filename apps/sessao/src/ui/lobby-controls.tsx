@@ -6,7 +6,7 @@ import {npcRules} from '../parliamentarians';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
+    tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
@@ -20,16 +20,16 @@ type LobbyCommands = {
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
   const [infiltrators,setInfiltrators] = useState(1);
-  const {running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
-  const showInfiltrators = host && players+botsToFill>=MIN_PLAYERS;
+  const {tutorial,running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
+  const showInfiltrators = !tutorial && host && players+botsToFill>=MIN_PLAYERS;
   const canStart = host && players>=minimum && assetsReady;
   const botHint = botsToFill===0 ? '' : botsToFill===1 ?
     'Entrará 1 bot para completar a sala.' : `Entrarão ${botsToFill} bots para completar a sala.`;
-  const hint = players<minimum ? `${players}/${minimum} jogadores para iniciar` :
+  const hint = tutorial ? 'Treino no mapa original com bots guiados.' : players<minimum ? `${players}/${minimum} jogadores para iniciar` :
     host ? botHint : 'Aguardando quem criou a sala iniciar a sessão.';
   if (running) return null;
   return <>
-    <div className="lobby-options">
+    <div className="lobby-options" hidden={tutorial}>
       {showInfiltrators ? <div id="infiltrator-setup" className="lobby-count" role="group" aria-labelledby="infiltrator-label">
         <span id="infiltrator-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>
         <div id="infiltrator-count">
@@ -53,7 +53,7 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
       <p id="start-hint" role="status">{hint}</p>
       {host ? <button className="hud-button" id="start-match" type="button" disabled={!canStart}
         onClick={()=>commands.start(showInfiltrators ? infiltrators : 1)}>
-        {rematch ? 'Jogar de novo' : 'Iniciar sessão'} <span aria-hidden="true">›</span>
+        {tutorial ? 'Iniciar tutorial' : rematch ? 'Jogar de novo' : 'Iniciar sessão'} <span aria-hidden="true">›</span>
       </button> : null}
     </footer>
   </>;
