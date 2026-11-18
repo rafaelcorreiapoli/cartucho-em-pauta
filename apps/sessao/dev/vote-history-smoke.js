@@ -254,9 +254,9 @@ async page => {
       }
       const alignedPortraits = await election.locator('.portrait').evaluateAll(portraits=>{
         const edge = portraits[0].closest('.right-hud').getBoundingClientRect().right;
-        return portraits.every(portrait=>Math.abs(portrait.getBoundingClientRect().right-edge)<1);
+        return portraits.map(portrait=>({right:portrait.getBoundingClientRect().right,edge}));
       });
-      if (!alignedPortraits) throw Error('Retratos devem seguir a margem direita dos avisos');
+      if (alignedPortraits.some(({right,edge})=>Math.abs(right-edge)>1)) throw Error('Retratos devem seguir a margem direita dos avisos '+JSON.stringify({width,alignedPortraits}));
       const portraitOnRight = await election.locator('.election-leader').evaluate(row=>
         row.querySelector('.poll-avatar').getBoundingClientRect().left>=row.querySelector('.election-name').getBoundingClientRect().right);
       if (!portraitOnRight) throw Error('Retrato do líder desalinhado no placar eleitoral');

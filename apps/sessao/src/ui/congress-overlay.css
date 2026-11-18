@@ -625,14 +625,15 @@
 .congress-session-clock[data-urgent="true"] strong,
 .congress-budget[data-in-debt="true"] strong, .congress-debt { color: #ffb2a4; }
 
-#command-strip #election-dock { display: grid; justify-items: end; width: 100%; }
+#command-strip #election-dock { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: end; width: 100%; }
 #command-strip #election-dock > #open-election-polls {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 5px;
-  width: 220px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 220px;
+  min-width: 0;
   padding: 7px 0;
   border: 0;
   background: none;
