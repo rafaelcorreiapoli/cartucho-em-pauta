@@ -438,6 +438,7 @@ async function connect(join: () => Promise<Room>) {
       const negotiating = phase==='negotiation';
       settings.update({voiceDescription:negotiating ? 'Voz por proximidade' :
         phase==='ballot' || phase==='hearing' ? 'Voz geral no Plenário' : 'Voz geral da sala'});
+      if (phase==='ballot' || phase==='hearing') gameplay.close();
       voice?.setRange(negotiating ? new Map() : undefined);
       matchRunning = negotiating || phase==='ballot' || phase==='hearing';
       setup.hidden = matchRunning;
