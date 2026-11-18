@@ -148,15 +148,24 @@ async page => {
   await games.getByRole('button',{name:'Bets',exact:true}).waitFor();
   await page.keyboard.press('3');
   const bets = dialog.getByRole('region',{name:'Bets'});
-  await bets.getByText('R$ 80 mil',{exact:true}).waitFor();
+  const wallet = bets.locator('header strong');
+  await wallet.waitFor();
   await dialog.getByRole('button',{name:/Voltar aos joguinhos/}).waitFor({state:'detached'});
   await bets.getByRole('button',{name:'R$ 2 mil',exact:true}).click();
+  const startingBalance = Number((await wallet.textContent()).match(/^R\$ (\d+) mil$/)?.[1]);
+  if (!Number.isFinite(startingBalance)) throw Error('Saldo inicial da aposta inválido');
   await viaPalette(bets.getByRole('button',{name:/^Apostar/}),'Apostar');
   if (await bets.locator('.bets-reel').count()!==3) throw Error('Quantidade de rolos');
   const result = bets.getByRole('status');
   await bets.getByText(/Trinca!|Sem trinca/).waitFor();
-  const balance = (await result.textContent()).startsWith('Trinca!') ? 'R$ 96 mil' : 'R$ 78 mil';
-  await bets.getByText(balance,{exact:true}).waitFor();
+  const outcome = await result.textContent();
+  const won = outcome.startsWith('Trinca!');
+  if (outcome!==(won ? 'Trinca! +R$ 16 mil' : 'Sem trinca · −R$ 2 mil')) {
+    throw Error('Resultado da aposta de R$ 2 mil inválido: '+outcome);
+  }
+  const expectedBalance = startingBalance+(won ? 16 : -2);
+  // A payroll tick can credit R$ 10 mil while the player places the bet.
+  await wallet.filter({hasText:new RegExp(`^R\\$ (${expectedBalance}|${expectedBalance+10}) mil$`)}).waitFor();
   await home();
   await page.keyboard.press('3');
   const preview = dialog.getByRole('img',{name:'Enquadramento da câmera'});
