@@ -23,7 +23,7 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {BALLOT_MS,CASSATION_NOTICE_MS,bills,NEGOTIATION_MS,projectRules,policyDuration,stabilityRules,stations} from '../plenary';
 import {stationRecharge} from '../station-recharge';
-import {MissionRow, ParliamentMetrics} from './hud';
+import {MissionRow, ParliamentMetrics, PayrollMetrics} from './hud';
 import {PhonePix} from './phone-pix';
 import {HEARING_MS,SUSPENSION_MS,agendaCounts,agendaCashTargets,CRISIS_MISSION_STABILITY_LIMIT,COFFEE_DELIVERY_RECIPIENTS,PIX_MISSION_AMOUNT,LATE_CAMPAIGN_WINDOW_MS,PUBLIC_MEETING_PEERS,money,missionReward,agendaDurationMs,targetedAgendas,urgentCallMission,type Mission} from '../politics';
 
@@ -67,8 +67,8 @@ test('an opposition mission shows progress across successive ballots',()=>{
   expect(renderToStaticMarkup(<MissionRow mission={{...mission,current:2}} done/>)).toContain('data-done="true"');
 });
 
-test('the parliament HUD shows the next payroll countdown and cost',()=>{
-  const markup = renderToStaticMarkup(<ParliamentMetrics stability={48} budget={32} payroll={{remaining:125,cost:18}}/>);
+test('the separate payroll HUD shows the next countdown and total cost',()=>{
+  const markup = renderToStaticMarkup(<PayrollMetrics payroll={{remaining:125,cost:18}}/>);
   expect(markup).toContain('Próxima distribuição de salários');
   expect(markup).toContain('2:05');
   expect(markup).toContain('R$ 180 mil');

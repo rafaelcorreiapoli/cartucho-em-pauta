@@ -39,7 +39,7 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <HudHelp as="div" help="Tempo até abrir a votação." className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></HudHelp>;
 }
 
-export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn,payroll}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
   return <section className="congress-meter grid text-center" aria-label="Parlamento">
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
@@ -59,17 +59,25 @@ export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenalty
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
       <span>Orçamento Público</span><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelp>
-    {payroll && <HudHelp as="div" help="O orçamento público paga os salários quando o relógio zera." className="congress-payroll" role="timer" aria-label="Próxima distribuição de salários">
-      <HudIcon name="wallet"/><span>Salários em</span>
-      <strong className="tabular-nums">{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</strong>
-      <span>·</span><span>Custo</span><strong className="tabular-nums">{money(payroll.cost)}</strong>
-    </HudHelp>}
     {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
       <HudIcon name="clock"/><span>Fim da sessão</span>
       <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
     </HudHelp>}
   </section>;
+}
+
+export function PayrollMetrics({payroll}:{payroll:ReturnType<HudModel['congress']['get']>['payroll']}) {
+  return payroll ? <HudHelp as="div" help="Valor total da folha, pago pelo orçamento público quando o relógio zera." className="congress-payroll" aria-label="Próxima distribuição de salários">
+    <span className="payroll-label"><HudIcon name="wallet"/>Folha salarial</span>
+    <strong className="tabular-nums">{money(payroll.cost)}</strong>
+    <span className="payroll-countdown" role="timer"><HudIcon name="clock"/>{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</span>
+  </HudHelp> : null;
+}
+
+function Payroll({state}:{state:HudModel['congress']}) {
+  const {payroll} = useSyncExternalStore(state.subscribe,state.get);
+  return <PayrollMetrics payroll={payroll}/>;
 }
 
 function HudPanel({children}:{children:ReactNode}) {
@@ -261,6 +269,8 @@ export function mountReactHud(openSettings:()=>void) {
   const profileRoot = createRoot(document.getElementById('profile-dock')!);
   profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
+  const payrollRoot = createRoot(document.getElementById('payroll-mount')!);
+  payrollRoot.render(<Payroll state={congress}/>);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
   parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
@@ -269,6 +279,6 @@ export function mountReactHud(openSettings:()=>void) {
     player: model.player,
     profileReward:model.profileReward.update,
     render: model.render,
-    destroy() { televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
+    destroy() { payrollRoot.unmount(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
   };
 }

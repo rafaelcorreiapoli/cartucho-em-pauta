@@ -23,6 +23,16 @@ async page => {
     await tooltip.filter({hasText:'Retrato do personagem que você escolheu.'}).waitFor();
     await page.mouse.click(width-1,height-1);
     await tooltip.waitFor({state:'hidden'});
+    const electionHeading = page.locator('.election-heading');
+    if (await electionHeading.count()) {
+      const label = await electionHeading.locator(':scope > span').first().boundingBox();
+      const clock = await page.locator('.election-clock').boundingBox();
+      if (label && clock && (clock.x<label.x+label.width || clock.x-label.x-label.width>12)) {
+        throw Error('Relógio eleitoral deve ficar logo à direita do título');
+      }
+    }
+    if (await page.locator('#congress-dock .congress-payroll').count()) throw Error('Folha ainda no HUD central');
+    await page.locator('#payroll-mount .congress-payroll').waitFor();
     await stability.hover();
     await tooltip.filter({hasText:'Parlamento entra em colapso'}).waitFor();
     const bounds = await tooltip.boundingBox();

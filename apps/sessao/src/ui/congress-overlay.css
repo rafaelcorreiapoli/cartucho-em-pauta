@@ -651,8 +651,9 @@
 .election-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  direction: ltr;
+  justify-content: flex-end;
+  gap: 8px;
   padding-inline: 0;
   font-weight: 750;
   white-space: normal;
@@ -1158,4 +1159,28 @@
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #plenary-settings {
     inset-inline: auto var(--hud-edge);
   }
+}
+
+/* Keep the public payroll beside the election area without covering the world. */
+#command-strip .right-hud {
+  width: min(440px, 100%);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
+  column-gap: 16px;
+}
+.right-hud > * { grid-column: 1 / -1; }
+.right-hud > #payroll-mount { grid-column: 1; grid-row: 1; justify-self: start; }
+.right-hud > #election-indicator-mount { grid-column: 2; grid-row: 1; width: 100%; margin-block-start: 0; }
+#payroll-mount .congress-payroll { display: grid; justify-items: start; justify-content: start; gap: 4px; margin-top: 7px; }
+.payroll-label, .payroll-countdown { display: flex; align-items: center; gap: .4em; white-space: nowrap; }
+.payroll-label { font-size: .85em; }
+#payroll-mount .congress-payroll > strong { font-size: 1.1em; }
+@media (min-width: 761px) and (max-width: 1200px) {
+  #command-strip .right-hud { grid-template-columns: minmax(0, 1fr); }
+  .right-hud > #election-indicator-mount { grid-column: 1; }
+  .right-hud > #payroll-mount { grid-row: 2; justify-self: end; }
+}
+@media (max-width: 760px) {
+  #command-strip .right-hud { grid-template-columns: minmax(0, 1fr); }
+  .right-hud > #election-indicator-mount { grid-column: 1; }
+  .right-hud > #payroll-mount { grid-row: 2; justify-self: end; }
 }
