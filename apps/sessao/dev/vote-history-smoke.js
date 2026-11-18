@@ -252,6 +252,11 @@ async page => {
       if (width<=640 && notices && notices.height>0 && ballotToggle && notices.y+notices.height>ballotToggle.y) {
         throw Error(`Notificações cobrem a cédula em ${width}×${height}`);
       }
+      const alignedPortraits = await election.locator('.portrait').evaluateAll(portraits=>{
+        const edge = portraits[0].closest('.right-hud').getBoundingClientRect().right;
+        return portraits.every(portrait=>Math.abs(portrait.getBoundingClientRect().right-edge)<1);
+      });
+      if (!alignedPortraits) throw Error('Retratos devem seguir a margem direita dos avisos');
       const portraitOnRight = await election.locator('.election-leader').evaluate(row=>
         row.querySelector('.poll-avatar').getBoundingClientRect().left>=row.querySelector('.election-name').getBoundingClientRect().right);
       if (!portraitOnRight) throw Error('Retrato do líder desalinhado no placar eleitoral');
