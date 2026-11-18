@@ -84,7 +84,7 @@ export class PlayerBots {
     bot.routeRequest = undefined;
   }
 
-  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean,realNow=world.now) {
+  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean,realNow=world.now,approachLearner=false) {
     if (!this.bots.size) return;
     const {now} = world;
     if (match.phase!=='ballot') this.messages = [];
@@ -126,8 +126,9 @@ export class PlayerBots {
         if (match.powerOut && bot.index===0) {
           this.go(bot,powerPanels[1],now);
           if (canOperatePanel(player,1)) match.actOnPower(player,{kind:'repair',panel:1},now);
-        } else if (learner && bot.index===0 && Math.hypot(player.x-learner.x,player.y-learner.y)>25) {
-          this.go(bot,learner,now);
+        } else if (approachLearner && learner && bot.index===0) {
+          const distance = Math.hypot(player.x-learner.x,player.y-learner.y);
+          if (distance>22) this.go(bot,{x:learner.x+(player.x-learner.x)*20/distance,y:learner.y+(player.y-learner.y)*20/distance},now);
         }
       } else this.explore(bot,match,gameplay,world,view,visible);
       const phone = gameplay.phoneActivity(id);
@@ -179,7 +180,7 @@ export class PlayerBots {
     if (view.project!==undefined && witness && view.audit!=='fraud' && !view.reportedFraud) {
       bot.seenAtPanel = {name:witness.nick,at:now};
     }
-    const request = game.requests.find(entry=>entry.kind==='signature' && entry.item.document?.project!==undefined &&
+    const request = game.requests.find(entry=>
       visible.some(peer=>peer.id===entry.from.id && canReachObject(player,peer)));
     if (request) {
       this.stop(bot);

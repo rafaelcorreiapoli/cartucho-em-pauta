@@ -349,7 +349,7 @@ test('dialogue eligibility is private and checked again when the player chooses'
   world.hasMission = (id,mission)=>id===alice.id && mission==='cafe';
   world.hasEvidence = (id,kind)=>id===alice.id && kind==='clandestine-transfer';
   Object.assign(alice, {x:240,y:250});
-  game.act(alice,{kind:'supply',place:'coffee'},world);
+  game.giveTrainingItem(alice.id,'coffee');
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
   Object.assign(bob,{x:npcs.vendor.x+9,y:alice.y});
   for (const player of [alice,bob]) game.act(player,{kind:'talk',target:'vendor'},world);

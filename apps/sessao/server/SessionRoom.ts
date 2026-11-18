@@ -671,12 +671,13 @@ export class SessionRoom extends Room {
       if (this.tutorial && !this.tutorial.complete && this.tutorialOwner) {
         const step = tutorialSteps[this.tutorial.step];
         const player = this.players.get(this.tutorialOwner)?.player;
-        if (player && step.event==='call-time' && this.gameplay.phoneActivity(player.id)==='call') this.advanceTutorial();
+        if (player && step.event==='stored' && step.kind==='briefcase' && this.gameplay.hasBriefcaseInOwnCabinet(player.id)) this.advanceTutorial();
+        else if (player && step.event==='call-time' && this.gameplay.phoneActivity(player.id)==='call') this.advanceTutorial();
         else if (player && step.target && !step.event && !step.manual && this.tutorialOrigin &&
             Math.hypot(player.x-step.target.x,player.y-step.target.y)<30 &&
             Math.hypot(player.x-this.tutorialOrigin.x,player.y-this.tutorialOrigin.y)>10) this.advanceTutorial();
       }
-      this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now),realNow);
+      this.bots.tick(this.match,this.gameplay,world,(state,peer)=>this.sees(state,peer,now),realNow,!!this.tutorial && !this.tutorial.complete && ['transferred','signed'].includes(tutorialSteps[this.tutorial.step]?.event ?? ''));
       this.match.advancePower(now,id=>world.present(id) ? this.players.get(id)?.player : undefined);
       for (const player of players) {
         player.handlingObject = this.match.fireHandlingDirection(player);

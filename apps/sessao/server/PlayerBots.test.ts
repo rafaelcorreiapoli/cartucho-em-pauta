@@ -210,11 +210,11 @@ test.each([{roll:0,expected:'money-pocketed'}, {roll:.9,expected:'delivered'}])(
     expect(gameplay.hasVisibleCash(bot.id,32_000,human.id)).toBe(false);
   });
 
-test('training bots answer calls, accept offers and sign while leaving projects idle',()=>{
+for (const training of [false,true]) test(`bots accept offers and sign documents (training=${training})`,()=>{
   const {match,gameplay,human,players,bots,controls,worldAt,events,advance} = gameWithBots(()=>.4);
-  match.training = true;
+  match.training = training;
   const guide = players.find(person=>person.bot)!;
-  const world = (now:number)=>({...worldAt(now),training:true,voice:()=>true});
+  const world = (now:number)=>({...worldAt(now),training,voice:()=>true});
   Object.assign(human,stations.coffee);
   Object.assign(guide,{x:human.x+8,y:human.y});
   gameplay.giveTrainingItem(human.id,'coffee');
@@ -223,10 +223,12 @@ test('training bots answer calls, accept offers and sign while leaving projects 
   bots.tick(match,gameplay,world(1000),()=>true);
   expect(gameplay.view(guide,world(1000)).inventory.some(item=>item.kind==='coffee')).toBe(true);
   expect(events.some(event=>event.type==='transferred' && event.actor===human.id)).toBe(true);
-  expect(gameplay.act(human,{kind:'call',target:guide.id},world(1001))).toBeDefined();
-  bots.tick(match,gameplay,world(2000),()=>true);
-  expect(gameplay.phoneActivity(human.id)).toBe('call');
-  gameplay.act(human,{kind:'hangup'},world(2001));
+  if (training) {
+    expect(gameplay.act(human,{kind:'call',target:guide.id},world(1001))).toBeDefined();
+    bots.tick(match,gameplay,world(2000),()=>true);
+    expect(gameplay.phoneActivity(human.id)).toBe('call');
+    gameplay.act(human,{kind:'hangup'},world(2001));
+  }
   Object.assign(human,stations.secretary);
   Object.assign(guide,{x:human.x+8,y:human.y});
   gameplay.act(human,{kind:'supply',place:'secretary'},world(2002));
@@ -234,6 +236,25 @@ test('training bots answer calls, accept offers and sign while leaving projects 
   gameplay.act(human,{kind:'sign-request',item:document.id,target:guide.id},world(2003));
   bots.tick(match,gameplay,world(3000),()=>true);
   expect(document.document?.signatures.some(person=>person.id===guide.id)).toBe(true);
-  advance(180_000);
-  expect(match.projectIndex).toBeUndefined();
+  if (training) {
+    advance(180_000);
+    expect(match.projectIndex).toBeUndefined();
+  }
+});
+
+test('training guide approaches only for interactions and keeps space around the learner',()=>{
+  const {match,gameplay,human,players,bots,controls,worldAt} = gameWithBots(()=>.4);
+  match.training = true;
+  const guide = players.find(person=>person.bot)!;
+  Object.assign(human,stations.coffee);
+  Object.assign(guide,{x:human.x+80,y:human.y});
+  bots.tick(match,gameplay,worldAt(1000),()=>true);
+  bots.move(controls.get(guide.id)!,undefined);
+  expect(controls.get(guide.id)!.route).toEqual([]);
+  bots.tick(match,gameplay,worldAt(2000),()=>true,2000,true);
+  bots.move(controls.get(guide.id)!,undefined);
+  const destination = controls.get(guide.id)!.route.at(-1)!;
+  expect(destination).toBeDefined();
+  expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeGreaterThanOrEqual(18);
+  expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeLessThanOrEqual(24);
 });

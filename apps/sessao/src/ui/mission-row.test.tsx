@@ -566,7 +566,7 @@ test.each([false,true])('coffee missions count consumption at the station and fr
       expect(game.drinkStationCoffee(player,world)).toBe('Café bebido.');
       expect(game.drinkStationCoffee(player,world)).toBe(stationRecharge.coffee.feedback);
     } else {
-      expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+      game.giveTrainingItem(player.id,'coffee');
       const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
       expect(game.act(player,{kind:'use',item:coffee.id},world)).toBe('Café bebido.');
     }
@@ -1256,7 +1256,7 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(render()).toContain('0 / 2');
 
   Object.assign(player,stations.coffee);
-  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  game.giveTrainingItem(player.id,'coffee');
   Object.assign(player,game.officeSpawn(player.id)!);
   let xpAfterCoffee = 0;
   for (const kind of ['coffee','coxinha'] as const) {
@@ -1745,7 +1745,7 @@ test('Bandeja Gourmet accepts Pinga served by a project as the second consumable
   expect(draw()).toBeDefined();
 
   const world = match.gameplayWorld([player],++now,()=>false);
-  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  game.giveTrainingItem(player.id,'coffee');
   const inventory = game.view(player,world).inventory;
   Object.assign(player,game.officeSpawn(player.id)!);
   const consume = (kind:'coffee'|'pinga')=>{

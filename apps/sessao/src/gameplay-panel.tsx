@@ -290,7 +290,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
-    const canOffer = !!offerTarget && !!view.gameplay && contacts.some(person=>(view.tutorial || !person.bot) && person.id===offerTarget?.id);
+    const canOffer = !!offerTarget && !!view.gameplay && contacts.some(person=>person.id===offerTarget?.id);
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
@@ -430,7 +430,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
           if (state.installable.includes(key)) act(`${label} · ${site.label}`,'install',key);
         }
         if (contacts.length) {
-          if ((view.tutorial || contacts.some(person=>!person.bot)) && (view.tutorial || !contacts.some(person=>person.id===recipient && person.bot))) act('Oferecer','offer');
+          act('Oferecer','offer');
           if (item.document && (item.document.project===undefined || item.document.requiredSignatures>0)) act('Pedir assinatura','sign-request');
         }
         act('Largar no chão','drop');
@@ -604,7 +604,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     restorePhoneActivity() { if (phoneOpen) send({kind:'phone-open'}); },
     openBag() { open(undefined,undefined,false,false,true); },
     openOffer(id:string) {
-      const target = previous?.gameplay?.contacts.find(contact=>(previous?.tutorial || !contact.bot) && contact.id===id);
+      const target = previous?.gameplay?.contacts.find(contact=>contact.id===id);
       if (!target) return;
       assigningSlot = undefined;
       open(undefined,undefined,false,false,true,target);
@@ -651,14 +651,6 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }
         for (const decoration of state.interactive) {
           add('decoration-'+decoration.id,decoration.kind,decorationLabel(decoration),'Inspecionar',()=>open(undefined,decoration.id));
-        }
-        for (const place of state.locations) {
-          const terminal = terminals[place as keyof typeof terminals];
-          if (!('supply' in terminal) || terminal.supply==='document') continue;
-          add('supply-'+place,terminal.supply,objects[terminal.supply].name,'Pegar',()=>pickUp(
-            player=>canReachObject(player,terminal.point),
-            ()=>send({kind:'supply',place}),
-          ));
         }
         for (const item of state.filed) {
           add('filed-'+item.id,item.kind,itemName(item),'Consultar',()=>open({id:item.id,source:'filed'}));

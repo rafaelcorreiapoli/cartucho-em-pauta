@@ -55,7 +55,7 @@ test('a blocked context button renders its reason and disabled state',()=>{
 });
 
 
-test('offering an inventory item targets nearby human recipients in the field',()=>{
+test('offering an inventory item targets nearby humans and bots in the field',()=>{
   const host:Player = {id:'host',nick:'Rafa',character:0,direction:0,moving:false,...terminals.coffee.point};
   const guest = {...host,id:'guest',nick:'Bia'};
   const bot:Player = {...host,id:'bot',nick:'Bot',bot:true};
@@ -69,12 +69,13 @@ test('offering an inventory item targets nearby human recipients in the field',(
     .filter(({action})=>action.kind==='offer-item');
 
   expect(offers()).toEqual([]);
-  expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  game.giveTrainingItem(host.id,'coffee');
   expect(offers()).toEqual([expect.objectContaining({
     label:'Oferecer item · Bia',action:{kind:'offer-item',target:guest.id},
-  })]);
+  }),expect.objectContaining({action:{kind:'offer-item',target:bot.id}})]);
   const [coffee] = game.view(host,world).inventory;
-  expect(game.act(host,{kind:'offer',item:coffee.id,target:bot.id},world)).toBe('Aproxime-se do destinatário.');
+  expect(game.act(host,{kind:'offer',item:coffee.id,target:bot.id},world)).toBe('Pedido enviado.');
   guest.x += 100;
+  bot.x += 100;
   expect(offers()).toEqual([]);
 });

@@ -13,7 +13,7 @@ test('the Phaser snapshot uses authoritative ground and office data and clears t
   game.reset(0,()=>.9,[player]);
   Object.assign(player,stations.coffee);
   const world = match.gameplayWorld([player],1,()=>false);
-  expect(game.act(player,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+  game.giveTrainingItem(player.id,'coffee');
   const coffee = game.view(player,world).inventory.find(item=>item.kind==='coffee')!;
   game.act(player,{kind:'drop',item:coffee.id},world);
 

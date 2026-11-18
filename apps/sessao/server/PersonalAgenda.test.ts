@@ -880,7 +880,7 @@ test('coffee delivery counts accepted cups for three distinct available human re
     earn:()=>{},publish:event=>economy.recordGameplay(event)};
   function deliver(recipient:Player) {
     world.now += stationRecharge.coffee.duration;
-    expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+    game.giveTrainingItem(host.id,'coffee');
     const coffee = game.view(host,world).inventory.find(({kind})=>kind==='coffee')!;
     expect(game.act(host,{kind:'offer',item:coffee.id,target:recipient.id},world)).toBe('Pedido enviado.');
     const request = game.view(recipient,world).requests[0];

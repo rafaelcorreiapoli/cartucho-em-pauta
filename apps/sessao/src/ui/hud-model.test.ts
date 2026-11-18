@@ -207,7 +207,7 @@ test('the HUD preserves completed coffee deliveries when a recipient leaves',()=
   const deliver = (guest:Player)=>{
     now += stationRecharge.coffee.duration;
     const world = match.gameplayWorld(players,now,()=>false);
-    expect(game.act(host,{kind:'supply',place:'coffee'},world)).toBe('Objeto guardado no inventário.');
+    game.giveTrainingItem(host.id,'coffee');
     const coffee = game.view(host,world).inventory.find(item=>item.kind==='coffee')!;
     expect(game.act(host,{kind:'offer',item:coffee.id,target:guest.id},world)).toBe('Pedido enviado.');
     const request = game.view(guest,world).requests[0];

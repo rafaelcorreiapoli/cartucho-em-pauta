@@ -20,6 +20,8 @@ class ContextOverflowRoom extends SessionRoom {
           game.distributePinga(player,this.clock.currentTime);
         } else {
           Object.assign(player,stations.coffee);
+          // Keep the nearby-item shortcut scenario independent from station supplies.
+          Reflect.get(game,'create').call(game,'coffee',{ground:{...stations.coffee}});
           for (let i=0;i<3;i++) game.distributePinga(player,this.clock.currentTime);
         }
       }
