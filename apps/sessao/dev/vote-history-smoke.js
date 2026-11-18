@@ -77,6 +77,11 @@ async page => {
   await onlyLeader.getByText('Histórico QA',{exact:true}).waitFor();
   await onlyLeader.locator('.poll-rank[data-rank="1"]').waitFor();
   if (await election.locator('.election-personal, kbd').count()) throw Error('Placar mostra uma linha pessoal redundante ou o atalho visual');
+  const hasBackdrop = await election.locator('#open-election-polls').evaluate(button=>
+    getComputedStyle(button).backgroundColor==='rgba(0, 0, 0, 0)' &&
+    getComputedStyle(button,'::before').backgroundImage.includes('linear-gradient') &&
+    getComputedStyle(button.querySelector('.election-leader')).backgroundImage==='none');
+  if (!hasBackdrop) throw Error('O placar deve usar um fundo em degradê sem caixas opacas');
   if (await election.getAttribute('data-at-risk')!==null) throw Error('Alerta eleitoral sem risco de eliminação');
   const settings = page.getByRole('dialog',{name:'Configurações'});
   await settingsButton.click();
@@ -195,8 +200,8 @@ async page => {
     const personal = election.locator('.election-personal');
     await personal.getByText('Votação lotada QA',{exact:true}).waitFor();
     await personal.getByText('Em risco',{exact:true}).waitFor();
-    const alertGlows = await election.locator('#open-election-polls').evaluate(button=>
-      button.closest('#election-dock').dataset.atRisk==='true' && getComputedStyle(button).boxShadow!=='none');
+    const alertGlows = await personal.locator('.portrait').evaluate(portrait=>
+      portrait.closest('#election-dock').dataset.atRisk==='true' && getComputedStyle(portrait).boxShadow!=='none');
     if (!alertGlows) throw Error('O placar não destaca o risco de eliminação');
     const pending = sheet.locator('[data-vote-state="pending"]');
     await pending.nth(5).waitFor({state:'attached'});

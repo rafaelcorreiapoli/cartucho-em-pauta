@@ -594,20 +594,36 @@
 
 #command-strip #election-dock { width: 100%; }
 #command-strip #election-dock > #open-election-polls {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 5px;
   width: 220px;
   max-width: 100%;
   padding: 7px;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  background: #0b1810;
+  border: 0;
+  background: none;
+  text-shadow: 0 1px 4px #030906;
   color: #f6f3e9;
   cursor: pointer;
   text-align: right;
 }
-#command-strip #election-dock > #open-election-polls:hover { background: #13251c; }
+#command-strip #election-dock > #open-election-polls:is(:hover, [aria-expanded="true"]) {
+  background: none;
+}
+#open-election-polls::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -10px -7px -10px -20px;
+  background: linear-gradient(to left, #09150ff0 20%, #09150fdd 60%, transparent);
+  mask-image: linear-gradient(transparent, #000 16% 84%, transparent);
+  pointer-events: none;
+}
+#open-election-polls:is(:hover, :focus-visible)::before {
+  background: linear-gradient(to left, #143025f5 20%, #10271de0 60%, transparent);
+}
 .election-heading {
   display: flex;
   align-items: center;
@@ -624,13 +640,9 @@
   align-items: center;
   gap: 10px;
   padding: 3px 6px;
-  border: 1px solid transparent;
 }
 .election-leader {
   padding-block: 5px;
-  border-color: #496654;
-  border-radius: 9px;
-  background: linear-gradient(150deg,#183125,#0d1e16);
 }
 .election-standing .portrait {
   --portrait-size: 32px;
@@ -652,22 +664,21 @@
   white-space: nowrap;
 }
 .election-personal { color: #edca7c; }
-#command-strip #election-dock[data-at-risk="true"] > #open-election-polls {
-  border-color: #e24640;
-  box-shadow: 0 0 9px var(--hud-edge-glow);
-}
-#command-strip #election-dock[data-at-risk="true"] :is(.election-personal, .election-standing small) {
+#election-dock[data-at-risk="true"] .election-standing:has(small) {
   color: #ffb2a4;
-  text-shadow: 0 0 6px var(--hud-edge-glow);
+  text-shadow: 0 0 6px var(--hud-edge-glow), 0 1px 4px #030906;
+}
+#election-dock[data-at-risk="true"] .election-standing:has(small) .portrait {
+  border-color: #e87569;
+  box-shadow: 0 0 8px var(--hud-edge-glow);
 }
 #command-strip .election-clock {
   flex: none;
   min-width: 42px;
   margin: 0;
-  padding: 3px 6px;
-  border: 1px solid #617c66;
-  border-radius: 999px;
-  background: #0b1712;
+  padding: 3px 0;
+  border: 0;
+  background: none;
   text-align: center;
 }
 #command-strip #election-timer { color: #f8f5e8; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
