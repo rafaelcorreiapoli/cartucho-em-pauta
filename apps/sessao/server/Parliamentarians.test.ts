@@ -71,7 +71,9 @@ test('signature and competing vote offers transfer existing money and the commit
   expect(npc.knockedOut).toBe(true);
   Object.assign(b,{x:634,y:196});
   for (const player of [a,b]) talk.act(player,{kind:'rob',target:npc.id},world(5500));
+  expect(talk.robberyTarget(a.id)).toEqual({x:npc.x,y:npc.y,direction:npc.direction});
   talk.tick(world(5500+npcRules.robberyMs),true);
+  expect(talk.robberyTarget(a.id)).toBeUndefined();
   expect(world(11).wallet!(npc.id)).toBe(0);
   expect(world(11).wallet!(a.id)).toBe(walletBeforeRobbery);
   const cash = game.view(a,world(11)).inventory.find(item=>item.kind==='briefcase')!;
@@ -263,6 +265,7 @@ test('the HUD cancels a robbery without transferring cash and a delayed conversa
   if (cancel?.kind!=='npc-deal') throw Error('HUD did not offer the robbery cancellation');
   expect(talk.act(buyer,cancel.request,state)).toBe('Roubo interrompido.');
   expect(talk.robberyProgress(buyer.id,1)).toBeUndefined();
+  expect(talk.robberyTarget(buyer.id)).toBeUndefined();
   const wallet = state.wallet!(npc.id);
   talk.tick(world(1+npcRules.robberyMs),true);
   expect(state.wallet!(npc.id)).toBe(wallet);
