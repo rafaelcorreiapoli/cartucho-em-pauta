@@ -162,6 +162,10 @@
 .right-hud > :not(:empty) ~ :not(:empty) { margin-block-start: 8px; }
 #election-indicator-mount { width: min(220px, 100%); }
 .right-hud :is(#active-fire-mount, #active-outage-mount, #electoral-notice-mount, #hud-notices) { width: 100%; }
+.right-hud :is(#active-fire-mount, #active-outage-mount) {
+  display: grid;
+  justify-items: end;
+}
 .right-hud:has(> :not(:empty))::before {
   content: "";
   position: absolute;
@@ -691,7 +695,7 @@
 }
 .election-personal { color: #edca7c; }
 #election-dock[data-at-risk="true"] .election-standing:has(small) {
-  color: #ffb2a4;
+  color: #ff776b;
   text-shadow: 0 0 6px var(--hud-edge-glow), 0 1px 4px #030906;
 }
 #election-dock[data-at-risk="true"] .election-standing:has(small) .portrait {
@@ -1210,3 +1214,7 @@
 #stations .context-target:has(.context-signature-documents) { max-width:min(540px,calc(100vw - 24px)); }
 .context-signature-documents .hud-button { flex:1 1 150px; max-width:100%; white-space:normal; text-align:left; }
 .context-signature-documents .hud-button > span { overflow-wrap:anywhere; }
+
+/* Keep the candidate name and elimination warning in the same risk color. */
+.poll-label > [data-effect="loss"],
+.poll-label > [data-effect="loss"] .poll-lost { color: #ff776b; }

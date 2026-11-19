@@ -8,15 +8,15 @@ export function RankedPortrait({character,rank}:{character:number;rank:number}) 
   </span>;
 }
 
-export function ElectionCandidateCard({character,rank,name,percentage,trend=0,note,lost=false}:{
-  character:number; rank:number; name:string; percentage:number; trend?:number; note?:ReactNode; lost?:boolean;
+export function ElectionCandidateCard({character,rank,name,percentage,trend=0,note,lost=false,atRisk=false}:{
+  character:number; rank:number; name:string; percentage:number; trend?:number; note?:ReactNode; lost?:boolean; atRisk?:boolean;
 }) {
   const tone = lost || trend<0 ? 'loss' : trend>0 ? 'gain' : 'neutral';
   return <div className="poll-card">
     <RankedPortrait character={character} rank={rank}/>
     <div className="poll-details">
       <div className="poll-label">
-        <span data-effect={lost ? 'loss' : undefined}>{name}{note}{lost && <small className="poll-lost">Mandato perdido</small>}</span>
+        <span data-effect={lost || atRisk ? 'loss' : undefined}>{name}{note}{lost && <small className="poll-lost">Mandato perdido</small>}</span>
         <strong data-effect={tone}>{formatElectionPercentage(percentage)}%</strong>
         {!!trend && <small data-effect={tone}>{trend>0 ? '+' : ''}{formatElectionPercentage(trend)} pp</small>}
       </div>

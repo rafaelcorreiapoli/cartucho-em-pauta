@@ -57,6 +57,7 @@ test('the polls give candidates with the same displayed percentage a shared posi
   expect(markup.match(/class="poll-tie"> \(Empate\)</g)).toHaveLength(5);
   expect(markup).not.toContain('Apoio público');
   expect(markup.match(/Em risco de perder o mandato/g)).toHaveLength(3);
+  expect(markup.match(/<span data-effect="loss">Candidato/g)).toHaveLength(3);
 });
 
 test('the election indicator owns the dial and its keyboard shortcut',()=>{

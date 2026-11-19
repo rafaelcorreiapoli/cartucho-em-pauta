@@ -3,7 +3,7 @@ import type {tutorialSteps} from '../tutorial';
 
 type Highlight = NonNullable<(typeof tutorialSteps)[number]['highlight']>;
 const targets:Record<Highlight,string> = {
-  stats:'#profile-vitals, #profile-resources',
+  stats:'#profile-dock',
   energy:'.vital-row[data-tone="stamina"]',
   bag:'button[aria-label="Mochila"]',
   equipment:'.equipped-gear-slots',
@@ -35,20 +35,27 @@ export function TutorialSpotlight({highlight}:{highlight:Highlight}) {
         next.push({x:box.x-8,y:box.y-8,width:box.width+16,height:box.height+16});
       }
       setOpenings(previous=>JSON.stringify(previous)===JSON.stringify(next) ? previous : next);
+      // Transforms move targets without triggering ResizeObserver during app entry.
+      if (nodes.some(node=>node.getAnimations().some(animation=>
+        animation.playState==='running' && animation.effect?.getTiming().iterations!==Infinity))) schedule();
     }
     function schedule() { if (!frame) frame = requestAnimationFrame(measure); }
     // HUD sections mount independently; follow their layout without polling the game loop.
     const mutations = new MutationObserver(schedule);
-    mutations.observe(document.body,{childList:true,subtree:true});
+    mutations.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class','style','open']});
     window.addEventListener('resize',schedule);
     window.addEventListener('scroll',schedule,true);
     document.addEventListener('transitionend',schedule);
+    document.addEventListener('animationstart',schedule);
+    document.addEventListener('animationend',schedule);
     measure();
     return ()=>{
       cancelAnimationFrame(frame);resize.disconnect();mutations.disconnect();
       window.removeEventListener('resize',schedule);
       window.removeEventListener('scroll',schedule,true);
       document.removeEventListener('transitionend',schedule);
+      document.removeEventListener('animationstart',schedule);
+      document.removeEventListener('animationend',schedule);
     };
   },[highlight]);
   if (!openings.length) return null;

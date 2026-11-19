@@ -327,7 +327,7 @@ async function connect(join: () => Promise<Room>) {
       }
     });
     hudListeners.signal.addEventListener('abort',campaignTv.destroy,{once:true});
-    const election = createElectionPanel(joined.sessionId);
+    const election = createElectionPanel(joined.sessionId,()=>joined.send("tutorial","next"));
     let appStatus:HudAppStatus = {};
     const appCommands:Record<HudApp,()=>void> = {
       bag:gameplay.openBag,equipment:gameplay.openEquipment,phone:gameplay.openPhone,

@@ -16,6 +16,7 @@ async page => {
     if (worldSteps.has(await panel.getByRole('heading').textContent())) await spotlight.waitFor({state:'hidden'});
   }
   await spotlight.waitFor();
+  if (await spotlight.locator('[data-spotlight-opening]').count()!==1) throw Error('HUD deve ter um único recorte');
   if (await panel.getByRole('combobox').count()) throw Error('Tutorial ainda usa select');
   if (!await panel.getByRole('button',{name:'Etapa anterior',exact:true}).isDisabled()) throw Error('Primeira etapa permite voltar');
   const hint = panel.locator('summary');
@@ -23,7 +24,7 @@ async page => {
   await hint.click();
   await panel.getByText('Leia os indicadores e use a seta à direita para avançar.',{exact:true}).waitFor();
   await page.waitForFunction(()=>{
-    const vitals = document.querySelector('#profile-vitals').getBoundingClientRect();
+    const vitals = document.querySelector('#profile-dock').getBoundingClientRect();
     return [...document.querySelectorAll('[data-spotlight-opening]')].some(node=>{
       const x=+node.getAttribute('x'),y=+node.getAttribute('y');
       return x<=vitals.x && y<=vitals.y && x+(+node.getAttribute('width'))>=vitals.right && y+(+node.getAttribute('height'))>=vitals.bottom;
@@ -95,6 +96,21 @@ async page => {
   await spotlight.waitFor({state:'visible',timeout:15000});
   const options = Number((await panel.locator('.tutorial-progress').textContent()).split('/')[1]);
   for (let i=5;i<options-1;i++) {
+    if (await panel.getByRole('heading',{name:'Consulte a pesquisa',exact:true}).isVisible()) {
+      await page.keyboard.press('l');
+      const polls = page.getByRole('dialog',{name:'Pesquisa Eleitoral',exact:true});
+      await polls.waitFor();
+      await panel.getByRole('heading',{name:'Consulte a pesquisa',exact:true}).waitFor();
+      await page.keyboard.press('l');
+      await panel.getByRole('heading',{name:'Instale uma câmera',exact:true}).waitFor();
+      await panel.getByRole('button',{name:'Etapa anterior',exact:true}).click();
+      await panel.getByRole('heading',{name:'Consulte a pesquisa',exact:true}).waitFor();
+      await page.keyboard.press('l');
+      await polls.waitFor();
+      await polls.getByRole('button',{name:'Fechar pesquisa eleitoral',exact:true}).click();
+      await panel.getByRole('heading',{name:'Instale uma câmera',exact:true}).waitFor();
+      continue;
+    }
     const current = await panel.locator('.tutorial-progress').textContent();
     await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
     await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);
