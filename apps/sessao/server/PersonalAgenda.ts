@@ -110,7 +110,13 @@ const missionTargets:Partial<Record<Agenda,number>> = {
   chamadasUrgentes:urgentCallMission.contacts,entrega:COFFEE_DELIVERY_RECIPIENTS,
   fortuna:12,campanha:65,...agendaCounts,...agendaCashTargets,...agendaDurationMs,
 };
-const startingActivities = ['pizza','jogar','selfieSolo','passeio'] as const;
+const retiredMissions = new Set<Agenda>([
+  'bombom','cafeEstrategico','fiscalCafe','bandejaGourmet',
+  'visitaAlvo','visitaCortesia','visitaArquivo','visitaGabinete','passeio',
+  'presencaPlenario','reuniaoGabinete','reuniaoPublica','visitaDoisGabinetes',
+  'primeirosSocorros','debateTelefonico','chamadasUrgentes',
+]);
+const startingActivities = ['pizza','jogar','selfieSolo'] as const;
 const foodMissions = new Set<Agenda>(['cafe','pizza','lagosta','comprarLagosta','bombom','cafeEstrategico','fiscalCafe','almocoPlenario']);
 const purchaseRequirements:Partial<Record<Agenda,number>> = {
   campanhaUltimaHora:ELECTION_RULES.advertisementCost,pixVinte:PIX_MISSION_AMOUNT,
@@ -218,7 +224,7 @@ export class PersonalAgenda {
     private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true) {
     const documentAndProjectMissions:readonly Agenda[] = ['protocolo','assinaturas','assinar','comissaoImprovisada','assinaturaAlvo','documentoAlvo','provaDocumental','retratacaoOficial','votoNpc','apoio','projetos','oposicao','leitura','votacao'];
     const photographyMissions:readonly Agenda[] = ['selfieAlvo','selfieSolo','fotografia','flagra','selfie','presidenteFoto','celularFoto','reuniaoFoto','dossieFoto','apresentarFoto','entregaFoto','publicouSelfie','autorretrato','cerimonialOficial','fiscalVip','flagraGabinete','fotoOstentacao','fotoDinheiro','provaDocumental','registroHistorico','jornalismo','tresSelfies','turismo','selfieArrombamento','fotoNocaute'];
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' &&
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' && !retiredMissions.has(kind) &&
       (projectVotingEnabled || !documentAndProjectMissions.includes(kind)) &&
       (photosEnabled || !photographyMissions.includes(kind)) &&
       (decorationsEnabled || !['poltrona','ostentacao','gabinete','televisao','fotoOstentacao','doisMoveis'].includes(kind)) &&
