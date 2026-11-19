@@ -46,8 +46,9 @@ class LegislativeModalsRoom extends SessionRoom {
         }
         if (player.nick==='Projetos QA') {
           const parliamentarians:Parliamentarians = Reflect.get(this,'parliamentarians');
+          parliamentarians.stopRoutes();
           parliamentarians.players.forEach((npc,index)=>{
-            Object.assign(npc,{x:stations.secretary.x+8+index*6,y:stations.secretary.y,moving:false});
+            Object.assign(npc,{x:stations.secretary.x+8+index*6,y:stations.secretary.y,speed:0,moving:false});
           });
         }
         const now = this.clock.currentTime;
