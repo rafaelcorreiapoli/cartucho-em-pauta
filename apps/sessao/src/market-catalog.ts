@@ -25,6 +25,11 @@ const catalogs = {equipment:technical,food:foods,furniture,credentials:credentia
 type Catalog = keyof typeof catalogs;
 type TechnicalProduct = keyof typeof technical;
 
+export function decorationProductEnabled(kind:unknown,furnitureEnabled=true,portraitsAndVipEnabled=true) {
+  return (furnitureEnabled || typeof kind!=='string' || !isOfficeFurniture(kind)) &&
+    (portraitsAndVipEnabled || !isCredentialGood(kind));
+}
+
 export function isCredentialGood(kind:unknown):kind is keyof typeof credentialGoods {
   return typeof kind==='string' && Object.hasOwn(credentialGoods,kind);
 }

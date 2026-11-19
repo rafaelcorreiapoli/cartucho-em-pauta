@@ -826,6 +826,12 @@ test('six human clients can select eight NPCs and fill the available seats when 
     guest.send('lobby-surveillance',{enabled:false,token:6});
     await wait(()=>commandTokens.get(guest.sessionId)===6);
     expect(Reflect.get(room,'surveillanceEnabled')).toBe(true);
+    guest.send('lobby-decorations',{enabled:false,token:7});
+    await wait(()=>commandTokens.get(guest.sessionId)===7);
+    guest.send('lobby-portraits-vip',{enabled:false,token:8});
+    await wait(()=>commandTokens.get(guest.sessionId)===8);
+    expect(Reflect.get(room,'decorationsEnabled')).toBe(true);
+    expect(Reflect.get(room,'portraitsAndVipEnabled')).toBe(true);
     host.send('start-match',{infiltrators:2,token:3});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
@@ -888,7 +894,10 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
   {projectsEnabled:false,electionsEnabled:true,photosEnabled:true},{projectsEnabled:false,electionsEnabled:false,photosEnabled:true},
   {projectsEnabled:true,electionsEnabled:true,photosEnabled:false},{projectsEnabled:false,electionsEnabled:false,photosEnabled:false},
   {projectsEnabled:true,electionsEnabled:true,photosEnabled:true,surveillanceEnabled:false},
-  {projectsEnabled:false,electionsEnabled:false,photosEnabled:false,surveillanceEnabled:false}])('solo lobby applies independent mechanic settings: %j',async({projectsEnabled,electionsEnabled,photosEnabled,surveillanceEnabled=true})=>{
+  {projectsEnabled:false,electionsEnabled:false,photosEnabled:false,surveillanceEnabled:false},
+  {projectsEnabled:true,electionsEnabled:true,photosEnabled:true,decorationsEnabled:false,portraitsAndVipEnabled:true},
+  {projectsEnabled:true,electionsEnabled:true,photosEnabled:true,decorationsEnabled:true,portraitsAndVipEnabled:false},
+  {projectsEnabled:false,electionsEnabled:false,photosEnabled:false,surveillanceEnabled:false,decorationsEnabled:false,portraitsAndVipEnabled:false}])('solo lobby applies independent mechanic settings: %j',async({projectsEnabled,electionsEnabled,photosEnabled,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true})=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
@@ -922,7 +931,11 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     await wait(()=>view?.photosEnabled===photosEnabled);
     host.send('lobby-surveillance',{enabled:surveillanceEnabled,token:4});
     await wait(()=>view?.surveillanceEnabled===surveillanceEnabled);
-    host.send('start-match',{infiltrators:2,npcs:8,token:5});
+    host.send('lobby-decorations',{enabled:decorationsEnabled,token:5});
+    await wait(()=>view?.decorationsEnabled===decorationsEnabled);
+    host.send('lobby-portraits-vip',{enabled:portraitsAndVipEnabled,token:6});
+    await wait(()=>view?.portraitsAndVipEnabled===portraitsAndVipEnabled);
+    host.send('start-match',{infiltrators:2,npcs:8,token:7});
     await wait(()=>view?.phase==='negotiation');
     expect(view).toMatchObject({players:6,electorate:6});
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
@@ -930,32 +943,36 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     const controls:Map<string,ControlState> = Reflect.get(room,'players');
     const players = [...controls.keys()];
     expect(players.filter(id=>match.view(id,players,room.clock.currentTime).role==='Infiltrado')).toHaveLength(2);
-    host.send('lobby-elections',{enabled:!electionsEnabled,token:6});
     const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
-    await wait(()=>commandTokens.get(host!.sessionId)===6);
-    expect(Reflect.get(room,'electionsEnabled')).toBe(electionsEnabled);
+    const settings = [
+      ['lobby-elections','electionsEnabled',electionsEnabled],['lobby-photos','photosEnabled',photosEnabled],
+      ['lobby-surveillance','surveillanceEnabled',surveillanceEnabled],['lobby-decorations','decorationsEnabled',decorationsEnabled],
+      ['lobby-portraits-vip','portraitsAndVipEnabled',portraitsAndVipEnabled],
+    ] as const;
+    for (const [index,[channel,field,value]] of settings.entries()) {
+      host.send(channel,{enabled:!value,token:8+index});
+      await wait(()=>commandTokens.get(host!.sessionId)===8+index);
+      expect(Reflect.get(room,field)).toBe(value);
+    }
     expect(!!view?.election).toBe(electionsEnabled);
-    host.send('lobby-photos',{enabled:!photosEnabled,token:7});
-    await wait(()=>commandTokens.get(host!.sessionId)===7);
-    expect(Reflect.get(room,'photosEnabled')).toBe(photosEnabled);
-    expect(Reflect.get(room,'gameplay').photosEnabled).toBe(photosEnabled);
+    const gameplay = Reflect.get(room,'gameplay');
+    expect(gameplay.photosEnabled).toBe(photosEnabled);
+    expect(gameplay.surveillanceEnabled).toBe(surveillanceEnabled);
+    expect(gameplay.decorationsEnabled).toBe(decorationsEnabled);
+    expect(gameplay.portraitsAndVipEnabled).toBe(portraitsAndVipEnabled);
     expect(Reflect.get(room,'internalMail').photosEnabled).toBe(photosEnabled);
-    host.send('lobby-surveillance',{enabled:!surveillanceEnabled,token:8});
-    await wait(()=>commandTokens.get(host!.sessionId)===8);
-    expect(Reflect.get(room,'surveillanceEnabled')).toBe(surveillanceEnabled);
-    expect(Reflect.get(room,'gameplay').surveillanceEnabled).toBe(surveillanceEnabled);
     if (!surveillanceEnabled) {
       expect(view?.gameplay?.surveillance).toBeUndefined();
       const state = controls.get(host!.sessionId)!;
       Object.assign(state.player,securityRoom.terminal);
-      host!.send('security-camera',{kind:'open',token:9});
-      await wait(()=>commandTokens.get(host!.sessionId)===9);
+      host!.send('security-camera',{kind:'open',token:13});
+      await wait(()=>commandTokens.get(host!.sessionId)===13);
       expect(Reflect.get(room,'securityFeeds').size).toBe(0);
       expect(view?.gameplay?.security).toBeUndefined();
     }
     if (!projectsEnabled) {
-      host.send('lobby-project-voting',{enabled:true,token:10});
-      await wait(()=>commandTokens.get(host!.sessionId)===10);
+      host.send('lobby-project-voting',{enabled:true,token:14});
+      await wait(()=>commandTokens.get(host!.sessionId)===14);
       expect(Reflect.get(room,'projectVotingEnabled')).toBe(false);
       expect(Reflect.get(room,'gameplay').projectVotingEnabled).toBe(false);
       expect(()=>publishProjectFiling(match,controls.get(host!.sessionId)!.player,0,room.clock.currentTime)).toThrow('desativadas');

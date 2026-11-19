@@ -33,8 +33,9 @@ export const treasurer = {
   counter:treasuryCounter, interaction:{x:treasuryCounter.x+23,y:treasuryCounter.y+30}, label:'Tesouraria',
 } as const;
 
-export function npcEnabled(id:string,projectVotingEnabled=true) {
-  return projectVotingEnabled || (id!=='secretary' && id!=='protocol');
+export function npcEnabled(id:string,projectVotingEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true) {
+  return (projectVotingEnabled || id!=='secretary' && id!=='protocol') &&
+    (decorationsEnabled || id!=='furnitureVendor') && (portraitsAndVipEnabled || id!=='credentialsVendor');
 }
 
 export const mapNpcs = {...npcs,treasurer};

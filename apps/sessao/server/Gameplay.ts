@@ -3,7 +3,7 @@ import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
 import { stationRecharge } from '../src/station-recharge';
-import { isCredentialGood, marketProduct, marketPurchaseSlot } from '../src/market-catalog';
+import { decorationProductEnabled, isCredentialGood, marketProduct, marketPurchaseSlot } from '../src/market-catalog';
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
@@ -67,6 +67,11 @@ export class Gameplay {
   phoneGamesEnabled = true;
   photosEnabled = true;
   surveillanceEnabled = true;
+  get portraitsAndVipEnabled() { return this.dialogues.portraitsAndVipEnabled; }
+  set portraitsAndVipEnabled(enabled:boolean) { this.dialogues.portraitsAndVipEnabled = enabled; }
+  private decorationEnabled(kind:unknown) { return decorationProductEnabled(kind,this.decorationsEnabled,this.portraitsAndVipEnabled); }
+  get decorationsEnabled() { return this.dialogues.decorationsEnabled; }
+  set decorationsEnabled(enabled:boolean) { this.dialogues.decorationsEnabled = enabled; }
   get projectVotingEnabled() { return this.dialogues.projectVotingEnabled; }
   set projectVotingEnabled(enabled:boolean) { this.dialogues.projectVotingEnabled = enabled; }
   private dialogues = new NpcDialogues();
@@ -854,11 +859,11 @@ export class Gameplay {
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentOffer(player,world.now),
       modulator,
-      decorations:[...this.installations.values()].filter(item=>isOfficeFurniture(item.kind) ||
-        localPerception(player,item,this.vision(player.id,world.now)).visible),
-      interactive:[...this.installations.values()].filter(item=>item.kind==='portrait' && !item.privateOffice
+      decorations:[...this.installations.values()].filter(item=>this.decorationEnabled(item.kind) && (isOfficeFurniture(item.kind) ||
+        localPerception(player,item,this.vision(player.id,world.now)).visible)),
+      interactive:[...this.installations.values()].filter(item=>this.decorationEnabled(item.kind)).filter(item=>item.kind==='portrait' && !item.privateOffice
         ? canReachInstallation(player,item,'portrait') : canReachObject(player,item)),
-      installable:Object.entries(installationSites).filter(([key,site])=>canReachInstallation(player,site.point,site.kind) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
+      installable:Object.entries(installationSites).filter(([,site])=>this.decorationEnabled(site.kind)).filter(([key,site])=>canReachInstallation(player,site.point,site.kind) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
       contacts:world.players.filter(other=>this.canRequestItemAction(player,other,world)).map(other=>({id:other.id,name:other.nick,...(other.bot ? {bot:true as const} : {})})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
@@ -1104,7 +1109,7 @@ export class Gameplay {
   private officeView(player:Player, now:number, players:Player[]):Partial<GameplayView> {
     const offices = this.privateOffices.view(now,player);
     const ownOffice = this.privateOffices.ownedBy(player.id)?.id;
-    const officeFurnishings = ownOffice ? decorSlots.filter(isOfficeFurniture).filter(slot=>
+    const officeFurnishings = this.decorationsEnabled && ownOffice ? decorSlots.filter(isOfficeFurniture).filter(slot=>
       this.installations.has(`office:${ownOffice}:${slot}`)) : [];
     if (player.knockedOut || player.carrying) return {offices,ownOffice,officeFurnishings};
     const officeOptions:OfficeOption[] = [];
@@ -1163,7 +1168,7 @@ export class Gameplay {
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
         }
       }
-      for (const slot of decorSlots) {
+      for (const slot of decorSlots.filter(slot=>this.decorationEnabled(slot))) {
         if ((!own && slot!=='portrait') || !this.privateOffices.near(player,office,decorPoint(layout,slot))) continue;
         const decoration = this.installations.get(`office:${layout.id}:${slot}`);
         if (own) {
@@ -1564,6 +1569,12 @@ export class Gameplay {
   }
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
+    if (['shop-buy','install','uninstall','mark','office-install','office-remove'].includes(action.kind)) {
+      const kind = action.kind==='shop-buy' ? action.target : action.kind==='mark' ? 'portrait' :
+        this.items.get(action.item ?? -1)?.data.kind ?? [...this.installations.values()].find(item=>item.id===action.item)?.kind;
+      if (!this.decorationEnabled(kind)) return isOfficeFurniture(String(kind)) ?
+        'Decoração desativada nesta partida.' : 'Retratos e área VIP desativados nesta partida.';
+    }
     if (!this.surveillanceEnabled && action.kind==='shop-buy' && isSpyProduct(action.target)) return 'Vigilância desativada nesta partida.';
     if (!this.photosEnabled && (['photo','selfie','photo-delete','photo-publish'].includes(action.kind) || action.kind.startsWith('info-') && action.kind!=='info-close')) return 'Fotos desativadas nesta partida.';
     if (!this.phoneGamesEnabled && ['game-start','game-turn','bets-spin','candy-start','candy-swap'].includes(action.kind)) return 'Joguinhos desativados nesta partida.';

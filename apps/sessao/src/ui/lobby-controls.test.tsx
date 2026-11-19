@@ -82,3 +82,11 @@ test('surveillance setting is host-only and guests see its confirmed value',()=>
   expect(render('a')).toContain('type="checkbox"/> Vigilância');
   expect(render('b')).toContain('type="checkbox" disabled=""/> Vigilância');
 });
+
+test.each([['decorationsEnabled','Decoração'],['portraitsAndVipEnabled','Retratos e área VIP']])('lobby exposes independent host-only setting %s',(flag,label)=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),[flag]:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> '+label);
+  expect(render('b')).toContain('type="checkbox" disabled=""/> '+label);
+});

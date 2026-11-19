@@ -28,7 +28,7 @@ Para experimentar, selecione **Plenário 2** na camada **Portas**, troque **X** 
 
 ## Jogar uma sessão
 
-O lobby mostra quem entrou e permite escolher uma caricatura antes de começar. O anfitrião pode desativar joguinhos de celular, votações de projetos, eleição para eliminação, câmera/fotos e vigilância antes da partida. Sem projetos, Secretaria e Protocolo não aparecem, seus documentos e missões relacionadas ficam indisponíveis e o HUD oculta os controles de projetos. Sem eleição para eliminação, não há renovação automática de mandatos, pesquisa eleitoral, propaganda na Imprensa, discursos de campanha nem entrevistas eleitorais; as missões dessas ações também ficam indisponíveis. Cassações continuam disponíveis independentemente das duas opções.
+O lobby mostra quem entrou e permite escolher uma caricatura antes de começar. O anfitrião pode desativar joguinhos de celular, votações de projetos, eleição para eliminação, câmera/fotos, vigilância, decoração e retratos/área VIP antes da partida. Sem projetos, Secretaria e Protocolo não aparecem, seus documentos e missões relacionadas ficam indisponíveis e o HUD oculta os controles de projetos. Sem eleição para eliminação, não há renovação automática de mandatos, pesquisa eleitoral, propaganda na Imprensa, discursos de campanha nem entrevistas eleitorais; as missões dessas ações também ficam indisponíveis. Cassações continuam disponíveis independentemente das duas opções.
 O mapa ocupa toda a janela e a câmera acompanha o personagem entre as alas.
 O lobby e os controles sobre o mapa usam os estilos de `packages/hud`.
 
@@ -338,3 +338,5 @@ Os efeitos de passos usam quatro recortes de [Footsteps Carpet, de LewisEmmott5]
 Com câmera/fotos desativadas, não há captura, álbum, compartilhamento, anexos fotográficos no Correio nem denúncias com foto na Corregedoria. Missões fotográficas saem do sorteio. A vigilância ao vivo continua disponível.
 
 Sem vigilância, grampos, câmeras escondidas e Detector de Escutas saem da loja, as oito missões relacionadas saem do sorteio e o aplicativo e o terminal da Central de Segurança ficam indisponíveis. A câmera de fotos do celular continua independente dessa opção.
+
+Decoração e retratos/área VIP são opções independentes. Sem decoração, TV, tapete e poltrona ficam indisponíveis, Roberto Justus não aparece e seis missões de móveis saem do sorteio. Sem retratos/área VIP, retratos e placas VIP ficam indisponíveis, Donald Trump não aparece e 12 missões relacionadas saem do sorteio. Comida, mesas de pizza e segurança dos gabinetes continuam independentes.

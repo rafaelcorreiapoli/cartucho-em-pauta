@@ -585,7 +585,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         effect.update(time,active,visible,reducedMotion.matches);
       });
       for (const {id,sprite,label} of this.npcViews) {
-        const visible = npcEnabled(id,plenaryView?.projectVotingEnabled!==false) && (!running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible));
+        const visible = npcEnabled(id,plenaryView?.projectVotingEnabled!==false,plenaryView?.decorationsEnabled!==false,plenaryView?.portraitsAndVipEnabled!==false) && (!running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible));
         sprite.setVisible(visible);
         label?.setVisible(visible);
       }

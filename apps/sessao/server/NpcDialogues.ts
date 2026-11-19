@@ -12,6 +12,8 @@ export class NpcDialogues {
   private sessions = new Map<string,Session>();
   private serial = 0;
   projectVotingEnabled = true;
+  decorationsEnabled = true;
+  portraitsAndVipEnabled = true;
 
   reset() { this.sessions.clear(); }
   close(id:string) { this.sessions.delete(id); }
@@ -27,7 +29,7 @@ export class NpcDialogues {
   }
 
   private nearby(player:Player, key:NpcId) {
-    if (!npcEnabled(key,this.projectVotingEnabled)) return false;
+    if (!npcEnabled(key,this.projectVotingEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled)) return false;
     const npc = npcs[key];
     if ('interactionRadius' in npc) return canReachObject(player,npc,{radius:npc.interactionRadius});
     return canReachObject(player,'interaction' in npc ? npc.interaction : npc);
