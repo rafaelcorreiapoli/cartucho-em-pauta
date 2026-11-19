@@ -104,11 +104,7 @@ export function drawMap(scene: Phaser.Scene,
   const tribune = scene.add.text(570,591,'TRIBUNA',{
     fontFamily:'system-ui',fontSize:'5px',color:'#fff4dc',backgroundColor:'#263a31',resolution:3,
   }).setOrigin(.5,0).setDepth(HEIGHT+20);
-  const doctor = scene.add.text(infirmary.doctor.x,infirmary.doctor.y+2,infirmary.doctor.name,{
-    fontFamily:'system-ui',fontSize:'5px',fontStyle:'bold',color:'#eef6df',
-    backgroundColor:'#203b33',padding:{x:2,y:1},resolution:3,
-  }).setOrigin(.5,0).setDepth(1);
-  return [tribune,doctor,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
+  return [tribune,...rooms.filter(room=>!privateOffices.some(office=>office.name===room.name)).map(({name,bounds:[x,y,w]}) =>
     scene.add.text(x+w/2,y+4,name.toUpperCase(),{
       fontFamily:'system-ui',fontSize:name==='Plenário' ? '11px' : name===infirmary.name ? '6px' : '8px',fontStyle:'bold',color:'#fff4dc',
       backgroundColor:'#263a31aa',resolution:3,padding:{x:5,y:2},

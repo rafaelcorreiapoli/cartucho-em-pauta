@@ -1474,29 +1474,6 @@
           ]
         },
         {
-          "id": 124,
-          "name": "",
-          "x": 268,
-          "y": 42,
-          "width": 38,
-          "height": 38,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "properties": [
-            {
-              "name": "texture",
-              "type": "string",
-              "value": "infirmary-doctor"
-            },
-            {
-              "name": "footprint",
-              "type": "int",
-              "value": 5
-            }
-          ]
-        },
-        {
           "id": 126,
           "name": "",
           "x": 414,
@@ -2301,18 +2278,6 @@
           "name": "Atendimento da Enfermaria",
           "x": 272,
           "y": 94,
-          "width": 0,
-          "height": 0,
-          "rotation": 0,
-          "visible": true,
-          "type": "",
-          "point": true
-        },
-        {
-          "id": 192,
-          "name": "Médico da Enfermaria",
-          "x": 287,
-          "y": 80,
           "width": 0,
           "height": 0,
           "rotation": 0,

@@ -301,16 +301,17 @@ test('transport ends on disconnect, natural recovery and plenary transition', ()
   }
 });
 
-test('Drauzio fully heals a carried player for free when in reach', () => {
+test('the infirmary stretcher fully heals a carried player for free when in reach', () => {
   const match = setup();
   const {alice,bob,game,world,balance,events} = match;
   knockOut(match);
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
-  expect(findRoute({x:140,y:146},infirmary).at(-1)).toMatchObject({x:infirmary.x,y:infirmary.y});
+  const bedside = {x:infirmary.stretcher.x,y:infirmary.stretcher.y+12};
+  expect(findRoute({x:140,y:146},bedside).at(-1)).toMatchObject(bedside);
   game.act(alice,{kind:'carry',target:bob.id},world);
   Object.assign(alice,{x:803,y:461});
   expect(game.act(alice,{kind:'treat'},world)).toBe('Atendimento indisponível.');
-  Object.assign(alice,{x:infirmary.x,y:infirmary.y});
+  Object.assign(alice,{x:infirmary.stretcher.x,y:infirmary.stretcher.y+12});
   game.tick(world,true);
   balance.set(alice.id,0);
   expect(game.view(alice,world).treatment).toEqual({target:bob.id});
@@ -326,7 +327,7 @@ test('Drauzio fully heals a carried player for free when in reach', () => {
 });
 
 
-test('a wounded player with no money can consult Drauzio for a full heal', () => {
+test('a wounded player with no money can use the stretcher for a full heal', () => {
   const {alice,bob,game,world,balance,buyGear} = setup();
   buyGear(alice,'baton');
   game.act(alice,{kind:'equip',item:game.view(alice,world).inventory[0].id},world);
@@ -335,7 +336,11 @@ test('a wounded player with no money can consult Drauzio for a full heal', () =>
   game.tick(world,true);
   expect(game.view(bob,world).vitality?.hp).toBeLessThan(100);
   balance.set(bob.id,0);
-  Object.assign(bob,{x:infirmary.x,y:infirmary.y});
+  Object.assign(bob,{x:287,y:80}); // Former physician position is no longer an interaction target.
+  expect(game.view(bob,world).treatment).toBeUndefined();
+  expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento indisponível.');
+  Object.assign(bob,{x:infirmary.stretcher.x,y:infirmary.stretcher.y+12});
+  expect(canStand(bob.x,bob.y)).toBe(true);
   expect(game.view(bob,world).treatment).toEqual({});
   expect(game.act(bob,{kind:'treat'},world)).toBe('Atendimento concluído.');
   expect(game.view(bob,world).vitality?.hp).toBe(100);

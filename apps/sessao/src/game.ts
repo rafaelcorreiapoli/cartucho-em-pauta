@@ -188,7 +188,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.load.image(officeFixtures.safe.texture,`${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
       this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
       this.load.image('infirmary-stretcher',import.meta.env.BASE_URL+'assets/'+'maca-enfermaria.webp');
-      this.load.image('infirmary-doctor',import.meta.env.BASE_URL+'assets/'+'drauzio-varella.webp');
       this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
       this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
       this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
