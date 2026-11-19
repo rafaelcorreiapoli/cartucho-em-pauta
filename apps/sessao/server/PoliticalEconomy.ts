@@ -38,7 +38,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set()) {
+    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set(),phoneGamesEnabled=true) {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -71,7 +71,7 @@ export class PoliticalEconomy {
         this.rewardReserve -= cash;
         this.credit(account,cash);
         if (reward.popularity) account.popularity = cap(account.popularity+reward.popularity);
-      },botIds);
+      },botIds,phoneGamesEnabled);
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
         grantReadyAt:0,auditRound:-1,audits:0,paymentRound:-1,payments:0,

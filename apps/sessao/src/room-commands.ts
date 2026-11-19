@@ -14,6 +14,7 @@ import type { SecurityAction } from './security';
 type RoomActions = {
   character:{character:number};
   'lobby-npc-count':{count:number};
+  'lobby-phone-games':{enabled:boolean};
   'start-match':{infiltrators?:number;npcs?:number;asInfiltrator?:boolean};
   gameplay:{action:GameplayAction};
   spy:SpyCommand;

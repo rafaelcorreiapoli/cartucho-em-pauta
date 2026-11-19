@@ -27,8 +27,8 @@ export function PhoneAppButton({name,icon,shortcut,pressed,onClick,children,butt
   </button>;
 }
 
-export function PhoneApps({active,select,close}:{active?:PhoneApp;select:(app:PhoneApp)=>void;close?:()=>void}) {
-  const options = appOrder.map((app,index)=>({name:app,shortcut:String(index+1),activate:()=>select(app)}));
+export function PhoneApps({active,select,close,gamesEnabled=true}:{gamesEnabled?:boolean;active?:PhoneApp;select:(app:PhoneApp)=>void;close?:()=>void}) {
+  const options = appOrder.filter(app=>gamesEnabled || app!=='Joguinhos').map((app,index)=>({name:app,shortcut:String(index+1),activate:()=>select(app)}));
   const entries = close ? [{name:'Fechar',activate:close},...options] : options;
   const first = useDialogKeys<HTMLButtonElement>(key=>options.find(option=>option.shortcut===key)?.activate,entries);
   return options.map(({name,shortcut,activate},index)=><PhoneAppButton key={name} name={name} icon={apps[name]} shortcut={shortcut}

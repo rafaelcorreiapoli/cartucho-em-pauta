@@ -215,11 +215,12 @@ export class PersonalAgenda {
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set()) {
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria');
+    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true) {
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' && (this.phoneGamesEnabled || !['jogar','jogarOculto','joguinho','produtividade','celularFoto'].includes(kind)));
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
-    const activity = startingActivities[Math.floor(random()*startingActivities.length)];
+    const activities = startingActivities.filter(kind=>deck.includes(kind));
+    const activity = activities[Math.floor(random()*activities.length)];
     const offset = Math.floor(random()*deck.length);
     const ordered = [...deck.slice(offset),...deck.slice(0,offset)];
     this.missionDeck = ['cafe',mission,activity,...ordered.filter(kind=>kind!=='cafe' && kind!==mission && kind!==activity)];

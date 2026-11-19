@@ -1758,3 +1758,12 @@ test('the new agenda only draws challenges with their required targets and equip
   expect(draw('nocauteGabinete',{...metrics,owns:()=>false,hasOffice:()=>true})).toBe(true);
   expect(draw('cameraGabinete',{...metrics,owns:()=>true,hasOffice:()=>true,canInstallSpy:(_,ownOffice)=>!ownOffice})).toBe(false);
 });
+
+test('disabled phone games never enter the initial or replacement mission deck',()=>{
+  const blocked = ['jogar','jogarOculto','joguinho','produtividade','celularFoto'];
+  for (let seed=0;seed<100;seed++) {
+    const agenda = new PersonalAgenda(metrics,6,()=>seed/100,()=>{},new Set(),false);
+    expect(agenda.view(metrics).active.some(mission=>blocked.includes(mission.kind))).toBe(false);
+    expect((Reflect.get(agenda,'missionDeck') as string[]).some(kind=>blocked.includes(kind))).toBe(false);
+  }
+});

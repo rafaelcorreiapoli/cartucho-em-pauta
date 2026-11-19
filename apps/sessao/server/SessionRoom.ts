@@ -54,6 +54,7 @@ export class SessionRoom extends Room {
   }
 
   private lobbyNpcCount:number = npcRules.count;
+  private phoneGamesEnabled = true;
   private readonly stationCooldowns = new StationCooldowns();
   private gameplay = new Gameplay(this.stationCooldowns,()=>this.match.powerOut);
   private lastRoomCommandToken = new Map<string,number>();
@@ -136,6 +137,7 @@ export class SessionRoom extends Room {
     this.bots.clear(this.players);
     const players = [...this.players.values()].map(state=>state.player);
     this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
     for (const player of players) player.speed = undefined;
     void this.unlock();
   }
@@ -249,6 +251,12 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-phone-games',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.phoneGamesEnabled = raw.enabled;
+    });
     this.onMessage('lobby-npc-count',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('count' in raw) || !this.consumeRoomCommand(client.sessionId,raw)) return;
       const value = raw.count;
@@ -264,11 +272,12 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
         const count = this.tutorial ? 0 : Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.parliamentarians.reset(count,this.gameNow,new Set(players.map(player=>player.character)));
         this.npcTalk.reset();
@@ -708,6 +717,7 @@ export class SessionRoom extends Room {
           if (atDesk) view.complaints.atDesk = true;
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
+        view.phoneGamesEnabled = this.phoneGamesEnabled;
         if (!this.match.running && this.match.minimumPlayers===MIN_PLAYERS) {
           view.minimumPlayers = 1;
           view.botsToFill = Math.max(0,MIN_PLAYERS-players.length);
