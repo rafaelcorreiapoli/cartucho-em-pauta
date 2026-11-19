@@ -16,7 +16,7 @@ async page => {
   for (const name of ['Retratos e área VIP','Decoração','Vigilância','Votações de projetos','Joguinhos de celular']) {
     if (await page.getByRole('checkbox',{name,exact:true}).isChecked()) throw Error('Wrong default: '+name);
   }
-  await page.getByRole('button',{name:'Nenhum parlamentar NPC'}).click();
+  await page.getByRole('button',{name:'Nenhum visitante'}).click();
   await page.getByRole('button',{name:'Iniciar sessão',exact:true}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const history = page.locator('.automatic-projects-history');
