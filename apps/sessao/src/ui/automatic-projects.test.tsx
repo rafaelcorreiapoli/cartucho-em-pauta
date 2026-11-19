@@ -8,12 +8,13 @@ import {money} from '../politics';
 
 test('history shows a countdown and four secret slots, revealing only approved projects',()=>{
   const hidden = renderToStaticMarkup(<AutomaticProjectHistory state={{approved:[],total:4,nextIn:300}}/>);
-  expect(hidden).toContain('Próximo em 5:00');
-  expect(hidden.match(/· \?/g)).toHaveLength(4);
+  expect(hidden).toContain('Próxima aprovação');
+  expect(hidden).toContain('5:00');
+  expect(hidden.match(/Não revelado/g)).toHaveLength(4);
   for (const project of Object.values(automaticProjects)) expect(hidden).not.toContain(project.shortName);
   const history = renderToStaticMarkup(<AutomaticProjectHistory state={{approved:[{project:'porrete',at:300000,cost:6,recipients:6}],total:4,nextIn:90}}/>);
   expect(history).toContain('Porrete');
-  expect(history.match(/· \?/g)).toHaveLength(3);
+  expect(history.match(/Não revelado/g)).toHaveLength(3);
   expect(history).toContain('1:30');
 });
 

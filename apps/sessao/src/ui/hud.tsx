@@ -296,14 +296,27 @@ export function mountReactHud(openSettings:()=>void) {
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
   const payrollRoot = createRoot(document.getElementById('payroll-mount')!);
   payrollRoot.render(<Payroll state={congress}/>);
-  const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
-  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/><AutomaticProjectsHud channel={model.automaticProjects}/></>);
-  agendaRoot.render(<AgendaPanel state={agenda}/>);
+  const agendaDock = document.getElementById('agenda-dock')!;
+  const agendaRoot = createRoot(agendaDock);
+  const session = document.getElementById('session')!;
+  const equipment = session.querySelector('.character-dock')!;
+  const positionAgenda = ()=>{
+    const top = equipment.getBoundingClientRect().bottom;
+    const available = Math.max(0,agendaDock.getBoundingClientRect().bottom-top-20);
+    agendaDock.style.setProperty('--agenda-available-height',`${available}px`);
+    agendaDock.dataset.scrollable = String(agendaDock.scrollHeight>agendaDock.clientHeight+1);
+  };
+  const agendaLayout = new ResizeObserver(positionAgenda);
+  agendaLayout.observe(session);
+  agendaLayout.observe(equipment);
+  agendaLayout.observe(agendaDock);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
+  agendaRoot.render(<><AutomaticProjectsHud channel={model.automaticProjects}/><AgendaPanel state={agenda}/></>);
   return {
     broadcast: broadcast.update,
     player: model.player,
     profileReward:model.profileReward.update,
     render: model.render,
-    destroy() { payrollRoot.unmount(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
+    destroy() { agendaLayout.disconnect(); payrollRoot.unmount(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
   };
 }
