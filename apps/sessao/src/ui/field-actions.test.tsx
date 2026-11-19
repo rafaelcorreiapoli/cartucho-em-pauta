@@ -2,7 +2,8 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {Gameplay} from '../../server/Gameplay';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
-import type {Player} from '../map';
+import {canStand,type Player} from '../map';
+import {fireSites,fireRules} from '../fire';
 import {terminals} from '../gameplay';
 import {powerPanels,powerRules} from '../power';
 import {ContextActionButton} from './context-action-button';
@@ -109,4 +110,33 @@ test('signature actions target a nearby bot directly or expand document choices'
   expect(actions()[0].action).toHaveProperty('item');
   bot.x = host.x+49;
   expect(actions()).toEqual([]);
+});
+
+test('parliamentarians and infiltrators can plant incendiaries in every cabinet through contextual actions',()=>{
+  const cabinets = fireSites.flatMap((target,site)=>target.object==='Armário' ? [{target,site}] : []);
+  expect(cabinets).toHaveLength(11);
+  for (const {target,site} of cabinets) {
+    const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+      id:nick,nick,character,direction:0,moving:false,x:target.x,y:target.y+10,
+    }));
+    expect(canStand(players[0].x,players[0].y)).toBe(true);
+    for (const actor of [players[0],players[2]]) {
+      const match = new PlenaryMatch(1);
+      match.start(players[0].id,players,0,()=>.9);
+      const ids = players.map(player=>player.id);
+      const view = match.view(actor.id,ids,0);
+      expect(view.role).toBe(actor===players[0] ? 'Parlamentar' : 'Infiltrado');
+      view.fireInteraction = match.fireInteraction(actor,0,86,true,false);
+      const action = fieldActions(view,actor,players).find(({action})=>action.kind==='fire')?.action;
+      expect(action).toMatchObject({kind:'fire',option:{kind:'plant',site}});
+      if (action?.kind!=='fire') throw Error('Ação de incendiário ausente');
+      expect(match.actOnFire(actor,action.option.kind,action.option.site,0,false,123)).toBe('Instalando dispositivo…');
+      match.advance(fireRules.install);
+      expect(match.updateFireInstallation(fireRules.install,id=>players.find(player=>player.id===id),()=>true,()=>true))
+        .toEqual([{actor:actor.id,feedback:'Incendiário instalado.',failed:false}]);
+      const ignition = fireRules.install+fireRules.fuse;
+      match.advance(ignition);
+      expect(match.view(actor.id,ids,ignition).fires?.map(fire=>fire.site)).toEqual([site]);
+    }
+  }
 });
