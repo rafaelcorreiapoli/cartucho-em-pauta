@@ -21,7 +21,7 @@ export const incendiary = {
   name:'Incendiário',
   price:3,
   portrait:'retrato-incendiario.webp',
-  description:`Instale em um móvel ou vaso. O dispositivo acende após ${fireRules.fuse/1000} segundos e só pode ser usado uma vez.`,
+  description:`Instale em móveis, vasos ou armários, inclusive nos gabinetes. O dispositivo acende após ${fireRules.fuse/1000} segundos e só pode ser usado uma vez.`,
 } as const;
 
 export const extinguisherSpawns = [{x:271,y:241},{x:453,y:358}] as const;
@@ -30,17 +30,19 @@ const pots = furnishings.filter(prop=>'fireTarget' in prop).map(({area:[x,y,w,h]
   x:x+w/2,y:y+h,object:'Vaso de planta',
 }));
 
+// Frame 4 is the green cabinet in the map furniture spritesheet.
+const greenCabinets = furnishings.filter(prop=>'frame' in prop && prop.frame===4).map(({area:[x,y,w,h]})=>({
+  x:x+w/2,y:y+h,object:'Armário',
+}));
+
 const targets = [
   ...pots,
   {x:527,y:335,object:'Estante'},
   {...infirmary.stretcher,object:'Maca'},
   {x:570,y:616,object:'Tribuna'},
-  {x:30.5,y:222,object:'Armário'},
-  {x:666,y:73,object:'Armário'},
-  {x:912,y:68,object:'Armário'},
+  ...greenCabinets,
   {x:673,y:204,object:'Estante'},
   {x:933,y:241,object:'Vaso'},
-  {x:45,y:337,object:'Armário'},
   {...securityRoom.terminal,object:'Terminal'},
   {x:879.5,y:348,object:'Balcão'},
   {x:49,y:518,object:'Vaso'},
