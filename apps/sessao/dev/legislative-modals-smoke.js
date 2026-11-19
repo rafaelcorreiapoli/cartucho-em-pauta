@@ -117,12 +117,12 @@ async page => {
   await page.setViewportSize({width:1280,height:720});
   const conversation = page.getByRole('button',{name:/^Conversar · /});
   await conversation.nth(1).waitFor();
-  const conversations = await conversation.all();
+  const conversations = (await conversation.allTextContents()).map(name=>name.trim());
   const npcDeal = page.locator('#parliamentarian-dialog');
   const signatureMission = 'Consiga duas assinaturas no mesmo documento';
   await page.getByRole('list',{name:'Objetivos ativos'}).getByText(signatureMission,{exact:true}).waitFor();
-  for (const npc of conversations) {
-    await npc.click();
+  for (const name of conversations) {
+    await page.getByRole('button',{name,exact:true}).click();
     const sign = npcDeal.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
     await sign.waitFor();
     if (await npcDeal.getByRole('button',{name:new RegExp(title)}).count()) throw Error('NPC ofereceu assinatura de projeto');
