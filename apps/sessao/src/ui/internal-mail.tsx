@@ -42,7 +42,7 @@ export function MailComposer({choices,source,pending,error,fee,publish,back,clos
     entries.push({name:'Assunto',activate:()=>subject.current?.focus()},{name:'Mensagem',activate:()=>body.current?.focus()});
     if (!source) entries.push({name:selected?.label ?? 'Selecionar anexo',activate:toggle});
   }
-  const form = useDialogKeys<HTMLFormElement>(key=>key==='1' && !pending && !open ? submit : undefined,entries);
+  const form = useDialogKeys<HTMLFormElement>(key=>key==='1' && !pending && !open ? submit : undefined,open ? undefined : entries);
   return <>
     <PhoneBack label={backLabel} onBack={goBack} disabled={pending}/>
     <form ref={form} className="mail-composer" inert={open} onSubmit={event=>{

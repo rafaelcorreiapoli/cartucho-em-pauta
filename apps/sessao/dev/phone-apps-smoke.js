@@ -194,13 +194,16 @@ async page => {
   await dialog.getByRole('img',{name:/^Selfie em/}).waitFor();
   await dialog.getByText('Original',{exact:true}).waitFor();
   if (await dialog.getByRole('img',{name:/^Selfie em/}).evaluate(canvas=>canvas.width)<600) throw Error('Low-resolution selfie canvas');
+  await dialog.getByRole('button',{name:'Voltar ao álbum',exact:true}).click();
+  await dialog.getByRole('button',{name:/Abrir fotografia/}).waitFor();
   await home();
   await page.keyboard.press('6');
   await dialog.getByRole('heading',{name:'Correio',exact:true}).waitFor();
   await dialog.getByRole('button',{name:'Novo comunicado'}).click();
   await viaPalette(dialog.getByRole('button',{name:'Selecionar anexo',exact:true}),'Selecionar anexo');
+  await viaPalette(dialog.getByRole('button',{name:/Fotografias/}),'Fotografias');
   await dialog.getByRole('textbox',{name:'Buscar anexo'}).fill('inexistente');
-  if (await dialog.locator('.mail-attachment-grid button').count()) throw Error('Attachment search did not filter');
+  if (await dialog.locator('.mail-photo-grid button').count()) throw Error('Attachment search did not filter');
   await dialog.getByRole('textbox',{name:'Buscar anexo'}).fill('fotografia');
   await viaPalette(dialog.getByRole('button',{name:/Fotografia #/}),'Fotografia #');
   await dialog.getByLabel('Assunto').fill('Selfie de teste');
