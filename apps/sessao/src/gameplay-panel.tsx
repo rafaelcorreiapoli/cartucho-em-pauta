@@ -294,9 +294,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = contacts.length===1 ? contacts[0].id : '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
-    if (showNavigation!==navigationMounted) {
+    if (showNavigation!==navigationMounted || view.phoneGamesEnabled!==previous?.phoneGamesEnabled) {
       navigationMounted = showNavigation;
-      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps select={selectApp} close={()=>dialog.close()}/> : null));
+      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps gamesEnabled={view.phoneGamesEnabled!==false} select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.filter(occupiesInventorySlot).length);
@@ -454,7 +454,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       let application:ReactNode;
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
         available={!!previous?.gameplay} send={send} close={closePhoneApp}/>;
-      if (app==='Joguinhos') application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={!!previous?.gameplay} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
+      if (app==='Joguinhos' && view.phoneGamesEnabled!==false) application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={!!previous?.gameplay} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={!!previous?.gameplay} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;

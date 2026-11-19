@@ -53,6 +53,7 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
 
 export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean,back:()=>void) {
   const lobby = mountLobbyControls(element('lobby-controls'),id,{
+    changePhoneGames:enabled=>command('lobby-phone-games',{enabled}),
     changeNpcCount:count=>command('lobby-npc-count',{count}),
     start:(infiltrators,asInfiltrator)=>{ if (assetsReady()) command('start-match',{infiltrators,asInfiltrator}); },
     back,

@@ -64,6 +64,7 @@ export class Gameplay {
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
+  phoneGamesEnabled = true;
   private dialogues = new NpcDialogues();
   private combat = new Combat();
   private transport = new Transport();
@@ -1555,6 +1556,7 @@ export class Gameplay {
   }
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
+    if (!this.phoneGamesEnabled && ['game-start','game-turn','bets-spin','candy-start','candy-swap'].includes(action.kind)) return 'Joguinhos desativados nesta partida.';
     const {id} = player;
     if (action.kind==='dialogue-close') return this.dialogues.close(id);
     if (player.knockedOut) return this.reject(player,world,'Você está nocauteado.');

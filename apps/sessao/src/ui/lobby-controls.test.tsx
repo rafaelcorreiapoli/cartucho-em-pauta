@@ -39,3 +39,12 @@ test('the solo lobby waits for assets and removes its controls after the server 
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
   expect(render(true)).toBe('');
 });
+
+ test('phone games setting shows the confirmed value and is restricted to the host',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls
+    state={lobbyControlsState({...match.view(id,ids,0),phoneGamesEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Joguinhos de celular');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Joguinhos de celular');
+});
