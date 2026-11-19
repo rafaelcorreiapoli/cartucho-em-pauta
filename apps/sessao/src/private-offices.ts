@@ -19,7 +19,7 @@ export const privateOffices = Array.from({length:6},(_,index)=>{
   };
 });
 export const officeFixtures = {
-  safe:{texture:'office-safe',openTexture:'office-safe-open',width:19,height:24,footOffset:8,openWidth:28.5,openOriginX:154/240},
+  safe:{texture:'office-safe',openTexture:'office-safe-open',width:19,height:24,footOffset:8,openWidth:33.25,openOriginX:84/280},
   cabinet:{texture:'office-cabinet',width:21,height:33,footOffset:8},
 } as const;
 export type OfficeLayout = typeof privateOffices[number];
