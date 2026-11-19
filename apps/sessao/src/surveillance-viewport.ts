@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { characterArt, characterSheets, combatSheets, downedArt } from './character-art';
-import { drawMap } from './draw-map';
+import { drawMap, updateSafeArt } from './draw-map';
 import { objects } from './gameplay';
 import type { PhotoScene } from './photography';
-import { isOfficeFurniture, officeFixtures, officeFurniture } from './private-offices';
+import { depositingAtSafe, isOfficeFurniture, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import { spyRules } from './surveillance';
 
 export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>void) {
@@ -18,6 +18,7 @@ export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>v
     private scenery:Phaser.GameObjects.GameObject[] = [];
     private doors!:Phaser.GameObjects.Graphics;
     private rendered?:PhotoScene;
+    private safeArt = new Map<string,Phaser.GameObjects.Image>();
 
     preload() {
       const assets = import.meta.env.BASE_URL+'assets/';
@@ -26,6 +27,7 @@ export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>v
       }
       for (const [kind,item] of Object.entries(objects)) this.load.image(`item-${kind}`,assets+item.portrait);
       for (const [kind,item] of Object.entries(officeFurniture)) this.load.image(`furniture-${kind}`,assets+item.sprite);
+      this.load.image(officeFixtures.safe.openTexture,assets+'gabinete-cofre-aberto.webp');
       this.load.image(officeFixtures.safe.texture,assets+'gabinete-cofre.webp');
       this.load.image(officeFixtures.cabinet.texture,assets+'gabinete-armario.webp');
       this.load.image('infirmary-stretcher',assets+'maca-enfermaria.webp');
@@ -38,7 +40,9 @@ export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>v
     }
 
     create() {
-      drawMap(this);
+      drawMap(this,(art,office,kind)=>{
+        if (kind==='safe') this.safeArt.set(office.id,art);
+      });
       this.doors = this.add.graphics().setDepth(2);
       this.cameras.main.setZoom(density);
     }
@@ -46,6 +50,10 @@ export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>v
     update(time:number,delta:number) {
       const frame = latest;
       if (!frame?.camera) return;
+      for (const office of privateOffices) {
+        const art = this.safeArt.get(office.id);
+        if (art) updateSafeArt(art,depositingAtSafe(office,frame.people));
+      }
       const firstFrame = waitingForFrame;
       if (frame!==this.rendered) {
         const {camera,ground,decorations} = frame;
