@@ -4,7 +4,7 @@ import {SessionRoom as GameRoom} from '../server/SessionRoom';
 export class SessionRoom extends GameRoom {
   onCreate(options?:Parameters<GameRoom['onCreate']>[0]) {
     super.onCreate(options);
-    Object.assign(this,{initialBudget:32,gameMode:'classic',lobbyNpcCount:8,phoneGamesEnabled:true,projectVotingEnabled:true,
+    Object.assign(this,{initialWallet:8,initialBudget:32,gameMode:'classic',lobbyNpcCount:8,phoneGamesEnabled:true,projectVotingEnabled:true,
       electionsEnabled:true,photosEnabled:true,surveillanceEnabled:true,decorationsEnabled:true,portraitsAndVipEnabled:true,automaticProjectsEnabled:false});
   }
 }

@@ -949,12 +949,15 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     host.send('lobby-initial-budget',{value:-50,token:9});
     await wait(()=>view?.initialBudget===-50);
     host.send('lobby-match-minutes',{value:20,token:10});
-    await wait(()=>view?.matchMinutes===20);
+    await wait(()=>view?.matchMinutes===21);
     host.send('lobby-initial-budget',{value:999,token:11});
     host.send('lobby-match-minutes',{value:13,token:12});
-    host.send('start-match',{infiltrators:2,npcs:8,token:13});
+    host.send('lobby-initial-wallet',{value:50,token:13});
+    await wait(()=>view?.initialWallet===50);
+    host.send('start-match',{infiltrators:2,npcs:8,token:14});
     await wait(()=>view?.phase==='negotiation');
-    expect(view).toMatchObject({players:6,electorate:6,grantsEnabled:false,initialBudget:-50,budget:-50,matchMinutes:20,sessionRemaining:1200});
+    expect(view).toMatchObject({players:6,electorate:6,grantsEnabled:false,initialBudget:-50,budget:-50,matchMinutes:20,initialWallet:50,sessionRemaining:1200});
+    expect(view?.politics?.wallet).toBe(50);
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
     const match:import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');
     const controls:Map<string,ControlState> = Reflect.get(room,'players');
@@ -976,12 +979,12 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
       ['lobby-portraits-vip','portraitsAndVipEnabled',portraitsAndVipEnabled],
     ] as const;
     for (const [index,[channel,field,value]] of settings.entries()) {
-      host.send(channel,{enabled:!value,token:14+index});
-      await wait(()=>commandTokens.get(host!.sessionId)===14+index);
+      host.send(channel,{enabled:!value,token:15+index});
+      await wait(()=>commandTokens.get(host!.sessionId)===15+index);
       expect(Reflect.get(room,field)).toBe(value);
     }
-    host.send('lobby-game-mode',{mode:gameMode==='calote' ? 'classic' : 'calote',token:19});
-    await wait(()=>commandTokens.get(host!.sessionId)===19);
+    host.send('lobby-game-mode',{mode:gameMode==='calote' ? 'classic' : 'calote',token:20});
+    await wait(()=>commandTokens.get(host!.sessionId)===20);
     expect(Reflect.get(room,'gameMode')).toBe(gameMode as GameMode);
     expect(view?.gameMode).toBe(gameMode as GameMode);
     expect(!!view?.election).toBe(electionsEnabled);
@@ -995,14 +998,14 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
       expect(view?.gameplay?.surveillance).toBeUndefined();
       const state = controls.get(host!.sessionId)!;
       Object.assign(state.player,securityRoom.terminal);
-      host!.send('security-camera',{kind:'open',token:15});
-      await wait(()=>commandTokens.get(host!.sessionId)===15);
+      host!.send('security-camera',{kind:'open',token:21});
+      await wait(()=>commandTokens.get(host!.sessionId)===21);
       expect(Reflect.get(room,'securityFeeds').size).toBe(0);
       expect(view?.gameplay?.security).toBeUndefined();
     }
     if (!projectsEnabled) {
-      host.send('lobby-project-voting',{enabled:true,token:16});
-      await wait(()=>commandTokens.get(host!.sessionId)===16);
+      host.send('lobby-project-voting',{enabled:true,token:22});
+      await wait(()=>commandTokens.get(host!.sessionId)===22);
       expect(Reflect.get(room,'projectVotingEnabled')).toBe(false);
       expect(Reflect.get(room,'gameplay').projectVotingEnabled).toBe(false);
       expect(()=>publishProjectFiling(match,controls.get(host!.sessionId)!.player,0,room.clock.currentTime)).toThrow('desativadas');

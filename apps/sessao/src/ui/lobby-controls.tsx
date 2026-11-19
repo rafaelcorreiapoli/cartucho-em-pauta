@@ -7,7 +7,7 @@ import {npcRules} from '../visitors';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
+    initialWallet:view.initialWallet ?? 20, grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
     automaticProjectsEnabled:view.automaticProjectsEnabled!==false, gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
@@ -15,6 +15,7 @@ export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolea
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
+  changeInitialWallet?:(value:number)=>void;
   changeGrants?:(enabled:boolean)=>void;
   changeInitialBudget?:(value:number)=>void;
   changeMatchMinutes?:(value:number)=>void;
@@ -57,6 +58,11 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         <span>Orçamento inicial</span>
         <div>{[-50,0,50].map(value=><button key={value} type="button" disabled={!host}
           aria-pressed={state.initialBudget===value} onClick={()=>commands.changeInitialBudget?.(value)}>{value>0 ? `+${value}` : value}</button>)}</div>
+      </div>
+      <div className="lobby-count" role="group" aria-label="Patrimônio inicial">
+        <span>Patrimônio inicial por jogador</span>
+        <div>{[0,20,50].map(value=><button key={value} type="button" disabled={!host}
+          aria-pressed={state.initialWallet===value} onClick={()=>commands.changeInitialWallet?.(value)}>{value}</button>)}</div>
       </div>
       <div className="lobby-count" role="group" aria-label="Tempo de jogo">
         <span>Tempo de jogo</span>

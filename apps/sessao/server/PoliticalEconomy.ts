@@ -39,7 +39,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set(),phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true,gameMode:GameMode='classic') {
+    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set(),phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true,gameMode:GameMode='classic',initialWallet=8) {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -55,7 +55,7 @@ export class PoliticalEconomy {
     this.officialScandal = false;
     this.creditedDecorations.clear();
     for (const contact of contacts) {
-      const metrics = {wallet:8,popularity:40,hasScandal:()=>this.hasPublicScandal(),
+      const metrics = {wallet:initialWallet,popularity:40,hasScandal:()=>this.hasPublicScandal(),
         canExposeScandal:()=>this.hasUnpublishedScandal(contact.id),
         isScandalPizza:(id:number)=>this.scandalPizzas.has(id),
         npcHasCash:(minimum=0.1)=>[...this.npcIds].some(id=>this.wallet(id)>=minimum),

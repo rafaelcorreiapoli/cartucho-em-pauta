@@ -14,6 +14,7 @@ import type { SecurityAction } from './security';
 type RoomActions = {
   character:{character:number};
   'lobby-game-mode':{mode:import('./game-modes').GameMode};
+  'lobby-initial-wallet':{value:number};
   'lobby-grants':{enabled:boolean};
   'lobby-initial-budget':{value:number};
   'lobby-match-minutes':{value:number};
