@@ -1,3 +1,4 @@
+import {tutorialSteps,type TutorialView} from './tutorial';
 import {HudHelp} from './ui/hud-help';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import {DialogHeader} from './ui/dialog-header';
@@ -67,7 +68,7 @@ export function ElectionPolls({election,id}:{election:ElectionView; id:string}) 
           {standings.map(({candidate,rank,tied})=><li key={candidate.id}>
             <ElectionCandidateCard character={candidate.character} rank={rank}
               name={candidate.name+(candidate.id===id ? ' (você)' : '')} percentage={candidate.estimate}
-              trend={candidate.trend} note={<>{tied && <small className="poll-tie"> (Empate)</small>}{risk && rank===standings.at(-1)?.rank && <small className="poll-lost"> · Em risco de perder o mandato</small>}</>}/>
+              atRisk={risk && rank===standings.at(-1)?.rank} trend={candidate.trend} note={<>{tied && <small className="poll-tie"> (Empate)</small>}{risk && rank===standings.at(-1)?.rank && <small className="poll-lost"> · Em risco de perder o mandato</small>}</>}/>
           </li>)}
         </ol>
       </section>
@@ -86,21 +87,33 @@ export function ElectionIndicator({summary,urgency,open}:{
   </div>;
 }
 
-export function createElectionPanel(id:string) {
+export function createElectionPanel(id:string,onTutorialRead:()=>void=()=>{}) {
+  let tutorial:TutorialView|undefined;
+  let openedTutorialStep:number|undefined;
   let available = false;
   const polls = el<HTMLDialogElement>('election-poll-dialog');
   const summaryRoot = createRoot(el('election-indicator-mount'));
   function showPolls() {
     if (!available) return false;
-    if (!polls.open) polls.showModal();
+    if (!polls.open) {
+      openedTutorialStep = tutorial && !tutorial.complete && tutorialSteps[tutorial.step]?.highlight==='polls' ? tutorial.step : undefined;
+      polls.showModal();
+    }
     return true;
   }
+  function closed() {
+    const completed = openedTutorialStep!==undefined && openedTutorialStep===tutorial?.step && !tutorial.complete;
+    openedTutorialStep = undefined;
+    if (completed) onTutorialRead();
+  }
+  polls.addEventListener('close',closed);
   let summaryKey = '';
   let pollsKey = '';
   const pollsRoot = createRoot(polls);
   return {
     showPolls,
     render(view:PlenaryView) {
+      tutorial = view.tutorial;
       const election = view.election;
       available = !!election;
       if (!election) {
@@ -134,6 +147,7 @@ export function createElectionPanel(id:string) {
       }
     },
     destroy() {
+      polls.removeEventListener('close',closed);
       polls.close();
       pollsRoot.unmount();
       summaryRoot.unmount();
