@@ -151,6 +151,7 @@ export class PlenaryMatch {
   private projectVotingEnabled = true;
   private electionsEnabled = true;
   private photosEnabled = true;
+  private surveillanceEnabled = true;
 
   private remainingAgendaBallots(now:number) {
     if (!this.projectVotingEnabled) return 0;
@@ -303,13 +304,14 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.projectVotingEnabled = projectVotingEnabled;
     this.electionsEnabled = electionsEnabled;
     this.photosEnabled = photosEnabled;
+    this.surveillanceEnabled = surveillanceEnabled;
     this.electorate = new Set(ids);
     this.disconnected.clear();
     this.npcIds.clear();
@@ -352,7 +354,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.electionsEnabled && this.election.canCampaignAction(id,kind);
-    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled);
+    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled);
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
@@ -1188,7 +1190,7 @@ export class PlenaryMatch {
     const phaseTimeLeft = this.voting ? this.voteEndsAt-realNow
       : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
-      projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,
+      projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,surveillanceEnabled:this.surveillanceEnabled,
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),

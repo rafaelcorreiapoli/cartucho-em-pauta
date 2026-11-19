@@ -6,13 +6,14 @@ import {npcRules} from '../parliamentarians';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
+    surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
+  changeSurveillance?:(enabled:boolean)=>void;
   changePhotos?:(enabled:boolean)=>void;
   changeElections?:(enabled:boolean)=>void;
   changeProjectVoting?:(enabled:boolean)=>void;
@@ -34,6 +35,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
   if (running) return null;
   return <>
     <div className="lobby-options" hidden={tutorial}>
+      <label className="lobby-count"><input type="checkbox" checked={state.surveillanceEnabled} disabled={!host}
+        onChange={event=>commands.changeSurveillance?.(event.currentTarget.checked)}/> Vigilância</label>
       <label className="lobby-count"><input type="checkbox" checked={state.photosEnabled} disabled={!host}
         onChange={event=>commands.changePhotos?.(event.currentTarget.checked)}/> Câmera e fotos</label>
       <label className="lobby-count"><input type="checkbox" checked={state.electionsEnabled} disabled={!host}

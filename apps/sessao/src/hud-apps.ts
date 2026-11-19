@@ -33,7 +33,7 @@ export function hudAppStatus(view:PlenaryView,ready:boolean):HudAppStatus {
   if (politics?.progression && view.phase!=='finished') {
     status.attributes = {badge:String(politics.progression.available || '')};
   }
-  if (gameplay?.surveillance) {
+  if (view.surveillanceEnabled!==false && gameplay?.surveillance) {
     const active = gameplay.surveillance.channels.filter(channel=>channel.active).length;
     status.surveillance = {badge:String(active || '')};
   }

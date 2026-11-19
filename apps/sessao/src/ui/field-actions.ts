@@ -53,7 +53,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
   for (const {label,...action} of state?.officeOptions ?? []) {
     actions.push({label,icon:action.kind==='office-cancel' ? 'cross' : 'document',action});
   }
-  if (state?.security) actions.push({label:'Consultar câmeras',icon:'camera',action:{kind:'open-security'}});
+  if (view?.surveillanceEnabled!==false && state?.security) actions.push({label:'Consultar câmeras',icon:'camera',action:{kind:'open-security'}});
   if (state?.locations.includes('reprography')) {
     for (const item of state.inventory) if (item.document?.project!==undefined && state.forgeryRemaining===undefined) {
       actions.push({label:'Adulterar · '+item.document.title,icon:'document',action:{kind:'edit-document',item:item.id,project:item.document.project}});

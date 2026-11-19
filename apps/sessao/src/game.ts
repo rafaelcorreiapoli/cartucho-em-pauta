@@ -137,6 +137,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
     private installationFixtures: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
+    private securityTerminal?:Phaser.GameObjects.Image;
     private textResolution = 3;
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
@@ -226,7 +227,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (action) interact(action);
           }
         });
-      },art=>this.registerInteraction(art,()=>!!plenaryView?.gameplay?.security,openSecurity));
+      },art=>{
+        this.securityTerminal = art;
+        this.registerInteraction(art,()=>plenaryView?.surveillanceEnabled!==false && !!plenaryView?.gameplay?.security,openSecurity);
+      });
       powerPanels.forEach(({x,y},index)=>{
         const panel = index as PowerPanel;
         const fixture = this.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
@@ -245,7 +249,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
-      this.photoRenderer.loadMap(this.children.getChildren());
+      this.photoRenderer.loadMap(this.children.getChildren(),this.securityTerminal);
       this.roomFires = createRoomFires(this);
       this.fuseSmoke = createFuseSmoke(this);
       this.extinguishEffect = createExtinguishEffect(this);
@@ -588,6 +592,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
       const agenda = plenaryView?.project!==undefined ? agendaProject(plenaryView) : undefined;
+      this.securityTerminal?.setVisible(plenaryView?.surveillanceEnabled!==false);
       this.board.setVisible(plenaryView?.projectVotingEnabled!==false);
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Nenhum projeto em pauta');
       const camera = this.cameras.main;
@@ -876,6 +881,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     drawPhoto(canvas:HTMLCanvasElement, captured?:PhotoScene) {
       if (!scene.sys.isActive() || !scene.photoRenderer) return;
+      scene.photoRenderer.surveillanceEnabled = plenaryView?.surveillanceEnabled!==false;
       if (captured) {
         scene.photoRenderer.draw(canvas,captured);
         return;

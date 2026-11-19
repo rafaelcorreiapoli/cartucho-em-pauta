@@ -32,7 +32,7 @@ import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
 import { securityCameraSees, type SecurityCamera } from "../src/security";
-import { cameraSees, spyRules, type SpyDevice } from "../src/surveillance";
+import { isSpyProduct, cameraSees, spyRules, type SpyView, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
@@ -66,6 +66,7 @@ export class Gameplay {
   private phone = new PhoneSession();
   phoneGamesEnabled = true;
   photosEnabled = true;
+  surveillanceEnabled = true;
   get projectVotingEnabled() { return this.dialogues.projectVotingEnabled; }
   set projectVotingEnabled(enabled:boolean) { this.dialogues.projectVotingEnabled = enabled; }
   private dialogues = new NpcDialogues();
@@ -625,7 +626,7 @@ export class Gameplay {
     this.privateOffices.expireDoors(world.players,world.now);
     this.syncOfficeDoors(world.players,world.now);
     const endedXray = this.tickXray(world,exploring);
-    this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
+    if (this.surveillanceEnabled) this.surveillance.tick(world.players,world.now,this.spyAccess(world),exploring,id=>world.present?.(id)!==false);
     if (exploring) this.spawnCash(world);
     for (const [id,request] of this.requests) if (request.expires<=world.now) this.requests.delete(id);
     this.phone.tick(world,exploring,player=>this.privateOffices.ownedBy(player.id)?.name===roomAt(player));
@@ -900,14 +901,16 @@ export class Gameplay {
     };
   }
 
-  spyView(player:Player,world:GameplayWorld) {
+  spyView(player:Player,world:GameplayWorld):SpyView {
+    if (!this.surveillanceEnabled) return {channels:[],options:[],muted:false};
     return this.surveillance.view(player,world.now,this.spyAccess(world),true);
   }
 
-  spyVolume(listener:Player,talker:Player) { return this.surveillance.volume(listener,talker); }
-  spySound(id:string,now:number) { this.surveillance.sound(id,now); }
+  spyVolume(listener:Player,talker:Player) { return this.surveillanceEnabled ? this.surveillance.volume(listener,talker) : 0; }
+  spySound(id:string,now:number) { if (this.surveillanceEnabled) this.surveillance.sound(id,now); }
 
   spyAction(player:Player,raw:unknown,world:GameplayWorld) {
+    if (!this.surveillanceEnabled) return 'Vigilância desativada nesta partida.';
     if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
     if (raw.kind==='close' || raw.kind==='cancel') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
     if (player.knockedOut || player.carried || player.carrying || this.hasOfficeChannel(player.id)) return;
@@ -930,6 +933,7 @@ export class Gameplay {
   }
 
   spyFrame(player:Player,world:GameplayWorld):PhotoScene|undefined {
+    if (!this.surveillanceEnabled) return;
     const device = this.surveillance.channel(player.id,'spyCamera');
     if (!device || player.knockedOut || player.carried) return;
     const camera = this.surveillance.origin(device);
@@ -1560,6 +1564,7 @@ export class Gameplay {
   }
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
+    if (!this.surveillanceEnabled && action.kind==='shop-buy' && isSpyProduct(action.target)) return 'Vigilância desativada nesta partida.';
     if (!this.photosEnabled && (['photo','selfie','photo-delete','photo-publish'].includes(action.kind) || action.kind.startsWith('info-') && action.kind!=='info-close')) return 'Fotos desativadas nesta partida.';
     if (!this.phoneGamesEnabled && ['game-start','game-turn','bets-spin','candy-start','candy-swap'].includes(action.kind)) return 'Joguinhos desativados nesta partida.';
     if (!this.projectVotingEnabled && (

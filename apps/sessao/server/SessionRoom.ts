@@ -58,6 +58,7 @@ export class SessionRoom extends Room {
   private projectVotingEnabled = true;
   private electionsEnabled = true;
   private photosEnabled = true;
+  private surveillanceEnabled = true;
   private readonly stationCooldowns = new StationCooldowns();
   private gameplay = new Gameplay(this.stationCooldowns,()=>this.match.powerOut);
   private lastRoomCommandToken = new Map<string,number>();
@@ -140,10 +141,6 @@ export class SessionRoom extends Room {
     this.bots.clear(this.players);
     const players = [...this.players.values()].map(state=>state.player);
     this.gameplay.reset(this.clock.currentTime,Math.random,players);
-        this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
-        this.gameplay.projectVotingEnabled = this.projectVotingEnabled;
-        this.gameplay.photosEnabled = this.photosEnabled;
-        this.internalMail.photosEnabled = this.photosEnabled;
     for (const player of players) player.speed = undefined;
     void this.unlock();
   }
@@ -160,7 +157,7 @@ export class SessionRoom extends Room {
   private securityFeeds = new Map<string,{camera:SecurityCamera; delivered:boolean}>();
 
   private atSecurityTerminal(player:Player, now:number) {
-    return this.match.phase==='negotiation' && this.match.ballotCountdown(now)===undefined &&
+    return this.surveillanceEnabled && this.match.phase==='negotiation' && this.match.ballotCountdown(now)===undefined &&
       this.match.canHandleObjects(player.id,now) && canUseSecurityTerminal(player);
   }
 
@@ -257,6 +254,12 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-surveillance',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.surveillanceEnabled = raw.enabled;
+    });
     this.onMessage('lobby-photos',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -296,7 +299,7 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -304,6 +307,8 @@ export class SessionRoom extends Room {
         this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
         this.gameplay.projectVotingEnabled = this.projectVotingEnabled;
         this.gameplay.photosEnabled = this.photosEnabled;
+        this.gameplay.surveillanceEnabled = this.surveillanceEnabled;
+        this.securityFeeds.clear();
         this.internalMail.photosEnabled = this.photosEnabled;
         const count = this.tutorial ? 0 : Math.min(countFromStart(countRequest,this.lobbyNpcCount),PLENARY_SEATS.length-players.length);
         this.parliamentarians.reset(count,this.gameNow,new Set(players.map(player=>player.character)));
@@ -752,6 +757,7 @@ export class SessionRoom extends Room {
         view.projectVotingEnabled = this.projectVotingEnabled;
         view.electionsEnabled = this.electionsEnabled;
         view.photosEnabled = this.photosEnabled;
+        view.surveillanceEnabled = this.surveillanceEnabled;
         if (!this.match.running && this.match.minimumPlayers===MIN_PLAYERS) {
           view.minimumPlayers = 1;
           view.botsToFill = Math.max(0,MIN_PLAYERS-players.length);
@@ -769,7 +775,7 @@ export class SessionRoom extends Room {
           if (lastPhotos?.key!==key && (lastPhotos || this.match.running)) client.send('photo-state',photos);
         }
         if (view.gameplay && this.match.running) {
-          view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
+          if (this.surveillanceEnabled) view.gameplay.surveillance = this.gameplay.spyView(state.player,world);
           view.gameplay.parliamentarians = this.npcTalk.nearby(state.player);
           view.gameplay.parliamentarianDeal = this.npcTalk.view(state.player,world);
           view.gameplay.robberyProgress = this.npcTalk.robberyProgress(id,this.clock.currentTime);

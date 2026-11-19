@@ -74,3 +74,11 @@ test('photo setting is visible to guests and configurable only by the host',()=>
   expect(render('a')).toContain('type="checkbox"/> Câmera e fotos');
   expect(render('b')).toContain('type="checkbox" disabled=""/> Câmera e fotos');
 });
+
+test('surveillance setting is host-only and guests see its confirmed value',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),surveillanceEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Vigilância');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Vigilância');
+});

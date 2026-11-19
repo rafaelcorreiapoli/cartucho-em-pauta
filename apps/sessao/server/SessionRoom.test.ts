@@ -823,6 +823,9 @@ test('six human clients can select eight NPCs and fill the available seats when 
     guest.send('lobby-photos',{enabled:false,token:5});
     await wait(()=>commandTokens.get(guest.sessionId)===5);
     expect(Reflect.get(room,'photosEnabled')).toBe(true);
+    guest.send('lobby-surveillance',{enabled:false,token:6});
+    await wait(()=>commandTokens.get(guest.sessionId)===6);
+    expect(Reflect.get(room,'surveillanceEnabled')).toBe(true);
     host.send('start-match',{infiltrators:2,token:3});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
@@ -883,7 +886,9 @@ test('six human clients can select eight NPCs and fill the available seats when 
 
 test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{projectsEnabled:true,electionsEnabled:false,photosEnabled:true},
   {projectsEnabled:false,electionsEnabled:true,photosEnabled:true},{projectsEnabled:false,electionsEnabled:false,photosEnabled:true},
-  {projectsEnabled:true,electionsEnabled:true,photosEnabled:false},{projectsEnabled:false,electionsEnabled:false,photosEnabled:false}])('solo lobby applies independent mechanic settings: %j',async({projectsEnabled,electionsEnabled,photosEnabled})=>{
+  {projectsEnabled:true,electionsEnabled:true,photosEnabled:false},{projectsEnabled:false,electionsEnabled:false,photosEnabled:false},
+  {projectsEnabled:true,electionsEnabled:true,photosEnabled:true,surveillanceEnabled:false},
+  {projectsEnabled:false,electionsEnabled:false,photosEnabled:false,surveillanceEnabled:false}])('solo lobby applies independent mechanic settings: %j',async({projectsEnabled,electionsEnabled,photosEnabled,surveillanceEnabled=true})=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
@@ -915,7 +920,9 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     await wait(()=>view?.electionsEnabled===electionsEnabled);
     host.send('lobby-photos',{enabled:photosEnabled,token:3});
     await wait(()=>view?.photosEnabled===photosEnabled);
-    host.send('start-match',{infiltrators:2,npcs:8,token:4});
+    host.send('lobby-surveillance',{enabled:surveillanceEnabled,token:4});
+    await wait(()=>view?.surveillanceEnabled===surveillanceEnabled);
+    host.send('start-match',{infiltrators:2,npcs:8,token:5});
     await wait(()=>view?.phase==='negotiation');
     expect(view).toMatchObject({players:6,electorate:6});
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
@@ -923,19 +930,32 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     const controls:Map<string,ControlState> = Reflect.get(room,'players');
     const players = [...controls.keys()];
     expect(players.filter(id=>match.view(id,players,room.clock.currentTime).role==='Infiltrado')).toHaveLength(2);
-    host.send('lobby-elections',{enabled:!electionsEnabled,token:5});
+    host.send('lobby-elections',{enabled:!electionsEnabled,token:6});
     const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
-    await wait(()=>commandTokens.get(host!.sessionId)===5);
+    await wait(()=>commandTokens.get(host!.sessionId)===6);
     expect(Reflect.get(room,'electionsEnabled')).toBe(electionsEnabled);
     expect(!!view?.election).toBe(electionsEnabled);
-    host.send('lobby-photos',{enabled:!photosEnabled,token:6});
-    await wait(()=>commandTokens.get(host!.sessionId)===6);
+    host.send('lobby-photos',{enabled:!photosEnabled,token:7});
+    await wait(()=>commandTokens.get(host!.sessionId)===7);
     expect(Reflect.get(room,'photosEnabled')).toBe(photosEnabled);
     expect(Reflect.get(room,'gameplay').photosEnabled).toBe(photosEnabled);
     expect(Reflect.get(room,'internalMail').photosEnabled).toBe(photosEnabled);
+    host.send('lobby-surveillance',{enabled:!surveillanceEnabled,token:8});
+    await wait(()=>commandTokens.get(host!.sessionId)===8);
+    expect(Reflect.get(room,'surveillanceEnabled')).toBe(surveillanceEnabled);
+    expect(Reflect.get(room,'gameplay').surveillanceEnabled).toBe(surveillanceEnabled);
+    if (!surveillanceEnabled) {
+      expect(view?.gameplay?.surveillance).toBeUndefined();
+      const state = controls.get(host!.sessionId)!;
+      Object.assign(state.player,securityRoom.terminal);
+      host!.send('security-camera',{kind:'open',token:9});
+      await wait(()=>commandTokens.get(host!.sessionId)===9);
+      expect(Reflect.get(room,'securityFeeds').size).toBe(0);
+      expect(view?.gameplay?.security).toBeUndefined();
+    }
     if (!projectsEnabled) {
-      host.send('lobby-project-voting',{enabled:true,token:7});
-      await wait(()=>commandTokens.get(host!.sessionId)===7);
+      host.send('lobby-project-voting',{enabled:true,token:10});
+      await wait(()=>commandTokens.get(host!.sessionId)===10);
       expect(Reflect.get(room,'projectVotingEnabled')).toBe(false);
       expect(Reflect.get(room,'gameplay').projectVotingEnabled).toBe(false);
       expect(()=>publishProjectFiling(match,controls.get(host!.sessionId)!.player,0,room.clock.currentTime)).toThrow('desativadas');
