@@ -48,3 +48,12 @@ test('the solo lobby waits for assets and removes its controls after the server 
   expect(render('a')).toContain('type="checkbox"/> Joguinhos de celular');
   expect(render('b')).toContain('type="checkbox" disabled=""/> Joguinhos de celular');
 });
+
+ test('project voting setting shows the confirmed value and only the host can change it',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls
+    state={lobbyControlsState({...match.view(id,ids,0),projectVotingEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Votações de projetos');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Votações de projetos');
+});

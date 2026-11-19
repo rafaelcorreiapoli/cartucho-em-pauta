@@ -19,7 +19,7 @@ export function stationShortcuts(view?:PlenaryView,player?:Player,station?:Stati
   const {grant} = station==='cabinet' ? institutionalActions(view,player) : {};
   if (station==='cabinet' && grant) actions.push({kind:'grant',station,label:'Aplicar verba',icon:'wallet'});
   if (station==='press' && canPublishEvidence(view,player)) actions.push({kind:'publish',station,label:'Divulgar evidência',icon:'document'});
-  if (Object.hasOwn(roomActivities,station)) {
+  if (Object.hasOwn(roomActivities,station) && (station!=='library' || view.projectVotingEnabled!==false)) {
     const activity = station as RoomActivity;
     const {label,icon} = roomActivities[activity];
     actions.push({kind:activity,station,label,icon});

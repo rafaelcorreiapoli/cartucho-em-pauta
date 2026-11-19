@@ -49,6 +49,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   let currentVendor:NpcId|undefined;
   let dismissed = false;
   let last = '';
+  let projectsEnabled = true;
   const close = () => {
     if (token===undefined || dismissed) return;
     dismissed = true;
@@ -73,7 +74,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number,direct:boolean,suppliesSeconds?:number) {
     const catalog = npcs[npc].catalog;
     if (!catalog) return;
-    const kinds = marketKinds[catalog];
+    const kinds = marketKinds[catalog].filter(kind=>projectsEnabled || kind!=='forensicKit');
     const owned = [...inventory,...equipped];
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     const pageCount = Math.ceil(kinds.length/pageSize);
@@ -181,6 +182,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       return actions;
     },
     render(view:PlenaryView) {
+      projectsEnabled = view.projectVotingEnabled!==false;
       const inventory = view.gameplay?.inventory ?? [];
       const equipped = view.gameplay?.equipped ?? [];
       if (purchase && equipped.some(item=>item.id===purchase?.id)) purchase = undefined;
@@ -229,7 +231,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,wallet,inventory,equipped,furnishings,policies,budget,suppliesSeconds]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,projectsEnabled,wallet,inventory,equipped,furnishings,policies,budget,suppliesSeconds]);
       if (key===last) return;
       last = key;
       token = state.token;

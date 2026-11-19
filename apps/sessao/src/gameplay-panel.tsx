@@ -294,9 +294,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = contacts.length===1 ? contacts[0].id : '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
-    if (showNavigation!==navigationMounted || view.phoneGamesEnabled!==previous?.phoneGamesEnabled) {
+    if (showNavigation!==navigationMounted || view.phoneGamesEnabled!==previous?.phoneGamesEnabled || view.projectVotingEnabled!==previous?.projectVotingEnabled) {
       navigationMounted = showNavigation;
-      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps gamesEnabled={view.phoneGamesEnabled!==false} select={selectApp} close={()=>dialog.close()}/> : null));
+      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps projectsEnabled={view.projectVotingEnabled!==false} gamesEnabled={view.phoneGamesEnabled!==false} select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.filter(occupiesInventorySlot).length);
@@ -458,7 +458,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={!!previous?.gameplay} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
-      if (app==='Projetos') application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
+      if (app==='Projetos' && view.projectVotingEnabled!==false) application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
       if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
       if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && !!previous?.gameplay,closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;

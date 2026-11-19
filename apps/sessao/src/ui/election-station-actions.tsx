@@ -22,7 +22,7 @@ export function electionStationActions(view:PlenaryView|undefined,station:Statio
   if (station==='press') actions.push('advertise');
   if (station==='panel') {
     if (!personal.spoke) actions.push('speech');
-    if (view.project!==undefined && election.canObject) actions.push('object');
+    if (view.projectVotingEnabled!==false && view.project!==undefined && election.canObject) actions.push('object');
   }
   if (station==='tv' && election.canInterview && hasVoice) actions.push('interview');
   return {actions,voiceHint:station==='tv' && election.canInterview && !hasVoice};

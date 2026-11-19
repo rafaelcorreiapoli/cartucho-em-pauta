@@ -9,7 +9,7 @@ import { decorPoint, isOfficeFurniture, officeDoorPoint, officeFixtures, officeF
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
-import { mapNpcs, type NpcId } from './npcs';
+import { npcEnabled, mapNpcs, type NpcId } from './npcs';
 import { binoculars, xray } from './equipment';
 import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
@@ -151,7 +151,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     extinguishEffect!:ReturnType<typeof createExtinguishEffect>;
     private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
     private marker!: Phaser.GameObjects.Ellipse;
-    private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
+    private npcViews:{id:string;sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
 
     private assetsFailed = false;
@@ -333,7 +333,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const target = id as NpcId;
           this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'catalog' in npc && npc.catalog ? 'open-shop' : 'talk',target}));
         }
-        return {sprite,label};
+        return {id,sprite,label};
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
@@ -580,14 +580,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const visible = active && !!ownPlayer && localPerception(ownPlayer,fireSites[site],this.drawnVisionRadius).visible;
         effect.update(time,active,visible,reducedMotion.matches);
       });
-      for (const {sprite,label} of this.npcViews) {
-        const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
+      for (const {id,sprite,label} of this.npcViews) {
+        const visible = npcEnabled(id,plenaryView?.projectVotingEnabled!==false) && (!running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible));
         sprite.setVisible(visible);
         label?.setVisible(visible);
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
       const agenda = plenaryView?.project!==undefined ? agendaProject(plenaryView) : undefined;
+      this.board.setVisible(plenaryView?.projectVotingEnabled!==false);
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Nenhum projeto em pauta');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;

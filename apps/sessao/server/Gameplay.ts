@@ -65,6 +65,8 @@ export class Gameplay {
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
   phoneGamesEnabled = true;
+  get projectVotingEnabled() { return this.dialogues.projectVotingEnabled; }
+  set projectVotingEnabled(enabled:boolean) { this.dialogues.projectVotingEnabled = enabled; }
   private dialogues = new NpcDialogues();
   private combat = new Combat();
   private transport = new Transport();
@@ -815,7 +817,7 @@ export class Gameplay {
 
   view(player:Player, world:GameplayWorld):GameplayView {
     const {id} = player;
-    const nearbyLocations = locations(player);
+    const nearbyLocations = locations(player).filter(place=>this.projectVotingEnabled || !['secretary','protocol','reprography'].includes(place));
     const equipped = this.equipped(id).map(item=>item.data);
     const voiceGear = equipped.find(item=>item.kind==='voiceModulator');
     const modulator = voiceGear && this.modulator.view(voiceGear.id);
@@ -1557,6 +1559,11 @@ export class Gameplay {
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
     if (!this.phoneGamesEnabled && ['game-start','game-turn','bets-spin','candy-start','candy-swap'].includes(action.kind)) return 'Joguinhos desativados nesta partida.';
+    if (!this.projectVotingEnabled && (
+      action.kind==='supply' && action.place==='secretary' ||
+      ['edit','stamp','verify-document'].includes(action.kind) ||
+      action.kind==='shop-buy' && action.target==='forensicKit'
+    )) return 'Documentos e projetos desativados nesta partida.';
     const {id} = player;
     if (action.kind==='dialogue-close') return this.dialogues.close(id);
     if (player.knockedOut) return this.reject(player,world,'Você está nocauteado.');
@@ -1815,6 +1822,7 @@ export class Gameplay {
   }
 
   private fileDocument(player:Player,itemId:number,world:GameplayWorld) {
+    if (!this.projectVotingEnabled) return 'Documentos e projetos desativados nesta partida.';
     const id = player.id;
     if (world.hasMandate?.(id)===false) return 'Somente parlamentares com mandato podem protocolar.';
     const item = this.items.get(itemId);

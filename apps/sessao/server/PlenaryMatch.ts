@@ -148,7 +148,10 @@ export class PlenaryMatch {
     if (this.running) this.refreshAgendaEligibility();
   }
 
+  private projectVotingEnabled = true;
+
   private remainingAgendaBallots(now:number) {
+    if (!this.projectVotingEnabled) return 0;
     const inBallot = this.phase==='ballot';
     const freeAt = Math.max(now,this.cassationAt ?? now);
     const first = inBallot ? now+projectRules.cooldownMs+projectRules.debateMs : this.proposal
@@ -297,10 +300,11 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
+    this.projectVotingEnabled = projectVotingEnabled;
     this.electorate = new Set(ids);
     this.disconnected.clear();
     this.npcIds.clear();
@@ -343,7 +347,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.election.canCampaignAction(id,kind);
-    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled);
+    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled);
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
@@ -420,6 +424,7 @@ export class PlenaryMatch {
       this.receivedEvents.add(event.eventId);
     }
     if (event.type==='bill-studied') {
+      if (!this.projectVotingEnabled) return false;
       const studied = event.project;
       if (studied===undefined || this.phase!=='negotiation' || this.proposal?.project!==studied) return false;
       const readers = this.studiedBills.get(studied) ?? new Set<string>();
@@ -452,10 +457,12 @@ export class PlenaryMatch {
   }
 
   private projectFilingClosed(now:number) {
+    if (!this.projectVotingEnabled) return true;
     return Math.max(now,this.protocolOpensAt)+projectRules.debateMs>=this.sessionEndsAt;
   }
 
   private projectFilingError(id:string,project:number,now:number) {
+    if (!this.projectVotingEnabled) return 'Votações de projetos desativadas nesta partida.';
     if (this.training) return "Projetos ficam para uma próxima versão do tutorial.";
     if (!bills[project] || !this.canVote(id)) return 'Somente jogadores com mandato podem protocolar projetos.';
     if (this.outcomes.some(outcome=>outcome.project===project)) return 'Esse projeto já foi votado nesta partida.';
@@ -495,6 +502,7 @@ export class PlenaryMatch {
   roomActivity(player:Player, activity:Exclude<RoomActivity,'coffee'>, now:number,publish?:GameplayWorld['publish']):RoomActivityResult | undefined {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
+    if (!this.projectVotingEnabled) return;
     const project = this.proposal?.project;
     if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
     if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
@@ -1172,6 +1180,7 @@ export class PlenaryMatch {
     const phaseTimeLeft = this.voting ? this.voteEndsAt-realNow
       : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
+      projectVotingEnabled:this.projectVotingEnabled,
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),

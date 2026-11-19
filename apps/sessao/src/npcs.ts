@@ -33,6 +33,10 @@ export const treasurer = {
   counter:treasuryCounter, interaction:{x:treasuryCounter.x+23,y:treasuryCounter.y+30}, label:'Tesouraria',
 } as const;
 
+export function npcEnabled(id:string,projectVotingEnabled=true) {
+  return projectVotingEnabled || (id!=='secretary' && id!=='protocol');
+}
+
 export const mapNpcs = {...npcs,treasurer};
 
 export type NpcId = keyof typeof npcs;

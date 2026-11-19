@@ -1,7 +1,7 @@
 import type { MissionSwapResult } from './PersonalAgenda';
 import { canReachObject } from '../src/gameplay';
 import type { Player } from '../src/map';
-import { dialogues, npcs, type DialogueCondition, type DialogueNode, type DialogueOption, type DialogueView, type NpcId } from '../src/npcs';
+import { npcEnabled, dialogues, npcs, type DialogueCondition, type DialogueNode, type DialogueOption, type DialogueView, type NpcId } from '../src/npcs';
 
 type Eligibility = (condition:DialogueCondition)=>boolean;
 
@@ -11,6 +11,7 @@ type Document = {id:number; title:string};
 export class NpcDialogues {
   private sessions = new Map<string,Session>();
   private serial = 0;
+  projectVotingEnabled = true;
 
   reset() { this.sessions.clear(); }
   close(id:string) { this.sessions.delete(id); }
@@ -26,6 +27,7 @@ export class NpcDialogues {
   }
 
   private nearby(player:Player, key:NpcId) {
+    if (!npcEnabled(key,this.projectVotingEnabled)) return false;
     const npc = npcs[key];
     if ('interactionRadius' in npc) return canReachObject(player,npc,{radius:npc.interactionRadius});
     return canReachObject(player,'interaction' in npc ? npc.interaction : npc);
