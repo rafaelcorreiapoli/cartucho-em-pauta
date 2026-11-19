@@ -112,6 +112,7 @@ const missionTargets:Partial<Record<Agenda,number>> = {
   fortuna:12,campanha:65,...agendaCounts,...agendaCashTargets,...agendaDurationMs,
 };
 const retiredMissions = new Set<Agenda>([
+  'lagosta','comprarLagosta','turismo','fotoOstentacao','mensagemComAnexo','jornalismo',
   'bombom','cafeEstrategico','fiscalCafe','bandejaGourmet',
   'visitaAlvo','visitaCortesia','visitaArquivo','visitaGabinete','passeio',
   'presencaPlenario','reuniaoGabinete','reuniaoPublica','visitaDoisGabinetes',
