@@ -9,17 +9,19 @@ async page => {
   await page.setViewportSize({width:1280,height:800});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Visitantes QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
-  await page.locator('#parliamentarian-count [data-count="8"]').click();
+  await page.locator('#parliamentarian-count [data-count="9"]').click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const state = async ()=>(await page.request.get('http://127.0.0.1:26874/qa/visitors')).json();
   const initial = await state();
   const visitors = initial.people.filter(player=>player.npc);
   const bots = initial.people.filter(player=>player.bot);
-  if (visitors.length!==8 || bots.length!==5) throw Error('Incorrect visitor/bot populations');
-  if (new Set(visitors.map(player=>player.visitor)).size!==8) throw Error('Repeated visitor identity');
+  if (visitors.length!==9 || bots.length!==5) throw Error('Incorrect visitor/bot populations');
+  if (new Set(visitors.map(player=>player.visitor)).size!==9) throw Error('Repeated visitor identity');
   if (bots.some(player=>player.visitor || player.npc || !player.office)) throw Error('Bots lost their parliamentary identity');
   if (visitors.some(player=>player.office)) throw Error('A visitor has a mandate');
+  const hang = visitors.find(player=>player.visitor==='luciano-hang');
+  if (hang?.nick!=='Véio da Havan' || hang.wallet!==16) throw Error('Hang profile was not registered');
   for (const visitor of visitors) for (const action of ['walk','hit','fall']) {
     const file = `${visitor.visitor}-${action}.${action==='walk'?'png':'webp'}`;
     if (!loaded.has(file)) throw Error(`Missing sprite: ${file}`);

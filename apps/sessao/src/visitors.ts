@@ -7,6 +7,7 @@ export const visitorRoster = [
   {id:'joao-santana',name:'João Santana',wallet:10},
   {id:'alexandre-de-moraes',name:'Alexandre de Moraes',wallet:6},
   {id:'delcidio-do-amaral',name:'Delcídio do Amaral',wallet:8},
+  {id:'luciano-hang',name:'Véio da Havan',wallet:16},
 ] as const;
 export type VisitorId = typeof visitorRoster[number]['id'];
 
