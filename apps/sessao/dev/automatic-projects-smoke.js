@@ -22,8 +22,36 @@ async page => {
   const history = page.locator('.automatic-projects-history');
   await history.waitFor();
   if (!/4:5\d|5:00/.test(await history.innerText())) throw Error('Initial countdown missing');
-  if (await history.locator('li').filter({hasText:'?'}).count()!==4) throw Error('Future projects leaked');
+  if (await history.locator('li').filter({hasText:'Não revelado'}).count()!==4) throw Error('Future projects leaked');
   if (await page.locator('.calote-budget-zero').count()) throw Error('Zero label still rendered');
+  const checkLayout = async (width,height)=>{
+    await page.setViewportSize({width,height});
+    await page.waitForTimeout(150);
+    const layout = await page.evaluate(()=>{
+      const dock = document.querySelector('#agenda-dock');
+      const projects = dock.querySelector('.automatic-projects-history');
+      const agenda = dock.querySelector('.react-agenda');
+      const box = element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+      const overlaps = (a,b)=>a.x<b.right && a.right>b.x && a.y<b.bottom && a.bottom>b.y;
+      const bounds = box(dock);
+      const obstructions = ['.character-dock','.congress-meter','.right-hud','.deck-tools'].map(selector=>document.querySelector(selector)).filter(Boolean).map(box);
+      const style = getComputedStyle(projects);
+      return {inside:bounds.x>=0 && bounds.y>=0 && bounds.right<=innerWidth+1 && bounds.bottom<=innerHeight+1,
+        ordered:box(projects).bottom+12<=box(agenda).y,overlaps:obstructions.some(other=>overlaps(bounds,other)),
+        positioned:style.position,border:style.borderTopWidth,scrollable:dock.dataset.scrollable,
+        centerFree:!dock.contains(document.elementFromPoint(innerWidth*.55,innerHeight*.65))};
+    });
+    if (!layout.inside || !layout.ordered || layout.overlaps || !layout.centerFree || layout.positioned==='fixed' || layout.border!=='0px') throw Error('HUD layout regression at '+width+'x'+height+': '+JSON.stringify(layout));
+    if (height<=600) {
+      if (await history.getAttribute('open')!==null) throw Error('Compact history should start collapsed');
+      const agenda = await page.locator('.react-agenda').boundingBox();
+      if (!agenda || agenda.y+agenda.height>height+1) throw Error('Compact missions should remain visible');
+    }
+    await page.mouse.move(width*.6,height*.7);
+    await page.screenshot({path:`output/playwright/automatic-project-layout-${width}.png`});
+  };
+  for (const [width,height] of [[1920,1080],[1280,720],[800,450],[640,480]]) await checkLayout(width,height);
+
   const names = ['Pacote de Diálogo Parlamentar','Reajuste Emergencial de Subsídios','Programa Congresso Sem Dormir','PEC da Qualificação Parlamentar'];
   for (let index=0;index<names.length;index++) {
     const response = await page.request.post(`${server}/qa/next-project?room=${encodeURIComponent(room)}`,{data:{}});
@@ -38,9 +66,11 @@ async page => {
     await announcement.getByRole('button',{name:'Fechar anúncio do projeto'}).click();
     await announcement.waitFor({state:'hidden'});
     await page.waitForFunction(count=>document.querySelectorAll('.automatic-projects-history [data-approved="true"]').length===count,index+1);
-    if (await history.locator('li').filter({hasText:'?'}).count()!==3-index) throw Error('Incorrect secret slots');
+    if (await history.locator('li').filter({hasText:'Não revelado'}).count()!==3-index) throw Error('Incorrect secret slots');
   }
   await history.getByText('Pauta encerrada').waitFor();
+  await checkLayout(1280,720);
+  await checkLayout(800,450);
   await page.screenshot({path:'output/playwright/automatic-project-history.png'});
   return {defaults:true,secretCountdown:true,approvals:4,compactAnnouncement:true,history:true};
 }
