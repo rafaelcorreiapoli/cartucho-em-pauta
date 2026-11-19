@@ -925,12 +925,11 @@ export class PlenaryMatch {
 
   fireInteraction(player:Player,now:number,vision:number,hasDevice:boolean,hasExtinguisher:boolean):FireInteraction|undefined {
     if (this.phase!=='negotiation') return;
-    const site = this.fire.smoke;
-    const smoke = site!==undefined && localPerception(player,fireSites[site],vision).visible ? site : undefined;
+    const smoke = this.fire.smoke.filter(site=>localPerception(player,fireSites[site],vision).visible);
     const allowed = this.canUseFire(player,now);
     const option = allowed ? this.fire.option(player,hasDevice,hasExtinguisher) : undefined;
     const progress = allowed ? this.fire.progress(player.id,now) : undefined;
-    if (option || smoke!==undefined || progress!==undefined) return {option,smoke,progress};
+    if (option || smoke.length || progress!==undefined) return {option,smoke:smoke.length ? smoke : undefined,progress};
   }
 
   fireHandlingDirection(player:Player) {
@@ -944,15 +943,17 @@ export class PlenaryMatch {
 
   updateFireInstallation(now:number,findPlayer:(id:string)=>Player|undefined,
     owns:(actor:string,item:number)=>boolean,consume:(actor:string,item:number)=>boolean) {
-    const actor = this.fire.installer;
-    if (actor===undefined) return;
-    const player = findPlayer(actor);
-    let failed = false;
-    const feedback = this.fire.updateInstallation(player && this.canUseFire(player,now) ? player : undefined,now,owns,consume,message=>{
-      failed = true;
-      return message;
-    });
-    if (feedback) return {actor,feedback,failed};
+    const results:{actor:string;feedback:string;failed:boolean}[] = [];
+    for (const actor of this.fire.installers) {
+      const player = findPlayer(actor);
+      let failed = false;
+      const feedback = this.fire.updateInstallation(actor,player && this.canUseFire(player,now) ? player : undefined,now,owns,consume,message=>{
+        failed = true;
+        return message;
+      });
+      if (feedback) results.push({actor,feedback,failed});
+    }
+    return results;
   }
 
   actOnFire(player:Player, action:FireAction, site:number, now:number, hasExtinguisher=false, device?:number,failed?:(message:string)=>void) {
@@ -962,7 +963,7 @@ export class PlenaryMatch {
       if (device===undefined) return failed?.('Você precisa de um dispositivo incendiário.');
       if (player.moving) return failed?.('Pare para instalar o dispositivo.');
       if (this.fire.plant(player,site,device,now)) return 'Instalando dispositivo…';
-      return failed?.('Já existe um dispositivo em uso ou um incêndio ativo.');
+      return failed?.('Este alvo já está ocupado ou você já está instalando um dispositivo.');
     }
     if (action==='disarm') {
       if (this.fire.disarm(site)) return 'Dispositivo desarmado.';
@@ -1204,7 +1205,7 @@ export class PlenaryMatch {
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
-      fire:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
+      fires:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,

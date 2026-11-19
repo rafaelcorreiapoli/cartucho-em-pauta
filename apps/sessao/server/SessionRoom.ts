@@ -659,11 +659,11 @@ export class SessionRoom extends Room {
         } else if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
         else if (wasIsolated) Object.assign(state.player,isolationRoom.exit,{direction:2});
       }
-      const installation = this.match.updateFireInstallation(now,id=>{
+      const installations = this.match.updateFireInstallation(now,id=>{
         if (!world.present(id) || this.gameplay.hasOfficeChannel(id) || this.npcTalk.robberyProgress(id,this.clock.currentTime)!==undefined) return;
         return this.players.get(id)?.player;
       },(id,item)=>this.gameplay.incendiaryItem(id,item)!==undefined,(id,item)=>this.gameplay.consumeIncendiary(id,item));
-      if (installation) (installation.failed ? world.actionFailed : world.feedback)(installation.actor,installation.feedback);
+      for (const installation of installations) (installation.failed ? world.actionFailed : world.feedback)(installation.actor,installation.feedback);
       if (this.tutorial && !this.tutorial.complete && this.tutorialOwner) {
         const step = tutorialSteps[this.tutorial.step];
         const player = this.players.get(this.tutorialOwner)?.player;

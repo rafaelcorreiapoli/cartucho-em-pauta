@@ -1218,3 +1218,15 @@
 /* Keep the candidate name and elimination warning in the same risk color. */
 .poll-label > [data-effect="loss"],
 .poll-label > [data-effect="loss"] .poll-lost { color: #ff776b; }
+
+.fire-notices {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  width: min(270px, 100%);
+  max-height: min(40dvh, 360px);
+  overflow-y: auto;
+  overflow-x: clip;
+  scrollbar-width: thin;
+  pointer-events: auto;
+}

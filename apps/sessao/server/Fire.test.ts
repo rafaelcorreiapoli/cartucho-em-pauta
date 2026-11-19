@@ -8,21 +8,21 @@ test('fires apply stability losses only during articulation and extinguishing sc
   fire.reset(0);
   const start = fireRules.firstAfter;
   expect(fire.advance(start,true)).toBe(0);
-  const active = fire.view(true)!;
+  const active = fire.view(true)?.[0]!;
   expect(active.remaining).toBe(36);
   expect(fire.advance(start+3000,true)).toBe(0);
   expect(fire.advance(start+33_000,false)).toBe(0);
-  expect(fire.view(false)).toMatchObject({paused:true,remaining:33});
+  expect(fire.view(false)?.[0]).toMatchObject({paused:true,remaining:33});
   expect(fire.advance(start+36_000,true)).toBe(2);
   expect(fire.extinguish((active.site+1)%fireSites.length)).toBe(false);
   expect(fire.extinguish(active.site)).toBe(true);
   expect(fire.extinguish(active.site)).toBe(false);
-  expect(fire.view(true)).toBeUndefined();
+  expect(fire.view(true)?.[0]).toBeUndefined();
   fire.increaseSafety();
   fire.advance(start+36_000+fireRules.cooldown,true);
-  expect(fire.view(true)).toBeUndefined();
+  expect(fire.view(true)?.[0]).toBeUndefined();
   fire.advance(start+36_000+fireRules.cooldown+fireRules.safetyDelay,true);
-  expect(fire.view(true)).toBeDefined();
+  expect(fire.view(true)?.[0]).toBeDefined();
 });
 
 test('moving interrupts installation and only completing it spends the device',()=>{
@@ -32,20 +32,20 @@ test('moving interrupts installation and only completing it spends the device',(
   const consume = ()=>{ spent++; return true; };
   expect(fire.plant(player,0,1,0)).toBe(true);
   expect(fire.plant({...player,id:'b'},0,2,0)).toBe(false);
-  expect(fire.updateInstallation({...player,moving:true},100,()=>true,consume)).toBe('Instalação interrompida.');
+  expect(fire.updateInstallation(player.id,{...player,moving:true},100,()=>true,consume)).toBe('Instalação interrompida.');
   expect(spent).toBe(0);
   expect(fire.plant(player,0,1,100)).toBe(true);
-  expect(fire.updateInstallation(player,3100,()=>true,consume)).toBe('Incendiário instalado.');
+  expect(fire.updateInstallation(player.id,player,3100,()=>true,consume)).toBe('Incendiário instalado.');
   expect(spent).toBe(1);
   expect(fire.plant(player,0,2,3100)).toBe(false);
   fire.advance(fireRules.fuse-fireRules.smoke-1,true);
-  expect(fire.smoke).toBeUndefined();
+  expect(fire.smoke).toEqual([]);
   expect(fire.disarm(0)).toBe(false);
   fire.advance(fireRules.fuse-fireRules.smoke,true);
   expect(fire.option({...player,id:'b'},false,false)).toMatchObject({kind:'disarm',site:0});
   expect(fire.disarm(0)).toBe(true);
   fire.advance(fireRules.fuse,true);
-  expect(fire.view(true)).toBeUndefined();
+  expect(fire.view(true)?.[0]).toBeUndefined();
 });
 
 test('only a device that ignites reports an arsonist, and it reports them once',()=>{
@@ -56,7 +56,7 @@ test('only a device that ignites reports an arsonist, and it reports them once',
   const onIgnition = (actor:string,index:number)=>ignitions.push([actor,index]);
   fire.reset(0);
   expect(fire.plant(player,site,1,0)).toBe(true);
-  fire.updateInstallation(player,fireRules.install,()=>true,()=>true);
+  fire.updateInstallation(player.id,player,fireRules.install,()=>true,()=>true);
   fire.advance(fireRules.fuse-1,true,onIgnition);
   expect(ignitions).toEqual([]);
   fire.advance(fireRules.fuse,true,onIgnition);
@@ -66,4 +66,80 @@ test('only a device that ignites reports an arsonist, and it reports them once',
   fire.reset(0);
   fire.advance(fireRules.firstAfter,true,onIgnition);
   expect(ignitions).toEqual([[player.id,site]]);
+});
+
+test('one player can arm multiple targets while another fire burns, and losses add up independently',()=>{
+  const fire = new Fire();
+  fire.reset(0);
+  fire.startTraining(0);
+  const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...fireSites[1]};
+  expect(fire.option(player,true,false)).toMatchObject({kind:'plant',site:1});
+  expect(fire.plant(player,1,1,0)).toBe(true);
+  fire.updateInstallation(player.id,player,fireRules.install,()=>true,()=>true);
+  Object.assign(player,fireSites[2]);
+  expect(fire.plant(player,2,2,fireRules.install)).toBe(true);
+  fire.updateInstallation(player.id,player,fireRules.install*2,()=>true,()=>true);
+  expect(fire.plant(player,2,3,fireRules.install*2)).toBe(false);
+  const ignitions:number[] = [];
+  fire.advance(fireRules.fuse,true,(_actor,site)=>ignitions.push(site));
+  expect(ignitions).toEqual([1,2]);
+  expect(fire.view(true)?.map(f=>f.site)).toEqual([0,1,2]);
+  expect(fire.advance(fireRules.fuse+fireRules.tick,true)).toBe(fireRules.damage*3);
+  expect(fire.extinguish(1)).toBe(true);
+  expect(fire.view(true)?.map(f=>f.site)).toEqual([0,2]);
+  expect(fire.advance(fireRules.fuse+fireRules.tick*2,true)).toBe(fireRules.damage*2);
+  expect(fire.extinguish(0)).toBe(true);
+  expect(fire.burning).toBe(true);
+  expect(fire.option(player,false,true)).toMatchObject({kind:'extinguish',site:2});
+  expect(fire.extinguish(2)).toBe(true);
+  expect(fire.burning).toBe(false);
+});
+
+test('concurrent installers reserve targets and interruption only releases the interrupted job',()=>{
+  const fire = new Fire();
+  fire.reset(0);
+  const a:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...fireSites[0]};
+  const b:Player = {...a,id:'b',...fireSites[1]};
+  const spent:string[] = [];
+  const consume = (actor:string)=>{spent.push(actor);return true;};
+  expect(fire.plant(a,0,1,0)).toBe(true);
+  expect(fire.plant(b,1,2,0)).toBe(true);
+  expect(fire.plant({...a,id:'c'},0,3,0)).toBe(false);
+  expect(fire.plant({...a,...fireSites[2]},2,4,0)).toBe(false);
+  expect(fire.progress(a.id,1500)).toBe(.5);
+  expect(fire.progress(b.id,1500)).toBe(.5);
+  fire.updateInstallation(a.id,undefined,1500,()=>true,consume);
+  expect(fire.installers).toEqual(['b']);
+  expect(fire.plant({...a,id:'c'},0,3,1500)).toBe(true);
+  fire.updateInstallation(b.id,b,3000,()=>true,consume);
+  expect(spent).toEqual(['b']);
+  expect(fire.handlingSite('c')).toBe(0);
+  expect(fire.progress('b',3000)).toBeUndefined();
+});
+
+test('each fuse, smoke plume and fire lifetime pauses and can be resolved separately',()=>{
+  const fire = new Fire();
+  fire.reset(0);
+  const a:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,...fireSites[0]};
+  const b:Player = {...a,id:'b',...fireSites[1]};
+  fire.plant(a,0,1,0);
+  fire.updateInstallation(a.id,a,3000,()=>true,()=>true);
+  fire.advance(4000,true);
+  fire.plant(b,1,2,4000);
+  fire.updateInstallation(b.id,b,7000,()=>true,()=>true);
+  fire.advance(14_000,true);
+  expect(fire.smoke).toEqual([0,1]);
+  expect(fire.disarm(1)).toBe(true);
+  fire.advance(44_000,false);
+  expect(fire.view(false)).toBeUndefined();
+  const ignitions:number[] = [];
+  fire.advance(45_000,true,(_actor,site)=>ignitions.push(site));
+  expect(ignitions).toEqual([0]);
+  fire.startTraining(2);
+  fire.advance(45_000+fireRules.tick,true);
+  expect(fire.view(true)?.map(f=>f.remaining)).toEqual([30,30]);
+  fire.advance(90_000,false);
+  expect(fire.view(false)?.every(f=>f.paused && f.remaining===30)).toBe(true);
+  expect(fire.advance(90_000+30_000,true)).toBe(fireRules.damage*5*2);
+  expect(fire.view(true)).toBeUndefined();
 });

@@ -11,7 +11,7 @@ const targets:Record<Highlight,string> = {
   profile:'.deck-identity',
   apps:'button[aria-label="Aplicativos"], button[aria-label="Celular"], button[aria-label="Celular"] .congress-app-label',
   surveillance:'button[aria-label="Aplicativos"], button[aria-label="Vigilância"], button[aria-label="Vigilância"] .congress-app-label',
-  polls:'#election-dock',fire:'#active-fire',power:'#active-outage',
+  polls:'#election-dock',fire:'#active-fire-mount',power:'#active-outage',
 };
 type Opening = {x:number;y:number;width:number;height:number};
 
