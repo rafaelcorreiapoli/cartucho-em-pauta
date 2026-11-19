@@ -1537,7 +1537,7 @@ export class Gameplay {
   }
 
   private treatmentPatient(player:Player, now:number) {
-    if (!canReachObject(player,infirmary.doctor)) return;
+    if (!canReachObject(player,infirmary.stretcher)) return;
     const patient = this.transport.passenger(player) ?? player;
     const {hp,max} = this.combat.view(patient,now);
     if (hp<max) return patient;

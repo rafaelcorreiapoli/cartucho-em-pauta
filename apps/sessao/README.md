@@ -116,7 +116,7 @@ Os personagens têm PV, força e velocidade próprios. Um personagem sem PV fica
 
 Perto de um personagem nocauteado, use as ações contextuais para inspecionar, socorrer ou carregar. Durante o transporte, o carregador anda a 65% da velocidade normal e pode tirar fotos. Soltar, recuperar a consciência, desconectar ou entrar no Plenário encerra o transporte.
 
-A Enfermaria fica ao norte do corredor principal, entre os Gabinetes 01 e 02. O Gabinete 05 tem entrada pela Central de Expediente. O Gabinete 06 fica no anexo leste. Drauzio Varella trata ferimentos gratuitamente e restaura todos os PV. Ao chegar carregando alguém nocauteado, o atendimento acorda e trata o paciente.
+A Enfermaria fica ao norte do corredor principal, entre os Gabinetes 01 e 02. O Gabinete 05 tem entrada pela Central de Expediente. O Gabinete 06 fica no anexo leste. A maca oferece atendimento gratuito e restaura todos os PV. Ao chegar à maca carregando alguém nocauteado, o atendimento acorda e trata o paciente.
 
 ## Voz da sala
 

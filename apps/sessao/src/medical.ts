@@ -3,7 +3,6 @@ export const infirmary = {
   ...mapPoint('Atendimento da Enfermaria'),
   stretcher:mapPoint('Maca da Enfermaria'),
   door:mapDoor('Enfermaria'),
-  doctor:{name:'Drauzio Varella',...mapPoint('Médico da Enfermaria')},
   name:'Enfermaria',
   bounds:roomBounds('Enfermaria'),
 } as const;
