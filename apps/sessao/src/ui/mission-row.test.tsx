@@ -1465,12 +1465,13 @@ test('the Agenda can offer selfie publication from the album while the photograp
   };
 
   draw();
-  const props = view(101).missions.active.find(row=>row.kind==='publicouSelfie')!;
+  const beforePublication = view(101);
+  const props = beforePublication.missions.active.find(row=>row.kind==='publicouSelfie')!;
   expect(renderToStaticMarkup(<MissionRow mission={props}/>)).toContain('Publique uma selfie sua');
   expect(game.act(author,{kind:'photo-publish',item:photo.id},world(102))).toBe('Fotografia publicada no álbum público.');
   const published = view(102);
   expect(published.missions.completed).toContainEqual(expect.objectContaining({id:props.id,kind:'publicouSelfie'}));
-  expect(published.progression.xp).toBe(30);
+  expect(published.progression.xp-beforePublication.progression.xp).toBe(missionReward('publicouSelfie').xp);
   expect(published.popularity).toBe(44);
   draw();
   expect(view(103).missions.active.some(row=>row.kind==='publicouSelfie')).toBe(false);
