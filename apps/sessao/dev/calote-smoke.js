@@ -52,6 +52,22 @@ async page => {
   await checkFill('positive');
   await page.screenshot({path:'output/playwright/calote-positive.png'});
   if (await metrics.getByRole('timer',{name:'Tempo até o calote'}).count()) throw Error('Positive balance has countdown');
+  await page.evaluate(()=>{
+    window.caloteInvalidFill = false;
+    const inspect = ()=>{
+      const track = document.querySelector('.calote-budget-track');
+      const fill = track?.querySelector('.calote-budget-fill');
+      if (track && fill) {
+        const bounds = track.getBoundingClientRect(), colored = fill.getBoundingClientRect();
+        const center = bounds.x+bounds.width/2;
+        if (track.dataset.direction==='positive' && Math.abs(colored.x-center)>.5 ||
+            track.dataset.direction==='negative' && Math.abs(colored.right-center)>.5 ||
+            track.dataset.direction==='zero' && colored.width>.5) window.caloteInvalidFill = true;
+      }
+      window.caloteFrame = requestAnimationFrame(inspect);
+    };
+    inspect();
+  });
   await setBudget(-16,10_000);
   await checkFill('negative');
   const timer = metrics.getByRole('timer',{name:'Tempo até o calote'});
@@ -71,6 +87,7 @@ async page => {
   await setBudget(-16);
   await checkFill('negative');
   await page.waitForFunction(()=>/Calote em\s*(29|30) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
+  if (await page.evaluate(()=>{cancelAnimationFrame(window.caloteFrame);return window.caloteInvalidFill;})) throw Error('Budget fill crossed the center during updates');
   await setBudget(-16,30_001);
   await page.getByRole('heading',{name:'O Congresso deu calote!',exact:true}).waitFor();
   return {mode:'calote',centeredBudget:true,positiveRight:true,negativeLeft:true,recoveryResetsTimer:true,loss:true};

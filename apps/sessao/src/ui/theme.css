@@ -115,4 +115,3 @@
 .calote-budget-center { position:absolute; inset-block:0; left:50%; width:1px; background:var(--color-hud-ink); }
 .calote-budget-zero { font-size:.6rem; opacity:.8; text-align:center; }
 .calote-countdown { display:flex; align-items:center; justify-content:center; gap:.3rem; padding:.2rem .4rem; color:var(--color-hud-danger); font-size:.75rem; }
-@media (prefers-reduced-motion:no-preference) { .calote-budget-fill { transition:left 180ms ease-out,width 180ms ease-out; } }
