@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { attackArt, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheets, safeDepositArt, safeDepositSheets, npcRobberyArt, npcRobberySheets } from './character-art';
 import { NAMES } from './map';
 
-for (const [name,skin] of [
+const cast = [
   ['Lula','lula'],
   ['Bolsonaro','bolsonaro'],
   ['Clodovil','clodovil'],
@@ -11,7 +11,8 @@ for (const [name,skin] of [
   ['Alexandre Frota','alexandre-frota'],
   ['Sergio Moro','sergio-moro'],
   ['Inês Brasil','ines-brasil'],
-] as const) {
+] as const;
+for (const [name,skin] of cast) {
   const character = NAMES.indexOf(name);
 
   test(`${name} uses separate attack and hit frames`,()=>{
@@ -76,31 +77,30 @@ test('only Lula has the eight-frame safe deposit animation, with a stationary re
   expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([1024,128]);
 });
 
-test('Lula kneels toward the robbery victim regardless of his previous facing direction',async ()=>{
-  const lula = NAMES.indexOf('Lula');
+for (const [name,skin] of cast) test(`${name} kneels toward the robbery victim regardless of previous facing direction`,async ()=>{
+  const character = NAMES.indexOf(name);
   for (const direction of [0,1,2,3]) {
     const actor = {x:100,y:100,direction};
     for (const y of [90,100,110]) {
-      expect(npcRobberyArt(lula,0,false,actor,{x:110,y,direction:1})?.flipX).toBe(false);
-      expect(npcRobberyArt(lula,0,false,actor,{x:90,y,direction:1})?.flipX).toBe(true);
+      expect(npcRobberyArt(character,0,false,actor,{x:110,y,direction:1})?.flipX).toBe(false);
+      expect(npcRobberyArt(character,0,false,actor,{x:90,y,direction:1})?.flipX).toBe(true);
     }
   }
   for (const direction of [0,2]) {
     for (const y of [90,110]) {
       const actor = {x:100,y:100,direction};
-      expect(npcRobberyArt(lula,0,false,actor,{x:100,y,direction:3})?.flipX).toBe(true);
-      expect(npcRobberyArt(lula,0,false,actor,{x:100,y,direction:1})?.flipX).toBe(false);
+      expect(npcRobberyArt(character,0,false,actor,{x:100,y,direction:3})?.flipX).toBe(true);
+      expect(npcRobberyArt(character,0,false,actor,{x:100,y,direction:1})?.flipX).toBe(false);
     }
   }
   const actor = {x:100,y:100,direction:1};
   const target = {x:110,y:100,direction:0};
-  expect(Array.from({length:9},(_,frame)=>npcRobberyArt(lula,frame*180,false,actor,target)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
-  expect(npcRobberyArt(lula,900,true,actor,target)?.frame).toBe(0);
-  for (let character=0;character<NAMES.length;character++) {
-    if (character!==lula) expect(npcRobberyArt(character,0,false,actor,target)).toBeUndefined();
-  }
-  expect(npcRobberySheets).toEqual([{key:'lula-npc-robbery',path:'assets/lula-npc-robbery.webp'}]);
-  const asset = Bun.file(new URL('../public/assets/lula-npc-robbery.webp',import.meta.url));
+  expect(Array.from({length:9},(_,frame)=>npcRobberyArt(character,frame*180,false,actor,target)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
+  expect(npcRobberyArt(character,900,true,actor,target)?.frame).toBe(0);
+  expect(npcRobberySheets).toHaveLength(NAMES.length);
+  expect(npcRobberySheets).toContainEqual({key:`${skin}-npc-robbery`,path:`assets/${skin}-npc-robbery.webp`});
+  expect(npcRobberyArt(-1,0,false,actor,target)).toBeUndefined();
+  const asset = Bun.file(new URL(`../public/assets/${skin}-npc-robbery.webp`,import.meta.url));
   expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
   const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
   expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([1024,128]);
