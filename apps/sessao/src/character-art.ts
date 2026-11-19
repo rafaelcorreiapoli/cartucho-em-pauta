@@ -32,6 +32,13 @@ export function phoneArt(character:number,time:number,reducedMotion:boolean) {
   return {key:`${skin}-phone`,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
 }
 
+export const safeDepositSheets = [{key:'lula-safe-deposit',path:'assets/lula-safe-deposit.webp'}];
+
+export function safeDepositArt(character:number,time:number,reducedMotion:boolean) {
+  if (NAMES[character]!=='Lula') return;
+  return {key:'lula-safe-deposit',frame:reducedMotion ? 3 : Math.floor(time/200)%8};
+}
+
 export const safeBreachSheets = Object.values(characterSlugs).map(character=>{
   const key = safeBreachKey(character);
   return {key,path:`assets/${key}.webp`};
