@@ -49,11 +49,11 @@ export class InternalMail {
 
   publish(player:Player, raw:unknown, world:GameplayWorld,resolve?:(ref:unknown)=>{attachment:MailAttachment;authentic?:boolean}|undefined) {
     if (this.nextPublicationAt(player.id)>world.now) return 'Aguarde para publicar outro comunicado.';
-    if (!raw || typeof raw!=='object' || !('subject' in raw) || !('body' in raw) ||
-      typeof raw.subject!=='string' || typeof raw.body!=='string') return 'Preencha o assunto e a mensagem.';
+    if (!raw || typeof raw!=='object' || !('subject' in raw) || typeof raw.subject!=='string' ||
+      ('body' in raw && typeof raw.body!=='string')) return 'Preencha o assunto.';
     const subject = raw.subject.trim();
-    const body = raw.body.trim();
-    if (!subject || !body || subject.length>internalMailRules.subjectLength || body.length>internalMailRules.bodyLength) {
+    const body = 'body' in raw ? (raw.body as string).trim() : '';
+    if (!subject || subject.length>internalMailRules.subjectLength || body.length>internalMailRules.bodyLength) {
       return 'Confira o tamanho do assunto e da mensagem.';
     }
     const forward = 'forwardedFrom' in raw ? raw.forwardedFrom : undefined;
@@ -69,10 +69,10 @@ export class InternalMail {
     const id = ++this.sequence;
     if (resolved?.authentic!==undefined) this.authenticity.set(id,resolved.authentic);
     this.addNotice({id,author:player.nick,subject,body,forwardedFrom:source?.id,attachment:resolved && structuredClone(resolved.attachment)});
-    if (!source && resolved) {
-      const {attachment} = resolved;
-      const photo = attachment.kind==='photo' && attachment.photo.author.id===player.id ? attachment.photo : undefined;
-      publishGameplay(world,player,'mail-published',{item:id,place:attachment.kind,photo,reportNotice:attachment.kind==='report' ? attachment.report.notice : undefined,witnesses:[]});
+    if (!source) {
+      const attachment = resolved?.attachment;
+      const photo = attachment?.kind==='photo' && attachment.photo.author.id===player.id ? attachment.photo : undefined;
+      publishGameplay(world,player,'mail-published',{item:id,place:attachment?.kind,photo,reportNotice:attachment?.kind==='report' ? attachment.report.notice : undefined,witnesses:[]});
     }
   }
 }

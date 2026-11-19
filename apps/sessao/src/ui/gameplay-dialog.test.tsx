@@ -18,7 +18,8 @@ test('an app offers back while the inventory and phone home can close the native
   expect(bag).toContain('bag-title-icon');
   expect(app).toContain('aria-label="Fechar aplicativo" aria-keyshortcuts="Escape"');
   expect(app).toContain('id="phone-back" type="button"');
-  expect(app).toContain('href="#icon-cross"');
+  expect(app).not.toContain('href="#icon-cross"');
+  expect(app).toContain('phone-back-slot');
   expect(app).not.toContain('method="dialog"');
 });
 

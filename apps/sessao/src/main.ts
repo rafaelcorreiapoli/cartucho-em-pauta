@@ -230,7 +230,7 @@ async function connect(join: () => Promise<Room>) {
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
-        ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id})),
+        ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id,photo})),
       ]),width=>game?.setPhoneInset(width),
       proof=>sendCommand('complaint-submit',proof.kind==='phone-game' ? {target:proof.target,photo:proof.photo} : {id:proof.id,photo:proof.photo}));
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
@@ -374,7 +374,7 @@ async function connect(join: () => Promise<Room>) {
     }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
-      tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial);
+      tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
       ballotCountdown.update(view.ballotCountdown);
       floorPlan.track(view.gameplay?.briefcaseTracking);
       const scan = view.gameplay?.xrayVision;

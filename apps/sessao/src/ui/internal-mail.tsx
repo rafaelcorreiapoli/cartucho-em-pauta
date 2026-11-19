@@ -9,63 +9,63 @@ import { flushSync } from 'react-dom';
 import { internalMailRules, type InternalNotice, type AttachmentRef, type ForensicReport, type MailAttachment } from '../internal-mail';
 import { money } from '../politics';
 
-export type AttachmentChoice = AttachmentRef & {label:string};
+export type {AttachmentChoice} from './mail-attachment-picker';
+import {MailAttachmentPicker,type AttachmentChoice,type AttachmentCategory} from './mail-attachment-picker';
+import {PhoneBack} from './phone-back';
+import {HudIcon} from './hud-icon';
 
 type Draft = {subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};
 
-function MailComposer({choices,source,pending,error,fee,publish,back,close}:{choices:readonly AttachmentChoice[];
+export function MailComposer({choices,source,pending,error,fee,publish,back,close,draw}:{choices:readonly AttachmentChoice[];
   source?:InternalNotice;pending:boolean;error:string|null;fee:number;publish:(draft:Draft)=>void;back:()=>void;close:()=>void;
+  draw:(canvas:HTMLCanvasElement,photo:Photo)=>void;
 }) {
   const [open,setOpen] = useState(false);
-  const [query,setQuery] = useState('');
+  const [category,setCategory] = useState<AttachmentCategory>();
   const [selection,setSelection] = useState<AttachmentRef>();
   const subject = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLTextAreaElement>(null);
-  const search = useRef<HTMLInputElement>(null);
   const selected = choices.find(choice=>choice.kind===selection?.kind && choice.id===selection?.id);
-  const visible = open ? choices.filter(choice=>choice.label.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR'))) : [];
-  const toggle = ()=>setOpen(!open);
-  const pick = (choice?:AttachmentChoice)=>{
-    setSelection(choice && {kind:choice.kind,id:choice.id});
-    setOpen(false);
-  };
+  const cancel = ()=>{setOpen(false);setCategory(undefined);};
+  const toggle = ()=>{setCategory(undefined);setOpen(!open);};
+  const pick = (choice:AttachmentChoice)=>{setSelection({kind:choice.kind,id:choice.id});cancel();};
   const submit = ()=>form.current?.requestSubmit();
+  const goBack = open ? category ? ()=>setCategory(undefined) : cancel : back;
+  const backLabel = open ? category ? 'Voltar às categorias' : 'Voltar ao comunicado' : 'Voltar ao Correio';
   const entries:ShortcutEntry[] = [{name:'Fechar aplicativo',activate:close}];
-  if (!pending) entries.push({name:'Voltar ao Correio',activate:back},{name:'Publicar · '+money(fee),activate:submit});
-  entries.push({name:'Assunto',activate:()=>subject.current?.focus()},{name:'Mensagem',activate:()=>body.current?.focus()});
-  if (!source) {
-    entries.push({name:selected?.label ?? 'Selecionar anexo',activate:toggle});
-    if (open) {
-      entries.push({name:'Buscar anexo',activate:()=>search.current?.focus()},{name:'Sem anexo',activate:()=>pick()});
-      entries.push(...visible.map(choice=>({name:choice.label,activate:()=>pick(choice)})));
-    }
+  if (!pending) entries.push({name:backLabel,activate:goBack});
+  if (open) {
+    entries.push({name:'Cancelar anexo',activate:cancel});
+    if (!category) entries.push({name:'Documentos',activate:()=>setCategory('document')},{name:'Fotografias',activate:()=>setCategory('photo')});
+  } else {
+    if (!pending) entries.push({name:'Publicar · '+money(fee),activate:submit});
+    entries.push({name:'Assunto',activate:()=>subject.current?.focus()},{name:'Mensagem',activate:()=>body.current?.focus()});
+    if (!source) entries.push({name:selected?.label ?? 'Selecionar anexo',activate:toggle});
   }
-  const form = useDialogKeys<HTMLFormElement>(key=>key==='1' && !pending ? submit : undefined,entries);
-  return <form ref={form} className="grid gap-3" onSubmit={event=>{
-    event.preventDefault();
-    if (pending) return;
-    const data = new FormData(event.currentTarget);
-    publish({subject:String(data.get('subject')),body:String(data.get('body')),
-      attachment:selected && {kind:selected.kind,id:selected.id},forwardedFrom:source?.id});
-  }}>
-    <label>Assunto<input ref={subject} name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
-    <label>Mensagem<textarea ref={body} name="body" required rows={4} maxLength={internalMailRules.bodyLength}/></label>
-    {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <div className="mail-attachments">
-      <button type="button" className="hud-button" aria-expanded={open} onClick={toggle}>{selected?.label ?? 'Selecionar anexo'}</button>
-      {open && <section className="mail-entry" aria-label="Inventário de anexos">
-        <input ref={search} aria-label="Buscar anexo" placeholder="Buscar pelo nome" value={query} onChange={event=>setQuery(event.target.value)}/>
-        <div className="mail-attachment-grid">
-          {visible.map(choice=><button type="button" className="hud-button hud-button--secondary" key={choice.kind+'-'+choice.id} onClick={()=>pick(choice)}>
-            <svg className="hud-glyph" aria-hidden="true"><use href={choice.kind==='photo' ? '#icon-app-photos' : '#icon-document'}/></svg>{choice.label}
-          </button>)}
-        </div>
-        <button type="button" className="hud-button hud-button--secondary" onClick={()=>pick()}>Sem anexo</button>
-      </section>}
-    </div>}
-    <p role="status">{error}</p>
-    <button className="hud-button" disabled={pending} aria-keyshortcuts="1">Publicar · {money(fee)} <kbd className="action-key" aria-hidden="true">1</kbd></button>
-    <button type="button" className="hud-button hud-button--secondary" disabled={pending} onClick={back}>Voltar ao Correio</button>
-  </form>;
+  const form = useDialogKeys<HTMLFormElement>(key=>key==='1' && !pending && !open ? submit : undefined,entries);
+  return <>
+    <PhoneBack label={backLabel} onBack={goBack} disabled={pending}/>
+    <form ref={form} className="mail-composer" inert={open} onSubmit={event=>{
+      event.preventDefault();
+      if (pending) return;
+      const data = new FormData(event.currentTarget);
+      publish({subject:String(data.get('subject')),body:String(data.get('body')),
+        attachment:selected && {kind:selected.kind,id:selected.id},forwardedFrom:source?.id});
+    }}>
+      <h3>Publicar comunicado</h3>
+      <label>Assunto<input ref={subject} name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
+      <label><span>Mensagem <small>(opcional)</small></span><textarea ref={body} name="body" aria-label="Mensagem" rows={4} maxLength={internalMailRules.bodyLength}/></label>
+      {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <div className="mail-selected-attachment">
+        <button type="button" className="hud-button hud-button--secondary" aria-haspopup="dialog" onClick={toggle}>
+          <HudIcon name={selected?.kind==='photo' ? 'app-photos' : 'document'}/>{selected?.label ?? 'Selecionar anexo'}
+        </button>
+        {selected && <button type="button" className="mail-cancel" onClick={()=>setSelection(undefined)}>Remover anexo</button>}
+      </div>}
+      {error && <p role="status">{error}</p>}
+      <footer><button className="hud-button" disabled={pending} aria-keyshortcuts="1">Publicar · {money(fee)} <kbd className="action-key" aria-hidden="true">1</kbd></button></footer>
+    </form>
+    {open && <MailAttachmentPicker choices={choices} category={category} setCategory={setCategory} pick={pick} cancel={cancel} draw={draw}/>}
+  </>;
 }
 
 function MailPhoto({photo,draw}:{photo:Photo;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void}) {
@@ -143,7 +143,7 @@ function MailInbox({notices,reports,complaints,exploring,compose,examine,draw,su
       {name:'Consumir kit · '+notice.subject,activate:consume},{name:'Cancelar perícia',activate:cancel},
     );
     return <article className="mail-entry" key={notice.id}>
-      <h3>{notice.subject}</h3><small>{notice.author}</small><p>{notice.body}</p>
+      <h3>{notice.subject}</h3><small>{notice.author}</small>{notice.body && <p>{notice.body}</p>}
       <ForwardedNotice notice={notice}/>
       <button type="button" className="hud-button hud-button--secondary" disabled={!exploring} onClick={forward}>Encaminhar</button>
       {notice.attachment && <Attachment draw={draw} attachment={notice.attachment}/>}
@@ -191,9 +191,8 @@ export function mountInternalMail(publish:(message:Draft)=>void,
 
   function render() {
     const attachments = [...choices,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
-    root.render(<>
-      {composing && <h3>Publicar comunicado</h3>}
-      {composing ? <MailComposer choices={attachments} source={source} pending={pending} error={error} fee={fee} close={close}
+    root.render(<div className="mail-screen">
+      {composing ? <MailComposer choices={attachments} source={source} pending={pending} error={error} fee={fee} close={close} draw={draw}
         publish={draft=>{
           if (pending) return;
           pending = true;
@@ -208,7 +207,7 @@ export function mountInternalMail(publish:(message:Draft)=>void,
         }}/> : <MailInbox key={inboxRevision} notices={notices} reports={reports} complaints={complaints} exploring={exploring}
         close={close} draw={draw} examine={examine} submit={exploring && complaints.atDesk ? submit : undefined}
         compose={notice=>{source=notice;composing=true;error=null;render();}}/>}
-    </>);
+    </div>);
   }
 
   return {

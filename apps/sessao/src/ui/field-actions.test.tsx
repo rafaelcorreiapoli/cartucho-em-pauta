@@ -79,3 +79,34 @@ test('offering an inventory item targets nearby humans and bots in the field',()
   bot.x += 100;
   expect(offers()).toEqual([]);
 });
+
+
+test('signature actions target a nearby bot directly or expand document choices',()=>{
+  const host:Player = {id:'host',nick:'Rafa',character:0,direction:0,moving:false,...terminals.secretary.point};
+  const bot:Player = {...host,id:'bot',nick:'Bot',bot:true};
+  const players = [host,bot];
+  const match = new PlenaryMatch(1);
+  const game = new Gameplay();
+  match.start(host.id,players,0,()=>.9);
+  const world = match.gameplayWorld(players,1,()=>true);
+  game.act(host,{kind:'supply',place:'secretary'},world);
+  const first = game.view(host,world).inventory.find(item=>item.document)!;
+  const actions = (expanded?:string)=>fieldActions({...match.view(host.id,['host','bot'],1),gameplay:game.view(host,world)},host,players,expanded)
+    .filter(entry=>entry.action.kind==='sign-request');
+  bot.x = host.x+40;
+  expect(actions()).toHaveLength(1);
+  expect(actions()[0].action).toEqual({kind:'sign-request',target:bot.id,item:first.id});
+  game.act(host,{kind:'drop',item:first.id},world);
+  game.act(host,{kind:'supply',place:'secretary'},world);
+  game.act(host,{kind:'collect',item:first.id},world);
+  expect(actions()).toHaveLength(1);
+  expect(actions()[0].action).toEqual({kind:'sign-request',target:bot.id});
+  const choices = actions(bot.id).filter(entry=>entry.documentChoice);
+  expect(choices).toHaveLength(2);
+  expect(new Set(choices.map(entry=>'item' in entry.action && entry.action.item)).size).toBe(2);
+  first.document!.signatures.push({id:bot.id,name:bot.nick});
+  expect(actions()).toHaveLength(1);
+  expect(actions()[0].action).toHaveProperty('item');
+  bot.x = host.x+49;
+  expect(actions()).toEqual([]);
+});

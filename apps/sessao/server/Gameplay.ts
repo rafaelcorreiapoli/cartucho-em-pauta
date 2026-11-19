@@ -1,3 +1,4 @@
+import {canReachPerson} from '../src/interactions';
 import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
 import { StationCooldowns } from './StationCooldowns';
@@ -669,7 +670,7 @@ export class Gameplay {
   }
 
   private canRequestItemAction(player:Player,target:Player,world:GameplayWorld) {
-    return target.id!==player.id && !target.npc && world.present?.(target.id)!==false && canReachObject(player,target);
+    return target.id!==player.id && !target.npc && world.present?.(target.id)!==false && canReachPerson(player,target);
   }
 
   private nearbyParliamentarian(player:Player,world:GameplayWorld,previous?:string,eligible?:(other:Player)=>boolean) {
@@ -1706,6 +1707,7 @@ export class Gameplay {
         return 'Objeto exposto.';
       case 'offer':
       case 'sign-request': {
+        if (!action.target) return this.reject(player,world,'Escolha o destinatário.');
         const target = world.players.find(person=>person.id===action.target && this.canRequestItemAction(player,person,world));
         if (!target) return this.reject(player,world,'Aproxime-se do destinatário.');
         if (action.kind==='sign-request' && (!data.document || data.document.signatures.some(person => person.id===target.id))) {
@@ -1839,7 +1841,7 @@ export class Gameplay {
     }
     const owner = world.players.find(person => person.id===request.from);
     const item = this.items.get(request.item);
-    if (!owner || !item || !('holder' in item.place) || item.place.holder!==owner.id || !canReachObject(player,owner)) {
+    if (!owner || !item || !('holder' in item.place) || item.place.holder!==owner.id || !this.canRequestItemAction(player,owner,world)) {
       return this.reject(player,world,'O portador ou objeto está fora de alcance.');
     }
     if (request.kind==='offer') {

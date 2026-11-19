@@ -40,6 +40,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   }
   const contextRoot = createRoot(element('context-actions-mount'));
   let nearbyOpen = false;
+  let signatureTarget:string|undefined;
   let overflowExpanded = false;
   let contextKey = '';
   let lastItems:readonly NearbyItem[] = [];
@@ -52,6 +53,16 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       case 'publish': institutional.openDossier(); return;
       default: sendActivity(kind);
     }
+  }
+  function selectField(action:FieldAction) {
+    if (action.kind==='sign-request' && action.item===undefined) {
+      signatureTarget = signatureTarget===action.target ? undefined : action.target;
+      actions();
+      return;
+    }
+    signatureTarget = undefined;
+    sendField(action);
+    actions();
   }
   function toggleOverflow() {
     overflowExpanded = !overflowExpanded;
@@ -87,9 +98,10 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       return;
     }
     if (event.key==='Escape') {
-      if (!stations.hidden && (nearbyOpen || overflowExpanded)) {
+      if (!stations.hidden && (nearbyOpen || overflowExpanded || signatureTarget!==undefined)) {
         event.preventDefault();
         nearbyOpen = overflowExpanded = false;
+        signatureTarget = undefined;
         actions();
       }
       return;
@@ -130,7 +142,8 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const exploring = !!view?.gameplay && !player?.knockedOut;
     const interactionView = exploring ? view : undefined;
     const installing = !!interactionView?.gameplay?.installationProgress;
-    const field = fieldActions(installing ? undefined : interactionView,player,roster);
+    if (!interactionView?.gameplay?.contacts.some(contact=>contact.id===signatureTarget)) signatureTarget = undefined;
+    const field = fieldActions(installing ? undefined : interactionView,player,roster,signatureTarget);
     const meter = contextProgress(interactionView);
     const canInteract = exploring && !installing && !player?.carrying && view?.gameplay?.officeChannel?.kind!=='office-cash' && view?.gameplay?.robberyProgress===undefined;
     let context:Station | undefined;
@@ -164,7 +177,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       legislative.map(action=>({...legislativeButtons[action],action,activate:()=>sendLegislative(action)})),
       electoral.actions.map(kind=>({...electionButtons[kind],id:kind,activate:()=>selectElection(kind)})),
       shortcuts.map(({kind,...button})=>({...button,activate:()=>selectShortcut(kind)})),
-      field.map(({action,...button})=>({...button,activate:()=>sendField(action)})),
+      field.map(({action,...button})=>({...button,activate:()=>selectField(action)})),
     ] as const;
     const targetActions = new Map<string,number[]>();
     for (const [index,button] of groups[3].entries()) {
@@ -204,10 +217,12 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
     const keysFor = (index:number)=>normal[index].map(control=>presentation.get(control)!);
 
     const fieldButton = (index:number,shortLabel?:string)=>{
-      const {target,...button} = groups[3][index];
+      const action = field[index].action;
+      const {target,documentChoice,...button} = groups[3][index];
       return <ContextActionButton key={groupIds[3][index]} {...button}
         label={shortLabel ?? button.label} accessibleLabel={shortLabel ? button.label : undefined}
-        presentation={presentation.get(normal[3][index])}/>;
+        presentation={presentation.get(normal[3][index])}
+        expanded={action.kind==='sign-request' && action.item===undefined ? signatureTarget===action.target : undefined}/>;
     };
 
     flushSync(()=>contextRoot.render(<>
@@ -227,7 +242,11 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         return <div key={target.id} className="context-target" role="group" aria-label={target.name} data-context-overflow={overflow}>
           <span className="context-target-name">{target.name}</span>
           <div className="context-target-buttons">
-            {members.map(member=>fieldButton(member,groups[3][member].target?.verb))}
+            {members.filter(member=>!groups[3][member].documentChoice).map(member=>fieldButton(member,groups[3][member].target?.verb))}
+            {members.some(member=>groups[3][member].documentChoice) && <div className="context-signature-documents" role="group" aria-label="Documentos para assinar">
+              <small>Escolha o documento</small>
+              {members.filter(member=>groups[3][member].documentChoice).map(member=>fieldButton(member,groups[3][member].target?.verb))}
+            </div>}
           </div>
         </div>;
       })}</div>

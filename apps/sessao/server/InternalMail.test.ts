@@ -45,3 +45,18 @@ test('forwarding only resolves existing public notices and preserves the origina
   expect(mail.reportsFor('b')).toEqual([{notice:2,document,authentic:true}]);
   expect(mail.reportsFor('a')).toEqual([]);
 });
+
+
+test('a subject-only notice is published once and emits the tutorial event',()=>{
+  const mail = new InternalMail();
+  const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...stations.audit};
+  const events:unknown[] = [];
+  let charges = 0;
+  const world:GameplayWorld = {players:[player],now:100,voice:()=>false,earn:()=>{},office:()=>undefined,
+    spend:()=>{charges++;return true;},publish:event=>events.push(event)};
+  expect(mail.publish(player,{subject:'Aviso sem mensagem'},world)).toBeUndefined();
+  expect(mail.view()[0]).toMatchObject({subject:'Aviso sem mensagem',body:''});
+  expect(events).toContainEqual(expect.objectContaining({type:'mail-published',actor:player.id}));
+  expect(mail.publish(player,{subject:'Aviso repetido',body:''},world)).toContain('Aguarde');
+  expect(charges).toBe(1);
+});

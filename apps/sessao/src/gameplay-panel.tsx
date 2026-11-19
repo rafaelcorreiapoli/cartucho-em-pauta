@@ -291,7 +291,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     const directory = view.politics?.directory ?? [];
     const contacts = state.contacts;
     const canOffer = !!offerTarget && !!view.gameplay && contacts.some(person=>person.id===offerTarget?.id);
-    if (!phone && !contacts.some(person=>person.id===recipient)) recipient = '';
+    if (!phone && !contacts.some(person=>person.id===recipient)) recipient = contacts.length===1 ? contacts[0].id : '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
     if (showNavigation!==navigationMounted) {
@@ -399,7 +399,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       const act = (label:string,kind:GameplayAction['kind'],place?:string) => {
         const transferQuantity = (kind==='offer' || kind==='drop') && itemQuantity(item)>1
           ? {quantity:selectedItemQuantity(item,quantity)} : {};
-        actions.push({label,run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
+        actions.push({label,disabled:(kind==='offer' || kind==='sign-request') && !contacts.some(person=>person.id===recipient),run:()=>send({kind,item:item.id,target:recipient,place,...transferQuantity})});
       };
       if (offerTarget) {
         const target = offerTarget.id;

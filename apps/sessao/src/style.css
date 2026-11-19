@@ -355,3 +355,5 @@ body:has(.tutorial-spotlight) .hud-help-popover { z-index:1002; }
   to { opacity:0; transform:scale(1.06); }
 }
 @media(prefers-reduced-motion:reduce) { .tutorial-focus-pulse { animation:none; opacity:0; } }
+
+.tutorial-panel p strong { color:#f3f1dc; font-weight:750; }

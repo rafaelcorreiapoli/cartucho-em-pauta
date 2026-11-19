@@ -13,7 +13,12 @@ function TutorialIcon({icon}:{icon:IconNode}) {
   </svg>;
 }
 
-export function TutorialPanel({view,send}:{view:TutorialView;send:(action:string)=>void}) {
+export function TutorialText({children}:{children:string}) {
+  return <>{children.split(/(\*\*[^*]+\*\*)/g).map((part,index)=>
+    part.startsWith('**') ? <strong key={index}>{part.slice(2,-2)}</strong> : part)}</>;
+}
+
+export function TutorialPanel({view,send,binocularActive=false}:{view:TutorialView;send:(action:string)=>void;binocularActive?:boolean}) {
   const step = tutorialSteps[view.step];
   const panel = useRef<HTMLElement>(null);
   const drag = useRef<{x:number;y:number}|undefined>(undefined);
@@ -43,7 +48,7 @@ export function TutorialPanel({view,send}:{view:TutorialView;send:(action:string
     event.currentTarget.setPointerCapture(event.pointerId);
   }
   return <>
-    {!collapsed && !view.complete && step.highlight && <TutorialSpotlight key={step.highlight} highlight={step.highlight}/>}
+    {!collapsed && !binocularActive && !view.complete && step.highlight && <TutorialSpotlight key={step.highlight} highlight={step.highlight}/>}
     <aside ref={panel} style={position ? {left:position.x,top:position.y,right:'auto',bottom:'auto'} : undefined} className="tutorial-panel hud-panel" aria-label="Tutorial" data-highlight={view.complete ? undefined : step.highlight}>
     <header className="tutorial-toolbar">
       <button type="button" className="tutorial-drag" aria-label="Mover tutorial" title="Arraste para mover; use as setas para reposicionar"
@@ -72,11 +77,11 @@ export function TutorialPanel({view,send}:{view:TutorialView;send:(action:string
         <div className="tutorial-copy">
           <small className="tutorial-chapter">{step.chapter}</small>
           <h2>{step.title}</h2>
-          <p role="status">{step.text.replaceAll('Bot 1',view.guide ?? 'o guia')}</p>
+          <p role="status"><TutorialText>{step.text.replaceAll('Bot 1',view.guide ?? 'o guia')}</TutorialText></p>
         </div>
         <details className="tutorial-hint" key={view.step}>
           <summary>Ver dica</summary>
-          <p>{step.hint}{view.target && ' Siga o marcador no mapa; Tab abre a planta.'}</p>
+          <p><TutorialText>{step.hint.replaceAll('Bot 1',view.guide ?? 'o guia')}</TutorialText>{view.target && <> Siga o <strong>marcador</strong> no mapa.</>}</p>
         </details>
         <nav className="tutorial-navigation" aria-label="Etapas do tutorial">
           <button type="button" className="tutorial-icon-button" aria-label="Etapa anterior" title="Etapa anterior"
@@ -95,7 +100,7 @@ export function mountTutorial(send:(action:string)=>void) {
   document.body.append(host);
   const root = createRoot(host);
   return {
-    render(view?:TutorialView) { root.render(view ? <TutorialPanel view={view} send={send}/> : null); },
+    render(view?:TutorialView,binocularActive=false) { root.render(view ? <TutorialPanel view={view} send={send} binocularActive={binocularActive}/> : null); },
     destroy() {root.unmount();host.remove();},
   };
 }

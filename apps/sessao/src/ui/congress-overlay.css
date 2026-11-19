@@ -1203,3 +1203,10 @@
 @media (max-width: 640px) {
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #payroll-mount { display: none; }
 }
+
+.context-signature-documents { display:flex; flex-wrap:wrap; gap:8px; width:100%; padding:10px 4px 4px; border-top:1px solid #779c7c50; }
+.context-signature-documents > small { width:100%; color:var(--color-hud-muted); }
+
+#stations .context-target:has(.context-signature-documents) { max-width:min(540px,calc(100vw - 24px)); }
+.context-signature-documents .hud-button { flex:1 1 150px; max-width:100%; white-space:normal; text-align:left; }
+.context-signature-documents .hud-button > span { overflow-wrap:anywhere; }

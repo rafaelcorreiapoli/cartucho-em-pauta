@@ -1,3 +1,4 @@
+import {canReachPerson} from '../src/interactions';
 import {characterStats} from '../src/character-stats';
 import {canReachObject,canUseGameplayAction,terminals,type GameplayAction,type GameplayView,type PhoneActivity} from '../src/gameplay';
 import {canStand,NAMES,type Motion,type Player} from '../src/map';
@@ -181,7 +182,7 @@ export class PlayerBots {
       bot.seenAtPanel = {name:witness.nick,at:now};
     }
     const request = game.requests.find(entry=>
-      visible.some(peer=>peer.id===entry.from.id && canReachObject(player,peer)));
+      visible.some(peer=>peer.id===entry.from.id && canReachPerson(player,peer)));
     if (request) {
       this.stop(bot);
       act({kind:'accept',item:request.id});
