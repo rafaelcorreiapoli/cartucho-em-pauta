@@ -4,12 +4,13 @@ import type {Agenda,Mission} from '../src/politics';
 
 const removed = new Set<Agenda>([
   'lagosta','comprarLagosta','turismo','fotoOstentacao','mensagemComAnexo','jornalismo',
+  'apresentarFoto','flagraGabinete','amizadeInstitucional','fortuna','poupancaInstitucional',
   'bombom','cafeEstrategico','fiscalCafe','bandejaGourmet',
   'visitaAlvo','visitaCortesia','visitaArquivo','visitaGabinete','passeio',
   'presencaPlenario','reuniaoGabinete','reuniaoPublica','visitaDoisGabinetes',
   'primeirosSocorros','debateTelefonico','chamadasUrgentes',
 ]);
-const preserved:Agenda[] = ['cafe','nocauteDuplo','porretadaGabinete','nocauteGabinete','nocautePlenario','equipamento','discursoMegafone'];
+const preserved:Agenda[] = ['cafe','nocauteDuplo','porretadaGabinete','nocauteGabinete','nocautePlenario','equipamento','discursoMegafone','incendiarGabinete','reservaCofre','roubarCofre','cuecaCofre'];
 const metrics = {wallet:100,popularity:40};
 const contacts = ['b','c','d','e','f'].map(id=>({id,name:id}));
 
@@ -37,6 +38,6 @@ test.each([true,false])('retired missions never enter the initial agenda, pool o
     expect(agenda.swapMissions(metrics)).toBe('swapped');
     expectNoRetired(agenda.view(metrics).active);
     for (const kind of availableKinds(agenda)) expect(removed.has(kind)).toBe(false);
-    if (!enabled) expect(availableKinds(agenda).size).toBe(51);
+    if (!enabled) expect(availableKinds(agenda).size).toBe(48);
   }
 });

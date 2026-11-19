@@ -298,7 +298,9 @@ export class Gameplay {
     return this.surveillance.cameraAvailability(id,cameras,credited);
   }
 
-  canInstallSpy(id:string,kind:SpyDevice,ownOffice=false) {
+  canInstallSpy(id:string,kind:SpyDevice,ownOffice:boolean|'foreign'=false) {
+    if (ownOffice==='foreign') return [...this.privateOffices.offices.values()].some(office=>
+      !!office.owner && office.owner!==id && this.surveillance.canInstall(id,kind,`office-${office.layout.id}`));
     if (!ownOffice) return this.surveillance.canInstall(id,kind);
     const office = this.privateOffices.ownedBy(id);
     return !!office && this.surveillance.canInstall(id,kind,`office-${office.id}`);
@@ -900,7 +902,8 @@ export class Gameplay {
       },
       event:(player:Player,kind:Parameters<typeof publishGameplay>[2],site:string,device?:{kind:SpyDevice;id:number})=>{
         const office = this.privateOffices.ownedBy(player.id);
-        publishGameplay(world,player,kind,{place:site,kind:device?.kind,item:device?.id,witnesses:[],
+        const siteOwner = [...this.privateOffices.offices.values()].find(office=>site===`office-${office.layout.id}`)?.owner;
+        publishGameplay(world,player,kind,{target:kind==='spy-installed' ? siteOwner : undefined,place:site,kind:device?.kind,item:device?.id,witnesses:[],
           ownOffice:kind==='spy-installed' && !!office && site===`office-${office.id}`});
       },
     };

@@ -9,7 +9,7 @@ import {installationSites} from '../src/installations';
 import type {Player} from '../src/map';
 import type {WorldItem} from '../src/gameplay';
 
-const furnitureMissions = ['poltrona','ostentacao','gabinete','televisao','fotoOstentacao','doisMoveis'];
+const furnitureMissions = ['poltrona','ostentacao','gabinete','televisao','doisMoveis'];
 const portraitMissions = ['retratoGabinete','retrato','autorretrato','cerimonialOficial','reforma','reserva','fiscalVip','mandaVip','solenidadeInauguracao','privilegioAdquirido','reuniaoVip','rabiscarRetrato'];
 const metrics = {wallet:8,popularity:40};
 

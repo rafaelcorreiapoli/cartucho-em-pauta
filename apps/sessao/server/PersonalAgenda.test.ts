@@ -1005,6 +1005,7 @@ test.each([
   ['retratacaoOficial',event('mail-published',{place:'report',reportNotice:1}),event('mail-published',{place:'document'})],
   ['instalarGrampo',event('spy-installed',{kind:'wiretap'}),event('spy-installed',{kind:'spyCamera'})],
   ['instalarCamera',event('spy-installed',{kind:'spyCamera'}),event('spy-installed',{kind:'wiretap'})],
+  ['cameraGabinete',event('spy-installed',{kind:'spyCamera',target:'other'}),event('spy-installed',{kind:'spyCamera',ownOffice:true})],
   ['reuniaoGabinete',event('office-meeting-time',{duration:15_000}),event('public-meeting-time',{duration:15_000})],
   ['reuniaoPublica',event('public-meeting-time',{duration:10_000}),event('office-meeting-time',{duration:10_000})],
   ['heroiInesperado',event('fire-extinguished',{amount:29}),event('fire-extinguished',{amount:30,at:2})],
@@ -1756,7 +1757,8 @@ test('the new agenda only draws challenges with their required targets and equip
   expect(draw('roubarArmario',{...metrics,wallet:1,officeBreachLevel:()=>5})).toBe(false);
   expect(draw('nocauteGabinete')).toBe(false);
   expect(draw('nocauteGabinete',{...metrics,owns:()=>false,hasOffice:()=>true})).toBe(true);
-  expect(draw('cameraGabinete',{...metrics,owns:()=>true,hasOffice:()=>true,canInstallSpy:(_,ownOffice)=>!ownOffice})).toBe(false);
+  expect(draw('cameraGabinete',{...metrics,owns:()=>true,hasOffice:()=>true,canInstallSpy:(_,scope)=>scope===true})).toBe(false);
+  expect(draw('cameraGabinete',{...metrics,owns:()=>true,hasOffice:()=>false,canInstallSpy:(_,scope)=>scope==='foreign'})).toBe(true);
 });
 
 test('disabled phone games never enter the initial or replacement mission deck',()=>{

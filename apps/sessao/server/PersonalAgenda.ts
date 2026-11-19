@@ -14,7 +14,7 @@ export type MissionSwapResult = 'swapped'|'used'|'unavailable';
 
 export type AgendaAction = 'propaganda'|'discurso'|'votoNpc'|'leitura'|'responderCrise';
 
-export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera',ownOffice?:boolean)=>boolean;
+export type AgendaMetrics = Readonly<{agendaSelfies?:()=>readonly {id:number;public:boolean}[];wallet:number; popularity:number; commerce?:()=>{policies:BillPolicies;publicBudget:number}; canFightCrisis?:()=>boolean; canRepairOutage?:()=>boolean; canPublishMail?:()=>boolean; agendaReportNotices?:()=>readonly number[]; hasKnownForeignSpy?:()=>boolean; hasLuxuryDecoration?:()=>boolean; agendaCameras?:(credited:ReadonlySet<string>)=>{installed:number;uncredited:number;slots:number;portable:number}; ownsWiretap?:()=>boolean; canInstallSpy?:(kind:'wiretap'|'spyCamera',ownOffice?:boolean|'foreign')=>boolean;
   officeBreachLevel?:(target:'door'|'safe'|'cabinet')=>number; owns?: (kind:ObjectKind)=>boolean;
   canUseXray?:()=>boolean; hasFutureAdvertising?:()=>boolean; canAgendaAction?:(kind:AgendaAction)=>boolean; canPay?:()=>boolean; canAffordNpcSignatures?:(needed:number)=>boolean; canReceivePayments?:(requiredPayers:number)=>boolean; npcVotePrice?:()=>number|undefined; npcHasCash?:(minimum?:number)=>boolean; canPartiallyDepositCash?:(itemId:number)=>boolean; hasScandal?:()=>boolean; canExposeScandal?:()=>boolean; installedPizza?:()=>{id:number;owned:boolean;canTakeSlice:boolean;slices:number;served:ReadonlySet<string>}|undefined; isScandalPizza?:(id:number)=>boolean; officeStock?:()=>readonly OfficeFurniture[]; hasOffice?:(id?:string)=>boolean; hasCashLot?:(amount:number)=>boolean; hasAgendaDecoration?:(kind:AgendaDecoration,replacement?:boolean)=>boolean}>;
 const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
@@ -37,7 +37,7 @@ const activityMissions = {
     person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.knockedOut),
   incendiarGabinete:(event:GameplayEvent) => event.type==='fire-started' && event.ownOffice===true,
   rabiscarRetrato:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && humanTarget(event),
-  cameraGabinete:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera' && event.ownOffice===true,
+  cameraGabinete:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera' && !!event.target && event.target!==event.actor,
   solenidadeInauguracao:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && (event.duration ?? Infinity)<=NEW_PORTRAIT_MS,
   privilegioAdquirido:(event:GameplayEvent) => event.type==='installed' && event.kind==='vip',
   plantaoEmergencia:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.place==='inside-crisis-room',
@@ -113,6 +113,7 @@ const missionTargets:Partial<Record<Agenda,number>> = {
 };
 const retiredMissions = new Set<Agenda>([
   'lagosta','comprarLagosta','turismo','fotoOstentacao','mensagemComAnexo','jornalismo',
+  'apresentarFoto','flagraGabinete','amizadeInstitucional','fortuna','poupancaInstitucional',
   'bombom','cafeEstrategico','fiscalCafe','bandejaGourmet',
   'visitaAlvo','visitaCortesia','visitaArquivo','visitaGabinete','passeio',
   'presencaPlenario','reuniaoGabinete','reuniaoPublica','visitaDoisGabinetes',
@@ -136,7 +137,7 @@ const decorationRequirements = {
   privilegioAdquirido:'vip',reserva:'vip',mandaVip:'vip',
 } as const satisfies Partial<Record<Agenda,keyof typeof credentialGoods>>;
 
-const ownOfficeMissions = new Set<Agenda>(['carregarGabinete','roubarCofre','incendiarGabinete','cameraGabinete','doisMoveis','bandejaGourmet','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
+const ownOfficeMissions = new Set<Agenda>(['carregarGabinete','roubarCofre','incendiarGabinete','doisMoveis','bandejaGourmet','produtividade','reservaCofre','embolso','transporte','retratoGabinete','televisao','gabinete','ostentacao']);
 const batonMissions = new Set<Agenda>(['nocauteDuplo','carregarGabinete','porretadaGabinete','nocauteGabinete','nocautePlenario','socorroNocaute']);
 const breachTargets:Partial<Record<Agenda,'door'|'safe'|'cabinet'>> = {
   arrombarPorta:'door',selfieArrombamento:'door',roubarCofre:'safe',cuecaCofre:'safe',roubarArmario:'cabinet',
@@ -568,7 +569,7 @@ export class PersonalAgenda {
       (metrics.owns(item) || agendaProductPrice('equipment',item,metrics)<=metrics.wallet);
     if (batonMissions.has(kind) && !canGetEquipment('baton')) return false;
     if (kind==='incendiarGabinete' && (!this.hasOffice?.() || !canGetEquipment('incendiary'))) return false;
-    if (kind==='cameraGabinete' && (!metrics.canInstallSpy?.('spyCamera',true) || !canGetEquipment('spyCamera'))) return false;
+    if (kind==='cameraGabinete' && (!metrics.canInstallSpy?.('spyCamera','foreign') || !canGetEquipment('spyCamera'))) return false;
     if (kind==='rabiscarRetrato' && !metrics.hasAgendaDecoration?.('markableForeignPortrait')) return false;
     const breach = breachTargets[kind];
     if (breach) {
