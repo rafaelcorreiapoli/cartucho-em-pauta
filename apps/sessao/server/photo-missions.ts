@@ -10,7 +10,7 @@ type Rule = {target:number; players:number; facts:(event:GameplayEvent)=>Fact[]}
 const fact = (value:string|number, group?:string):Fact[] => [{value:String(value),group}];
 export function isGroupSelfie(photo:Photo,author:string) {
   return photo.selfie && photo.author.id===author &&
-    photo.people.filter(person=>person.id!==author && !person.id.startsWith('npc-parliamentarian-')).length>=photoMissionCounts.publicouSelfie;
+    photo.people.filter(person=>person.id!==author && !person.id.startsWith('npc-visitor-')).length>=photoMissionCounts.publicouSelfie;
 }
 
 const people = (photo:Photo,actor:string) => photo.people.filter(person=>person.id!==actor);

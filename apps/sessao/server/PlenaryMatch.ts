@@ -11,7 +11,7 @@ import {Fire} from './Fire';
 import {canActOnFire,fireRules,fireSites,type FireAction,type FireInteraction} from '../src/fire';
 import {Power} from './Power';
 import {canOperatePanel,powerPanels,powerRules,type PowerAction,type PowerPanel} from '../src/power';
-import { npcRules } from '../src/parliamentarians';
+import { visitorRoster } from '../src/visitors';
 import type { AttributeRequest } from '../src/progression';
 import { canInteract } from '../src/interactions';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
@@ -82,16 +82,21 @@ export class PlenaryMatch {
   }
 
   private treasuryBonus?:{until:number;amount:number};
-  private npcVotes = new Map<string,Vote>();
   private npcIds = new Set<string>();
 
-  addParliamentarian(player:Player) {
-    if (this.npcIds.has(player.id) || this.electorate.has(player.id)) return;
+  addVisitor(player:Player) {
+    if (!this.running || !player.npc || this.npcIds.has(player.id) || this.electorate.has(player.id)) return;
     this.npcIds.add(player.id);
-    const [min,max] = npcRules.startingWallet;
-    const wallet = min+Math.floor(Math.random()*(max-min+1));
-    this.economy.addParliamentarian({id:player.id,name:player.nick,character:player.character},wallet);
+    const wallet = visitorRoster.find(visitor=>visitor.id===player.visitor)?.wallet ?? 7;
+    this.economy.addVisitor({id:player.id,name:player.nick,character:player.character},wallet);
     this.cash.npcIssued += wallet;
+    this.refreshAgendaEligibility();
+  }
+
+  removeVisitor(id:string) {
+    if (!this.npcIds.delete(id)) return;
+    this.cash.expired += this.economy.removeVisitor(id);
+    this.refreshAgendaEligibility();
   }
 
   private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
@@ -185,15 +190,7 @@ export class PlenaryMatch {
     return this.remainingAgendaBallots(now)>Number(this.phase==='ballot');
   }
 
-  negotiableProject(now:number) {
-    if (this.phase==='negotiation' && this.hasFutureVoteNegotiation(now)) return this.projectIndex;
-  }
-
   get projectRound() { return this.round; }
-
-  recordNpcVote(id:string,vote:Vote) {
-    if (this.phase==='ballot' && this.npcIds.has(id) && !this.npcVotes.has(id)) this.npcVotes.set(id,vote);
-  }
 
   private gameMode:GameMode = 'classic';
   private caloteStartedAt?:number;
@@ -232,7 +229,7 @@ export class PlenaryMatch {
   private lastPayroll?:{at:number;recipients:Set<string>;salary:number};
 
   private payrollRecipients() {
-    return new Set([...this.election.mandateIds(),...this.npcIds]);
+    return new Set(this.election.mandateIds());
   }
 
   private payrollView(id:string,now:number):PayrollView {
@@ -368,7 +365,6 @@ export class PlenaryMatch {
     this.electorate = new Set(ids);
     this.disconnected.clear();
     this.npcIds.clear();
-    this.npcVotes.clear();
     this.initialPlayers = ids.length;
     const forceHost = !this.training && this.localSolo && asInfiltrator;
     const candidates = forceHost ? players.slice(1) : [...players];
@@ -404,7 +400,7 @@ export class PlenaryMatch {
         if (this.phase!=='ballot' && project!==undefined && !this.studiedBills.get(project)?.has(id)) return true;
         return this.remainingAgendaBallots(this.agendaNow)>Number(this.phase==='ballot' || project!==undefined);
       }
-      if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
+      if (kind==='votoNpc') return false;
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.electionsEnabled && this.election.canCampaignAction(id,kind);
     }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,gameMode);
@@ -447,7 +443,6 @@ export class PlenaryMatch {
     this.voteIntents.clear();
     this.agendaYesVotes.clear();
     this.votes.clear();
-    this.npcVotes.clear();
     this.audits.clear();
     this.auditNotes.clear();
     this.objector = undefined;
@@ -586,10 +581,10 @@ export class PlenaryMatch {
       plenary:this.phase!=='negotiation',started:this.started,wallet:id=>this.economy.wallet(id),spend:(id,amount)=>current() && this.economy.spend(id,amount),
       earnXp:(id,amount)=>{ if (current()) this.economy.earnXp(id,amount); },
       settleBet:(id,stake,payout,maxPayout)=>current() && this.economy.settleBet(id,stake,payout,maxPayout),
-      office:id=>this.npcIds.has(id) ? 'deputy' : this.election.office(id),
+      office:id=>this.election.office(id),
       projectFilingError:(id,project)=>current() ? this.projectFilingError(id,project,now) : 'Partida encerrada.',
       projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
-      hasMandate:id=>this.npcIds.has(id) || !!this.election.office(id),
+      hasMandate:id=>!!this.election.office(id),
       cashFlow:(kind,amount)=>{ if (current()) this.cash[kind] += amount; },
       deposit:(id,amount)=>{
         if (!current() || !this.running || !this.electorate.has(id) || amount<=0) return false;
@@ -607,7 +602,7 @@ export class PlenaryMatch {
       lootWallet:(id,fraction)=>current() && this.electorate.has(id) ? this.economy.takeWallet(id,fraction) : 0,
       takeWallet:id=>current() && this.npcIds.has(id) ? this.economy.takeWallet(id) : 0,
       paymentsLeft:id=>current() ? this.economy.paymentsLeft(id,this.round) : 0,
-      payNpc:(from,to,amount)=>current() && this.npcIds.has(to) && this.economy.transfer(from,to,amount,true,this.round),
+      payNpc:()=>false,
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       callCassation:player=>current() ? this.callCassation(player,now) : 'Partida encerrada.',
       missionSwapUsed:id=>current() && this.economy.missionSwapUsed(id),
@@ -1155,11 +1150,6 @@ export class PlenaryMatch {
     let no = votes.filter(vote=>vote==='no').length;
     const abstentions = votes.filter(vote=>vote==='abstain').length;
     const absences = Math.max(0,this.votingPlayers()-votes.length);
-    const preference = [...this.npcVotes.values()].reduce((score,vote)=>score+(vote==='yes' ? 1 : -1),0);
-    if (this.votes.size===this.votingPlayers() && yes===no && yes>0) {
-      if (preference>0) yes++;
-      if (preference<0) no++;
-    }
     const needed = this.billQuorum();
     const passed = yes>=needed;
     const impact = this.impact(passed ? 'yes' : 'no');

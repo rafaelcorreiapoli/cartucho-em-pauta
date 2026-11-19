@@ -7,7 +7,7 @@ import type { PoliticsAction } from './politics';
 import type { Action, BillVote, Vote } from './plenary';
 import type { AttachmentRef } from './internal-mail';
 
-import type { ParliamentarianAction } from './parliamentarians';
+import type { VisitorAction } from './visitors';
 import type { SpyCommand } from './surveillance';
 import type { SecurityAction } from './security';
 
@@ -27,7 +27,7 @@ type RoomActions = {
   gameplay:{action:GameplayAction};
   spy:SpyCommand;
   'security-camera':SecurityAction;
-  'npc-deal':ParliamentarianAction;
+  'npc-deal':VisitorAction;
   'fire-action':FireCommand;
   'power-action':PowerAction;
   'room-activity':{activity:RoomActivity};

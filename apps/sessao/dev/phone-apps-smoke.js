@@ -76,7 +76,8 @@ async page => {
   await page.keyboard.press('ArrowLeft');
   await dialog.getByText('Use as setas para começar',{exact:true}).waitFor();
   await page.keyboard.press('ArrowRight');
-  await dialog.getByText('1 / 5 frutas',{exact:true}).waitFor();
+  // The next random fruit can be on the same row, so score 1 may be transient.
+  await dialog.getByText(/^[1-5] \/ 5 frutas$/).waitFor();
   await dialog.getByText('Fim de jogo',{exact:true}).waitFor();
   const board = await dialog.getByRole('img',{name:'Tabuleiro do Snake'}).boundingBox();
   const replay = await dialog.getByRole('button',{name:'Jogar de novo'}).boundingBox();

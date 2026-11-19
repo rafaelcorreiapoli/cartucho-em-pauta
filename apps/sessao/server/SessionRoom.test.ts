@@ -766,7 +766,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
   }
 },35_000);
 
-test('six human clients can select eight NPCs and fill the available seats when the vote opens',async()=>{
+test('six human clients vote while eight visitors remain outside the parliamentary seats',async()=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('../dev/classic-room-fixture');
@@ -844,7 +844,7 @@ test('six human clients can select eight NPCs and fill the available seats when 
     expect(Reflect.get(room,'phoneGamesEnabled')).toBe(false);
     expect(Reflect.get(room,'gameplay').phoneGamesEnabled).toBe(false);
     const observer = Reflect.get(room,'players').get(host.sessionId).player as Player;
-    const [walkingNpc] = Reflect.get(room,'parliamentarians').players as Player[];
+    const [walkingNpc] = Reflect.get(room,'visitors').players as Player[];
     Object.assign(observer,{x:30,y:197});
     Object.assign(walkingNpc,{x:30,y:229,knockedOut:true});
     await wait(()=>states.get(host.sessionId)?.some(player=>player.id===walkingNpc.id)===true);
@@ -854,12 +854,12 @@ test('six human clients can select eight NPCs and fill the available seats when 
     const match: import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');
     publishProjectFiling(match,observer,0,room.clock.currentTime);
     Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
-    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.length===12));
-    const expected = PLENARY_SEATS.map(({x,y})=>`${x},${y}`).sort();
+    await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='ballot' && states.get(peer.sessionId)?.filter(player=>!player.npc).length===6));
+    const expected = PLENARY_SEATS.slice(0,6).map(({x,y})=>`${x},${y}`).sort();
     for (const peer of rooms) {
       const players = states.get(peer.sessionId)!;
-      expect(players.filter(player=>player.npc)).toHaveLength(6);
-      expect(players.map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
+      expect(Reflect.get(room,'visitors').players).toHaveLength(8);
+      expect(players.filter(player=>!player.npc).map(({x,y})=>`${x},${y}`).sort()).toEqual(expected);
     }
 
     const count = ()=>Number(gameplayMetrics.exposition().match(/^congresso_economy_discrepancies_total (\d+)$/m)?.[1]);
@@ -952,6 +952,15 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     const controls:Map<string,ControlState> = Reflect.get(room,'players');
     const players = [...controls.keys()];
     expect(players.filter(id=>match.view(id,players,room.clock.currentTime).role==='Infiltrado')).toHaveLength(2);
+    const visitors:import('../src/map').Player[] = Reflect.get(room,'visitors').players;
+    expect(visitors).toHaveLength(8);
+    expect(new Set(visitors.map(player=>player.visitor)).size).toBe(8);
+    for (const {player} of controls.values()) {
+      expect(player.visitor).toBeUndefined();
+      expect(player.npc).toBeUndefined();
+      expect(player.character).toBeGreaterThanOrEqual(0);
+      expect(player.character).toBeLessThan(8);
+    }
     const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
     const settings = [
       ['lobby-elections','electionsEnabled',electionsEnabled],['lobby-photos','photosEnabled',photosEnabled],
@@ -993,9 +1002,9 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     }
     publishProjectFiling(match,controls.get(host.sessionId)!.player,0,room.clock.currentTime);
     Reflect.get(match,'proposal').voteAt = room.clock.currentTime;
-    await wait(()=>view?.phase==='ballot' && snapshot.length===12);
+    await wait(()=>view?.phase==='ballot' && snapshot.filter(player=>!player.npc).length===6);
     expect(snapshot.filter(player=>player.bot && !player.npc)).toHaveLength(5);
-    expect(snapshot.filter(player=>player.npc && !player.bot)).toHaveLength(6);
+    expect(Reflect.get(room,'visitors').players).toHaveLength(8);
     expect(view?.billVoters).toHaveLength(6);
   } finally {
     if (host) await host.leave();

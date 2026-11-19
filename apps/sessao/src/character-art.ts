@@ -1,4 +1,5 @@
 import { NAMES, type Motion } from './map';
+import type {VisitorId} from './visitors';
 
 const originalCount = 3;
 
@@ -79,7 +80,8 @@ function combatSheet(character:string, action:(typeof combatActions)[number]) {
   return `${character}-${action}`;
 }
 
-export function characterArt(character:number) {
+export function characterArt(character:number,visitor?:VisitorId) {
+  if (visitor) return {sheet:{key:`${visitor}-walk`,path:`assets/${visitor}-walk.png`},row:0,frame:0};
   const expansion = character>=originalCount;
   const sheet = characterSheets[expansion ? 1 : 0];
   const row = (expansion ? character-originalCount : character)*3;
@@ -95,18 +97,18 @@ export function attackArt(character:number, row:number, progress:number, impactP
   return {key:combatSheet(skin,'attack'),frame:row*4+frame};
 }
 
-export function hitArt(character:number, direction:number, elapsed:number) {
-  const skin = characterSlugs[NAMES[character]];
+export function hitArt(character:number, direction:number, elapsed:number,visitor?:VisitorId) {
+  const skin = visitor ?? characterSlugs[NAMES[character]];
   const frame = Math.floor(elapsed/hitFrameMs);
   if (!skin || frame>=4) return;
   const row = direction===3 ? 1 : direction;
   return {key:combatSheet(skin,'hit'),frame:row*4+frame,flipX:direction===3};
 }
 
-export function downedArt(character:number, direction:number, elapsed = Infinity) {
+export function downedArt(character:number, direction:number, elapsed = Infinity,visitor?:VisitorId) {
   const row = direction===3 ? 1 : direction;
   const flipX = direction===3;
-  const skin = characterSlugs[NAMES[character]];
+  const skin = visitor ?? characterSlugs[NAMES[character]];
   if (skin) {
     const frame = Math.min(3,Math.floor(elapsed/fallFrameMs));
     return {key:combatSheet(skin,'fall'),frame:row*4+frame,flipX,rotation:0,originY:frame===3 ? .85 : 1};

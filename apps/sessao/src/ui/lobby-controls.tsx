@@ -2,7 +2,7 @@ import {gameModes,type GameMode} from '../game-modes';
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MIN_PLAYERS,type PlenaryView} from '../plenary';
-import {npcRules} from '../parliamentarians';
+import {npcRules} from '../visitors';
 
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
@@ -71,10 +71,10 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         </div>
       </div> : null}
       <div id="parliamentarian-setup" className="lobby-count" role="group" aria-labelledby="parliamentarian-label">
-        <span id="parliamentarian-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-ballot"/></svg> Parlamentares NPC</span>
+        <span id="parliamentarian-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg> Visitantes</span>
         <div id="parliamentarian-count">
           {[0,1,2,3,npcRules.maxCount].map(count=><button key={count} type="button" data-count={count} aria-pressed={npcCount===count}
-            aria-label={count===0 ? 'Nenhum parlamentar NPC' : undefined} disabled={!host}
+            aria-label={count===0 ? 'Nenhum visitante' : undefined} disabled={!host}
             onClick={()=>commands.changeNpcCount(count)}>{count}</button>)}
         </div>
       </div>

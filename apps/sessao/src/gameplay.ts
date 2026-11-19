@@ -6,7 +6,6 @@ import type { RechargeStation } from './station-recharge';
 import { firstAidKit } from './medical';
 import { money } from './politics';
 import { reprography } from './room-activities';
-import type { ParliamentarianDeal } from './parliamentarians';
 import { officeActions, officeGoods, type OfficeDecor, type OfficeFurniture, type OfficeOption, type OfficeView } from './private-offices';
 import { binoculars, briefcaseTracker, concealment, equipment, megaphone, xray } from './equipment';
 import { foodDefinition, foods, isDrink, isFood, pinga } from './food';
@@ -130,8 +129,7 @@ export function canUseGameplayAction(action:GameplayAction, articulating:boolean
 export type ExposedItem = {id:number; kind:ObjectKind};
 
 export type GameplayView = {
-  parliamentarians?:{id:string;name:string;down:boolean}[];
-  parliamentarianDeal?:ParliamentarianDeal;
+  visitors?:{id:string;name:string;down:boolean}[];
   robberyProgress?:number;
   forgeryRemaining?:number;
   surveillance?:SpyView;

@@ -1,3 +1,4 @@
+import {visitorRoster,visitorSheets} from './visitors';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
@@ -172,7 +173,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...visitorSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
         this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
@@ -206,6 +207,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const frames = Array.from({length:4},(_,step) => ({key:sheet.key,frame:start+step}));
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
+      }
+      for (const {id} of visitorRoster) for (let direction=0;direction<3;direction++) {
+        this.anims.create({key:`${id}-${direction}`,frames:Array.from({length:4},(_,step)=>({key:`${id}-walk`,frame:direction*4+step})),frameRate:9,repeat:-1});
       }
       const syncCanvas = () => {
         const density = Math.min(2,Math.max(1,window.devicePixelRatio || 1));
@@ -651,8 +655,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const latest of players) {
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
-        const {id,character,direction} = player;
-        const {sheet,frame} = characterArt(character);
+        const {id,character,direction,visitor} = player;
+        const {sheet,frame} = characterArt(character,visitor);
         let view = this.views.get(id);
         if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !characterVisible(ownPlayer,player,this.drawnVisionRadius))) {
           view?.sprite.setVisible(false);
@@ -722,10 +726,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
         const downed = latest.knockedOut || latest.carried
-          ? downedArt(character,direction,time-(view.fallAt ?? -Infinity))
+          ? downedArt(character,direction,time-(view.fallAt ?? -Infinity),visitor)
           : undefined;
         if (!downed) view.fallAt = undefined;
-        const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt);
+        const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt,visitor);
         const combatArt = downed ?? recoil ?? attack;
         const breachArt = latest.breachingSafe && !combatArt && !pose && !latest.carrying
           ? safeBreachArt(character,time,reducedMotion.matches) : undefined;
@@ -759,7 +763,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
-        const name = player.npc ? NAMES[character] ?? player.nick : player.nick;
+        const name = player.nick;
         label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : phone==='game' ? `🎮 ${name}` : phone==='call' ? `☎ ${name}` : name);
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
@@ -791,7 +795,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
         if (office.style.color!==officeColor) office.setColor(officeColor);
         if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
-          sprite.play(`${character}-${row}`,true);
+          sprite.play(`${visitor ?? character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
         } else {
           sprite.anims.stop();

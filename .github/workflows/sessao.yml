@@ -35,6 +35,7 @@ jobs:
       matrix:
         flow:
           - calote
+          - visitors
           - automatic-projects
           - security-layout
           - market
@@ -103,6 +104,13 @@ jobs:
             fi
             browser close
           done
+      - name: Keep visitor screenshots
+        if: matrix.flow == 'visitors'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visitor-screenshots
+          path: apps/sessao/output/playwright/visitors-*.png
+          if-no-files-found: error
       - name: Keep automatic project screenshots
         if: matrix.flow == 'automatic-projects'
         uses: actions/upload-artifact@v4

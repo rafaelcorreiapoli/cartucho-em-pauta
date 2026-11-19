@@ -21,7 +21,7 @@ const furnitureKinds = Object.keys(officeFurniture) as OfficeFurniture[];
 
 const drankCoffee = (event:GameplayEvent) => event.type==='used' && event.kind==='coffee';
 
-const humanTarget = (event:GameplayEvent) => !!event.target && !event.target.startsWith('npc-parliamentarian-');
+const humanTarget = (event:GameplayEvent) => !!event.target && !event.target.startsWith('npc-visitor-');
 const activityMissions = {
   arrombarPorta:(event:GameplayEvent) => event.type==='door-breached',
   roubarCofre:(event:GameplayEvent) => event.type==='money-pocketed' && event.cashFromOwnBreach===true,
@@ -34,7 +34,7 @@ const activityMissions = {
   nocautePlenario:(event:GameplayEvent) => event.type==='character-knocked-out' && humanTarget(event) && event.targetInPlenary===true,
   socorroNocaute:(event:GameplayEvent) => event.type==='aided' && humanTarget(event) && event.knockedOutByActor===true,
   fotoNocaute:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
-    person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.knockedOut),
+    person.id!==event.actor && !person.id.startsWith('npc-visitor-') && person.knockedOut),
   incendiarGabinete:(event:GameplayEvent) => event.type==='fire-started' && event.ownOffice===true,
   rabiscarRetrato:(event:GameplayEvent) => event.type==='marked' && event.kind==='portrait' && humanTarget(event),
   cameraGabinete:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera' && !!event.target && event.target!==event.actor,
@@ -54,7 +54,7 @@ const activityMissions = {
   mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published' && (event.place==='document' || event.place==='photo' || event.place==='report'),
   fotoOstentacao:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.decorations.some(item=>isOfficeFurniture(item.kind)),
   fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
-    person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),
+    person.id!==event.actor && !person.id.startsWith('npc-visitor-') && person.exposed?.some(item=>cashAmount(item.kind))),
   campanhaUltimaHora:(event:GameplayEvent) => event.type==='advertisement-aired' && (event.duration ?? Infinity)<=LATE_CAMPAIGN_WINDOW_MS,
   cuecaDinheiro:(event:GameplayEvent) => event.type==='concealment-started' && (event.amount ?? 0)>0,
   provaDocumental:(event:GameplayEvent) => event.type==='photo' && !!event.photo &&
@@ -66,7 +66,7 @@ const activityMissions = {
   manutencaoEmergencia:(event:GameplayEvent) => event.type==='power-repaired',
   apagarIncendio:(event:GameplayEvent) => event.type==='fire-extinguished',
   primeirosSocorros:(event:GameplayEvent) => event.type==='used' && event.kind==='firstAidKit',
-  socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-parliamentarian-'),
+  socorro:(event:GameplayEvent) => event.type==='aided' && !!event.target && !event.target.startsWith('npc-visitor-'),
   fiscalCafe:drankCoffee,
   almocoPlenario:(event:GameplayEvent) => event.type==='used' && event.kind==='pizza' && inPlenary(event.position),
   cafe:drankCoffee,
@@ -353,9 +353,9 @@ export class PersonalAgenda {
     if ((kind==='porretadaGabinete' || kind==='nocauteGabinete') &&
         !this.targets.some(person=>this.hasOffice?.(person.id) && (!drawing || this.targetAvailable(kind,person.id)))) return false;
     if (kind==='flagraGabinete' && !this.hasOffice?.() && !this.targets.some(person=>this.hasOffice?.(person.id))) return false;
-    if (kind==='votoNpc' && (this.ballotsLeft===0 || metrics?.canAgendaAction?.('votoNpc')===false)) return false;
+    if (kind==='votoNpc') return false;
     if (kind==='presidenteFoto') return false;
-    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='votoNpc' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
+    if ((kind==='rouboNpc' || kind==='recolhimentoExtraordinario' || kind==='patrimonioSuspeito') && !this.npcCount) return false;
     if (kind==='amizadeInstitucional' && !this.targets.some(person=>!this.visitedTargets.has(kind+':'+person.id) &&
         (!drawing || this.targetAvailable(kind,person.id)))) return false;
     const players = minimumPlayers[kind] ?? photoMissions[kind as keyof typeof photoMissions]?.players ?? 1;
@@ -365,14 +365,14 @@ export class PersonalAgenda {
       ? this.availableTargets ? 1+this.targets.filter(person=>this.availableTargets?.has(person.id)).length : this.playerCount
       : this.playerCount;
     if (kind==='nocauteDuplo' && humans-1+this.npcCount<2) return false;
-    if ((kind==='segurancaParlamentar' || kind==='reuniaoVip') && humans<2 && !this.npcCount) return false;
+    if ((kind==='segurancaParlamentar' || kind==='reuniaoVip') && humans<2) return false;
     if (kind==='assinaturas' || kind==='comissaoImprovisada') {
       const available = this.availableTargets;
       const colleagues = drawing && available
         ? this.targets.filter(person=>available.has(person.id)).length
         : Math.max(0,this.playerCount-1);
       const needed = (missionTargets[kind] ?? agendaCounts.assinaturas)-colleagues;
-      if (needed>this.npcCount || (needed>0 && metrics?.canAffordNpcSignatures?.(needed)===false)) return false;
+      if (needed>0) return false;
     } else if (players>humans) return kind==='publicouSelfie' && !!metrics && this.canPublishSavedSelfie(metrics);
     if (kind==='projetos' || kind==='oposicao' || kind==='apoio' || kind==='votacao') {
       const consumed = drawing && (kind==='votacao' && this.votedThisBallot || kind==='apoio' && this.supportedThisBallot);
@@ -461,7 +461,7 @@ export class PersonalAgenda {
       if (rule && (kind!=='pizzada' || scandalPizza)) {
         const factEvent = kind==='publicouSelfie' && publishedMailPhoto ? publishedMailPhoto : event;
         const photo = factEvent.photo;
-        const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-parliamentarian-'))} : undefined;
+        const humanPhoto = photo ? {...photo,people:photo.people.filter(person=>!person.id.startsWith('npc-visitor-'))} : undefined;
         const facts = rule.facts(humanPhoto ? {...factEvent,photo:humanPhoto} : factEvent);
         if (kind==='publicouSelfie' && photo && facts.length) {
           if (this.rewardedSelfieIds.has(photo.id)) continue;

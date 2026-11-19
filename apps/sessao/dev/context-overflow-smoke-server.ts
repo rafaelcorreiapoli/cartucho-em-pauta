@@ -38,8 +38,8 @@ class ContextOverflowRoom extends SessionRoom {
           for (let i=0;i<3;i++) game.distributePinga(player,this.clock.currentTime);
         }
       }
-      for (const player of Reflect.get(this,'parliamentarians').players) {
-        Object.assign(player,{x:stations.coffee.x+8,y:stations.coffee.y});
+      for (const player of Reflect.get(this,'visitors').players) {
+        Object.assign(player,{x:stations.coffee.x+8,y:stations.coffee.y,knockedOut:true});
       }
     },50);
   }

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Visitantes · Sprites</title>
+<style>
+
+*{box-sizing:border-box}
+body{margin:0;padding:30px;background:#e5e1d6;color:#242c29;font:14px system-ui}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+h1{margin:0;font-size:26px}
+p{margin:7px 0 0;color:#58605a}
+button{padding:8px 14px;border:1px solid #a5ada4;background:#f6f4ed;border-radius:5px;color:inherit;cursor:pointer}
+main{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+article{padding:14px 20px 16px;background:#f6f4ed;border:1px solid #c9cbbf;border-radius:7px}
+h2{margin:0 0 10px;font-size:16px}
+.poses{display:flex;justify-content:space-around;gap:16px}
+.poses>div{text-align:center}
+.sprite{display:block;width:128px;height:128px;background-size:512px 384px;background-repeat:no-repeat;background-position:0 var(--row,0px)}
+small{display:block;color:#6d756c;margin-top:6px}
+.walk{animation:walk .444s steps(4) infinite}
+.hit{animation:walk .22s steps(4) infinite}
+.fall{animation:fall 1.6s steps(1) infinite}
+@keyframes walk{to{background-position-x:-512px}}
+@keyframes fall{0%,49%{background-position-x:0}55%{background-position-x:-128px}61%{background-position-x:-256px}67%,100%{background-position-x:-384px}}
+body.paused .sprite{animation-play-state:paused}
+footer{margin-top:18px;color:#58605a;font-size:12px}
+@media(max-width:1000px){main{grid-template-columns:1fr}header{align-items:flex-start;gap:16px;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.sprite{animation:none}}
+
+</style>
+<header>
+<div>
+<h1>Visitantes do Infiltrados</h1>
+<p>Caminhada, reação ao golpe e queda · frames de 128 × 128 px</p>
+</div>
+<div>
+<button onclick="document.body.style.setProperty('--row','0px')">Frente</button> <button onclick="document.body.style.setProperty('--row','-128px')">Lado</button> <button onclick="document.body.style.setProperty('--row','-256px')">Costas</button> <button onclick="document.body.classList.toggle('paused')">Pausar</button>
+</div>
+</header>
+<main>
+<article>
+<h2>Nestor Cerveró</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/nestor-cervero-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/nestor-cervero-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/nestor-cervero-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Pablo Marçal</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/pablo-marcal-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/pablo-marcal-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/pablo-marcal-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Joesley Batista</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/joesley-batista-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/joesley-batista-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/joesley-batista-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Marcos Valério</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/marcos-valerio-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/marcos-valerio-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/marcos-valerio-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Marcelo Odebrecht</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/marcelo-odebrecht-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/marcelo-odebrecht-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/marcelo-odebrecht-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>João Santana</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/joao-santana-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/joao-santana-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/joao-santana-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Alexandre de Moraes</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/alexandre-de-moraes-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/alexandre-de-moraes-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/alexandre-de-moraes-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+<article>
+<h2>Delcídio do Amaral</h2>
+<div class="poses">
+<div>
+<span class="sprite walk" style="background-image:url(/assets/delcidio-do-amaral-walk.png)">
+</span>
+<small>Caminhada</small>
+</div>
+<div>
+<span class="sprite hit" style="background-image:url(/assets/delcidio-do-amaral-hit.webp)">
+</span>
+<small>Hit</small>
+</div>
+<div>
+<span class="sprite fall" style="background-image:url(/assets/delcidio-do-amaral-fall.webp)">
+</span>
+<small>Queda</small>
+</div>
+</div>
+</article>
+</main>
+<footer>Nestor: arte existente · Pablo: identidade reaproveitada do BR Wars · Demais: novos sprites no padrão do elenco.</footer>
+</html>

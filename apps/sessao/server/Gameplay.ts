@@ -501,29 +501,9 @@ export class Gameplay {
 
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
 
-  signableDocuments(player:Player,npc:Player,world:GameplayWorld) {
-    return this.inventory(player.id).flatMap(({data})=>{
-      const doc = data.document;
-      return doc && doc.project===undefined && !doc.signatures.some(person=>person.id===npc.id) &&
-        (!doc.requiredOffice || (world.hasMandate?.(npc.id) ?? world.office(npc.id)===doc.requiredOffice))
-        ? [{id:data.id,title:doc.title}] : [];
-    });
-  }
-
-  signWithNpc(player:Player,npc:Player,itemId:number,price:number,world:GameplayWorld) {
-    if (!this.signableDocuments(player,npc,world).some(document=>document.id===itemId)) return 'Documento indisponível.';
-    if (price && !world.payNpc?.(player.id,npc.id,price)) return 'Pagamento indisponível.';
-    const item = this.items.get(itemId)!;
-    item.data.document!.signatures.push({id:npc.id,name:npc.nick});
-    this.signProject(item.data,npc,world.now);
-    this.event(world,npc,'signed',item.data,player.id);
-    console.info(JSON.stringify({event:'npc-signature',from:player.id,to:npc.id,amount:price,item:itemId}));
-    return 'Assinatura obtida.';
-  }
-
   robNpc(player:Player,npc:Player,world:GameplayWorld) {
     const amount = world.takeWallet?.(npc.id) ?? 0;
-    if (!amount) return 'O parlamentar está sem dinheiro.';
+    if (!amount) return 'O visitante está sem dinheiro.';
     const cash = this.create('briefcase',{holder:player.id});
     cash.cash = amount;
     cash.cashStolenFrom = {name:npc.nick};
@@ -979,7 +959,7 @@ export class Gameplay {
     const visible = (point:Motion)=>sees(camera,point);
     return {center,camera,
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
-        id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,
+        id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,visitor:person.visitor,
         direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
         exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
@@ -992,7 +972,7 @@ export class Gameplay {
     const {x,y} = player;
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
       .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
-        character:person.character,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
+        character:person.character,visitor:person.visitor,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
@@ -1616,7 +1596,7 @@ export class Gameplay {
       return error ? this.reject(player,world,error) : undefined;
     }
     if (action.kind==='carry' || action.kind==='inspect-down') {
-      const target = world.players.find(person=>person.id===action.target);
+      const target = world.players.find(person=>person.id===action.target && !person.npc);
       if (action.kind==='carry') {
         if (!this.transport.carry(player,target,world)) return this.reject(player,world,'Esse jogador não pode ser carregado agora.');
         this.dialogues.close(id);
@@ -1667,7 +1647,7 @@ export class Gameplay {
       return message;
     }
     if (action.kind==='aid') {
-      const target = world.players.find(person=>person.id===action.target);
+      const target = world.players.find(person=>person.id===action.target && !person.npc);
       const knockedOutByActor = !!target && this.combat.knockedOutBy(target)===id;
       if (!target || !this.combat.aid(player,target,world.now)) return this.reject(player,world,'Aproxime-se de um jogador nocauteado.');
       this.transport.detach(target,world);
