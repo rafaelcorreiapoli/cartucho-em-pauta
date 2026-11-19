@@ -24,3 +24,5 @@ O incêndio dificulta a circulação e a entrega de maletas à Tesouraria. Pode 
 - Tempo de execução para apagar, intervalo entre sabotagens e limite de incêndios simultâneos.
 
 Não implementar esta proposta como parte do registro. A discussão de outras sabotagens para a versão inicial continua separadamente.
+
+Proposta relacionada: [interdição com placa de chão molhado](infiltrados-placa-chao-molhado.md), com poças indicando os pontos de instalação.
