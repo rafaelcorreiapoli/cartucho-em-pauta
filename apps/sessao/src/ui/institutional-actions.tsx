@@ -12,7 +12,7 @@ export function institutionalActions(view?:PlenaryView,player?:Player) {
   if (!politics || view.phase!=='negotiation' || !player) return {};
   const grant = canReachStation(player,'cabinet') && view.mandate && !politics.suspended && view.ballotCountdown===undefined
     ? {budget:view.budget,cooldown:politics.grantCooldown} : undefined;
-  return {grant};
+  return {grant,stabilityEnabled:view.gameMode!=='calote'};
 }
 
 export function InstitutionalActions({model,send,close}:{close?:()=>void;model:ReturnType<typeof institutionalActions>;send:(action:PoliticsAction)=>void}) {
@@ -66,7 +66,7 @@ export function InstitutionalActions({model,send,close}:{close?:()=>void;model:R
       <div className="investment-preview" aria-label="Prévia privada">
         <span>{money(impact.invested)} para {investmentAreas[area]}</span>
         <span>+{money(impact.diverted)} na sua carteira</span>
-        <span>+{impact.stability} de estabilidade</span>
+        <span hidden={model.stabilityEnabled===false}>{model.stabilityEnabled!==false && <>+{impact.stability} de estabilidade</>}</span>
         <strong>{effects[area]}</strong>
       </div>
       {grant.cooldown>0 ? <p role="status">Disponível em {grant.cooldown} s</p> :

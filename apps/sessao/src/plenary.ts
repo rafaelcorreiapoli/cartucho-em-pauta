@@ -116,6 +116,8 @@ export const bills:readonly Bill[] = [
 
 export const agendaProject = ({round,project}: {round:number;project?:number}) => bills[project ?? round%bills.length];
 
+export type {GameMode} from './game-modes';
+
 export type Impact = {stability:number; budget:number};
 export type Role = 'Parlamentar' | 'Infiltrado';
 export type VoteIntent = {id:string; name:string; vote:Vote};
@@ -150,7 +152,7 @@ export type PlenaryView = {
   projectWarning?: number;
   projectVoteExpired?: boolean;
   megaphoneActive?:true;
-  phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
+  gameMode?:import('./game-modes').GameMode; caloteIn?:number; phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean; botsToFill?:number;
   botMessages?:readonly {name:string; text:string}[];
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; photosEnabled?:boolean; surveillanceEnabled?:boolean; decorationsEnabled?:boolean; portraitsAndVipEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;

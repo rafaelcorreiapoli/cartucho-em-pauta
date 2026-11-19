@@ -1,3 +1,4 @@
+import {isGameMode,type GameMode} from '../src/game-modes';
 import {tutorialSteps,matchesTutorialEvent,type TutorialView} from '../src/tutorial';
 import { fireSites, type FireExtinguished } from '../src/fire';
 import type { SpyCameraFrame } from '../src/surveillance';
@@ -53,6 +54,7 @@ export class SessionRoom extends Room {
     state.revision = (state.revision ?? 0)+1;
   }
 
+  private gameMode:GameMode = 'classic';
   private lobbyNpcCount:number = npcRules.count;
   private phoneGamesEnabled = true;
   private projectVotingEnabled = true;
@@ -256,6 +258,12 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-game-mode',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('mode' in raw) || !isGameMode(raw.mode) ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.gameMode = raw.mode;
+    });
     this.onMessage('lobby-portraits-vip',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -313,7 +321,7 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -769,6 +777,7 @@ export class SessionRoom extends Room {
           if (atDesk) view.complaints.atDesk = true;
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
+        view.gameMode = this.gameMode;
         view.phoneGamesEnabled = this.phoneGamesEnabled;
         view.projectVotingEnabled = this.projectVotingEnabled;
         view.electionsEnabled = this.electionsEnabled;

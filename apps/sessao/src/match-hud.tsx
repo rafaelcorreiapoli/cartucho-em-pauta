@@ -289,7 +289,9 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
         }
         if (view.isolationSeconds && !previous.isolationSeconds) notify('Afastamento aprovado',`Sala de Isolamento · ${view.isolationSeconds} s`,true);
         if (!view.isolationSeconds && previous.isolationSeconds && view.phase!=='finished') notify('Afastamento encerrado','Você já pode voltar à sessão.');
-        if (view.stability<stabilityRules.target && previous.stability>=stabilityRules.target) notify('Estabilidade abaixo da meta',`${view.stability} de ${stabilityRules.maximum}`,true);
+        if (view.gameMode!=='calote' && view.stability<stabilityRules.target && previous.stability>=stabilityRules.target) notify('Estabilidade abaixo da meta',`${view.stability} de ${stabilityRules.maximum}`,true);
+        if (view.gameMode==='calote' && view.budget<0 && previous.budget>=0) notify('Risco de calote',`Recupere o orçamento em ${view.caloteIn ?? 30} s.`,true);
+        if (view.gameMode==='calote' && view.budget>=0 && previous.budget<0) notify('Orçamento recuperado','Contagem de calote cancelada.');
         if (view.reportedFraud && !previous.reportedFraud) notify('Fraude denunciada','O painel mostra os números reais.',true);
         if (politics && past && politics.wallet<past.wallet && politics.walletIncome>=past.walletIncome && previous.phase!=='finished') {
           notify('Carteira atualizada',`−${money(past.wallet-politics.wallet)}`);

@@ -25,7 +25,7 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
   const impact = showImpact(view);
   return <>
     <HudHelp as="div" help="Resultado da última votação." id="project-outcome-brief" role="status" hidden={!brief} data-passed={brief ? String(brief.passed) : undefined}>
-      {brief && <VoteBrief outcome={brief}/>}
+      {brief && <VoteBrief outcome={brief} stabilityEnabled={view.gameMode!=='calote'}/>}
     </HudHelp>
     <div id="proposal" hidden={!showProposal(view.phase)}>
       <HudHelp as="div" help="Projeto em pauta nesta sessão." id="project-heading" className="deck-project-heading">
@@ -33,7 +33,7 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
       </HudHelp>
       <div className="deck-project-controls">
         <HudHelp as="div" help="Veja como aprovar ou rejeitar o projeto afeta o Congresso." id="impact" aria-label="Impacto de cada decisão" hidden={!impact}>
-          {impact && <ProjectImpact yes={view.yes} no={view.no}/>}
+          {impact && <ProjectImpact stabilityEnabled={view.gameMode!=='calote'} yes={view.yes} no={view.no}/>}
         </HudHelp>
         <div id="ballot-host" hidden={!ballot}>
           {ballot && <SessionBallot key={matchId} state={ballot} ownId={id} onExpansion={onExpansion}
@@ -55,6 +55,7 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
 
 export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean,back:()=>void) {
   const lobby = mountLobbyControls(element('lobby-controls'),id,{
+    changeGameMode:mode=>command('lobby-game-mode',{mode}),
     changePortraitsAndVip:enabled=>command('lobby-portraits-vip',{enabled}),
     changeDecorations:enabled=>command('lobby-decorations',{enabled}),
     changeSurveillance:enabled=>command('lobby-surveillance',{enabled}),
@@ -82,7 +83,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
 
   function renderDock(next:PlenaryView) {
     const nextKey = JSON.stringify([next.politics?.progression.matchId,brief?.round,
-      next.phase,next.projectVotingEnabled,projectHeading(next),projectDetailsState(next),next.mandate,next.politics?.suspended,next.voteIntents,
+      next.phase,next.gameMode,next.projectVotingEnabled,projectHeading(next),projectDetailsState(next),next.mandate,next.politics?.suspended,next.voteIntents,
       next.project,next.cassationIn,showImpact(next) && [next.yes,next.no],sessionBallotState(next)]);
     if (nextKey===key) return;
     key = nextKey;

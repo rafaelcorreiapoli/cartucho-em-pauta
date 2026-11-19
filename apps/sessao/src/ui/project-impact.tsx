@@ -7,7 +7,7 @@ const metrics = [
   {key:'budget',label:'Orçamento',icon:'wallet'},
 ] as const;
 
-export function ProjectImpact({yes,no}:{yes:Impact;no:Impact}) {
+export function ProjectImpact({yes,no,stabilityEnabled=true}:{yes:Impact;no:Impact;stabilityEnabled?:boolean}) {
   const decisions = [
     {key:'yes',label:'Se aprovar',icon:'check',impact:yes},
     {key:'no',label:'Se rejeitar',icon:'cross',impact:no},
@@ -15,7 +15,7 @@ export function ProjectImpact({yes,no}:{yes:Impact;no:Impact}) {
   return decisions.map(({key,label,icon,impact})=><div className="impact-card" key={key}>
     <h3><HudIcon name={icon}/>{label}</h3>
     <div className="impact-values">
-      {metrics.map(metric=>{
+      {metrics.filter(metric=>stabilityEnabled || metric.key!=='stability').map(metric=>{
         const value = impact[metric.key];
         return <span title={metric.label} key={metric.key}>
           <HudIcon name={metric.icon}/>

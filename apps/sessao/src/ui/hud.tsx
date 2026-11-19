@@ -1,3 +1,4 @@
+import {caloteRules,publicBudgetLabel} from '../game-modes';
 import {HudHelp} from './hud-help';
 import {HudIcon} from './hud-icon';
 import {PopularityReward} from './popularity-reward';
@@ -39,27 +40,49 @@ function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
   return <HudHelp as="div" help="Tempo até abrir a votação." className="plenary-countdown" data-kind={remaining.kind}><HudIcon name="clock"/>{remaining.kind==='cassation' ? 'Votação de cassação' : 'Votação de projeto'} em <strong>{remaining.seconds} s</strong></HudHelp>;
 }
 
-export function ParliamentMetrics({stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
-  return <section className="congress-meter grid text-center" aria-label="Parlamento">
+export function BudgetMeter({budget}:{budget:number}) {
+  const limit = caloteRules.budgetMeterLimit;
+  const width = Math.min(1,Math.abs(budget)/limit)*50;
+  const direction = budget<0 ? 'negative' : budget>0 ? 'positive' : 'zero';
+  return <div className="calote-budget-track" role="meter" aria-label="Orçamento público"
+    aria-valuemin={-limit} aria-valuemax={limit} aria-valuenow={Math.max(-limit,Math.min(limit,budget))}
+    aria-valuetext={publicBudgetLabel(budget)} data-direction={direction}>
+    <span className="calote-budget-fill" style={{left:(budget<0 ? 50-width : 50)+'%',width:width+'%'}}/>
+    <i className="calote-budget-center"/>
+  </div>;
+}
+
+export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
+  const calote = gameMode==='calote';
+  return <section className="congress-meter grid text-center" aria-label="Parlamento" data-game-mode={gameMode}>
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
         <path fill="currentColor" d="M39 2h6v25h-6zm9 0h6v25h-6zM2 26a16 11 0 0 1 32 0zm60-9h32a16 10 0 0 1-32 0zM0 28h96v2H0z"/>
       </svg>
     </div>
-    <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp>
-    <HudHelp as="div" help="A marca na barra indica a meta de estabilidade." className="congress-meter-track flex items-center">
+    <HudHelp className="congress-meter-label" aria-label={calote ? 'Como funciona o orçamento' : 'Como funciona a estabilidade'}
+      help={calote ? 'Trinta segundos seguidos de orçamento negativo dão vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : `A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>{calote ? 'Orçamento público' : 'Estabilidade institucional'}</HudHelp>
+    <HudHelp as="div" help={calote ? 'Zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
       <Laurel/>
-      <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
-      <strong className="tabular-nums">{stability}</strong>
+      {calote ? <div className="calote-budget-wrap">
+        <strong className="tabular-nums calote-budget-value" data-in-debt={budget<0}>{publicBudgetLabel(budget)}</strong>
+        <BudgetMeter budget={budget}/>
+        <span className="calote-budget-zero">{publicBudgetLabel(0)}</span>
+      </div> : <>
+        <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
+        <strong className="tabular-nums">{stability}</strong>
+      </>}
       <Laurel right/>
     </HudHelp>
+    {calote && budget<0 && caloteIn!==undefined && <div className="calote-countdown" role="timer" aria-label="Tempo até o calote">
+      <HudIcon name="clock"/>Calote em <strong>{caloteIn} s</strong>
+    </div>}
     <div className="congress-summary-row">
-    <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
+    {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
       <HudIcon name="coins"/><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
-    </HudHelp>
+    </HudHelp>}
     {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
       aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
       <HudIcon name="clock"/>
