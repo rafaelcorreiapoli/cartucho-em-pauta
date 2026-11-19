@@ -20,11 +20,11 @@ function fixture() {
   return {humans,match,game,visitors,robberies,world};
 }
 
-test('visitor roster is independent of parliamentarian appearances and uses eight distinct rooms',()=>{
-  const visitors = new Visitors(); visitors.reset(8,0,()=>0);
+test('visitor roster is independent of parliamentarian appearances and uses distinct rooms for the full roster',()=>{
+  const visitors = new Visitors(); visitors.reset(visitorRoster.length,0,()=>0);
   expect(visitors.players.map(player=>player.nick)).toEqual(visitorRoster.map(visitor=>visitor.name));
-  expect(new Set(visitors.players.map(player=>player.visitor)).size).toBe(8);
-  expect(new Set(visitors.players.map(roomAt)).size).toBe(8);
+  expect(new Set(visitors.players.map(player=>player.visitor)).size).toBe(visitorRoster.length);
+  expect(new Set(visitors.players.map(roomAt)).size).toBe(visitorRoster.length);
   for (const visitor of visitors.players) {
     expect(visitor.npc).toBe(true); expect(visitor.bot).toBeUndefined();
     expect(NAMES as readonly string[]).not.toContain(visitor.nick);
@@ -39,7 +39,7 @@ test('NPC render keys differ from human and bot keys even with the same base cha
     expect(hitArt(0,3,110,id)).toMatchObject({key:`${id}-hit`,frame:6,flipX:true});
     expect(downedArt(0,2,8000,id)).toMatchObject({key:`${id}-fall`,frame:11});
   }
-  expect(visitorSheets).toHaveLength(24);
+  expect(visitorSheets).toHaveLength(visitorRoster.length*3);
   for (const sheet of visitorSheets) expect(await Bun.file(new URL(`../public/${sheet.path}`,import.meta.url)).exists()).toBe(true);
 });
 

@@ -1,7 +1,7 @@
 # Sprites dos visitantes do Infiltrados
 
-Elenco inicial: Nestor Cerveró, Pablo Marçal, Joesley Batista, Marcos Valério,
-Marcelo Odebrecht, João Santana, Alexandre de Moraes e Delcídio do Amaral.
+Elenco: Nestor Cerveró, Pablo Marçal, Joesley Batista, Marcos Valério,
+Marcelo Odebrecht, João Santana, Alexandre de Moraes, Delcídio do Amaral e Luciano Hang (Véio da Havan).
 
 As folhas ficam em `apps/sessao/public/assets/` e seguem o padrão do elenco:
 512 × 384 pixels, quatro colunas e três linhas, com frames de 128 × 128.
@@ -18,6 +18,7 @@ o renderizador deve espelhar o perfil direito.
 | João Santana | `joao-santana` | Novo. |
 | Alexandre de Moraes | `alexandre-de-moraes` | Novo. |
 | Delcídio do Amaral | `delcidio-do-amaral` | Novo. |
+| Luciano Hang (Véio da Havan) | `luciano-hang` | Atlas realista já aprovado, exportado em caminhada, hit e queda sem regeneração da arte. |
 
 Cada prefixo tem três folhas com fundo transparente:
 
@@ -60,6 +61,7 @@ Valores fictícios para balanceamento, em unidades de R$ 10 mil:
 | João Santana | 10 |
 | Alexandre de Moraes | 6 |
 | Delcídio do Amaral | 8 |
+| Luciano Hang (Véio da Havan) | 16 |
 
 O saque gera uma maleta física com o valor carregado, sem creditar a carteira
 diretamente. Dinheiro de visitantes que saem sem ser saqueados entra no total

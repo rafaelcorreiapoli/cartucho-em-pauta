@@ -29,6 +29,8 @@ class VisitorsRoom extends SessionRoom {
       }
       const nestor = world.players.find(player=>player.visitor==='nestor-cervero')!;
       Object.assign(nestor,{x:152,y:146,direction:3});
+      const hang = world.players.find(player=>player.visitor==='luciano-hang')!;
+      Object.assign(hang,{x:110,y:146,direction:0});
       const game:Gameplay = Reflect.get(this,'gameplay');
       const baton = Reflect.get(game,'create').call(game,'baton',{holder:host.id});
       game.act(host,{kind:'equip',item:baton.id},world);
