@@ -949,7 +949,7 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     host.send('lobby-initial-budget',{value:-50,token:9});
     await wait(()=>view?.initialBudget===-50);
     host.send('lobby-match-minutes',{value:20,token:10});
-    await wait(()=>view?.matchMinutes===21);
+    await wait(()=>view?.matchMinutes===20);
     host.send('lobby-initial-budget',{value:999,token:11});
     host.send('lobby-match-minutes',{value:13,token:12});
     host.send('lobby-initial-wallet',{value:50,token:13});
