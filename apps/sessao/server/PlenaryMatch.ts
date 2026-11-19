@@ -1,3 +1,5 @@
+import {AutomaticProjects} from './AutomaticProjects';
+import {automaticProjectRules,type AutomaticProject} from '../src/automatic-projects';
 import {caloteRules,type GameMode} from '../src/game-modes';
 import {investmentImpact,type InvestmentAnnouncement} from '../src/public-investments';
 import { StationCooldowns } from './StationCooldowns';
@@ -100,7 +102,7 @@ export class PlenaryMatch {
     const spent = this.cash.expired+this.cash.publicDuty+this.cash.projects+this.cash.cassationFees;
     const held = totals.humans+totals.npcs+totals.reserve+physical+this.budget;
     return {...totals,...this.cash,physical,budget:this.budget,issued,spent,
-      discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
+      discrepancy:Math.round((issued-spent-held)*100)/100 || 0};
   }
 
   private get criticalStability() { return this.gameMode==='classic' && this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
@@ -198,7 +200,7 @@ export class PlenaryMatch {
 
   private changeBudget(amount:number,now:number) {
     if (this.gameMode==='calote') this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
-    this.budget = Math.round((this.budget+amount)*10)/10;
+    this.budget = Math.round((this.budget+amount)*100)/100;
     if (this.gameMode==='calote') {
       this.caloteStartedAt = this.budget<0 ? this.caloteStartedAt ?? now : undefined;
       this.nextDebtPenaltyAt = undefined;
@@ -222,8 +224,12 @@ export class PlenaryMatch {
     if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'A dívida pública derrubou a estabilidade.');
   }
 
+  private readonly automaticProjects = new AutomaticProjects();
+  private automaticProjectsEnabled = false;
+  private salaryMultiplier = 1;
+  private get salary() { return payrollRules.salary*this.salaryMultiplier; }
   private nextPayrollAt = 0;
-  private lastPayroll?:{at:number;recipients:Set<string>};
+  private lastPayroll?:{at:number;recipients:Set<string>;salary:number};
 
   private payrollRecipients() {
     return new Set([...this.election.mandateIds(),...this.npcIds]);
@@ -233,9 +239,9 @@ export class PlenaryMatch {
     return {
       next:this.running && this.nextPayrollAt<this.sessionEndsAt ? {
         remaining:Math.max(0,Math.ceil((this.nextPayrollAt-now)/1000)),
-        cost:this.payrollRecipients().size*payrollRules.salary,
+        cost:this.payrollRecipients().size*this.salary,
       } : undefined,
-      last:this.lastPayroll && {at:this.lastPayroll.at,received:this.lastPayroll.recipients.has(id) ? payrollRules.salary : 0},
+      last:this.lastPayroll && {at:this.lastPayroll.at,received:this.lastPayroll.recipients.has(id) ? this.lastPayroll.salary : 0},
     };
   }
 
@@ -246,13 +252,31 @@ export class PlenaryMatch {
         if (!this.running) return;
       }
       const recipients = this.payrollRecipients();
-      for (const id of recipients) this.economy.earn(id,payrollRules.salary);
-      const cost = recipients.size*payrollRules.salary;
+      for (const id of recipients) this.economy.earn(id,this.salary);
+      const cost = recipients.size*this.salary;
       this.changeBudget(-cost,this.gameMode==='calote' ? this.nextPayrollAt : now);
       this.cash.salaries += cost;
-      this.lastPayroll = {at:this.nextPayrollAt,recipients};
+      this.lastPayroll = {at:this.nextPayrollAt,recipients,salary:this.salary};
       this.nextPayrollAt += payrollRules.interval;
     }
+  }
+
+  private advanceAutomaticProjects(now:number,distributeItems?:(recipients:readonly string[],project:AutomaticProject)=>void) {
+    let due = this.automaticProjects.nextAt;
+    while (due!==undefined && due<=now && due<this.sessionEndsAt && this.running) {
+      this.distributeSalaries(due);
+      this.applyDebtPenalty(due);
+      if (!this.running) return;
+      const recipients = [...this.election.mandateIds()];
+      const approval = this.automaticProjects.approve(recipients.length);
+      this.changeBudget(-approval.cost,due);
+      this.cash.projects += approval.cost;
+      if (approval.project==='reajuste') this.salaryMultiplier = automaticProjectRules.salaryMultiplier;
+      else if (approval.project==='qualificacao') for (const id of recipients) this.economy.grantAttributePoints(id,2);
+      else distributeItems?.(recipients,approval.project);
+      due = this.automaticProjects.nextAt;
+    }
+    this.distributeSalaries(now);
   }
 
   private advertisementMultiplier(now:number) {
@@ -326,12 +350,15 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true,gameMode:GameMode='classic') {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true,gameMode:GameMode='classic',automaticProjectsEnabled=false) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.gameMode = gameMode;
     this.caloteStartedAt = undefined;
+    this.automaticProjectsEnabled = automaticProjectsEnabled && gameMode==='calote' && !this.training;
+    this.automaticProjects.reset(this.automaticProjectsEnabled,now,random);
+    this.salaryMultiplier = 1;
     this.projectVotingEnabled = projectVotingEnabled;
     this.electionsEnabled = electionsEnabled;
     this.photosEnabled = photosEnabled;
@@ -1031,7 +1058,7 @@ export class PlenaryMatch {
 
   private pingaProgramCost() { return this.pingaRecipients().length*pingaProgram.doseCost; }
 
-  advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void, ownsOfficeRoom?:(id:string,room:string)=>boolean) {
+  advance(realNow:number, distributePinga?:(recipients:readonly string[])=>void, ownsOfficeRoom?:(id:string,room:string)=>boolean,distributeAutomaticItems?:(recipients:readonly string[],project:AutomaticProject)=>void) {
     if (!this.running) return;
     const gameNow = this.gameTime(realNow);
     if (this.training) { this.agendaNow = gameNow; return; }
@@ -1066,7 +1093,7 @@ export class PlenaryMatch {
       }
     }
     const expiredSuspensions = this.economy.expireSuspensions(now);
-    if (this.gameMode==='calote') this.distributeSalaries(Math.min(now,this.sessionEndsAt));
+    if (this.gameMode==='calote') this.advanceAutomaticProjects(Math.min(now,this.sessionEndsAt),distributeAutomaticItems);
     this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
     if (!this.running) return;
     const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
@@ -1256,6 +1283,8 @@ export class PlenaryMatch {
       audit:this.audits.get(id),reportedFraud:this.reportedFraud,
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
+      automaticProjectsEnabled:this.automaticProjectsEnabled,
+      automaticProjects:this.automaticProjects.view(now,this.running),
       payroll:role ? this.payrollView(id,now) : undefined,
       election:role && this.electionsEnabled ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient),now) : undefined,

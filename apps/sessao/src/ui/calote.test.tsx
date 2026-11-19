@@ -29,7 +29,7 @@ test('calote HUD replaces stability, keeps the session clock and shows the serve
   expect(html).toContain('Tempo até o calote');
   expect(html).toContain('17 s');
   expect(html).toContain('1:30');
-  expect(html).toContain(publicBudgetLabel(0));
+  expect(html).not.toContain('calote-budget-zero');
   const positive = renderToStaticMarkup(<ParliamentMetrics gameMode="calote" stability={0} budget={0} caloteIn={30}/>);
   expect(positive).not.toContain('Tempo até o calote');
   expect(renderToStaticMarkup(<ParliamentMetrics stability={48} budget={0}/>)).toContain('Estabilidade institucional');

@@ -1,3 +1,4 @@
+import {AutomaticProjectsHud} from './automatic-projects';
 import {caloteRules,publicBudgetLabel} from '../game-modes';
 import {HudHelp} from './hud-help';
 import {HudIcon} from './hud-icon';
@@ -67,7 +68,6 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
       {calote ? <div className="calote-budget-wrap">
         <strong className="tabular-nums calote-budget-value" data-in-debt={budget<0}>{publicBudgetLabel(budget)}</strong>
         <BudgetMeter budget={budget}/>
-        <span className="calote-budget-zero">{publicBudgetLabel(0)}</span>
       </div> : <>
         <Meter label="Estabilidade institucional" value={stability} max={stabilityRules.maximum} tone={stability<stabilityRules.target ? 'danger' : 'stability'} target={stabilityRules.target}/>
         <strong className="tabular-nums">{stability}</strong>
@@ -297,7 +297,7 @@ export function mountReactHud(openSettings:()=>void) {
   const payrollRoot = createRoot(document.getElementById('payroll-mount')!);
   payrollRoot.render(<Payroll state={congress}/>);
   const agendaRoot = createRoot(document.getElementById('agenda-dock')!);
-  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/><AutomaticProjectsHud channel={model.automaticProjects}/></>);
   agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,

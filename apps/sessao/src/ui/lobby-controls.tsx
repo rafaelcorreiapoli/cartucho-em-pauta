@@ -7,13 +7,14 @@ import {npcRules} from '../parliamentarians';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
+    automaticProjectsEnabled:view.automaticProjectsEnabled!==false, gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
+  changeAutomaticProjects?:(enabled:boolean)=>void;
   changeGameMode?:(mode:GameMode)=>void;
   changePortraitsAndVip?:(enabled:boolean)=>void;
   changeDecorations?:(enabled:boolean)=>void;
@@ -28,7 +29,7 @@ type LobbyCommands = {
 };
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
-  const [infiltrators,setInfiltrators] = useState(1);
+  const [infiltrators,setInfiltrators] = useState(2);
   const {tutorial,running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
   const showInfiltrators = !tutorial && host && players+botsToFill>=MIN_PLAYERS;
   const canStart = host && players>=minimum && assetsReady;
@@ -46,6 +47,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
           onClick={()=>commands.changeGameMode?.(mode as GameMode)}>{label}</button>)}</div>
         <small>{gameModes[state.gameMode].description}</small>
       </div>
+      {state.gameMode==='calote' && <label className="lobby-count"><input type="checkbox" checked={state.automaticProjectsEnabled} disabled={!host}
+        onChange={event=>commands.changeAutomaticProjects?.(event.currentTarget.checked)}/> Projetos automáticos</label>}
       <label className="lobby-count"><input type="checkbox" checked={state.portraitsAndVipEnabled} disabled={!host}
         onChange={event=>commands.changePortraitsAndVip?.(event.currentTarget.checked)}/> Retratos e área VIP</label>
       <label className="lobby-count"><input type="checkbox" checked={state.decorationsEnabled} disabled={!host}

@@ -11,7 +11,7 @@ Bun.plugin({
 });
 const {defineRoom,defineServer} = await import('colyseus');
 const {BunWebSockets} = await import('@colyseus/bun-websockets');
-const {SessionRoom} = await import('../server/SessionRoom');
+const {SessionRoom} = await import('./classic-room-fixture');
 const {ELECTION_RULES} = await import('../src/elections');
 const {publishProjectFiling} = await import('../server/project-test-fixture');
 

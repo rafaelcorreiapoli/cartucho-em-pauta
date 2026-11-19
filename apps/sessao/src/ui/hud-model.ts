@@ -33,6 +33,7 @@ function channel<T>(initial:T) {
 }
 
 export function createHudModel() {
+  const automaticProjects = channel<{state:NonNullable<PlenaryView['automaticProjects']>;matchId?:number}|undefined>(undefined);
   const fires = channel<FireView[]|undefined>(undefined);
   const outage = channel<PowerView|undefined>(undefined);
   const broadcast = channel(false);
@@ -48,7 +49,7 @@ export function createHudModel() {
   const resources = channel<PersonalResources|undefined>(undefined);
   let matchId:number|undefined;
   return {
-    fires,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,character,mandate,profileReward,
+    automaticProjects,fires,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,character,mandate,profileReward,
     player(player:Pick<Player,'stamina'|'staminaMax'|'nick'|'character'>) {
       const identity = character.get();
       if (identity?.nick!==player.nick || identity?.character!==player.character) {
@@ -59,6 +60,7 @@ export function createHudModel() {
     },
     render(view:PlenaryView) {
       broadcast.update(view.phase==='negotiation' && view.megaphoneActive===true);
+      automaticProjects.update(view.automaticProjects && view.phase!=='lobby' && view.phase!=='finished' ? {state:view.automaticProjects,matchId:view.politics?.progression.matchId} : undefined);
       fires.update(view.fires);
       outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;

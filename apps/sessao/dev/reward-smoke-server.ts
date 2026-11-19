@@ -1,6 +1,6 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
-import {SessionRoom} from '../server/SessionRoom';
+import {SessionRoom} from './classic-room-fixture';
 import {stations,type PlenaryView} from '../src/plenary';
 import type {Player} from '../src/map';
 

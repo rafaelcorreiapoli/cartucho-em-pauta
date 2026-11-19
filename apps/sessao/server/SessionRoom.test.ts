@@ -21,7 +21,7 @@ test('clients share movement and voice, then receive private roles and payments'
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:() => new Response()});
   const port = reservation.port!;
   await reservation.stop();
-  const server = Bun.spawn([process.execPath,join(import.meta.dir,'index.ts')],{
+  const server = Bun.spawn([process.execPath,join(import.meta.dir,'../dev/classic-room-test-server.ts')],{
     env:{...process.env,PORT:String(port),NODE_ENV:'test',SESSAO_TEST_MIN_PLAYERS:'1'},stdout:'ignore',stderr:'inherit',
   });
   const endpoint = `http://127.0.0.1:${port}`;
@@ -359,7 +359,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {gameplayMetrics} = await import('./gameplay-metrics');
-  const {SessionRoom} = await import('./SessionRoom');
+  const {SessionRoom} = await import('../dev/classic-room-fixture');
   const {PlenaryMatch} = await import('./PlenaryMatch');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
@@ -769,7 +769,7 @@ test('transport is released on an actual socket reconnect and on plenary admissi
 test('six human clients can select eight NPCs and fill the available seats when the vote opens',async()=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
-  const {SessionRoom} = await import('./SessionRoom');
+  const {SessionRoom} = await import('../dev/classic-room-fixture');
   const {gameplayMetrics} = await import('./gameplay-metrics');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
@@ -906,7 +906,7 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
   {projectsEnabled:true,electionsEnabled:true,photosEnabled:true,gameMode:'calote'}])('solo lobby applies independent mechanic settings: %j',async({projectsEnabled,electionsEnabled,photosEnabled,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true,gameMode='classic'})=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
-  const {SessionRoom} = await import('./SessionRoom');
+  const {SessionRoom} = await import('../dev/classic-room-fixture');
   const reservation = Bun.serve({hostname:'127.0.0.1',port:0,fetch:()=>new Response()});
   const port = reservation.port!;
   await reservation.stop();

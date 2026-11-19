@@ -157,6 +157,7 @@ export type PlenaryView = {
   botMessages?:readonly {name:string; text:string}[];
   role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; photosEnabled?:boolean; surveillanceEnabled?:boolean; decorationsEnabled?:boolean; portraitsAndVipEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
+  automaticProjectsEnabled?:boolean; automaticProjects?:import('./automatic-projects').AutomaticProjectsView;
   payroll?:PayrollView; election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
   complaints?:ComplaintView; fires?:FireView[]; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};

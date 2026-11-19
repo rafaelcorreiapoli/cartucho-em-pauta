@@ -14,7 +14,7 @@ async page => {
   await page.screenshot({path:'output/playwright/calote-lobby.png'});
   const options = page.locator('.lobby-options input[type=checkbox]');
   for (let index=0;index<await options.count();index++) {
-    await options.nth(index).click();
+    if (await options.nth(index).isChecked()) await options.nth(index).click();
     await page.waitForFunction(index=>!document.querySelectorAll('.lobby-options input[type=checkbox]')[index].checked,index);
   }
   await page.getByRole('button',{name:'Nenhum parlamentar NPC'}).click();

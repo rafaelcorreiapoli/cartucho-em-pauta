@@ -351,3 +351,13 @@ O anfitrião seleciona o modo no lobby antes de iniciar ou jogar novamente. Os c
 O cronômetro de calote acompanha o relógio da partida, que pausa durante votações. A barra do Calote tem zero no centro, saldo positivo verde à direita, dívida vermelha à esquerda e contagem regressiva no vermelho. A escala usa o orçamento inicial como limite de cada metade; saldos além da escala preenchem a metade inteira e continuam exibidos numericamente. Painéis de projetos e investimentos ocultam efeitos de estabilidade nesse modo, e a missão que exige estabilidade crítica não entra no sorteio.
 
 O fluxo de navegador `dev/calote-smoke.js` valida seleção no lobby, a barra em dois tamanhos de tela, recuperação da dívida e derrota por calote.
+
+### Projetos automáticos no Calote
+
+A opção **Projetos automáticos** do lobby aprova quatro projetos, em ordem sorteada sem repetição, aos 5:00, 6:30, 8:00 e 9:30 de tempo efetivo. O relógio pausa nas votações. O próximo projeto permanece secreto até a aprovação. O HUD mostra countdown, histórico e um anúncio central por dez segundos, que também pode ser fechado manualmente. Não há votação ou veto, e o gasto é aplicado mesmo sem saldo.
+
+Custos por jogador com mandato na aprovação: Porrete R$ 10 mil (um porrete), Reajuste R$ 5 mil (+25% nos próximos salários até o fim), Congresso Sem Dormir R$ 10 mil (cinco energéticos) e Qualificação R$ 15 mil (dois pontos de atributo). Infiltrados também recebem os efeitos; jogadores eliminados não recebem. A folha salarial existente inclui os NPCs e também recebe o reajuste. Itens ocupam o inventário, aproveitando pilhas existentes; excedentes vão ao armário pessoal e depois ao chão do próprio gabinete.
+
+Novas salas começam em Calote, com dois infiltrados, três NPCs, projetos automáticos, fotos e eleições ligados. As outras opções começam desligadas. O tutorial preserva suas mecânicas de treinamento. A votação opcional de projetos permanece independente.
+
+O smoke `dev/automatic-projects-smoke.js` verifica o padrão do lobby, sigilo, quatro aprovações, imagens, anúncio em 800×450 e histórico. As imagens e seus prompts estão documentados em `docs/automatic-project-images.json` na raiz do repositório.
