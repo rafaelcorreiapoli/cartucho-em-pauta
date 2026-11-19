@@ -976,12 +976,12 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
       ['lobby-portraits-vip','portraitsAndVipEnabled',portraitsAndVipEnabled],
     ] as const;
     for (const [index,[channel,field,value]] of settings.entries()) {
-      host.send(channel,{enabled:!value,token:9+index});
-      await wait(()=>commandTokens.get(host!.sessionId)===9+index);
+      host.send(channel,{enabled:!value,token:14+index});
+      await wait(()=>commandTokens.get(host!.sessionId)===14+index);
       expect(Reflect.get(room,field)).toBe(value);
     }
-    host.send('lobby-game-mode',{mode:gameMode==='calote' ? 'classic' : 'calote',token:14});
-    await wait(()=>commandTokens.get(host!.sessionId)===14);
+    host.send('lobby-game-mode',{mode:gameMode==='calote' ? 'classic' : 'calote',token:19});
+    await wait(()=>commandTokens.get(host!.sessionId)===19);
     expect(Reflect.get(room,'gameMode')).toBe(gameMode as GameMode);
     expect(view?.gameMode).toBe(gameMode as GameMode);
     expect(!!view?.election).toBe(electionsEnabled);

@@ -17,6 +17,7 @@ test.each([12,15,20])('session deadline respects %s minutes',minutes=>{
 test.each([-50,0,50])('starting budget %s is applied',budget=>{
   const match = start(true,budget,12);
   expect(match.view('a',['a'],0).budget).toBe(budget);
+  expect(match.economySummary(0).discrepancy).toBe(0);
 });
 test.each([true,false])('grant UI and server authorization agree when enabled=%s',enabled=>{
   const match = start(enabled,50,12);
