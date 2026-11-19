@@ -2117,7 +2117,7 @@ test.each([false,true])('the crisis mission follows fire eligibility and rewards
   expect(match.actOnFire(host,'plant',0,1,false,1)).toBe('Instalando dispositivo…');
   const installedAt = 1+fireRules.install;
   match.advance(installedAt);
-  expect(match.updateFireInstallation(installedAt,id=>players.find(p=>p.id===id),()=>true,()=>true)?.feedback)
+  expect(match.updateFireInstallation(installedAt,id=>players.find(p=>p.id===id),()=>true,()=>true)[0]?.feedback)
     .toBe('Incendiário instalado.');
   const ignitedAt = installedAt+fireRules.fuse;
   match.advance(ignitedAt);
@@ -2446,14 +2446,14 @@ test.each([0,1])('a final hearing preserves fire missions only if articulation r
 
   match.politics(host,{kind:'hearing',target:target.id},players,hearingAt);
   expect(match.phase).toBe('hearing');
-  expect(view(hearingAt).fire?.paused).toBe(true);
+  expect(view(hearingAt).fires?.[0]?.paused).toBe(true);
   expect(active(hearingAt)).toHaveLength(3);
   expect(view(hearingAt).politics!.progression.xp).toBe(0);
 
   const resumeAt = hearingAt+HEARING_MS;
   match.advance(resumeAt);
   expect(match.phase).toBe('negotiation');
-  const site = view(resumeAt).fire!.site;
+  const site = view(resumeAt).fires![0]!.site;
   Object.assign(host,fireSites[site]);
   expect(match.actOnFire(host,'extinguish',site,hearingAt,true)).toBe('Incêndio apagado.');
   const {missions,progression} = view(resumeAt).politics!;

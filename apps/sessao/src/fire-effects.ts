@@ -135,24 +135,31 @@ function smokeTexture(scene:Phaser.Scene) {
 
 export function createFuseSmoke(scene:Phaser.Scene) {
   const key = smokeTexture(scene);
-  const plume = scene.add.particles(0,0,key,{
-    emitting:false,frequency:95,lifespan:1150,
-    speedX:{min:-6,max:6},speedY:{min:-24,max:-18},
-    scale:{start:.24,end:.62},alpha:{start:.92,end:0},maxAliveParticles:14,
-  });
-  const still = scene.add.image(0,0,key).setScale(.55).setVisible(false);
-  let site:number|undefined;
-  return (visibleSite:number|undefined,reduced:boolean)=>{
-    if (site!==visibleSite && plume.emitting) plume.stop(true);
-    site = visibleSite;
-    still.setVisible(site!==undefined && reduced);
-    if (site===undefined) return;
-    const {x,y} = fireSites[site];
-    if (reduced) {
-      if (plume.emitting) plume.stop(true);
-      still.setPosition(x,y-40).setDepth(y+2);
-    } else if (!plume.emitting) {
-      plume.setPosition(x,y-31).setDepth(y+2).start();
+  const effects = new Map<number,{plume:Phaser.GameObjects.Particles.ParticleEmitter;still:Phaser.GameObjects.Image}>();
+  return (visibleSites:readonly number[]|undefined,reduced:boolean)=>{
+    const visible = new Set(visibleSites);
+    for (const [site,{plume,still}] of effects) if (!visible.has(site)) {
+      plume.destroy();
+      still.destroy();
+      effects.delete(site);
+    }
+    for (const site of visible) {
+      const {x,y} = fireSites[site];
+      let effect = effects.get(site);
+      if (!effect) {
+        const plume = scene.add.particles(x,y-31,key,{
+          emitting:false,frequency:95,lifespan:1150,
+          speedX:{min:-6,max:6},speedY:{min:-24,max:-18},
+          scale:{start:.24,end:.62},alpha:{start:.92,end:0},maxAliveParticles:14,
+        }).setDepth(y+2);
+        const still = scene.add.image(x,y-40,key).setScale(.55).setDepth(y+2);
+        effect = {plume,still};
+        effects.set(site,effect);
+      }
+      effect.still.setVisible(reduced);
+      if (reduced) {
+        if (effect.plume.emitting) effect.plume.stop(true);
+      } else if (!effect.plume.emitting) effect.plume.start();
     }
   };
 }

@@ -104,7 +104,7 @@ test('eliminating both infiltrators wins without stability damage',()=>{
       item:Number(player.id),position:player,at:0,witnesses:[]});
   }
   match.advance(fireRules.firstAfter);
-  const site = view('2',fireRules.firstAfter).fire!.site;
+  const site = view('2',fireRules.firstAfter).fires![0]!.site;
   expect(match.actOnFire({...humans[2],...fireSites[site]},'extinguish',site,fireRules.firstAfter,true)).toBe('Incêndio apagado.');
   match.advance(rules.interval-1);
   const before = view('2',rules.interval);

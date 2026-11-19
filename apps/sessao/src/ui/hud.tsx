@@ -204,13 +204,13 @@ function Broadcast({state}:{state:HudModel['broadcast']}) {
 }
 
 export function FireNotice({fire}:{fire:FireView}) {
-  return <aside id="active-fire" className="incident-panel" aria-labelledby="fire-title" data-paused={fire.paused}>
+  return <aside id={"active-fire-"+fire.site} className="incident-panel" aria-labelledby={"fire-title-"+fire.site} data-paused={fire.paused}>
     <HudHelp as="article" help="Use um extintor no local para combater o incêndio." className="incident-fire">
       <svg className="hud-glyph incident-flame" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 22a7 7 0 0 0 7-7c0-3-2-5-3-6 0 2-1 3-2 3 1-4-1-8-4-10 0 4-1 6-3 8a7 7 0 0 0 5 12Z"/>
         <path d="M12 22a3 3 0 0 0 3-3c0-2-2-3-3-5-1 2-3 3-3 5a3 3 0 0 0 3 3Z"/>
       </svg>
-      <div><strong id="fire-title">Incêndio</strong><small>{fireSites[fire.site].name}</small></div>
+      <div><strong id={"fire-title-"+fire.site}>Incêndio</strong><small>{fireSites[fire.site].name} · {fireSites[fire.site].object}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
       {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
     </HudHelp>
@@ -233,9 +233,9 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
   </aside>;
 }
 
-function ActiveFire({state}:{state:HudModel['fire']}) {
-  const fire = useSyncExternalStore(state.subscribe,state.get);
-  return fire && <FireNotice fire={fire}/>;
+function ActiveFires({state}:{state:HudModel['fires']}) {
+  const fires = useSyncExternalStore(state.subscribe,state.get);
+  return fires && <div className="fire-notices">{fires.map(active=><FireNotice key={active.site} fire={active}/>)}</div>;
 }
 
 export function TelevisionNotice({name,remaining}:{name:string;remaining:number}) {
@@ -263,7 +263,7 @@ export function mountReactHud(openSettings:()=>void) {
   const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
   televisionRoot.render(<LiveTelevision state={model.television}/>);
   const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
-  fireRoot.render(<ActiveFire state={model.fire}/>);
+  fireRoot.render(<ActiveFires state={model.fires}/>);
   const outageRoot = createRoot(document.getElementById('active-outage-mount')!);
   outageRoot.render(<PowerNotice state={model.outage}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);

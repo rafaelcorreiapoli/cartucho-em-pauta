@@ -252,7 +252,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const extinguishOption = (site:number)=>{
         const player = local.state?.player;
         const option = plenaryView?.fireInteraction?.option;
-        return option?.kind==='extinguish' && option.site===site && player && canActOnFire(player,site) ? option : undefined;
+        return option?.kind==='extinguish' && plenaryView?.fires?.some(fire=>fire.site===site) && player && canActOnFire(player,site)
+          ? {...option,site} : undefined;
       };
       this.roomFires.forEach(({flame},site)=>{
         this.registerInteraction(flame,()=>!!extinguishOption(site),()=>{
@@ -572,10 +573,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.tutorialMarker.lineBetween(target.x-5,target.y-21,target.x,target.y-15);
         this.tutorialMarker.lineBetween(target.x+5,target.y-21,target.x,target.y-15);
       }
-      const fire = plenaryView?.fire;
+      const fires = plenaryView?.fires;
       this.fuseSmoke(negotiating ? plenaryView?.fireInteraction?.smoke : undefined,reducedMotion.matches);
       this.roomFires.forEach((effect,site)=>{
-        const active = negotiating && fire?.site===site && !fire.paused;
+        const active = negotiating && !!fires?.some(fire=>fire.site===site && !fire.paused);
         const visible = active && !!ownPlayer && localPerception(ownPlayer,fireSites[site],this.drawnVisionRadius).visible;
         effect.update(time,active,visible,reducedMotion.matches);
       });

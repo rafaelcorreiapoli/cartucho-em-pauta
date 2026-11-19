@@ -57,7 +57,7 @@ test('tutorial rooms isolate learners, validate progress and prepare repeatable 
     room.send('gameplay',{token:2,action:{kind:'equip',item:item.id}});
     await waitFor(()=>view?.tutorial?.step===equipment+1);
     room.send('tutorial','step:'+tutorialSteps.findIndex(step=>step.event==='fire-extinguished'));
-    await waitFor(()=>!!view?.fire);
+    await waitFor(()=>!!view?.fires?.[0]);
     room.send('tutorial','step:'+tutorialSteps.findIndex(step=>step.event==='power-repaired'));
     await waitFor(()=>!!view?.outage);
     room.send('tutorial','skip');

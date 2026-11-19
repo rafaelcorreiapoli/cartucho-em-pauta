@@ -244,9 +244,9 @@ test('Segurança delays the next fire and Abastecimento applies a temporary pric
   expect(game.view(buyer,active).inventory).toContainEqual(expect.objectContaining({kind:'pizza'}));
   expect(match.view(buyer.id,ids,3000)).toMatchObject({budget:26,politics:{wallet:6.6}});
   match.advance(fireRules.firstAfter+2999);
-  expect(match.view(host.id,ids,fireRules.firstAfter+2999).fire).toBeUndefined();
+  expect(match.view(host.id,ids,fireRules.firstAfter+2999).fires?.[0]).toBeUndefined();
   match.advance(fireRules.firstAfter+3000);
-  expect(match.view(host.id,ids,fireRules.firstAfter+3000).fire).toBeDefined();
+  expect(match.view(host.id,ids,fireRules.firstAfter+3000).fires?.[0]).toBeDefined();
 });
 
 test.each([honest,traitor])('an approved temporary hearing isolates the target without changing stability (%s)', target => {
@@ -395,16 +395,16 @@ test('parliamentarians can install a device and the fire still requires an extin
   match.updateFireInstallation(fireRules.install,()=>installer,()=>true,()=>true);
   const ignites = fireRules.install+fireRules.fuse;
   match.advance(ignites-fireRules.smoke);
-  expect(match.fireInteraction(installer,ignites-fireRules.smoke,86,false,false)).toMatchObject({smoke:site,option:{kind:'disarm'}});
+  expect(match.fireInteraction(installer,ignites-fireRules.smoke,86,false,false)).toMatchObject({smoke:[site],option:{kind:'disarm'}});
   expect(match.fireInteraction(traitor,ignites-fireRules.smoke,86,false,false)).toBeUndefined();
   match.advance(ignites);
-  expect(match.view(honest.id,ids,ignites).fire?.site).toBe(site);
+  expect(match.view(honest.id,ids,ignites).fires?.[0]?.site).toBe(site);
   const later = ignites+fireRules.tick;
   match.advance(later);
   expect(match.view(honest.id,ids,later).stability).toBe(48-fireRules.damage);
   expect(match.actOnFire(installer,'extinguish',site,later)).toBeUndefined();
   expect(match.actOnFire(installer,'extinguish',site,later,true)).toBe('Incêndio apagado.');
-  expect(match.view(honest.id,ids,later).fire).toBeUndefined();
+  expect(match.view(honest.id,ids,later).fires?.[0]).toBeUndefined();
 });
 
 test('an informal loan and a later manual repayment conserve both wallets',()=>{
@@ -1071,7 +1071,7 @@ test('Plantão de Emergência cannot be claimed after the fire has expired',()=>
   match.advance(expired);
   expect(match.actOnFire({...honest,...point},'extinguish',site,expired,true)).toBeUndefined();
   const view = match.view(honest.id,ids,expired);
-  expect(view.fire).toBeUndefined();
+  expect(view.fires?.[0]).toBeUndefined();
   expect(view.politics!.missions.active).toContainEqual(expect.objectContaining({kind:'plantaoEmergencia',current:0}));
 });
 
@@ -1423,7 +1423,7 @@ test('Herói Inesperado requires an active crisis below the shared stability thr
   expect(active()).toBe(false);
   Reflect.set(match,'stability',CRISIS_MISSION_STABILITY_LIMIT);
   match.advance(now);
-  const site = view().fire!.site;
+  const site = view().fires![0]!.site;
   expect(site).toBeDefined();
   match.refreshAgendaEligibility();
   expect(active()).toBe(false);
@@ -1576,4 +1576,29 @@ test('the Pix agenda uses the same amount for the wallet check and exact payment
   expect(missions().active).toContainEqual(expect.objectContaining({kind:'pixVinte',current:0}));
   expect(pay(PIX_MISSION_AMOUNT,2)).toBe(true);
   expect(missions().completed).toContainEqual(expect.objectContaining({kind:'pixVinte',current:1}));
+});
+
+test('independent installers publish concurrent fires and their combined stability penalty',()=>{
+  const match = new PlenaryMatch(1);
+  match.start(host.id,people,0,()=>.9);
+  const first = {...host,...fireSites[0]};
+  const second = {...honest,...fireSites[1]};
+  expect(match.actOnFire(first,'plant',0,0,false,101)).toBe('Instalando dispositivo…');
+  expect(match.actOnFire(second,'plant',1,0,false,102)).toBe('Instalando dispositivo…');
+  const spent:string[] = [];
+  match.advance(fireRules.install);
+  const installed = match.updateFireInstallation(fireRules.install,id=>[first,second].find(p=>p.id===id),()=>true,
+    actor=>{spent.push(actor);return true;});
+  expect(installed).toHaveLength(2);
+  expect(spent).toEqual([first.id,second.id]);
+  const ignition = fireRules.install+fireRules.fuse;
+  match.advance(ignition);
+  expect(match.view(host.id,ids,ignition).fires?.map(fire=>fire.site)).toEqual([0,1]);
+  const tick = ignition+fireRules.tick;
+  match.advance(tick);
+  expect(match.view(host.id,ids,tick).stability).toBe(stabilityRules.initial-fireRules.damage*2);
+  expect(match.actOnFire(first,'extinguish',0,tick,true)).toBe('Incêndio apagado.');
+  expect(match.view(host.id,ids,tick).fires?.map(fire=>fire.site)).toEqual([1]);
+  match.advance(tick+fireRules.tick);
+  expect(match.view(host.id,ids,tick+fireRules.tick).stability).toBe(stabilityRules.initial-fireRules.damage*3);
 });

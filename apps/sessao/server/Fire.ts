@@ -7,9 +7,9 @@ type Installation = {
 };
 
 export class Fire {
-  private active?: {site:number; elapsed:number; losses:number};
-  private installation?: Installation;
-  private armed?: {actor:string; site:number; ignites:number};
+  private active = new Map<number,{elapsed:number;losses:number}>();
+  private installations = new Map<string,Installation>();
+  private armed = new Map<number,{actor:string;ignites:number}>();
   private next:number = fireRules.firstAfter;
   private nextSite?:number;
   private random = Math.random;
@@ -19,7 +19,9 @@ export class Fire {
   private fundedDelay = 0;
 
   reset(now:number,random=Math.random) {
-    this.active = this.installation = this.armed = undefined;
+    this.active.clear();
+    this.installations.clear();
+    this.armed.clear();
     this.next = fireRules.firstAfter;
     this.nextSite = undefined;
     this.random = random;
@@ -28,74 +30,74 @@ export class Fire {
     this.delay = this.fundedDelay = 0;
   }
 
-  startTraining(site:number) { this.active = {site,elapsed:0,losses:0}; }
+  startTraining(site:number) { this.active.set(site,{elapsed:0,losses:0}); }
 
-  get burning() { return this.active!==undefined; }
-
-  get installer() { return this.installation?.actor; }
+  get burning() { return this.active.size>0; }
+  get installers() { return [...this.installations.keys()]; }
   get smoke() {
-    return this.armed && this.armed.ignites+this.fundedDelay-this.clock<=fireRules.smoke ? this.armed.site : undefined;
+    return [...this.armed].filter(([,device])=>device.ignites+this.fundedDelay-this.clock<=fireRules.smoke).map(([site])=>site);
   }
 
-  handlingSite(actor:string) {
-    return this.installation?.actor===actor ? this.installation.site : undefined;
-  }
+  handlingSite(actor:string) { return this.installations.get(actor)?.site; }
 
   progress(actor:string,now:number) {
-    return this.installation?.actor===actor ? Math.min(1,(now-this.installation.started)/fireRules.install) : undefined;
+    const job = this.installations.get(actor);
+    return job ? Math.min(1,(now-job.started)/fireRules.install) : undefined;
+  }
+
+  private occupied(site:number) {
+    return this.active.has(site) || this.armed.has(site) || [...this.installations.values()].some(job=>job.site===site);
   }
 
   option(player:Player,hasDevice:boolean,hasExtinguisher:boolean):FireOption|undefined {
-    if (this.active) {
-      const {site} = this.active;
-      if (hasExtinguisher && canActOnFire(player,site)) return {kind:'extinguish',site,label:'Apagar incêndio'};
-      return;
+    if (hasExtinguisher) {
+      const site = [...this.active.keys()].find(site=>canActOnFire(player,site));
+      if (site!==undefined) return {kind:'extinguish',site,label:'Apagar incêndio'};
     }
-    const smoke = this.smoke;
-    if (smoke!==undefined && canActOnFire(player,smoke)) {
-      return {kind:'disarm',site:smoke,label:'Desarmar dispositivo'};
-    }
-    if (!hasDevice || this.installation || this.armed) return;
-    const site = fireSites.findIndex((_,index)=>canActOnFire(player,index));
+    const smoke = this.smoke.find(site=>canActOnFire(player,site));
+    if (smoke!==undefined) return {kind:'disarm',site:smoke,label:'Desarmar dispositivo'};
+    if (!hasDevice || this.installations.has(player.id)) return;
+    const site = fireSites.findIndex((_,index)=>!this.occupied(index) && canActOnFire(player,index));
     if (site!==-1) return {kind:'plant',site,label:`Instalar incendiário · ${fireSites[site].object}`};
   }
 
   plant(player:Player,site:number,item:number,now:number) {
-    if (this.active || this.armed || this.installation || player.moving || !canActOnFire(player,site)) return false;
+    if (this.occupied(site) || this.installations.has(player.id) || player.moving || !canActOnFire(player,site)) return false;
     const {id:actor,x,y,hit,swing} = player;
-    this.installation = {actor,site,item,started:now,x,y,hit,swing};
+    this.installations.set(actor,{actor,site,item,started:now,x,y,hit,swing});
     return true;
   }
 
-  updateInstallation(player:Player|undefined, now:number,
+  updateInstallation(actor:string,player:Player|undefined, now:number,
     owns:(actor:string,item:number)=>boolean, consume:(actor:string,item:number)=>boolean,
     reject = (message:string)=>message) {
-    const job = this.installation;
+    const job = this.installations.get(actor);
     if (!job) return;
     if (!player || player.id!==job.actor || player.moving || player.x!==job.x || player.y!==job.y ||
         player.hit!==job.hit || player.swing!==job.swing || !canActOnFire(player,job.site) || !owns(job.actor,job.item)) {
-      this.installation = undefined;
+      this.installations.delete(actor);
       return reject('Instalação interrompida.');
     }
     if (now<job.started+fireRules.install) return;
-    this.installation = undefined;
+    this.installations.delete(actor);
     if (!consume(job.actor,job.item)) return reject('Instalação interrompida.');
-    this.armed = {actor:job.actor,site:job.site,ignites:this.clock+fireRules.fuse};
+    this.armed.set(job.site,{actor:job.actor,ignites:this.clock+fireRules.fuse});
     return 'Incendiário instalado.';
   }
 
   disarm(site:number) {
-    if (this.smoke!==site) return false;
-    this.armed = undefined;
+    if (!this.smoke.includes(site)) return false;
+    this.armed.delete(site);
     this.next = Math.max(this.next,this.clock+fireRules.fuse);
     return true;
   }
 
   extinguish(site:number) {
-    if (site!==this.active?.site) return false;
-    this.active = undefined;
-    this.next = this.clock+fireRules.cooldown+this.delay;
-    this.nextSite = (site+1)%fireSites.length;
+    if (!this.active.delete(site)) return false;
+    if (!this.burning) {
+      this.next = this.clock+fireRules.cooldown+this.delay;
+      this.nextSite = (site+1)%fireSites.length;
+    }
     return true;
   }
 
@@ -112,30 +114,34 @@ export class Fire {
     this.last = now;
     if (!exploring) return 0;
     this.clock += elapsed;
-    const active = this.active;
-    if (!active) {
-      if (this.armed && this.clock>=this.armed.ignites+this.fundedDelay) {
-        const {actor,site} = this.armed;
-        this.active = {site,elapsed:0,losses:0};
-        this.armed = undefined;
-        onIgnition?.(actor,site);
-      } else if (!this.armed && !this.installation && this.clock>=this.next+this.fundedDelay) {
-        const site = this.nextSite ?? Math.floor(this.random()*fireSites.length);
-        this.active = {site,elapsed:0,losses:0};
-      }
-      if (this.active) this.fundedDelay = 0;
-      return 0;
+    let damage = 0;
+    for (const [site,active] of this.active) {
+      active.elapsed = Math.min(fireRules.duration,active.elapsed+elapsed);
+      const losses = Math.floor(active.elapsed/fireRules.tick);
+      damage += (losses-active.losses)*fireRules.damage;
+      active.losses = losses;
+      if (active.elapsed>=fireRules.duration) this.extinguish(site);
     }
-    active.elapsed = Math.min(fireRules.duration,active.elapsed+elapsed);
-    const losses = Math.floor(active.elapsed/fireRules.tick);
-    const damage = (losses-active.losses)*fireRules.damage;
-    active.losses = losses;
-    if (active.elapsed>=fireRules.duration) this.extinguish(active.site);
+    let ignited = false;
+    for (const [site,device] of this.armed) {
+      if (this.clock<device.ignites+this.fundedDelay) continue;
+      this.active.set(site,{elapsed:0,losses:0});
+      this.armed.delete(site);
+      onIgnition?.(device.actor,site);
+      ignited = true;
+    }
+    if (!this.burning && !this.armed.size && !this.installations.size && this.clock>=this.next+this.fundedDelay) {
+      const site = this.nextSite ?? Math.floor(this.random()*fireSites.length);
+      this.active.set(site,{elapsed:0,losses:0});
+      ignited = true;
+    }
+    if (ignited && !this.armed.size) this.fundedDelay = 0;
     return damage;
   }
 
-  view(exploring:boolean):FireView|undefined {
-    if (this.active) return {site:this.active.site,remaining:Math.ceil((fireRules.duration-this.active.elapsed)/1000),
-      damage:fireRules.damage,paused:!exploring};
+  view(exploring:boolean):FireView[]|undefined {
+    if (!this.active.size) return;
+    return [...this.active].map(([site,active])=>({site,remaining:Math.ceil((fireRules.duration-active.elapsed)/1000),
+      damage:fireRules.damage,paused:!exploring}));
   }
 }

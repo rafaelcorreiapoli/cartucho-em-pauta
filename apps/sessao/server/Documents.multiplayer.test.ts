@@ -281,19 +281,19 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     await wait(()=>views.get(firefighter.sessionId)?.fireInteraction?.progress);
     await wait(()=>snapshots.get(infiltrator.sessionId)?.some(player=>player.id===firefighter.sessionId && player.handlingObject!==undefined));
     expect(views.get(infiltrator.sessionId)?.fireInteraction?.progress).toBeUndefined();
-    const armed = await wait(()=>Reflect.get(fire,'armed') as {site:number;ignites:number}|undefined);
+    const armed = await wait(()=>(Reflect.get(fire,'armed') as Map<number,{ignites:number}>).get(0));
     await wait(()=>state(firefighter)?.inventory.some(item=>item.kind==='incendiary')===false);
     expect(views.get(remote.sessionId)?.fireInteraction).toBeUndefined();
     Reflect.set(fire,'clock',armed.ignites-fireRules.smoke);
-    await wait(()=>views.get(infiltrator.sessionId)?.fireInteraction?.smoke===0);
+    await wait(()=>views.get(infiltrator.sessionId)?.fireInteraction?.smoke?.includes(0));
     expect(views.get(remote.sessionId)?.fireInteraction?.smoke).toBeUndefined();
     Reflect.set(fire,'clock',armed.ignites);
-    await wait(()=>views.get(firefighter.sessionId)?.fire?.site===0);
+    await wait(()=>views.get(firefighter.sessionId)?.fires?.[0]?.site===0);
     const commandTokens = Reflect.get(room,'lastRoomCommandToken') as Map<string,number>;
     move(firefighter,site);
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2270});
     await wait(()=>commandTokens.get(firefighter.sessionId)===2270);
-    expect(views.get(firefighter.sessionId)?.fire?.site).toBe(0);
+    expect(views.get(firefighter.sessionId)?.fires?.[0]?.site).toBe(0);
     move(firefighter,extinguisherSpawns[0]);
     move(infiltrator,extinguisherSpawns[0]);
     const extinguisher = await wait(()=>state(firefighter)?.nearby.find(item=>item.kind==='extinguisher'));
@@ -311,7 +311,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
       player.exposed?.some(item=>item.kind==='extinguisher')));
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2285});
     await wait(()=>commandTokens.get(firefighter.sessionId)===2285);
-    expect(views.get(firefighter.sessionId)?.fire?.site).toBe(0);
+    expect(views.get(firefighter.sessionId)?.fires?.[0]?.site).toBe(0);
     move(firefighter,site);
     firefighter.send('fire-action',{kind:'extinguish',site:0,token:2290});
     await wait(()=>rooms.every(peer=>fireNotices.has(peer.sessionId)));
@@ -320,7 +320,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     }
     expect(fireNotices.get(firefighter.sessionId)?.effect).toEqual({site:0,from:{x:site.x,y:site.y}});
     expect(fireNotices.get(remote.sessionId)?.effect).toBeUndefined();
-    await wait(()=>views.get(infiltrator.sessionId)?.fire===undefined);
+    await wait(()=>views.get(infiltrator.sessionId)?.fires?.[0]===undefined);
     move(firefighter,extinguisherSpawns[0]);
     firefighter.send('gameplay',{action:{kind:'drop',item:extinguisher.id},token:2292});
     await wait(()=>state(infiltrator)?.nearby.some(item=>item.id===extinguisher.id));

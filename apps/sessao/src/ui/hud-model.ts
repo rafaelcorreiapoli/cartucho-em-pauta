@@ -33,7 +33,7 @@ function channel<T>(initial:T) {
 }
 
 export function createHudModel() {
-  const fire = channel<FireView|undefined>(undefined);
+  const fires = channel<FireView[]|undefined>(undefined);
   const outage = channel<PowerView|undefined>(undefined);
   const broadcast = channel(false);
   const television = channel<{name:string;remaining:number}|undefined>(undefined);
@@ -48,7 +48,7 @@ export function createHudModel() {
   const resources = channel<PersonalResources|undefined>(undefined);
   let matchId:number|undefined;
   return {
-    fire,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,character,mandate,profileReward,
+    fires,outage,broadcast,television,congress,countdown,agenda,profile,stamina,resources,character,mandate,profileReward,
     player(player:Pick<Player,'stamina'|'staminaMax'|'nick'|'character'>) {
       const identity = character.get();
       if (identity?.nick!==player.nick || identity?.character!==player.character) {
@@ -59,7 +59,7 @@ export function createHudModel() {
     },
     render(view:PlenaryView) {
       broadcast.update(view.phase==='negotiation' && view.megaphoneActive===true);
-      fire.update(view.fire);
+      fires.update(view.fires);
       outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;
       television.update(interview && {name:interview.name,remaining:interview.remaining});
