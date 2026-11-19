@@ -16,13 +16,13 @@ export function electionStationActions(view:PlenaryView|undefined,station:Statio
   const actions:StationElectionAction[] = [];
   const election = view?.election;
   const personal = election?.personal;
-  if (view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !election.remaining || !personal) {
+  if (view?.electionsEnabled===false || view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !election.remaining || !personal) {
     return {actions,voiceHint:false};
   }
   if (station==='press') actions.push('advertise');
   if (station==='panel') {
     if (!personal.spoke) actions.push('speech');
-    if (view.project!==undefined && election.canObject) actions.push('object');
+    if (view.projectVotingEnabled!==false && view.project!==undefined && election.canObject) actions.push('object');
   }
   if (station==='tv' && election.canInterview && hasVoice) actions.push('interview');
   return {actions,voiceHint:station==='tv' && election.canInterview && !hasVoice};

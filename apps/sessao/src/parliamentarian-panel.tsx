@@ -14,7 +14,7 @@ export function refreshVoteOffer(amount:number,minimum:number) {
 
 type Send = (action:ParliamentarianAction)=>void;
 
-export function ParliamentarianDealPanel({deal,round,send}:{deal:ParliamentarianDeal;round:number;send:Send}) {
+export function ParliamentarianDealPanel({deal,round,send,projectsEnabled=true}:{projectsEnabled?:boolean;deal:ParliamentarianDeal;round:number;send:Send}) {
   const [quote,setQuote] = useState<{vote:Vote;amount:number}>();
   let shortcut = 0;
   const actions = new Map<string,()=>void>();
@@ -57,7 +57,7 @@ export function ParliamentarianDealPanel({deal,round,send}:{deal:Parliamentarian
           send({kind:'vote',session:deal.session,target:deal.id,round,project:deal.projectIndex,vote:quote.vote,amount});
           setQuote(undefined);
         },paymentUnavailable(amount))}
-      </>}</> : <p>Nenhum projeto em pauta.</p>}
+      </>}</> : projectsEnabled ? <p>Nenhum projeto em pauta.</p> : null}
     </div>
   </>;
 }
@@ -90,10 +90,10 @@ export function createParliamentarianPanel(send:Send) {
       close();
       if (dismissed===deal.session) return;
       const projectKey = JSON.stringify([view.round,deal.projectIndex,deal.session]);
-      const next = JSON.stringify([projectKey,deal.name,deal.project,deal.documents,deal.minimum,deal.wallet,deal.paymentsLeft]);
+      const next = JSON.stringify([projectKey,view.projectVotingEnabled,deal.name,deal.project,deal.documents,deal.minimum,deal.wallet,deal.paymentsLeft]);
       if (key!==next) {
         key = next;
-        flushSync(()=>root.render(<ParliamentarianDealPanel key={projectKey} deal={deal} round={view.round} send={send}/>));
+        flushSync(()=>root.render(<ParliamentarianDealPanel projectsEnabled={view.projectVotingEnabled!==false} key={projectKey} deal={deal} round={view.round} send={send}/>));
       }
       if (!dialog.open && !document.querySelector('dialog:modal')) dialog.showModal();
       if (dialog.open) opened = deal.session;

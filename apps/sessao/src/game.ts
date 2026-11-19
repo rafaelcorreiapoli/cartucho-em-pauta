@@ -9,7 +9,7 @@ import { decorPoint, isOfficeFurniture, officeDoorPoint, officeFixtures, officeF
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
-import { mapNpcs, type NpcId } from './npcs';
+import { npcEnabled, mapNpcs, type NpcId } from './npcs';
 import { binoculars, xray } from './equipment';
 import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
@@ -137,6 +137,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     }
     private installationFixtures: {point:Motion; art:Phaser.GameObjects.Image}[] = [];
     private mapLabels:Phaser.GameObjects.Text[] = [];
+    private securityTerminal?:Phaser.GameObjects.Image;
     private textResolution = 3;
     private safeFraction = 0;
     private drawnVisionRadius = VISION_RADIUS;
@@ -151,7 +152,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     extinguishEffect!:ReturnType<typeof createExtinguishEffect>;
     private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
     private marker!: Phaser.GameObjects.Ellipse;
-    private npcViews:{sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
+    private npcViews:{id:string;sprite:Phaser.GameObjects.Sprite;label?:Phaser.GameObjects.Text}[] = [];
 
 
     private assetsFailed = false;
@@ -226,7 +227,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             if (action) interact(action);
           }
         });
-      },art=>this.registerInteraction(art,()=>!!plenaryView?.gameplay?.security,openSecurity));
+      },art=>{
+        this.securityTerminal = art;
+        this.registerInteraction(art,()=>plenaryView?.surveillanceEnabled!==false && !!plenaryView?.gameplay?.security,openSecurity);
+      });
       powerPanels.forEach(({x,y},index)=>{
         const panel = index as PowerPanel;
         const fixture = this.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
@@ -245,7 +249,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
       this.photoRenderer = new PhotoRenderer(this.textures);
       this.children.depthSort();
-      this.photoRenderer.loadMap(this.children.getChildren());
+      this.photoRenderer.loadMap(this.children.getChildren(),this.securityTerminal);
       this.roomFires = createRoomFires(this);
       this.fuseSmoke = createFuseSmoke(this);
       this.extinguishEffect = createExtinguishEffect(this);
@@ -333,7 +337,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const target = id as NpcId;
           this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.npcNearby?.includes(target),()=>interact({kind:'catalog' in npc && npc.catalog ? 'open-shop' : 'talk',target}));
         }
-        return {sprite,label};
+        return {id,sprite,label};
       });
       this.marker = this.add.ellipse(0,0,19,6,0x09110e,.34).setVisible(false);
       this.input.on('pointerdown',(pointer: Phaser.Input.Pointer) => {
@@ -580,14 +584,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const visible = active && !!ownPlayer && localPerception(ownPlayer,fireSites[site],this.drawnVisionRadius).visible;
         effect.update(time,active,visible,reducedMotion.matches);
       });
-      for (const {sprite,label} of this.npcViews) {
-        const visible = !running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible);
+      for (const {id,sprite,label} of this.npcViews) {
+        const visible = npcEnabled(id,plenaryView?.projectVotingEnabled!==false,plenaryView?.decorationsEnabled!==false,plenaryView?.portraitsAndVipEnabled!==false) && (!running || (negotiating && !!ownPlayer && localPerception(ownPlayer,sprite,visionRadius).visible));
         sprite.setVisible(visible);
         label?.setVisible(visible);
       }
       const inSession = !!local.state?.plenary;
       this.doors.setVisible(inSession);
       const agenda = plenaryView?.project!==undefined ? agendaProject(plenaryView) : undefined;
+      this.securityTerminal?.setVisible(plenaryView?.surveillanceEnabled!==false);
+      this.board.setVisible(plenaryView?.projectVotingEnabled!==false);
       this.board.setText(agenda && plenaryView && running ? `${agenda.name} · ${plenaryView.remaining}s` : 'Nenhum projeto em pauta');
       const camera = this.cameras.main;
       const cssWidth = parent.clientWidth || 1;
@@ -875,6 +881,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     },
     drawPhoto(canvas:HTMLCanvasElement, captured?:PhotoScene) {
       if (!scene.sys.isActive() || !scene.photoRenderer) return;
+      scene.photoRenderer.surveillanceEnabled = plenaryView?.surveillanceEnabled!==false;
       if (captured) {
         scene.photoRenderer.draw(canvas,captured);
         return;

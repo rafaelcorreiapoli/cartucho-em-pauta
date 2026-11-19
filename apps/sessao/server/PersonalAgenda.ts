@@ -215,8 +215,17 @@ export class PersonalAgenda {
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true) {
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' && (this.phoneGamesEnabled || !['jogar','jogarOculto','joguinho','produtividade','celularFoto'].includes(kind)));
+    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true) {
+    const documentAndProjectMissions:readonly Agenda[] = ['protocolo','assinaturas','assinar','comissaoImprovisada','assinaturaAlvo','documentoAlvo','provaDocumental','retratacaoOficial','votoNpc','apoio','projetos','oposicao','leitura','votacao'];
+    const photographyMissions:readonly Agenda[] = ['selfieAlvo','selfieSolo','fotografia','flagra','selfie','presidenteFoto','celularFoto','reuniaoFoto','dossieFoto','apresentarFoto','entregaFoto','publicouSelfie','autorretrato','cerimonialOficial','fiscalVip','flagraGabinete','fotoOstentacao','fotoDinheiro','provaDocumental','registroHistorico','jornalismo','tresSelfies','turismo','selfieArrombamento','fotoNocaute'];
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' &&
+      (projectVotingEnabled || !documentAndProjectMissions.includes(kind)) &&
+      (photosEnabled || !photographyMissions.includes(kind)) &&
+      (decorationsEnabled || !['poltrona','ostentacao','gabinete','televisao','fotoOstentacao','doisMoveis'].includes(kind)) &&
+      (portraitsAndVipEnabled || !['retratoGabinete','retrato','autorretrato','cerimonialOficial','reforma','reserva','fiscalVip','mandaVip','solenidadeInauguracao','privilegioAdquirido','reuniaoVip','rabiscarRetrato'].includes(kind)) &&
+      (surveillanceEnabled || !['varredura','limpeza','escutaAtiva','instalarGrampo','vigilanciaInstitucional','duasCameras','instalarCamera','cameraGabinete'].includes(kind)) &&
+      (photosEnabled || projectVotingEnabled || kind!=='mensagemComAnexo') &&
+      (electionsEnabled || !['propaganda','discurso','investimentoPolitico','campanhaUltimaHora'].includes(kind)) && (this.phoneGamesEnabled || !['jogar','jogarOculto','joguinho','produtividade','celularFoto'].includes(kind)));
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
     const activities = startingActivities.filter(kind=>deck.includes(kind));

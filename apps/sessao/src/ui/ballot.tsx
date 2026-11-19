@@ -43,7 +43,7 @@ export function hearingBallotState(view:PlenaryView):BallotState|null {
 }
 
 export function sessionBallotState(view:PlenaryView) {
-  if (view.phase==='ballot') {
+  if (view.phase==='ballot' && view.projectVotingEnabled!==false) {
     const {round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,mandate,politics} = view;
     return {kind:'project' as const,state:{round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters,vote,
       eligible:!!mandate && !politics?.suspended}};

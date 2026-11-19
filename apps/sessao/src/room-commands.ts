@@ -15,6 +15,12 @@ type RoomActions = {
   character:{character:number};
   'lobby-npc-count':{count:number};
   'lobby-phone-games':{enabled:boolean};
+  'lobby-project-voting':{enabled:boolean};
+  'lobby-elections':{enabled:boolean};
+  'lobby-photos':{enabled:boolean};
+  'lobby-surveillance':{enabled:boolean};
+  'lobby-decorations':{enabled:boolean};
+  'lobby-portraits-vip':{enabled:boolean};
   'start-match':{infiltrators?:number;npcs?:number;asInfiltrator?:boolean};
   gameplay:{action:GameplayAction};
   spy:SpyCommand;

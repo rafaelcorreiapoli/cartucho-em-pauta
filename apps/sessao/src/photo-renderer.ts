@@ -4,7 +4,7 @@ import { equipment } from './equipment';
 import type Phaser from 'phaser';
 import { characterArt, downedArt, phoneArt } from './character-art';
 import { objects, type ObjectKind } from './gameplay';
-import { HEIGHT, VISION_RADIUS, WIDTH } from './map';
+import { desks, HEIGHT, VISION_RADIUS, WIDTH } from './map';
 import { wallVision } from './visibility';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type Decoration, type Photo, type PhotoScene } from './photography';
 
@@ -15,14 +15,15 @@ const MAP_SCALE = 3;
 
 export class PhotoRenderer {
   private map?:HTMLImageElement;
+  surveillanceEnabled = true;
 
   constructor(private textures:Phaser.Textures.TextureManager) {}
 
-  loadMap(staticObjects:Phaser.GameObjects.GameObject[]) {
+  loadMap(staticObjects:Phaser.GameObjects.GameObject[],securityTerminal?:Phaser.GameObjects.GameObject) {
     const texture = this.textures.addDynamicTexture('photo-map',WIDTH*MAP_SCALE,HEIGHT*MAP_SCALE);
     if (!texture) return;
     texture.camera.setOrigin(0,0).setZoom(MAP_SCALE);
-    texture.draw(staticObjects).render();
+    texture.draw(staticObjects.filter(object=>object!==securityTerminal)).render();
     texture.snapshot(image=>{
       if (image instanceof HTMLImageElement) this.map = image;
     });
@@ -40,6 +41,11 @@ export class PhotoRenderer {
     ctx.fillStyle = '#101d19';
     ctx.fillRect(0,0,width,height);
     ctx.drawImage(this.map,-left,-top,WIDTH,HEIGHT);
+    if (this.surveillanceEnabled) {
+      const terminal = desks.find(desk=>desk.name==='Terminal de segurança')!;
+      const art = this.textures.get('security-terminal').getSourceImage() as HTMLImageElement;
+      ctx.drawImage(art,terminal.x-left,terminal.y-14-top,45,34);
+    }
     if (scene.camera) {
       ctx.fillStyle = '#334e42';
       for (const [x,y,w,h] of scene.camera.barriers ?? []) ctx.fillRect(x-left,y-top,w,h);

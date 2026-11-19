@@ -148,7 +148,15 @@ export class PlenaryMatch {
     if (this.running) this.refreshAgendaEligibility();
   }
 
+  private projectVotingEnabled = true;
+  private electionsEnabled = true;
+  private photosEnabled = true;
+  private surveillanceEnabled = true;
+  private decorationsEnabled = true;
+  private portraitsAndVipEnabled = true;
+
   private remainingAgendaBallots(now:number) {
+    if (!this.projectVotingEnabled) return 0;
     const inBallot = this.phase==='ballot';
     const freeAt = Math.max(now,this.cassationAt ?? now);
     const first = inBallot ? now+projectRules.cooldownMs+projectRules.debateMs : this.proposal
@@ -165,7 +173,7 @@ export class PlenaryMatch {
     const agendaPlayers = this.expelled.size
       ? new Set([...this.electorate].filter(id=>!this.expelled.has(id)))
       : this.electorate;
-    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.election.hasFutureAdvertising(id,this.agendaNow));
+    this.economy.updateAgendaEligibility(agendaPlayers,this.agendaBallotsLeft,id=>!!this.election.office(id),this.round,this.disconnected,id=>this.electionsEnabled && this.election.hasFutureAdvertising(id,this.agendaNow));
   }
 
   former(id:string) { return this.electorate.has(id) && !this.election.office(id); }
@@ -232,6 +240,7 @@ export class PlenaryMatch {
   }
 
   private renew(now:number) {
+    if (!this.electionsEnabled) return;
     const previous = this.election.eliminated;
     const cycle = this.election.currentCycle;
     this.election.advance(now,this.popularity,this.advertisementMultiplier(now));
@@ -297,10 +306,16 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
+    this.projectVotingEnabled = projectVotingEnabled;
+    this.electionsEnabled = electionsEnabled;
+    this.photosEnabled = photosEnabled;
+    this.surveillanceEnabled = surveillanceEnabled;
+    this.decorationsEnabled = decorationsEnabled;
+    this.portraitsAndVipEnabled = portraitsAndVipEnabled;
     this.electorate = new Set(ids);
     this.disconnected.clear();
     this.npcIds.clear();
@@ -342,8 +357,8 @@ export class PlenaryMatch {
       }
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
-      return this.election.canCampaignAction(id,kind);
-    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled);
+      return this.electionsEnabled && this.election.canCampaignAction(id,kind);
+    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled);
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
@@ -420,6 +435,7 @@ export class PlenaryMatch {
       this.receivedEvents.add(event.eventId);
     }
     if (event.type==='bill-studied') {
+      if (!this.projectVotingEnabled) return false;
       const studied = event.project;
       if (studied===undefined || this.phase!=='negotiation' || this.proposal?.project!==studied) return false;
       const readers = this.studiedBills.get(studied) ?? new Set<string>();
@@ -452,10 +468,12 @@ export class PlenaryMatch {
   }
 
   private projectFilingClosed(now:number) {
+    if (!this.projectVotingEnabled) return true;
     return Math.max(now,this.protocolOpensAt)+projectRules.debateMs>=this.sessionEndsAt;
   }
 
   private projectFilingError(id:string,project:number,now:number) {
+    if (!this.projectVotingEnabled) return 'Votações de projetos desativadas nesta partida.';
     if (this.training) return "Projetos ficam para uma próxima versão do tutorial.";
     if (!bills[project] || !this.canVote(id)) return 'Somente jogadores com mandato podem protocolar projetos.';
     if (this.outcomes.some(outcome=>outcome.project===project)) return 'Esse projeto já foi votado nesta partida.';
@@ -495,6 +513,7 @@ export class PlenaryMatch {
   roomActivity(player:Player, activity:Exclude<RoomActivity,'coffee'>, now:number,publish?:GameplayWorld['publish']):RoomActivityResult | undefined {
     const {id} = player;
     if (this.phase!=='negotiation' || now>=this.ends || !this.electorate.has(id) || this.isolated(id) || !this.at(player,activity)) return;
+    if (!this.projectVotingEnabled) return;
     const project = this.proposal?.project;
     if (project===undefined) return {activity,text:'Nenhum projeto em pauta.'};
     if (this.studiedBills.get(project)?.has(id)) return {activity,text:`Você já estudou o projeto ${bills[project].name}.`};
@@ -759,6 +778,7 @@ export class PlenaryMatch {
   }
 
   private canUseCampaignActions(id:string, now:number) {
+    if (!this.electionsEnabled) return false;
     return this.phase==='negotiation' && now<this.ends && this.canVote(id) &&
       this.election.open(now) && this.ballotCountdown(now)===undefined;
   }
@@ -817,6 +837,7 @@ export class PlenaryMatch {
 
 
   complaintView(id:string,photos?:readonly Photo[]) {
+    if (!this.photosEnabled) photos = undefined;
     const name = (actor:string)=>this.economy.name(actor);
     return {available:this.complaints.available(id,name,photos),history:this.complaints.history(),
       proofs:photos && this.complaints.proofs(id,photos,actor=>this.electorate.has(actor),name)};
@@ -828,6 +849,7 @@ export class PlenaryMatch {
   }
 
   submitComplaint(player:Player,id:number|string,now:number,photo?:Photo) {
+    if (!this.photosEnabled && photo) return 'Fotos desativadas nesta partida.';
     if (!this.canFileComplaint(player,now)) {
       return 'Vá ao balcão da Corregedoria durante a articulação.';
     }
@@ -1172,6 +1194,7 @@ export class PlenaryMatch {
     const phaseTimeLeft = this.voting ? this.voteEndsAt-realNow
       : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
+      projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,surveillanceEnabled:this.surveillanceEnabled,decorationsEnabled:this.decorationsEnabled,portraitsAndVipEnabled:this.portraitsAndVipEnabled,
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
       cassationIn:this.cassationAt===undefined ? undefined : Math.max(0,Math.ceil((this.cassationAt-now)/1000)),
@@ -1200,7 +1223,7 @@ export class PlenaryMatch {
       yes:this.impact('yes',this.fraud && !this.reportedFraud && !this.audits.has(id) && role!=='Infiltrado' && this.running),
       billQuorum:this.billQuorum(),
       payroll:role ? this.payrollView(id,now) : undefined,
-      election:role ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
+      election:role && this.electionsEnabled ? this.election.view(id,now,this.popularity,this.canUseCampaignActions(id,now),this.objection(),this.advertisementMultiplier(now)) : undefined,
       politics:role ? this.economy.view(id,contacts,this.round,this.canCallHearing(id,now),id => this.canVote(id) && (this.hearingImmunity.get(id) ?? 0)<=now, recipient=>this.canSendPix(id,now) && this.canReceivePix(recipient),now) : undefined,
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,

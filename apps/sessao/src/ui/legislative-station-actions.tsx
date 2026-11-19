@@ -12,7 +12,7 @@ export const legislativeButtons = {
 
 export function legislativeStationActions(view:PlenaryView|undefined,station:Station|undefined):StationAction[] {
   if (view?.phase!=='negotiation' || view.isolationSeconds || view.ballotCountdown!==undefined) return [];
-  if (station==='audit') return ['denounce'];
+  if (station==='audit') return view.photosEnabled===false ? [] : ['denounce'];
   if (view.mandate===false) return [];
   if (view.project===undefined || view.projectVoteExpired) return [];
   if (station!=='panel') return [];

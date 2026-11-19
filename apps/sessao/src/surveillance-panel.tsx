@@ -35,6 +35,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     }
   }
   let view:SpyView|undefined;
+  let photosEnabled = true;
   let key = '';
   let page = 0;
   let device:SpyDevice = 'spyCamera';
@@ -45,7 +46,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
 
   function update(opening=false) {
     if (!dialog.open && !opening) return;
-    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing,device]);
+    const next = JSON.stringify([view?.channels,view?.selected,view?.audio,view?.muted,page,editing,device,photosEnabled]);
     if (key===next) return;
     key = next;
     const allChannels = view?.channels ?? [];
@@ -112,7 +113,7 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
     const monitor = <>
       {audio && <p>{audio.name} · {view?.muted ? 'Silenciado' : audio.active ? 'Áudio ativo' : 'Sem voz detectada'}</p>}
       {!channel ? <p>Selecione um canal.</p> : <>
-        {selected && action('capture','Fotografar',()=>send({kind:'capture',channel:selected.id}))}
+        {photosEnabled && selected && action('capture','Fotografar',()=>send({kind:'capture',channel:selected.id}))}
         {audio && action(`mute:${view?.muted}`,view?.muted ? 'Ouvir grampo' : 'Silenciar grampo',()=>send({kind:'mute',channel:audio.id}))}
         {action(`alerts:${channel.alerts}`,channel.alerts ? 'Silenciar alertas' : 'Ativar alertas',()=>send({kind:'alerts',channel:channel.id}))}
         {action('edit','Renomear',()=>{ editing = channel.id; update(); })}
@@ -169,7 +170,8 @@ export function createSurveillancePanel(send:(action:SpyCommand)=>void) {
 
   return {
     open,
-    render(next?:SpyView) {
+    render(next?:SpyView,nextPhotosEnabled=true) {
+      photosEnabled = nextPhotosEnabled;
       if (monitoredChannel(next)?.id!==monitoredChannel(view)?.id) stopViewport();
       view = next;
       if (!view && dialog.open) dialog.close();

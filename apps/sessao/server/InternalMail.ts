@@ -5,6 +5,7 @@ import type { Player } from '../src/map';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 export class InternalMail {
+  photosEnabled = true;
   private readonly cooldowns = new Map<string,number>();
   private notices:InternalNotice[] = [];
   private authenticity = new Map<number,boolean>();
@@ -63,6 +64,7 @@ export class InternalMail {
     if (source && reference!==undefined) return 'O encaminhamento preserva o anexo original.';
     const resolved = source ? source.attachment && {attachment:source.attachment,authentic:this.authenticity.get(source.id)} :
       reference===undefined ? undefined : resolve?.(reference);
+    if (!this.photosEnabled && resolved?.attachment.kind==='photo') return 'Fotos desativadas nesta partida.';
     if (reference!==undefined && !resolved) return 'Anexo indisponível.';
     if (!world.spend?.(player.id,mailPublicationFee(world.policies))) return 'Saldo insuficiente para publicar.';
     this.cooldowns.set(player.id,world.now+internalMailRules.cooldownMs);

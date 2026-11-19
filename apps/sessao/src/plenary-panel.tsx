@@ -20,6 +20,8 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
 }) {
   const matchId = view.politics?.progression.matchId;
   const ballot = sessionBallotState(view);
+  if (view.projectVotingEnabled===false) return ballot ? <SessionBallot key={matchId} state={ballot} ownId={id} onExpansion={onExpansion}
+    cast={vote=>command('bill-vote',{vote})} castCassation={candidate=>command('cassation-vote',{candidate})}/> : null;
   const impact = showImpact(view);
   return <>
     <HudHelp as="div" help="Resultado da última votação." id="project-outcome-brief" role="status" hidden={!brief} data-passed={brief ? String(brief.passed) : undefined}>
@@ -53,6 +55,12 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
 
 export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean,back:()=>void) {
   const lobby = mountLobbyControls(element('lobby-controls'),id,{
+    changePortraitsAndVip:enabled=>command('lobby-portraits-vip',{enabled}),
+    changeDecorations:enabled=>command('lobby-decorations',{enabled}),
+    changeSurveillance:enabled=>command('lobby-surveillance',{enabled}),
+    changePhotos:enabled=>command('lobby-photos',{enabled}),
+    changeElections:enabled=>command('lobby-elections',{enabled}),
+    changeProjectVoting:enabled=>command('lobby-project-voting',{enabled}),
     changePhoneGames:enabled=>command('lobby-phone-games',{enabled}),
     changeNpcCount:count=>command('lobby-npc-count',{count}),
     start:(infiltrators,asInfiltrator)=>{ if (assetsReady()) command('start-match',{infiltrators,asInfiltrator}); },
@@ -74,7 +82,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
 
   function renderDock(next:PlenaryView) {
     const nextKey = JSON.stringify([next.politics?.progression.matchId,brief?.round,
-      next.phase,projectHeading(next),projectDetailsState(next),next.mandate,next.politics?.suspended,next.voteIntents,
+      next.phase,next.projectVotingEnabled,projectHeading(next),projectDetailsState(next),next.mandate,next.politics?.suspended,next.voteIntents,
       next.project,next.cassationIn,showImpact(next) && [next.yes,next.no],sessionBallotState(next)]);
     if (nextKey===key) return;
     key = nextKey;

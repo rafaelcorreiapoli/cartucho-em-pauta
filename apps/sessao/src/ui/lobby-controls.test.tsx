@@ -48,3 +48,45 @@ test('the solo lobby waits for assets and removes its controls after the server 
   expect(render('a')).toContain('type="checkbox"/> Joguinhos de celular');
   expect(render('b')).toContain('type="checkbox" disabled=""/> Joguinhos de celular');
 });
+
+ test('project voting setting shows the confirmed value and only the host can change it',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls
+    state={lobbyControlsState({...match.view(id,ids,0),projectVotingEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Votações de projetos');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Votações de projetos');
+});
+
+test('only the host can change the election setting and guests see its confirmed value',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls
+    state={lobbyControlsState({...match.view(id,ids,0),electionsEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Eleição para eliminação');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Eleição para eliminação');
+});
+
+test('photo setting is visible to guests and configurable only by the host',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),photosEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Câmera e fotos');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Câmera e fotos');
+});
+
+test('surveillance setting is host-only and guests see its confirmed value',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),surveillanceEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Vigilância');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Vigilância');
+});
+
+test.each([['decorationsEnabled','Decoração'],['portraitsAndVipEnabled','Retratos e área VIP']])('lobby exposes independent host-only setting %s',(flag,label)=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),[flag]:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> '+label);
+  expect(render('b')).toContain('type="checkbox" disabled=""/> '+label);
+});
