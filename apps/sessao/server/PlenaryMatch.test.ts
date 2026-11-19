@@ -89,7 +89,7 @@ test('the vote uses actual costs, requires a majority and reveals the infiltrato
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,() => .9);
   Reflect.set(Reflect.get(match,'fire'),'next',Infinity);
-  expect(match.view(host.id,[host.id],0).sessionRemaining).toBe(600);
+  expect(match.view(host.id,[host.id],0).sessionRemaining).toBe(720);
   let now = 0;
   for (let round=0;round<3;round++) {
     publishProjectFiling(match,host,round===0 ? 0 : round+2,match.gameTime(now));
@@ -612,7 +612,7 @@ test.each([0,2,3])('stable Parliament wins regardless of how many projects were 
     match.advance(now+=NEGOTIATION_MS);
     const ballot = match.view(host.id,[host.id],now);
     expect(ballot.remaining).toBe(BALLOT_MS/1_000);
-    expect(ballot.sessionRemaining).toBe(600-match.gameTime(now)/1_000);
+    expect(ballot.sessionRemaining).toBe(ELECTION_RULES.matchDuration/1_000-match.gameTime(now)/1_000);
     match.vote(host.id,'no',now+1);
     match.advance(now+=BALLOT_MS);
     now+=60_000;
