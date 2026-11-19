@@ -67,7 +67,9 @@ test('robbery requires a knockout, yields one physical cash lot and cannot dupli
   for (const kind of ['talk','sign','vote']) expect(robberies.act(a,{kind,target:visitor.id},world(1))).toContain('não negociam');
   visitor.knockedOut = true;
   for (const player of [a,b]) robberies.act(player,{kind:'rob',target:visitor.id},world(2));
+  expect(robberies.robberyTarget(a.id)).toEqual({x:visitor.x,y:visitor.y,direction:visitor.direction});
   robberies.tick(world(2+npcRules.robberyMs),true);
+  expect(robberies.robberyTarget(a.id)).toBeUndefined();
   expect(world(3).wallet!(visitor.id)).toBe(0);
   expect(world(3).wallet!(a.id)).toBe(wallet);
   expect(game.view(a,world(3)).inventory).toContainEqual(expect.objectContaining({kind:'briefcase',cash:amount}));
@@ -89,6 +91,7 @@ test('the contextual HUD only offers robbery on a downed visitor and can cancel 
   const cancel = buttons().find(button=>button.label==='Cancelar roubo')!;
   if (cancel.action.kind!=='npc-deal') throw Error('Missing cancellation');
   robberies.act(a,cancel.action.request,world(1));
+  expect(robberies.robberyTarget(a.id)).toBeUndefined();
   robberies.tick(world(1+npcRules.robberyMs),true);
   expect(world(1).wallet!(visitor.id)).toBeGreaterThan(0);
   expect(game.view(a,world(1)).inventory).toEqual([]);

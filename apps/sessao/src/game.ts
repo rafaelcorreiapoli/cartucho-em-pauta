@@ -15,7 +15,7 @@ import { binoculars, xray } from './equipment';
 import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheets, safeDepositArt, safeDepositSheets } from './character-art';
+import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheets, safeDepositArt, safeDepositSheets, npcRobberyArt, npcRobberySheets } from './character-art';
 import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
@@ -27,7 +27,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number; depositStarted?:number };
+type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number; depositStarted?:number; robberyStarted?:number };
 // Grip coordinates in the original 128 px frames, ordered front, profile, back.
 type Grip = readonly [x:number,y:number];
 type WalkGrips = readonly [Grip,Grip,Grip,Grip];
@@ -173,7 +173,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,...visitorSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...visitorSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
         this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
@@ -737,8 +737,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (depositing) view.depositStarted ??= time;
         else view.depositStarted = undefined;
         const depositArt = depositing ? safeDepositArt(character,time-(view.depositStarted ?? time),reducedMotion.matches) : undefined;
+        const robberyTarget = latest.robberyTarget;
+        const robbing = robberyTarget && !moving && !combatArt && !pose && !latest.carrying;
+        if (robbing) view.robberyStarted ??= time;
+        else view.robberyStarted = undefined;
+        const robberyArt = robbing ? npcRobberyArt(character,time-(view.robberyStarted ?? time),reducedMotion.matches,latest,robberyTarget) : undefined;
         const phone = latest.phone;
-        const usingPhone = !depositArt && !breachArt && (phone==='open' || phone==='game') && !player.moving &&
+        const usingPhone = !robberyArt && !depositArt && !breachArt && (phone==='open' || phone==='game') && !player.moving &&
           handling===undefined && !combatArt && !pose && !latest.carrying;
         const handsetArt = usingPhone ? phoneArt(character,time,reducedMotion.matches) : undefined;
         const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
@@ -751,7 +756,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const spriteDepth = y+(latest.carried ? 1 : 0);
         if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
         sprite.setVisible(true).setPosition(spriteX,spriteY)
-          .setFlipX(downed?.flipX ?? recoil?.flipX ?? (!handsetArt && !breachArt && !depositArt && facing===3));
+          .setFlipX(downed?.flipX ?? recoil?.flipX ?? robberyArt?.flipX ?? (!handsetArt && !breachArt && !depositArt && facing===3));
         view.weapon.setVisible(!!pose);
         if (pose && swing && profile) {
           view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
@@ -763,7 +768,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
         // Phaser redraws and uploads the text texture on every setColor call.
         if (label.style.color!==nameColor) label.setColor(nameColor);
-        const handsBusy = !!(handsetArt || breachArt || depositArt);
+        const handsBusy = !!(handsetArt || breachArt || depositArt || robberyArt);
         const grip = briefcaseGrip[NAMES[character]]?.[breachArt ? 2 : handsetArt ? 0 : row];
         const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
         const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
@@ -789,15 +794,15 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           .setPosition(x,labelY+6).setText(status);
         const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
         if (office.style.color!==officeColor) office.setColor(officeColor);
-        if (moving && !pose && !combatArt && !breachArt && !depositArt) {
+        if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
           sprite.play(`${visitor ?? character}-${row}`,true);
           sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
         } else {
           sprite.anims.stop();
-          const art = combatArt ?? depositArt ?? breachArt ?? handsetArt;
+          const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
           sprite.setTexture(art?.key ?? sheet.key,art?.frame ?? frame+row*4);
         }
-        if (grip && latest.cashInHand && !pose && !combatArt && !depositArt) {
+        if (grip && latest.cashInHand && !pose && !combatArt && !depositArt && !robberyArt) {
           const walkFrame = !handsBusy && typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
           const [handX,handY] = grip[walkFrame];
           const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setScale(12/128);

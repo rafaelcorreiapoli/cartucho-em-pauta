@@ -40,6 +40,12 @@ async page => {
   await page.screenshot({path:'output/playwright/visitors-knockout.png'});
   await rob.click();
   await page.getByRole('button',{name:'Cancelar roubo',exact:true}).waitFor();
+  const during = await state();
+  const robber = during.people.find(player=>!player.npc && !player.bot);
+  if (!robber.robberyTarget || robber.robberyTarget.x!==down.x || robber.robberyTarget.y!==down.y) {
+    throw Error('The robbery animation lost its victim position');
+  }
+  await page.screenshot({path:'output/playwright/visitors-robbing.png'});
   await page.getByText('Maleta roubada. Leve-a ao seu cofre.',{exact:true}).waitFor();
   const after = await state();
   const nestor = after.people.find(player=>player.visitor==='nestor-cervero');
