@@ -17,6 +17,8 @@ Os itens são entregues primeiro no inventário. O excedente vai para o armário
 
 Os salários continuam entrando diretamente nos cofres dos jogadores, conforme a dinâmica existente. Não são entregues em maletas. Os projetos automáticos são uma dinâmica do Calote, distinta da votação opcional de projetos.
 
+A implementação deve incluir uma opção própria de projetos automáticos no lobby, para o anfitrião habilitar ou desabilitar antes da partida, seguindo as outras opções de mecânicas. Essa opção é independente da votação de projetos e só tem efeito no modo Calote. Quando desabilitada, não há aprovações, despesas, efeitos ou avisos de projetos automáticos.
+
 O Programa Voz do Povo foi descartado. O megafone permite falar com jogadores independentemente da distância; não concede campanha ou popularidade.
 
 ## Backlog: Estatuto da Legítima Defesa do Mandato
