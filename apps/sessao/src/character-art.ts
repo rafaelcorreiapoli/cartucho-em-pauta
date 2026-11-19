@@ -47,11 +47,15 @@ export function npcRobberyArt(character:number,time:number,reducedMotion:boolean
   return {key:`${skin}-npc-robbery`,frame:reducedMotion ? 0 : Math.floor(time/180)%8,flipX};
 }
 
-export const safeDepositSheets = [{key:'lula-safe-deposit',path:'assets/lula-safe-deposit.webp'}];
+export const safeDepositSheets = Object.values(characterSlugs).map(skin=>{
+  const key = `${skin}-safe-deposit`;
+  return {key,path:`assets/${key}.webp`};
+});
 
 export function safeDepositArt(character:number,time:number,reducedMotion:boolean) {
-  if (NAMES[character]!=='Lula') return;
-  return {key:'lula-safe-deposit',frame:reducedMotion ? 3 : Math.floor(time/200)%8};
+  const skin = characterSlugs[NAMES[character]];
+  if (!skin) return;
+  return {key:`${skin}-safe-deposit`,frame:reducedMotion ? 3 : Math.floor(time/200)%8};
 }
 
 export const safeBreachSheets = Object.values(characterSlugs).map(character=>{

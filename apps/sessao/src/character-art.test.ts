@@ -62,18 +62,18 @@ test('the replacement skins ship all three combat sheets at the Phaser atlas dim
   }
 });
 
-test('only Lula has the eight-frame safe deposit animation, with a stationary reduced-motion pose', async ()=>{
-  const lula = NAMES.indexOf('Lula');
-  expect(Array.from({length:9},(_,frame)=>safeDepositArt(lula,frame*200,false)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
-  expect(safeDepositArt(lula,1200,true)).toEqual({key:'lula-safe-deposit',frame:3});
-  for (let character=0;character<NAMES.length;character++) {
-    if (character!==lula) expect(safeDepositArt(character,0,false)).toBeUndefined();
-  }
-  expect(safeDepositSheets).toEqual([{key:'lula-safe-deposit',path:'assets/lula-safe-deposit.webp'}]);
-  const asset = Bun.file(new URL('../public/assets/lula-safe-deposit.webp',import.meta.url));
+for (const [name,skin] of cast) test(`${name} has eight safe deposit frames and a stationary reduced-motion pose`,async ()=>{
+  const character = NAMES.indexOf(name);
+  const key = `${skin}-safe-deposit`;
+  const path = `assets/${key}.webp`;
+  expect(Array.from({length:9},(_,frame)=>safeDepositArt(character,frame*200,false)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
+  expect(safeDepositArt(character,1200,true)).toEqual({key,frame:3});
+  expect(safeDepositArt(-1,0,false)).toBeUndefined();
+  expect(safeDepositSheets).toHaveLength(NAMES.length);
+  expect(safeDepositSheets).toContainEqual({key,path});
+  const asset = Bun.file(new URL(`../public/${path}`,import.meta.url));
   expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
-  const header = new DataView(await asset.slice(21,25).arrayBuffer());
-  const dimensions = header.getUint32(0,true);
+  const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
   expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([1024,128]);
 });
 
