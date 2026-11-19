@@ -55,6 +55,10 @@ export function LegislativeDock({view,brief,id,command,onExpansion}:{
 
 export function createPlenaryPanel(id:string, command:ReturnType<typeof createRoomCommandSender>,assetsReady:()=>boolean,back:()=>void) {
   const lobby = mountLobbyControls(element('lobby-controls'),id,{
+    changeInitialWallet:value=>command('lobby-initial-wallet',{value}),
+    changeGrants:enabled=>command('lobby-grants',{enabled}),
+    changeInitialBudget:value=>command('lobby-initial-budget',{value}),
+    changeMatchMinutes:value=>command('lobby-match-minutes',{value}),
     changeAutomaticProjects:enabled=>command('lobby-automatic-projects',{enabled}),
     changeGameMode:mode=>command('lobby-game-mode',{mode}),
     changePortraitsAndVip:enabled=>command('lobby-portraits-vip',{enabled}),

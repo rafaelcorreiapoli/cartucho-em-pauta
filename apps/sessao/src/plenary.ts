@@ -155,7 +155,7 @@ export type PlenaryView = {
   gameMode?:import('./game-modes').GameMode; caloteIn?:number; phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean; botsToFill?:number;
   botMessages?:readonly {name:string; text:string}[];
-  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; photosEnabled?:boolean; surveillanceEnabled?:boolean; decorationsEnabled?:boolean; portraitsAndVipEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
+  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; grantsEnabled?:boolean; initialWallet?:number; initialBudget?:number; matchMinutes?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; photosEnabled?:boolean; surveillanceEnabled?:boolean; decorationsEnabled?:boolean; portraitsAndVipEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   automaticProjectsEnabled?:boolean; automaticProjects?:import('./automatic-projects').AutomaticProjectsView;
   payroll?:PayrollView; election?:ElectionView; billQuorum:number;
