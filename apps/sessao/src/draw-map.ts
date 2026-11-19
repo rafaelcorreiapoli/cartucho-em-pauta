@@ -115,3 +115,10 @@ export function drawMap(scene: Phaser.Scene,
     }).setOrigin(.5,0).setDepth(1),
   )];
 }
+
+export function updateSafeArt(art:Phaser.GameObjects.Image,open:boolean) {
+  const {texture,openTexture,width,openWidth,height,openOriginX} = officeFixtures.safe;
+  const key = open ? openTexture : texture;
+  if (art.texture.key!==key) art.setTexture(key).setOrigin(open ? openOriginX : .5,1)
+    .setDisplaySize(open ? openWidth : width,height);
+}

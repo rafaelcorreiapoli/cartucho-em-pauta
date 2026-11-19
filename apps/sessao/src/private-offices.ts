@@ -19,10 +19,14 @@ export const privateOffices = Array.from({length:6},(_,index)=>{
   };
 });
 export const officeFixtures = {
-  safe:{texture:'office-safe',width:19,height:24,footOffset:8},
+  safe:{texture:'office-safe',openTexture:'office-safe-open',width:19,height:24,footOffset:8,openWidth:28.5,openOriginX:154/240},
   cabinet:{texture:'office-cabinet',width:21,height:33,footOffset:8},
 } as const;
 export type OfficeLayout = typeof privateOffices[number];
+
+export function depositingAtSafe(office:OfficeLayout,people:readonly (Motion & {pocketing?:boolean})[]) {
+  return people.some(person=>person.pocketing && Math.hypot(person.x-office.safe.x,person.y-office.safe.y)<=17);
+}
 
 export const officeRules = {
   safeLootFraction:1, cashMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],

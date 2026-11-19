@@ -5,7 +5,7 @@ import {wallVision} from './visibility';
 import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke,createExtinguishEffect} from './fire-effects';
 import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
-import { decorPoint, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
+import { decorPoint, depositingAtSafe, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
 import { weaponPose, weapons } from './weapons';
@@ -19,7 +19,7 @@ import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
 import { groundItemArt } from './map-props';
-import { drawMap } from './draw-map';
+import { drawMap, updateSafeArt } from './draw-map';
 import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
@@ -140,6 +140,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private securityTerminal?:Phaser.GameObjects.Image;
     private textResolution = 3;
     private safeFraction = 0;
+    private safeArt = new Map<string,Phaser.GameObjects.Image>();
     private drawnVisionRadius = VISION_RADIUS;
     fog!:Phaser.GameObjects.Graphics;
     hideFogEdge() { this.fogEdge?.setVisible(false); }
@@ -182,6 +183,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
       }
       this.load.spritesheet('installed-portraits',`${import.meta.env.BASE_URL}assets/retratos-elenco.webp`,{frameWidth:256,frameHeight:256});
+      this.load.image(officeFixtures.safe.openTexture,`${import.meta.env.BASE_URL}assets/gabinete-cofre-aberto.webp`);
       this.load.image(officeFixtures.safe.texture,`${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
       this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
       this.load.image('infirmary-stretcher',import.meta.env.BASE_URL+'assets/'+'maca-enfermaria.webp');
@@ -216,6 +218,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       window.addEventListener('resize',syncCanvas,options);
       syncCanvas();
       this.mapLabels = drawMap(this,(art,office,kind)=>{
+        if (kind==='safe') this.safeArt.set(office.id,art);
         const stash = ()=>kind==='cabinet' && plenaryView?.gameplay?.officeStash?.id===office.id;
         const option = ()=>plenaryView?.gameplay?.officeOptions?.find(action=>action.place===office.id &&
           (kind==='safe' ? ['office-cash','office-breach-safe','office-upgrade-safe'].includes(action.kind) :
@@ -537,6 +540,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
             .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
         }
+      }
+      for (const layout of privateOffices) {
+        const art = this.safeArt.get(layout.id);
+        if (!art) continue;
+        const open = negotiating && depositingAtSafe(layout,players);
+        updateSafeArt(art,open);
       }
       this.mapProgress.clear();
       const channel = plenaryView?.gameplay?.officeChannel;
