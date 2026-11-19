@@ -16,7 +16,7 @@ import {HudIcon} from './hud-icon';
 
 type Draft = {subject:string;body:string;attachment?:AttachmentRef;forwardedFrom?:number};
 
-export function MailComposer({choices,source,pending,error,fee,publish,back,close,draw}:{choices:readonly AttachmentChoice[];
+export function MailComposer({choices,source,pending,error,fee,publish,back,close,draw,photosEnabled=true,documentsEnabled=true}:{photosEnabled?:boolean;documentsEnabled?:boolean;choices:readonly AttachmentChoice[];
   source?:InternalNotice;pending:boolean;error:string|null;fee:number;publish:(draft:Draft)=>void;back:()=>void;close:()=>void;
   draw:(canvas:HTMLCanvasElement,photo:Photo)=>void;
 }) {
@@ -25,7 +25,7 @@ export function MailComposer({choices,source,pending,error,fee,publish,back,clos
   const [selection,setSelection] = useState<AttachmentRef>();
   const subject = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLTextAreaElement>(null);
-  const selected = choices.find(choice=>choice.kind===selection?.kind && choice.id===selection?.id);
+  const selected = choices.find(choice=>(choice.kind==='photo' ? photosEnabled : documentsEnabled) && choice.kind===selection?.kind && choice.id===selection?.id);
   const cancel = ()=>{setOpen(false);setCategory(undefined);};
   const toggle = ()=>{setCategory(undefined);setOpen(!open);};
   const pick = (choice:AttachmentChoice)=>{setSelection({kind:choice.kind,id:choice.id});cancel();};
@@ -55,16 +55,16 @@ export function MailComposer({choices,source,pending,error,fee,publish,back,clos
       <h3>Publicar comunicado</h3>
       <label>Assunto<input ref={subject} name="subject" defaultValue={source ? ('Enc: '+source.subject).slice(0,internalMailRules.subjectLength) : undefined} required maxLength={internalMailRules.subjectLength}/></label>
       <label><span>Mensagem <small>(opcional)</small></span><textarea ref={body} name="body" aria-label="Mensagem" rows={4} maxLength={internalMailRules.bodyLength}/></label>
-      {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : <div className="mail-selected-attachment">
+      {source ? <p>Comunicado original #{source.id} · {source.subject}</p> : (photosEnabled || documentsEnabled) ? <div className="mail-selected-attachment">
         <button type="button" className="hud-button hud-button--secondary" aria-haspopup="dialog" onClick={toggle}>
           <HudIcon name={selected?.kind==='photo' ? 'app-photos' : 'document'}/>{selected?.label ?? 'Selecionar anexo'}
         </button>
         {selected && <button type="button" className="mail-cancel" onClick={()=>setSelection(undefined)}>Remover anexo</button>}
-      </div>}
+      </div> : null}
       {error && <p role="status">{error}</p>}
       <footer><button className="hud-button" disabled={pending} aria-keyshortcuts="1">Publicar · {money(fee)} <kbd className="action-key" aria-hidden="true">1</kbd></button></footer>
     </form>
-    {open && <MailAttachmentPicker choices={choices} category={category} setCategory={setCategory} pick={pick} cancel={cancel} draw={draw}/>}
+    {open && <MailAttachmentPicker photosEnabled={photosEnabled} documentsEnabled={documentsEnabled} choices={choices} category={category} setCategory={setCategory} pick={pick} cancel={cancel} draw={draw}/>}
   </>;
 }
 
@@ -177,6 +177,8 @@ export function mountInternalMail(publish:(message:Draft)=>void,
   const host = document.querySelector<HTMLElement>('#phone-mail')!;
   const root = createRoot(host);
   let choices:readonly AttachmentChoice[] = [];
+  let photosEnabled = true;
+  let documentsEnabled = true;
   let reports:readonly ForensicReport[] = [];
   let notices:readonly InternalNotice[] = [];
   let composing = false;
@@ -192,7 +194,7 @@ export function mountInternalMail(publish:(message:Draft)=>void,
   function render() {
     const attachments = [...choices,...reports.map(report=>({kind:'report' as const,id:report.notice,label:'Laudo · '+report.document.title}))];
     root.render(<div className="mail-screen">
-      {composing ? <MailComposer choices={attachments} source={source} pending={pending} error={error} fee={fee} close={close} draw={draw}
+      {composing ? <MailComposer photosEnabled={photosEnabled} documentsEnabled={documentsEnabled} choices={attachments} source={source} pending={pending} error={error} fee={fee} close={close} draw={draw}
         publish={draft=>{
           if (pending) return;
           pending = true;
@@ -216,7 +218,9 @@ export function mountInternalMail(publish:(message:Draft)=>void,
       fee = next;
       if (composing) render();
     },
-    open(attachments:readonly AttachmentChoice[]) {
+    open(attachments:readonly AttachmentChoice[],options?:{photosEnabled?:boolean;documentsEnabled?:boolean}) {
+      photosEnabled = options?.photosEnabled!==false;
+      documentsEnabled = options?.documentsEnabled!==false;
       composing = false;
       source = undefined;
       choices = attachments;

@@ -230,8 +230,8 @@ async function connect(join: () => Promise<Room>) {
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
           [{kind:'document' as const,id:item.id,label:item.document.title}]),
-        ...mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id,photo})),
-      ]),width=>game?.setPhoneInset(width),
+        ...(previousView?.photosEnabled===false ? [] : mailPhotos.map(({photo})=>({kind:'photo' as const,id:photo.id,label:'Fotografia #'+photo.id,photo}))),
+      ],{photosEnabled:previousView?.photosEnabled!==false,documentsEnabled:previousView?.projectVotingEnabled!==false}),width=>game?.setPhoneInset(width),
       proof=>sendCommand('complaint-submit',proof.kind==='phone-game' ? {target:proof.target,photo:proof.photo} : {id:proof.id,photo:proof.photo}));
     const political = createPoliticsPanel(joined.sessionId,action => sendCommand('politics',action),() => map.focus({preventScroll:true}));
     const hud = createMatchHud(joined.sessionId,station => {
@@ -402,7 +402,7 @@ async function connect(join: () => Promise<Room>) {
       political.render(view);
       election.render(view);
       gameplay.render(view);
-      surveillance.render(view.gameplay?.surveillance);
+      surveillance.render(view.gameplay?.surveillance,view.photosEnabled!==false);
       security.render(view.gameplay?.security);
       market.render(view);
       npcPanel.update(view);

@@ -13,13 +13,14 @@ function PhotoPreview({photo,draw}:{photo:Photo;draw:(canvas:HTMLCanvasElement,p
   return <canvas ref={canvas} aria-hidden="true"/>;
 }
 
-export function MailAttachmentPicker({choices,category,setCategory,pick,cancel,draw}:{
+export function MailAttachmentPicker({choices,category,setCategory,pick,cancel,draw,photosEnabled=true,documentsEnabled=true}:{photosEnabled?:boolean;documentsEnabled?:boolean;
   choices:readonly AttachmentChoice[];category?:AttachmentCategory;setCategory:(category:AttachmentCategory|undefined)=>void;
   pick:(choice:AttachmentChoice)=>void;cancel:()=>void;draw:(canvas:HTMLCanvasElement,photo:Photo)=>void;
 }) {
   const [query,setQuery] = useState('');
   const search = useRef<HTMLInputElement>(null);
-  const categories = [{kind:'document' as const,label:'Documentos',icon:'document'},{kind:'photo' as const,label:'Fotografias',icon:'app-photos'}];
+  const categories = [{kind:'document' as const,label:'Documentos',icon:'document'},{kind:'photo' as const,label:'Fotografias',icon:'app-photos'}].filter(entry=>entry.kind==='photo' ? photosEnabled : documentsEnabled);
+  if (!categories.some(entry=>entry.kind===category)) category = undefined;
   const inCategory = (choice:AttachmentChoice,kind:AttachmentCategory)=>kind==='photo' ? choice.kind==='photo' : choice.kind!=='photo';
   const visible = choices.filter(choice=>category && inCategory(choice,category) && choice.label.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR')));
   const entries = [

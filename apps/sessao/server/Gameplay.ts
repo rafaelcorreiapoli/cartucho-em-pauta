@@ -65,6 +65,7 @@ export class Gameplay {
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
   phoneGamesEnabled = true;
+  photosEnabled = true;
   get projectVotingEnabled() { return this.dialogues.projectVotingEnabled; }
   set projectVotingEnabled(enabled:boolean) { this.dialogues.projectVotingEnabled = enabled; }
   private dialogues = new NpcDialogues();
@@ -910,6 +911,7 @@ export class Gameplay {
     if (!raw || typeof raw!=='object' || !('kind' in raw)) return;
     if (raw.kind==='close' || raw.kind==='cancel') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
     if (player.knockedOut || player.carried || player.carrying || this.hasOfficeChannel(player.id)) return;
+    if (raw.kind==='capture' && !this.photosEnabled) return 'Fotos desativadas nesta partida.';
     if (raw.kind!=='capture') return this.surveillance.act(player,raw,world.now,this.spyAccess(world));
     const device = this.surveillance.channel(player.id,'spyCamera');
     if (!device || !('channel' in raw) || raw.channel!==device.id) return 'O canal da câmera mudou.';
@@ -1558,6 +1560,7 @@ export class Gameplay {
   }
 
   act(player:Player, action:GameplayAction, world:GameplayWorld) {
+    if (!this.photosEnabled && (['photo','selfie','photo-delete','photo-publish'].includes(action.kind) || action.kind.startsWith('info-') && action.kind!=='info-close')) return 'Fotos desativadas nesta partida.';
     if (!this.phoneGamesEnabled && ['game-start','game-turn','bets-spin','candy-start','candy-swap'].includes(action.kind)) return 'Joguinhos desativados nesta partida.';
     if (!this.projectVotingEnabled && (
       action.kind==='supply' && action.place==='secretary' ||

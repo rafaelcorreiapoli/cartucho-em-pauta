@@ -153,7 +153,7 @@ export type PlenaryView = {
   phase:Phase; round:number; project?:number; proposer?:string; protocolCooldown?:number; projectFilingClosed?:boolean; remaining:number; sessionRemaining?:number; debtPenaltyIn?:number; suppliesSeconds?:number; stability:number; budget:number; host?:string;
   canStartAsInfiltrator?:boolean; botsToFill?:number;
   botMessages?:readonly {name:string; text:string}[];
-  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
+  role?:Role; mandate?:boolean; solo:boolean; players:number; minimumPlayers?:number; lobbyNpcCount?:number; phoneGamesEnabled?:boolean; projectVotingEnabled?:boolean; electionsEnabled?:boolean; photosEnabled?:boolean; electorate:number; voteIntents?:VoteIntent[]; vote?:BillVote; billVoters?:BillVoter[]; voted:number;
   canFraud:boolean; audit?:'clean' | 'fraud'; reportedFraud:boolean;
   payroll?:PayrollView; election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;

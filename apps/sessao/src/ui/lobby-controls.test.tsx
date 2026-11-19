@@ -66,3 +66,11 @@ test('only the host can change the election setting and guests see its confirmed
   expect(render('a')).toContain('type="checkbox"/> Eleição para eliminação');
   expect(render('b')).toContain('type="checkbox" disabled=""/> Eleição para eliminação');
 });
+
+test('photo setting is visible to guests and configurable only by the host',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  const render = (id:string)=>renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view(id,ids,0),photosEnabled:false},id,true)} commands={commands}/>);
+  expect(render('a')).toContain('type="checkbox"/> Câmera e fotos');
+  expect(render('b')).toContain('type="checkbox" disabled=""/> Câmera e fotos');
+});

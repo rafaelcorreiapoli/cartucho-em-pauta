@@ -294,9 +294,9 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     if (!phone && !contacts.some(person=>person.id===recipient)) recipient = contacts.length===1 ? contacts[0].id : '';
     navigation.hidden = !phone || !!app;
     const showNavigation = phone && !app;
-    if (showNavigation!==navigationMounted || view.phoneGamesEnabled!==previous?.phoneGamesEnabled || view.projectVotingEnabled!==previous?.projectVotingEnabled) {
+    if (showNavigation!==navigationMounted || view.phoneGamesEnabled!==previous?.phoneGamesEnabled || view.projectVotingEnabled!==previous?.projectVotingEnabled || view.photosEnabled!==previous?.photosEnabled) {
       navigationMounted = showNavigation;
-      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps projectsEnabled={view.projectVotingEnabled!==false} gamesEnabled={view.phoneGamesEnabled!==false} select={selectApp} close={()=>dialog.close()}/> : null));
+      flushSync(()=>navigationRoot.render(showNavigation ? <PhoneApps photosEnabled={view.photosEnabled!==false} projectsEnabled={view.projectVotingEnabled!==false} gamesEnabled={view.phoneGamesEnabled!==false} select={selectApp} close={()=>dialog.close()}/> : null));
     }
     const phase = view.phase;
     const canRemoveDecoration = !!decoration && state.interactive.some(item=>item.id===decoration.id) && hasInventorySpace(state.inventory.filter(occupiesInventorySlot).length);
@@ -455,12 +455,12 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Telefone') application = <PhoneCalls call={state.call} contacts={directory.filter(person=>person.id!==ownId)}
         available={!!previous?.gameplay} send={send} close={closePhoneApp}/>;
       if (app==='Joguinhos' && view.phoneGamesEnabled!==false) application = <PhoneSnake game={state.game} bets={state.bets} candy={state.candy} wallet={view.politics?.wallet ?? 0} available={!!previous?.gameplay} board={setSnakeBoard} send={send} close={closePhoneApp}/>;
-      if (app==='Câmera') application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
+      if (app==='Câmera' && view.photosEnabled!==false) application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={!!previous?.gameplay} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
       if (app==='Projetos' && view.projectVotingEnabled!==false) application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
-      if (app==='Denunciar') application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
-      if (app==='Álbum') application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && !!previous?.gameplay,closePhoneApp);
+      if (app==='Denunciar' && view.photosEnabled!==false) application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
+      if (app==='Álbum' && view.photosEnabled!==false) application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && !!previous?.gameplay,closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;
     }
     mailHost.hidden = !showMail;
@@ -594,6 +594,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
 
   return {
     openComplaint() {
+      if (previous?.photosEnabled===false) return;
       app = 'Denunciar';
       photos.resetSelection();
       open();
@@ -646,7 +647,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
             ()=>send({kind:'recover',item:item.id}),
           ));
         }
-        if (state.locations.includes('press') && photos.count) {
+        if (previous?.photosEnabled!==false && state.locations.includes('press') && photos.count) {
           add('album','portrait','Álbum para a Imprensa','Abrir',openPersonalAlbum);
         }
         for (const decoration of state.interactive) {

@@ -17,6 +17,7 @@ type RoomActions = {
   'lobby-phone-games':{enabled:boolean};
   'lobby-project-voting':{enabled:boolean};
   'lobby-elections':{enabled:boolean};
+  'lobby-photos':{enabled:boolean};
   'start-match':{infiltrators?:number;npcs?:number;asInfiltrator?:boolean};
   gameplay:{action:GameplayAction};
   spy:SpyCommand;
