@@ -532,6 +532,32 @@ test('occupied installation sites expose only the actions the server accepts',()
   expect(game.view(alice,world).installable).toContain(place);
 });
 
+test('camera installation identifies the office owner and foreign-office eligibility excludes own and public sites',()=>{
+  const {alice,bob,game,world,events} = setup();
+  game.reset(0,()=>.5,world.players,()=>0);
+  expect(game.canInstallSpy(alice.id,'spyCamera','foreign')).toBe(true);
+  const office = privateOffices.find(office=>office.id===game.view(bob,world).ownOffice)!;
+  const site = hideouts.find(site=>site.id===`office-${office.id}`)!;
+  world.spend = ()=>true;
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(alice,{kind:'talk',target:'vendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  game.act(alice,{kind:'shop-buy',target:'spyCamera',token:game.view(alice,world).dialogue?.token},world);
+  const camera = game.view(alice,world).inventory.find(item=>item.kind==='spyCamera')!;
+  Object.assign(alice,{x:site.x,y:site.y});
+  game.spyAction(alice,{kind:'install',site:site.id,item:camera.id},world);
+  world.now = 5000;
+  game.tick(world,true);
+  expect(events.filter(event=>event.type==='spy-installed')).toEqual([
+    expect.objectContaining({actor:alice.id,target:bob.id,kind:'spyCamera',ownOffice:false}),
+  ]);
+  const alone = new Gameplay();
+  alone.reset(0,()=>.5,[alice],()=>0);
+  expect(alone.canInstallSpy(alice.id,'spyCamera')).toBe(true);
+  expect(alone.canInstallSpy(alice.id,'spyCamera',true)).toBe(true);
+  expect(alone.canInstallSpy(alice.id,'spyCamera','foreign')).toBe(false);
+});
+
 test('surveillance shops, races, discoveries, reconnection, audio and photo evidence stay private', () => {
   const {alice,bob,watcher,events,game,world} = setup();
   const feedback = new Map<string,string>();

@@ -3,12 +3,14 @@ import {PersonalAgenda} from './PersonalAgenda';
 import type {Agenda,Mission} from '../src/politics';
 
 const removed = new Set<Agenda>([
+  'lagosta','comprarLagosta','turismo','fotoOstentacao','mensagemComAnexo','jornalismo',
+  'apresentarFoto','flagraGabinete','amizadeInstitucional','fortuna','poupancaInstitucional',
   'bombom','cafeEstrategico','fiscalCafe','bandejaGourmet',
   'visitaAlvo','visitaCortesia','visitaArquivo','visitaGabinete','passeio',
   'presencaPlenario','reuniaoGabinete','reuniaoPublica','visitaDoisGabinetes',
   'primeirosSocorros','debateTelefonico','chamadasUrgentes',
 ]);
-const preserved:Agenda[] = ['cafe','nocauteDuplo','porretadaGabinete','nocauteGabinete','nocautePlenario','equipamento','discursoMegafone'];
+const preserved:Agenda[] = ['cafe','nocauteDuplo','porretadaGabinete','nocauteGabinete','nocautePlenario','equipamento','discursoMegafone','incendiarGabinete','reservaCofre','roubarCofre','cuecaCofre'];
 const metrics = {wallet:100,popularity:40};
 const contacts = ['b','c','d','e','f'].map(id=>({id,name:id}));
 
@@ -26,11 +28,16 @@ test.each([true,false])('retired missions never enter the initial agenda, pool o
     expectNoRetired(agenda.view(metrics).active);
     for (const kind of availableKinds(agenda)) expect(removed.has(kind)).toBe(false);
     for (const kind of preserved) expect(availableKinds(agenda).has(kind)).toBe(true);
+    if (enabled) {
+      for (const kind of ['selfieSolo','selfieAlvo','selfie','presidenteFoto','publicouSelfie','autorretrato','cerimonialOficial','registroHistorico','tresSelfies','selfieArrombamento'] as const) {
+        expect(availableKinds(agenda).has(kind)).toBe(true);
+      }
+    }
     agenda.updateEligibility(metrics,6,true,3,0,contacts);
     expectNoRetired(agenda.view(metrics).active);
     expect(agenda.swapMissions(metrics)).toBe('swapped');
     expectNoRetired(agenda.view(metrics).active);
     for (const kind of availableKinds(agenda)) expect(removed.has(kind)).toBe(false);
-    if (!enabled) expect(availableKinds(agenda).size).toBe(53);
+    if (!enabled) expect(availableKinds(agenda).size).toBe(48);
   }
 });

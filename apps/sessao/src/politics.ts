@@ -187,7 +187,7 @@ export const agendas = {
   fotoNocaute:'Fotografe um colega nocauteado',
   incendiarGabinete:'Incendeie o seu próprio gabinete',
   rabiscarRetrato:'Rabisque o Retrato Oficial de um colega',
-  cameraGabinete:'Instale uma câmera escondida no seu próprio gabinete',
+  cameraGabinete:'Instale uma câmera escondida no gabinete de outro parlamentar',
 } as const;
 export type Agenda = keyof typeof agendas;
 export type MissionReward = {xp:number; cash?:number; popularity?:number};

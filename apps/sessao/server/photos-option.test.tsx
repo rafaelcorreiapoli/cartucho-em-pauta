@@ -23,7 +23,7 @@ test('photo missions are excluded from initial and replacement agendas while liv
     expect(agenda.view(metrics).active.some(({kind})=>blocked.includes(kind))).toBe(false);
     const deck = Reflect.get(agenda,'missionDeck') as string[];
     expect(deck.some(kind=>blocked.includes(kind))).toBe(false);
-    for (const kind of ['instalarCamera','cameraGabinete','duasCameras','vigilanciaInstitucional','mensagemComAnexo']) expect(deck).toContain(kind);
+    for (const kind of ['instalarCamera','cameraGabinete','duasCameras','vigilanciaInstitucional']) expect(deck).toContain(kind);
     const allDisabled = new PersonalAgenda(metrics,6,()=>seed/100,()=>{},new Set(),false,false,false,false);
     expect((Reflect.get(allDisabled,'missionDeck') as string[])).not.toContain('mensagemComAnexo');
   }
