@@ -19,22 +19,22 @@ function ImpactValue({value,currency=false}:{value:number;currency?:boolean}) {
   return <b className="project-impact-value" data-effect={impactTone(value)}>{formatImpact(value,currency)}</b>;
 }
 
-export function ProjectImpact({impact,budget,approved,detail}:{impact:Impact;budget:number;approved:boolean;detail?:string}) {
+export function ProjectImpact({impact,budget,approved,detail,stabilityEnabled=true}:{stabilityEnabled?:boolean;impact:Impact;budget:number;approved:boolean;detail?:string}) {
   const balance = Math.round((budget+Math.min(0,impact.budget))*10)/10;
   return <div className="project-ballot-impact" data-choice={approved?'yes':'no'}>
     <strong><HudIcon name={approved?'check':'cross'}/>{approved?'Se aprovado':'Se rejeitado'}</strong>
-    <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>
+    {stabilityEnabled && <span><HudIcon name="shield"/><ImpactValue value={impact.stability}/> Estabilidade</span>}
     <span><HudIcon name="wallet"/><ImpactValue value={impact.budget} currency/> do orçamento</span>
     {balance<0 && <small className="project-ballot-deficit">Dívida após a votação de {money(-balance)}</small>}
     {detail && <small>{detail}</small>}
   </div>;
 }
 
-type Props = Pick<PlenaryView,'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
+type Props = Pick<PlenaryView,'gameMode'|'round'|'project'|'proposer'|'remaining'|'budget'|'yes'|'no'|'billQuorum'|'billVoters'|'vote'> & {
   ownId:string; eligible:boolean; onExpansion?:(expanded:boolean)=>void; cast:(choice:BillVote)=>void;
 };
 
-export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
+export function ProjectBallot({gameMode,round,project,proposer,remaining,budget,yes,no,billQuorum,billVoters=[],vote,ownId,eligible,cast,onExpansion}:Props) {
   const [expanded,setExpanded] = useState(true);
   const bill = agendaProject({round,project});
   const index = project ?? round%bills.length;
@@ -56,10 +56,10 @@ export function ProjectBallot({round,project,proposer,remaining,budget,yes,no,bi
         <header className="project-ballot-banner">
           <img className="project-ballot-art" src={import.meta.env.BASE_URL+'assets/'+bill.icon} width="72" height="72" alt=""/>
           <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
-          <ProjectImpact impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
+          <ProjectImpact stabilityEnabled={gameMode!=='calote'} impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
             bill.effect?.kind==='treasury-xp' ? `Até +${bill.effect.bonus} XP por entrega · ${bill.effect.duration/1000} s` :
             bill.effect?.kind==='pinga-distribution' ? pingaProgram.detail : bill.effect?.kind==='policy' ? bill.effect.detail : bill.effect?.kind==='fire-safety' ? 'Mais tempo entre incêndios até o fim da partida' : undefined}/>
-          <ProjectImpact impact={no} budget={budget} approved={false}/>
+          <ProjectImpact stabilityEnabled={gameMode!=='calote'} impact={no} budget={budget} approved={false}/>
         </header>
 
       </div>

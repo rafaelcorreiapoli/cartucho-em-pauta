@@ -1,3 +1,4 @@
+import type {GameMode} from '../src/game-modes';
 import {investmentRules} from '../src/public-investments';
 import type {AgendaDecoration} from '../src/installations';
 import type { OfficeFurniture } from '../src/private-offices';
@@ -38,7 +39,7 @@ export class PoliticalEconomy {
   private scandalPizzas = new Set<number>();
 
   reset(contacts:DirectoryContact[], random:()=>number,
-    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set(),phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true) {
+    canAgendaAction?:(id:string,kind:AgendaAction)=>boolean,botIds:ReadonlySet<string> = new Set(),phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true,gameMode:GameMode='classic') {
     this.matchId++;
     this.agendaRound = 0;
     this.transferred = this.reserveFees = 0;
@@ -71,7 +72,7 @@ export class PoliticalEconomy {
         this.rewardReserve -= cash;
         this.credit(account,cash);
         if (reward.popularity) account.popularity = cap(account.popularity+reward.popularity);
-      },botIds,phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled);
+      },botIds,phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,gameMode);
       this.accounts.set(contact.id,{
         ...metrics,walletIncome:0,agenda,progression,selfieBonus:false,
         grantReadyAt:0,auditRound:-1,audits:0,paymentRound:-1,payments:0,

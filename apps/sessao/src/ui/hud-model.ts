@@ -6,7 +6,7 @@ import { stabilityRules, type PlenaryView, type PayrollView } from '../plenary';
 import { ELECTION_RULES } from '../elections';
 import { missionTitle, type Mission } from '../politics';
 
-type Congress = {stability:number;budget:number;sessionRemaining?:number;debtPenaltyIn?:number;payroll?:PayrollView['next']};
+type Congress = {gameMode?:import('../game-modes').GameMode;caloteIn?:number;stability:number;budget:number;sessionRemaining?:number;debtPenaltyIn?:number;payroll?:PayrollView['next']};
 type Agenda = {active:Mission[]; recent:Mission[]; announcement:string};
 type Profile = {hp?:number; maxHp?:number; xp:number; start:number; next?:number; level:number};
 type Stamina = {current:number; max:number};
@@ -63,7 +63,7 @@ export function createHudModel() {
       outage.update(view.outage);
       const interview = view.phase==='lobby' || view.phase==='finished' ? undefined : view.election?.broadcast;
       television.update(interview && {name:interview.name,remaining:interview.remaining});
-      congress.update({stability:view.stability,budget:view.budget,sessionRemaining:view.sessionRemaining,debtPenaltyIn:view.debtPenaltyIn,payroll:view.payroll?.next});
+      congress.update({gameMode:view.gameMode,caloteIn:view.caloteIn,stability:view.stability,budget:view.budget,sessionRemaining:view.sessionRemaining,debtPenaltyIn:view.debtPenaltyIn,payroll:view.payroll?.next});
       countdown.update(view.phase!=='negotiation' ? undefined : view.cassationIn ?
         {kind:'cassation',seconds:view.cassationIn} : view.projectWarning ?
           {kind:'bill',seconds:view.projectWarning} : undefined);

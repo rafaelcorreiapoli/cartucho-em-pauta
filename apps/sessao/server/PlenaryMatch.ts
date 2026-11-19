@@ -1,3 +1,4 @@
+import {caloteRules,type GameMode} from '../src/game-modes';
 import {investmentImpact,type InvestmentAnnouncement} from '../src/public-investments';
 import { StationCooldowns } from './StationCooldowns';
 import type {SessionParticipant} from '../src/plenary';
@@ -102,7 +103,7 @@ export class PlenaryMatch {
       discrepancy:Math.round((issued-spent-held)*10)/10 || 0};
   }
 
-  private get criticalStability() { return this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
+  private get criticalStability() { return this.gameMode==='classic' && this.stability<CRISIS_MISSION_STABILITY_LIMIT; }
 
   private get canArticulateBeforeDeadline() {
     return this.running && this.agendaNow<this.sessionEndsAt;
@@ -192,12 +193,27 @@ export class PlenaryMatch {
     if (this.phase==='ballot' && this.npcIds.has(id) && !this.npcVotes.has(id)) this.npcVotes.set(id,vote);
   }
 
+  private gameMode:GameMode = 'classic';
+  private caloteStartedAt?:number;
+
   private changeBudget(amount:number,now:number) {
+    if (this.gameMode==='calote') this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
     this.budget = Math.round((this.budget+amount)*10)/10;
+    if (this.gameMode==='calote') {
+      this.caloteStartedAt = this.budget<0 ? this.caloteStartedAt ?? now : undefined;
+      this.nextDebtPenaltyAt = undefined;
+      return;
+    }
     this.nextDebtPenaltyAt = this.budget<0 ? this.nextDebtPenaltyAt ?? now+publicDebtRules.interval : undefined;
   }
 
   private applyDebtPenalty(now:number) {
+    if (this.gameMode==='calote') {
+      if (this.running && this.caloteStartedAt!==undefined && now>=this.caloteStartedAt+caloteRules.debtMs) {
+        this.finish('Infiltrado','O Congresso deu calote: o orçamento ficou negativo por 30 segundos seguidos.');
+      }
+      return;
+    }
     const due = this.nextDebtPenaltyAt;
     if (due===undefined || now<due) return;
     const intervals = 1+Math.floor((now-due)/publicDebtRules.interval);
@@ -224,11 +240,15 @@ export class PlenaryMatch {
   }
 
   private distributeSalaries(now:number) {
-    while (this.nextPayrollAt<=now && this.nextPayrollAt<this.sessionEndsAt) {
+    while (this.running && this.nextPayrollAt<=now && this.nextPayrollAt<this.sessionEndsAt) {
+      if (this.gameMode==='calote') {
+        this.applyDebtPenalty(this.nextPayrollAt);
+        if (!this.running) return;
+      }
       const recipients = this.payrollRecipients();
       for (const id of recipients) this.economy.earn(id,payrollRules.salary);
       const cost = recipients.size*payrollRules.salary;
-      this.changeBudget(-cost,now);
+      this.changeBudget(-cost,this.gameMode==='calote' ? this.nextPayrollAt : now);
       this.cash.salaries += cost;
       this.lastPayroll = {at:this.nextPayrollAt,recipients};
       this.nextPayrollAt += payrollRules.interval;
@@ -306,10 +326,12 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true,gameMode:GameMode='classic') {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
+    this.gameMode = gameMode;
+    this.caloteStartedAt = undefined;
     this.projectVotingEnabled = projectVotingEnabled;
     this.electionsEnabled = electionsEnabled;
     this.photosEnabled = photosEnabled;
@@ -358,7 +380,7 @@ export class PlenaryMatch {
       if (kind==='votoNpc') return this.hasFutureVoteNegotiation(this.agendaNow);
       if (kind==='responderCrise') return this.canArticulateBeforeDeadline;
       return this.electionsEnabled && this.election.canCampaignAction(id,kind);
-    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled);
+    }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,gameMode);
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
     this.cash = {initial:humans+reserve+rules.startingBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
@@ -544,6 +566,10 @@ export class PlenaryMatch {
       cashFlow:(kind,amount)=>{ if (current()) this.cash[kind] += amount; },
       deposit:(id,amount)=>{
         if (!current() || !this.running || !this.electorate.has(id) || amount<=0) return false;
+        if (this.gameMode==='calote') {
+          this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
+          if (!this.running) return false;
+        }
         this.cash.treasury += amount;
         this.changeBudget(amount,now);
         if (this.treasuryBonus && now<this.treasuryBonus.until) {
@@ -740,7 +766,7 @@ export class PlenaryMatch {
         this.cash.diverted += diverted;
         this.cash.projects += invested;
         const wasCritical = this.criticalStability;
-        this.stability = clamp(this.stability+stability);
+        if (this.gameMode==='classic') this.stability = clamp(this.stability+stability);
         if (action.area==='safety') this.fire.delayNextFire(duration);
         if (action.area==='supplies' || action.area==='transport') {
           this.policies.set(action.area,Math.max(now,this.policies.get(action.area) ?? 0)+duration);
@@ -820,7 +846,7 @@ export class PlenaryMatch {
   private impact(vote:Vote, misleading = false): Impact {
     if (!this.proposal) return {budget:0,stability:0};
     const bill = bills[this.proposal.project];
-    const impact = bill[vote];
+    const impact = this.gameMode==='calote' ? {...bill[vote],stability:0} : bill[vote];
     if (vote==='yes' && bill.effect?.kind==='allowance') {
       return {...impact,budget:-bill.effect.perMandate*this.votingPlayers()};
     }
@@ -1032,7 +1058,7 @@ export class PlenaryMatch {
       this.recordGameplay({type:'fire-started',actor,position:{x,y},at:now,place:name,witnesses:[],
         ownOffice:ownsOfficeRoom?.(actor,name)});
     });
-    if (damage) {
+    if (damage && this.gameMode==='classic') {
       this.stability = clamp(this.stability-damage);
       if (!this.stability) {
         this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O incêndio derrubou a estabilidade.');
@@ -1040,6 +1066,7 @@ export class PlenaryMatch {
       }
     }
     const expiredSuspensions = this.economy.expireSuspensions(now);
+    if (this.gameMode==='calote') this.distributeSalaries(Math.min(now,this.sessionEndsAt));
     this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
     if (!this.running) return;
     const changedCriticalFire = wasBurning!==this.fire.burning && (wasCritical || this.criticalStability);
@@ -1054,7 +1081,7 @@ export class PlenaryMatch {
       this.renew(now);
       if (!this.running) return;
     }
-    if (now<this.sessionEndsAt) this.distributeSalaries(now);
+    if (this.gameMode==='classic' && now<this.sessionEndsAt) this.distributeSalaries(now);
     if (this.remainingAgendaBallots(this.agendaNow)!==this.agendaBallotsLeft ||
         (electionWasOpen && !this.election.open(this.agendaNow))) this.refreshAgendaEligibility();
     if (this.cassationAt!==undefined && now>=this.cassationAt) {
@@ -1124,11 +1151,11 @@ export class PlenaryMatch {
       for (const id of this.electorate) if (this.canVote(id)) this.economy.earn(id,payout);
       this.cash.salaries += previous.budget-this.budget;
     } else this.cash.projects += previous.budget-this.budget;
-    this.stability = clamp(this.stability+impact.stability);
+    if (this.gameMode==='classic') this.stability = clamp(this.stability+impact.stability);
     this.outcomes.push({round:this.round,project,proposer,passed,yes,no,abstentions,absences,needed,deficit:Math.max(0,-this.budget),fraud:this.fraud,
       applied:{budget:this.budget-previous.budget,stability:this.stability-previous.stability}});
     this.economy.cancelOffers();
-    if (!this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
+    if (this.gameMode==='classic' && !this.stability) this.finish(this.infiltrators.size ? 'Infiltrado' : undefined,'O Congresso entrou em colapso.');
     else {
       this.round++;
       this.protocolOpensAt = now+projectRules.cooldownMs;
@@ -1144,6 +1171,10 @@ export class PlenaryMatch {
   private billQuorum() { return Math.min(this.votingPlayers(),this.quorum()+(this.objection() ? 1 : 0)); }
 
   private finishAtDeadline() {
+    if (this.gameMode==='calote') {
+      this.finish('Parlamentar','O Congresso sobreviveu até o fim da sessão sem dar calote.');
+      return;
+    }
     const won = this.stability>=stabilityRules.target;
     this.finish(won ? 'Parlamentar' : 'Infiltrado', won
       ? 'O Congresso manteve a estabilidade até o fim da sessão.'
@@ -1158,7 +1189,7 @@ export class PlenaryMatch {
     this.cassationAt = undefined;
     this.cassationCall = undefined;
     this.cassationOpen = false;
-    this.congressDestroyed = winner==='Infiltrado' || this.stability===0 || undefined;
+    this.congressDestroyed = winner==='Infiltrado' || this.gameMode==='classic' && this.stability===0 || undefined;
     this.winner = winner==='Infiltrado' && !this.infiltrators.size ? undefined : winner;
     this.reason = reason;
   }
@@ -1194,6 +1225,9 @@ export class PlenaryMatch {
     const phaseTimeLeft = this.voting ? this.voteEndsAt-realNow
       : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
+      gameMode:this.gameMode,
+      caloteIn:this.gameMode==='calote' && this.running && this.caloteStartedAt!==undefined ?
+        Math.max(0,Math.ceil((this.caloteStartedAt+caloteRules.debtMs-now)/1000)) : undefined,
       projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,surveillanceEnabled:this.surveillanceEnabled,decorationsEnabled:this.decorationsEnabled,portraitsAndVipEnabled:this.portraitsAndVipEnabled,
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,

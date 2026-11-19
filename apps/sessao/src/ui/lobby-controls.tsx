@@ -1,3 +1,4 @@
+import {gameModes,type GameMode} from '../game-modes';
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MIN_PLAYERS,type PlenaryView} from '../plenary';
@@ -6,13 +7,14 @@ import {npcRules} from '../parliamentarians';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
+    gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
+  changeGameMode?:(mode:GameMode)=>void;
   changePortraitsAndVip?:(enabled:boolean)=>void;
   changeDecorations?:(enabled:boolean)=>void;
   changeSurveillance?:(enabled:boolean)=>void;
@@ -37,6 +39,13 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
   if (running) return null;
   return <>
     <div className="lobby-options" hidden={tutorial}>
+      <div className="lobby-count" role="group" aria-label="Modo de jogo">
+        <span>Modo de jogo</span>
+        <div>{Object.entries(gameModes).map(([mode,{label,description}])=><button key={mode} type="button"
+          aria-pressed={state.gameMode===mode} disabled={!host} title={description}
+          onClick={()=>commands.changeGameMode?.(mode as GameMode)}>{label}</button>)}</div>
+        <small>{gameModes[state.gameMode].description}</small>
+      </div>
       <label className="lobby-count"><input type="checkbox" checked={state.portraitsAndVipEnabled} disabled={!host}
         onChange={event=>commands.changePortraitsAndVip?.(event.currentTarget.checked)}/> Retratos e área VIP</label>
       <label className="lobby-count"><input type="checkbox" checked={state.decorationsEnabled} disabled={!host}

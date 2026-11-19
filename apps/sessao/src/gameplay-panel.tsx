@@ -458,7 +458,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
       if (app==='Câmera' && view.photosEnabled!==false) application = <PhoneCamera character={directory.find(person=>person.id===ownId)?.character} count={photos.count}
         available={!!previous?.gameplay} preview={photos.setPreview} send={send} openAlbum={openPersonalAlbum} close={closePhoneApp}/>;
       if (app==='Pix' && view.politics) application = <PhonePix ownId={ownId} politics={view.politics} send={sendPolitics} close={closePhoneApp}/>;
-      if (app==='Projetos' && view.projectVotingEnabled!==false) application = <ProjectCatalog project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
+      if (app==='Projetos' && view.projectVotingEnabled!==false) application = <ProjectCatalog gameMode={view.gameMode} project={view.project} outcomes={view.outcomes} projectFilingClosed={view.projectFilingClosed} projectVoteExpired={view.projectVoteExpired} close={closePhoneApp}/>;
       if (app==='Denunciar' && view.photosEnabled!==false) application = photos.renderComplaintAlbum(view.complaints,submitComplaint,()=>dialog.close());
       if (app==='Álbum' && view.photosEnabled!==false) application = photos.renderAlbum(contacts,directory,state.locations.includes('press') && !!previous?.gameplay,closePhoneApp);
       if (application) content = <div key={app} className="phone-app-content">{application}</div>;

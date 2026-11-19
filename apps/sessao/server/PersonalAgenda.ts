@@ -1,3 +1,4 @@
+import type {GameMode} from '../src/game-modes';
 import {mailPublicationFee,marketKinds,marketProduct} from '../src/market-catalog';
 import type {BillPolicies} from '../src/plenary';
 import { inPlenary } from '../src/map';
@@ -221,10 +222,10 @@ export class PersonalAgenda {
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true) {
+    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true,photosEnabled=true,surveillanceEnabled=true,decorationsEnabled=true,portraitsAndVipEnabled=true,gameMode:GameMode='classic') {
     const documentAndProjectMissions:readonly Agenda[] = ['protocolo','assinaturas','assinar','comissaoImprovisada','assinaturaAlvo','documentoAlvo','provaDocumental','retratacaoOficial','votoNpc','apoio','projetos','oposicao','leitura','votacao'];
     const photographyMissions:readonly Agenda[] = ['selfieAlvo','selfieSolo','fotografia','flagra','selfie','presidenteFoto','celularFoto','reuniaoFoto','dossieFoto','apresentarFoto','entregaFoto','publicouSelfie','autorretrato','cerimonialOficial','fiscalVip','flagraGabinete','fotoOstentacao','fotoDinheiro','provaDocumental','registroHistorico','jornalismo','tresSelfies','turismo','selfieArrombamento','fotoNocaute'];
-    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' && !retiredMissions.has(kind) &&
+    const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' && !retiredMissions.has(kind) && (gameMode!=='calote' || kind!=='heroiInesperado') &&
       (projectVotingEnabled || !documentAndProjectMissions.includes(kind)) &&
       (photosEnabled || !photographyMissions.includes(kind)) &&
       (decorationsEnabled || !['poltrona','ostentacao','gabinete','televisao','fotoOstentacao','doisMoveis'].includes(kind)) &&

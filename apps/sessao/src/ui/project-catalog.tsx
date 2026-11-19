@@ -5,7 +5,7 @@ import {money} from '../politics';
 
 const signed = (value:number) => value>0 ? `+${value}` : String(value);
 
-export function ProjectCatalog({project,outcomes,projectFilingClosed,projectVoteExpired,close}:Pick<PlenaryView,'project'|'outcomes'|'projectFilingClosed'|'projectVoteExpired'> & {close?:()=>void}) {
+export function ProjectCatalog({project,outcomes,projectFilingClosed,projectVoteExpired,gameMode,close}:Pick<PlenaryView,'gameMode'|'project'|'outcomes'|'projectFilingClosed'|'projectVoteExpired'> & {close?:()=>void}) {
   const voted = new Map(outcomes.map(outcome=>[outcome.project,outcome]));
   const details = useRef(new Map<string,HTMLDetailsElement>());
   const panel = useDialogKeys<HTMLElement>(()=>undefined,[
@@ -28,10 +28,10 @@ export function ProjectCatalog({project,outcomes,projectFilingClosed,projectVote
       }}>
         <summary><strong>{bill.name}</strong> · {result ? (result.passed ? 'Votado: aprovado' : 'Votado: rejeitado') : project===index ? (projectVoteExpired ? 'Sem votação nesta sessão' : 'Em pauta') : projectFilingClosed ? 'Fora do prazo' : 'Disponível'}</summary>
         <p>{bill.description}</p>
-        <p>Aprovar: {signed(bill.yes.stability)} de estabilidade · {effect?.kind==='allowance' ? `${money(effect.perMandate)} por mandato` :
+        <p>Aprovar: {gameMode!=='calote' && <>{signed(bill.yes.stability)} de estabilidade · </>}{effect?.kind==='allowance' ? `${money(effect.perMandate)} por mandato` :
           effect?.kind==='pinga-distribution' ? pingaProgram.detail : `${signed(Math.min(0,bill.yes.budget))} de orçamento`}</p>
         {effect?.kind==='policy' && <p>{effect.detail}.</p>}
-        <p>Rejeitar: {signed(bill.no.stability)} de estabilidade · {signed(Math.min(0,bill.no.budget))} de orçamento</p>
+        <p>Rejeitar: {gameMode!=='calote' && <>{signed(bill.no.stability)} de estabilidade · </>}{signed(Math.min(0,bill.no.budget))} de orçamento</p>
       </details>;
     })}
   </section>;

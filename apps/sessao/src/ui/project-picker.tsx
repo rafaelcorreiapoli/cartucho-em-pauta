@@ -34,14 +34,14 @@ function extraEffect(bill:Project) {
   }
 }
 
-function ImpactSummary({impact,budget}:{impact:Impact;budget:ReturnType<typeof budgetImpact>}) {
+function ImpactSummary({impact,budget,stabilityEnabled=true}:{stabilityEnabled?:boolean;impact:Impact;budget:ReturnType<typeof budgetImpact>}) {
   return <span className="project-picker-impact">
     <span>Orçamento <b data-effect={impactTone(budget.value)}>{budget.label}</b></span>
-    <span>Estabilidade <b data-effect={impactTone(impact.stability)}>{formatImpact(impact.stability)}</b></span>
+    <span hidden={!stabilityEnabled}>{stabilityEnabled && <>Estabilidade <b data-effect={impactTone(impact.stability)}>{formatImpact(impact.stability)}</b></>}</span>
   </span>;
 }
 
-function ProjectPicker({title,current,unavailable,confirm}:{
+function ProjectPicker({title,current,unavailable,confirm,stabilityEnabled=true}:{stabilityEnabled?:boolean;
   title:string;current?:number;unavailable:ReadonlySet<number>;confirm:(project:number)=>void;
 }) {
   const [selected,setSelected] = useState<number>();
@@ -107,7 +107,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
             <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/'+project.icon} alt=""/>
             <span className="project-picker-copy">
               <strong id={`project-picker-name-${index}`}>{project.name}{unavailable.has(index) && ' · Já votado'}</strong>
-              <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary impact={project.yes} budget={approvalBudget(project)}/></span>
+              <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary stabilityEnabled={stabilityEnabled} impact={project.yes} budget={approvalBudget(project)}/></span>
             </span>
             <input type="radio" name="project" value={index} checked={selected===index}
               disabled={unavailable.has(index)} onChange={()=>select(index)} aria-keyshortcuts={shortcut}
@@ -123,7 +123,7 @@ function ProjectPicker({title,current,unavailable,confirm}:{
             <h3>{bill.name}</h3>
             <p>{bill.description}</p>
             {effect && <div><h4>Efeito extra se aprovado</h4><p>{effect}</p></div>}
-            <div><h4>Se rejeitado</h4><ImpactSummary impact={bill.no} budget={budgetImpact(bill.no.budget)}/></div>
+            <div><h4>Se rejeitado</h4><ImpactSummary stabilityEnabled={stabilityEnabled} impact={bill.no} budget={budgetImpact(bill.no.budget)}/></div>
           </> : <p>Selecione um projeto para ver os detalhes.</p>}
         </div>
         <footer>
@@ -141,9 +141,9 @@ export function mountProjectPicker() {
   const root = createRoot(dialog);
   let opened = 0;
   return {
-    open(title:string, select:(project:number)=>void, current?:number, unavailable:ReadonlySet<number> = new Set()) {
+    open(title:string, select:(project:number)=>void, current?:number, unavailable:ReadonlySet<number> = new Set(),stabilityEnabled=true) {
       if (dialog.open) return;
-      flushSync(()=>root.render(<ProjectPicker key={++opened} title={title} current={current} unavailable={unavailable}
+      flushSync(()=>root.render(<ProjectPicker stabilityEnabled={stabilityEnabled} key={++opened} title={title} current={current} unavailable={unavailable}
         confirm={project=>{select(project);dialog.close();}}/>));
       dialog.showModal();
       dialog.querySelector<HTMLInputElement>('input[name="project"]:enabled')?.focus({preventScroll:true});

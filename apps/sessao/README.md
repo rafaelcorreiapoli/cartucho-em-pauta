@@ -340,3 +340,14 @@ Com câmera/fotos desativadas, não há captura, álbum, compartilhamento, anexo
 Sem vigilância, grampos, câmeras escondidas e Detector de Escutas saem da loja, as oito missões relacionadas saem do sorteio e o aplicativo e o terminal da Central de Segurança ficam indisponíveis. A câmera de fotos do celular continua independente dessa opção.
 
 Decoração e retratos/área VIP são opções independentes. Sem decoração, TV, tapete e poltrona ficam indisponíveis, Roberto Justus não aparece e seis missões de móveis saem do sorteio. Sem retratos/área VIP, retratos e placas VIP ficam indisponíveis, Donald Trump não aparece e 12 missões relacionadas saem do sorteio. Comida, mesas de pizza e segurança dos gabinetes continuam independentes.
+
+## Modos de jogo
+
+O anfitrião seleciona o modo no lobby antes de iniciar ou jogar novamente. Os convidados veem a escolha, mas não podem alterá-la. O tutorial permanece no Clássico.
+
+- **Clássico:** mantém as regras de estabilidade institucional.
+- **Calote:** não usa estabilidade como recurso ou condição de vitória. Trinta segundos seguidos de orçamento negativo dão vitória aos infiltrados. Voltar a zero ou a um saldo positivo cancela a contagem; uma nova dívida começa outros 30 segundos. Salários, orçamento, eleições, cassações e duração da sessão continuam funcionando, respeitando as opções selecionadas. Os parlamentares vencem ao eliminar todos os infiltrados ou sobreviver até o fim da sessão sem completar um calote. Se os 30 segundos terminarem exatamente no encerramento, o calote prevalece.
+
+O cronômetro de calote acompanha o relógio da partida, que pausa durante votações. A barra do Calote tem zero no centro, saldo positivo verde à direita, dívida vermelha à esquerda e contagem regressiva no vermelho. A escala usa o orçamento inicial como limite de cada metade; saldos além da escala preenchem a metade inteira e continuam exibidos numericamente. Painéis de projetos e investimentos ocultam efeitos de estabilidade nesse modo, e a missão que exige estabilidade crítica não entra no sorteio.
+
+O fluxo de navegador `dev/calote-smoke.js` valida seleção no lobby, a barra em dois tamanhos de tela, recuperação da dívida e derrota por calote.
