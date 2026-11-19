@@ -616,7 +616,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       if (camera.zoom!==zoom) camera.setZoom(zoom);
       for (const {point,art} of this.installationFixtures) {
-        art.setVisible(!!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible);
+        art.setVisible(plenaryView?.portraitsAndVipEnabled!==false && !!ownPlayer && localPerception(ownPlayer,point,visionRadius).visible);
       }
       for (const [art,{outline,ready}] of this.interactionTargets) {
         outline.setVisible(running && art.visible && ready());
