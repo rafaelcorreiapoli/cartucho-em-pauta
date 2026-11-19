@@ -4,7 +4,9 @@ Decisões da discussão de 19/11/2026. Registro de design; os projetos abaixo ai
 
 ## Primeira seleção aprovada
 
-Periodicamente, um projeto é aprovado sem votação, desconta seu custo do orçamento público e aplica um efeito à partida. A cadência, os custos, a ordem, as repetições e as regras de entrega ainda precisam ser definidos.
+Periodicamente, um projeto é aprovado sem votação, desconta seu custo do orçamento público e aplica um efeito à partida. A duração padrão da partida passa a ser de 12 minutos. A programação escolhida para os projetos é começar aos cinco minutos, com intervalo de 90 segundos: 5:00, 6:30, 8:00 e 9:30 de tempo efetivo de partida. A ordem é sorteada, sem repetição. Essa programação ainda precisa ser implementada.
+
+Os itens são entregues primeiro no inventário. O excedente vai para o armário pessoal; se também não couber, cai no chão dentro do gabinete do jogador. Os custos e o percentual do reajuste continuam como propostas em discussão.
 
 | Projeto | Efeito escolhido |
 | --- | --- |

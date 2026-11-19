@@ -6,7 +6,7 @@ export const offices = {
 export type Office = keyof typeof offices;
 export const officeKeys = Object.keys(offices) as Office[];
 export const ELECTION_RULES = {
-  interval:180_000, cycles:3, matchDuration:600_000, minimumMandates:3, startingBudget:32, publicDuty:6, advertisementCost:2,
+  interval:180_000, cycles:3, matchDuration:720_000, minimumMandates:3, startingBudget:32, publicDuty:6, advertisementCost:2,
   interviewLength:15_000, interviewGap:15_000,
 } as const;
 export const advertisements = {
