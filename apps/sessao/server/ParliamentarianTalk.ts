@@ -111,6 +111,12 @@ export class ParliamentarianTalk {
     return paused;
   }
 
+  robberyTarget(id:string) {
+    const robbery = this.robberies.get(id);
+    const target = robbery && this.target(robbery.target);
+    return target ? {x:target.x,y:target.y,direction:target.direction} : undefined;
+  }
+
   robberyProgress(id:string,now:number) {
     const robbery = this.robberies.get(id);
     return robbery ? Math.max(0,npcRules.robberyMs-(robbery.until-now)) : undefined;

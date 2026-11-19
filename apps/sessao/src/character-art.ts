@@ -1,4 +1,4 @@
-import { NAMES } from './map';
+import { NAMES, type Motion } from './map';
 
 const originalCount = 3;
 
@@ -30,6 +30,16 @@ export function phoneArt(character:number,time:number,reducedMotion:boolean) {
   const skin = characterSlugs[NAMES[character]];
   if (!skin) return;
   return {key:`${skin}-phone`,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
+}
+
+export const npcRobberySheets = [{key:'lula-npc-robbery',path:'assets/lula-npc-robbery.webp'}];
+
+export function npcRobberyArt(character:number,time:number,reducedMotion:boolean,actor:Motion & {direction:number},target:Motion & {direction:number}) {
+  if (NAMES[character]!=='Lula') return;
+  const dx = target.x-actor.x;
+  // On a vertical approach, use the victim's lying orientation when there is no horizontal offset.
+  const flipX = Math.abs(dx)>.5 ? dx<0 : actor.direction===3 || actor.direction!==1 && target.direction===3;
+  return {key:'lula-npc-robbery',frame:reducedMotion ? 0 : Math.floor(time/180)%8,flipX};
 }
 
 export const safeDepositSheets = [{key:'lula-safe-deposit',path:'assets/lula-safe-deposit.webp'}];

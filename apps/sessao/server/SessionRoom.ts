@@ -758,6 +758,7 @@ export class SessionRoom extends Room {
         player.handlingObject = this.match.fireHandlingDirection(player);
         player.former = this.match.running ? this.match.former(player.id) : undefined;
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
+        player.robberyTarget = exploring ? this.npcTalk.robberyTarget(player.id) : undefined;
         player.breachingSafe = exploring && this.gameplay.isBreachingSafe(player.id) ? true : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,this.clock.currentTime) : undefined;
       }
