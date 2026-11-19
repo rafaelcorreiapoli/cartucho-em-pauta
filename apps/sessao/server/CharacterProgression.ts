@@ -3,6 +3,8 @@ import { levelThresholds, type AttributePoints, type AttributeRequest, type Prog
 export class CharacterProgression {
   private xp = 0;
   private revision = 0;
+  private bonusPoints = 0;
+  grantPoints(amount:number) { this.bonusPoints += amount; }
   private invested:AttributePoints = {agility:0,stamina:0};
 
   constructor(private readonly matchId:number) {}
@@ -13,7 +15,7 @@ export class CharacterProgression {
     return levelThresholds.filter(threshold=>this.xp>=threshold).length;
   }
 
-  private get available() { return this.level-1-this.revision; }
+  private get available() { return this.level-1+this.bonusPoints-this.revision; }
 
   allocate(request:AttributeRequest) {
     if (request.matchId!==this.matchId || request.revision!==this.revision || !this.available ||

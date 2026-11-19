@@ -35,6 +35,7 @@ jobs:
       matrix:
         flow:
           - calote
+          - automatic-projects
           - security-layout
           - market
           - vote-history
@@ -77,7 +78,7 @@ jobs:
           server_entry="dev/$server_fixture-smoke-server.ts"
           flows=("$SMOKE_FLOW")
           if [[ "$SMOKE_FLOW" == exploration-hud ]]; then
-            server_entry=server/index.ts
+            server_entry=dev/classic-room-test-server.ts
             flows=(tutorial room-entrance asset-loading hud-help action-shortcuts floor-plan phone-apps)
           fi
           PORT=26874 SESSAO_LOCAL_SOLO=1 bun "$server_entry" &
@@ -102,6 +103,13 @@ jobs:
             fi
             browser close
           done
+      - name: Keep automatic project screenshots
+        if: matrix.flow == 'automatic-projects'
+        uses: actions/upload-artifact@v4
+        with:
+          name: automatic-project-screenshots
+          path: apps/sessao/output/playwright/automatic-project-*.png
+          if-no-files-found: error
       - name: Keep Calote HUD screenshots
         if: matrix.flow == 'calote'
         uses: actions/upload-artifact@v4

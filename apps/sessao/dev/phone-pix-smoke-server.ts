@@ -1,6 +1,6 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
-import {SessionRoom} from '../server/SessionRoom';
+import {SessionRoom} from './classic-room-fixture';
 import type {WorldItem} from '../src/gameplay';
 import {stations} from '../src/plenary';
 import {ELECTION_RULES} from '../src/elections';

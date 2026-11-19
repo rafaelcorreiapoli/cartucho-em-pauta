@@ -1,6 +1,6 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
-import {SessionRoom} from '../server/SessionRoom';
+import {SessionRoom} from './classic-room-fixture';
 import {stations,MIN_PLAYERS} from '../src/plenary';
 
 class ContextOverflowRoom extends SessionRoom {

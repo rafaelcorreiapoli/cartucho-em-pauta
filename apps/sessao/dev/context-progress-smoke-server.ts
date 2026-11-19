@@ -1,6 +1,6 @@
 import {defineRoom,defineServer} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
-import {SessionRoom} from '../server/SessionRoom';
+import {SessionRoom} from './classic-room-fixture';
 import {installationSites} from '../src/installations';
 import {npcs} from '../src/npcs';
 

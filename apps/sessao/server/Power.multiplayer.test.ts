@@ -6,7 +6,7 @@ import {canStand,roomAt,type Motion,type Player} from '../src/map';
 import {missionReward} from '../src/politics';
 import type {PlenaryView} from '../src/plenary';
 import {powerPanels,powerRules,type PowerAction} from '../src/power';
-import {SessionRoom} from './SessionRoom';
+import {SessionRoom} from '../dev/classic-room-fixture';
 
 test('power panels are on walkable floors in their assigned rooms',()=>{
   for (const panel of powerPanels) {
@@ -60,7 +60,7 @@ test('an infiltrator cuts visibility for the room and distinct live panel operat
       await wait(()=>tokens.get(peer.sessionId)===sent);
     }
 
-    host.send('start-match',{npcs:0,token});
+    host.send('start-match',{infiltrators:1,npcs:0,token});
     await wait(()=>rooms.every(peer=>view(peer)?.phase==='negotiation'));
     const infiltrator = rooms.find(peer=>view(peer)?.role==='Infiltrado')!;
     const [first,second] = rooms.filter(peer=>peer!==infiltrator);

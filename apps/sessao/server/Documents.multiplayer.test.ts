@@ -3,7 +3,7 @@ import {expect,test} from 'bun:test';
 import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
-import {SessionRoom} from './SessionRoom';
+import {SessionRoom} from '../dev/classic-room-fixture';
 import {PlenaryMatch} from './PlenaryMatch';
 import type {ControlState} from '../src/movement';
 import {cassationFee} from '../src/npcs';

@@ -54,15 +54,16 @@ export class SessionRoom extends Room {
     state.revision = (state.revision ?? 0)+1;
   }
 
-  private gameMode:GameMode = 'classic';
-  private lobbyNpcCount:number = npcRules.count;
-  private phoneGamesEnabled = true;
-  private projectVotingEnabled = true;
+  private gameMode:GameMode = 'calote';
+  private lobbyNpcCount:number = 3;
+  private phoneGamesEnabled = false;
+  private projectVotingEnabled = false;
+  private automaticProjectsEnabled = true;
   private electionsEnabled = true;
   private photosEnabled = true;
-  private surveillanceEnabled = true;
-  private decorationsEnabled = true;
-  private portraitsAndVipEnabled = true;
+  private surveillanceEnabled = false;
+  private decorationsEnabled = false;
+  private portraitsAndVipEnabled = false;
   private readonly stationCooldowns = new StationCooldowns();
   private gameplay = new Gameplay(this.stationCooldowns,()=>this.match.powerOut);
   private lastRoomCommandToken = new Map<string,number>();
@@ -221,6 +222,7 @@ export class SessionRoom extends Room {
   }
   onCreate(options?:{tutorial?:boolean}) {
     if (options?.tutorial===true) {
+      Object.assign(this,{gameMode:'classic',phoneGamesEnabled:true,projectVotingEnabled:true,electionsEnabled:true,photosEnabled:true,surveillanceEnabled:true,decorationsEnabled:true,portraitsAndVipEnabled:true,automaticProjectsEnabled:false});
       this.tutorial = {step:0,complete:false};
       this.match.training = true;
       this.maxClients = 1;
@@ -257,6 +259,12 @@ export class SessionRoom extends Room {
         message.to === client.sessionId || !this.voice.has(message.to)) return;
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
+    });
+    this.onMessage('lobby-automatic-projects',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.automaticProjectsEnabled = raw.enabled;
     });
     this.onMessage('lobby-game-mode',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('mode' in raw) || !isGameMode(raw.mode) ||
@@ -319,9 +327,9 @@ export class SessionRoom extends Room {
       if (this.tutorial || this.match.minimumPlayers===MIN_PLAYERS) this.bots.addTo(this.players,this.clock.currentTime);
       const players = [...this.players.values()].map(state=>state.player);
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
-      const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
+      const infiltrators = 'infiltrators' in request && request.infiltrators===1 ? 1 : 2;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode,this.automaticProjectsEnabled)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -683,7 +691,9 @@ export class SessionRoom extends Room {
       const previousProject = this.match.phase==='ballot' ? this.match.projectRound : undefined;
       this.match.advance(realNow, recipients=>{
         for (const id of recipients) this.gameplay.distributePinga(this.players.get(id)!.player,this.clock.currentTime);
-      },(id,room)=>this.gameplay.ownsOfficeRoom(id,room));
+      },(id,room)=>this.gameplay.ownsOfficeRoom(id,room),(recipients,project)=>{
+        for (const id of recipients) this.gameplay.distributeProjectItems(id,project==='porrete' ? 'baton' : 'energyDrink',project==='porrete' ? 1 : 5);
+      });
       const now = this.gameNow;
       this.resetFinishedMatch(now);
       const players = [...this.players.values()].map(state => state.player);
@@ -778,6 +788,7 @@ export class SessionRoom extends Room {
         }
         view.lobbyNpcCount = this.lobbyNpcCount;
         view.gameMode = this.gameMode;
+        view.automaticProjectsEnabled = this.automaticProjectsEnabled;
         view.phoneGamesEnabled = this.phoneGamesEnabled;
         view.projectVotingEnabled = this.projectVotingEnabled;
         view.electionsEnabled = this.electionsEnabled;

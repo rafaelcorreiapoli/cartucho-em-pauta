@@ -459,6 +459,19 @@ export class Gameplay {
     return !!office && this.officeStash(office.id).some(item=>item.data.kind==='briefcase');
   }
 
+  distributeProjectItems(owner:string,kind:'baton'|'energyDrink',quantity:number) {
+    const office = this.privateOffices.ownedBy(owner);
+    if (!office) return;
+    for (let i=0;i<quantity;i++) {
+      if (this.available(owner) || this.stack(owner,kind)) {
+        const data = this.create(kind,{holder:owner});
+        this.addToInventory(this.items.get(data.id)!,owner);
+      }
+      else if (this.officeStash(office.id).length<officeRules.stashSlots) this.create(kind,{storage:`office:${office.id}`});
+      else this.create(kind,{ground:{...office.spawn}});
+    }
+  }
+
   giveTrainingItem(owner:string,kind:ObjectKind) {
     if (this.owns(owner,kind)) return 0;
     const item = this.create(kind,{holder:owner});
@@ -1772,7 +1785,7 @@ export class Gameplay {
         if (action.expectedCash!==undefined && action.expectedCash!==total) return this.reject(player,world,'O valor da maleta mudou.');
         if (!amount || !world.deposit?.(id,amount)) return this.reject(player,world,'Leve a maleta à Tesouraria.');
         if (partial) {
-          data.cash = Math.round((total!-amount)*10)/10;
+          data.cash = Math.round((total!-amount)*100)/100;
           this.clearRequests(data.id);
           this.event(world,player,'cash-part-deposited',data,undefined,{place,amount,witnesses:[]});
         } else {

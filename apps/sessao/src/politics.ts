@@ -25,7 +25,7 @@ export const SAVINGS_MISSION_AMOUNT = 10;
 export const agendaCashTargets = {
   ostentacao:5, contribuinte:5, reservaCofre:5,
 } as const;
-export const money = (units:number) => `R$ ${Math.round(units*10)} mil`;
+export const money = (units:number) => `R$ ${(units*10).toLocaleString('pt-BR',{maximumFractionDigits:2})} mil`;
 
 export const targetedAgendas = {
   documentoAlvo:'Entregue um documento a',

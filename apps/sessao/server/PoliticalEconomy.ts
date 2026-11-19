@@ -81,6 +81,8 @@ export class PoliticalEconomy {
     }
   }
 
+  grantAttributePoints(id:string,amount:number) { this.accounts.get(id)?.progression.grantPoints(amount); }
+
   allocate(id:string, request:AttributeRequest) {
     const progression = this.accounts.get(id)?.progression;
     if (!progression?.allocate(request)) return false;
@@ -113,8 +115,8 @@ export class PoliticalEconomy {
   takeWallet(id:string,fraction=1) {
     const account = this.accounts.get(id);
     if (!account) return 0;
-    const amount = Math.floor(Math.round(account.wallet*10)*fraction)/10;
-    account.wallet = Math.round((account.wallet-amount)*10)/10;
+    const amount = Math.floor(Math.round(account.wallet*100)*fraction)/100;
+    account.wallet = Math.round((account.wallet-amount)*100)/100;
     return amount;
   }
 
@@ -148,8 +150,8 @@ export class PoliticalEconomy {
   }
 
   private credit(account:Account, amount:number) {
-    account.wallet = Math.round((account.wallet+amount)*10)/10;
-    account.walletIncome = Math.round((account.walletIncome+amount)*10)/10;
+    account.wallet = Math.round((account.wallet+amount)*100)/100;
+    account.walletIncome = Math.round((account.walletIncome+amount)*100)/100;
   }
 
   rewardFromReserve(id:string,amount:number) {
@@ -169,7 +171,7 @@ export class PoliticalEconomy {
   spend(id:string,amount:number) {
     const account = this.accounts.get(id);
     if (!account || !Number.isSafeInteger(amount*10) || amount<=0 || amount>account.wallet) return false;
-    account.wallet = Math.round((account.wallet-amount)*10)/10;
+    account.wallet = Math.round((account.wallet-amount)*100)/100;
     this.rewardReserve = Math.round((this.rewardReserve+amount)*10)/10;
     this.reserveFees = Math.round((this.reserveFees+amount)*10)/10;
     return true;
