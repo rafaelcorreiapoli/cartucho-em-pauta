@@ -56,6 +56,7 @@ export class SessionRoom extends Room {
   private lobbyNpcCount:number = npcRules.count;
   private phoneGamesEnabled = true;
   private projectVotingEnabled = true;
+  private electionsEnabled = true;
   private readonly stationCooldowns = new StationCooldowns();
   private gameplay = new Gameplay(this.stationCooldowns,()=>this.match.powerOut);
   private lastRoomCommandToken = new Map<string,number>();
@@ -253,6 +254,12 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-elections',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.electionsEnabled = raw.enabled;
+    });
     this.onMessage('lobby-project-voting',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -280,7 +287,7 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===2 ? 2 : 1;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -728,6 +735,7 @@ export class SessionRoom extends Room {
         view.lobbyNpcCount = this.lobbyNpcCount;
         view.phoneGamesEnabled = this.phoneGamesEnabled;
         view.projectVotingEnabled = this.projectVotingEnabled;
+        view.electionsEnabled = this.electionsEnabled;
         if (!this.match.running && this.match.minimumPlayers===MIN_PLAYERS) {
           view.minimumPlayers = 1;
           view.botsToFill = Math.max(0,MIN_PLAYERS-players.length);

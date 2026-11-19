@@ -215,10 +215,11 @@ export class PersonalAgenda {
   }
 
   constructor(metrics:AgendaMetrics, private playerCount:number, random:()=>number,
-    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true) {
+    private reward:(reward:MissionReward, completed:Mission[])=>void,private readonly botIds:ReadonlySet<string> = new Set(),private readonly phoneGamesEnabled=true,projectVotingEnabled=true,electionsEnabled=true) {
     const documentAndProjectMissions:readonly Agenda[] = ['protocolo','assinaturas','assinar','comissaoImprovisada','assinaturaAlvo','documentoAlvo','provaDocumental','retratacaoOficial','votoNpc','apoio','projetos','oposicao','leitura','votacao'];
     const deck = (Object.keys(agendas) as Agenda[]).filter(kind=>kind!=='auditoria' &&
-      (projectVotingEnabled || !documentAndProjectMissions.includes(kind)) && (this.phoneGamesEnabled || !['jogar','jogarOculto','joguinho','produtividade','celularFoto'].includes(kind)));
+      (projectVotingEnabled || !documentAndProjectMissions.includes(kind)) &&
+      (electionsEnabled || !['propaganda','discurso','investimentoPolitico','campanhaUltimaHora'].includes(kind)) && (this.phoneGamesEnabled || !['jogar','jogarOculto','joguinho','produtividade','celularFoto'].includes(kind)));
     const missions = deck.filter(kind=>kind!=='cafe' && !(startingActivities as readonly Agenda[]).includes(kind) && this.eligible(kind,metrics));
     const mission = missions[Math.floor(random()*missions.length)];
     const activities = startingActivities.filter(kind=>deck.includes(kind));

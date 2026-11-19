@@ -71,9 +71,9 @@ test('disabled projects cannot be filed or scheduled and disappear from HUD and 
   expect(stationShortcuts(view,players[0],'library')).toEqual([]);
 });
 
-test('cassation still opens and resolves with project voting disabled',()=>{
+test.each([true,false])('cassation still works without projects, elections=%s',(electionsEnabled)=>{
   const match = new PlenaryMatch(1);
-  match.start(ids[0],players,0,()=>.9,1,false,true,false);
+  match.start(ids[0],players,0,()=>.9,1,false,true,false,electionsEnabled);
   (Reflect.get(match,'economy') as PoliticalEconomy).earn(ids[0],cassationFee);
   expect(match.callCassation({...players[0],...stations.audit},50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;

@@ -16,7 +16,7 @@ export function electionStationActions(view:PlenaryView|undefined,station:Statio
   const actions:StationElectionAction[] = [];
   const election = view?.election;
   const personal = election?.personal;
-  if (view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !election.remaining || !personal) {
+  if (view?.electionsEnabled===false || view?.phase!=='negotiation' || view.ballotCountdown!==undefined || !election?.canCampaign || !election.remaining || !personal) {
     return {actions,voiceHint:false};
   }
   if (station==='press') actions.push('advertise');

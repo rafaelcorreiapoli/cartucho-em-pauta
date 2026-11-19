@@ -6,13 +6,14 @@ import {npcRules} from '../parliamentarians';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
+    electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
 }
 
 type LobbyControlsState = ReturnType<typeof lobbyControlsState>;
 type LobbyCommands = {
+  changeElections?:(enabled:boolean)=>void;
   changeProjectVoting?:(enabled:boolean)=>void;
   changePhoneGames?:(enabled:boolean)=>void;
   changeNpcCount:(count:number)=>void;
@@ -32,6 +33,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
   if (running) return null;
   return <>
     <div className="lobby-options" hidden={tutorial}>
+      <label className="lobby-count"><input type="checkbox" checked={state.electionsEnabled} disabled={!host}
+        onChange={event=>commands.changeElections?.(event.currentTarget.checked)}/> Eleição para eliminação</label>
       <label className="lobby-count"><input type="checkbox" checked={state.projectVotingEnabled} disabled={!host}
         onChange={event=>commands.changeProjectVoting?.(event.currentTarget.checked)}/> Votações de projetos</label>
       <label className="lobby-count"><input type="checkbox" checked={state.phoneGamesEnabled} disabled={!host}

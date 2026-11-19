@@ -817,6 +817,9 @@ test('six human clients can select eight NPCs and fill the available seats when 
     guest.send('lobby-project-voting',{enabled:false,token:3});
     await wait(()=>commandTokens.get(guest.sessionId)===3);
     expect(Reflect.get(room,'projectVotingEnabled')).toBe(true);
+    guest.send('lobby-elections',{enabled:false,token:4});
+    await wait(()=>commandTokens.get(guest.sessionId)===4);
+    expect(Reflect.get(room,'electionsEnabled')).toBe(true);
     host.send('start-match',{infiltrators:2,token:3});
     await wait(()=>rooms.every(peer=>phases.get(peer.sessionId)==='negotiation'));
     expect([...roles.values()].filter(role=>role==='Infiltrado')).toHaveLength(2);
@@ -875,7 +878,8 @@ test('six human clients can select eight NPCs and fill the available seats when 
   }
 });
 
-test.each([true,false])('the ordinary lobby starts solo with project voting=%s',async(projectsEnabled)=>{
+test.each([{projectsEnabled:true,electionsEnabled:true},{projectsEnabled:true,electionsEnabled:false},
+  {projectsEnabled:false,electionsEnabled:true},{projectsEnabled:false,electionsEnabled:false}])('solo lobby applies independent project and election settings: %j',async({projectsEnabled,electionsEnabled})=>{
   const {defineRoom,defineServer,matchMaker} = await import('colyseus');
   const {BunWebSockets} = await import('@colyseus/bun-websockets');
   const {SessionRoom} = await import('./SessionRoom');
@@ -903,7 +907,9 @@ test.each([true,false])('the ordinary lobby starts solo with project voting=%s',
     expect(view).toMatchObject({phase:'lobby',minimumPlayers:1,players:1});
     host.send('lobby-project-voting',{enabled:projectsEnabled,token:1});
     await wait(()=>view?.projectVotingEnabled===projectsEnabled);
-    host.send('start-match',{infiltrators:2,npcs:8,token:2});
+    host.send('lobby-elections',{enabled:electionsEnabled,token:2});
+    await wait(()=>view?.electionsEnabled===electionsEnabled);
+    host.send('start-match',{infiltrators:2,npcs:8,token:3});
     await wait(()=>view?.phase==='negotiation');
     expect(view).toMatchObject({players:6,electorate:6});
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
@@ -911,10 +917,14 @@ test.each([true,false])('the ordinary lobby starts solo with project voting=%s',
     const controls:Map<string,ControlState> = Reflect.get(room,'players');
     const players = [...controls.keys()];
     expect(players.filter(id=>match.view(id,players,room.clock.currentTime).role==='Infiltrado')).toHaveLength(2);
+    host.send('lobby-elections',{enabled:!electionsEnabled,token:4});
+    const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
+    await wait(()=>commandTokens.get(host!.sessionId)===4);
+    expect(Reflect.get(room,'electionsEnabled')).toBe(electionsEnabled);
+    expect(!!view?.election).toBe(electionsEnabled);
     if (!projectsEnabled) {
-      host.send('lobby-project-voting',{enabled:true,token:3});
-      const commandTokens:Map<string,number> = Reflect.get(room,'lastRoomCommandToken');
-      await wait(()=>commandTokens.get(host!.sessionId)===3);
+      host.send('lobby-project-voting',{enabled:true,token:5});
+      await wait(()=>commandTokens.get(host!.sessionId)===5);
       expect(Reflect.get(room,'projectVotingEnabled')).toBe(false);
       expect(Reflect.get(room,'gameplay').projectVotingEnabled).toBe(false);
       expect(()=>publishProjectFiling(match,controls.get(host!.sessionId)!.player,0,room.clock.currentTime)).toThrow('desativadas');
