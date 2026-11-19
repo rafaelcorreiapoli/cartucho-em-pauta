@@ -3,7 +3,6 @@ import { decorationInstallMs, installationSites } from '../src/installations';
 import { expect, test } from 'bun:test';
 import { Gameplay } from './Gameplay';
 import { PersonalAgenda } from './PersonalAgenda';
-import { Parliamentarians } from './Parliamentarians';
 import { PoliticalEconomy } from './PoliticalEconomy';
 import type { GameplayWorld } from './gameplay-world';
 import { terminals, type GameplayEvent } from '../src/gameplay';
@@ -571,13 +570,14 @@ test('a signature objective needs two other available signers and retains progre
   expect(agenda.hasActive('assinaturas')).toBe(false);
 
   Reflect.set(agenda,'missions',[]);
+  available.add('c');
   agenda.updateEligibility(metrics,3,true,3,1,targets,available);
   expect(agenda.hasActive('assinaturas')).toBe(true);
   agenda.recordSignature(metrics,21,'b');
   available.clear();
   agenda.updateEligibility(metrics,3,true,3,1,targets,available);
   expect(agenda.view(metrics).active.find(mission=>mission.kind==='assinaturas')?.current).toBe(1);
-  agenda.recordSignature(metrics,21,'npc');
+  agenda.recordSignature(metrics,21,'c');
   expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
 });
 
@@ -595,15 +595,15 @@ test('buying an NPC vote is drawn only when a paid quote is affordable and payme
   expect(draw(3,false).hasActive('votoNpc')).toBe(false);
   expect(draw(3,true,false).hasActive('votoNpc')).toBe(false);
   const agenda = draw(3,true);
-  expect(agenda.hasActive('votoNpc')).toBe(true);
+  expect(agenda.hasActive('votoNpc')).toBe(false);
   recordAgendaEvent(agenda,event('npc-vote-bought'));
-  expect(agenda.view(metrics).completed).toContainEqual(expect.objectContaining({kind:'votoNpc'}));
+  expect(agenda.view(metrics).completed).not.toContainEqual(expect.objectContaining({kind:'votoNpc'}));
 });
 
 test('NPC robbery returns to the mission deck when an empty wallet is funded again',()=>{
   const economy = new PoliticalEconomy();
   economy.reset([{id:'a',name:'Alice'}],()=>0);
-  economy.addParliamentarian({id:'npc',name:'Parlamentar'},3);
+  economy.addVisitor({id:'npc',name:'Parlamentar'},3);
   const {agenda} = Reflect.get(economy,'accounts').get('a');
   const draw = () => {
     Reflect.set(agenda,'missions',[]);
@@ -753,49 +753,18 @@ test('incoming payment missions require distinct colleagues who can still pay',(
   expect(view(1).missions.completed.map(mission=>mission.kind)).toEqual(['recebido','articulacao']);
 });
 
-test('solo signature missions require enough money and payment quota for the NPC signatures',()=>{
-  const owner:Player = {...terminals.secretary.point,id:'a',nick:'A',direction:0,moving:false,character:0};
-  const members = new Parliamentarians();
-  members.reset(3,0);
-  const [free,paid] = members.players;
+test('visitors cannot make solo signature missions eligible',()=>{
   const economy = new PoliticalEconomy();
-  economy.reset([{id:owner.id,name:owner.nick,character:owner.character}],()=>0);
-  for (const npc of members.players) economy.addParliamentarian({id:npc.id,name:npc.nick,character:npc.character},1);
-  const game = new Gameplay();
-  economy.setAgendaInventory((id,kind)=>game.owns(id,kind),undefined,undefined,undefined,undefined,undefined,
-    id=>members.players.map(npc=>members.signature(npc.id,id)));
-  const {agenda} = Reflect.get(economy,'accounts').get(owner.id);
-  const view = (round:number)=>economy.view(owner.id,[],round,false,()=>true)!;
-  const draw = (round:number)=>{
-    Reflect.set(agenda,'missions',[]);
-    Reflect.set(agenda,'missionDeck',['assinaturas','cafe','passeio','selfieSolo']);
-    economy.updateAgendaEligibility(new Set([owner.id]),3,()=>true,round);
-    return agenda.hasActive('assinaturas');
-  };
-  expect(economy.spend(owner.id,7)).toBe(true);
-  expect(draw(0)).toBe(false);
-  economy.earn(owner.id,1);
-  for (let i=0, limit=view(0).paymentsLeft;i<limit;i++) {
-    expect(economy.transfer(owner.id,paid.id,1,true,0)).toBe(true);
-    expect(economy.transfer(paid.id,owner.id,1,true,0)).toBe(true);
-  }
-  expect(draw(0)).toBe(false);
-  expect(draw(1)).toBe(true);
-  const quota = view(1).paymentsLeft;
-  const world:GameplayWorld = {players:[owner,...members.players],now:1,voice:()=>false,office:()=>undefined,
-    earn:()=>{},publish:event=>economy.recordGameplay(event),
-    payNpc:(from,to,price)=>economy.transfer(from,to,price,true,1)};
-  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toBe('Objeto guardado no inventário.');
-  expect(game.act(owner,{kind:'supply',place:'secretary',target:'project-0'},world)).toBe('Objeto guardado no inventário.');
-  expect(game.act(owner,{kind:'supply',place:'secretary',target:'queue'},world)).toContain('já está carregando');
-  const [document,project] = game.view(owner,world).inventory;
-  expect(game.signWithNpc(owner,free,project.id,0,world)).toBe('Documento indisponível.');
-  for (const npc of [free,paid]) {
-    expect(game.signWithNpc(owner,npc,document.id,members.signature(npc.id,owner.id),world)).toBe('Assinatura obtida.');
-  }
-  expect(view(1).missions.completed).toContainEqual(expect.objectContaining({kind:'assinaturas',current:2}));
-  expect(view(1).paymentsLeft).toBe(quota-1);
+  economy.reset([{id:'a',name:'A'}],()=>0);
+  for (let i=0;i<8;i++) economy.addVisitor({id:`npc-${i}`,name:'Visitante'},20);
+  const {agenda} = Reflect.get(economy,'accounts').get('a');
+  Reflect.set(agenda,'missions',[]);
+  Reflect.set(agenda,'missionDeck',['assinaturas','comissaoImprovisada','cafe','passeio','selfieSolo']);
+  economy.updateAgendaEligibility(new Set(['a']),3);
+  expect(agenda.hasActive('assinaturas')).toBe(false);
+  expect(agenda.hasActive('comissaoImprovisada')).toBe(false);
 });
+
 
 test('replayed installations cannot turn a pre-scandal pizza into a scandal pizza',()=>{
   const economy = new PoliticalEconomy();
@@ -926,7 +895,7 @@ test.each([
   ['contribuinte',event('delivered',{amount:5,place:'treasury'}),event('delivered',{amount:5,place:'press'})],
   ['apagarIncendio',event('fire-extinguished'),event('room-entered',{place:'Cafezinho'})],
   ['primeirosSocorros',event('used',{kind:'firstAidKit'}),event('collected',{kind:'firstAidKit'})],
-  ['socorro',event('aided',{target:'b'}),event('aided',{target:'npc-parliamentarian-1'})],
+  ['socorro',event('aided',{target:'b'}),event('aided',{target:'npc-visitor-1'})],
   ['almocoPlenario',event('used',{kind:'pizza',position:{x:480,y:650}}),event('used',{kind:'pizza',at:2})],
   ['reservaCofre',event('money-pocketed',{amount:5}),event('collected',{kind:'briefcase'})],
   ['cuecaDinheiro',event('concealment-started',{amount:1}),event('concealment-started',{amount:0,at:2})],
@@ -1497,12 +1466,12 @@ test('a signature objective replaces itself if its only remaining signers alread
   const agenda = new PersonalAgenda(metrics,3,()=>0,()=>{});
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['comissaoImprovisada','cafe','passeio','selfieSolo']);
-  const humans = [{id:'b',name:'Bia'},{id:'c',name:'Caio'}];
-  const npcs = new Set(['npc']);
-  agenda.updateEligibility(metrics,3,true,3,1,humans,undefined,npcs);
+  const humans = [{id:'b',name:'Bia'},{id:'c',name:'Caio'},{id:'d',name:'Duda'}];
+  const npcs = new Set<string>();
+  agenda.updateEligibility(metrics,4,true,3,1,humans,undefined,npcs);
   expect(agenda.hasActive('comissaoImprovisada')).toBe(true);
   agenda.recordSignature(metrics,1,'b');
-  agenda.recordSignature(metrics,1,'npc');
+  agenda.recordSignature(metrics,1,'d');
   agenda.updateEligibility(metrics,2,true,3,1,humans.slice(0,1),undefined,npcs);
   expect(agenda.hasActive('comissaoImprovisada')).toBe(false);
   expect(agenda.view(metrics).active).toHaveLength(3);

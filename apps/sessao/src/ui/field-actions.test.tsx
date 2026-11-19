@@ -112,7 +112,7 @@ test('signature actions target a nearby bot directly or expand document choices'
   expect(actions()).toEqual([]);
 });
 
-test('parliamentarians and infiltrators can plant incendiaries in every cabinet through contextual actions',()=>{
+test('visitors and infiltrators can plant incendiaries in every cabinet through contextual actions',()=>{
   const cabinets = fireSites.flatMap((target,site)=>target.object==='Armário' ? [{target,site}] : []);
   expect(cabinets).toHaveLength(11);
   for (const {target,site} of cabinets) {

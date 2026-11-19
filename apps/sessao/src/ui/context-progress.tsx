@@ -1,6 +1,6 @@
 import {HudHelp} from './hud-help';
 import {documentRules} from '../internal-mail';
-import {npcRules} from '../parliamentarians';
+import {npcRules} from '../visitors';
 import type {PlenaryView} from '../plenary';
 
 export function contextProgress(view:PlenaryView|undefined) {

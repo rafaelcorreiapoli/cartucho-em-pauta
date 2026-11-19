@@ -63,7 +63,7 @@ test('disabled projects cannot be filed or scheduled and disappear from HUD and 
   const view = match.view(ids[0],ids,projectRules.debateMs+1);
   expect(view.phase).toBe('negotiation');
   expect(view.project).toBeUndefined();
-  expect(match.negotiableProject(1)).toBeUndefined();
+  expect(match.projectIndex).toBeUndefined();
   expect(renderToStaticMarkup(<LegislativeDock view={view} id={ids[0]} command={()=>{}}/>)).toBe('');
   const phone = renderToStaticMarkup(<PhoneApps projectsEnabled={false} select={()=>{}}/>);
   expect(phone).not.toContain('Projetos');

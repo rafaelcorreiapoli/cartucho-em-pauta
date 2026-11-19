@@ -16,8 +16,8 @@ import {xray} from '../equipment';
 import {privateOffices} from '../private-offices';
 
 import {PlenaryMatch} from '../../server/PlenaryMatch';
-import {ParliamentarianTalk} from '../../server/ParliamentarianTalk';
-import {Parliamentarians} from '../../server/Parliamentarians';
+import {VisitorRobberies} from '../../server/VisitorRobberies';
+import {Visitors} from '../../server/Visitors';
 import type {Player} from '../map';
 import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -214,7 +214,7 @@ test('Raio X missions identify which kind of balance to reveal',()=>{
   const safe = renderToStaticMarkup(<MissionRow mission={{id:1,kind:'fiscalizacaoParalela',current:0,target:1}}/>);
   const npc = renderToStaticMarkup(<MissionRow mission={{id:2,kind:'patrimonioSuspeito',current:1,target:1}} done/>);
   expect(safe).toContain('cofre de outro parlamentar com o Raio X');
-  expect(npc).toContain('saldo de um parlamentar NPC com o Raio X');
+  expect(npc).toContain('saldo de um visitante com o Raio X');
   expect(npc).toContain('data-done="true"');
 });
 
@@ -1852,10 +1852,10 @@ test.each([0,1])('mail missions respect the exact end of an approved isolation (
 
 test('the Agenda offers extraordinary collection only when a robbery can fund a partial deposit',()=>{
   const player:Player = {id:'a',nick:'Rafa',character:0,direction:0,moving:false,...terminals.treasury.point};
-  const npc:Player = {...player,id:'npc-parliamentarian-1',nick:'Parlamentar',npc:true};
+  const npc:Player = {...player,id:'npc-visitor-1',nick:'Parlamentar',npc:true};
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const game = new Gameplay();
   game.reset(0,()=>.9,[player]);
   match.setAgendaCashAvailability(itemId=>game.canPartiallyDepositCash(itemId));
@@ -1967,48 +1967,24 @@ test.each([false,true])('Pix missions and recipients reflect cassation with prio
   expect(politics.progression.xp-before).toBe(missionReward('pixVinte').xp);
 });
 
-test.each(['vote starts','vote ends'])('the Agenda drops NPC vote buying when the final %s', ending=>{
+test('visitor vote buying is absent from the Agenda and rejects stale offers',()=>{
   const player:Player = {id:'host',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
-  const members = new Parliamentarians();
-  members.reset(2,0);
-  const npc = members.players[1];
-  Object.assign(npc,{x:player.x+8,y:player.y});
-  const match = new PlenaryMatch(1);
-  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
-  const voteAt = ELECTION_RULES.matchDuration-BALLOT_MS;
-  const filingAt = voteAt-NEGOTIATION_MS;
-  publishProjectFiling(match,player,0,filingAt);
-  const economy = Reflect.get(match,'economy');
-  const {agenda} = Reflect.get(economy,'accounts').get(player.id);
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
-  match.refreshAgendaEligibility(filingAt);
-  const view = (now:number)=>match.view(player.id,[player.id],now).politics!;
-  const hud = (now:number)=>renderToStaticMarkup(<>{view(now).missions.active.map(mission=><MissionRow key={mission.id} mission={mission}/>)}</>);
-  const talk = new ParliamentarianTalk(members,new Gameplay(),match);
-  const world = (now:number)=>match.gameplayWorld([player,npc],match.gameTime(now),()=>false);
-  const open = (now:number)=>talk.act(player,{kind:'talk',target:npc.id},world(now));
-  open(filingAt);
-  const quote = talk.view(player,world(filingAt))!;
-  const offer = {kind:'vote',session:quote.session,target:npc.id,round:match.projectRound,project:quote.projectIndex,vote:'yes',amount:quote.minimum.yes};
-  expect(quote.minimum.yes).toBeGreaterThan(0);
-  expect(hud(filingAt)).toContain('Compre um voto de um parlamentar NPC');
-
-  match.advance(voteAt);
-  const now = voteAt+(ending==='vote ends' ? BALLOT_MS : 0);
-  match.advance(now);
-  expect(match.phase).toBe(ending==='vote starts' ? 'ballot' : 'negotiation');
-  expect(hud(now)).not.toContain('Compre um voto de um parlamentar NPC');
-  expect(view(now).missions.active).toHaveLength(3);
-  const {wallet,paymentsLeft,progression:{xp}} = view(now);
-  open(now);
-  expect(talk.view(player,world(now))).toMatchObject({projectIndex:undefined});
-  talk.act(player,offer,world(now));
-  expect(view(now).paymentsLeft).toBe(paymentsLeft);
-  expect(view(now).wallet).toBe(wallet);
-  expect(view(now).progression.xp).toBe(xp);
+  const members = new Visitors(); members.reset(2,0,()=>0);
+  const npc = members.players[1]; Object.assign(npc,{x:player.x+8,y:player.y});
+  const match = new PlenaryMatch(1); match.start(player.id,[player],0,()=>.9); match.addVisitor(npc);
+  publishProjectFiling(match,player);
+  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
+  Reflect.set(agenda,'missions',[]); Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
+  match.refreshAgendaEligibility();
+  const view = ()=>match.view(player.id,[player.id],1).politics!;
+  const before = view();
+  expect(before.missions.active.some(mission=>mission.kind==='votoNpc')).toBe(false);
+  const robberies = new VisitorRobberies(members,new Gameplay());
+  expect(robberies.act(player,{kind:'vote',target:npc.id,session:1,vote:'yes',amount:2},
+    match.gameplayWorld([player,npc],1,()=>false))).toContain('não negociam');
+  expect(view()).toEqual(before);
 });
+
 
 test.each([
   ['contribuinte','delivered','treasury'],
@@ -2045,56 +2021,6 @@ test.each([
   expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
 });
 
-test('an NPC vote purchase advances the Agenda once despite a repeat offer and event replay',()=>{
-  const player:Player = {id:'rafa',nick:'Rafa',character:0,x:140,y:146,direction:0,moving:false};
-  const match = new PlenaryMatch(1);
-  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
-  const members = new Parliamentarians();
-  members.reset(2,0);
-  const npc = members.players[1];
-  match.addParliamentarian(npc);
-  Object.assign(npc,{x:player.x+8,y:player.y});
-  publishProjectFiling(match,player);
-  const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['votoNpc','cafe','passeio','selfieSolo']);
-  match.refreshAgendaEligibility();
-  const view = () => match.view(player.id,[player.id],1).politics!;
-  const active = view().missions.active.find(mission=>mission.kind==='votoNpc')!;
-  expect(renderToStaticMarkup(<MissionRow mission={active}/>)).toContain('Compre um voto de um parlamentar NPC');
-
-  const events:GameplayEvent[] = [];
-  const state = match.gameplayWorld([player,npc],1,()=>false);
-  const instrumentedWorld = {...state,publish:(event:GameplayEvent)=>{
-    events.push(event);
-    state.publish(event);
-  }};
-  const talk = new ParliamentarianTalk(members,new Gameplay(),match);
-  talk.act(player,{kind:'talk',target:npc.id},state);
-  const deal = talk.view(player,state)!;
-  const offer = {kind:'vote',target:npc.id,session:deal.session,round:match.projectRound,project:deal.projectIndex,vote:'yes',amount:deal.minimum.yes};
-  expect(offer.amount).toBeGreaterThan(0);
-  const before = view();
-  expect(talk.act(player,offer,instrumentedWorld)).toBe('Voto comprometido.');
-  expect(events).toEqual([expect.objectContaining({type:'npc-vote-bought',target:npc.id,project:0,amount:offer.amount,eventId:expect.any(Number)})]);
-  const after = view();
-  const completed = after.missions.completed.find(mission=>mission.id===active.id)!;
-  expect(renderToStaticMarkup(<MissionRow mission={completed} done/>)).toContain('data-done="true"');
-  expect(after.wallet).toBe(before.wallet-offer.amount+(missionReward('votoNpc').cash ?? 0));
-  expect(after.paymentsLeft).toBe(before.paymentsLeft-1);
-  expect(after.progression.xp).toBe(before.progression.xp+missionReward('votoNpc').xp);
-
-  expect(talk.act(player,offer,instrumentedWorld)).toBe('Já aceita esse voto sem pagamento.');
-  expect(events).toHaveLength(1);
-  expect(view()).toEqual(after);
-  Reflect.set(agenda,'missions',[]);
-  Reflect.set(agenda,'missionDeck',['cafe','passeio','votoNpc']);
-  match.refreshAgendaEligibility();
-  const redrawn = view();
-  expect(redrawn.missions.active).toContainEqual(expect.objectContaining({kind:'votoNpc',current:0}));
-  state.publish(events[0]);
-  expect(view()).toEqual(redrawn);
-});
 
 
 test.each([false,true])('the crisis mission follows fire eligibility and rewards only the player who resolves it (expire=%s)',expires=>{
@@ -2207,12 +2133,12 @@ test('Republishing a forensic report cannot complete another Retratação Oficia
 test('the cash handover mission tracks custody across stash, drop, collection and acceptance',()=>{
   const sender:Player = {id:'rafa',nick:'Rafa',character:0,direction:0,moving:false,...stations.coffee};
   const recipient:Player = {...sender,id:'bia',nick:'Bia',character:1};
-  const npc:Player = {...sender,id:'npc-parliamentarian-1',nick:'NPC',character:2,npc:true};
+  const npc:Player = {...sender,id:'npc-visitor-1',nick:'NPC',character:2,npc:true};
   const players = [sender,recipient,npc];
   const ids = [sender.id,recipient.id];
   const match = new PlenaryMatch(1);
   expect(match.start(sender.id,[sender,recipient],0,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const game = new Gameplay();
   game.reset(0,()=>.9,[sender,recipient]);
   const economy = Reflect.get(match,'economy');

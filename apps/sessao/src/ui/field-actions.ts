@@ -5,7 +5,7 @@ import {decorationActions} from '../installations';
 import {npcs} from '../npcs';
 import {cashAmount,treasuryDeliveries,type GameplayAction} from '../gameplay';
 import {PLENARY_DOORS,type Player} from '../map';
-import type {ParliamentarianFieldAction} from '../parliamentarians';
+import type {VisitorAction} from '../visitors';
 import type {PlenaryView} from '../plenary';
 import type {SpyOption} from '../surveillance';
 import {treatmentAction} from './treatment-action';
@@ -15,7 +15,7 @@ export type FieldAction = GameplayAction
   | {kind:'power';option:PowerAction}
   | {kind:'fire';option:FireOption}
   | {kind:'spy';option:SpyOption}
-  | {kind:'npc-deal';request:ParliamentarianFieldAction}
+  | {kind:'npc-deal';request:VisitorAction}
   | {kind:'cross-door';door:number}
   | {kind:'inspect-stash'}
   | {kind:'edit-document';item:number;project:number}
@@ -60,10 +60,10 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
     }
   }
   if (state && player && channel?.kind!=='office-cash' && robbery===undefined) {
-    for (const npc of state.parliamentarians ?? []) {
-      actions.push({label:npc.down ? `Roubar dinheiro · ${npc.name}` : `Conversar · ${npc.name}`,icon:npc.down ? 'wallet' : 'document',
-        target:{id:npc.id,name:npc.name,verb:npc.down ? 'Roubar dinheiro' : 'Conversar'},
-        action:{kind:'npc-deal',request:{kind:npc.down ? 'rob' : 'talk',target:npc.id}}});
+    for (const npc of state.visitors ?? []) if (npc.down) {
+      actions.push({label:`Roubar dinheiro · ${npc.name}`,icon:'wallet',
+        target:{id:npc.id,name:npc.name,verb:'Roubar dinheiro'},
+        action:{kind:'npc-deal',request:{kind:'rob',target:npc.id}}});
     }
     if (state.locations.includes('treasury')) {
       for (const delivery of treasuryDeliveries(state.inventory)) actions.push({...delivery,icon:'wallet'});
@@ -109,7 +109,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
         else actions.push({label:`${npc.label} · Falar com ${npc.name}`,icon:'document',action:{kind:'talk',target}});
       }
       for (const target of roster) {
-        if (canReachDownedPlayer(player,target)) {
+        if (!target.npc && canReachDownedPlayer(player,target)) {
           actions.push({label:`Socorrer ${target.nick}`,icon:'shield',target:{id:target.id,name:target.nick,verb:'Socorrer'},action:{kind:'aid',target:target.id}});
           if (!target.carried) actions.push({label:`Carregar ${target.nick}`,icon:'handset',target:{id:target.id,name:target.nick,verb:'Carregar'},action:{kind:'carry',target:target.id}});
           actions.push({label:`Inspecionar ${target.nick}`,icon:'search',target:{id:target.id,name:target.nick,verb:'Inspecionar'},action:{kind:'inspect-down',target:target.id}});

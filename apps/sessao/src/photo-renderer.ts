@@ -114,8 +114,8 @@ export class PhotoRenderer {
         ctx.drawImage(atlas,person.character%2*256,Math.floor(person.character/2)*256,256,256,(width-size)/2,height-size,size,size);
         continue;
       }
-      const {sheet,frame} = characterArt(person.character);
-      const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction) : undefined;
+      const {sheet,frame} = characterArt(person.character,person.visitor);
+      const downed = person.carried || person.knockedOut ? downedArt(person.character,person.direction,Infinity,person.visitor) : undefined;
       const handset = !downed && (person.phone==='open' || person.phone==='game')
         ? phoneArt(person.character,0,true)
         : undefined;

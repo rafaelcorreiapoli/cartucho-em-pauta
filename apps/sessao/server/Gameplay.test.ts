@@ -3,7 +3,7 @@ import { xray } from '../src/equipment';
 import { money } from '../src/politics';
 import { contextActionKeys } from '../src/ui/context-action-keys';
 import { xrayRechargeAction } from '../src/ui/xray-recharge-action';
-import { Parliamentarians } from './Parliamentarians';
+import { Visitors } from './Visitors';
 import { hideouts } from '../src/surveillance';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
@@ -897,22 +897,19 @@ test('Raio X spends one charge per window, follows visible targets and preserves
   expect(events.filter(event=>event.type==='xray-scanned' || event.type==='xray-recharged').map(event=>event.witnesses)).toEqual([[],[],[],[]]);
 });
 
-test('an NPC raises its quote only after witnessing a weapon hit',()=>{
+test('visitors witness only weapon hits within their vision',()=>{
   const {alice,bob,game,world,events} = setup();
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
   Object.assign(bob,{x:alice.x+9,y:alice.y});
-  const parliamentarians = new Parliamentarians();
-  parliamentarians.reset(2,world.now);
-  const [witness,unaware] = parliamentarians.players;
+  const visitors = new Visitors();
+  visitors.reset(2,world.now);
+  const [witness,unaware] = visitors.players;
   Object.assign(witness,{x:alice.x-14,y:alice.y});
   Object.assign(unaware,{x:720,y:240});
   world.players = [alice,bob,witness,unaware];
   world.publish = event=>{
     events.push(event);
-    parliamentarians.witnessAggression(event);
   };
-  const quote = (npc:Player) => parliamentarians.signature(npc.id,alice.id);
-  const before = parliamentarians.players.map(quote);
   world.spend = ()=>true;
   game.act(alice,{kind:'talk',target:'vendor'},world);
   game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
@@ -928,11 +925,8 @@ test('an NPC raises its quote only after witnessing a weapon hit',()=>{
   };
   world.vision = id=>id===witness.id ? 10 : 100;
   expect(strike(100)?.witnesses).toEqual([]);
-  expect(parliamentarians.players.map(quote)).toEqual(before);
   world.vision = ()=>100;
   expect(strike(2000)?.witnesses).toEqual([witness.id]);
-  expect(quote(witness)).toBeGreaterThan(before[0]);
-  expect(quote(unaware)).toBe(before[1]);
   Object.assign(witness,{x:720,y:240});
   expect(strike(4000)).toMatchObject({at:4000+weapons.baton.impactMs,witnesses:[]});
 });
@@ -946,7 +940,7 @@ test.each([0,1,2])('projects require %i other player signatures and no stamps',r
   game.act(alice,{kind:'supply',place:'secretary',target:'project-0'},world);
   const [doc] = game.view(alice,world).inventory;
   expect(doc.document).toMatchObject({requiredSignatures:required,requiredStamps:[]});
-  expect(game.signWithNpc(alice,npc,doc.id,0,world)).toBe('Documento indisponível.');
+  expect(game.act(alice,{kind:'sign-request',item:doc.id,target:npc.id},world)).toBe('Aproxime-se do destinatário.');
   expect(game.act(alice,{kind:'stamp',place:'secretary',item:doc.id},world)).toBe('Projetos não exigem carimbos.');
   Object.assign(alice,terminals.protocol.point);
   const file = () => submitAtProtocol(game,alice,doc.id,world);

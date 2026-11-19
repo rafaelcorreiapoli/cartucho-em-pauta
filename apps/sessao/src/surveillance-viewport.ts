@@ -79,8 +79,8 @@ export function createSurveillanceViewport(parent:HTMLElement,onFirstDraw?:()=>v
         this.rendered = frame;
       }
       for (const person of frame.people) {
-        const {sheet,frame:base} = characterArt(person.character);
-        const down = person.knockedOut || person.carried ? downedArt(person.character,person.direction) : undefined;
+        const {sheet,frame:base} = characterArt(person.character,person.visitor);
+        const down = person.knockedOut || person.carried ? downedArt(person.character,person.direction,Infinity,person.visitor) : undefined;
         const row = person.direction===3 ? 1 : person.direction;
         const step = person.moving && !down ? Math.floor(time/100)%4 : 0;
         const y = person.y-(person.carried ? 24 : 0);

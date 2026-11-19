@@ -34,9 +34,37 @@ Para revisar as animações, rode `bun run dev` em `apps/sessao` e abra
 `/dev/visitor-sprites.html`. O visor mostra as três ações e permite alternar
 frente, lado e costas ou pausar os ciclos.
 
-Esta entrega prepara a arte. A ligação com o spawn periódico, os valores de
-saque e a retirada das negociações e votos dos NPCs será feita na integração
-da mecânica de visitantes.
+## Mecânica integrada
+
+Os visitantes usam uma identidade visual separada do atributo `character` dos
+jogadores. Bots continuam sendo parlamentares do elenco original, com cargos,
+votos e todas as ações de jogador. Visitantes não têm mandato, salário, voto
+ou negociação; a interação contextual com eles é roubar o dinheiro depois do
+nocaute. A identidade também acompanha fotos e imagens das câmeras.
+
+O limite configurado no lobby vale só para visitantes. Eles começam espalhados
+em salas diferentes, caminham entre ambientes e saem após 90 segundos. Há uma
+nova oportunidade de aparição a cada 25 segundos, respeitando o limite e sem
+repetir a mesma figura entre os visitantes presentes. Um corpo permanece até
+se recuperar; depois de saqueado, o visitante sai ao se recuperar.
+
+Valores fictícios para balanceamento, em unidades de R$ 10 mil:
+
+| Visitante | Dinheiro |
+| --- | ---: |
+| Nestor Cerveró | 7 |
+| Pablo Marçal | 9 |
+| Joesley Batista | 18 |
+| Marcos Valério | 12 |
+| Marcelo Odebrecht | 20 |
+| João Santana | 10 |
+| Alexandre de Moraes | 6 |
+| Delcídio do Amaral | 8 |
+
+O saque gera uma maleta física com o valor carregado, sem creditar a carteira
+diretamente. Dinheiro de visitantes que saem sem ser saqueados entra no total
+de dinheiro expirado, preservando a conferência da economia.
+
 
 ## Geração
 

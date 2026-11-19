@@ -15,7 +15,6 @@ import type { InternalNotice, ForensicReport } from './internal-mail';
 import { hudAppStatus, launchHudApp, type HudApp, type HudAppStatus } from './hud-apps';
 import { mountAppLauncher } from './ui/app-launcher';
 import { mountReactHud } from './ui/hud';
-import { createParliamentarianPanel } from './parliamentarian-panel';
 import { createProgressionHud } from './progression-hud';
 import './progression-hud.css';
 import { bindActionShortcuts } from './action-shortcuts';
@@ -218,7 +217,6 @@ async function connect(join: () => Promise<Room>) {
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
     joined.onMessage('spy-frame',(frame:SpyCameraFrame)=>surveillance.frame(frame));
     joined.onDrop(()=>{ surveillance.render(undefined); game?.clearPrivateVision(); });
-    const npcPanel = createParliamentarianPanel(action=>sendCommand('npc-deal',action));
     const market = createMarketPanel(sendGameplay,()=>{
       const voted = new Set(previousView?.outcomes.flatMap(outcome=>outcome.project===undefined ? [] : [outcome.project]));
       projectPicker.open('Solicitar documento',index=>{
@@ -407,7 +405,6 @@ async function connect(join: () => Promise<Room>) {
       surveillance.render(view.gameplay?.surveillance,view.photosEnabled!==false);
       security.render(view.gameplay?.security);
       market.render(view);
-      npcPanel.update(view);
       const disguise = view.gameplay?.modulator?.active ?? false;
       if (disguiseActive!==disguise) {
         disguiseActive = disguise;
@@ -489,7 +486,6 @@ async function connect(join: () => Promise<Room>) {
       security.destroy();
       gameplay.destroy();
       market.destroy();
-      npcPanel.destroy();
       if (room!==joined) return;
       const outdated = closeCode===4002 && reason?.includes('not registered');
       showLobby(outdated ? 'O servidor da sala está desatualizado. Atualize o servidor e crie outra sala.' : 'Você saiu da sala.');

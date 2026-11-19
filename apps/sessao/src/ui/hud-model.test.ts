@@ -346,14 +346,14 @@ test('the megaphone notice follows the phase and the anonymous snapshot flag',()
 });
 
 
-test('a paid NPC deal uses the transfer quota without completing the human transfer mission',()=>{
+test('a rejected visitor payment preserves cash, quota and the transfer mission',()=>{
   const peer = {...player,id:'bia',nick:'Bia'};
-  const npc:Player = {...player,id:'npc-parliamentarian-1',nick:'Parlamentar',npc:true};
+  const npc:Player = {...player,id:'npc-visitor-1',nick:'Parlamentar',npc:true};
   const players = [player,peer,npc];
   const ids = [player.id,peer.id];
   const match = new PlenaryMatch(1);
   expect(match.start(player.id,[player,peer],0,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const {agenda} = Reflect.get(Reflect.get(match,'economy'),'accounts').get(player.id);
   Reflect.set(agenda,'missions',[]);
   Reflect.set(agenda,'missionDeck',['pagamento','cafe','passeio','selfieSolo']);
@@ -365,10 +365,10 @@ test('a paid NPC deal uses the transfer quota without completing the human trans
   expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'pagamento'}));
 
   const world = match.gameplayWorld(players,1,()=>false);
-  expect(world.payNpc?.(player.id,npc.id,AGENDA_TRANSFER_MIN)).toBe(true);
+  expect(world.payNpc?.(player.id,npc.id,AGENDA_TRANSFER_MIN)).toBe(false);
   const paid = view(1);
   expect(paid.politics).toMatchObject({
-    wallet:initial.wallet-AGENDA_TRANSFER_MIN,paymentsLeft:initial.paymentsLeft-1,
+    wallet:initial.wallet,paymentsLeft:initial.paymentsLeft,
   });
   hud.render(paid);
   expect(hud.agenda.get()?.active).toContainEqual(expect.objectContaining({kind:'pagamento',current:0}));

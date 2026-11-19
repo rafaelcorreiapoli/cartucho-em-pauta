@@ -381,7 +381,7 @@ test('only an accepted filing schedules a ballot, with a cooldown and no repeat 
   expect(open.projectFilingError?.(host.id,0)).toBeUndefined();
 });
 
-test('parliamentarians can install a device and the fire still requires an extinguisher',()=>{
+test('visitors can install a device and the fire still requires an extinguisher',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
   const site = 0;
@@ -537,33 +537,33 @@ test('the monetary summary reconciles physical issuance, trade, treasury and pro
   expect(match.economySummary(game.physicalCash())).toMatchObject({budget:-8,publicDuty:6,salaries:9,discrepancy:0});
 });
 
-test('NPC issuance, paid agreements, robbery and reserve fees conserve the same funds',()=>{
+test('visitor issuance, rejected payments, robbery and reserve fees conserve funds',()=>{
   const match = new PlenaryMatch(1);
   match.start(host.id,people,0,()=>.9);
-  const npc:Player = {...traitor,id:'npc-parliamentarian-1',npc:true};
+  const npc:Player = {...traitor,id:'npc-visitor-1',npc:true};
   const game = new Gameplay();
   const world = match.gameplayWorld([...people,npc],1,()=>false);
   const summary = () => match.economySummary(game.physicalCash());
 
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const issued = summary().npcIssued;
   expect(issued).toBeGreaterThan(0);
-  match.addParliamentarian(npc);
-  match.addParliamentarian(host);
+  match.addVisitor(npc);
+  match.addVisitor(host);
   expect(summary()).toMatchObject({npcIssued:issued,npcs:issued,humans:24,discrepancy:0});
 
-  expect(world.payNpc!(host.id,npc.id,2)).toBe(true);
+  expect(world.payNpc!(host.id,npc.id,2)).toBe(false);
   expect(world.payNpc!(host.id,npc.id,100)).toBe(false);
-  expect(summary()).toMatchObject({npcs:issued+2,humans:22,transferred:2,discrepancy:0});
+  expect(summary()).toMatchObject({npcs:issued,humans:24,transferred:0,discrepancy:0});
 
   expect(game.robNpc(host,npc,world)).toContain('Maleta roubada');
-  expect(game.robNpc(host,npc,world)).toBe('O parlamentar está sem dinheiro.');
-  expect(summary()).toMatchObject({npcs:0,physical:issued+2,discrepancy:0});
+  expect(game.robNpc(host,npc,world)).toBe('O visitante está sem dinheiro.');
+  expect(summary()).toMatchObject({npcs:0,physical:issued,discrepancy:0});
 
   for (const invalid of [-1,NaN,Infinity,0,.05]) expect(world.spend!(host.id,invalid)).toBe(false);
-  for (const fee of [.1,.2,.3,5.4]) expect(world.spend!(host.id,fee)).toBe(true);
+  for (const fee of [.1,.2,.3,7.4]) expect(world.spend!(host.id,fee)).toBe(true);
   expect(world.wallet!(host.id)).toBe(0);
-  expect(summary()).toMatchObject({reserveFees:6,physical:issued+2,discrepancy:0});
+  expect(summary()).toMatchObject({reserveFees:8,physical:issued,discrepancy:0});
 });
 
 test('failed mail payments and expired cash preserve the ledger across retries',()=>{
@@ -1116,13 +1116,13 @@ test('a previous match event cannot reserve the new match’s document ID',()=>{
 
 test('a previous gameplay world cannot settle transactions against the new match',()=>{
   const match = new PlenaryMatch(1);
-  const npc:Player = {...host,id:'npc-parliamentarian-1',npc:true};
+  const npc:Player = {...host,id:'npc-visitor-1',npc:true};
   expect(match.start(host.id,[host],0,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const previous = match.gameplayWorld([host,npc],1,()=>false);
   match.leave(host.id,2);
   expect(match.start(host.id,[host],3,()=>.9)).toBe(true);
-  match.addParliamentarian(npc);
+  match.addVisitor(npc);
   const next = match.gameplayWorld([host,npc],4,()=>false);
   const state = ()=>({
     economy:match.economySummary(0),

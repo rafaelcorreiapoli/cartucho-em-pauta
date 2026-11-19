@@ -115,28 +115,12 @@ async page => {
   await page.keyboard.press('Escape');
   await page.locator('#gameplay-dialog').waitFor({state:'hidden'});
   await page.setViewportSize({width:1280,height:720});
-  const conversation = page.getByRole('button',{name:/^Conversar · /});
-  await conversation.nth(1).waitFor();
-  const conversations = (await conversation.allTextContents()).map(name=>name.trim());
-  const npcDeal = page.locator('#parliamentarian-dialog');
+  if (await page.getByRole('button',{name:/^Conversar · /}).count()) throw Error('Visitantes ainda negociam.');
+  if (await page.locator('#parliamentarian-dialog').count()) throw Error('Diálogo de negociação legado ainda existe.');
   const signatureMission = 'Consiga duas assinaturas no mesmo documento';
-  await page.getByRole('list',{name:'Objetivos ativos'}).getByText(signatureMission,{exact:true}).waitFor();
-  for (const name of conversations) {
-    await page.getByRole('button',{name,exact:true}).click();
-    const sign = npcDeal.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
-    await sign.waitFor();
-    if (await npcDeal.getByRole('button',{name:new RegExp(title)}).count()) throw Error('NPC ofereceu assinatura de projeto');
-    await sign.evaluate(button=>button.setAttribute('aria-label','Assinatura original oculta do F2'));
-    await page.keyboard.press('F2');
-    const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
-    const action = palette.getByRole('button',{name:/^Estatuto da Fila Preferencial/});
-    await action.waitFor();
-    await page.keyboard.press(await action.getAttribute('aria-keyshortcuts'));
-    await npcDeal.getByRole('button',{name:'Assinatura original oculta do F2',exact:true}).waitFor({state:'hidden'});
-    await page.keyboard.press('Escape');
-    await npcDeal.waitFor({state:'hidden'});
+  if (await page.getByRole('list',{name:'Objetivos ativos'}).getByText(signatureMission,{exact:true}).count()) {
+    throw Error('A agenda solo depende de assinaturas de visitantes.');
   }
-  await page.locator('#agenda-dock [data-done="true"]').getByText(signatureMission,{exact:true}).waitFor();
   await page.keyboard.press('o');
   const objectDialog = page.locator('#gameplay-dialog');
   await objectDialog.getByRole('button',{name:/Estatuto da Fila Preferencial/}).click();
@@ -146,7 +130,7 @@ async page => {
   await page.keyboard.press('Shift+Digit1');
   await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor();
   await runShortcut(objectDialog.locator('summary'),/^Inspecionar$/);
-  await objectDialog.locator('details[open]').getByText(/Assinaturas 2\//).waitFor();
+  await objectDialog.locator('details[open]').getByText(/Assinaturas 0\//).waitFor();
   await page.keyboard.press('Shift+Digit2');
   await objectDialog.getByRole('button',{name:'Vincular ao slot 2',pressed:true}).waitFor();
   const drop = objectDialog.getByRole('button',{name:'Largar no chão',exact:true});

@@ -92,7 +92,7 @@ export class PoliticalEconomy {
     return true;
   }
 
-  addParliamentarian(contact:DirectoryContact, wallet:number) {
+  addVisitor(contact:DirectoryContact, wallet:number) {
     const sample = this.accounts.values().next().value;
     if (!sample) return;
     this.npcIds.add(contact.id);
@@ -101,6 +101,14 @@ export class PoliticalEconomy {
     this.accounts.set(contact.id,{...initial,wallet,walletIncome:0,known:new Set(),agenda:new PersonalAgenda({wallet,popularity:40},1,Math.random,()=>{}),
       progression:new CharacterProgression(this.matchId)});
     console.info(JSON.stringify({event:'money-issued',source:'npc-start',id:contact.id,amount:wallet}));
+  }
+
+  removeVisitor(id:string) {
+    if (!this.npcIds.delete(id)) return 0;
+    const wallet = this.wallet(id);
+    this.accounts.delete(id);
+    this.contacts.delete(id);
+    return wallet;
   }
 
   totals() {
@@ -488,7 +496,7 @@ export class PoliticalEconomy {
           eligiblePayers().filter(payer=>payer!==id).length>=required,
       });
       account.agenda.updateEligibility(account,players.size,hasMandate(id) && !this.suspended(id),
-        ballotsLeft,this.npcIds.size,targets,availableTargets,this.npcIds);
+        ballotsLeft,this.npcIds.size,targets,availableTargets,new Set());
     }
   }
 

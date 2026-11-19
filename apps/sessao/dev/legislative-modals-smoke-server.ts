@@ -5,7 +5,7 @@ import {publishProjectFiling} from '../server/project-test-fixture';
 import {cassationFee} from '../src/npcs';
 import {stations} from '../src/plenary';
 import {ELECTION_RULES} from '../src/elections';
-import type {Parliamentarians} from '../server/Parliamentarians';
+import type {Visitors} from '../server/Visitors';
 
 class LegislativeModalsRoom extends SessionRoom {
   onCreate() {
@@ -45,9 +45,9 @@ class LegislativeModalsRoom extends SessionRoom {
           }
         }
         if (player.nick==='Projetos QA') {
-          const parliamentarians:Parliamentarians = Reflect.get(this,'parliamentarians');
-          parliamentarians.stopRoutes();
-          parliamentarians.players.forEach((npc,index)=>{
+          const visitors:Visitors = Reflect.get(this,'visitors');
+          visitors.stopRoutes();
+          visitors.players.forEach((npc,index)=>{
             Object.assign(npc,{x:stations.secretary.x+8+index*6,y:stations.secretary.y,speed:0,moving:false});
           });
         }

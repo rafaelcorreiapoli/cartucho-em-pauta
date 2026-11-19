@@ -120,18 +120,18 @@ test('eliminating both infiltrators wins without stability damage',()=>{
   expect(view('2',rules.interval*2)).toMatchObject({winner:'Parlamentar',election:{result:{eliminated:'1'}}});
 });
 
-test('a short budget pays full salaries to remaining mandates and NPCs by borrowing',()=>{
+test('payroll pays only mandates and never pays visitors',()=>{
   const match = new PlenaryMatch();
   const humans = Array.from({length:6},(_,index)=>({...players[0],id:String(index)}));
   const ids = humans.map(player=>player.id);
   match.start('0',humans,0,()=>0);
-  match.addParliamentarian({...players[0],id:'npc',npc:true});
+  match.addVisitor({...players[0],id:'npc',npc:true});
   publishProjectFiling(match,humans[0]);
   match.advance(payrollRules.interval-1);
-  expect(match.view('0',ids,payrollRules.interval-1).payroll).toEqual({next:{remaining:1,cost:7},last:undefined});
+  expect(match.view('0',ids,payrollRules.interval-1).payroll).toEqual({next:{remaining:1,cost:6},last:undefined});
   match.advance(payrollRules.interval);
   expect(match.view('0',ids,payrollRules.interval).payroll).toEqual({
-    next:{remaining:60,cost:7},last:{at:payrollRules.interval,received:payrollRules.salary},
+    next:{remaining:60,cost:6},last:{at:payrollRules.interval,received:payrollRules.salary},
   });
   match.advance(NEGOTIATION_MS);
   for (const id of ids) match.vote(id,'yes',NEGOTIATION_MS+1);
@@ -141,14 +141,14 @@ test('a short budget pays full salaries to remaining mandates and NPCs by borrow
   match.advance(renewal-1);
   const npcBefore = world.wallet!('npc');
   const beforePayment = match.view('0',ids,renewal-1);
-  expect(beforePayment).toMatchObject({budget:-10,payroll:{next:{remaining:1,cost:7}}});
+  expect(beforePayment).toMatchObject({budget:-8,payroll:{next:{remaining:1,cost:6}}});
   expect(beforePayment.payroll?.last?.at).toBe(2*payrollRules.interval);
 
   match.advance(renewal);
   const next = match.view('0',ids,renewal);
-  expect(next).toMatchObject({budget:-22,payroll:{last:{received:payrollRules.salary},next:{remaining:60,cost:6}}});
+  expect(next).toMatchObject({budget:-19,payroll:{last:{received:payrollRules.salary},next:{remaining:60,cost:5}}});
   expect(match.economySummary(0).discrepancy).toBe(0);
-  expect(world.wallet!('npc')).toBeCloseTo(npcBefore+payrollRules.salary);
+  expect(world.wallet!('npc')).toBe(npcBefore);
   expect(match.view('5',ids,renewal).payroll?.last?.received).toBe(0);
   const paid = world.wallet!('npc');
   match.advance(renewal);
