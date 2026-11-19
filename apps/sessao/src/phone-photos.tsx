@@ -1,3 +1,4 @@
+import {PhoneBack} from './ui/phone-back';
 import {infractionLabels,type ComplaintProof,type ComplaintView} from './complaints';
 import type {ReactNode} from 'react';
 import type {ShortcutEntry} from './action-shortcuts';
@@ -118,13 +119,13 @@ export function createPhonePhotos(
           {photoView(photos.shown,true)}<AlbumButton onClick={register('Fechar apresentação',closePresentation)}>Fechar apresentação</AlbumButton>
         </>;
         if (published) return <>
-          <AlbumButton onClick={register('Voltar às publicadas',back)}>Voltar às publicadas</AlbumButton>{photoView(published,true)}
+          <PhoneBack label="Voltar às publicadas" onBack={register('Voltar às publicadas',back)}/>{photoView(published,true)}
         </>;
         if (entry) {
           const item = entry.photo.id;
           const recipient = contacts.find(person=>person.id===photoRecipient);
           return <>
-            <AlbumButton onClick={register('Voltar ao álbum',back)}>Voltar ao álbum</AlbumButton>{photoView(entry.photo,true)}
+            <PhoneBack label="Voltar ao álbum" onBack={register('Voltar ao álbum',back)}/>{photoView(entry.photo,true)}
             <p>{entry.access==='original' ? 'Original' : 'Cópia verificada'}</p>
             {contacts.length>0 && <div className="photo-contacts">
               {contacts.map(person=><button type="button" className="hud-button hud-button--secondary photo-contact" key={person.id}

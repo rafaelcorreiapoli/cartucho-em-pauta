@@ -50,7 +50,7 @@ const activityMissions = {
   heroiInesperado:(event:GameplayEvent) => (event.type==='fire-extinguished' || event.type==='power-repaired') && event.amount!==undefined && event.amount<CRISIS_MISSION_STABILITY_LIMIT,
   instalarGrampo:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='wiretap',
   instalarCamera:(event:GameplayEvent) => event.type==='spy-installed' && event.kind==='spyCamera',
-  mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published',
+  mensagemComAnexo:(event:GameplayEvent) => event.type==='mail-published' && (event.place==='document' || event.place==='photo' || event.place==='report'),
   fotoOstentacao:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.decorations.some(item=>isOfficeFurniture(item.kind)),
   fotoDinheiro:(event:GameplayEvent) => event.type==='photo' && !!event.photo?.people.some(person=>
     person.id!==event.actor && !person.id.startsWith('npc-parliamentarian-') && person.exposed?.some(item=>cashAmount(item.kind))),

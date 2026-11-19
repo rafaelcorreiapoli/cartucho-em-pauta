@@ -1,7 +1,7 @@
 import { aidRadius } from './medical';
 import { PLENARY_DOORS, obstacleBetween, wallBetween, type Motion } from './map';
 
-export type InteractionActor = Motion & {knockedOut?:boolean; carrying?:boolean};
+export type InteractionActor = Motion & {knockedOut?:boolean; carrying?:boolean; carried?:boolean};
 
 type Reach = {radius?:number; clearFloor?:boolean; handsFree?:boolean};
 
@@ -11,6 +11,11 @@ export function canInteract(actor:InteractionActor, target:Motion, {
   return !actor.knockedOut && !(handsFree && actor.carrying) &&
     Math.hypot(actor.x-target.x,actor.y-target.y)<=radius &&
     !(clearFloor ? obstacleBetween(actor,target) : wallBetween(actor,target));
+}
+
+// Characters occupy more screen space than an object's interaction point.
+export function canReachPerson(actor:InteractionActor,target:InteractionActor) {
+  return !target.knockedOut && !target.carried && canInteract(actor,target,{radius:48});
 }
 
 export function doorDestination(actor:InteractionActor, index:number, closed:boolean) {

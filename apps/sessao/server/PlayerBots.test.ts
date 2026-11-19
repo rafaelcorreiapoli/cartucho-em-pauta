@@ -216,7 +216,7 @@ for (const training of [false,true]) test(`bots accept offers and sign documents
   const guide = players.find(person=>person.bot)!;
   const world = (now:number)=>({...worldAt(now),training,voice:()=>true});
   Object.assign(human,stations.coffee);
-  Object.assign(guide,{x:human.x+8,y:human.y});
+  Object.assign(guide,{x:human.x+40,y:human.y});
   gameplay.giveTrainingItem(human.id,'coffee');
   const coffee = gameplay.view(human,world(1)).inventory.find(item=>item.kind==='coffee')!;
   expect(gameplay.act(human,{kind:'offer',item:coffee.id,target:guide.id},world(1))).toBe('Pedido enviado.');
@@ -230,7 +230,7 @@ for (const training of [false,true]) test(`bots accept offers and sign documents
     gameplay.act(human,{kind:'hangup'},world(2001));
   }
   Object.assign(human,stations.secretary);
-  Object.assign(guide,{x:human.x+8,y:human.y});
+  Object.assign(guide,{x:human.x+40,y:human.y});
   gameplay.act(human,{kind:'supply',place:'secretary'},world(2002));
   const document = gameplay.view(human,world(2002)).inventory.find(item=>item.kind==='document')!;
   gameplay.act(human,{kind:'sign-request',item:document.id,target:guide.id},world(2003));

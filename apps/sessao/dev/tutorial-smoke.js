@@ -11,7 +11,7 @@ async page => {
   const panel = page.getByRole('complementary',{name:'Tutorial',exact:true});
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
   const spotlight = page.locator('.tutorial-spotlight');
-  const worldSteps = new Set(['Caminhe pelo Congresso','Beba um café','Faça uma entrega pública','Guarde dinheiro no gabinete','Ofereça um café','Consiga uma assinatura','Instale uma câmera','Apague o incêndio','Repare a energia']);
+  const worldSteps = new Set(['Use o equipamento','Caminhe pelo Congresso','Beba um café','Faça uma entrega pública','Guarde dinheiro no gabinete','Ofereça um café','Consiga uma assinatura','Instale uma câmera','Apague o incêndio','Repare a energia']);
   async function checkWorldLighting() {
     if (worldSteps.has(await panel.getByRole('heading').textContent())) await spotlight.waitFor({state:'hidden'});
   }
@@ -30,6 +30,20 @@ async page => {
     });
   });
   if (await spotlight.evaluate(node=>getComputedStyle(node).pointerEvents)!=='none') throw Error('Foco bloqueia interação');
+  const pulse = spotlight.locator('.tutorial-focus-pulse').first();
+  if (await pulse.evaluate(node=>getComputedStyle(node).animationName)!=='tutorial-focus-pulse') throw Error('Foco sem pulso de atenção');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  if (await pulse.evaluate(node=>getComputedStyle(node).animationName)!=='none') throw Error('Foco ignora movimento reduzido');
+  if (await spotlight.locator('.tutorial-focus-border').first().evaluate(node=>getComputedStyle(node).strokeOpacity)!=='0.8') throw Error('Foco estático invisível com movimento reduzido');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.locator('#profile-vitals [data-tone="xp"]').first().hover();
+  const tooltip = page.getByRole('tooltip').filter({hasText:'Experiência acumulada até o próximo nível.'});
+  await tooltip.waitFor();
+  const tooltipLayer = await tooltip.evaluate(node=>Number(getComputedStyle(node).zIndex));
+  const dimLayer = await spotlight.evaluate(node=>Number(getComputedStyle(node).zIndex));
+  if (tooltipLayer<=dimLayer) throw Error('Popover está por baixo do dimmer');
+  await page.screenshot({path:'/tmp/tutorial-focus-popover.png'});
+  await page.mouse.move(600,400);
   await page.screenshot({path:'/tmp/tutorial-focus-desktop.png'});
   await panel.getByRole('button',{name:'Recolher tutorial',exact:true}).click();
   if (await panel.getByRole('heading',{name:'Conheça seu HUD'}).isVisible()) throw Error('Tutorial não recolheu');
@@ -55,6 +69,9 @@ async page => {
   await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
   await panel.getByRole('heading',{name:'Caminhe pelo Congresso'}).waitFor();
   await spotlight.waitFor({state:'hidden'});
+  for (const key of ['mouse','WASD','setas do teclado','Shift']) {
+    await panel.locator('[role="status"] strong').filter({hasText:key}).waitFor();
+  }
   await panel.getByRole('button',{name:'Etapa anterior',exact:true}).click();
   await panel.getByRole('heading',{name:'Conheça seu HUD'}).waitFor();
   await spotlight.waitFor();
@@ -66,10 +83,18 @@ async page => {
   }
   await panel.getByRole('heading',{name:'Equipe um acessório'}).waitFor();
   await page.getByRole('button',{name:'Mochila',exact:true}).click();
-  await page.getByRole('dialog').filter({visible:true}).waitFor();
+  const bag = page.getByRole('dialog',{name:'Inventário',exact:true});
+  await bag.getByRole('button',{name:'Binóculo',exact:true}).click();
+  await bag.getByRole('button',{name:'Equipar',exact:true}).click();
   await page.keyboard.press('Escape');
+  await panel.getByRole('heading',{name:'Use o equipamento'}).waitFor();
+  await spotlight.waitFor({state:'hidden'});
+  await page.keyboard.press('b');
+  await panel.getByRole('heading',{name:'Entenda suas missões'}).waitFor();
+  await spotlight.waitFor({state:'hidden'});
+  await spotlight.waitFor({state:'visible',timeout:15000});
   const options = Number((await panel.locator('.tutorial-progress').textContent()).split('/')[1]);
-  for (let i=3;i<options-1;i++) {
+  for (let i=5;i<options-1;i++) {
     const current = await panel.locator('.tutorial-progress').textContent();
     await panel.getByRole('button',{name:'Próxima etapa',exact:true}).click();
     await page.waitForFunction(previous=>document.querySelector('.tutorial-progress')?.textContent!==previous,current);

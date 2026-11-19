@@ -22,8 +22,8 @@ export type FieldAction = GameplayAction
   | {kind:'open-security'}
   | {kind:'offer-item';target:string};
 
-export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[]) {
-  const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean;target?:{id:string;name:string;verb:string}}[] = [];
+export function fieldActions(view:PlenaryView|undefined, player:Player|undefined, roster:readonly Player[],signatureTarget?:string) {
+  const actions:{label:string; icon:string; action:FieldAction;blocked?:string;disabled?:boolean;target?:{id:string;name:string;verb:string};documentChoice?:true}[] = [];
   const state = view?.gameplay;
   if (state && player) {
     const cash = state.nearby.find(item=>cashAmount(item));
@@ -87,6 +87,20 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
         for (const contact of state.contacts) {
           actions.push({label:`Oferecer item · ${contact.name}`,icon:'inventory',
             target:{id:contact.id,name:contact.name,verb:'Oferecer item'},action:{kind:'offer-item',target:contact.id}});
+          const documents = state.inventory.filter(item=>item.document &&
+            (item.document.project===undefined || item.document.requiredSignatures>0) &&
+            !item.document.signatures.some(signer=>signer.id===contact.id));
+          if (documents.length===1) actions.push({label:`Pedir assinatura · ${contact.name}`,icon:'document',
+            target:{id:contact.id,name:contact.name,verb:'Pedir assinatura'},action:{kind:'sign-request',target:contact.id,item:documents[0].id}});
+          else if (documents.length>1) {
+            actions.push({label:`Pedir assinatura · ${contact.name}`,icon:'document',
+              target:{id:contact.id,name:contact.name,verb:'Pedir assinatura'},action:{kind:'sign-request',target:contact.id}});
+            if (signatureTarget===contact.id) for (const item of documents) actions.push({
+              label:`Assinar · ${item.document!.title} #${item.id}`,icon:'document',documentChoice:true,
+              target:{id:contact.id,name:contact.name,verb:`${item.document!.title} #${item.id}`},
+              action:{kind:'sign-request',target:contact.id,item:item.id},
+            });
+          }
         }
       }
       for (const target of state.npcNearby ?? []) {

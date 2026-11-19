@@ -206,5 +206,30 @@ async page => {
   await page.keyboard.press('Escape');
   await stash.waitFor({state:'hidden'});
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O fluxo tentou usar o microfone');
-  return {stashDepositViaShift:true,stashWithdrawalViaF2:true};
+
+  await page.reload();
+  await page.getByRole('textbox',{name:'Seu nick'}).fill('Assinatura QA');
+  await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.locator('#parliamentarian-count [data-count="0"]').click();
+  await page.getByRole('button',{name:'Iniciar sessão'}).click();
+  await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
+  const requestSignature = page.getByRole('button',{name:/^Pedir assinatura ·/});
+  await requestSignature.waitFor();
+  await requestSignature.click();
+  const documents = page.getByRole('group',{name:'Documentos para assinar',exact:true});
+  await documents.getByRole('button',{name:/^Assinar · Documento B #/}).click();
+  await documents.waitFor({state:'hidden'});
+  await page.keyboard.press('o');
+  const signingBag = page.getByRole('dialog',{name:'Inventário',exact:true});
+  await signingBag.getByRole('button',{name:'Documento B',exact:true}).click();
+  await signingBag.getByText('Mais detalhes',{exact:true}).click();
+  await signingBag.getByText(/Assinaturas 1\/1/).waitFor();
+  await page.keyboard.press('Escape');
+  await requestSignature.click();
+  if (await documents.isVisible()) throw Error('Um documento disponível deveria solicitar assinatura diretamente');
+  await page.keyboard.press('o');
+  await signingBag.getByRole('button',{name:'Documento A',exact:true}).click();
+  await signingBag.getByText('Mais detalhes',{exact:true}).click();
+  await signingBag.getByText(/Assinaturas 1\/1/).waitFor();
+  return {stashDepositViaShift:true,stashWithdrawalViaF2:true,multipleDocumentSignatures:true,directSignature:true};
 }

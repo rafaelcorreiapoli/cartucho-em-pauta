@@ -58,5 +58,9 @@ export function TutorialSpotlight({highlight}:{highlight:Highlight}) {
       {openings.map((box,index)=><rect key={index} {...box} rx="10" fill="black" data-spotlight-opening=""/>)}
     </mask></defs>
     <rect width="100%" height="100%" fill="rgb(3 10 8 / .76)" mask={`url(#${mask})`}/>
+    {openings.map((box,index)=><g key={index} fill="none">
+      <rect {...box} rx="10" className="tutorial-focus-border"/>
+      <rect {...box} rx="10" className="tutorial-focus-pulse"/>
+    </g>)}
   </svg>;
 }

@@ -213,7 +213,24 @@ async page => {
     await runShortcut(page,mail.getByRole('button',{name:'Novo comunicado'}),'Novo comunicado');
     await mail.getByLabel('Assunto').fill('Aviso do Cafezinho');
     await mail.getByLabel('Mensagem').fill('Enviado pelo celular');
+    if (await mail.getByLabel('Mensagem').evaluate(node=>node.required)) throw Error('Mensagem continua obrigatória');
+    const backToMail = page.locator(dialog).locator('header').getByRole('button',{name:'Voltar ao Correio',exact:true});
+    if ((await backToMail.textContent()).trim()) throw Error('Voltar ainda usa texto no corpo do app');
+    const horizontalOverflow = await mail.evaluate(node=>node.scrollWidth>node.clientWidth+1 || [...node.querySelectorAll('form,input,textarea')].some(element=>element.scrollWidth>element.clientWidth+1));
+    if (horizontalOverflow) throw Error('Correio tem rolagem horizontal');
+    await page.screenshot({path:'/tmp/mail-composer-review.png'});
     await mail.getByRole('button',{name:'Selecionar anexo'}).click();
+    const attachmentPicker = mail.getByRole('dialog',{name:'Selecionar anexo',exact:true});
+    await attachmentPicker.getByRole('button',{name:/Fotografias/}).click();
+    await attachmentPicker.locator('.mail-photo-grid canvas').first().waitFor();
+    await attachmentPicker.evaluate(node=>Promise.all(node.getAnimations().map(animation=>animation.finished)));
+    await page.screenshot({path:'/tmp/mail-photos-review.png'});
+    await page.locator(dialog).locator('header').getByRole('button',{name:'Voltar às categorias',exact:true}).click();
+    await attachmentPicker.getByRole('button',{name:/Documentos/}).waitFor();
+    await attachmentPicker.getByRole('button',{name:'Cancelar',exact:true}).click();
+    await attachmentPicker.waitFor({state:'hidden'});
+    await mail.getByRole('button',{name:'Selecionar anexo'}).click();
+    await mail.getByRole('button',{name:'Documentos',exact:false}).click();
     await mail.getByRole('button',{name:'Projeto de teste',exact:true}).click();
     const publish = mail.getByRole('button',{name:/^Publicar/});
     await publish.evaluate(button=>{

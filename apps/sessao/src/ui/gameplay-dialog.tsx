@@ -1,3 +1,4 @@
+import {PhoneBackIcon} from './phone-back';
 import {Backpack} from 'lucide';
 import type {GameplayAction} from '../gameplay';
 import type {Decoration} from '../photography';
@@ -15,7 +16,7 @@ export function GameplayDialogHeader({title,bag,back}:{title:string;bag?:boolean
         return <Tag key={index} {...attributes}/>;
       })}
     </svg>}{title}</h2>
-    {back ? <DialogDismiss id="phone-back" label="Fechar aplicativo" shortcut="Escape" onDismiss={back}/> :
+    {back ? <span className="phone-back-slot"><span id="phone-back-mount"/><DialogDismiss id="phone-back" label="Fechar aplicativo" shortcut="Escape" onDismiss={back}><PhoneBackIcon/></DialogDismiss></span> :
       <DialogDismiss label="Fechar"/>}
   </>;
 }
