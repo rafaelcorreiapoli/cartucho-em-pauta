@@ -90,3 +90,19 @@ test.each([['decorationsEnabled','Decoração'],['portraitsAndVipEnabled','Retra
   expect(render('a')).toContain('type="checkbox"/> '+label);
   expect(render('b')).toContain('type="checkbox" disabled=""/> '+label);
 });
+
+test('lobby shows confirmed grant, budget and duration choices to host and guests',()=>{
+  const match = new PlenaryMatch(6);
+  const ids = ['a','b','c','d','e','f'];
+  for (const id of ['a','b']) {
+    const html = renderToStaticMarkup(<LobbyControls state={lobbyControlsState({
+      ...match.view(id,ids,0),grantsEnabled:false,initialBudget:-50,matchMinutes:20,
+    },id,true)} commands={commands}/>);
+    expect(html).toContain('Aplicar verba');
+    expect(html).toContain('aria-label="Orçamento inicial"');
+    expect(html).toContain('aria-label="Tempo de jogo"');
+    expect(html).toContain('aria-pressed="true">-50</button>');
+    expect(html).toContain('aria-pressed="true">20 min</button>');
+    if (id==='b') expect(html).toContain('type="checkbox" disabled=""/> Aplicar verba');
+  }
+});

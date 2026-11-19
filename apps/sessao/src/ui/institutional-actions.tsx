@@ -10,7 +10,7 @@ import {diversionPercentages,investmentAmounts,investmentAreas,investmentImpact,
 export function institutionalActions(view?:PlenaryView,player?:Player) {
   const politics = view?.politics;
   if (!politics || view.phase!=='negotiation' || !player) return {};
-  const grant = canReachStation(player,'cabinet') && view.mandate && !politics.suspended && view.ballotCountdown===undefined
+  const grant = view.grantsEnabled!==false && canReachStation(player,'cabinet') && view.mandate && !politics.suspended && view.ballotCountdown===undefined
     ? {budget:view.budget,cooldown:politics.grantCooldown} : undefined;
   return {grant,stabilityEnabled:view.gameMode!=='calote'};
 }

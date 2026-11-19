@@ -54,6 +54,9 @@ export class SessionRoom extends Room {
     state.revision = (state.revision ?? 0)+1;
   }
 
+  private grantsEnabled = true;
+  private initialBudget = 0;
+  private matchMinutes = 12;
   private gameMode:GameMode = 'calote';
   private lobbyNpcCount:number = 3;
   private phoneGamesEnabled = false;
@@ -259,6 +262,24 @@ export class SessionRoom extends Room {
       const signal = readVoiceSignal(message.signal);
       if (signal) this.clients.getById(message.to)?.send('voice-signal', { from:client.sessionId, signal });
     });
+    this.onMessage('lobby-grants',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || !(typeof raw.enabled==='boolean') ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.grantsEnabled = raw.enabled as boolean;
+    });
+    this.onMessage('lobby-initial-budget',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('value' in raw) || !(typeof raw.value==='number' && [-50,0,50].includes(raw.value)) ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.initialBudget = raw.value as number;
+    });
+    this.onMessage('lobby-match-minutes',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('value' in raw) || !(typeof raw.value==='number' && [12,15,20].includes(raw.value)) ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.matchMinutes = raw.value as number;
+    });
     this.onMessage('lobby-automatic-projects',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -328,7 +349,7 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===1 ? 1 : 2;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode,this.automaticProjectsEnabled)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode,this.automaticProjectsEnabled,this.grantsEnabled,this.tutorial ? undefined : this.initialBudget,this.matchMinutes)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -778,6 +799,9 @@ export class SessionRoom extends Room {
           view.complaints = this.match.complaintView(id,photos);
           if (atDesk) view.complaints.atDesk = true;
         }
+        view.grantsEnabled = this.grantsEnabled;
+        view.initialBudget = this.initialBudget;
+        view.matchMinutes = this.matchMinutes;
         view.lobbyNpcCount = this.lobbyNpcCount;
         view.gameMode = this.gameMode;
         view.automaticProjectsEnabled = this.automaticProjectsEnabled;
