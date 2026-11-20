@@ -45,9 +45,11 @@ async page => {
   await page.setViewportSize({width:1280,height:720});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Histórico QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   const npcs = page.locator('#parliamentarian-count [data-count="0"]');
   await npcs.click();
   await page.waitForFunction(()=>document.querySelector('#parliamentarian-count [data-count="0"]')?.getAttribute('aria-pressed')==='true');
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();

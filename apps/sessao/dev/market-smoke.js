@@ -13,6 +13,21 @@ async page => {
   await page.getByRole('button',{name:'Criar sala'}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
+  await page.evaluate(()=>{
+    window.photoFlashes = 0;
+    new MutationObserver(records=>{
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node instanceof HTMLElement && node.classList.contains('photo-screen-flash')) window.photoFlashes++;
+      }
+    }).observe(document.body,{childList:true});
+  });
+  await page.keyboard.press('Shift+g');
+  await page.waitForFunction(()=>window.photoFlashes===1);
+  await page.waitForTimeout(1100);
+  await page.waitForTimeout(1000); // The server keeps a 900 ms interval between captures.
+  await page.keyboard.press('Shift+h');
+  await page.waitForFunction(()=>window.photoFlashes===2);
+  if (await page.locator('#gameplay-dialog').isVisible()) throw Error('Atalho de foto abriu celular');
   await page.getByRole('button',{name:/Abrir loja.*Daniel Vorcaro/}).click();
   const dialog = page.locator('#market-dialog');
   const slots = dialog.locator('.market-products > *');
@@ -41,13 +56,10 @@ async page => {
         throw Error(`Controle cortado em ${size.width}×${size.height}: ${selector} ${JSON.stringify({control,frame})}`);
       }
     }
-    await page.keyboard.press('ArrowRight');
-    await dialog.getByRole('button',{name:'Página 2',exact:true}).waitFor();
-    if (await dialog.getByRole('button',{name:'Página 2',exact:true}).getAttribute('aria-current')!=='page') {
-      throw Error('Right arrow did not open the second page');
+    for (const category of ['Arrombamento','Sabotagem','Utilidades','Equipamentos']) {
+      await dialog.getByRole('button',{name:category,exact:true}).click();
+      if (await slots.count()!==9 || await bounds()!==before) throw Error('Category moved catalog');
     }
-    if (await slots.count()!==9 || await bounds()!==before) throw Error('Pagination moved catalog');
-    await page.keyboard.press('ArrowLeft');
   }
   const initial = await bounds();
   const themedSelection = await page.locator('.market-product-button[aria-pressed="true"]').evaluate(button=>{

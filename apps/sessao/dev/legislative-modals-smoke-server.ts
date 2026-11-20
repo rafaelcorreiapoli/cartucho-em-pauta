@@ -32,7 +32,7 @@ class LegislativeModalsRoom extends SessionRoom {
           Object.assign(player,plenaryTest ? stations.audit : player.nick==='Projetos QA' ? stations.secretary : stations.cabinet);
           const economy = Reflect.get(match,'economy');
           if (plenaryTest) economy.changePopularity(player.id,20);
-          if (player.nick==='Cassação QA') economy.earn(player.id,cassationFee);
+          if (player.nick==='Cassação QA') { economy.earn(player.id,cassationFee); Reflect.set(match,'cassationReadyAt',0); }
           if (player.nick==='Projetos QA') {
             const {agenda} = Reflect.get(economy,'accounts').get(player.id);
             Reflect.set(agenda,'missions',[]);

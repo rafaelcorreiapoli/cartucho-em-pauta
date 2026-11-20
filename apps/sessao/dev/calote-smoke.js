@@ -7,6 +7,7 @@ async page => {
   await page.setViewportSize({width:800,height:450});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Calote QA');
   await page.getByRole('button',{name:'Criar sala',exact:true}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   const room = new URL(await page.getByRole('textbox',{name:'Link da sala'}).inputValue()).searchParams.get('sala');
   if (!room) throw Error('Missing room ID');
   await page.getByRole('button',{name:'Calote',exact:true}).click();
@@ -18,6 +19,7 @@ async page => {
     await page.waitForFunction(index=>!document.querySelectorAll('.lobby-options input[type=checkbox]')[index].checked,index);
   }
   await page.getByRole('button',{name:'Nenhum visitante'}).click();
+  await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão',exact:true}).click();
   const intro = page.locator('#role-intro');
   await intro.getByText(/Evite 30 segundos seguidos no vermelho/).waitFor();
@@ -48,6 +50,12 @@ async page => {
         Math.abs((direction==='positive' ? colored.x : colored.right)-center)<.5 && Math.abs(colored.width-bounds.width/4)<.5;
     },direction);
   };
+  await setBudget(-1);
+  const central = page.locator('.center-game-alert');
+  await central.getByText('ORÇAMENTO NEGATIVO',{exact:true}).waitFor();
+  const centralStyle = await central.evaluate(element=>({pointer:getComputedStyle(element).pointerEvents,background:getComputedStyle(element).backgroundColor}));
+  if (centralStyle.pointer!=='none' || centralStyle.background!=='rgba(0, 0, 0, 0)') throw Error('Central warning blocks play or has a panel');
+  await central.waitFor({state:'hidden',timeout:5000});
   await setBudget(16);
   await checkFill('positive');
   await page.screenshot({path:'output/playwright/calote-positive.png'});
@@ -72,7 +80,7 @@ async page => {
   await checkFill('negative');
   const timer = metrics.getByRole('timer',{name:'Tempo até o calote'});
   await timer.waitFor();
-  await page.waitForFunction(()=>/Calote em\s*(19|20) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
+  await page.waitForFunction(()=>/DERROTA POR CALOTE EM\s*(19|20) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
   await page.screenshot({path:'output/playwright/calote-negative.png'});
   for (const size of [{width:1280,height:720},{width:800,height:450}]) {
     await page.setViewportSize(size);
@@ -86,7 +94,7 @@ async page => {
   await page.waitForFunction(()=>!document.querySelector('.calote-countdown'));
   await setBudget(-16);
   await checkFill('negative');
-  await page.waitForFunction(()=>/Calote em\s*(29|30) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
+  await page.waitForFunction(()=>/(?:Calote em|DERROTA POR CALOTE EM)\s*(29|30) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
   if (await page.evaluate(()=>{cancelAnimationFrame(window.caloteFrame);return window.caloteInvalidFill;})) throw Error('Budget fill crossed the center during updates');
   await setBudget(-16,30_001);
   await page.getByRole('heading',{name:'O Congresso deu calote!',exact:true}).waitFor();

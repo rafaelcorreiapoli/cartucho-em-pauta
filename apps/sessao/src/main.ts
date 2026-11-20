@@ -1,3 +1,4 @@
+import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
@@ -178,7 +179,7 @@ async function connect(join: () => Promise<Room>) {
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
     settings.update({roomLabel:`Sala ${joined.roomId}`});
-    const inviteUrl = new URL(location.href);
+    const inviteUrl = new URL('https://cartuchao.io/infiltrados-no-congresso/jogar');
     inviteUrl.searchParams.set('sala',joined.roomId);
     const destroyInvite = mountLobbyInvite(document.getElementById('lobby-invite-mount')!,inviteUrl.href,settings.open);
     hudListeners.signal.addEventListener('abort',destroyInvite,{once:true});
@@ -186,6 +187,8 @@ async function connect(join: () => Promise<Room>) {
     let assetError = false;
     renderLoading({progress:loadingProgress});
 
+    const centerAlert = createCenterAlert();
+    hudListeners.signal.addEventListener('abort',()=>centerAlert.destroy(),{once:true});
     const audioReady = audio.enter();
     let assetsReady = false;
     const security = createSecurityPanel(action=>sendCommand('security-camera',action));
@@ -223,7 +226,7 @@ async function connect(join: () => Promise<Room>) {
         sendGameplay({kind:'supply',place:'secretary',target:'project-'+index});
         sendGameplay({kind:'dialogue-close'});
       },undefined,voted,previousView?.gameMode!=='calote');
-    });
+    },()=>audio.stationClick());
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :
@@ -258,6 +261,7 @@ async function connect(join: () => Promise<Room>) {
     const reactHud = mountReactHud(settings.open);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
+    joined.onMessage('safe-trap-explosion',(point:{x:number;y:number})=>{ game?.showSafeExplosion(point); audio.cue('explosion'); });
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');
@@ -311,7 +315,8 @@ async function connect(join: () => Promise<Room>) {
       actionFeedbackTimer = setTimeout(clearActionFeedback,2500);
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
+      if (message.startsWith('Seu Seguro Antiarrombamento')) { audio.cue('alert'); hud.notify('Cofre protegido',message); }
+      else if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
       else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
       else if (market.isOpen()) hud.notify(previousView?.gameplay?.dialogue?.npc==='protocol' ? 'Protocolo' : previousView?.gameplay?.dialogue?.npc==='secretary' ? 'Secretaria' : 'Loja',message);
@@ -351,7 +356,7 @@ async function connect(join: () => Promise<Room>) {
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
     },()=>assetsReady,()=>void joined.leave());
     let inVotingArea = false;
-    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts(),...appLauncher.shortcuts(),...gameplay.hotbarShortcuts(),...hud.equippedShortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
+    bindActionShortcuts(session,hudListeners.signal,appLauncher.activate,{j:political.toggleDossier,l:election.showPolls,u:appLauncher.toggle,context:()=>[...gameplay.requestShortcuts(),...panel.votingShortcuts(()=>inVotingArea),...hud.contextualShortcuts(),...appLauncher.shortcuts(),...gameplay.hotbarShortcuts(),...gameplay.photoShortcuts(),...hud.equippedShortcuts()],dialog:scope=>progression.shortcuts(scope) ?? market.shortcuts(scope),vote:key=>inVotingArea && panel.voteByKey(key)});
     let phase: PlenaryView['phase'] = 'lobby';
     let previousView:PlenaryView | undefined;
     let roleRevealed = false;
@@ -374,6 +379,13 @@ async function connect(join: () => Promise<Room>) {
     }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      if (previousView && caloteAlertLevel(view)>caloteAlertLevel(previousView)) centerAlert.show(
+        caloteAlertLevel(view)===2 ? 'CALOTE IMINENTE' : 'ORÇAMENTO NEGATIVO', 'Recupere o saldo na Tesouraria para evitar a derrota.','calote');
+      if (previousView && lastInElection(view,joined.sessionId) && !lastInElection(previousView,joined.sessionId)) centerAlert.show(
+        'VOCÊ ESTÁ EM ÚLTIMO NA PESQUISA', 'Faça campanha para proteger seu mandato.','election');
+      if (!caloteAlertLevel(view)) centerAlert.clear('calote');
+      if (!lastInElection(view,joined.sessionId)) centerAlert.clear('election');
+      audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
       ballotCountdown.update(view.ballotCountdown);
       floorPlan.track(view.gameplay?.briefcaseTracking);

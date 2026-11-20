@@ -5,6 +5,7 @@ export const equipment = {
   megaphone:{slot:'broadcast',price:4,symbol:'📣'},
   vest:{slot:'armor',price:3,damageReduction:.35,symbol:'🛡️'},
   runningShoes:{slot:'feet',price:2,speedBonus:25,symbol:'👟'},
+  briefcaseTracker:{slot:'tracker',price:2,symbol:'▣'},
   baton:{slot:'weapon',weapon:'baton',price:2,symbol:'🏏'},
 } as const;
 
@@ -19,7 +20,7 @@ export function equippedWeapon(items:readonly {kind:string}[] = []) {
   }
 }
 
-export const briefcaseTracker = {duration:10_000,price:2} as const;
+export const briefcaseTracker = {duration:10_000,cooldown:30_000,price:2} as const;
 export const concealment = {duration:45_000,price:2} as const;
 export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as const;
 export const xrayNeedsRecharge = (charges?:number) => (charges ?? 0)<xray.capacity;

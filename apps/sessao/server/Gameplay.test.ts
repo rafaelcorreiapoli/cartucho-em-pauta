@@ -34,7 +34,7 @@ function setup() {
   return {alice,bob,watcher,events,game,world};
 }
 
-test('Silvio trades three missions once per player and keeps the copier reachable',()=>{
+test('Silvio offers a free first trade and increasingly priced repeat trades and keeps the copier reachable',()=>{
   const {alice,bob,game} = setup();
   const match = new PlenaryMatch(1);
   const players = [alice,bob];
@@ -80,11 +80,32 @@ test('Silvio trades three missions once per player and keeps the copier reachabl
 
   expect(choose(alice,'confirm-trade',confirmation)).toBe('Esta conversa já mudou.');
   talk(alice);
-  expect(dialogue(alice).text).toContain('Você já abriu seus três envelopes');
+  expect(dialogue(alice).options).toContainEqual({id:'trade',label:'Trocar minhas 3 missões · R$ 10 mil'});
   expect(politics(alice).missions).toEqual(after.missions);
+  for (const cost of [1,2]) {
+    choose(alice,'trade');
+    const token = dialogue(alice).token;
+    const wallet = politics(alice).wallet;
+    choose(alice,'confirm-trade',token);
+    expect(dialogue(alice).text).toContain('Três missões novas');
+    expect(politics(alice).wallet).toBe(wallet-cost);
+    expect(choose(alice,'confirm-trade',token)).toBe('Esta conversa já mudou.');
+    expect(politics(alice).wallet).toBe(wallet-cost);
+    talk(alice);
+  }
+  const economy = Reflect.get(match,'economy');
+  economy.spend(alice.id,politics(alice).wallet);
+  const preserved = politics(alice).missions;
+  choose(alice,'trade');
+  choose(alice,'confirm-trade');
+  expect(dialogue(alice).text).toContain('Seu saldo não cobre');
+  expect(politics(alice).wallet).toBe(0);
+  expect(politics(alice).missions).toEqual(preserved);
+  talk(alice);
+  expect(dialogue(alice).options).toContainEqual({id:'trade',label:'Trocar minhas 3 missões · R$ 30 mil'});
   Object.assign(bob,atCounter);
   talk(bob);
-  expect(dialogue(bob).options).toContainEqual({id:'trade',label:'Trocar minhas 3 missões'});
+  expect(dialogue(bob).options).toContainEqual({id:'trade',label:'Trocar minhas 3 missões · Grátis'});
 });
 
 test('custody moves exactly once and requests are private', () => {
@@ -214,7 +235,7 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+12});
   game.act(alice,{kind:'open-shop',target:'vendor'},world);
   game.act(alice,{kind:'shop-buy',target:'briefcaseTracker',token:game.view(alice,world).dialogue?.token},world);
-  const tracker = game.view(alice,world).inventory.find(item=>item.kind==='briefcaseTracker')!;
+  const tracker = game.view(alice,world).equipped!.find(item=>item.kind==='briefcaseTracker')!;
   expect(tracker).toBeDefined();
 
   const create = Reflect.get(game,'create').bind(game);
@@ -226,8 +247,8 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   const stashed = create('briefcase',{storage:`office:${office.id}`});
   create('bundle',{ground});
 
-  const use = {kind:'use',item:tracker.id} as const;
-  expect(game.act(bob,use,world)).toBe('O objeto não está com você.');
+  const use = {kind:'use-tracker'} as const;
+  expect(game.act(bob,use,world)).toBe('Equipe o Rastreador de maletas.');
   expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
   expect(game.act(alice,use,world)).toContain('Rastreador ativo');
   expect(game.view(alice,world).inventory).toEqual([]);
@@ -247,6 +268,13 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   expect(game.view(alice,world).briefcaseTracking?.seconds).toBe(1);
   world.now = 10_000;
   expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
+  expect(game.view(alice,world).equipped).toContainEqual(tracker);
+  expect(game.view(alice,world).equipmentCooldowns?.[tracker.id]).toBe(30);
+  expect(game.act(alice,use,world)).toBe('Rastreador em recarga.');
+  world.now = 40_000;
+  expect(game.act(alice,use,world)).toContain('Rastreador ativo');
+  expect(game.view(alice,world).equipped).toContainEqual(tracker);
+  expect(game.view(alice,world).briefcaseTracking?.seconds).toBe(10);
 });
 
 test.each([3,12])('cash reappears sooner with %i competing players', contenders=>{

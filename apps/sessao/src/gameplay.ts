@@ -32,7 +32,7 @@ export const objects = {
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
-  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Uso único.`,use:'consume'},
+  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Recarga automática de ${briefcaseTracker.cooldown/1000} s. Cargas ilimitadas.`},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
   xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
@@ -109,7 +109,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; expectedCash?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -120,7 +120,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
@@ -140,7 +140,7 @@ export type GameplayView = {
   offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   installationProgress?:{elapsed:number;duration:number};
-  officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
+  officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'|'office-upgrade-door'|'office-upgrade-cabinet'|'office-upgrade-safe'; officeId:string; label:string; elapsed:number; duration:number};
   briefcaseTracking?:{seconds:number; markers:(Motion & {id:number})[]};
   concealmentSeconds?:number;
   binocularSeconds?:number;
@@ -154,7 +154,7 @@ export type GameplayView = {
 export type InteractionCue = 'cash'|'stamp'|'lock'|'pickup';
 
 export type GameplayEvent = {
-  type:'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'plenary-visit-interrupted'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'power-repaired'|'fire-started'|'fire-extinguished'|'character-carried-into-office'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
+  type:'safe-trap-triggered'|'security-camera-viewed'|'item-received'|'vip-meeting-time'|'vip-meeting-interrupted'|'security-watch-time'|'security-watch-interrupted'|'cash-part-deposited'|'xray-target-revealed'|'cash-received'|'office-guest-interaction'|'concealed-cash-time'|'wiretap-time'|'room-left'|'plenary-visit-interrupted'|'office-meeting-time'|'public-meeting-time'|'spy-viewed'|'mail-published'|'call-time'|'megaphone-time'|'power-repaired'|'fire-started'|'fire-extinguished'|'character-carried-into-office'|'bill-studied'|'advertisement-aired'|'speech-given'|'audit-performed'|'megaphone-started'|'megaphone-ended'|'concealment-started'|'concealment-ended'|'xray-scanned'|'xray-recharged'|'safe-robbed'|'spy-activity'|'spy-installed'|'spy-discovered'|'spy-removed'|'spy-install-failed'|'npc-robbed'|'npc-vote-bought'|'room-entered'|'game-played'|'money-pocketed'|'door-breached'|'cabinet-breached'|'security-upgraded'|'collected'|'transferred'|'dropped'|'stored'|'recovered'|'used'|'destroyed'|'signed'|'stamped'|'filed'|'delivered'|'edited'|'called'|'hung-up'|'game-started'|'game-stopped'|'game-won'|'photo'|'photo-shown'|'photo-shared'|'photo-published'|'exposed'|'installed'|'uninstalled'|'marked'|'slice'|'purchased'|'equipped'|'unequipped'|'hit'|'aided'|'npc-interacted'|'character-knocked-out'|'character-recovered'|'character-carried'|'character-dropped'|'treated';
   ownOffice?:boolean; targetInOwnOffice?:boolean; targetInPlenary?:boolean; knockedOutByActor?:boolean;
   breachedByActor?:boolean; cashFromOwnBreach?:boolean;
   eventId?:number; actor:string; target?:string; item?:number; inventoryItem?:number; kind?:ObjectKind; position:Motion; at:number; witnesses:string[]; duration?:number; amount?:number; damage?:number; project?:number; reportNotice?:number; photo?:Photo; place?:string; replaced?:boolean;

@@ -946,8 +946,9 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     await wait(()=>view?.gameMode===gameMode);
     host.send('lobby-grants',{enabled:false,token:8});
     await wait(()=>view?.grantsEnabled===false);
-    host.send('lobby-initial-budget',{value:-50,token:9});
-    await wait(()=>view?.initialBudget===-50);
+    const initialBudget = gameMode==='calote' ? 5 : -5;
+    host.send('lobby-initial-budget',{value:initialBudget,token:9});
+    await wait(()=>view?.initialBudget===initialBudget);
     host.send('lobby-match-minutes',{value:20,token:10});
     await wait(()=>view?.matchMinutes===20);
     host.send('lobby-initial-budget',{value:999,token:11});
@@ -956,7 +957,7 @@ test.each([{projectsEnabled:true,electionsEnabled:true,photosEnabled:true},{proj
     await wait(()=>view?.initialWallet===50);
     host.send('start-match',{infiltrators:2,npcs:8,token:14});
     await wait(()=>view?.phase==='negotiation');
-    expect(view).toMatchObject({players:6,electorate:6,grantsEnabled:false,initialBudget:-50,budget:-50,matchMinutes:20,initialWallet:50,sessionRemaining:1200});
+    expect(view).toMatchObject({players:6,electorate:6,grantsEnabled:false,initialBudget,budget:initialBudget,matchMinutes:20,initialWallet:50,sessionRemaining:1200});
     expect(view?.politics?.wallet).toBe(50);
     const room = matchMaker.getLocalRoomById(host.roomId) as InstanceType<typeof SessionRoom>;
     const match:import('./PlenaryMatch').PlenaryMatch = Reflect.get(room,'match');

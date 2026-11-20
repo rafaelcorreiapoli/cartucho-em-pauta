@@ -24,7 +24,7 @@ import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
 import { decorationLabel } from './photo-renderer';
-import type { PhotoAccessView, PhotoScene } from './photography';
+import {PHOTO_LIMIT,type PhotoAccessView,type PhotoScene} from './photography';
 import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';
 import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, occupiesInventorySlot, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
@@ -417,6 +417,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
+        const safeTrapOption = state.officeOptions?.find(option=>option.kind==='office-trap-safe' && option.item===item.id);
+        if (safeTrapOption) act('Instalar no cofre','office-trap-safe',safeTrapOption.place);
         if (isGear(item.kind) && !!previous?.gameplay) act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);
@@ -545,7 +547,17 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     render();
   }
 
+  function capturePhoto(selfie:boolean) {
+    if (!previous?.gameplay || previous.phase!=='negotiation' || previous.ballotCountdown!==undefined || previous.photosEnabled===false || photos.count>=PHOTO_LIMIT) return;
+    send({kind:selfie ? 'selfie' : 'photo'});
+  }
   const onSlotKey = (event:KeyboardEvent) => {
+    if (event.shiftKey && (event.code==='KeyG' || event.code==='KeyH') && !event.defaultPrevented && !event.repeat && !event.isComposing &&
+        !event.ctrlKey && !event.altKey && !event.metaKey && !hudConsumesKeys(event.target)) {
+      event.preventDefault();
+      capturePhoto(event.code==='KeyH');
+      return;
+    }
     if (event.isComposing) return;
     if (dialog.open && dialog.contains(document.activeElement) && selection?.source==='inventory' && !event.defaultPrevented &&
         !event.ctrlKey && !event.altKey && !event.metaKey && !isEditingText(event.target) &&
@@ -621,6 +633,10 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     nearbyActions,
     requestShortcuts:()=>requestEntries,
     hotbarShortcuts,
+    photoShortcuts:():ShortcutEntry[]=>previous?.gameplay && previous.phase==='negotiation' && previous.photosEnabled!==false ? [
+      {name:'Tirar foto (Shift + G)',activate:()=>capturePhoto(false)},
+      {name:'Tirar selfie (Shift + H)',activate:()=>capturePhoto(true)},
+    ] : [],
     nearby(player:Motion | undefined, exploring:boolean, directCollections:readonly number[]) {
       if (collectedArea) {
         if (exploring && (!player || collectedArea(player))) return;
