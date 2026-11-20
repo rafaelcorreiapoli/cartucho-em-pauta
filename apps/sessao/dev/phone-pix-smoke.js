@@ -37,7 +37,9 @@ async page => {
     if (await receiver.getByRole('textbox',{name:'Código da sala'}).inputValue()!==code) throw Error('O convite não preenche a sala');
     await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
     await receiver.locator('#lobby-back').waitFor();
+    await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
+    if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     await Promise.all([page,receiver].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();
@@ -259,7 +261,9 @@ async page => {
     await receiver.getByRole('textbox',{name:'Seu nick'}).fill('Jogo QA');
     await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
     await receiver.locator('#lobby-back').waitFor();
+    await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
+    if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     await Promise.all([page,receiver].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     for (const client of [page,receiver]) await client.locator('#session[data-phase=negotiation]').waitFor();

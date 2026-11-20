@@ -135,13 +135,18 @@ export class PoliticalEconomy {
     return [...(known ?? []),...this.published].some(key=>this.records.get(key)?.kind===kind);
   }
 
-  missionSwapUsed(id:string) {
-    return this.accounts.get(id)?.agenda.missionSwapUsed ?? false;
+  missionSwapPrice(id:string) {
+    return this.accounts.get(id)?.agenda.missionSwapPrice ?? 0;
   }
 
   swapMissions(id:string) {
     const account = this.accounts.get(id);
-    return account ? account.agenda.swapMissions(account) : 'unavailable';
+    if (!account) return 'unavailable';
+    const price = account.agenda.missionSwapPrice;
+    if (account.wallet<price) return 'insufficient';
+    const result = account.agenda.swapMissions({...account,wallet:account.wallet-price});
+    if (result==='swapped' && price>0) this.spend(id,price);
+    return result;
   }
 
   hasMission(id:string,mission:Agenda) {

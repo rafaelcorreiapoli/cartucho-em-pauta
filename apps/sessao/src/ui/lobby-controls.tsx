@@ -1,3 +1,4 @@
+import {money} from '../politics';
 import {gameModes,type GameMode} from '../game-modes';
 import {useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -61,8 +62,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         onChange={event=>commands.changeGrants?.(event.currentTarget.checked)}/> Aplicar verba</label>
       <div className="lobby-count" role="group" aria-label="Orçamento inicial">
         <span>Orçamento inicial</span>
-        <div>{[-50,0,50].map(value=><button key={value} type="button" disabled={!host}
-          aria-pressed={state.initialBudget===value} onClick={()=>commands.changeInitialBudget?.(value)}>{value>0 ? `+${value}` : value}</button>)}</div>
+        <div>{[-5,0,5].map(value=><button key={value} type="button" disabled={!host}
+          aria-pressed={state.initialBudget===value} onClick={()=>commands.changeInitialBudget?.(value)}>{value===0 ? 'R$ 0' : `${value<0 ? '−' : '+'}${money(Math.abs(value))}`}</button>)}</div>
       </div>
       <div className="lobby-count" role="group" aria-label="Patrimônio inicial">
         <span>Patrimônio inicial por jogador</span>

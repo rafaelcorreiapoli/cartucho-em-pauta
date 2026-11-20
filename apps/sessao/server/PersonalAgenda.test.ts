@@ -34,12 +34,14 @@ test('a swap with too few eligible replacements preserves the agenda and the fre
   Reflect.set(agenda,'missionDeck',[...before.active.map(({kind})=>kind),'selfieSolo']);
   expect(agenda.swapMissions(metrics)).toBe('unavailable');
   expect(agenda.view(metrics)).toEqual(before);
-  expect(agenda.missionSwapUsed).toBe(false);
+  expect(agenda.missionSwapPrice).toBe(0);
 
   Reflect.set(agenda,'missionDeck',deck);
   expect(agenda.swapMissions(metrics)).toBe('swapped');
   expect(agenda.view(metrics).completed).toEqual(before.completed);
-  expect(agenda.swapMissions(metrics)).toBe('used');
+  expect(agenda.missionSwapPrice).toBe(1);
+  expect(agenda.swapMissions(metrics)).toBe('swapped');
+  expect(agenda.missionSwapPrice).toBe(2);
 });
 
 test('two different signers must sign the same document after assignment',()=>{

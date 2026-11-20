@@ -853,7 +853,7 @@ export class Gameplay {
       briefcaseTracking:this.briefcaseTracking(id,world),
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
-      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
+      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id),world.missionSwapPrice?.(id) ?? 0),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentOffer(player,world.now),
       modulator,
@@ -1594,7 +1594,7 @@ export class Gameplay {
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return this.reject(player,world,'Solte o jogador primeiro.');
     if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
     if (action.kind==='talk' || action.kind==='open-shop') {
-      const error = this.dialogues.open(player,action.target,action.kind==='open-shop',action.target==='silvio' && world.missionSwapUsed?.(id));
+      const error = this.dialogues.open(player,action.target,action.kind==='open-shop');
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
       return error ? this.reject(player,world,error) : undefined;
     }

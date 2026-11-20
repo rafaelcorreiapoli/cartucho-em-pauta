@@ -276,7 +276,7 @@ export class SessionRoom extends Room {
       this.grantsEnabled = raw.enabled as boolean;
     });
     this.onMessage('lobby-initial-budget',(client,raw:unknown)=>{
-      if (!raw || typeof raw!=='object' || !('value' in raw) || !(typeof raw.value==='number' && [-50,0,50].includes(raw.value)) ||
+      if (!raw || typeof raw!=='object' || !('value' in raw) || !(typeof raw.value==='number' && [-5,0,5].includes(raw.value)) ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
           this.players.keys().next().value!==client.sessionId) return;
       this.initialBudget = raw.value as number;

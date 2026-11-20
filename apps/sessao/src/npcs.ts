@@ -87,7 +87,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       ],
     },
     confirm:{
-      text:'A troca é grátis e vale uma vez por partida. Você perde o progresso das três missões atuais e fica com as recompensas que já ganhou.',
+      text:'A primeira troca é grátis. As próximas custam R$ 10 mil a mais a cada troca. Você perde o progresso das três missões atuais e fica com as recompensas que já ganhou.',
       options:[
         {id:'confirm-trade',label:'Abrir os três envelopes',action:'swap-missions'},
         {id:'leave',label:'Ficar com a minha agenda',action:'close'},
@@ -97,8 +97,8 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       text:'Ma ôe! Três missões novas na sua agenda. Pode levar, que o intervalo comercial acabou!',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
-    used:{
-      text:'Você já abriu seus três envelopes nesta partida. Agora é com você, meu colega!',
+    insufficient:{
+      text:'Seu saldo não cobre esta troca. Volte com mais dinheiro; sua agenda e o preço continuam iguais.',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
     unavailable:{

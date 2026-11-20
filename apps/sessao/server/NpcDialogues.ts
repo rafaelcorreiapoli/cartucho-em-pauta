@@ -1,3 +1,4 @@
+import {money} from '../src/politics';
 import type { MissionSwapResult } from './PersonalAgenda';
 import { canReachObject } from '../src/gameplay';
 import type { Player } from '../src/map';
@@ -39,11 +40,11 @@ export class NpcDialogues {
     return (Object.keys(npcs) as NpcId[]).filter(key=>this.nearby(player,key));
   }
 
-  open(player:Player, target?:string, direct=false, missionSwapUsed=false) {
+  open(player:Player, target?:string, direct=false) {
     if (!target || !Object.hasOwn(npcs,target) || !this.nearby(player,target as NpcId)) return 'Aproxime-se para conversar.';
     const npc = target as NpcId;
     if (direct && !npcs[npc].catalog) return 'Converse com o atendente.';
-    const node = npc==='silvio' && missionSwapUsed ? 'used' : 'start';
+    const node = 'start';
     this.sessions.set(player.id,{npc,node,shop:direct,direct,token:++this.serial});
   }
 
@@ -92,13 +93,16 @@ export class NpcDialogues {
     return result;
   }
 
-  view(player:Player,eligible:Eligibility,documents:readonly Document[]):DialogueView|undefined {
+  view(player:Player,eligible:Eligibility,documents:readonly Document[],swapPrice=0):DialogueView|undefined {
     const session = this.active(player);
     if (!session) return;
     const text = session.npc==='protocol' && !documents.length && !session.feedback
       ? 'Você não tem documentos no inventário. Solicite um na Secretaria.'
       : this.node(session).text;
-    return {npc:session.npc,shop:session.shop,direct:!!session.direct,token:session.token,text,feedback:session.feedback,
-      options:this.options(session,eligible,documents).map(({id,label})=>({id,label}))};
+    const swapCost = swapPrice===0 ? 'Grátis' : money(swapPrice);
+    const swapText = session.npc==='silvio' && session.node==='confirm'
+      ? `Esta troca custa ${swapCost}. A primeira é grátis; as próximas custam R$ 10 mil a mais a cada troca. Você perde o progresso das três missões atuais e mantém as recompensas já ganhas.` : text;
+    return {npc:session.npc,shop:session.shop,direct:!!session.direct,token:session.token,text:swapText,feedback:session.feedback,
+      options:this.options(session,eligible,documents).map(({id,label})=>({id,label:session.npc==='silvio' && (id==='trade' || id==='confirm-trade') ? `${label} · ${swapCost}` : label}))};
   }
 }

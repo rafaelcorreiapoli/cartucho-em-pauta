@@ -28,7 +28,7 @@ export function MarketDialogContent({title,children}:{title:string;children:Reac
   </>;
 }
 
-export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocument:()=>void) {
+export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocument:()=>void,playChoice:()=>void=()=>{}) {
   const dialog = document.querySelector<HTMLDialogElement>('#market-dialog')!;
   const root = createRoot(dialog);
   const prompt = document.querySelector<HTMLDialogElement>('#equip-purchase-dialog')!;
@@ -58,6 +58,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   const close = () => {
     if (token===undefined || dismissed) return;
     dismissed = true;
+    playChoice();
     send({kind:'dialogue-close'});
   };
   dialog.addEventListener('cancel',close);
@@ -260,6 +261,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       dialog.setAttribute('aria-labelledby',state.shop ? 'market-catalog-title' : 'market-title');
       if (!state.shop) {
         const choices = state.options.map(option=>({...option,activate:()=>{
+          playChoice();
           if (state.npc==='secretary' && option.id==='projects') return requestDocument();
           send({kind:'dialogue-choice',target:option.id,token:state.token});
         }}));

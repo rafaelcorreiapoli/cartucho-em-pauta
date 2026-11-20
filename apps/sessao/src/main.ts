@@ -223,7 +223,7 @@ async function connect(join: () => Promise<Room>) {
         sendGameplay({kind:'supply',place:'secretary',target:'project-'+index});
         sendGameplay({kind:'dialogue-close'});
       },undefined,voted,previousView?.gameMode!=='calote');
-    });
+    },()=>audio.stationClick());
     const gameplay = createGameplayPanel(sendGameplay,joined.sessionId,message=>hud.notify('Objetos e celular',message),(canvas,photo)=>game?.drawPhoto(canvas,photo),
       option=>sendCommand('spy',option),action=>sendCommand('politics',action),()=>mail.open([
         ...(previousView?.gameplay?.inventory ?? []).flatMap(item=>item.document?.project===undefined ? [] :

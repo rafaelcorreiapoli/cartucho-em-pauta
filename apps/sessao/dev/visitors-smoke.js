@@ -9,7 +9,9 @@ async page => {
   await page.setViewportSize({width:1280,height:800});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Visitantes QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.locator('#parliamentarian-count [data-count="9"]').click();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const state = async ()=>(await page.request.get('http://127.0.0.1:26874/qa/visitors')).json();

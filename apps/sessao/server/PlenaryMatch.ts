@@ -609,7 +609,7 @@ export class PlenaryMatch {
       payNpc:()=>false,
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       callCassation:player=>current() ? this.callCassation(player,now) : 'Partida encerrada.',
-      missionSwapUsed:id=>current() && this.economy.missionSwapUsed(id),
+      missionSwapPrice:id=>current() ? this.economy.missionSwapPrice(id) : 0,
       swapMissions:id=>{
         if (!current() || this.phase!=='negotiation' || !this.canHandleObjects(id,now)) return 'unavailable';
         return this.economy.swapMissions(id);

@@ -18,7 +18,7 @@ export type GameplayWorld = {
   projectFilingError?:(id:string,project:number)=>string|undefined;
   projectSignatures?:number;
   callCassation?:(player:Player)=>string|undefined;
-  missionSwapUsed?:(id:string)=>boolean;
+  missionSwapPrice?:(id:string)=>number;
   swapMissions?:(id:string)=>MissionSwapResult;
   hasMandate?:(id:string)=>boolean;
   deposit?:(id:string,amount:number)=>boolean;
