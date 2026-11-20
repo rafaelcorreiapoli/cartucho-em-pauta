@@ -12,20 +12,22 @@ WebP sem perdas. NPCs fixos usam uma pose frontal, sem folhas de caminhada,
 golpe ou queda. Gerado pela ferramenta integrada ImageGen; referência de
 estilo: `roberto-justus.webp`. Normalização de resolução com Pillow.
 
-Prompt final (ImageGen integrada, usando a fotografia enviada por Rafael como
-referência obrigatória de identidade e Roberto Justus apenas para estilo):
+Prompt final de ajuste da pose (ImageGen integrada): Roberto Justus como
+molde obrigatório de pose, projeção, proporções e enquadramento; a caricatura
+aprovada do Duda como referência exclusiva de identidade facial.
 
-> Create a very caricatured recognizable full body game NPC of Duda Mendonça.
-> Match the man in the supplied photo: very bald shiny high forehead and crown,
-> sparse short gray hair only at sides, heavy broad round face, small deep set
-> serious eyes, sagging eyelids, large fleshy nose, pursed thin lips, broad jowls
-> and double chin, very short salt-and-pepper stubble beard along jaw and chin.
-> No thick mustache, no glasses, no full head of hair. Exaggerate the bald
-> forehead, heavy cheeks, skeptical calculating expression and jowls. Painted
-> realistic detailed texture like Roberto Justus. Enormous head, short stocky
-> small body, dark blazer over open collar charcoal shirt, black trousers and
-> shoes. Standing front facing, arms relaxed down, no hand in face. Full body
-> inside square canvas with transparent margins. No text, props or scenery.
+> Replace the identity of the Roberto Justus template with Duda Mendonça,
+> keeping the template's exact straight frontal pose. Duda has a bald crown,
+> sparse gray side hair, broad face, fleshy nose, jowls, short gray stubble beard
+> and stern skeptical expression. Face looks directly at viewer, head upright
+> and centered, both ears equally visible, both eyes level and same size.
+> No three-quarter face, head rotation or tilt, or tilted shoulders. Torso
+> frontal and vertical, shoulders horizontal, straight relaxed arms close to
+> sides, hands at same height, legs parallel, shoes pointing forward together.
+> Match the template's head-to-body ratio, subject scale and framing. Dark
+> blazer and open collar charcoal shirt, no tie. Preserve recognizable baldness
+> and rounded jowls. Painted caricature rendering like the template, full body
+> visible, fully transparent background, no colored marks, text or props.
 
 ## Áudio
 
