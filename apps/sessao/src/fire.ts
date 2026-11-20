@@ -70,3 +70,17 @@ export function canActOnFire(player:InteractionActor & {carried?:boolean}, site:
   return !!location && !player.carried && roomAt(player)===location.name &&
     canInteract(player,location,{radius:fireRules.radius,handsFree:true});
 }
+
+// Only fires inside the listener's room contribute; multiple fires never stack volume.
+export function fireIntensity(listener:{x:number;y:number}|undefined,fires:readonly FireView[]|undefined) {
+  if (!listener) return 0;
+  const room = roomAt(listener);
+  let intensity = 0;
+  for (const fire of fires ?? []) {
+    const site = fireSites[fire.site];
+    if (fire.paused || !site || site.name!==room) continue;
+    const distance = Math.hypot(listener.x-site.x,listener.y-site.y);
+    intensity = Math.max(intensity,.16+.84*Math.max(0,1-distance/180)**2);
+  }
+  return intensity;
+}

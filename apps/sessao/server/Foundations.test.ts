@@ -917,3 +917,24 @@ test('the Collant keeps anonymous knockout and transport poses until its origina
   expect(game.cloakActive(bob,world.now)).toBe(false);
   expect(game.view(bob,world).equipmentCooldowns?.[item.id]).toBe(30);
 });
+
+test.each([[-1,-1],[-1,1],[1,-1],[1,1]])('diagonal attacks follow movement (%s, %s) and keep the weapon reach', (x,y) => {
+  const attacker = player('Alice',70,110);
+  const state = {player:attacker,route:[],ack:0};
+  applyInput(state,{seq:1,motion:{x,y}});
+  applyInput(state,{seq:2});
+  const angle = Math.atan2(y,x);
+  const target = player('Alvo',attacker.x+30*Math.cos(angle),attacker.y+30*Math.sin(angle));
+  const combat = new Combat();
+  combat.attack(attacker,100);
+  expect(attacker.swing?.angle).toBe(angle);
+  combat.tick([attacker,target],240,true);
+  expect(combat.view(target,240).hp).toBe(94);
+
+  target.x = attacker.x+65*Math.cos(angle);
+  target.y = attacker.y+65*Math.sin(angle);
+  combat.attack(attacker,1400);
+  combat.tick([attacker,target],1540,true);
+  expect(combat.view(target,1540).hp).toBe(94);
+  expect(target.hit).toBeUndefined();
+});

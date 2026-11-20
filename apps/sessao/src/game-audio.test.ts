@@ -74,7 +74,7 @@ test('cancelling a Federal transfer stops the siren without playing arrival audi
   expect(Reflect.get(sources[0],'stops')).toBe(1);
 });
 
-test.each(['applause','powerDown'] as const)('%s plays once as an effect and respects mute and SFX volume',cue=>{
+test.each(['applause','powerDown','extinguish'] as const)('%s plays once as an effect and respects mute and SFX volume',cue=>{
   const {audio,sources,buffers} = fixture();
   buffers.set(cue,{key:cue,duration:1});
   Reflect.set(audio,'effectsGain',{gain:{setTargetAtTime(){}},connect(){},disconnect(){}});
@@ -282,4 +282,34 @@ test('cassation result effects respect mute and are stopped when leaving the mat
   expect(sources).toHaveLength(1);
   audio.leave();
   expect(sources[0].stopTimes).toHaveLength(1);
+});
+
+test('fire ambience reuses one loop, fades on room exit, and stops on leave',()=>{
+  const {audio,sources,buffers} = fixture();
+  buffers.set('fireLoop',{key:'fireLoop',duration:8});
+  audio.setFireIntensity(.2);
+  expect(sources).toHaveLength(1);
+  expect(sources[0].buffer).toBe(buffers.get('fireLoop'));
+  expect(sources[0].loop).toBe(true);
+  audio.setFireIntensity(1);
+  expect(sources).toHaveLength(1);
+  audio.setFireIntensity(0);
+  expect(sources[0].stopTimes).toEqual([1.4]);
+  audio.setFireIntensity(0);
+  expect(sources[0].stopTimes).toHaveLength(1);
+  audio.setFireIntensity(.5);
+  expect(sources).toHaveLength(2);
+  audio.leave();
+  expect(sources[1].stopTimes).toEqual([1.4]);
+  audio.setFireIntensity(1);
+  expect(sources).toHaveLength(2);
+});
+
+test('fire ambience retries when its buffer finishes loading',()=>{
+  const {audio,sources,buffers} = fixture();
+  audio.setFireIntensity(1);
+  expect(sources).toHaveLength(0);
+  buffers.set('fireLoop',{key:'fireLoop',duration:8});
+  audio.setFireIntensity(1);
+  expect(sources).toHaveLength(1);
 });
