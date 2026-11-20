@@ -1,3 +1,4 @@
+import {landMine,type PlantedMine} from '../src/land-mines';
 import {FederalPatrol} from './FederalPatrol';
 import {federalPatrolRules} from '../src/federal-patrol';
 import {canReachPerson} from '../src/interactions';
@@ -67,6 +68,7 @@ export class Gameplay {
   private privateOffices = new PrivateOffices();
   private readonly federalPatrol = new FederalPatrol(this.privateOffices);
   private items = new Map<number,Item>();
+  private mines = new Map<number,PlantedMine & {owner:string;armedAt:number}>();
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
   phoneGamesEnabled = true;
@@ -198,6 +200,7 @@ export class Gameplay {
     this.ghostAdvisers.reset(now,random);
     this.stationCooldowns.reset();
     this.items.clear();
+    this.mines.clear();
     for (const extinguisher of extinguisherSpawns) this.create('extinguisher',this.groundPlace('extinguisher',extinguisher,now));
     this.surveillance.reset();
     this.roomSamples.clear();
@@ -712,6 +715,7 @@ export class Gameplay {
       },
     });
     this.ghostAdvisers.tick(world.incidentNow ?? world.now,exploring && !world.plenary,amount=>world.incidentExpense?.(amount));
+    if (exploring) this.tickMines(world);
     this.tickOfficeChannels(world,exploring);
     this.tickInstallations(world,exploring);
     this.updateMegaphone(world,exploring);
@@ -721,6 +725,26 @@ export class Gameplay {
       if (player.knockedOut) this.stopModulator(player.id);
     }
     return endedXray;
+  }
+
+  private tickMines(world:GameplayWorld) {
+    for (const mine of this.mines.values()) {
+      if (world.now<mine.armedAt) continue;
+      const target = world.players.find(player=>!player.npc && !player.knockedOut && !player.carried &&
+        world.present?.(player.id)!==false && Math.hypot(player.x-mine.x,player.y-mine.y)<=landMine.radius &&
+        worldVisible(player,mine,landMine.radius+1));
+      if (!target) continue;
+      this.mines.delete(mine.id);
+      this.combat.knockOut(target,world.now,mine.owner);
+      this.transport.detach(target,world);
+      this.dialogues.close(target.id);
+      this.stopModulator(target.id);
+      this.phone.leave(target,world);
+      this.stopBinoculars(target.id);
+      for (const carried of this.inventory(target.id)) if (cashAmount(carried.data)) this.dropItem(target,carried,world);
+      publishGameplay(world,{...target,x:mine.x,y:mine.y},'mine-triggered',{item:mine.id,kind:'landMine'});
+      world.feedback?.(target.id,'Você pisou em uma mina terrestre e foi nocauteado!');
+    }
   }
 
   private stopModulator(id:string) {
@@ -917,6 +941,7 @@ export class Gameplay {
       contacts:world.players.filter(other=>this.canRequestItemAction(player,other,world)).map(other=>({id:other.id,name:other.nick,...(other.bot ? {bot:true as const} : {})})),
       inventory:this.inventory(id).map(item => item.data),
       nearby:ground.filter(item => canReachObject(player,item)),
+      mines:[...this.mines.values()].filter(mine=>localPerception(player,mine,world.vision?.(id)).visible).map(({id,x,y})=>({id,x,y})),
       ground:ground.map(({id,kind,x,y,document}) => ({id,kind,x,y,title:document?.title})),
       stored:[...this.items.values()].filter(({place}) =>
         'storage' in place && nearbyLocations.some(key => key===place.storage)).map(({data})=>data),
@@ -1847,6 +1872,14 @@ export class Gameplay {
       return 'Objeto recolhido.';
     }
     if (!('holder' in item.place) || item.place.holder!==id) return this.reject(player,world,'O objeto não está com você.');
+    if (action.kind==='plant-mine') {
+      if (data.kind!=='landMine' || !canStand(player.x,player.y)) return this.reject(player,world,'Não é possível instalar esta mina aqui.');
+      if ([...this.mines.values()].some(mine=>Math.hypot(player.x-mine.x,player.y-mine.y)<landMine.radius*2)) return this.reject(player,world,'Já existe uma mina muito próxima.');
+      this.mines.set(data.id,{id:data.id,x:player.x,y:player.y,owner:id,armedAt:world.now+landMine.armingMs});
+      this.remove(item);
+      this.event(world,player,'used',data);
+      return 'Mina instalada. Afaste-se: ela arma em 1,5 s.';
+    }
     const definition = objects[data.kind];
     const quantity = action.quantity ?? itemQuantity(data);
     if ((action.kind==='offer' || action.kind==='drop') &&

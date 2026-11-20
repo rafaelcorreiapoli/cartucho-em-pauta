@@ -1,3 +1,4 @@
+import {landMine} from './land-mines';
 import {investmentRules} from './public-investments';
 import { credentialGoods } from './installations';
 import { incendiary } from './fire';
@@ -12,6 +13,7 @@ import { isOfficeFurniture, officeGoods } from './private-offices';
 import { spyProducts } from './surveillance';
 
 const supplies = {
+  landMine,
   mensalUnderwear:concealment,
   briefcaseTracker,
   forensicKit:{price:documentRules.kitPrice},
@@ -47,7 +49,7 @@ export const marketKinds = {
 export const equipmentCategories = {
   equipment:{label:'Equipamentos',kinds:['xray','binoculars','voiceModulator','megaphone','vest','runningShoes','baton','briefcaseTracker']},
   burglary:{label:'Arrombamento',kinds:['lockpick','lockKit','proLockKit','decoder']},
-  sabotage:{label:'Sabotagem',kinds:['mensalUnderwear','incendiary','ghostAdviser']},
+  sabotage:{label:'Sabotagem',kinds:['landMine','mensalUnderwear','incendiary','ghostAdviser']},
   utilities:{label:'Utilidades',kinds:['firstAidKit','forensicKit','doorLock','cabinetLock','wiretap','spyCamera','bugDetector','safeTrap']},
 } as const;
 export type EquipmentCategory = keyof typeof equipmentCategories;
