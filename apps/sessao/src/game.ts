@@ -618,7 +618,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           for (const part of [view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
-          this.fog.setVisible(running);
+          const fogDepth = powerOut ? HEIGHT+90 : 3;
+          this.fog.setDepth(fogDepth).setVisible(running);
+          this.fogEdge.setDepth(fogDepth);
           const roomFog = inSession && !powerOut;
           this.fogEdge.setVisible(running && !roomFog);
           if (running && roomFog && !this.fogInSession) {
