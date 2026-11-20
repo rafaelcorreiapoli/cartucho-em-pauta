@@ -42,3 +42,20 @@ test('slots keep their positions while displaying the server-confirmed equipment
   game.act(player,{kind:'drop',item:cash.id},at(5));
   expect(render(5)).not.toContain('carried-briefcases');
 });
+
+
+test('night vision exposes an accessible on/off control without a cooldown',()=>{
+  const game = new Gameplay();
+  const player:Player = {id:'night',nick:'Rafa',character:0,x:npcs.vendor.x,y:npcs.vendor.y+11,direction:0,moving:false};
+  const world = {players:[player],now:0,voice:()=>true,earn:()=>{},office:()=>undefined,wallet:()=>10,spend:()=>true,publish:()=>{}};
+  game.act(player,{kind:'open-shop',target:'vendor'},world);
+  game.act(player,{kind:'shop-buy',target:'nightVision',token:game.view(player,world).dialogue?.token},world);
+  const render = ()=>renderToStaticMarkup(<EquippedGear state={equippedGearState(game.view(player,world))!} activate={()=>{}} inspectBriefcase={()=>{}}/>);
+  expect(render()).toContain('aria-keyshortcuts="N"');
+  expect(render()).toContain('Ligar Visão noturna');
+  expect(render()).toContain('aria-pressed="false"');
+  game.act(player,{kind:'toggle-night-vision'},world);
+  expect(render()).toContain('Desligar Visão noturna');
+  expect(render()).toContain('aria-pressed="true"');
+  expect(render()).not.toContain('Recarga');
+});

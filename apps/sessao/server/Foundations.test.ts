@@ -19,10 +19,10 @@ function player(id:string, x:number, y:number, character=0):Player {
   return {id,nick:id,x,y,character,direction:0,moving:false};
 }
 
-function setup() {
+function setup(powerOut = ()=>false) {
   const alice = {...player('Alice',631,197),direction:1};
   const bob = player('Bob',640,197,1);
-  const game = new Gameplay();
+  const game = new Gameplay(undefined,powerOut);
   const events:GameplayEvent[] = [];
   const balance = new Map([[alice.id,12],[bob.id,5]]);
   const world:GameplayWorld = {
@@ -831,4 +831,36 @@ test('vision specialization reveals farther objects without bypassing walls or p
   outage = true;
   expect(worldVisible(observer,target,game.vision(observer,0))).toBe(false);
   expect(game.vision(observer,0)).toBeCloseTo(VISION_RADIUS*1.2*.45);
+});
+
+
+test('night vision toggles without cooldown, restores outage vision and stops when unequipped or reset',()=>{
+  let outage = true;
+  const {alice,game,world,buyGear} = setup(()=>outage);
+  expect(game.act(alice,{kind:'toggle-night-vision'},world)).toContain('Equipe');
+  expect(buyGear(alice,'nightVision')).toBe('Compra guardada no inventário.');
+  const item = game.view(alice,world).inventory.find(item=>item.kind==='nightVision')!;
+  expect(game.act(alice,{kind:'equip',item:item.id},world)).toBe('Equipado.');
+  game.applyAttribute(alice,'vision');
+  const normal = VISION_RADIUS*1.1;
+  expect(game.vision(alice,world.now)).toBeCloseTo(normal*.45);
+  for (let index=0;index<3;index++) {
+    expect(game.act(alice,{kind:'toggle-night-vision'},world)).toBe('Visão noturna ligada.');
+    expect(game.view(alice,world).nightVision).toBe(true);
+    expect(game.vision(alice,world.now)).toBeCloseTo(normal);
+    expect(game.act(alice,{kind:'toggle-night-vision'},world)).toBe('Visão noturna desligada.');
+    expect(game.vision(alice,world.now)).toBeCloseTo(normal*.45);
+  }
+  game.act(alice,{kind:'toggle-night-vision'},world);
+  alice.barriers = [[alice.x+5,alice.y-10,2,20]];
+  expect(worldVisible(alice,{x:alice.x+20,y:alice.y},game.vision(alice,world.now))).toBe(false);
+  outage = false;
+  expect(game.vision(alice,world.now)).toBeCloseTo(normal);
+  game.act(alice,{kind:'unequip',item:item.id},world);
+  expect(game.view(alice,world).nightVision).toBeUndefined();
+  game.act(alice,{kind:'equip',item:item.id},world);
+  expect(game.view(alice,world).nightVision).toBeUndefined();
+  game.act(alice,{kind:'toggle-night-vision'},world);
+  game.reset(world.now,()=>0,[alice],()=>0);
+  expect(game.view(alice,world).nightVision).toBeUndefined();
 });
