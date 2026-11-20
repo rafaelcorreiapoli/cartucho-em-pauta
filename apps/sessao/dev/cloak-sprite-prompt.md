@@ -1,4 +1,4 @@
-# Sprite da capa de invisibilidade
+# Sprite do Collant da Invisibilidade
 
 Gerado com a ferramenta ImageGen integrada. Referência de proporção e perspectiva: `public/assets/characters-hd/lula-walk-256.webp`. A identidade do personagem de referência não faz parte do sprite.
 

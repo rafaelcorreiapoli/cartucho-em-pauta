@@ -1797,12 +1797,12 @@ export class Gameplay {
     }
     if (action.kind==='use-cloak') {
       const item = this.wearing(id,'invisibilityCloak');
-      if (!item) return this.reject(player,world,'Equipe a Capa de invisibilidade.');
-      if ((this.cloakUse.get(item.id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Capa em recarga.');
+      if (!item) return this.reject(player,world,'Equipe o Collant da Invisibilidade.');
+      if ((this.cloakUse.get(item.id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Collant em recarga.');
       const activeUntil = world.now+invisibilityCloak.duration;
       this.cloakUse.set(item.id,{activeUntil,readyAt:activeUntil+invisibilityCloak.cooldown});
       this.event(world,player,'used',item,undefined,{witnesses:[]});
-      return 'Capa ativa por 10 s.';
+      return 'Collant ativo por 10 s.';
     }
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return this.reject(player,world,'Equipe o Binóculo.');

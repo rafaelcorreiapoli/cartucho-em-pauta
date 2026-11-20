@@ -15,7 +15,7 @@ export function drawMap(scene: Phaser.Scene,
     graphics.fillStyle(color,alpha).fillRect(x,y,width,height);
   };
   const prop = (frame:number, x:number, y:number, width:number, height:number, depth=0) =>
-    scene.add.image(x,y,'office',frame).setOrigin(0).setDisplaySize(width,height).setDepth(depth);
+    scene.add.image(x,y,frame===0 ? 'plenary-counter' : 'office',frame===0 ? undefined : frame).setOrigin(0).setDisplaySize(width,height).setDepth(depth);
   const floor = ([x,y,w,h]:Rect, color:number, tileWidth:number, tileHeight:number) => {
     fill(color,x,y,w,h);
     for (let row=0;row*tileHeight<h;row++) {

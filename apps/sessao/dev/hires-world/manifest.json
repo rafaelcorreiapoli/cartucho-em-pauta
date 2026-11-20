@@ -2163,7 +2163,46 @@
     "masterSize": [
       1536,
       1024
-    ]
+    ],
+    "frameBoxes": [
+      [
+        30,
+        140,
+        630,
+        451
+      ],
+      [
+        640,
+        104,
+        1080,
+        443
+      ],
+      [
+        1160,
+        30,
+        1460,
+        484
+      ],
+      [
+        60,
+        516,
+        552,
+        1002
+      ],
+      [
+        668,
+        525,
+        938,
+        998
+      ],
+      [
+        1184,
+        516,
+        1386,
+        1002
+      ]
+    ],
+    "stretchToLegacyFrame": true
   },
   {
     "id": "cast-portrait-0",
@@ -2704,6 +2743,47 @@
     "kind": "image",
     "sourceFile": "exec-cafc97f8-d291-4905-840f-0a3fb23f7ae5.png",
     "sourceSha256": "eafb7142bbce0637cbf4ebe805a4f17ce508f07685091030cae7fa210a65f92e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "plenary-counter",
+    "original": "plenary-counter.webp",
+    "kind": "image",
+    "resolutions": [
+      128,
+      256,
+      512,
+      1024,
+      2048
+    ],
+    "stretchToLegacyFrame": true,
+    "sourceKind": "restored",
+    "sourceFile": "exec-7907d60d-bff3-4ace-8e42-24fd3c21e147.png",
+    "sourceSha256": "4cf4b3b0ada2995d444adf319b85d57e7ddc29ac2cf15d471cc585fc6488f06a",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "masterSize": [
+      1774,
+      887
+    ],
+    "prompt": "Use case: identity-preserve restoration. Faithfully restore this exact Brazilian plenary curved wooden counter as a high-resolution transparent game asset. Preserve the complete front and curved ends, polished warm brown wood, three microphones at the same positions, green upholstered front panels with gold borders, centered Brazilian coat of arms, camera angle, perspective, proportions and silhouette. Reconstruct fine crisp woodgrain, microphone edges, gold trim and emblem details without changing the design, adding objects or changing colors. Smooth illustrated contours rather than pixelated stair steps. Output a wide roughly 2:1 composition, target 2048x1024 with genuinely transparent background. Keep the entire counter and every microphone inside the canvas with a small transparent margin. Remove any colored artifacts behind/above the counter; no neighboring furniture, no text, background, floor, grid or new shadows. This is the exact counter used in the game, not a new design."
+  },
+  {
+    "id": "retrato-collant-invisibilidade",
+    "original": "retrato-collant-invisibilidade.webp",
+    "kind": "image",
+    "sourceKind": "generated",
+    "sourceFile": "exec-a89f6bb6-ea4b-479c-b79d-42598c8d8a02.png",
+    "sourceSha256": "b4f3cab01b1c75cb691bb98a0b7439813dd91824b5213391ea78dd4e5467be8b",
     "nativeSize": [
       1254,
       1254
