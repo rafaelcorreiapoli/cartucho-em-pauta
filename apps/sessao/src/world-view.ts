@@ -50,7 +50,7 @@ export class WorldView {
     for (const [id, npc] of Object.entries(mapNpcs)) this.npcs.push({ id, ...createMapNpc(scene, id, npc) });
   }
 
-  render(frame: PhotoScene, time: number, frozen = false) {
+  render(frame: PhotoScene, time: number, frozen = false, pixelScale = this.scene.cameras.main.zoom) {
     const { scene } = this;
     const features = frame.features;
     this.terminal?.setVisible(features?.surveillance !== false);
@@ -129,7 +129,7 @@ export class WorldView {
         sampled.y,
         sampled.moving,
         time,
-        { frozen },
+        { frozen, pixelScale },
       );
     }
   }

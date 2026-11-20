@@ -452,3 +452,32 @@ master e aplica uma máscara apenas ao braço/ferramenta, preservando os demais
 pixels e todos os outros quadros. A alteração é na imagem, sem compensação de
 coordenadas no renderer para o Lula. Continua só no laboratório antes de aplicar
 ao elenco. Links com `frame` abrem pausados nesse quadro.
+
+### Resolução adaptativa na partida
+
+O renderizador da partida usa as variantes registradas em
+`src/adaptive-character-art.ts`. Hoje, o Tiririca tem variantes de 256 e 512 px
+para parado/caminhada nas três direções (perfil esquerdo espelhado). As demais
+poses e personagens mantêm as spritesheets originais enquanto não houver
+variantes registradas. Nenhum caminho de arquivo desconhecido é sondado.
+
+A demanda é o tamanho de 37,76 unidades do quadro no mundo × escala efetiva da
+renderização. Na câmera principal, o zoom já inclui a densidade do canvas, sem
+multiplicar o DPR duas vezes. O jogo baixa somente a menor variante disponível
+que atende a essa demanda, reaproveita texturas já carregadas e usa a original
+quando 128 px bastam. Redimensionar a janela pode atualizar a escolha. Mantém o
+tamanho no mundo, posição, maleta, animação e campo de visão; normaliza a escala
+quando muda a dimensão nativa do quadro.
+
+O carregamento é feito pelo loader nativo do Phaser, sem bloquear a partida.
+Enquanto a imagem carrega, usa uma textura já disponível; após falha opcional,
+continua com a original e não repete o download a cada quadro. O carregador de
+entrada da sala acompanha somente os assets iniciais. Foto/câmera compartilham
+as mesmas regras, considerando a escala de seus próprios renders.
+
+O smoke `dev/adaptive-sprites-smoke.js` testa o renderer nativo e partidas reais:
+2560×1440 a 1× usa 256; a 2× usa 512; 390×844 a 1× mantém 128 sem baixar variantes
+maiores. Cobre mudança de escala, tamanho/posição/maleta, poses sem variante,
+carregamento em andamento e falha de download opcional sem reabrir o loader.
+A arte de alta resolução continua tendo o limite de detalhe nativo do master
+descrito no laboratório; ampliar a textura para 512 não cria detalhe adicional.
