@@ -4,6 +4,7 @@ import { money } from '../src/politics';
 import { contextActionKeys } from '../src/ui/context-action-keys';
 import { xrayRechargeAction } from '../src/ui/xray-recharge-action';
 import { Visitors } from './Visitors';
+import {securityCameras} from '../src/security';
 import { hideouts } from '../src/surveillance';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
@@ -1086,4 +1087,48 @@ test('ten briefcases block collection, transfers and NPC robbery without losing 
   game.act(alice,{kind:'drop',item:inventory(alice)[0].id},world);
   expect(game.act(alice,{kind:'collect',item:extra.id},world)).toBe('Objeto recolhido.');
   expect(inventory(alice)).toHaveLength(10);
+});
+
+test('photos and security frames project the same public visual state and freeze the capture settings',()=>{
+  const {alice,bob,game,world} = setup();
+  world.now=4000;
+  Object.assign(alice,{x:260,y:204});
+  Object.assign(bob,{x:250,y:204,moving:true,handlingObject:1,breachingSafe:true,cashInHand:true,carrying:true,
+    robberyTarget:{x:255,y:250,direction:3},swing:{weapon:'baton',startedAt:3900,angle:1},health:.2});
+  game.surveillanceEnabled=false;
+  game.portraitsAndVipEnabled=false;
+  game.act(alice,{kind:'photo'},world);
+  const photo=game.photoView(alice.id,world.now).album[0].photo;
+  const subject=photo.people.find(person=>person.id===bob.id)!;
+  expect(subject).toMatchObject({moving:true,handlingObject:1,breachingSafe:true,carrying:true,
+    robberyTarget:{x:255,y:250,direction:3},swing:{weapon:'baton',startedAt:3900,angle:1}});
+  expect(subject.cashInHand).toBeUndefined(); // The authoritative inventory, not a client-visible flag.
+  expect(subject).not.toHaveProperty('health');
+  expect(photo.time).toBe(4000);
+  expect(photo.features).toMatchObject({surveillance:false,portraitsAndVip:false});
+  const frame=game.securityFrame(alice,securityCameras[1],world);
+  const {office,...visual} = subject;
+  expect(frame.people.find(person=>person.id===bob.id)).toMatchObject(visual);
+  bob.robberyTarget!.x=999;
+  bob.swing!.angle=3;
+  bob.moving=false;
+  game.surveillanceEnabled=true;
+  game.portraitsAndVipEnabled=true;
+  expect(subject.robberyTarget!.x).toBe(255);
+  expect(subject.swing!.angle).toBe(1);
+  expect(subject.moving).toBe(true);
+  expect(photo.features).toMatchObject({surveillance:false,portraitsAndVip:false});
+});
+
+
+test('a photo captures open safe state independently of the people left in its crop',()=>{
+  const {alice,bob,game,world} = setup();
+  const office=privateOffices[0];
+  Object.assign(alice,{x:office.safe.x,y:office.safe.y});
+  Object.assign(bob,{...office.safe,pocketing:true});
+  game.act(alice,{kind:'photo'},world);
+  const photo=game.photoView(alice.id,world.now).album[0].photo;
+  expect(photo.openSafes).toContain(office.id);
+  bob.pocketing=false;
+  expect(photo.openSafes).toContain(office.id);
 });

@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: #15211b; color: white">
+    <div id="reference"></div>
+    <div id="surveillance"></div>
+    <canvas id="photo"></canvas>
+    <script type="module">
+      import Phaser from 'phaser';
+      import { preloadWorldArt, createWorldAnimations } from '/src/world-art.ts';
+      import { WorldView } from '/src/world-view.ts';
+      import {privateOffices} from '/src/private-offices.ts';
+      import { PhotoRenderer } from '/src/photo-renderer.ts';
+      import { createSurveillanceViewport } from '/src/surveillance-viewport.ts';
+      window.qa = {
+        safe:privateOffices[0],
+        async pixels(canvas) {
+          return [...canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data];
+        },
+        async referencePixels() {
+          const image = await new Promise((resolve) =>
+            qa.game.events.once(Phaser.Core.Events.POST_RENDER, () => qa.game.renderer.snapshot(resolve)),
+          );
+          const canvas = document.createElement('canvas');
+          canvas.width = 608;
+          canvas.height = 512;
+          canvas.getContext('2d').drawImage(image, 0, 0);
+          return qa.pixels(canvas);
+        },
+        render(frame) {
+          qa.world.render(frame, frame.time ?? 0, true);
+          qa.scene.cameras.main.centerOn(frame.center.x, frame.center.y - 19);
+          qa.renderer.draw(document.querySelector('#photo'), frame);
+        },
+      };
+      const frame = {
+        time: 2400,
+        center: { x: 140, y: 165 },
+        camera: { x: 140, y: 146 },
+        people: [
+          {
+            id: 'a',
+            name: 'Lula',
+            x: 140,
+            y: 146,
+            character: 0,
+            direction: 1,
+            moving: false,
+            cashInHand: true,
+            exposed: [{ id: 1, kind: 'briefcase' }],
+          },
+        ],
+        ground: [{ id: 2, kind: 'briefcase', x: 160, y: 150 }],
+        decorations: [],
+      };
+      class Reference extends Phaser.Scene {
+        preload() {
+          preloadWorldArt(this);
+        }
+        create() {
+          createWorldAnimations(this);
+          this.world = new WorldView(this);
+          this.world.render(frame, frame.time, true);
+          this.cameras.main.setZoom(4).centerOn(140, 146);
+          window.qa.renderer = new PhotoRenderer(this);
+          window.qa.renderer.draw(document.querySelector('#photo'), frame);
+          window.qa.frame = frame;
+          window.qa.game = this.game;
+          window.qa.world = this.world;
+          window.qa.scene = this;
+          window.qa.ready = true;
+        }
+      }
+      new Phaser.Game({
+        type: Phaser.AUTO,
+        parent: 'reference',
+        width: 608,
+        height: 512,
+        scene: Reference,
+        backgroundColor: '#101d19',
+        audio: { noAudio: true },
+      });
+      window.qa.viewport = createSurveillanceViewport(
+        document.querySelector('#surveillance'),
+        () => (window.qa.liveReady = true),
+      );
+      window.qa.viewport.receive(frame);
+    </script>
+  </body>
+</html>

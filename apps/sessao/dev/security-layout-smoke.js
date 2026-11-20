@@ -95,15 +95,24 @@ async page => {
     await surveillance.locator('.spy-viewport[aria-busy="false"]').waitFor();
     await canvas.waitFor();
     if (await canvas.count()!==1) throw Error('Mais de um canvas na câmera '+name);
-    const hasScene = await canvas.evaluate(canvas=>{
-      const context = canvas.getContext('2d');
-      if (!context) return false;
-      const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
+    // The shared map renderer can use WebGL. Read the displayed pixels through
+    // Playwright rather than requesting an incompatible 2D context from its canvas.
+    const screenshot = await canvas.screenshot({scale:'css'});
+    const hasScene = await page.evaluate(async encoded=>{
+      const image = new Image();
+      image.src = 'data:image/png;base64,'+encoded;
+      await image.decode();
+      const sample = document.createElement('canvas');
+      sample.width = image.width;
+      sample.height = image.height;
+      const context = sample.getContext('2d');
+      context.drawImage(image,0,0);
+      const pixels = context.getImageData(0,0,sample.width,sample.height).data;
       for (let index=4;index<pixels.length;index+=64) {
         if (pixels[index]!==pixels[0] || pixels[index+1]!==pixels[1] || pixels[index+2]!==pixels[2]) return true;
       }
       return false;
-    });
+    },screenshot.toString('base64'));
     if (!hasScene) throw Error('Primeiro quadro sem cenário na câmera '+name);
   }
   async function markCanvas(id) {

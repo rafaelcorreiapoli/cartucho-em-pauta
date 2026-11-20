@@ -1,12 +1,14 @@
 import type Phaser from 'phaser';
 import { corridorFloors, doors, floorDecor } from './congress-layout';
 import { officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
+import {powerPanels,type PowerPanel} from './power';
 import { infirmary } from './medical';
 import { desks, furnishings, rooms, walls, WIDTH, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
   officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void,
-  securityTerminal?:(art:Phaser.GameObjects.Image)=>void) {
+  securityTerminal?:(art:Phaser.GameObjects.Image)=>void,
+  powerPanel?:(art:Phaser.GameObjects.Image,panel:PowerPanel)=>void) {
   const graphics = scene.add.graphics();
   const fill = (color:number, x:number, y:number, width:number, height:number, alpha=1) => {
     graphics.fillStyle(color,alpha).fillRect(x,y,width,height);
@@ -72,6 +74,18 @@ export function drawMap(scene: Phaser.Scene,
       const art = scene.add.image(x,y-footOffset,texture).setOrigin(.5,1).setDisplaySize(width,height).setDepth(y-footOffset);
       officeFixture?.(art,office,kind);
     }
+  }
+  powerPanels.forEach(({x,y},index)=>{
+    const art = scene.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
+    powerPanel?.(art,index as PowerPanel);
+  });
+  for (const office of privateOffices) {
+    const [x,y,w,h] = office.door;
+    scene.add.text(x+w+3,y+h/2,office.id.padStart(2,'0'),{
+      fontFamily:'system-ui',fontSize:'5.2px',fontStyle:'bold',color:'#fff3cd',backgroundColor:'#152720',
+      shadow:{offsetX:0,offsetY:0,color:'#ffd879',blur:3,fill:true,stroke:false},
+      align:'left',padding:{x:2,y:1},resolution:4,
+    }).setOrigin(0,.5).setDepth(3.1);
   }
   // The floor, rugs and walls never move. Draw their geometry once.
   const backdrop = 'congress-map-backdrop';
