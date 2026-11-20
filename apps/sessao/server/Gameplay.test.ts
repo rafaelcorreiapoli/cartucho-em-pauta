@@ -1033,3 +1033,29 @@ test('Cafezinho only serves drinks and cannot supply takeaway coffee',()=>{
   expect(game.view(alice,world).inventory.some(item=>item.kind==='coffee')).toBe(false);
   expect(game.drinkStationCoffee(alice,world)).toBe('Café bebido.');
 });
+
+test('ten briefcases block collection, transfers and NPC robbery without losing cash',()=>{
+  const {alice,bob,game,world} = setup();
+  const create = Reflect.get(game,'create').bind(game);
+  const inventory = (player:Player)=>game.view(player,world).inventory.filter(item=>item.kind==='briefcase');
+  for (let index=0;index<10;index++) {
+    const cash = create('briefcase',{ground:alice});
+    expect(game.act(alice,{kind:'collect',item:cash.id},world)).toBe('Objeto recolhido.');
+  }
+  const extra = create('briefcase',{ground:alice});
+  expect(game.act(alice,{kind:'collect',item:extra.id},world)).toContain('máximo de 10 maletas');
+  expect(Reflect.get(game,'items').get(extra.id).place).toEqual({ground:alice});
+  let walletTaken = false;
+  world.takeWallet = ()=>{walletTaken = true;return 12;};
+  expect(game.robNpc(alice,{...bob,id:'npc',npc:true},world)).toContain('máximo de 10 maletas');
+  expect(walletTaken).toBe(false);
+  const offered = create('briefcase',{holder:bob.id});
+  game.act(bob,{kind:'offer',item:offered.id,target:alice.id},world);
+  const request = game.view(alice,world).requests[0];
+  expect(game.act(alice,{kind:'accept',item:request.id},world)).toContain('máximo de 10 maletas');
+  expect(inventory(alice)).toHaveLength(10);
+  expect(inventory(bob)).toContainEqual(offered);
+  game.act(alice,{kind:'drop',item:inventory(alice)[0].id},world);
+  expect(game.act(alice,{kind:'collect',item:extra.id},world)).toBe('Objeto recolhido.');
+  expect(inventory(alice)).toHaveLength(10);
+});
