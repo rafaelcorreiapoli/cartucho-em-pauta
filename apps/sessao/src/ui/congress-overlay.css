@@ -1183,7 +1183,7 @@
   text-shadow: 0 1px 3px #000, 0 0 3px #000;
   pointer-events: none;
 }
-.congress-summary-row { display: flex; justify-content: center; align-items: center; gap: 24px; }
+.congress-summary-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 14px; }
 .congress-summary-row .congress-budget, .congress-summary-row .congress-session-clock { margin-top: 3px; gap: .45em; }
 .congress-summary-row .congress-session-clock strong { font-size: 1.12em; }
 

@@ -32,7 +32,7 @@ function Laurel({right=false}:{right?:boolean}) {
 
 function Parliament({state,countdown,projects}:{state:HudModel['congress'];countdown:HudModel['countdown'];projects:HudModel['automaticProjects']}) {
   const values = useSyncExternalStore(state.subscribe,state.get);
-  return <><ParliamentMetrics {...values}><AutomaticProjectsHud channel={projects}/><PayrollMetrics payroll={values.payroll}/></ParliamentMetrics><PlenaryCountdown state={countdown}/></>;
+  return <><ParliamentMetrics {...values}><AutomaticProjectsHud channel={projects}/></ParliamentMetrics><PlenaryCountdown state={countdown}/></>;
 }
 
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
@@ -53,17 +53,17 @@ export function BudgetMeter({budget}:{budget:number}) {
   </div>;
 }
 
-export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn,children}:ReturnType<HudModel['congress']['get']>&{children?:ReactNode}) {
+export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn,payroll,children}:ReturnType<HudModel['congress']['get']>&{children?:ReactNode}) {
   const calote = gameMode==='calote';
   return <section className="congress-meter grid text-center" aria-label="Parlamento" data-game-mode={gameMode}>
-    <div className="congress-emblem" aria-hidden="true">
+    {!calote && <><div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
         <path fill="currentColor" d="M39 2h6v25h-6zm9 0h6v25h-6zM2 26a16 11 0 0 1 32 0zm60-9h32a16 10 0 0 1-32 0zM0 28h96v2H0z"/>
       </svg>
     </div>
-    <HudHelp className="congress-meter-label" aria-label={calote ? 'Como funciona o orçamento' : 'Como funciona a estabilidade'}
-      help={calote ? 'Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : `A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>{calote ? 'Orçamento público' : 'Estabilidade institucional'}</HudHelp>
-    <HudHelp as="div" help={calote ? 'Zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
+    <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp></>}
+    <HudHelp as="div" aria-label={calote ? 'Como funciona o orçamento' : undefined} help={calote ? 'Orçamento público: zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida. Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
       <Laurel/>
       {calote ? <div className="calote-budget-wrap">
         <strong className="tabular-nums calote-budget-value" data-in-debt={budget<0}>{publicBudgetLabel(budget)}</strong>
@@ -79,6 +79,7 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
     </div>}
     {children}
     <div className="congress-summary-row">
+    <PayrollMetrics payroll={payroll}/>
     {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
