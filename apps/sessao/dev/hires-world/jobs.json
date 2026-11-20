@@ -89,5 +89,14 @@
       4,
       3
     ]
+  },
+  {
+    "id": "plenary-counter",
+    "input": "inputs/plenary-counter.png",
+    "name": "plenary-counter.webp",
+    "grid": [
+      1,
+      1
+    ]
   }
 ]
