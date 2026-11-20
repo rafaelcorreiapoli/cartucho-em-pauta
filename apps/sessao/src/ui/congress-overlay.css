@@ -560,6 +560,7 @@
   gap: 5px;
 }
 .congress-emblem {
+  margin-bottom: 3px;
   display: flex;
   align-items: end;
   justify-content: center;
@@ -1166,7 +1167,7 @@
 }
 
 /* Keep payroll compact beneath the budget and project slots. */
-#command-strip .right-hud { width: min(220px,100%); }
+#command-strip .right-hud { width: min(300px,100%); }
 .payroll-label, .payroll-countdown { display:flex; align-items:center; gap:.4em; white-space:nowrap; }
 .congress-payroll .payroll-label { display:grid; place-items:center; padding:3px; border:0; background:none; color:inherit; cursor:pointer; pointer-events:auto; }
 .congress-payroll .payroll-label .hud-glyph { width:18px; height:18px; }
