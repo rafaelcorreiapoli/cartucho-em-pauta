@@ -107,7 +107,7 @@ async page => {
     await campaignShortcut.waitFor();
     await page.keyboard.press(await campaignShortcut.getAttribute('aria-keyshortcuts'));
     await actionMenu.waitFor({state:'hidden'});
-    const picker = client=>client.getByRole('dialog',{name:'Campanhas · Duda Mendonça'});
+    const picker = client=>client.getByRole('dialog',{name:'Duda Mendonça'});
     const spot = client=>picker(client).getByRole('button',{name:/Spot eleitoral/});
     await spot(page).waitFor();
     const offers = await picker(page).locator('button[aria-keyshortcuts]').evaluateAll(async buttons=>

@@ -12,20 +12,20 @@ WebP sem perdas. NPCs fixos usam uma pose frontal, sem folhas de caminhada,
 golpe ou queda. Gerado pela ferramenta integrada ImageGen; referência de
 estilo: `roberto-justus.webp`. Normalização de resolução com Pillow.
 
-Prompts usados:
+Prompt final (ImageGen integrada, usando a fotografia enviada por Rafael como
+referência obrigatória de identidade e Roberto Justus apenas para estilo):
 
-1. Create a game NPC sprite for Infiltrados using roberto-justus.webp only as
-   reference for painted caricature style, full body proportions and transparent
-   framing. Subject: Brazilian political marketer Duda Mendonça, older stocky
-   man, dark blazer over light open-collar shirt, dark trousers and shoes.
-   Single full body standing facing forward, hands relaxed. Oversized caricature
-   head and small body, detailed painted realistic texture. Transparent
-   background, no text, no props.
-2. Correct the identity to Duda Mendonça: remove glasses and beard completely,
-   keep thick dark gray mustache, round chubby clean-shaven cheeks and chin,
-   fuller combed-back salt-and-pepper hair with receding temples, not bald top.
-   Keep full body painted caricature style, dark blazer, open collar,
-   proportions and transparent background. No text.
+> Create a very caricatured recognizable full body game NPC of Duda Mendonça.
+> Match the man in the supplied photo: very bald shiny high forehead and crown,
+> sparse short gray hair only at sides, heavy broad round face, small deep set
+> serious eyes, sagging eyelids, large fleshy nose, pursed thin lips, broad jowls
+> and double chin, very short salt-and-pepper stubble beard along jaw and chin.
+> No thick mustache, no glasses, no full head of hair. Exaggerate the bald
+> forehead, heavy cheeks, skeptical calculating expression and jowls. Painted
+> realistic detailed texture like Roberto Justus. Enormous head, short stocky
+> small body, dark blazer over open collar charcoal shirt, black trousers and
+> shoes. Standing front facing, arms relaxed down, no hand in face. Full body
+> inside square canvas with transparent margins. No text, props or scenery.
 
 ## Áudio
 
