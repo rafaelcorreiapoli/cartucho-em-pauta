@@ -64,6 +64,11 @@ async page => {
     await page.setViewportSize({width:800,height:450});
     const box = await announcement.boundingBox();
     if (!box || box.x<0 || box.y<0 || box.x+box.width>801 || box.y+box.height>451) throw Error('Announcement outside compact viewport');
+    const images = await page.locator('.automatic-project-announcement img, .automatic-projects-history img').evaluateAll(images=>images.map(img=>{
+      const box=img.getBoundingClientRect();
+      return {width:box.width,height:box.height,naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight};
+    }));
+    if (images.some(img=>Math.abs(img.width-img.height)>1 || !img.naturalWidth || img.naturalWidth!==img.naturalHeight)) throw Error('Project images must be square: '+JSON.stringify(images));
     await page.screenshot({path:`output/playwright/automatic-project-${index+1}.png`});
     await announcement.getByRole('button',{name:'Fechar anúncio do projeto'}).click();
     await announcement.waitFor({state:'hidden'});
