@@ -1,0 +1,36 @@
+/* Entry and feedback preserve the lobby's illustrated palette. */
+@media (prefers-reduced-motion: no-preference) {
+  #landing:not([hidden]) .landing-title,
+  #landing:not([hidden]) .entrance,
+  #asset-loading:not([hidden]) .lobby-card { animation:lobby-arrive 480ms cubic-bezier(.2,.75,.25,1) both; }
+  #landing:not([hidden]) .entrance { animation-delay:100ms; }
+  #lobby > * { animation:lobby-arrive 380ms ease-out both; }
+  #lobby > :nth-child(2) { animation-delay:140ms; }
+  #lobby > :nth-child(3) { animation-delay:200ms; }
+  #lobby > :nth-child(4) { animation-delay:260ms; }
+  #session:is([data-phase="lobby"],[data-phase="finished"]):not([hidden]) #plenary { animation:lobby-reveal 450ms cubic-bezier(.2,.75,.25,1) both; }
+  #characters .character-option { animation:lobby-arrive 360ms ease-out backwards; }
+  #characters .character-option:nth-child(2n) { animation-delay:80ms; }
+  #characters .character-option:nth-child(n+5) { animation-delay:150ms; }
+  :is(#landing,#plenary,.match-settings) button { transition:transform 160ms ease,background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease; }
+  :is(#landing,#plenary,.match-settings) button:enabled:active { transform:translateY(1px) scale(.97); }
+  .character-option .portrait { transition:transform 250ms cubic-bezier(.2,.75,.25,1); }
+  .character-option[aria-pressed="true"] .portrait { transform:scale(1.06) translateY(-2%); }
+  .character-players > span { animation:lobby-arrive 220ms ease-out both; }
+  .lobby-settings-entry,.lobby-footer { animation:lobby-arrive 420ms 180ms ease-out backwards; }
+  #start-match:enabled { animation:lobby-ready 550ms ease-out; }
+  dialog.match-settings[open] { animation:lobby-arrive 240ms cubic-bezier(.2,.75,.25,1) both; }
+  dialog.match-settings[open]::backdrop { animation:lobby-dim 220ms ease-out both; }
+  #session:is([data-phase="negotiation"],[data-phase="ballot"],[data-phase="hearing"]) #map { animation:lobby-dim 420ms ease-out both; }
+  :is(#landing,.match-settings) input { transition:border-color 180ms ease,box-shadow 180ms ease; }
+  @media (hover:hover) {
+    :is(#landing,#plenary,.match-settings) button:enabled:hover { transform:translateY(-2px); }
+    .character-option:enabled:hover .portrait { transform:scale(1.08) translateY(-2%); }
+  }
+}
+.character-option[aria-pressed="true"] { box-shadow:inset 0 0 0 2px var(--hud-gold),0 0 18px #e8bf7328; }
+:is(#landing,.match-settings) input:focus-visible { box-shadow:0 0 0 4px #e8bf731c; }
+@keyframes lobby-arrive { from { opacity:0; translate:0 12px; } to { opacity:1; translate:0 0; } }
+@keyframes lobby-reveal { from { opacity:0; translate:0 12px; scale:.98; } to { opacity:1; translate:0 0; scale:1; } }
+@keyframes lobby-dim { from { opacity:0; } to { opacity:1; } }
+@keyframes lobby-ready { from { box-shadow:0 0 0 0 #e8bf7370; } to { box-shadow:0 0 0 12px #e8bf7300; } }
