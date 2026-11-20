@@ -7,6 +7,7 @@ import {nickKey} from '../src/nick';
 import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
 import {HEARING_MS} from '../src/politics';
+import {BotAggression} from './BotAggression';
 import {BotTactics} from './BotTactics';
 import type {CampaignBroadcast} from '../src/elections';
 import {BotAgenda} from './BotAgenda';
@@ -26,6 +27,7 @@ type Bot = {
   index:number;
   agenda:BotAgenda;
   tactics:BotTactics;
+  aggression:BotAggression;
   tempo:number;
   nextThink:number;
   destination?:Motion;
@@ -66,7 +68,7 @@ export class PlayerBots {
       const control:ControlState = {player,ack:0,route:[]};
       const index = this.bots.size;
       const tempo = Math.floor(random()*350);
-      this.bots.set(player.id,{control,index,agenda:new BotAgenda(random,now),tactics:new BotTactics(random,now),tempo,nextThink:now+index*125+tempo,retryRouteAt:now});
+      this.bots.set(player.id,{control,index,agenda:new BotAgenda(random,now),tactics:new BotTactics(random,now),aggression:new BotAggression(random,now),tempo,nextThink:now+index*125+tempo,retryRouteAt:now});
       players.set(player.id,control);
     }
   }
@@ -224,6 +226,7 @@ export class PlayerBots {
       this.stop(bot);
       return;
     }
+    if (bot.aggression.tick(player,game,visible,world,point=>this.go(bot,point,now),()=>this.stop(bot),act)) return;
     if (bot.tactics.tick(player,view,game,match,world,point=>this.go(bot,point,now),()=>this.stop(bot),act,broadcast)) return;
     if (view.project!==undefined && !view.projectVoteExpired &&
         this.workOnBill(bot,match,view,visible,now)) return;

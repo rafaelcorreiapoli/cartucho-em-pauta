@@ -7,6 +7,7 @@ import {characterVisible,inPlenary,PLENARY_SEATS,roomAt,type Player} from '../sr
 import {STEP_MS,type ControlState} from '../src/movement';
 import {BALLOT_MS,MIN_PLAYERS,projectRules,stations} from '../src/plenary';
 import {Gameplay} from './Gameplay';
+import {BotAggression} from './BotAggression';
 import {PlayerBots} from './PlayerBots';
 import {PlenaryMatch} from './PlenaryMatch';
 import {publishProjectFiling} from './project-test-fixture';
@@ -80,29 +81,33 @@ test('five identifiable bots fill the solo roster, share role assignment and are
 });
 
 test('a solo infiltrator can leave filing, signatures, and legislative voting to the bots',()=>{
-  const {advance,bots,human,match,view} = gameWithBots(()=>0);
-  expect(view(human.id,0).role).toBe('Infiltrado');
-  advance(29_000);
-  expect(match.projectIndex).toBeUndefined();
-  const afterFiling = 75_000;
-  advance(afterFiling);
-  expect(view(human.id,afterFiling).proposer).toMatch(/^Bot /);
-  expect(match.projectIndex).toBeDefined();
-  const duringBallot = afterFiling+view(human.id,afterFiling).remaining*1000+22_000;
-  advance(duringBallot);
-  expect(view(human.id,duringBallot).phase).toBe('ballot');
-  expect(view(human.id,duringBallot).voted).toBe(5);
-  expect(bots.messages).toHaveLength(5);
-  advance(duringBallot+BALLOT_MS);
-  expect(view(human.id,duringBallot+BALLOT_MS).outcomes).toHaveLength(1);
-  expect(bots.messages).toHaveLength(0);
-  const afterProtocolReopens = duringBallot+BALLOT_MS+projectRules.cooldownMs+60_000;
-  advance(afterProtocolReopens);
-  expect(view(human.id,afterProtocolReopens).protocolCooldown).toBeUndefined();
-  expect(match.projectIndex).toBeUndefined();
-  advance(ELECTION_RULES.matchDuration);
-  expect(match.phase).toBe('finished');
-  expect(view(human.id,ELECTION_RULES.matchDuration).winner).toBeDefined();
+  // Keep this legislative scenario peaceful; combat behavior has separate coverage.
+  const aggression = spyOn(BotAggression.prototype,'tick').mockReturnValue(false);
+  try {
+    const {advance,bots,human,match,view} = gameWithBots(()=>0);
+    expect(view(human.id,0).role).toBe('Infiltrado');
+    advance(29_000);
+    expect(match.projectIndex).toBeUndefined();
+    const afterFiling = 75_000;
+    advance(afterFiling);
+    expect(view(human.id,afterFiling).proposer).toMatch(/^Bot /);
+    expect(match.projectIndex).toBeDefined();
+    const duringBallot = afterFiling+view(human.id,afterFiling).remaining*1000+22_000;
+    advance(duringBallot);
+    expect(view(human.id,duringBallot).phase).toBe('ballot');
+    expect(view(human.id,duringBallot).voted).toBe(5);
+    expect(bots.messages).toHaveLength(5);
+    advance(duringBallot+BALLOT_MS);
+    expect(view(human.id,duringBallot+BALLOT_MS).outcomes).toHaveLength(1);
+    expect(bots.messages).toHaveLength(0);
+    const afterProtocolReopens = duringBallot+BALLOT_MS+projectRules.cooldownMs+60_000;
+    advance(afterProtocolReopens);
+    expect(view(human.id,afterProtocolReopens).protocolCooldown).toBeUndefined();
+    expect(match.projectIndex).toBeUndefined();
+    advance(ELECTION_RULES.matchDuration);
+    expect(match.phase).toBe('finished');
+    expect(view(human.id,ELECTION_RULES.matchDuration).winner).toBeDefined();
+  } finally { aggression.mockRestore(); }
 });
 
 test('an infiltrator bot attempts a cut and two separate bots repair the panels',()=>{
