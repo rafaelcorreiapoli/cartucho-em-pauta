@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import {spriteOriginX} from './sprite-alignment';
 import { federalPatrolRules, federalPatrolSheets, federalBreachArt } from './federal-patrol';
 import { visitorRoster, visitorSheets } from './visitors';
 import {
@@ -327,6 +328,7 @@ export function updateActorView(
     sprite.anims.stop();
     sprite.setTexture(sheet.key, frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
   }
+  sprite.setOrigin(spriteOriginX(sprite.texture.key, sprite.frame.name, sprite.flipX), downed?.originY ?? 1);
   if (grip && latest.cashInHand && !pose && !combatArt && !depositArt && !robberyArt) {
     const walkFrame = !handsBusy && typeof sprite.frame.name === 'number' ? sprite.frame.name % 4 : 0;
     const [handX, handY] = grip[walkFrame];

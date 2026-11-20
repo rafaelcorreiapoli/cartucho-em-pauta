@@ -426,3 +426,23 @@ navegador; não é compartilhada automaticamente. Exporte o JSON para compartilh
 os registros. Não altera nem aprova automaticamente os assets do jogo. O
 laboratório do Tiririca continua separado: nitidez validada por Rafael; pintura,
 contornos, sombras e proporções entre quadros ainda precisam de consistência.
+
+Os limites mostram o retângulo válido de cada quadro, com margem externa para
+inspecionar o atlas adjacente. Verde marca o recorte; vermelho indica que há alpha
+maior que 32 na borda. O quadro vizinho pode aparecer na margem: isso é contexto,
+não prova de vazamento. A sobreposição e os limites podem ser desligados.
+
+A caminhada do Japonês da Federal tem compensação de origem horizontal por
+quadro, compartilhada pelo Phaser e pelo laboratório. A medição dos 12 quadros
+alinha o eixo da cabeça em x=64 sem alterar pintura, posição no mundo ou movimento
+vertical. Inclui a direção espelhada e os renders de foto/câmera.
+
+Em **Lula · cofre ajustado**, a imagem candidata é comparada à original em sincronia.
+O arquivo `lula-safe-breach-fit-tool.png` mantém os três primeiros quadros e todos
+os pixels fora de um pequeno trecho da ferramenta no quadro 4. A ferramenta
+intacta do quadro 1 foi reorientada em torno da empunhadura e recolocada atrás da
+mão, com 4 px de margem direita. Corpo e mão não foram deslocados; não há ajuste
+de coordenadas no jogo para esta candidata. A receita offline reproduzível está
+em `dev/lula-safe-breach-fit.py` (`uv run --with pillow python
+ dev/lula-safe-breach-fit.py`). Continua só no laboratório, aguardando validação
+visual antes de aplicar ao elenco. Links com `frame` abrem pausados nesse quadro.

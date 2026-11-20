@@ -1,5 +1,6 @@
 import {spriteCatalog, spriteFrame, type SpriteClip} from './sprite-catalog';
-import {spriteImage, paintFrame} from './sprite-review-renderer';
+import {spriteFrameOffsetX} from './sprite-alignment';
+import {spriteImage, paintFrame, frameEdges} from './sprite-review-renderer';
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const pose = element<HTMLSelectElement>('pose');
@@ -8,6 +9,7 @@ const frameInput = element<HTMLInputElement>('frame');
 const size = element<HTMLInputElement>('size');
 const speed = element<HTMLSelectElement>('speed');
 const background = element<HTMLSelectElement>('background');
+const bounds = element<HTMLInputElement>('bounds');
 const onion = element<HTMLInputElement>('onion');
 const repeat = element<HTMLInputElement>('repeat');
 const verdict = element<HTMLSelectElement>('verdict');
@@ -19,8 +21,9 @@ let subject = spriteCatalog.find(subject => subject.id === params.get('subject')
 let clip = subject.clips.find(clip => clip.id === params.get('pose')) ?? subject.clips[0];
 let facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(params.get('direction'))) || 0));
 let frame = Math.max(0, Math.min(clip.count - 1, Math.floor(Number(params.get('frame'))) || 0));
-let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let paused = params.has('frame') || matchMedia('(prefers-reduced-motion: reduce)').matches;
 let image: HTMLImageElement | undefined;
+let reference: HTMLImageElement | undefined;
 let generation = 0;
 let elapsed = 0;
 let previousTime = 0;
@@ -111,11 +114,17 @@ async function loadPose() {
 async function showSubject() {
   const current = ++generation;
   setError('');
+  reference = undefined;
+  element('reference').hidden = subject.id !== 'lula-safe-breach-fit';
+  element('preview-label').textContent = subject.id === 'lula-safe-breach-fit' ? 'Imagem candidata' : 'Pose selecionada';
+  if (subject.id === 'lula-safe-breach-fit') void spriteImage('assets/lula-safe-breach.webp').then(loaded => { if (generation === current) reference = loaded; }).catch(reason => { if (generation === current) setError(String(reason)); });
   subjectList();
   element('name').textContent = subject.name;
   element('group').textContent = subject.group;
   document.querySelector<HTMLParagraphElement>('.intro')!.textContent = subject.group === 'Experimento de nitidez'
     ? 'Variante experimental do Tiririca: ganho de nitidez validado. O master tem 362 px por quadro, normalizados para 256/512. Pintura, contornos e proporções entre quadros ainda precisam de revisão. Não é a arte usada na partida.'
+    : subject.id === 'lula-safe-breach-fit'
+      ? 'Experimento na imagem: quadros 1–3 preservados; no quadro 4, a ferramenta foi reaproveitada do quadro 1 e reorientada para caber. Corpo e mão não foram deslocados. Compare a original com a candidata. Ainda não aplicado à partida ou aos outros personagens.'
     : 'Compare contornos, pintura, sombras e proporções entre os quadros. Estas são as artes usadas no jogo. Direções espelhadas estão identificadas; parado usa o primeiro quadro da caminhada.';
   element('sheets').replaceChildren();
   void loadPose();
@@ -142,7 +151,9 @@ async function showSubject() {
           button.setAttribute('aria-label', `${entry.name}, ${dir.label}, quadro ${step + 1}`);
           const canvas = document.createElement('canvas');
           canvas.className = 'surface'; canvas.dataset.background = background.value;
-          paintFrame(canvas, loaded, entry, index, step, 112);
+          paintFrame(canvas, loaded, entry, index, step, 112, false, false, bounds.checked);
+          const touching = frameEdges(loaded, entry, index, step);
+          if (touching.length) button.title = `Encosta na borda: ${touching.join(', ')}`;
           const caption = document.createElement('span'); caption.textContent = `Quadro ${step + 1}`;
           button.append(canvas, caption);
           button.onclick = () => {
@@ -171,6 +182,7 @@ pose.onchange = () => {
 direction.onchange = () => { facing = Number(direction.value); elapsed = 0; shareLocation(); };
 size.oninput = () => { element<HTMLOutputElement>('size-label').value = `${size.value} px`; };
 speed.onchange = () => { elapsed = 0; };
+bounds.onchange = () => { void showSubject(); };
 background.onchange = () => {
   document.querySelectorAll<HTMLElement>('.surface').forEach(surface => { surface.dataset.background = background.value; });
 };
@@ -214,9 +226,12 @@ function render(time: number) {
   element<HTMLOutputElement>('frame-label').value = `${frame + 1} / ${clip.count}`;
   const canvas = element<HTMLCanvasElement>('player');
   if (image) {
-    paintFrame(canvas, image, clip, facing, frame, Number(size.value), onion.checked, true);
+    paintFrame(canvas, image, clip, facing, frame, Number(size.value), onion.checked, true, bounds.checked);
+    if (reference) paintFrame(element<HTMLCanvasElement>('reference-frame'), reference, {...clip, path: 'assets/lula-safe-breach.webp'}, facing, frame, Number(size.value), onion.checked, true, bounds.checked);
+    const touching = frameEdges(image, clip, facing, frame);
+    element('edges').textContent = touching.length ? `Pixels visíveis encostam na borda: ${touching.join(', ')}.` : 'Nenhum pixel visível encosta nas bordas deste quadro.';
     const frameSize = clip.size ? `${clip.size}×${clip.size}` : `${image.naturalWidth}×${image.naturalHeight}`;
-    element('asset').textContent = `${clip.path} · ${frameSize} px · índice ${spriteFrame(clip, facing, frame)} · ${clip.count === 1 ? 'pose estática' : `${clip.fps.toFixed(1)} quadros/s`}`;
+    element('asset').textContent = `${clip.path} · ${frameSize} px · índice ${spriteFrame(clip, facing, frame)} · ${clip.count === 1 ? 'pose estática' : `${clip.fps.toFixed(1)} quadros/s`}${spriteFrameOffsetX(clip.path, spriteFrame(clip, facing, frame)) ? ' · origem horizontal corrigida' : ''}`;
   } else canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
   const selection = `${clip.id}/${facing}/${frame}`;
   if (selection !== previousSelection) {
@@ -227,5 +242,14 @@ function render(time: number) {
   }
   requestAnimationFrame(render);
 }
+window.addEventListener('hashchange', () => {
+  const values = new URLSearchParams(location.hash.slice(1));
+  subject = spriteCatalog.find(subject => subject.id === values.get('subject')) ?? spriteCatalog[0];
+  clip = subject.clips.find(clip => clip.id === values.get('pose')) ?? subject.clips[0];
+  facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(values.get('direction'))) || 0));
+  frame = Math.max(0, Math.min(clip.count - 1, Math.floor(Number(values.get('frame'))) || 0));
+  paused = true;
+  void showSubject();
+});
 void showSubject();
 requestAnimationFrame(render);

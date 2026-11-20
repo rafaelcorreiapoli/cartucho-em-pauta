@@ -54,6 +54,9 @@ export const spriteCatalog: SpriteSubject[] = [
     ...walking(`${federalPatrolRules.skin}-walk`),
     clip('door-breach', 'Arrombar porta', `${federalPatrolRules.skin}-door-breach`, {fps: 5, directions: directions.map((direction, row) => ({label: row === 3 ? 'Esquerda' : direction.label, row}))}),
   ]},
+  {id: 'lula-safe-breach-fit', name: 'Lula · cofre ajustado', group: 'Experimento de enquadramento', clips: [
+    {...players[0].clips.find(clip => clip.id === 'safe-breach')!, path: 'assets/lula-safe-breach-fit-tool.png'},
+  ]},
   ...([256, 512] as const).map((size): SpriteSubject => ({
     id: `tiririca-test-${size}`, name: `Tiririca · teste ${size} px`, group: 'Experimento de nitidez',
     clips: [1, 4].map(count => ({id: count === 1 ? 'idle' : 'walk', name: count === 1 ? 'Parado' : 'Caminhar', path: `assets/tiririca-walk-${size}.png`, size, start: 0, count, fps: 9, directions, loop: true})),

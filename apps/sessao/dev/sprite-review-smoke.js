@@ -58,6 +58,49 @@ async (page) => {
   await page.screenshot({path: '/tmp/infiltrados-sprite-review-mobile.png'});
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Mobile horizontal overflow');
   if (errors.length) throw new Error(errors.join('\n'));
+  await page.goto(new URL('/sprites.html#subject=lula-safe-breach-fit&pose=safe-breach&direction=0&frame=3', base).href);
+  await page.waitForFunction(() => document.querySelector('#reference').hidden === false && document.querySelector('#asset').textContent.includes('lula-safe-breach-fit-tool'));
+  const imageExperiment = await page.evaluate(async () => {
+    const {frameEdges, paintFrame} = await import('/src/sprite-review-renderer.ts');
+    const {spriteCatalog} = await import('/src/sprite-catalog.ts');
+    const {spriteFrameOffsetX} = await import('/src/sprite-alignment.ts');
+    const original = new Image(); original.src = '/assets/lula-safe-breach.webp'; await original.decode();
+    const candidate = new Image(); candidate.src = '/assets/lula-safe-breach-fit-tool.png'; await candidate.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const pixels = image => { ctx.clearRect(0, 0, 512, 128); ctx.drawImage(image, 0, 0); return ctx.getImageData(0, 0, 512, 128).data; };
+    const a = pixels(original), b = pixels(candidate);
+    let changed = 0;
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 512; x++) for (let channel = 0; channel < 4; channel++) {
+      const i = (y * 512 + x) * 4 + channel;
+      if (a[i] !== b[i]) {
+        const protectedPixel = x < 384 || x - 384 < 98 || y < 40 || y > 69;
+        // WEBP and PNG decoders round premultiplied translucent edges differently.
+        const alpha = a[(y * 512 + x) * 4 + 3];
+        const effectiveDelta = channel === 3 ? Math.abs(a[i] - b[i]) : Math.abs(a[i] - b[i]) * alpha / 255;
+        if (protectedPixel && effectiveDelta > (channel === 3 ? 0 : 2)) throw new Error(`Candidate changed protected pixels at ${x},${y}`);
+        if (!protectedPixel) changed++;
+      }
+    }
+    const clip = spriteCatalog.find(subject => subject.id === 'lula-safe-breach-fit').clips[0];
+    if (!changed) throw new Error('Candidate is identical to original');
+    if (!frameEdges(original, {...clip, path: 'assets/lula-safe-breach.webp'}, 0, 3).includes('direita')) throw new Error('Original right-edge clipping not detected');
+    if (frameEdges(candidate, clip, 0, 3).includes('direita')) throw new Error('Candidate still touches right edge');
+    paintFrame(canvas, candidate, clip, 0, 3, 128);
+    if (canvas.style.width !== '160px') throw new Error('Frame has no outer inspection margin');
+    const federal = new Image(); federal.src = '/assets/japones-federal-walk.png'; await federal.decode();
+    canvas.width = 128; canvas.height = 128;
+    for (let frame = 0; frame < 12; frame++) {
+      ctx.clearRect(0, 0, 128, 128); ctx.drawImage(federal, frame % 4 * 128, Math.floor(frame / 4) * 128, 128, 128, 0, 0, 128, 128);
+      const pixels = ctx.getImageData(0, 0, 128, 54).data;
+      let left = 128, right = -1;
+      for (let y = 0; y < 54; y++) for (let x = 0; x < 128; x++) if (pixels[(y * 128 + x) * 4 + 3] > 128) { left = Math.min(left, x); right = Math.max(right, x); }
+      if ((left + right) / 2 + spriteFrameOffsetX('japones-federal-walk', frame) !== 64) throw new Error(`Federal head axis drift in frame ${frame}`);
+    }
+    return {changedChannels: changed, firstThreeFrames: 'unchanged', candidateRightEdge: 'clear', federalFrames: 12};
+  });
+  await page.getByRole('button', {name: 'Arrombar cofre, Pose única, quadro 4', exact: true}).click();
+  await page.screenshot({path: '/tmp/infiltrados-lula-tool-comparison.png'});
   await context.close();
-  return result;
+  return {...result, imageExperiment};
 }
