@@ -29,8 +29,8 @@ async page => {
   await page.keyboard.press('1');
   const attributes = page.locator('#attributes-dialog[open]');
   await attributes.getByText('2 pontos para distribuir').waitFor();
-  const stamina = attributes.locator('[data-attribute=stamina] button');
-  for (const [button,label] of [[stamina,'+1'],[attributes.getByRole('button',{name:'Confirmar +1'}),'Confirmar +1']]) {
+  const stamina = attributes.locator('[data-attribute=mobility] button');
+  for (const [button,label] of [[stamina,'+1']]) {
     const bounds = await button.boundingBox();
     const badge = await button.locator('kbd').boundingBox();
     const text = await button.getByText(label,{exact:true}).boundingBox();
@@ -47,23 +47,28 @@ async page => {
   await stamina.evaluate(button=>button.removeAttribute('aria-label'));
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
-  const paletteChoice = palette.getByRole('button',{name:'Investir em Fôlego',exact:true});
+  const paletteChoice = palette.getByRole('button',{name:'Investir em Movimentação',exact:true});
   await paletteChoice.waitFor();
   await page.keyboard.press(await paletteChoice.getAttribute('aria-keyshortcuts'));
   await palette.waitFor({state:'hidden'});
-  if (await stamina.getAttribute('aria-pressed')!=='true') throw Error('O F2 não selecionou Fôlego sem consultar o botão original.');
-  await attributes.getByText('100/100 → 150/150',{exact:true}).waitFor();
-  await page.keyboard.press('3');
   await attributes.getByText('1 ponto para distribuir').waitFor();
-  await attributes.getByText('150/150',{exact:true}).waitFor();
+  await attributes.locator('[data-attribute=mobility] .attribute-current').getByText('150 stamina · +5% velocidade',{exact:true}).waitFor();
+  if (await attributes.locator('[data-attribute]').count()!==4) throw Error('Especializações incompletas');
+  if (await attributes.getByRole('button',{name:'Confirmar +1'}).count()) throw Error('Confirmação redundante');
+  for (const size of [{width:390,height:720},{width:1024,height:600}]) {
+    await page.setViewportSize(size);
+    for (const button of await attributes.locator('[data-attribute] button').all()) {
+      const box = await button.boundingBox();
+      if (!box || box.x<0 || box.x+box.width>size.width) throw Error('Botão fora da tela');
+    }
+  }
 
   await page.locator('#ballot-countdown[open]').waitFor();
   if (await stamina.isEnabled()) throw Error('É possível escolher um atributo durante a contagem.');
-  await page.keyboard.press('2');
   await page.keyboard.press('3');
+  await page.keyboard.press('4');
   await attributes.getByText('1 ponto para distribuir').waitFor();
-  await attributes.getByText('150/150',{exact:true}).waitFor();
-  if (await stamina.getAttribute('aria-pressed')!=='false') throw Error('O atalho armou investimento durante a contagem.');
+  await attributes.locator('[data-attribute=mobility] .attribute-current').getByText('150 stamina · +5% velocidade',{exact:true}).waitFor();
   if (await page.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
   const deferred = await page.context().newPage();
   try {
@@ -80,10 +85,10 @@ async page => {
     if (await sheet.isVisible()) throw Error('Adiar abriu a ficha de atributos.');
     await deferred.keyboard.press('p');
     await sheet.getByText('2 pontos para distribuir').waitFor();
-    await sheet.getByText('100/100',{exact:true}).waitFor();
+    await sheet.locator('[data-attribute=mobility] .attribute-current').getByText('100 stamina · +0% velocidade',{exact:true}).waitFor();
     if (await deferred.evaluate(()=>window.micAttempts)!==0) throw Error('O jogo solicitou o microfone.');
   } finally {
     await deferred.close();
   }
-  return {viewport:'1024×600',stamina:'150/150',remainingPoints:1,countdownBlocked:true,deferredPoints:2};
+  return {viewport:'1024×600',mobility:'150 stamina · +5% velocidade',remainingPoints:1,countdownBlocked:true,deferredPoints:2};
 }

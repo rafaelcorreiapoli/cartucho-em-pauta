@@ -5,7 +5,7 @@ export class CharacterProgression {
   private revision = 0;
   private bonusPoints = 0;
   grantPoints(amount:number) { this.bonusPoints += amount; }
-  private invested:AttributePoints = {agility:0,stamina:0};
+  private invested:AttributePoints = {burglary:0,concealment:0,mobility:0,vision:0};
 
   constructor(private readonly matchId:number) {}
 

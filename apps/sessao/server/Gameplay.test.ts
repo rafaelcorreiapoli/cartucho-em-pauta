@@ -476,8 +476,8 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   const {alice,bob,game,world,events} = setup();
   world.spend = ()=>true;
   alice.character = 4;
-  game.applyAttribute(alice,'agility');
-  const duration = decorationInstallMs/1.25;
+  game.applyAttribute(alice,'burglary');
+  const duration = decorationInstallMs;
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
     Object.assign(alice,npcs.credentialsVendor.interaction);
