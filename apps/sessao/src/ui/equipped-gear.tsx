@@ -12,6 +12,7 @@ export const equipmentControls = {
   xray:{key:'X',action:'scan-xray'},
   briefcaseTracker:{key:'R',action:'use-tracker'},
   nightVision:{key:'N',action:'toggle-night-vision'},
+  invisibilityCloak:{key:'I',action:'use-cloak'},
   binoculars:{key:'B',action:'use-binoculars'},
   megaphone:{key:'H',action:'toggle-megaphone'},
   voiceModulator:{key:'U',action:'toggle-modulator'},
@@ -38,7 +39,7 @@ export function equippedGearState(state?:GameplayView) {
       const control = weapon ? weaponControl : equipmentControls[item.kind as keyof typeof equipmentControls];
       const seconds = state.equipmentCooldowns?.[item.id] ?? 0;
       const charges = item.kind==='xray' ? `${item.charges ?? 0}/${xray.capacity}` : '';
-      const activeSeconds = item.kind==='briefcaseTracker' ? state.briefcaseTracking?.seconds : item.kind==='binoculars' ? state.binocularSeconds : item.kind==='megaphone' ? state.megaphoneSeconds : undefined;
+      const activeSeconds = item.kind==='invisibilityCloak' ? state.cloakSeconds : item.kind==='briefcaseTracker' ? state.briefcaseTracking?.seconds : item.kind==='binoculars' ? state.binocularSeconds : item.kind==='megaphone' ? state.megaphoneSeconds : undefined;
       const scan = item.kind==='xray' ? state.xrayVision : undefined;
       const scanning = !!scan;
       const modulating = item.kind==='voiceModulator' && !!state.modulator?.active;

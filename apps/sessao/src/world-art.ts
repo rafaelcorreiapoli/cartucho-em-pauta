@@ -78,7 +78,15 @@ const briefcaseGrip = {
   'Inês Brasil': [[[94,100],[98,95],[94,100],[92,89]],[[65,100],[89,79],[65,100],[89,79]],[[38,101],[32,94],[38,101],[32,94]]],
 } satisfies Record<(typeof NAMES)[number],readonly [WalkGrips,WalkGrips,WalkGrips]>;
 
+const cloakGrip:readonly WalkGrips[] = [
+  [[90,100],[91,87],[90,100],[88,88]],
+  [[65,100],[95,79],[65,100],[94,79]],
+  [[36,100],[40,89],[36,100],[40,89]],
+  [[63,100],[33,79],[63,100],[34,79]],
+];
+
 export function preloadWorldArt(scene: Phaser.Scene) {
+  scene.load.spritesheet('cloak-walk',import.meta.env.BASE_URL+'assets/capa-invisibilidade-walk.webp',{frameWidth:256,frameHeight:256});
   for (const { texture, sprite } of Object.values(installationArt)) {
     loadWorldImage(scene, texture, sprite);
   }
@@ -248,7 +256,9 @@ export function updateActorView(
   const spriteX = x + (pose?.lungeX ?? (handling === 1 ? reach : handling === 3 ? -reach : 0));
   const spriteY = latest.carried ? y - 24 : y + (pose?.lungeY ?? -reach);
   const labelY = latest.carried ? y - 51 : y + 2;
-  const opacity =
+  const glass = !!latest.cloaked && !latest.knockedOut && !latest.carried;
+  for (const part of [label,office,view.items,view.weapon,view.briefcase,view.speedIcon]) part?.setAlpha(glass ? 0 : 1);
+  const opacity = glass ? 1 :
     latest.knockedOut && !latest.carried
       ? 0.68
       : latest.recoveryProtected && (reducedMotion || Math.floor(time / 150) % 2 === 0)
@@ -280,12 +290,12 @@ export function updateActorView(
   label
     .setVisible(true)
     .setPosition(x, labelY)
-    .setText(latest.pocketing ? `▣ ${name}` : phone === 'game' ? `🎮 ${name}` : phone === 'call' ? `☎ ${name}` : name);
+    .setText(glass ? '' : latest.pocketing ? `▣ ${name}` : phone === 'game' ? `🎮 ${name}` : phone === 'call' ? `☎ ${name}` : name);
   const nameColor = latest.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
   // Phaser redraws and uploads the text texture on every setColor call.
   if (label.style.color !== nameColor) label.setColor(nameColor);
   const handsBusy = !!(handsetArt || breachArt || depositArt || robberyArt);
-  const grip = briefcaseGrip[NAMES[character]]?.[breachArt ? 2 : handsetArt ? 0 : row];
+  const grip = glass ? cloakGrip[direction] : briefcaseGrip[NAMES[character]]?.[breachArt ? 2 : handsetArt ? 0 : row];
   const exposed = grip ? (latest.exposed ?? []).filter((item) => !cashAmount(item.kind)) : (latest.exposed ?? []);
   const concealed = options.concealed ?? false;
   const itemsKey = `${concealed}:${exposed.map((item) => item.kind).join(',')}`;
@@ -321,23 +331,30 @@ export function updateActorView(
     .setText(status);
   const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
   if (office.style.color !== officeColor) office.setColor(officeColor);
-  const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
-  const walk = art ? {key: base.sheet.key, frame: base.frame, animation: `${visitor ?? character}`} : adaptiveWalkArt(scene, character, visitor, pixelScale);
-  if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
-    const key = `${walk.animation}-${row}`;
-    const previous = sprite.anims.currentAnim?.key;
-    const progress = sprite.anims.isPlaying && previous !== key && previous?.endsWith(`-${row}`) ? sprite.anims.getProgress() : undefined;
-    sprite.play(key, true);
-    if (progress !== undefined) sprite.anims.setProgress(progress);
-    sprite.anims.timeScale = latest.sprinting ? sprintMultiplier : 1;
+  // Every wearer shares this featureless shape: no face, hair or outfit can identify them.
+  if (glass) {
+    sprite.anims.stop();
+    const step = moving && !reducedMotion ? Math.floor(time*9*(latest.sprinting ? sprintMultiplier : 1)/1000)%4 : 0;
+    sprite.setTexture('cloak-walk',direction*4+step).setFlipX(false).clearTint();
   } else {
-    sprite.anims.stop();
-    const texture = art ? adaptivePoseArt(scene, art, pixelScale) : {key: walk.key, frame: walk.frame + row * 4};
-    sprite.setTexture(texture.key, texture.frame);
-  }
-  if (options.frozen && moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
-    sprite.anims.stop();
-    sprite.setTexture(walk.key, walk.frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
+    const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
+    const walk = art ? {key: base.sheet.key, frame: base.frame, animation: `${visitor ?? character}`} : adaptiveWalkArt(scene, character, visitor, pixelScale);
+    if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
+      const key = `${walk.animation}-${row}`;
+      const previous = sprite.anims.currentAnim?.key;
+      const progress = sprite.anims.isPlaying && previous !== key && previous?.endsWith(`-${row}`) ? sprite.anims.getProgress() : undefined;
+      sprite.play(key, true);
+      if (progress !== undefined) sprite.anims.setProgress(progress);
+      sprite.anims.timeScale = latest.sprinting ? sprintMultiplier : 1;
+    } else {
+      sprite.anims.stop();
+      const texture = art ? adaptivePoseArt(scene, art, pixelScale) : {key: walk.key, frame: walk.frame + row * 4};
+      sprite.setTexture(texture.key, texture.frame);
+    }
+    if (options.frozen && moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
+      sprite.anims.stop();
+      sprite.setTexture(walk.key, walk.frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
+    }
   }
   sprite.setDisplaySize(actorFrameWorldSize, actorFrameWorldSize);
   sprite.setOrigin(spriteOriginX(sprite.texture.key, sprite.frame.name, sprite.flipX), downed?.originY ?? 1);

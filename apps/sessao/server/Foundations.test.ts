@@ -864,3 +864,34 @@ test('night vision toggles without cooldown, restores outage vision and stops wh
   game.reset(world.now,()=>0,[alice],()=>0);
   expect(game.view(alice,world).nightVision).toBeUndefined();
 });
+
+
+test('cloak purchased at technical support has server duration, item cooldown and torso conflict',()=>{
+  const {alice,game,world,buyGear} = setup();
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('Equipe');
+  expect(buyGear(alice,'invisibilityCloak')).toContain('Compra');
+  const cloak = game.view(alice,world).inventory.find(item=>item.kind==='invisibilityCloak')!;
+  expect(cloak).toBeDefined();
+  expect(game.act(alice,{kind:'equip',item:cloak.id},world)).toBe('Equipado.');
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('10 s');
+  expect(game.cloakActive(alice,world.now)).toBe(true);
+  expect(game.view(alice,world).cloakSeconds).toBe(10);
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('recarga');
+  world.now+=10_000;
+  expect(game.cloakActive(alice,world.now)).toBe(false);
+  expect(game.view(alice,world).equipmentCooldowns?.[cloak.id]).toBe(30);
+  game.act(alice,{kind:'unequip',item:cloak.id},world);
+  game.act(alice,{kind:'equip',item:cloak.id},world);
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('recarga');
+  world.now+=30_000;
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('ativa');
+  alice.knockedOut=true;
+  expect(game.cloakActive(alice,world.now)).toBe(false);
+  alice.knockedOut=false;
+  expect(buyGear(alice,'vest')).toContain('Compra');
+  const vest=game.view(alice,world).inventory.find(item=>item.kind==='vest')!;
+  expect(game.act(alice,{kind:'equip',item:vest.id},world)).toContain('ocupado');
+  expect(game.act(alice,{kind:'replace-gear',item:vest.id,token:cloak.id},world)).toBe('Equipado.');
+  expect(game.cloakActive(alice,world.now)).toBe(false);
+  expect(game.view(alice,world).equipped?.some(item=>item.kind==='invisibilityCloak')).toBe(false);
+});

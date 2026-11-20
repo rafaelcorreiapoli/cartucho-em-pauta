@@ -30,7 +30,7 @@ import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
 import { VoiceEquipment } from './VoiceEquipment';
-import { gearConflict, binoculars, briefcaseTracker, equippedWeapon, equipment, megaphone, isGear, concealment, xray, xrayNeedsRecharge, type Gear } from '../src/equipment';
+import { gearConflict, invisibilityCloak, binoculars, briefcaseTracker, equippedWeapon, equipment, megaphone, isGear, concealment, xray, xrayNeedsRecharge, type Gear } from '../src/equipment';
 import { PhoneSession } from './PhoneSession';
 import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
@@ -88,6 +88,7 @@ export class Gameplay {
   private modulator = new VoiceEquipment();
   private serial = 0;
   private nightVisionItems = new Set<number>();
+  private cloakUse = new Map<number,{activeUntil:number;readyAt:number}>();
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
   private trackerReadyAt = new Map<number,number>();
@@ -216,6 +217,7 @@ export class Gameplay {
     this.trackerReadyAt.clear();
     this.scanning.clear();
     this.binocularUse.clear();
+    this.cloakUse.clear();
     this.nightVisionItems.clear();
     this.pendingInstallations.clear();
     this.installations.clear();
@@ -362,6 +364,17 @@ export class Gameplay {
     if (player.visitor===federalPatrolRules.skin) return 1;
     const {hp,max} = this.combat.view(player,now);
     return hp/max;
+  }
+
+  cloakActive(player:Player,now:number) {
+    const item = this.wearing(player.id,'invisibilityCloak');
+    return !player.knockedOut && !player.carried && !!item && (this.cloakUse.get(item.id)?.activeUntil ?? 0)>now;
+  }
+
+  private stopCloak(id:string) {
+    const item = this.wearing(id,'invisibilityCloak');
+    const use = item && this.cloakUse.get(item.id);
+    if (use) use.activeUntil = 0;
   }
 
   private binocularRemaining(id:string,now:number) {
@@ -730,6 +743,7 @@ export class Gameplay {
     this.updateMegaphone(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
+      if (!exploring || player.knockedOut || player.carried) this.stopCloak(player.id);
       if (player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (player.knockedOut) this.stopModulator(player.id);
     }
@@ -856,6 +870,7 @@ export class Gameplay {
   leave(player:Player, world:GameplayWorld, permanent:boolean) {
     this.surveillance.leave(player.id,permanent);
     this.scanning.delete(player.id);
+    this.stopCloak(player.id);
     this.stopBinoculars(player.id);
     this.privateOffices.channels.delete(player.id);
     this.pendingInstallations.delete(player.id);
@@ -912,7 +927,7 @@ export class Gameplay {
     const modulator = voiceGear && this.modulator.view(voiceGear.id);
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
-      const seconds = item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
+      const seconds = item.kind==='invisibilityCloak' ? Math.ceil(Math.max(0,(this.cloakUse.get(item.id)?.readyAt ?? 0)-world.now)/1000) : item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
         item.kind==='briefcaseTracker' ? Math.ceil(Math.max(0,(this.trackerReadyAt.get(item.id) ?? 0)-world.now)/1000) :
         item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
@@ -934,6 +949,7 @@ export class Gameplay {
       forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
       nightVision:this.nightVisionActive(id) || undefined,
+      cloakSeconds:this.cloakActive(player,world.now) ? Math.ceil((this.cloakUse.get(this.wearing(id,'invisibilityCloak')!.id)!.activeUntil-world.now)/1000) : undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       briefcaseTracking:this.briefcaseTracking(id,world),
@@ -1060,7 +1076,7 @@ export class Gameplay {
     const visible = (point:Motion)=>sees({...position,barriers},point);
     return {center,camera,...this.photoWorldState({...player,...camera},world,visible),
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
-        ...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+        ...photoPerson(person),cloaked:this.cloakActive(person,world.now) ? true : undefined,cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
@@ -1071,7 +1087,7 @@ export class Gameplay {
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
-      .map(person=>({...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+      .map(person=>({...photoPerson(person),cloaked:this.cloakActive(person,world.now) ? true : undefined,cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
@@ -1681,6 +1697,10 @@ export class Gameplay {
     if (!('equipped' in item.place) || item.place.equipped!==id) return this.reject(player,world,'Equipamento indisponível.');
     if (!this.available(id)) return this.reject(player,world,'Inventário cheio.');
     this.move(item,{holder:id});
+    if (item.data.kind==='invisibilityCloak') {
+      const use = this.cloakUse.get(item.data.id);
+      if (use) use.activeUntil = 0;
+    }
     if (item.data.kind==='binoculars') this.stopBinoculars(id);
     if (item.data.kind==='megaphone') this.stopMegaphone(id,world);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id);
@@ -1774,6 +1794,15 @@ export class Gameplay {
       this.trackerReadyAt.set(item.id,until+briefcaseTracker.cooldown);
       this.event(world,player,'used',item,undefined,{witnesses:[]});
       return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
+    }
+    if (action.kind==='use-cloak') {
+      const item = this.wearing(id,'invisibilityCloak');
+      if (!item) return this.reject(player,world,'Equipe a Capa de invisibilidade.');
+      if ((this.cloakUse.get(item.id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Capa em recarga.');
+      const activeUntil = world.now+invisibilityCloak.duration;
+      this.cloakUse.set(item.id,{activeUntil,readyAt:activeUntil+invisibilityCloak.cooldown});
+      this.event(world,player,'used',item,undefined,{witnesses:[]});
+      return 'Capa ativa por 10 s.';
     }
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return this.reject(player,world,'Equipe o Binóculo.');

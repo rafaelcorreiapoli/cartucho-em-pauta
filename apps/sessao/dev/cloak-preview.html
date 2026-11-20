@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Capa de invisibilidade · prévia no mapa</title>
+<style>body{margin:0;background:#15211b;color:#eef8f4;font:16px system-ui}main{width:800px;margin:32px auto}h1{font-size:22px;margin-bottom:8px}p{color:#adc4bc}canvas{border-radius:12px}.labels{display:flex;justify-content:space-around;margin:16px 120px}</style>
+<main><h1>Capa de invisibilidade</h1><p>10 s de efeito · 30 s de recarga · tecla I · equipamento de tronco</p><div id="map"></div><div class="labels"><span>Sem capa</span><span>Capa ativa · identidade oculta</span></div></main>
+<script type="module">
+import Phaser from 'phaser';
+import {preloadWorldArt,createWorldAnimations} from '/src/world-art.ts';
+import {WorldView} from '/src/world-view.ts';
+import {sprintDust} from '/src/sprint-dust.ts';
+class Preview extends Phaser.Scene {
+  preload(){preloadWorldArt(this);}
+  create(){
+    createWorldAnimations(this);
+    const frame={time:2400,center:{x:140,y:158},camera:{x:140,y:139},people:[
+      {id:'normal',name:'',x:114,y:160,character:0,direction:1,moving:false},
+      {id:'glass',name:'',x:166,y:160,character:0,direction:1,moving:true,sprinting:true,cloaked:true,cashInHand:true},
+    ],ground:[],decorations:[]};
+    this.world=new WorldView(this);
+    this.frame=frame;
+    this.world.render(frame,2400,true);
+    this.cameras.main.setZoom(5).centerOn(140,139);
+    this.time.addEvent({delay:220,loop:true,callback:()=>sprintDust(this,this.cloakX ?? 166,160,1,0)});
+    window.preview={scene:this,frame,world:this.world,ready:true};
+  }
+  update(time){
+    if(!this.frame)return;
+    this.cloakX=142+(time/1000*8)%42;
+    const frame={...this.frame,people:this.frame.people.map(person=>person.cloaked ? {...person,x:this.cloakX} : person)};
+    this.world.render(frame,time,false);
+  }
+}
+new Phaser.Game({type:Phaser.AUTO,parent:'map',width:800,height:400,scene:Preview,backgroundColor:'#15211b',audio:{noAudio:true}});
+</script>
+</html>
