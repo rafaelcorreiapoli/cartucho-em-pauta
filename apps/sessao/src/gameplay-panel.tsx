@@ -94,7 +94,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
   let bagFilter:typeof bagFilters[number] = 'Todos';
   let snakeBoard:HTMLCanvasElement|null = null;
   const setSnakeBoard = (board:HTMLCanvasElement|null) => { snakeBoard = board; };
-  const photos = createPhonePhotos(send,drawPhoto,render);
+  const photos = createPhonePhotos(send,drawPhoto,render,ownId);
   let previous:PlenaryView | undefined;
   let renderKey = '';
   let phoneOpen = false;

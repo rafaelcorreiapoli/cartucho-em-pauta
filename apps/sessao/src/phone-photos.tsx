@@ -27,8 +27,12 @@ export function createPhonePhotos(
   send:(action:GameplayAction)=>void,
   drawPhoto:(canvas:HTMLCanvasElement,photo?:PhotoScene)=>void,
   render:()=>void,
+  ownId:string,
 ) {
   let photos = emptyPhotoAccess;
+  let capturedPhoto:Photo|undefined;
+  let polaroid:HTMLElement|undefined;
+  let polaroidTimer:ReturnType<typeof setTimeout>|undefined;
   let albumTab:'personal'|'public' = 'personal';
   let photoId:number | undefined;
   let photoRecipient:string | undefined;
@@ -154,13 +158,30 @@ export function createPhonePhotos(
       });
     },
     update(next:PhotoAccessView) {
-      const captured = next.album.some(({photo,access})=>access==='original' && !photos.album.some(entry=>entry.photo.id===photo.id));
+      capturedPhoto = next.album.find(({photo,access})=>access==='original' && photo.author.id===ownId && !photos.album.some(entry=>entry.photo.id===photo.id))?.photo;
+      const captured = capturedPhoto!==undefined;
       const presented = !!next.shown && next.shown.id!==photos.shown?.id;
       photos = next;
       if (presented) showing = true;
       return {captured,presented};
     },
     flash() {
+      if (capturedPhoto) {
+        polaroid?.remove();
+        clearTimeout(polaroidTimer);
+        polaroid = document.createElement('figure');
+        polaroid.className = 'photo-polaroid';
+        const canvas = document.createElement('canvas');
+        canvas.setAttribute('role','img');
+        canvas.setAttribute('aria-label',`${capturedPhoto.selfie ? 'Selfie' : 'Foto'} em ${capturedPhoto.location}`);
+        const caption = document.createElement('figcaption');
+        caption.textContent = capturedPhoto.location;
+        polaroid.append(canvas,caption);
+        document.body.append(polaroid);
+        drawPhoto(canvas,capturedPhoto);
+        polaroidTimer = setTimeout(()=>{polaroid?.remove();polaroid=undefined;},4_560);
+        capturedPhoto = undefined;
+      }
       const flash = document.createElement('div');
       flash.className = 'photo-screen-flash';
       flash.setAttribute('aria-hidden','true');
@@ -172,6 +193,6 @@ export function createPhonePhotos(
         cameraPreview.animate([{filter:'brightness(3)'},{filter:'brightness(1)'}],{duration:220});
       }
     },
-    destroy() { window.clearInterval(previewTimer); },
+    destroy() { window.clearInterval(previewTimer); clearTimeout(polaroidTimer); polaroid?.remove(); },
   };
 }

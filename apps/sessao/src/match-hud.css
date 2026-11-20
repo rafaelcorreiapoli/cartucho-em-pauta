@@ -1130,3 +1130,29 @@ button.item-tile:active { transform: translateY(3px); }
 .mail-composer footer .action-key { inset:6px 6px auto auto; }
 #gameplay-dialog .mail-picker > header { display:grid; grid-template-columns:minmax(0,1fr); justify-content:stretch; gap:8px; }
 .photo-screen-flash { position:fixed; inset:0; z-index:10000; background:#fff; pointer-events:none; }
+
+.photo-polaroid {
+  position: fixed;
+  left: clamp(8px, 1.5vw, 20px);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 9999;
+  width: min(320px, 43vw, 48dvh);
+  margin: 0;
+  padding: 12px 12px 0;
+  background: #fff9eb;
+  color: #302b25;
+  box-shadow: 0 12px 24px #0009;
+  pointer-events: none;
+}
+.photo-polaroid canvas { display: block; width: 100%; height: auto; background: #182528; }
+.photo-polaroid figcaption { padding: 16px 4px 20px; text-align: center; font-size: clamp(12px, 1.4vw, 16px); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) {
+  .photo-polaroid { animation: photo-polaroid-play 4560ms forwards; }
+}
+@keyframes photo-polaroid-play {
+  0% { transform: translateX(calc(-100% - 3rem)); animation-timing-function: ease-out; }
+  6.14% { transform: none; }
+  93.86% { transform: none; animation-timing-function: ease-in; }
+  100% { transform: translateX(calc(-100% - 3rem)); }
+}

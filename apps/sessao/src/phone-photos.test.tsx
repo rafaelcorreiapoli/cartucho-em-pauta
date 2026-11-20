@@ -8,7 +8,7 @@ test('the album renders private copies and opens incoming presentations',()=>{
   const clear = globalThis.clearInterval;
   const originalWindow = globalThis.window;
   Object.defineProperty(globalThis,'window',{configurable:true,writable:true,value:{setInterval:timer,clearInterval:clear}});
-  const album = createPhonePhotos(()=>{},()=>{},()=>{});
+  const album = createPhonePhotos(()=>{},()=>{},()=>{},'bia');
   try {
     const photo:Photo = {id:1,author:{id:'bia',name:'Bia'},at:1000,location:'Arquivo',selfie:true,
       center:{x:0,y:0},people:[],ground:[],decorations:[],transfers:[]};
@@ -16,6 +16,9 @@ test('the album renders private copies and opens incoming presentations',()=>{
     const grid = renderToStaticMarkup(album.renderAlbum([],[],false,()=>{}));
     expect(grid).toContain('Abrir fotografia 1 · Arquivo');
     expect(grid).toContain('Selfie em Arquivo');
+    expect(album.update({album:[{photo:{...photo,id:2,author:{id:'outro',name:'Outro'}},access:'original'}],publicPhotos:[]}).captured).toBe(false);
+    expect(album.update({album:[{photo,access:'original'}],publicPhotos:[]}).captured).toBe(true);
+    expect(album.update({album:[{photo,access:'original'}],publicPhotos:[]}).captured).toBe(false);
     expect(album.update({album:[],publicPhotos:[],shown:photo}).presented).toBe(true);
     const presentation = renderToStaticMarkup(album.renderAlbum([],[],true,()=>{}));
     expect(presentation).toContain('Fechar apresentação');
