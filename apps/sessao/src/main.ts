@@ -197,6 +197,11 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
 
     const centerAlert = createCenterAlert();
     hudListeners.signal.addEventListener('abort',()=>centerAlert.destroy(),{once:true});
+    joined.onMessage('first-blood',()=>{
+      centerAlert.show('FIRST BLOOD','','first-blood');
+      audio.cue('firstBlood');
+    });
+    joined.onMessage('knockout-sound',({level,pan}:{level:number;pan:number})=>audio.combat('fall',level,pan));
     const audioReady = audio.enter();
     let assetsReady = false;
     const security = createSecurityPanel(action=>sendCommand('security-camera',action));
@@ -406,6 +411,10 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
       if (previousView && view.treasuryRescue && view.treasuryRescue.sequence!==previousView.treasuryRescue?.sequence) {
         centerAlert.show(view.treasuryRescue.name,'SALVOU A PÁTRIA!','treasury-rescue');
         audio.cue('rescue');
+      }
+      const elimination = view.ghostAdvisers?.elimination;
+      if (previousView && elimination && elimination.sequence!==previousView.ghostAdvisers?.elimination?.sequence) {
+        centerAlert.enqueue(elimination.name,'assassinou um\nassessor fantasma','ghost-adviser');
       }
       audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);

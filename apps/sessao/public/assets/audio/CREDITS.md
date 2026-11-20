@@ -22,3 +22,12 @@ Included in the finished game via Vite; original samples are not distributed wit
 Source: https://opengameart.org/content/applause-in-a-large-hall-or-church
 License: https://creativecommons.org/publicdomain/zero/1.0/
 Excerpt from seconds 2–6, converted to 44.1 kHz stereo PCM, with short fade-in and fade-out for the campaign TV.
+
+# First Blood
+
+`first-blood.mp3`: anúncio clássico “First Blood”, disponibilizado como
+“First Blood DotA” por bigattaum no Myinstants.
+Fonte: https://www.myinstants.com/en/instant/first-blood/
+Arquivo: https://www.myinstants.com/media/sounds/firstblood.mp3
+Original, sem edição. A página não informa licença de redistribuição;
+este crédito não atribui licença CC0 ao sample.

@@ -591,9 +591,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (latest.knockedOut) {
             view.fallAt = time;
             view.hitAt = undefined;
-            this.time.delayedCall(185,()=>{
-              if (running) playCombatSound('fall',x,y);
-            });
           } else view.hitAt = time;
           playBloodImpact(this,x,y-15);
           playComicImpact(this,x,y-54,latest.hit,this.textResolution);
