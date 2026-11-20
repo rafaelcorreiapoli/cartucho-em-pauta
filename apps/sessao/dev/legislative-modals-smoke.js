@@ -167,7 +167,7 @@ async page => {
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     await Promise.all([page,disconnected,witness,fourth].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     await page.getByRole('button',{name:/Falar com Chapolin Colorado/}).click();
-    await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · R\$ 100 mil/}).click();
+    await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · Grátis/}).click();
     const ballot = page.getByRole('region',{name:'Votação de cassação'});
     await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor();
     await ballot.getByText('Convocada por').waitFor();

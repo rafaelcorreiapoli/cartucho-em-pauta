@@ -924,6 +924,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         decorations:worldSnapshot.decorations.filter(item=>inPhotoFrame(center,item)),
       });
     },
+    showSafeExplosion(point:Motion) {
+      if (!scene.sys.isActive() || reducedMotion.matches) return;
+      const burst = scene.add.circle(point.x,point.y,8,0xffc66b,.9).setDepth(10000);
+      scene.tweens.add({targets:burst,scaleX:5,scaleY:5,alpha:0,duration:420,onComplete:()=>burst.destroy()});
+      scene.cameras.main.shake(180,.003);
+    },
     showExtinguishEffect(effect:ExtinguishEffect) {
       if (scene.sys.isActive() && !reducedMotion.matches) scene.extinguishEffect?.(effect);
     },

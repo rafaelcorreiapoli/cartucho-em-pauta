@@ -1,0 +1,5 @@
+Asset: apps/sessao/public/assets/retrato-seguro-antiarrombamento.webp
+Generated with the built-in image_gen tool; resized to 384 × 384 and converted to WebP with cwebp, preserving transparency.
+
+Final prompt:
+Use case: stylized-concept. Asset type: single isolated inventory item portrait for a satirical Brazilian parliament videogame. Primary request: a fictional cartoon anti-burglary safe trap called Seguro Antiarrombamento. A compact brass and dark olive security module with a prominent stylized round cartoon bomb emblem, small red warning light, sturdy mounting plate. Match polished hand-painted game inventory art: chunky readable silhouette, gold metal edges, dark outlines, warm highlights, slightly three-quarter view, no photorealism. Centered object, square composition, entire object visible, generous transparent margin, genuinely transparent background. No text, no letters, no watermark. No human figures and no technical construction detail. Save final image to a local file and provide its path.

@@ -753,6 +753,7 @@ test('cassation requires at least three eligible players to be called',()=>{
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
   economy.earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   const call = () => match.callCassation(at(host,'audit'),50);
   const view = () => match.view(host.id,ids,50);
 
@@ -771,6 +772,7 @@ test('cassation can be called at 40 popularity',()=>{
   match.start(host.id,people,0,()=>.9);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   const call = () => match.callCassation(at(host,'audit'),50);
   const view = () => match.view(host.id,ids,50);
 
@@ -792,6 +794,7 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.changePopularity(host.id,17);
   match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation(at(host,'audit'),50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   const view = (now:number)=>match.view(host.id,ids,now);
@@ -808,35 +811,24 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
     cassationResult:{text:expect.stringContaining('Ninguém foi cassado')}});
 });
 
-test('cassation charges the caller once and can be called again after an inconclusive vote',()=>{
+test('cassation is free, starts after one minute and has a room-wide one-minute cooldown',()=>{
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
+  economy.spend(host.id,economy.wallet(host.id));
   const caller = at(host,'audit');
-  expect(readPoliticsAction({kind:'hearing',target:traitor.id})).toBeUndefined();
-  expect(readPoliticsAction({kind:'call-cassation'})).toBeUndefined();
-  expect(canStand(caller.x,caller.y)).toBe(true);
-  economy.earn(host.id,cassationFee-1-economy.wallet(host.id));
-  expect(match.callCassation(caller,1)).toContain('Saldo insuficiente');
-  expect(economy.wallet(host.id)).toBe(cassationFee-1);
-  expect(match.view(host.id,ids,1).cassationIn).toBeUndefined();
-
-  economy.earn(host.id,cassationFee+1);
-  expect(match.callCassation(at(host,'panel'),2)).toContain('Corregedoria');
-  expect(economy.wallet(host.id)).toBe(2*cassationFee);
-  expect(match.callCassation(caller,3)).toBeUndefined();
-  expect(match.callCassation(caller,4)).toContain('indisponível');
-  expect(economy.wallet(host.id)).toBe(cassationFee);
-
-  const openedAt = 3+CASSATION_NOTICE_MS;
+  expect(match.callCassation(caller,59_999)).toContain('primeiro minuto');
+  expect(match.view(host.id,ids,59_999).cassationIn).toBeUndefined();
+  expect(match.callCassation(caller,60_000)).toBeUndefined();
+  expect(economy.wallet(host.id)).toBe(0);
+  expect(match.callCassation(caller,60_001)).toContain('indisponível');
+  const openedAt = 60_000+CASSATION_NOTICE_MS;
   match.advance(openedAt);
-  const resolvedAt = openedAt+HEARING_MS;
-  match.advance(resolvedAt);
-  expect(match.view(host.id,ids,resolvedAt).cassationResult?.text).toContain('Ninguém foi cassado');
-  const walletAfterPayroll = economy.wallet(host.id);
-  expect(match.callCassation(caller,match.gameTime(resolvedAt+1))).toBeUndefined();
-  expect(economy.wallet(host.id)).toBe(walletAfterPayroll-cassationFee);
-  expect(match.economySummary(0).cassationFees).toBe(2*cassationFee);
+  match.advance(openedAt+HEARING_MS);
+  expect(match.callCassation(at(honest,'audit'),119_999)).toContain('intervalo');
+  const walletBefore = economy.wallet(host.id);
+  expect(match.callCassation(caller,120_000)).toBeUndefined();
+  expect(economy.wallet(host.id)).toBe(walletBefore);
 });
 
 test('a cassation called at the last possible instant pauses the session until it resolves',()=>{
@@ -846,6 +838,7 @@ test('a cassation called at the last possible instant pauses the session until i
   const deadline = ELECTION_RULES.matchDuration;
   const lastCall = deadline-CASSATION_NOTICE_MS-1;
   const wallet = match.view(host.id,ids,0).politics!.wallet;
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation(caller,lastCall+1)).toContain('indisponível');
   expect(match.view(host.id,ids,lastCall+1).politics!.wallet).toBe(wallet);
   match.gameplayWorld([],lastCall,()=>false).earn(host.id,cassationFee);
@@ -888,6 +881,7 @@ test('cassation counts the same connected votes in the HUD and the final tally',
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,people,0,()=>.9)).toBe(true);
   match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation(at(host,'audit'),50)).toBeUndefined();
   const openedAt = 50+CASSATION_NOTICE_MS;
   match.advance(openedAt);

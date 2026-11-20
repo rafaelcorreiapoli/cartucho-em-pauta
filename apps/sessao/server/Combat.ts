@@ -136,13 +136,20 @@ export class Combat {
     const victim = this.state(target);
     victim.hp = Math.max(0,victim.hp-damage);
     target.hit = now+recoveryRules.hitStunMs;
-    if (!victim.hp) {
-      victim.knockedOutBy = attacker.id;
-      victim.recoverAt = now+recoveryRules.knockoutMs;
-      target.knockedOut = true;
-      this.interrupt(target);
-    }
+    if (!victim.hp) this.knockOut(target,now,attacker.id);
     return damage;
+  }
+
+  knockOut(target:Combatant,now:number,by?:string) {
+    const victim = this.state(target);
+    victim.hp = 0;
+    victim.knockedOutBy = by;
+    victim.protectedUntil = 0;
+    victim.recoverAt = now+recoveryRules.knockoutMs;
+    target.recoveryProtected = undefined;
+    target.knockedOut = true;
+    target.hit = now+recoveryRules.hitStunMs;
+    this.interrupt(target);
   }
 
   knockedOutBy(target:Combatant) { return this.vitality.get(target.id)?.knockedOutBy; }

@@ -1930,6 +1930,7 @@ test.each([false,true])('Pix missions and recipients reflect cassation with prio
   }
 
   match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation({...host,...stations.audit},50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);

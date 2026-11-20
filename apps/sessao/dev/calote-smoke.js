@@ -50,6 +50,12 @@ async page => {
         Math.abs((direction==='positive' ? colored.x : colored.right)-center)<.5 && Math.abs(colored.width-bounds.width/4)<.5;
     },direction);
   };
+  await setBudget(-1);
+  const central = page.locator('.calote-screen-warning');
+  await central.getByText('ORÇAMENTO NEGATIVO',{exact:true}).waitFor();
+  const centralStyle = await central.evaluate(element=>({pointer:getComputedStyle(element).pointerEvents,background:getComputedStyle(element).backgroundColor}));
+  if (centralStyle.pointer!=='none' || centralStyle.background!=='rgba(0, 0, 0, 0)') throw Error('Central warning blocks play or has a panel');
+  await central.waitFor({state:'hidden',timeout:5000});
   await setBudget(16);
   await checkFill('positive');
   await page.screenshot({path:'output/playwright/calote-positive.png'});

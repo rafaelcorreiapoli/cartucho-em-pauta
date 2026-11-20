@@ -1,3 +1,4 @@
+import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
@@ -186,6 +187,8 @@ async function connect(join: () => Promise<Room>) {
     let assetError = false;
     renderLoading({progress:loadingProgress});
 
+    const centerAlert = createCenterAlert();
+    hudListeners.signal.addEventListener('abort',()=>centerAlert.destroy(),{once:true});
     const audioReady = audio.enter();
     let assetsReady = false;
     const security = createSecurityPanel(action=>sendCommand('security-camera',action));
@@ -258,6 +261,7 @@ async function connect(join: () => Promise<Room>) {
     const reactHud = mountReactHud(settings.open);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
+    joined.onMessage('safe-trap-explosion',(point:{x:number;y:number})=>{ game?.showSafeExplosion(point); audio.combat('impact',.9,0); });
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');
@@ -374,6 +378,13 @@ async function connect(join: () => Promise<Room>) {
     }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      if (previousView && caloteAlertLevel(view)>caloteAlertLevel(previousView)) centerAlert.show(
+        caloteAlertLevel(view)===2 ? 'CALOTE IMINENTE' : 'ORÇAMENTO NEGATIVO', 'Recupere o saldo na Tesouraria para evitar a derrota.','calote');
+      if (previousView && lastInElection(view,joined.sessionId) && !lastInElection(previousView,joined.sessionId)) centerAlert.show(
+        'VOCÊ ESTÁ EM ÚLTIMO NA PESQUISA', 'Faça campanha para proteger seu mandato.','election');
+      if (!caloteAlertLevel(view)) centerAlert.clear('calote');
+      if (!lastInElection(view,joined.sessionId)) centerAlert.clear('election');
+      audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
       ballotCountdown.update(view.ballotCountdown);
       floorPlan.track(view.gameplay?.briefcaseTracking);

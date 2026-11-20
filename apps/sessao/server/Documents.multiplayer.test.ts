@@ -329,11 +329,12 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
 
     economy.changePopularity(alice.sessionId,40);
     economy.earn(alice.sessionId,cassationFee);
+    Reflect.set(match,'cassationReadyAt',0);
     move(alice,stations.audit);
     alice.send('gameplay',{action:{kind:'talk',target:'corregedor'},token:2300});
     const consultation = await wait(()=>state(alice)?.dialogue);
     expect(consultation.npc).toBe('corregedor');
-    expect(consultation.options).toContainEqual({id:'cassation',label:'Convocar cassação · R$ 100 mil'});
+    expect(consultation.options).toContainEqual({id:'cassation',label:'Convocar cassação · Grátis'});
     const before = await wait(()=>views.get(alice.sessionId)?.politics?.wallet);
     const call = {kind:'dialogue-choice',target:'cassation',token:consultation.token};
     alice.send('gameplay',{action:call,token:2310});

@@ -107,6 +107,7 @@ test('cassation removes a disconnected target and shows the gameserver participa
   const match = new PlenaryMatch(1);
   expect(match.start(host.id,players,0,()=>.9)).toBe(true);
   match.gameplayWorld([],0,()=>false).earn(host.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation({...host,...stations.audit},10)).toBeUndefined();
   const openedAt = 10+CASSATION_NOTICE_MS;
   match.advance(openedAt);

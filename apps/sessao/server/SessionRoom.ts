@@ -98,6 +98,12 @@ export class SessionRoom extends Room {
       present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         if (!world.publish({...event,at:this.match.gameTime(event.at)})) return;
+        if (event.type==='safe-trap-triggered') {
+          const intruder = this.players.get(event.actor)?.player;
+          if (intruder) for (const [id,state] of this.players) {
+            if (this.sees(state,intruder,this.clock.currentTime)) this.clients.getById(id)?.send('safe-trap-explosion',event.position);
+          }
+        }
         let cue:InteractionCue | undefined;
         if (event.type==='delivered' && event.place==='treasury') cue = 'cash';
         else if (event.type==='stamped') cue = 'stamp';

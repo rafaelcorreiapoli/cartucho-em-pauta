@@ -1162,6 +1162,8 @@ export class Gameplay {
       if (!own && this.privateOffices.near(player,office,'safe')) breach('safe');
       if (own && this.privateOffices.near(player,office,'safe')) {
         upgrade('safe',office.safeLevel);
+        const trap = items.find(item=>item.kind==='safeTrap');
+        if (!office.safeTrap && trap) add('office-trap-safe','Instalar Seguro Antiarrombamento',trap.id);
         for (const item of items) {
           const amount = cashAmount(item);
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
@@ -1260,6 +1262,15 @@ export class Gameplay {
       return this.reject(player,world,kind==='office-breach-door' || kind==='office-breach-cabinet' || kind==='office-breach-safe'
         ? 'Você precisa de uma ferramenta de arrombamento.' : 'O objeto não está com você.');
     }
+    if (kind==='office-trap-safe') {
+      if (!own || !offices.near(player,office,'safe')) return this.reject(player,world,'Instale a armadilha no seu próprio cofre.');
+      if (item.data.kind!=='safeTrap') return this.reject(player,world,'Armadilha incompatível.');
+      if (office.safeTrap) return this.reject(player,world,'O cofre já está protegido por um Seguro Antiarrombamento.');
+      office.safeTrap = item.data.id;
+      this.remove(item);
+      this.event(world,player,'installed',item.data,undefined,{place:office.layout.id,witnesses:[]});
+      return 'Seguro Antiarrombamento instalado no seu cofre.';
+    }
     if (kind==='office-install') {
       const decor = decorSlots.find(slot=>slot===item.data.kind);
       if (!decor) return this.reject(player,world,'Decoração incompatível.');
@@ -1335,6 +1346,22 @@ export class Gameplay {
       }
       this.remove(item);
       if (kind==='office-breach-safe') {
+        if (office.safeTrap!==undefined) {
+          const trap = office.safeTrap;
+          office.safeTrap = undefined;
+          this.combat.knockOut(player,world.now);
+          this.transport.detach(player,world);
+          this.dialogues.close(player.id);
+          this.stopModulator(player.id);
+          this.phone.leave(player,world);
+          this.stopBinoculars(player.id);
+          for (const carried of this.inventory(player.id)) if (cashAmount(carried.data)) this.dropItem(player,carried,world);
+          this.event(world,player,'safe-trap-triggered',{id:trap,kind:'safeTrap'},office.owner,{place:office.layout.id,witnesses:[]});
+          world.feedback?.(player.id,'O Seguro Antiarrombamento explodiu! Você foi nocauteado e não levou o dinheiro.');
+          if (office.owner) world.feedback?.(office.owner,`Seu Seguro Antiarrombamento explodiu no ${office.layout.name}. O invasor foi nocauteado e seu dinheiro está seguro.`);
+          continue;
+        }
+
         const owner = office.owner!;
         const amount = world.lootWallet?.(owner,officeRules.safeLootFraction) ?? 0;
         if (!amount) {

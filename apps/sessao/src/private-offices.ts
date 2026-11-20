@@ -42,6 +42,7 @@ export const officeGoods = {
   proLockKit:lockTool('Kit profissional','retrato-kit-profissional.webp',3,3),
   decoder:lockTool('Decodificador','retrato-decodificador.webp',4,4),
   masterDecoder:lockTool('Ferramenta especializada','retrato-ferramenta-especializada.webp',5,5),
+  safeTrap:{name:'Seguro Antiarrombamento',description:'Instale no seu cofre. Ao concluir um arrombamento, explode, zera a vida do invasor e impede o saque. Uso único; avisa o titular.',portrait:'retrato-seguro-antiarrombamento.webp',price:3},
   doorLock:{name:'Reforço de porta',description:'Aumenta a segurança da porta em um nível.',portrait:'retrato-fechadura.webp',price:2},
   cabinetLock:{name:'Reforço de armário',description:'Aumenta a segurança do armário em um nível.',portrait:'retrato-fechadura-armario.webp',price:2},
   officeTv:{name:'TV de 85 polegadas',description:'Instalação no seu gabinete incluída.',portrait:'retrato-tv.webp',price:3},
@@ -77,10 +78,10 @@ export type OfficeDoorState = 'open'|'closed'|'locked'|'breached';
 export type OfficeView = {id:string; owner?:string; door:OfficeDoorState; cabinetBreached?:true};
 export type OfficeAction = 'office-open'|'office-close'|'office-lock'|'office-unlock'|'office-cash'|'office-breach-safe'|'office-upgrade-safe'|
   'office-stash'|'office-take'|'office-breach-door'|'office-breach-cabinet'|'office-upgrade-door'|'office-upgrade-cabinet'|
-  'office-install'|'office-remove'|'office-cancel';
+  'office-trap-safe'|'office-install'|'office-remove'|'office-cancel';
 export const officeActions:readonly OfficeAction[] = [
   'office-open','office-close','office-lock','office-unlock','office-cash','office-breach-safe','office-upgrade-safe','office-stash','office-take',
-  'office-breach-door','office-breach-cabinet','office-upgrade-door','office-upgrade-cabinet','office-install','office-remove','office-cancel',
+  'office-breach-door','office-breach-cabinet','office-upgrade-door','office-upgrade-cabinet','office-trap-safe','office-install','office-remove','office-cancel',
 ];
 export type OfficeOption = {label:string; kind:OfficeAction; place?:string; item?:number};
 export function officeDoorPoint({door:[x,y,w,h],inside}:OfficeLayout, offset=0) {

@@ -7,7 +7,8 @@ export const snackBar = {
   name:'Lanchonete', bounds:roomBounds('Lanchonete'), door:mapDoor('Lanchonete'),
 } as const;
 
-export const cassationFee = 10;
+export const cassationFee = 0;
+export const cassationCooldownMs = 60_000;
 
 export const npcs = {
   corregedor:{name:'Chapolin Colorado',sprite:'chapolin-colorado.webp',x:808,y:72,direction:0,
@@ -62,7 +63,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
   corregedoria:{
     start:{
       text:'A convocação avisa o Plenário. Cada eleitor poderá votar em quem suspeita ser infiltrado.',
-      options:[{id:'cassation',label:'Convocar cassação · '+money(cassationFee),action:'call-cassation'},
+      options:[{id:'cassation',label:'Convocar cassação · Grátis',action:'call-cassation'},
         {id:'leave',label:'Encerrar',action:'close'}],
     },
   },

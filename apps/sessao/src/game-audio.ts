@@ -28,6 +28,7 @@ export class GameAudio {
   private buffers = new Map<Sample,AudioBuffer>();
   private loading?:Promise<void>;
   private playing = false;
+  private caloteDanger = 0;
   private speaking = false;
   private lastFootIndex = 0;
   private lastCashCue = -Infinity;
@@ -88,12 +89,22 @@ export class GameAudio {
     this.startMusic();
   }
 
+  setCaloteDanger(seconds:number|undefined) {
+    const danger = seconds===undefined ? 0 : seconds<=10 ? 2 : 1;
+    if (danger===this.caloteDanger) return;
+    this.caloteDanger = danger;
+    if (danger) this.cue('alert');
+    this.startMusic();
+    if (this.context && this.music) this.music.source.playbackRate.setTargetAtTime(danger===2 ? 1.22 : danger===1 ? 1.08 : 1,this.context.currentTime,.35);
+  }
+
   leave() {
     this.playing = false;
     this.lastCashCue = -Infinity;
     this.stopMusic(0);
     for (const source of this.fading) source.stop();
     this.score = 'music';
+    this.caloteDanger = 0;
     this.setSpeaking(false);
   }
 
@@ -110,7 +121,8 @@ export class GameAudio {
   }
 
   private startMusic() {
-    const score = this.buffers.has(this.score) ? this.score : 'music';
+    const requested = this.caloteDanger ? 'hearingMusic' : this.score;
+    const score = this.buffers.has(requested) ? requested : 'music';
     const buffer = this.buffers.get(score);
     if (!this.playing || this.music?.score===score || !buffer || !this.context || !this.musicGain) return;
     const now = this.context.currentTime;
@@ -119,6 +131,7 @@ export class GameAudio {
     const gain = this.context.createGain();
     source.buffer = buffer;
     source.loop = true;
+    source.playbackRate.value = this.caloteDanger===2 ? 1.22 : this.caloteDanger===1 ? 1.08 : 1;
     gain.gain.setValueAtTime(0,now);
     gain.gain.linearRampToValueAtTime(1,now+.7);
     source.connect(gain).connect(this.musicGain);
