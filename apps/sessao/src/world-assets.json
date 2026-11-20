@@ -3603,29 +3603,29 @@
       }
     ]
   },
-  "capa-invisibilidade.webp": {
-    "id": "capa-invisibilidade",
+  "retrato-collant-invisibilidade.webp": {
+    "id": "retrato-collant-invisibilidade",
     "kind": "image",
     "width": 256,
     "height": 256,
     "variants": [
       {
-        "key": "hires:capa-invisibilidade:128",
-        "path": "assets/world-hd/capa-invisibilidade-128.webp",
+        "key": "hires:retrato-collant-invisibilidade:128",
+        "path": "assets/world-hd/retrato-collant-invisibilidade-128.webp",
         "width": 128,
         "height": 128,
         "size": 128
       },
       {
-        "key": "hires:capa-invisibilidade:256",
-        "path": "assets/world-hd/capa-invisibilidade-256.webp",
+        "key": "hires:retrato-collant-invisibilidade:256",
+        "path": "assets/world-hd/retrato-collant-invisibilidade-256.webp",
         "width": 256,
         "height": 256,
         "size": 256
       },
       {
-        "key": "hires:capa-invisibilidade:512",
-        "path": "assets/world-hd/capa-invisibilidade-512.webp",
+        "key": "hires:retrato-collant-invisibilidade:512",
+        "path": "assets/world-hd/retrato-collant-invisibilidade-512.webp",
         "width": 512,
         "height": 512,
         "size": 512
