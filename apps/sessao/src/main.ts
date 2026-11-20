@@ -391,6 +391,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
           ? `Sabote o Congresso sem revelar seu papel. Faça a estabilidade cair a zero ou terminar a sessão abaixo de ${stabilityRules.target}.`
           : `Proteja o Congresso. Termine a sessão com pelo menos ${stabilityRules.target} de estabilidade ou tire de jogo todos os infiltrados.`;
         roleIntro.showModal();
+        if (view.role==='Infiltrado') audio.cue('cassationSummons');
       }
     }
     let suppressXpEffect = false;
