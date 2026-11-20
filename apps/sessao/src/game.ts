@@ -607,6 +607,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           showStatus:running || worldSnapshot.officeHolders.has(id),
         });
         if (own) {
+          if (powerOut) sprite.setDepth(HEIGHT+91);
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
