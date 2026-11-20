@@ -11,6 +11,8 @@ Em outro terminal, execute `bun run dev` e abra http://localhost:5175. Crie uma 
 
 Para testar sabotagens, rode o servidor com `SESSAO_LOCAL_SOLO=1 bun run server` e clique em **Iniciar como infiltrado** no lobby. É possível provocar a pane com uma pessoa. Abra a mesma sala em duas abas antes de começar se quiser testar também o reparo simultâneo.
 
+Para depurar quedas de desempenho, clique em **FPS** no topo do mapa ou aperte **F8**. O botão passa a mostrar o FPS medido pelo Phaser, atualizado a cada meio segundo. Clique ou aperte F8 novamente para ocultar o valor.
+
 `bun run check` verifica os tipos, testa clientes contra um servidor Bun e gera o build web. Consulte a [arquitetura](ARCHITECTURE.md) para localizar regras, estado e pontos de extensão.
 
 Os móveis e as caricaturas foram gerados com ImageGen. As caricaturas foram feitas de frente, perfil e costas, com duas poses de passada para cada direção, e empacotadas em quadros de 128×128. O perfil é espelhado no jogo para a quarta direção. O mapa usa um atlas de móveis próprio, pisos e paredes montados no Phaser.

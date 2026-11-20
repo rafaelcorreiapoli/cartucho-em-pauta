@@ -1,3 +1,4 @@
+import {createFpsDebug} from './fps-debug';
 import {sprintDust} from './sprint-dust';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
@@ -681,6 +682,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     width:Math.max(1,parent.clientWidth),height:Math.max(1,parent.clientHeight),
     scale:{mode:Phaser.Scale.NONE},
   });
+  const fpsDebug = createFpsDebug(parent,game);
   return {
     update(snapshot: Player[]) {
       players = snapshot;
@@ -771,6 +773,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
     },
     destroy() {
+      fpsDebug.destroy();
       listeners.abort();
       resizeObserver?.disconnect();
       game.destroy(true);

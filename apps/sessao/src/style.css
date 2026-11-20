@@ -362,3 +362,12 @@ body:has(.tutorial-spotlight) .hud-help-popover { z-index:1002; }
 .tutorial-panel p strong { color:#f3f1dc; font-weight:750; }
 .join-fields.join-invite { grid-template-columns:minmax(0,1fr); gap:1rem; }
 .join-invite #join { width:100%; min-height:48px; font-size:1.05rem; }
+
+.fps-debug {
+  position:absolute; top:max(12px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+  z-index:1; min-width:72px; padding:6px 10px; border:1px solid #817a60; border-radius:6px;
+  background:#171e1eee; color:#f5eacb; font:600 12px/1.4 monospace; font-variant-numeric:tabular-nums;
+  cursor:pointer;
+}
+.fps-debug[aria-pressed="true"] { color:#9cf5b8; }
+.fps-debug:focus-visible { outline:2px solid #ffdb83; outline-offset:3px; }
