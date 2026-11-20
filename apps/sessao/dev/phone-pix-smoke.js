@@ -32,7 +32,9 @@ async page => {
       const input = document.querySelector('#lobby-invite-url');
       return input.value.slice(input.selectionStart,input.selectionEnd)===value;
     },invite);
-    await receiver.goto(invite);
+    const localInvite = new URL(page.url());
+    localInvite.searchParams.set('sala',code);
+    await receiver.goto(localInvite.href);
     await receiver.getByRole('textbox',{name:'Seu nick'}).fill('Bia');
     if (await receiver.getByRole('textbox',{name:'Código da sala'}).inputValue()!==code) throw Error('O convite não preenche a sala');
     await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
@@ -257,7 +259,9 @@ async page => {
     await page.getByRole('textbox',{name:'Seu nick'}).fill('Denúncia QA');
     await page.getByRole('button',{name:'Criar sala'}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).waitFor();
-    await receiver.goto(await page.getByLabel('Link da sala').inputValue());
+    const nextInvite = new URL(page.url());
+    nextInvite.searchParams.set('sala',new URL(await page.getByLabel('Link da sala').inputValue()).searchParams.get('sala'));
+    await receiver.goto(nextInvite.href);
     await receiver.getByRole('textbox',{name:'Seu nick'}).fill('Jogo QA');
     await receiver.getByRole('button',{name:'Entrar',exact:true}).click();
     await receiver.locator('#lobby-back').waitFor();
