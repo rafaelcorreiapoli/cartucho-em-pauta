@@ -14,6 +14,33 @@ async (page) => {
     const {worldAssets} = await import('/src/world-assets.ts');
     const {visitorRoster} = await import('/src/visitors.ts');
     const qa = window.qa, scene = qa.scene;
+    // Validate actual pixels: a regular-grid source crop once leaked neighboring furniture.
+    let atlasFrames = 0;
+    for (const size of [384,768]) {
+      const image = new Image(); image.src = `/assets/world-hd/office-${size}.webp`; await image.decode();
+      const height = size*112/192;
+      const canvas = document.createElement('canvas'); canvas.width=size;canvas.height=height;
+      const ctx=canvas.getContext('2d');
+      for (let frame=0;frame<6;frame++) {
+        ctx.clearRect(0,0,size,height);ctx.drawImage(image,frame%2*size,Math.floor(frame/2)*height,size,height,0,0,size,height);
+        const pixels=ctx.getImageData(0,0,size,height).data, mask=new Uint8Array(size*height),queue=new Uint32Array(size*height);
+        let opaque=0,largest=0,left=size,right=-1,top=height,bottom=-1;
+        for (let i=0;i<mask.length;i++) if(pixels[i*4+3]>32) {mask[i]=1;opaque++;const x=i%size,y=Math.floor(i/size);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+        for (let i=0;i<mask.length;i++) if(mask[i]) {
+          let read=0,write=1;queue[0]=i;mask[i]=0;
+          while(read<write) {
+            const n=queue[read++],x=n%size,y=Math.floor(n/size);
+            for (const next of [x>0?n-1:-1,x<size-1?n+1:-1,y>0?n-size:-1,y<height-1?n+size:-1]) if(next>=0&&mask[next]) {mask[next]=0;queue[write++]=next;}
+          }
+          largest=Math.max(largest,write);
+        }
+        if (!opaque || largest/opaque<.995) throw new Error(`Foreign furniture fragments in frame ${frame}/${size}: ${largest}/${opaque}`);
+        if ((right-left+1)/size<.94 || (bottom-top+1)/height<.94) throw new Error(`Furniture proportions no longer match the original frame: ${frame}/${size}`);
+        atlasFrames++;
+      }
+    }
+    const counter=scene.children.list.find(image=>image.texture && worldArtKey(image)==='plenary-counter');
+    if (!counter || counter.displayWidth!==132 || counter.displayHeight!==38) throw new Error('Plenary counter lost its existing map footprint');
     const terminal = scene.add.image(140,146,'security-terminal').setDisplaySize(45,34);
     const desk = scene.add.image(145,146,'office',1).setDisplaySize(45,23);
     const npc = scene.add.image(150,146,'npc-vendor').setDisplaySize(38,38);
@@ -60,7 +87,9 @@ async (page) => {
       const art=adaptiveWalkArt(scene,0,id,9.3);
       if (!scene.anims.exists(`${art.animation}-2`)) throw new Error(`Missing walk directions: ${id}`);
     }
-    return {low,medium,high,animationSheets:animations.length,safeState:true,trump:'unchanged'};
+    updateWorldArt(scene,9.3,{x:400,y:550,width:160,height:100}); await settle(); updateWorldArt(scene,9.3,{x:400,y:550,width:160,height:100});
+    if (counter.texture.key!=='hires:plenary-counter:2048' || counter.displayWidth!==132 || counter.displayHeight!==38) throw new Error('Large plenary counter did not use its independent high-resolution texture');
+    return {atlasFrames,counterTier:2048,low,medium,high,animationSheets:animations.length,safeState:true,trump:'unchanged'};
   });
   await context.close();
   const ui=[];

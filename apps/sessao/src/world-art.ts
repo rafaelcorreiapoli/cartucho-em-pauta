@@ -90,6 +90,7 @@ export function preloadWorldArt(scene: Phaser.Scene) {
   for (const { texture, sprite } of Object.values(installationArt)) {
     loadWorldImage(scene, texture, sprite);
   }
+  loadWorldImage(scene, 'plenary-counter', 'plenary-counter.webp');
   loadWorldImage(scene, 'cash-briefcase', 'maleta-social.png');
   for (const [key, weapon] of Object.entries(weapons)) {
     loadWorldImage(scene, `weapon-${key}`, weapon.sprite);

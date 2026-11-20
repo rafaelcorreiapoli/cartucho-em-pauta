@@ -15,3 +15,9 @@ Optional positional prefixes restrict export, for example `project-` or `marcos-
 Generated files live in `public/assets/world-hd`; `src/world-assets.json` registers shipped variants. Animated actors use the existing lazy Phaser selection. Static world art uses the same loader and preserves frame index, world size, origin and safe state. Only render demand above the original frame size requests a larger texture; off-camera static images are skipped. Browser images use native `srcset`/`sizes`; the portrait atlas uses CSS `image-set` for dense screens. Failing optional files retain the base art.
 
 Open `/sprites.html` to inspect players, visitors, Federal, NPCs and **Objetos e interface**, comparing Anterior/128/256/512 with valid bounds and margins. Rectangular furniture and portrait atlases are shown as complete sheets. Original files remain available for comparison; artistic refinement is independent from resolution validation.
+
+## Office atlas correction
+
+The original furniture source is an illustration containing six unevenly spaced objects, not a regular grid. `frameBoxes` records each complete object's crop in the original master; neighboring fragments are removed before export. These atlas cells retain the existing per-frame X/Y proportions because map furniture dimensions compensate for the legacy 192×112 frame. Uniform aspect fitting would make chairs/cabinets too narrow.
+
+The 132×38 plenary counter uses an independent image instead of an atlas cell, with lazy 1024/2048 detail in addition to the smaller tiers. Its ImageGen restoration uses the complete original counter as reference; source, input and prompt are archived here. The map footprint and camera coverage remain unchanged. Browser regression checks inspect all twelve exported furniture frames for detached fragments and legacy occupancy, and verify the counter's real map dimensions and 2048 selection.

@@ -2163,7 +2163,46 @@
     "masterSize": [
       1536,
       1024
-    ]
+    ],
+    "frameBoxes": [
+      [
+        30,
+        140,
+        630,
+        451
+      ],
+      [
+        640,
+        104,
+        1080,
+        443
+      ],
+      [
+        1160,
+        30,
+        1460,
+        484
+      ],
+      [
+        60,
+        516,
+        552,
+        1002
+      ],
+      [
+        668,
+        525,
+        938,
+        998
+      ],
+      [
+        1184,
+        516,
+        1386,
+        1002
+      ]
+    ],
+    "stretchToLegacyFrame": true
   },
   {
     "id": "cast-portrait-0",
@@ -2714,18 +2753,47 @@
     ]
   },
   {
+    "id": "plenary-counter",
+    "original": "plenary-counter.webp",
+    "kind": "image",
+    "resolutions": [
+      128,
+      256,
+      512,
+      1024,
+      2048
+    ],
+    "stretchToLegacyFrame": true,
+    "sourceKind": "restored",
+    "sourceFile": "exec-7907d60d-bff3-4ace-8e42-24fd3c21e147.png",
+    "sourceSha256": "4cf4b3b0ada2995d444adf319b85d57e7ddc29ac2cf15d471cc585fc6488f06a",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "masterSize": [
+      1774,
+      887
+    ],
+    "prompt": "Use case: identity-preserve restoration. Faithfully restore this exact Brazilian plenary curved wooden counter as a high-resolution transparent game asset. Preserve the complete front and curved ends, polished warm brown wood, three microphones at the same positions, green upholstered front panels with gold borders, centered Brazilian coat of arms, camera angle, perspective, proportions and silhouette. Reconstruct fine crisp woodgrain, microphone edges, gold trim and emblem details without changing the design, adding objects or changing colors. Smooth illustrated contours rather than pixelated stair steps. Output a wide roughly 2:1 composition, target 2048x1024 with genuinely transparent background. Keep the entire counter and every microphone inside the canvas with a small transparent margin. Remove any colored artifacts behind/above the counter; no neighboring furniture, no text, background, floor, grid or new shadows. This is the exact counter used in the game, not a new design."
+  },
+  {
     "id": "capa-invisibilidade",
     "original": "capa-invisibilidade.webp",
     "kind": "image",
-    "sourceFile": "capa-invisibilidade.webp",
-    "sourceSha256": "0bf47cf2495d569f2c1d725481c1d7b9d2ba6694caaceb352b0aba1febeb530b",
-    "nativeSize": [
-      256,
-      256
+    "sourceKind": "vector",
+    "sourceFile": "capa-invisibilidade.svg",
+    "sourceSha256": "6606d8c9015f2e8b0378250769bc22931cd949a06af4a127456984d6bc634f11",
+    "vectorViewBox": [
+      0,
+      0,
+      128,
+      128
     ],
     "masterSize": [
-      256,
-      256
-    ]
+      1024,
+      1024
+    ],
+    "rasterizer": "Chromium Canvas2D at 1024x1024 from the repository SVG"
   }
 ]
