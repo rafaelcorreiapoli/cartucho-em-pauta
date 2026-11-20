@@ -81,6 +81,7 @@ export class Gameplay {
   private serial = 0;
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
+  private trackerReadyAt = new Map<number,number>();
   private briefcaseTrackingUntil = new Map<string,number>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
@@ -200,6 +201,7 @@ export class Gameplay {
     this.exposed.clear();
     this.concealedUntil.clear();
     this.briefcaseTrackingUntil.clear();
+    this.trackerReadyAt.clear();
     this.scanning.clear();
     this.binocularUse.clear();
     this.pendingInstallations.clear();
@@ -831,6 +833,7 @@ export class Gameplay {
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
       const seconds = item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
+        item.kind==='briefcaseTracker' ? Math.ceil(Math.max(0,(this.trackerReadyAt.get(item.id) ?? 0)-world.now)/1000) :
         item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
@@ -855,7 +858,7 @@ export class Gameplay {
       briefcaseTracking:this.briefcaseTracking(id,world),
       xrayVision:this.xrayVision(player,world),
       npcNearby:player.knockedOut || player.carrying ? [] : this.dialogues.nearbyNpcs(player),
-      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id)),
+      dialogue:player.knockedOut || player.carrying ? undefined : this.dialogues.view(player,this.dialogueEligibility(id,world),this.documentsForProtocol(id),world.missionSwapPrice?.(id) ?? 0),
       vitality:this.combat.view(player,world.now),
       treatment:this.treatmentOffer(player,world.now),
       modulator,
@@ -1116,7 +1119,7 @@ export class Gameplay {
     const officeOptions:OfficeOption[] = [];
     const channel = this.privateOffices.channels.get(player.id);
     if (channel) return {offices,ownOffice,officeFurnishings,officeOptions:[{kind:'office-cancel',label:'Cancelar'}],
-      officeChannel:{kind:channel.kind,officeId:channel.office.layout.id,label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
+      officeChannel:{kind:channel.kind,officeId:channel.office.layout.id,label:channel.kind==='office-cash' ? 'Embolsando dinheiro' : channel.kind.startsWith('office-upgrade-') ? `Reforçando ${channel.kind.endsWith('door') ? 'porta' : channel.kind.endsWith('safe') ? 'cofre' : 'armário'}` : 'Arrombando',elapsed:Math.floor((now-channel.started)/100)*100,duration:channel.ends-channel.started}};
 
     const items = this.inventory(player.id).map(item=>item.data);
     const tools = items.filter(item=>'attack' in objects[item.kind]).sort((a,b)=>
@@ -1164,6 +1167,8 @@ export class Gameplay {
       if (!own && this.privateOffices.near(player,office,'safe')) breach('safe');
       if (own && this.privateOffices.near(player,office,'safe')) {
         upgrade('safe',office.safeLevel);
+        const trap = items.find(item=>item.kind==='safeTrap');
+        if (!office.safeTrap && trap) add('office-trap-safe','Instalar Seguro Antiarrombamento',trap.id);
         for (const item of items) {
           const amount = cashAmount(item);
           if (amount) add('office-cash',`Embolsar ${money(amount)} · ${objects[item.kind].name}`,item.id);
@@ -1263,6 +1268,15 @@ export class Gameplay {
       return this.reject(player,world,kind==='office-breach-door' || kind==='office-breach-cabinet' || kind==='office-breach-safe'
         ? 'Você precisa de uma ferramenta de arrombamento.' : 'O objeto não está com você.');
     }
+    if (kind==='office-trap-safe') {
+      if (!own || !offices.near(player,office,'safe')) return this.reject(player,world,'Instale a armadilha no seu próprio cofre.');
+      if (item.data.kind!=='safeTrap') return this.reject(player,world,'Armadilha incompatível.');
+      if (office.safeTrap) return this.reject(player,world,'O cofre já está protegido por um Seguro Antiarrombamento.');
+      office.safeTrap = item.data.id;
+      this.remove(item);
+      this.event(world,player,'installed',item.data,undefined,{place:office.layout.id,witnesses:[]});
+      return 'Seguro Antiarrombamento instalado no seu cofre.';
+    }
     if (kind==='office-install') {
       const decor = decorSlots.find(slot=>slot===item.data.kind);
       if (!decor) return this.reject(player,world,'Decoração incompatível.');
@@ -1278,15 +1292,16 @@ export class Gameplay {
       if (!own || !offices.near(player,office,target)) return this.reject(player,world,'Use o reforço no seu gabinete.');
       if (item.data.kind!==(target==='door' ? 'doorLock' : 'cabinetLock')) return this.reject(player,world,'Reforço incompatível.');
       if (office[level]>=officeRules.maxSecurity) return this.reject(player,world,'Segurança no nível máximo.');
-      office[level]++;
-      this.remove(item);
-      this.event(world,player,'security-upgraded',item.data,undefined,{place:office.layout.id});
-      return `Segurança nível ${office[level]}.`;
+      if (offices.channels.has(player.id)) return this.reject(player,world,'Já existe uma interação em andamento.');
+      const duration = officeRules.reinforceMs;
+      offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,
+        ends:now+interactionDuration(player,duration),baseDuration:duration,level:office[level]});
+      return 'Reforço iniciado.';
     }
     if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return this.reject(player,world,'Ação indisponível.');
     if (kind==='office-breach-safe' && this.briefcasesFull(player.id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
     if (offices.channels.has(player.id)) return this.reject(player,world,'Já existe uma interação em andamento.');
-    const target = kind==='office-cash' || kind==='office-breach-safe' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+    const target = kind==='office-cash' || kind.endsWith('-safe') ? 'safe' : kind.endsWith('-door') ? 'door' : 'cabinet';
     if (!offices.near(player,office,target)) return this.reject(player,world,'Aproxime-se do alvo.');
     if (!own && target!=='door' && (world.plenary || this.ownerInside(office,world.players))) return this.reject(player,world,'O titular está no gabinete.');
     const level = this.toolLevel(item.data);
@@ -1323,16 +1338,18 @@ export class Gameplay {
       const player = world.players.find(player=>player.id===id);
       const item = this.items.get(channel.item);
       const {office,kind} = channel;
-      const target = kind==='office-cash' || kind==='office-breach-safe' ? 'safe' : kind==='office-breach-door' ? 'door' : 'cabinet';
+      const target = kind==='office-cash' || kind.endsWith('-safe') ? 'safe' : kind.endsWith('-door') ? 'door' : 'cabinet';
+      const reinforcing = kind.startsWith('office-upgrade-');
+      const level = target==='door' ? 'doorLevel' : target==='safe' ? 'safeLevel' : 'cabinetLevel';
       const valid = exploring && player && !player.knockedOut && !player.carrying && !player.moving &&
         world.present?.(id)!==false && player.x===channel.origin.x && player.y===channel.origin.y &&
         item && 'holder' in item.place && item.place.holder===id && offices.near(player,office,target) &&
-        (kind==='office-cash' ? office.owner===id : (target==='door' || !this.ownerInside(office,world.players)) && offices.breachTime(office,target,channel.level,world.now)===channel.baseDuration);
+        (reinforcing ? office.owner===id && office[level]===channel.level && office[level]<officeRules.maxSecurity : kind==='office-cash' ? office.owner===id : (target==='door' || !this.ownerInside(office,world.players)) && offices.breachTime(office,target,channel.level,world.now)===channel.baseDuration);
       if (valid && world.now<channel.ends) continue;
       offices.channels.delete(id);
       if (player) player.pocketing = undefined;
       if (!valid) {
-        const label = kind==='office-cash' ? 'Ação interrompida.' : 'Arrombamento interrompido.';
+        const label = reinforcing ? 'Reforço interrompido.' : kind==='office-cash' ? 'Ação interrompida.' : 'Arrombamento interrompido.';
         const moved = player && (player.moving || player.x!==channel.origin.x || player.y!==channel.origin.y);
         (world.actionFailed ?? world.feedback)?.(id,moved ? `${label} Fique parado durante a ação.` : label);
         continue;
@@ -1342,7 +1359,29 @@ export class Gameplay {
         continue;
       }
       this.remove(item);
+      if (reinforcing) {
+        office[level]++;
+        this.event(world,player,'security-upgraded',item.data,undefined,{place:office.layout.id});
+        world.feedback?.(id,`Segurança nível ${office[level]}.`);
+        continue;
+      }
       if (kind==='office-breach-safe') {
+        if (office.safeTrap!==undefined) {
+          const trap = office.safeTrap;
+          office.safeTrap = undefined;
+          this.combat.knockOut(player,world.now);
+          this.transport.detach(player,world);
+          this.dialogues.close(player.id);
+          this.stopModulator(player.id);
+          this.phone.leave(player,world);
+          this.stopBinoculars(player.id);
+          for (const carried of this.inventory(player.id)) if (cashAmount(carried.data)) this.dropItem(player,carried,world);
+          this.event(world,player,'safe-trap-triggered',{id:trap,kind:'safeTrap'},office.owner,{place:office.layout.id,witnesses:[]});
+          world.feedback?.(player.id,'O Seguro Antiarrombamento explodiu! Você foi nocauteado e não levou o dinheiro.');
+          if (office.owner) world.feedback?.(office.owner,`Seu Seguro Antiarrombamento explodiu no ${office.layout.name}. O invasor foi nocauteado e seu dinheiro está seguro.`);
+          continue;
+        }
+
         const owner = office.owner!;
         const amount = world.lootWallet?.(owner,officeRules.safeLootFraction) ?? 0;
         if (!amount) {
@@ -1398,7 +1437,7 @@ export class Gameplay {
   private consumeFood(player:Player, effect:FoodEffect) {
     if (effect.hp) this.combat.heal(player,effect.hp);
     const max = player.staminaMax ?? MAX_STAMINA;
-    if (effect.stamina) player.stamina = Math.min(max,(player.stamina ?? max)+effect.stamina);
+    if (effect.stamina) player.stamina = Math.max(0,Math.min(max,(player.stamina ?? max)+effect.stamina));
     if (effect.speed) player.speedModifier = {factor:effect.speed.factor,remainingMs:effect.speed.durationMs};
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
@@ -1602,7 +1641,7 @@ export class Gameplay {
     if (player.carrying && !['photo','selfie','inspect-down'].includes(action.kind)) return this.reject(player,world,'Solte o jogador primeiro.');
     if (officeActions.some(kind=>kind===action.kind)) return this.officeAction(player,action,world);
     if (action.kind==='talk' || action.kind==='open-shop') {
-      const error = this.dialogues.open(player,action.target,action.kind==='open-shop',action.target==='silvio' && world.missionSwapUsed?.(id));
+      const error = this.dialogues.open(player,action.target,action.kind==='open-shop');
       if (!error) publishGameplay(world,player,'npc-interacted',{target:action.target});
       return error ? this.reject(player,world,error) : undefined;
     }
@@ -1623,6 +1662,16 @@ export class Gameplay {
         callCassation:()=>world.callCassation ? world.callCassation(player) : 'Cassação indisponível.',
         swapMissions:()=>world.swapMissions?.(id) ?? 'unavailable',
       });
+    if (action.kind==='use-tracker') {
+      const item = this.wearing(id,'briefcaseTracker');
+      if (!item) return this.reject(player,world,'Equipe o Rastreador de maletas.');
+      if ((this.trackerReadyAt.get(item.id) ?? 0)>world.now) return this.reject(player,world,'Rastreador em recarga.');
+      const until = world.now+briefcaseTracker.duration;
+      this.briefcaseTrackingUntil.set(id,until);
+      this.trackerReadyAt.set(item.id,until+briefcaseTracker.cooldown);
+      this.event(world,player,'used',item,undefined,{witnesses:[]});
+      return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
+    }
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return this.reject(player,world,'Equipe o Binóculo.');
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Binóculo em recarga.');
@@ -1789,13 +1838,6 @@ export class Gameplay {
       case 'use':
         if (cashAmount(data)) return this.reject(player,world,'Leve o dinheiro ao cofre do seu gabinete.');
         if (!('use' in definition)) return this.reject(player,world,'Este objeto não pode ser usado dessa forma.');
-        if (data.kind==='briefcaseTracker') {
-          if ((this.briefcaseTrackingUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'O rastreador já está ativo.');
-          this.remove(item);
-          this.briefcaseTrackingUntil.set(id,world.now+briefcaseTracker.duration);
-          this.event(world,player,'used',data,undefined,{witnesses:[]});
-          return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
-        }
         if (data.kind==='mensalUnderwear') {
           if ((this.concealedUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'Você já está ocultando dinheiro.');
           this.remove(item);

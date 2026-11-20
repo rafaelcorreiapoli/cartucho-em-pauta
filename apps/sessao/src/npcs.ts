@@ -7,7 +7,8 @@ export const snackBar = {
   name:'Lanchonete', bounds:roomBounds('Lanchonete'), door:mapDoor('Lanchonete'),
 } as const;
 
-export const cassationFee = 10;
+export const cassationFee = 0;
+export const cassationCooldownMs = 60_000;
 
 export const npcs = {
   corregedor:{name:'Chapolin Colorado',sprite:'chapolin-colorado.webp',x:808,y:72,direction:0,
@@ -62,7 +63,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
   corregedoria:{
     start:{
       text:'A convocação avisa o Plenário. Cada eleitor poderá votar em quem suspeita ser infiltrado.',
-      options:[{id:'cassation',label:'Convocar cassação · '+money(cassationFee),action:'call-cassation'},
+      options:[{id:'cassation',label:'Convocar cassação · Grátis',action:'call-cassation'},
         {id:'leave',label:'Encerrar',action:'close'}],
     },
   },
@@ -87,7 +88,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       ],
     },
     confirm:{
-      text:'A troca é grátis e vale uma vez por partida. Você perde o progresso das três missões atuais e fica com as recompensas que já ganhou.',
+      text:'A primeira troca é grátis. As próximas custam R$ 10 mil a mais a cada troca. Você perde o progresso das três missões atuais e fica com as recompensas que já ganhou.',
       options:[
         {id:'confirm-trade',label:'Abrir os três envelopes',action:'swap-missions'},
         {id:'leave',label:'Ficar com a minha agenda',action:'close'},
@@ -97,8 +98,8 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
       text:'Ma ôe! Três missões novas na sua agenda. Pode levar, que o intervalo comercial acabou!',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
-    used:{
-      text:'Você já abriu seus três envelopes nesta partida. Agora é com você, meu colega!',
+    insufficient:{
+      text:'Seu saldo não cobre esta troca. Volte com mais dinheiro; sua agenda e o preço continuam iguais.',
       options:[{id:'leave',label:'Encerrar',action:'close'}],
     },
     unavailable:{

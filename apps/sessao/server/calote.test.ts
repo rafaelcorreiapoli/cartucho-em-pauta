@@ -118,6 +118,7 @@ test('cassation still eliminates infiltrators and wins calote before the session
   const match = start();
   const economy = Reflect.get(match,'economy') as PoliticalEconomy;
   economy.earn(ids[0],cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation({...players[0],...stations.audit},1)).toBeUndefined();
   const opens = 1+CASSATION_NOTICE_MS;
   match.advance(opens);
@@ -149,6 +150,7 @@ test('electoral elimination of the last infiltrator still wins calote',()=>{
 test('calote countdown follows the same paused match clock as salaries and session duration during ballots',()=>{
   const match = start();
   (Reflect.get(match,'economy') as PoliticalEconomy).earn(ids[0],cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation({...players[0],...stations.audit},0)).toBeUndefined();
   budget(match,-1,CASSATION_NOTICE_MS-1_000);
   match.advance(CASSATION_NOTICE_MS);

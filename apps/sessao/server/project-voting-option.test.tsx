@@ -75,6 +75,7 @@ test.each([true,false])('cassation still works without projects, elections=%s',(
   const match = new PlenaryMatch(1);
   match.start(ids[0],players,0,()=>.9,1,false,true,false,electionsEnabled);
   (Reflect.get(match,'economy') as PoliticalEconomy).earn(ids[0],cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // Isolate the ballot scenario from the opening cooldown.
   expect(match.callCassation({...players[0],...stations.audit},50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   match.advance(open);

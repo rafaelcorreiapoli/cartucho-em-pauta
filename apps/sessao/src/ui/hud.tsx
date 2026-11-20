@@ -74,8 +74,8 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
       </>}
       <Laurel right/>
     </HudHelp>
-    {calote && budget<0 && caloteIn!==undefined && <div className="calote-countdown" role="timer" aria-label="Tempo até o calote">
-      <HudIcon name="clock"/>Calote em <strong>{caloteIn} s</strong>
+    {calote && budget<0 && caloteIn!==undefined && <div className="calote-countdown" data-critical={caloteIn<=10} role="timer" aria-label="Tempo até o calote">
+      <HudIcon name="clock"/><span>DERROTA POR CALOTE EM</span><strong>{caloteIn} s</strong>
     </div>}
     <div className="congress-summary-row">
     {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"

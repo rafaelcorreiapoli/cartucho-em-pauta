@@ -163,3 +163,14 @@
   .automatic-projects-history header { margin-bottom:6px; }
   .automatic-projects-next strong { font-size:16px; }
 }
+
+.center-game-alert { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(90vw,1000px); z-index:55; pointer-events:none; user-select:none; text-align:center; color:#ffe2a0; font-family:system-ui,sans-serif; paint-order:stroke fill; -webkit-text-stroke:5px #23110a; text-shadow:0 4px 8px #0009; }
+.center-game-alert strong { display:block; font-size:clamp(28px,5.5vw,68px); font-weight:950; line-height:1.1; }
+.center-game-alert span { display:block; margin-top:.5rem; font-size:clamp(15px,2vw,23px); font-weight:800; -webkit-text-stroke:3px #23110a; }
+.center-game-alert[data-critical="true"] { color:#ff8570; }
+@media(prefers-reduced-motion:reduce) { .center-game-alert { animation:none; } }
+
+.calote-countdown { padding:.45rem .65rem; gap:.5rem; color:#ffe0bb; background:#682b24; border:1px solid #f18b64; border-radius:8px; font-weight:800; }
+.calote-countdown > span { font-size:.65rem; max-width:110px; line-height:1.25; }
+.calote-countdown > strong { font-size:1.35rem; color:#fff1d0; font-variant-numeric:tabular-nums; }
+.calote-countdown[data-critical="true"] { background:#941f24; border-color:#ffb39f; box-shadow:0 0 12px #ff493444; }

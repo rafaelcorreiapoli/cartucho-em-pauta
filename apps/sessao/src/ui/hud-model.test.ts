@@ -461,6 +461,7 @@ test('a pending project resumes its countdown after cassation',()=>{
   const hearingAt = hearingEnd-HEARING_MS;
   const noticeAt = hearingAt-CASSATION_NOTICE_MS;
   match.gameplayWorld([],0,()=>false).earn(player.id,cassationFee);
+  Reflect.set(match,'cassationReadyAt',0); // Isolate the ballot scenario from the opening cooldown.
   expect(match.callCassation({...player,...stations.audit},noticeAt)).toBeUndefined();
   const hud = createHudModel();
   hud.render(match.view(player.id,ids,noticeAt));

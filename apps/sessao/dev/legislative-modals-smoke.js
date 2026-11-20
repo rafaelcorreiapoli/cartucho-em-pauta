@@ -10,6 +10,7 @@ async page => {
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Modais QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const grant = page.getByRole('button',{name:/^Aplicar verba$/});
@@ -70,9 +71,11 @@ async page => {
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Projetos QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   const twoNpcs = page.locator('#parliamentarian-count [data-count="2"]');
   await twoNpcs.click();
   await twoNpcs.and(page.locator('[aria-pressed="true"]')).waitFor();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:'Secretaria · Falar com Enéas Carneiro'}).click();
@@ -158,11 +161,13 @@ async page => {
       await client.getByRole('button',{name:'Entrar',exact:true}).click();
       await client.locator('#lobby-back').waitFor();
     }
+    await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
+    if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     await Promise.all([page,disconnected,witness,fourth].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
     await page.getByRole('button',{name:/Falar com Chapolin Colorado/}).click();
-    await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · R\$ 100 mil/}).click();
+    await page.getByRole('dialog',{name:/Chapolin Colorado/}).getByRole('button',{name:/Convocar cassação · Grátis/}).click();
     const ballot = page.getByRole('region',{name:'Votação de cassação'});
     await ballot.getByRole('button',{name:'Bia',exact:true}).waitFor();
     await ballot.getByText('Convocada por').waitFor();
@@ -225,7 +230,9 @@ async page => {
   await page.setViewportSize({width:800,height:600});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Final QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.locator('#parliamentarian-count [data-count="0"]').click();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   const finale = page.locator('#session-finale');
   await page.locator('#session[data-phase="finished"]').waitFor();
