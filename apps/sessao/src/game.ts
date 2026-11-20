@@ -144,8 +144,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private assetsFailed = false;
 
     preload() {
-      this.load.on('progress',(value:number)=>loading(value*.99));
-      this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
+      const progress = (value:number)=>loading(value*.99);
+      const failed = ()=>{ this.assetsFailed = true; loading(-1); };
+      this.load.on('progress',progress);
+      this.load.on('loaderror',failed);
+      this.load.once('complete',()=>{
+        this.load.off('progress',progress);
+        this.load.off('loaderror',failed);
+      });
       const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp',...bills.map(bill=>bill.icon)];
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
