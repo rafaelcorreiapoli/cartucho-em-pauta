@@ -1241,3 +1241,18 @@
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #session-timers-mount { display:none; }
   #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #command-strip .right-hud { gap:0; }
 }
+
+/* Keep the electoral standing just above the two hotbar rows. */
+#election-indicator-mount {
+  position:fixed;
+  right:var(--hud-edge);
+  bottom:calc(var(--hud-edge) + 2 * var(--hot-slot) + var(--hot-gap) + 16px);
+  width:min(220px,calc(100vw - 2 * var(--hud-edge)));
+  margin:0;
+  background:radial-gradient(ellipse at right,#07100bd9,transparent 75%);
+}
+#session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #election-indicator-mount {
+  position:static;
+  width:100%;
+  background:none;
+}
