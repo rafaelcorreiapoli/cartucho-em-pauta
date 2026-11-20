@@ -2697,5 +2697,20 @@
       410,
       410
     ]
+  },
+  {
+    "id": "mina-terrestre",
+    "original": "mina-terrestre.webp",
+    "kind": "image",
+    "sourceFile": "exec-cafc97f8-d291-4905-840f-0a3fb23f7ae5.png",
+    "sourceSha256": "eafb7142bbce0637cbf4ebe805a4f17ce508f07685091030cae7fa210a65f92e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
   }
 ]

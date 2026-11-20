@@ -1,5 +1,6 @@
 import {expect, test} from 'bun:test';
 import {worldAssets, assetImageSources} from './world-assets';
+import {objects} from './gameplay';
 import {mapNpcs} from './npcs';
 import {visitorSheets} from './visitors';
 import {federalPatrolSheets} from './federal-patrol';
@@ -8,6 +9,7 @@ test('all requested NPCs, visitors, Federal, furniture and UI images ship real d
   expect(worldAssets['donald-trump.webp']).toBeUndefined();
   expect(worldAssets['retrato-donald-trump.webp']).toBeUndefined();
   expect(assetImageSources('donald-trump.webp')).not.toHaveProperty('srcSet');
+  for (const item of Object.values(objects)) expect(worldAssets[item.portrait]?.variants.some(v => v.size === 512)).toBe(true);
   for (const npc of Object.values(mapNpcs)) if (npc.sprite !== 'donald-trump.webp') expect(worldAssets[npc.sprite]?.variants.some(v => v.size === 512)).toBe(true);
   for (const sheet of [...visitorSheets,...federalPatrolSheets]) expect(Object.values(worldAssets).some(asset => asset?.id === sheet.key)).toBe(true);
   for (const filename of ['office-hd.png','retratos-elenco.webp','gabinete-cofre.webp','gabinete-cofre-aberto.webp','gabinete-armario.webp','gabinete-poltrona.webp','gabinete-tv.webp','gabinete-tapete.webp','terminal-seguranca.webp','painel-eletrico.webp','cadeira-reserva.webp','moldura-congresso.webp','retrato-tenis.webp','retrato-incendiario.webp','projetos/auxilio-churrasco.webp']) expect(worldAssets[filename]).toBeDefined();

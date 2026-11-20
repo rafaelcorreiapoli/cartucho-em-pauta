@@ -3573,5 +3573,34 @@
         "size": 512
       }
     ]
+  },
+  "mina-terrestre.webp": {
+    "id": "mina-terrestre",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:mina-terrestre:128",
+        "path": "assets/world-hd/mina-terrestre-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:mina-terrestre:256",
+        "path": "assets/world-hd/mina-terrestre-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:mina-terrestre:512",
+        "path": "assets/world-hd/mina-terrestre-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
   }
 }
