@@ -24,6 +24,7 @@ import { bills, canReachStation, recoveryPolicy, stations } from '../src/plenary
 import { PhotoAlbum } from './PhotoAlbum';
 import { NpcDialogues } from './NpcDialogues';
 import { Combat } from './Combat';
+import {GhostAdvisers} from './GhostAdvisers';
 import { Transport } from './Transport';
 import { canReachDownedPlayer } from '../src/interactions';
 import { firstAidKit, infirmary } from '../src/medical';
@@ -79,6 +80,7 @@ export class Gameplay {
   set projectVotingEnabled(enabled:boolean) { this.dialogues.projectVotingEnabled = enabled; }
   private dialogues = new NpcDialogues();
   private combat = new Combat();
+  readonly ghostAdvisers = new GhostAdvisers();
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
@@ -192,6 +194,7 @@ export class Gameplay {
   }
 
   reset(now:number,random = Math.random,players:Player[] = [], officeRandom = Math.random) {
+    this.ghostAdvisers.reset(now,random);
     this.stationCooldowns.reset();
     this.items.clear();
     for (const extinguisher of extinguisherSpawns) this.create('extinguisher',this.groundPlace('extinguisher',extinguisher,now));
@@ -685,6 +688,12 @@ export class Gameplay {
           targetInOwnOffice:this.ownsOfficeRoom(target.id,roomAt(target))};
         publishGameplay(world,attacker,'hit',{...details,damage});
         if (!target.knockedOut) return;
+        if (this.ghostAdvisers.has(target.id)) {
+          this.ghostAdvisers.kill(target.id);
+          this.combat.leave(target);
+          world.feedback?.(attacker.id,'Assessor fantasma eliminado. Despesa encerrada.');
+          return;
+        }
         this.transport.detach(target,world);
         publishGameplay(world,attacker,'character-knocked-out',{...details,targetInPlenary:inPlenary(target)});
         if (!target.npc) {
@@ -698,6 +707,7 @@ export class Gameplay {
         this.phone.leave(target,world);
       },
     });
+    this.ghostAdvisers.tick(world.incidentNow ?? world.now,exploring && !world.plenary,amount=>world.incidentExpense?.(amount));
     this.tickOfficeChannels(world,exploring);
     this.tickInstallations(world,exploring);
     this.updateMegaphone(world,exploring);
@@ -1554,6 +1564,13 @@ export class Gameplay {
           ? 'Este produto não é vendido aqui.' : 'Produto indisponível.';
       }
       const {kind,price,subsidy} = product;
+      if (kind==='ghostAdviser') {
+        if (!world.isInfiltrator?.(id)) return 'Contratação exclusiva dos infiltrados.';
+        if (!world.spend?.(id,price)) return 'Saldo insuficiente.';
+        this.ghostAdvisers.hire(world.incidentNow ?? world.now);
+        confirmation = 'Assessor fantasma contratado.';
+        return;
+      }
       const storage = marketPurchaseSlot(kind,this.inventory(id).map(({data})=>data),this.equipped(id).map(({data})=>data),direct);
       const layout = isOfficeFurniture(kind) ? this.privateOffices.ownedBy(id) : undefined;
       if (isOfficeFurniture(kind)) {

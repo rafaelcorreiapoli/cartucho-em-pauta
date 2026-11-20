@@ -91,6 +91,7 @@ export class SessionRoom extends Room {
       id=>this.match.training || this.voice.has(id));
     return {
       ...world,
+      players:world.players.concat(this.gameplay.ghostAdvisers.players),
       // Physical actions continue while the legislative clock is paused.
       now:this.clock.currentTime,
       detain:(id:string,duration:number)=>{
@@ -103,7 +104,7 @@ export class SessionRoom extends Room {
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       actionFailed:(id:string,message:string)=>this.clients.getById(id)?.send('map-action-failed',message),
       vision:(id:string)=>this.gameplay.vision(id,this.clock.currentTime),
-      present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.concat(this.gameplay.federalPlayers).some(player=>player.id===id),
+      present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.concat(this.gameplay.federalPlayers).some(player=>player.id===id) || this.gameplay.ghostAdvisers.has(id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         if (!world.publish({...event,at:this.match.gameTime(event.at)})) return;
         if (event.type==='safe-trap-triggered') {
@@ -821,6 +822,7 @@ export class SessionRoom extends Room {
           continue;
         }
         const view = this.match.view(id,ids,realNow,this.match.contacts(state.player,players));
+        if (this.match.running) view.ghostAdvisers = {count:this.gameplay.ghostAdvisers.players.length,paused:this.match.phase!=='negotiation'};
         if (broadcaster && broadcaster!==id) view.megaphoneActive = true;
         if (this.match.running) {
           const atDesk = this.match.canFileComplaint(state.player,now);

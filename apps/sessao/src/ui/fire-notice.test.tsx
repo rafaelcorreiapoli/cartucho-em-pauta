@@ -40,3 +40,9 @@ test('the shop describes the fuse duration used by the fire simulation',()=>{
   fire.advance(ignition,true);
   expect(fire.view(true)?.[0]?.site).toBe(0);
 });
+
+test('calote fire notice announces public spending instead of stability loss',()=>{
+  const markup=renderToStaticMarkup(<FireNotice fire={{site:0,remaining:30,damage:2,paused:false,budget:true}}/>);
+  expect(markup).toContain('mil do orçamento');
+  expect(markup).not.toContain('de estabilidade');
+});
