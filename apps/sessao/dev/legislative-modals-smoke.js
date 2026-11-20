@@ -130,7 +130,7 @@ async page => {
   await page.keyboard.press('Shift+Digit1');
   if (await objectDialog.getByRole('button',{name:'Vincular ao slot 1'}).isEnabled()) throw Error('Documento pode ser vinculado à hotbar.');
   await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor();
-  await runShortcut(objectDialog.locator('summary'),/^Inspecionar$/);
+  await runShortcut(objectDialog.locator('summary'),/^Mais detalhes$/);
   await objectDialog.locator('details[open]').getByText(/Assinaturas 0\//).waitFor();
   await page.keyboard.press('Shift+Digit2');
   if (await objectDialog.getByRole('button',{name:'Vincular ao slot 2'}).isEnabled()) throw Error('Documento pode ser vinculado à hotbar.');
