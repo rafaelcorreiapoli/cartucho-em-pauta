@@ -10,8 +10,18 @@ export function wallVision(origin:Motion,radius:number,showWallFaces=false) {
   }
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
-    let distance = radius;
-    for (const wall of nearby) distance = Math.min(distance,wallEntry(origin,dx,dy,wall,showWallFaces));
+    let first = radius, distance = radius;
+    for (const wall of nearby) {
+      const hit = wallEntry(origin,dx,dy,wall,showWallFaces);
+      if (!hit) continue;
+      if (hit.near<first) {
+        first = hit.near;
+        distance = hit.visible;
+      } else if (hit.near===first) distance = Math.max(distance,hit.visible);
+    }
+    // Choose the first physical surface before revealing its artwork. A divider
+    // behind that surface must not cast a shadow across the same visible face.
+    distance = Math.min(radius,distance);
     return {x:dx*distance,y:dy*distance,dx,dy};
   });
 }
@@ -21,12 +31,12 @@ function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect,showWallFace
   const [nearY,farY] = slab(origin.y,dy,y,y+h);
   const near = Math.max(nearX,nearY,0);
   const far = Math.min(farX,farY);
-  if (near>far) return Infinity;
+  if (near>far) return;
   // Horizontal wall art depicts its south-facing surface. Reveal that surface
   // only from the south; from the north it belongs to the room behind the wall.
   // Vertical walls retain their side visibility, without lighting end-on rays.
   const broadFace = w>=h ? dy<0 && nearY>=nearX : nearX>=nearY;
-  return showWallFaces && broadFace ? Math.max(near,far) : near;
+  return {near,visible:showWallFaces && broadFace ? Math.max(near,far) : near};
 }
 
 function slab(origin:number,direction:number,min:number,max:number) {

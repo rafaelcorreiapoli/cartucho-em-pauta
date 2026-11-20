@@ -152,3 +152,30 @@ test('the same horizontal wall face becomes visible from its own room to the sou
   expect(south.y+southSide!.y).toBeCloseTo(5010);
   expect(characterVisible(north,south,35)).toBe(false);
 });
+
+
+test('a divider ending in the upper wall cannot shadow its corridor-facing surface',()=>{
+  const horizontal = [5000,5010,60,8] as const;
+  const divider = [5030,4980,4,38] as const;
+  const origin = {x:5020,y:5040};
+  for (const barriers of [[horizontal,divider],[divider,horizontal]] as const) {
+    const rays = wallVision({...origin,barriers},60,true);
+    const baseline = wallVision({...origin,barriers:[horizontal]},60,true);
+    for (const ray of rays.filter(ray=>ray.dy<0)) {
+      const atFront = origin.x+(5018-origin.y)*ray.dx/ray.dy;
+      const atBack = origin.x+(5010-origin.y)*ray.dx/ray.dy;
+      if (atFront>5000 && atFront<5060 && atBack>5000 && atBack<5060) {
+        expect(origin.y+ray.y).toBeCloseTo(5010);
+      }
+    }
+    const north = rays.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+    expect(north?.y).toBeCloseTo(baseline.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0)!.y);
+    expect(characterVisible({...origin,barriers},{x:5032,y:5000},60)).toBe(false);
+  }
+});
+
+test('a divider protruding into the corridor still blocks the upper wall face',()=>{
+  const origin = {x:5020,y:5040,barriers:[[5000,5010,60,8],[5018,5000,4,30]] as const};
+  const north = wallVision(origin,60,true).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+  expect(north?.y).toBeCloseTo(-10);
+});
