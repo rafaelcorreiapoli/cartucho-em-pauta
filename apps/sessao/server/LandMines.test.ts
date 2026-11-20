@@ -2,7 +2,8 @@ import {expect,test} from 'bun:test';
 import {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
 import {consumableAction,type GameplayEvent} from '../src/gameplay';
-import type {Player} from '../src/map';
+import {canStand,type Player} from '../src/map';
+import {npcs,treasurer} from '../src/npcs';
 import {landMine} from '../src/land-mines';
 import {marketProduct,equipmentCategoryKinds} from '../src/market-catalog';
 function setup() {
@@ -78,3 +79,21 @@ test('ownership is enforced, reset removes mines, distant players cannot see the
   game.reset(world.now,()=>.5,world.players);
   expect(game.view(owner,world).mines).toEqual([]);
 });
+
+for (const [id,npc] of Object.entries({...npcs,treasurer})) {
+  test(`mine planting rejects the ${id} interaction area with map error feedback and keeps the item`,()=>{
+    const {game,world,owner,item,plant} = setup();
+    const failures:{id:string;message:string}[] = [];
+    world.actionFailed=(id,message)=>failures.push({id,message});
+    const point = 'interaction' in npc ? npc.interaction : {x:npc.x,y:npc.y+11};
+    Object.assign(owner,point);
+    expect(canStand(owner.x,owner.y)).toBe(true);
+    const message = plant();
+    expect(message).toBe('Não é possível implantar minas em áreas de interação com NPCs.');
+    expect(failures).toEqual([{id:owner.id,message:message!}]);
+    expect(game.view(owner,world).inventory.some(entry=>entry.id===item.id)).toBe(true);
+    expect(game.view(owner,world).mines).toEqual([]);
+    Object.assign(owner,{x:140,y:146});
+    expect(plant()).toBe('Mina instalada. Afaste-se: ela arma em 1,5 s.');
+  });
+}
