@@ -472,7 +472,7 @@ for (const [kind,hp,stamina] of consumableCases) {
     Object.assign(bob,npcs.snackVendor.interaction);
     const token = openShop(bob,'snackVendor');
     const buy = {kind:'shop-buy',target:kind,token} as const;
-    if (['pizza','chocolates','coffee'].includes(kind)) {
+    if (['pizza','chocolates','coffee','energyDrink'].includes(kind)) {
       expect(game.act(bob,buy,world)).toBe('Compra guardada no inventário.');
       expect(game.act(bob,buy,world)).toBe('Abra o catálogo do vendedor.');
       expect(balance.get(bob.id)).toBeCloseTo(12-foods[kind].price,5);
@@ -499,13 +499,14 @@ for (const [kind,hp,stamina] of consumableCases) {
       expect(movementSpeed(bob)).toBe(88);
     }
     if (kind==='energyDrink') {
-      const {factor,durationMs} = foods.energyDrink.effect.staminaRegen;
+      const {factor,durationMs} = foods.energyDrink.effect.speed;
+      expect(movementSpeed(bob)).toBeCloseTo(88*factor);
+      for (let t=0;t<durationMs-STEP_MS;t+=STEP_MS) restMovement(bob);
+      expect(bob.speedModifier?.remainingMs).toBe(STEP_MS);
+      expect(movementSpeed(bob)).toBeCloseTo(88*factor);
       restMovement(bob);
-      expect(bob.stamina).toBe(40+factor);
-      for (let t=STEP_MS;t<durationMs;t+=STEP_MS) restMovement(bob);
-      bob.stamina = 40;
-      restMovement(bob);
-      expect(bob.stamina).toBe(41);
+      expect(bob.speedModifier).toBeUndefined();
+      expect(movementSpeed(bob)).toBe(88);
     }
   });
 }
