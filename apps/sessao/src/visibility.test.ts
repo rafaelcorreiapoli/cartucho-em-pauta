@@ -124,3 +124,31 @@ test('visual light reveals vertical thickness but stops at walls viewed end-on',
     .find(ray=>Math.abs(ray.dy)<1e-8 && ray.dx>0);
   expect(endOn?.x).toBeCloseTo(13);
 });
+
+
+test('corridor light reveals the upper wall face but keeps the lower room wall face dark',()=>{
+  const origin = {x:140,y:146,barriers:[[120,130,40,8],[120,155,40,8]] as const};
+  const rays = wallVision(origin,35,true);
+  const north = rays.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+  const south = rays.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy>0);
+  expect(north?.y).toBeCloseTo(-16);
+  expect(south?.y).toBeCloseTo(9);
+  // Oblique rays must not produce lit triangles inside the lower wall either.
+  for (const ray of rays.filter(ray=>ray.dy>0 && Math.abs(ray.dx/ray.dy)<1)) {
+    expect(ray.y).toBeCloseTo(9);
+  }
+});
+
+test('the same horizontal wall face becomes visible from its own room to the south',()=>{
+  // Outside the map so existing dividers cannot mask this two-sided fixture.
+  const wall = [[5000,5010,40,8]] as const;
+  const north = {x:5020,y:5000,barriers:wall};
+  const south = {x:5020,y:5030,barriers:wall};
+  const northSide = wallVision(north,35,true)
+    .find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy>0);
+  const southSide = wallVision(south,35,true)
+    .find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+  expect(north.y+northSide!.y).toBeCloseTo(5010);
+  expect(south.y+southSide!.y).toBeCloseTo(5010);
+  expect(characterVisible(north,south,35)).toBe(false);
+});

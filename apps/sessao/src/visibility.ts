@@ -22,8 +22,10 @@ function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect,showWallFace
   const near = Math.max(nearX,nearY,0);
   const far = Math.min(farX,farY);
   if (near>far) return Infinity;
-  // Reveal thickness across the broad face, never along a divider viewed end-on.
-  const broadFace = w>=h ? nearY>=nearX : nearX>=nearY;
+  // Horizontal wall art depicts its south-facing surface. Reveal that surface
+  // only from the south; from the north it belongs to the room behind the wall.
+  // Vertical walls retain their side visibility, without lighting end-on rays.
+  const broadFace = w>=h ? dy<0 && nearY>=nearX : nearX>=nearY;
   return showWallFaces && broadFace ? Math.max(near,far) : near;
 }
 
