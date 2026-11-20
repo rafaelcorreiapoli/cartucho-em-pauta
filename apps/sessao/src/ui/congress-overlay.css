@@ -1256,3 +1256,5 @@
   width:100%;
   background:none;
 }
+
+#session:has(#congress-app-panel) #election-indicator-mount { visibility:hidden; pointer-events:none; }

@@ -83,7 +83,7 @@ async page => {
   const electionAboveHotbar = await page.evaluate(()=>{
     const election=document.querySelector('#election-indicator-mount').getBoundingClientRect();
     const hotbar=document.querySelector('.deck-tools').getBoundingClientRect();
-    return election.bottom+8<=hotbar.top && Math.abs(election.right-hotbar.right)<=1;
+    return election.bottom+8<=hotbar.top && Math.abs(election.right-document.querySelector('.right-hud').getBoundingClientRect().right)<=1;
   });
   if (!electionAboveHotbar) throw Error('Pesquisa eleitoral deve ficar acima da hotbar e alinhada à direita');
 
