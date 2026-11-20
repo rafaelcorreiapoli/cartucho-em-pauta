@@ -1,6 +1,7 @@
 import {investmentRules} from './public-investments';
 import { credentialGoods } from './installations';
 import { incendiary } from './fire';
+import {ghostAdviser} from './ghost-advisers';
 import {policyDiscountPercent,type BillPolicies} from './plenary';
 import { briefcaseTracker, concealment, equipment, gearConflict, isGear } from './equipment';
 import {canStackItem,hasInventorySpace,occupiesInventorySlot,type ObjectKind,type WorldItem} from './gameplay';
@@ -16,6 +17,7 @@ const supplies = {
   forensicKit:{price:documentRules.kitPrice},
   firstAidKit,
   incendiary,
+  ghostAdviser,
 } as const;
 
 const {officeTv,officeRug,officeChair,masterDecoder,...securityGoods} = officeGoods;
@@ -45,8 +47,8 @@ export const marketKinds = {
 export const equipmentCategories = {
   equipment:{label:'Equipamentos',kinds:['xray','binoculars','voiceModulator','megaphone','vest','runningShoes','baton','briefcaseTracker']},
   burglary:{label:'Arrombamento',kinds:['lockpick','lockKit','proLockKit','decoder']},
-  sabotage:{label:'Sabotagem',kinds:['mensalUnderwear','incendiary','safeTrap']},
-  utilities:{label:'Utilidades',kinds:['firstAidKit','forensicKit','doorLock','cabinetLock','wiretap','spyCamera','bugDetector']},
+  sabotage:{label:'Sabotagem',kinds:['mensalUnderwear','incendiary','ghostAdviser']},
+  utilities:{label:'Utilidades',kinds:['firstAidKit','forensicKit','doorLock','cabinetLock','wiretap','spyCamera','bugDetector','safeTrap']},
 } as const;
 export type EquipmentCategory = keyof typeof equipmentCategories;
 export function equipmentCategoryKinds(category:EquipmentCategory) {
@@ -78,6 +80,7 @@ export function marketProduct(catalog:Catalog|undefined,kind:unknown,policies?:B
 
 export function marketPurchaseSlot(kind:ObjectKind,inventory:readonly Pick<WorldItem,'kind'>[],
   equipped:readonly Pick<WorldItem,'kind'>[],direct:boolean) {
+  if (kind==='ghostAdviser') return 'service';
   if (isOfficeFurniture(kind)) return 'office';
   if (direct && isGear(kind) && !gearConflict(kind,equipped)) return 'equipped';
   if (hasInventorySpace(inventory.filter(occupiesInventorySlot).length) || canStackItem(kind) && inventory.some(item=>item.kind===kind)) return 'inventory';

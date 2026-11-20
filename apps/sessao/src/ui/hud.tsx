@@ -235,7 +235,7 @@ export function FireNotice({fire}:{fire:FireView}) {
       </svg>
       <div><strong id={"fire-title-"+fire.site}>Incêndio</strong><small>{fireSites[fire.site].name} · {fireSites[fire.site].object}</small></div>
       <span className="incident-time">{fire.paused ? 'Pausado' : `${fire.remaining} s`}</span>
-      {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} de estabilidade a cada {fireRules.tick/1000} s</p>}
+      {!fire.paused && <p><HudIcon name="shield"/>−{fire.damage} {fire.budget ? 'mil do orçamento' : 'de estabilidade'} a cada {fireRules.tick/1000} s</p>}
     </HudHelp>
   </aside>;
 }
@@ -253,6 +253,15 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
       </div>
       <p>{status}</p>
     </HudHelp>
+  </aside>;
+}
+
+function GhostAdviserNotice({state}:{state:HudModel['ghostAdvisers']}) {
+  const incident = useSyncExternalStore(state.subscribe,state.get);
+  return !!incident?.count && <aside className="incident-panel" data-paused={incident.paused}>
+    <article className="incident-fire"><div><strong>Assessores fantasmas: {incident.count}</strong>
+    <small>Encontre e elimine com porrete.</small></div>
+    <p>{incident.paused ? 'Pausado' : `−R$ ${incident.count} mil do orçamento a cada 6 s`}</p></article>
   </aside>;
 }
 
@@ -286,7 +295,7 @@ export function mountReactHud(openSettings:()=>void) {
   const televisionRoot = createRoot(document.getElementById('electoral-notice-mount')!);
   televisionRoot.render(<LiveTelevision state={model.television}/>);
   const fireRoot = createRoot(document.getElementById('active-fire-mount')!);
-  fireRoot.render(<ActiveFires state={model.fires}/>);
+  fireRoot.render(<><GhostAdviserNotice state={model.ghostAdvisers}/><ActiveFires state={model.fires}/></>);
   const outageRoot = createRoot(document.getElementById('active-outage-mount')!);
   outageRoot.render(<PowerNotice state={model.outage}/>);
   const broadcastRoot = createRoot(document.getElementById('megaphone-status')!);

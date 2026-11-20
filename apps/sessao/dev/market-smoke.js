@@ -56,9 +56,14 @@ async page => {
         throw Error(`Controle cortado em ${size.width}×${size.height}: ${selector} ${JSON.stringify({control,frame})}`);
       }
     }
-    for (const category of ['Arrombamento','Sabotagem','Utilidades','Equipamentos']) {
-      await dialog.getByRole('button',{name:category,exact:true}).click();
-      if (await slots.count()!==9 || await bounds()!==before) throw Error('Category moved catalog');
+    for (const [category,key] of [['Arrombamento','a'],['Sabotagem','s'],['Utilidades','u'],['Equipamentos','e']]) {
+      const tab = dialog.getByRole('button',{name:category,exact:true});
+      if (await tab.getAttribute('aria-keyshortcuts')!==key) throw Error('Atalho de categoria ausente');
+      await page.keyboard.press(key);
+      if (await tab.getAttribute('aria-pressed')!=='true') throw Error('Atalho não selecionou '+category);
+      if (await page.locator('dialog:modal').count()!==1 || !await dialog.isVisible()) throw Error('Atalho da loja abriu outro modal');
+      if (category==='Utilidades' && !await dialog.getByRole('button',{name:/^Seguro antiarrombamento ·/i}).count()) throw Error('Seguro fora de Utilidades');
+      if (await slots.count()!==9 || await bounds()!==before) throw Error('Category moved catalog '+category+' '+JSON.stringify(size)+' '+before+' -> '+await bounds());
     }
   }
   const initial = await bounds();
