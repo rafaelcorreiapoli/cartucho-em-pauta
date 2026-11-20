@@ -1,4 +1,4 @@
-import {isGameMode,type GameMode} from '../src/game-modes';
+import {isCaloteDebtSeconds,isGameMode,type GameMode} from '../src/game-modes';
 import {tutorialSteps,matchesTutorialEvent,type TutorialView} from '../src/tutorial';
 import { fireSites, type FireExtinguished } from '../src/fire';
 import type { SpyCameraFrame } from '../src/surveillance';
@@ -58,6 +58,7 @@ export class SessionRoom extends Room {
   private initialWallet = 20;
   private initialBudget = 0;
   private matchMinutes = 12;
+  private caloteDebtSeconds = 30;
   private gameMode:GameMode = 'calote';
   private lobbyNpcCount:number = 3;
   private federalPatrolEnabled = false;
@@ -296,6 +297,12 @@ export class SessionRoom extends Room {
           this.players.keys().next().value!==client.sessionId) return;
       this.initialBudget = raw.value as number;
     });
+    this.onMessage('lobby-calote-debt-seconds',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('value' in raw) || !isCaloteDebtSeconds(raw.value) ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.caloteDebtSeconds = raw.value;
+    });
     this.onMessage('lobby-match-minutes',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('value' in raw) || !(typeof raw.value==='number' && [12,15,20].includes(raw.value)) ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -377,7 +384,7 @@ export class SessionRoom extends Room {
       const request = countRequest && typeof countRequest==='object' ? countRequest : {};
       const infiltrators = 'infiltrators' in request && request.infiltrators===1 ? 1 : 2;
       const asInfiltrator = 'asInfiltrator' in request && request.asInfiltrator===true;
-      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode,this.automaticProjectsEnabled,this.grantsEnabled,this.tutorial ? undefined : this.initialBudget,this.matchMinutes,this.tutorial ? undefined : this.initialWallet)) {
+      if (this.match.start(client.sessionId,players,this.clock.currentTime,Math.random,infiltrators,asInfiltrator,this.phoneGamesEnabled,this.projectVotingEnabled,this.electionsEnabled,this.photosEnabled,this.surveillanceEnabled,this.decorationsEnabled,this.portraitsAndVipEnabled,this.gameMode,this.automaticProjectsEnabled,this.grantsEnabled,this.tutorial ? undefined : this.initialBudget,this.matchMinutes,this.tutorial ? undefined : this.initialWallet,this.caloteDebtSeconds)) {
         this.internalMail.reset();
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
@@ -834,6 +841,7 @@ export class SessionRoom extends Room {
         view.initialWallet = this.initialWallet;
         view.initialBudget = this.initialBudget;
         view.matchMinutes = this.matchMinutes;
+        view.caloteDebtSeconds = this.caloteDebtSeconds;
         view.lobbyNpcCount = this.lobbyNpcCount;
         view.gameMode = this.gameMode;
         view.automaticProjectsEnabled = this.automaticProjectsEnabled;

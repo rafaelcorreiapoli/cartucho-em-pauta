@@ -62,7 +62,7 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
       </svg>
     </div>
     <HudHelp className="congress-meter-label" aria-label={calote ? 'Como funciona o orçamento' : 'Como funciona a estabilidade'}
-      help={calote ? 'Trinta segundos seguidos de orçamento negativo dão vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : `A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>{calote ? 'Orçamento público' : 'Estabilidade institucional'}</HudHelp>
+      help={calote ? 'Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : `A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>{calote ? 'Orçamento público' : 'Estabilidade institucional'}</HudHelp>
     <HudHelp as="div" help={calote ? 'Zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
       <Laurel/>
       {calote ? <div className="calote-budget-wrap">

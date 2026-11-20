@@ -1,5 +1,5 @@
 import {money} from '../politics';
-import {gameModes,type GameMode} from '../game-modes';
+import {caloteDebtSecondsOptions,gameModes,type GameMode} from '../game-modes';
 import {useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MIN_PLAYERS,type PlenaryView} from '../plenary';
@@ -8,7 +8,7 @@ import {npcRules} from '../visitors';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    federalPatrolEnabled:!!view.federalPatrolEnabled, initialWallet:view.initialWallet ?? 20, grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
+    caloteDebtSeconds:view.caloteDebtSeconds ?? 30, federalPatrolEnabled:!!view.federalPatrolEnabled, initialWallet:view.initialWallet ?? 20, grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
     automaticProjectsEnabled:view.automaticProjectsEnabled!==false, gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
@@ -19,6 +19,7 @@ type LobbyCommands = {
   changeInitialWallet?:(value:number)=>void;
   changeGrants?:(enabled:boolean)=>void;
   changeInitialBudget?:(value:number)=>void;
+  changeCaloteDebtSeconds?:(value:number)=>void;
   changeMatchMinutes?:(value:number)=>void;
   changeAutomaticProjects?:(enabled:boolean)=>void;
   changeGameMode?:(mode:GameMode)=>void;
@@ -76,6 +77,12 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         <div>{[12,15,20].map(value=><button key={value} type="button" disabled={!host}
           aria-pressed={state.matchMinutes===value} onClick={()=>commands.changeMatchMinutes?.(value)}>{value} min</button>)}</div>
       </div>
+      {state.gameMode==='calote' && <div className="lobby-count" role="group" aria-label="Tempo no vermelho para perder">
+        <span>Tempo no vermelho para perder</span>
+        <div>{caloteDebtSecondsOptions.map(value=><button key={value} type="button" disabled={!host}
+          aria-pressed={state.caloteDebtSeconds===value} onClick={()=>commands.changeCaloteDebtSeconds?.(value)}>{value}s</button>)}</div>
+        <small>Voltar a zero ou ao saldo positivo reinicia a contagem.</small>
+      </div>}
       <h3>Recursos da partida</h3>
       {state.gameMode==='calote' && <label className="lobby-count"><input type="checkbox" checked={state.automaticProjectsEnabled} disabled={!host}
         onChange={event=>commands.changeAutomaticProjects?.(event.currentTarget.checked)}/> Projetos automáticos</label>}

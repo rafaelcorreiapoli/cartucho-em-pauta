@@ -1,6 +1,6 @@
 import {AutomaticProjects} from './AutomaticProjects';
 import {automaticProjectRules,type AutomaticProject} from '../src/automatic-projects';
-import {caloteRules,type GameMode} from '../src/game-modes';
+import {isCaloteDebtSeconds,type GameMode} from '../src/game-modes';
 import {investmentImpact,type InvestmentAnnouncement} from '../src/public-investments';
 import { StationCooldowns } from './StationCooldowns';
 import type {SessionParticipant} from '../src/plenary';
@@ -197,6 +197,8 @@ export class PlenaryMatch {
 
   private gameMode:GameMode = 'classic';
   private caloteStartedAt?:number;
+  private caloteDebtSeconds = 30;
+  private treasuryRescue?:{sequence:number;name:string};
 
   private changeBudget(amount:number,now:number) {
     if (this.gameMode==='calote') this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
@@ -211,8 +213,8 @@ export class PlenaryMatch {
 
   private applyDebtPenalty(now:number) {
     if (this.gameMode==='calote') {
-      if (this.running && this.caloteStartedAt!==undefined && now>=this.caloteStartedAt+caloteRules.debtMs) {
-        this.finish('Infiltrado','O Congresso deu calote: o orçamento ficou negativo por 30 segundos seguidos.');
+      if (this.running && this.caloteStartedAt!==undefined && now>=this.caloteStartedAt+this.caloteDebtSeconds*1000) {
+        this.finish('Infiltrado',`O Congresso deu calote: o orçamento ficou negativo por ${this.caloteDebtSeconds} segundos seguidos.`);
       }
       return;
     }
@@ -351,12 +353,14 @@ export class PlenaryMatch {
 
   get running() { return this.phase==='negotiation' || this.phase==='ballot' || this.phase==='hearing'; }
 
-  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true,gameMode:GameMode='classic',automaticProjectsEnabled=false,grantsEnabled=true,initialBudget:number=rules.startingBudget,matchMinutes=12,initialWallet=8) {
+  start(requester:string, players:Player[], now:number, random = Math.random, requested=1, asInfiltrator=false, phoneGamesEnabled=true, projectVotingEnabled=true, electionsEnabled=true, photosEnabled=true, surveillanceEnabled=true, decorationsEnabled=true, portraitsAndVipEnabled=true,gameMode:GameMode='classic',automaticProjectsEnabled=false,grantsEnabled=true,initialBudget:number=rules.startingBudget,matchMinutes=12,initialWallet=8,caloteDebtSeconds=30) {
     players = players.filter(player=>!player.npc);
     const ids = players.map(({id}) => id);
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.gameMode = gameMode;
     this.caloteStartedAt = undefined;
+    this.treasuryRescue = undefined;
+    this.caloteDebtSeconds = isCaloteDebtSeconds(caloteDebtSeconds) ? caloteDebtSeconds : 30;
     this.automaticProjectsEnabled = automaticProjectsEnabled && gameMode==='calote' && !this.training;
     this.automaticProjects.reset(this.automaticProjectsEnabled,now,random);
     this.salaryMultiplier = 1;
@@ -621,8 +625,12 @@ export class PlenaryMatch {
           this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
           if (!this.running) return false;
         }
+        const wasNegative = this.budget<0;
         this.cash.treasury += amount;
         this.changeBudget(amount,now);
+        if (wasNegative && this.budget>=0) {
+          this.treasuryRescue = {sequence:(this.treasuryRescue?.sequence ?? 0)+1,name:players.find(player=>player.id===id)?.nick ?? id};
+        }
         if (this.treasuryBonus && now<this.treasuryBonus.until) {
           this.economy.earnXp(id,Math.min(Math.floor(amount),this.treasuryBonus.amount));
         }
@@ -1273,8 +1281,10 @@ export class PlenaryMatch {
       : (projectVoteExpired ? this.sessionEndsAt : this.proposal?.voteAt ?? this.sessionEndsAt)-now;
     return {
       gameMode:this.gameMode,
+      caloteDebtSeconds:this.caloteDebtSeconds,
+      treasuryRescue:this.treasuryRescue,
       caloteIn:this.gameMode==='calote' && this.running && this.caloteStartedAt!==undefined ?
-        Math.max(0,Math.ceil((this.caloteStartedAt+caloteRules.debtMs-now)/1000)) : undefined,
+        Math.max(0,Math.ceil((this.caloteStartedAt+this.caloteDebtSeconds*1000-now)/1000)) : undefined,
       grantsEnabled:this.grantsEnabled,projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,surveillanceEnabled:this.surveillanceEnabled,decorationsEnabled:this.decorationsEnabled,portraitsAndVipEnabled:this.portraitsAndVipEnabled,
       policies:this.activePolicies(now),
       suppliesSeconds:Math.ceil(Math.max(0,(this.policies.get('supplies') ?? 0)-now)/1000) || undefined,
