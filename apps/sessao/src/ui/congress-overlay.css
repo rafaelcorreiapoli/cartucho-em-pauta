@@ -1236,8 +1236,8 @@
 .bag-cash-slots { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; margin-top: 5px; }
 .bag-cash-slots .item-tile { aspect-ratio: 1; width: 100%; }
 
-.market-categories { display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:8px 0; }
-.market-categories button { border:1px solid #a9935370; border-radius:8px; background:#1c3228; color:#d5d9c4; padding:8px 16px; font:700 .9rem/1.2 system-ui,sans-serif; cursor:pointer; }
-.market-categories button[aria-pressed="true"] { background:#e5c477; border-color:#f5d694; color:#172219; }
-.market-categories button:focus-visible { outline:2px solid #ffe3a5; outline-offset:2px; }
-@media(max-width:800px),(max-height:600px) { .market-categories button { padding:5px 10px; font-size:.8rem; } }
+.market-categories { gap: 6px; }
+.market-categories button { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 5px 12px; border: 1px solid #a9935380; border-radius: 9px; background: #1c3228; color: #d5d9c4; font: inherit; cursor: pointer; }
+.market-categories button[aria-pressed="true"] { background: #294335; border-color: #f0d69b; color: #f0d69b; }
+.market-categories button:focus-visible { outline: 2px solid #ffe3a5; outline-offset: 2px; }
+@media(max-width:800px),(max-height:600px) { .market-categories button { gap: 4px; padding: 3px 6px; font-size: .8rem; } }
