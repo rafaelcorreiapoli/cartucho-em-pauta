@@ -466,6 +466,30 @@ test('tutorial advances after cashing a briefcase in the learners safe',()=>{
   expect(events.some(event=>event.actor===owner.id && matchesTutorialEvent(step,event))).toBe(true);
 });
 
+test('briefcase capacity protects cabinet contents and safe loot, including during a breach',()=>{
+  const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+  const [home] = privateOffices;
+  const tool = buy(visitor,'lockpick');
+  const create = Reflect.get(game,'create').bind(game);
+  Object.assign(owner,{x:140,y:146});
+  Object.assign(visitor,home.safe);
+  let looted = false;
+  world.lootWallet = ()=>{looted = true;return 20;};
+  act(visitor,'office-breach-safe',home.id,tool);
+  expect(game.isBreachingSafe(visitor.id)).toBe(true);
+  for (let i=0;i<10;i++) create('briefcase',{holder:visitor.id});
+  tick(officeRules.breachTimes[0]);
+  expect(looted).toBe(false);
+  expect(game.view(visitor,world).inventory.some(item=>item.id===tool)).toBe(true);
+  expect(act(visitor,'office-breach-safe',home.id,tool)).toContain('máximo de 10 maletas');
+
+  for (let i=0;i<10;i++) create('briefcase',{holder:owner.id});
+  const cash = create('briefcase',{storage:`office:${home.id}`});
+  Object.assign(owner,home.cabinet);
+  expect(act(owner,'office-take',home.id,cash.id)).toContain('máximo de 10 maletas');
+  expect(game.view(owner,world).officeStash?.items.some(item=>item.id===cash.id)).toBe(true);
+});
+
 test('safe insurance only installs in the owners safe and explodes once before any money is taken',()=>{
   const {players:[owner,visitor],game,world,act,tick,buy,events} = setup();
   const [home,foreign] = privateOffices;

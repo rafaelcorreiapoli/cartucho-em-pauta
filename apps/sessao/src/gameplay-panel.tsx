@@ -27,7 +27,7 @@ import { decorationLabel } from './photo-renderer';
 import {PHOTO_LIMIT,type PhotoAccessView,type PhotoScene} from './photography';
 import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';
-import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, occupiesInventorySlot, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
+import { canReachObject, canVerifyDocumentAt, cashAmount, itemQuantity, selectedItemQuantity, consumableAction, hasInventorySpace, occupiesInventorySlot, BRIEFCASE_LIMIT, INVENTORY_SLOTS, objects, terminals, type GameplayAction, type ObjectKind, type WorldItem } from './gameplay';
 import type { Motion } from './map';
 import type { PlenaryView } from './plenary';
 
@@ -324,6 +324,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     }
     function renderBag(detail?:ReturnType<typeof objectCard>) {
       const inventory = state!.inventory.filter(occupiesInventorySlot);
+      const briefcases = state!.inventory.filter(entry=>entry.kind==='briefcase');
       const filtered = inventory.filter(entry=>bagFilter==='Todos' ||
         (bagFilter==='Equipamentos' ? isGear(entry.kind) : !!consumableAction(entry)));
       const chooseFilter = (filter:typeof bagFilter)=>{bagFilter = filter;selection = undefined;render();};
@@ -358,14 +359,21 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
             })}
           </div>
-          {offerTarget && bagFilter==='Todos' && state!.inventory.filter(entry=>entry.kind==='briefcase').map(entry=>{
-            const label = `${itemName(entry)} · ${money(cashAmount(entry) ?? 0)}`;
-            entries.push({name:label,activate:()=>chooseItem(entry)});
-            return <button key={entry.id} type="button" className="hud-button hud-button--secondary"
-              aria-pressed={selection?.id===entry.id} onClick={()=>chooseItem(entry)}>{label}</button>;
-          })}
+          {bagFilter==='Todos' && <section className="bag-cash" aria-label="Maletas de dinheiro">
+            <small>Maletas {briefcases.length}/{BRIEFCASE_LIMIT}</small>
+            <div className="bag-cash-slots">
+              {briefcases.map(entry=>{
+                const label = `${itemName(entry)} · ${money(cashAmount(entry) ?? 0)}`;
+                if (assigningSlot===undefined) entries.push({name:label,activate:()=>chooseItem(entry)});
+                return <button key={entry.id} type="button" className="item-tile" title={label} aria-label={label}
+                  disabled={assigningSlot!==undefined} aria-pressed={selection?.id===entry.id} onClick={()=>chooseItem(entry)}>
+                  <img alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
+                </button>;
+              })}
+            </div>
+          </section>}
         </div>
-        <div className="bag-detail">{offerTarget && !canOffer && <p role="status">Aproxime-se de {offerTarget.name} para oferecer um item.</p>}{detail ?? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p>}</div>
+        <div className="bag-detail">{offerTarget && !canOffer && <p role="status">Aproxime-se de {offerTarget.name} para oferecer um item.</p>}{detail ?? (!offerTarget || canOffer ? <p>{assigningSlot===undefined ? 'Selecione um item.' : `Escolha um item para o slot ${assigningSlot+1}.`}</p> : null)}</div>
         {!offerTarget && <footer className="bag-preview">
           <strong>Hotbar <span>(atalhos rápidos)</span></strong>
           <div className="bag-preview-slots">

@@ -101,6 +101,7 @@ export { canInteract as canReachObject } from './interactions';
 
 export const occupiesInventorySlot = (item:Pick<WorldItem,'kind'>) => item.kind!=='briefcase';
 export const INVENTORY_SLOTS = 9;
+export const BRIEFCASE_LIMIT = 10;
 export const hasInventorySpace = (slotsUsed:number) => slotsUsed<INVENTORY_SLOTS;
 export type PhoneActivity = 'open'|'call'|'game';
 const phoneActions = ['phone-open','phone-close','call','answer','hangup','game-start','game-stop','game-turn','bets-spin','candy-start','candy-swap'] as const;
