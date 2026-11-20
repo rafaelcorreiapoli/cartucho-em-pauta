@@ -1,0 +1,1108 @@
+[
+  {
+    "id": "lula-walk",
+    "slug": "lula",
+    "action": "walk",
+    "grid": [
+      3,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-7b6214ef-3201-44f8-831f-ec05dcffc1fb.png",
+    "sourceSha256": "2688ef60c4d67b9014fbdfee671164eb4732af762365f3fbc4dd73149f82bc33",
+    "nativeSize": [
+      1312,
+      1199
+    ]
+  },
+  {
+    "id": "bolsonaro-walk",
+    "slug": "bolsonaro",
+    "action": "walk",
+    "grid": [
+      3,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-b48f79f4-1105-4039-899f-584fc2f6af3e.png",
+    "sourceSha256": "925f995aa1b7ca95d0ca99648affab411cd551787d342a815ba9b467372acda0",
+    "nativeSize": [
+      1291,
+      1218
+    ]
+  },
+  {
+    "id": "clodovil-walk",
+    "slug": "clodovil",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-a5f58386-45a9-48fe-af84-faa568f4df31.png",
+    "sourceSha256": "98eaa91e172bf736f33475b260986705519c74d689241ce91cdd71abfc86ec3d",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "tiririca-walk",
+    "slug": "tiririca",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-14908ca9-6811-47f8-a17e-839e406eeb1d.png",
+    "sourceSha256": "3dc25ffcaa9c9d7323f354919ba9d0107dff07141cfa870f6e45c1be15e3656f",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "sikera-jr-walk",
+    "slug": "sikera-jr",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-8040975e-0b2a-4c93-bbd2-1a7d14f6f9e5.png",
+    "sourceSha256": "fe796fa48eb0cd5dfec8c22d7a5fd1fbb5dcdeb9871b056159660f79c3b411b4",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-frota-walk",
+    "slug": "alexandre-frota",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-c443d396-6316-478e-ba79-37c9f5f7b65b.png",
+    "sourceSha256": "3958542421178334e901d447d59ddbe6a8bbb65cd81dbcce186f4011679ebf74",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "sergio-moro-walk",
+    "slug": "sergio-moro",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-ecd7526e-29f4-4b11-8fd4-1870663207b7.png",
+    "sourceSha256": "eecfb8141c2e1ad9f843182bdd8195a2bcb4e241cbb111d8e2c06ab09ebd6fa0",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "ines-brasil-walk",
+    "slug": "ines-brasil",
+    "action": "walk",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-ea286c14-0597-4e8f-884d-ea13d7229b62.png",
+    "sourceSha256": "0cbfab714807d2009727504c8d1f51d2f87a872b0c474c7fe6fa7d8ebce41b89",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "lula-attack",
+    "slug": "lula",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-fdefee81-4337-445f-b74d-41ee8dabfdeb.png",
+    "sourceSha256": "c54600b1ee5e2457dfa30450d34fc0db6b76f059ce51fcb767482a10c25d1cf2",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "bolsonaro-attack",
+    "slug": "bolsonaro",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-c2268f8b-c5b8-4069-a61b-50d62eb91e9b.png",
+    "sourceSha256": "c55da99300df63f52283982503662a38bf770112d9b47bf281a3220dde20f27d",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "clodovil-attack",
+    "slug": "clodovil",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-777f5e65-99cc-4a89-a1ce-f62854eca706.png",
+    "sourceSha256": "acb6d6a3099cd76853118c158dcca4105705396b0c99556909e2205ccb21ba59",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact attack game animation of clodovil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "tiririca-attack",
+    "slug": "tiririca",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-a523061d-30cc-43fc-b063-a3f5ae401892.png",
+    "sourceSha256": "10354368a2b155cce57ca444856d8ed54075660dfcb129f978622ba022beb925",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact attack game animation of tiririca, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sikera-jr-attack",
+    "slug": "sikera-jr",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-1c00cad6-2e24-4799-88f8-7a3fc5b9874b.png",
+    "sourceSha256": "8c75a939471f17527839f4a13f22d129cc8064d48cb1168d5d3729c905f6c445",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-frota-attack",
+    "slug": "alexandre-frota",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-75967f7a-6a83-4a93-9019-ddc3caa81d2a.png",
+    "sourceSha256": "49e8734e4d349166c4ee746ef865d0d42fdb0c303a57ad5d5fc9468fcedee1ed",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact attack game animation of alexandre-frota, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sergio-moro-attack",
+    "slug": "sergio-moro",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-d7f61a36-34d8-4954-9f86-c8c5a2688e35.png",
+    "sourceSha256": "36ac8339cc475662f09e7e2dfa8d28421fe56a4b3e4c8f5460dd51a997f22937",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact attack game animation of sergio-moro, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "ines-brasil-attack",
+    "slug": "ines-brasil",
+    "action": "attack",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-7f541797-5d5d-4cf4-ba7a-5d72a20bb8b0.png",
+    "sourceSha256": "828a5cbedd0935360ad8a1af178de34ea782d79d20bce76a8ccd231dec3dcdf0",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact attack game animation of ines-brasil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "lula-hit",
+    "slug": "lula",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-5084862b-5d36-4ca6-9f9c-af4bee5e1a32.png",
+    "sourceSha256": "d772016c431795b4b7d9cb2792121ff3e42d2784e8782e3a92d3b4f288e22b1b",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "bolsonaro-hit",
+    "slug": "bolsonaro",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-fcf92450-19d4-4836-b120-fcff164f5684.png",
+    "sourceSha256": "765be09c7aa75b1da046080cad051daaf40e52c4baaa3048c2b6d42466c1e034",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "clodovil-hit",
+    "slug": "clodovil",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-0975057f-3b9e-41de-a39d-ba3fdd28db50.png",
+    "sourceSha256": "c5896e0a2baa11b43092a815cd15678f10b2175812e197020493c77c760d2b84",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact hit game animation of clodovil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "tiririca-hit",
+    "slug": "tiririca",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-db40154c-fbc9-4f6b-a070-a16f9a41654f.png",
+    "sourceSha256": "a489d4a51c649ed3f6f9c923783fea3a37feca84d3217ca81523f3757217d12d",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact hit game animation of tiririca, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sikera-jr-hit",
+    "slug": "sikera-jr",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-71652467-26ee-42e5-94c6-603c59769774.png",
+    "sourceSha256": "83e6b084ab5350ff168421ec9b27c10bf8aac1af4ae4b07063a2c8671942a71a",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-frota-hit",
+    "slug": "alexandre-frota",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-26e4c577-66fc-4d42-8dfa-8c10049a2c22.png",
+    "sourceSha256": "ace68c146600565dcd9b4bade500e4a15903646bc139096e0137476549738e4d",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact hit game animation of alexandre-frota, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sergio-moro-hit",
+    "slug": "sergio-moro",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-d115d225-3b19-48f9-8941-12635032062a.png",
+    "sourceSha256": "d12801b4240819686b8509176326ebb54fe3bc49f7461563f3aac84913d9b7ae",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact hit game animation of sergio-moro, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "ines-brasil-hit",
+    "slug": "ines-brasil",
+    "action": "hit",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-b8a4076f-31fd-472e-a8d2-baab32b0943a.png",
+    "sourceSha256": "4d5e4f9c1fefb4de22f8f4db483f736ff845f033f5485eb8933f62c292f0475b",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact hit game animation of ines-brasil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "lula-fall",
+    "slug": "lula",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-96623916-021d-40aa-b46e-86186883c22e.png",
+    "sourceSha256": "770e9af10d780f33e849a8e3f0513c26c2e53ffd50bb79c5311fb7c5dba94eac",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of lula, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "bolsonaro-fall",
+    "slug": "bolsonaro",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-dceaf931-24cf-4a2a-bbdc-43e0506ecf9d.png",
+    "sourceSha256": "951ec1835339d9e1122769860af6f081143251dcfd6da279c59859106e30b206",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "clodovil-fall",
+    "slug": "clodovil",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-ded6872d-42eb-4413-9217-505b2048e3a8.png",
+    "sourceSha256": "3072742d27b1a6464461998ac9d82cf2e0e97f2e8e8b96adac6f8635a8b0126e",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of clodovil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "tiririca-fall",
+    "slug": "tiririca",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-3051d386-a0f1-4e5d-96c5-f74ce6d21ec2.png",
+    "sourceSha256": "6d4f50c40c6c9231489b0eaffb7a7a4aee2db49f11558a911f89d952b4d31241",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of tiririca, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sikera-jr-fall",
+    "slug": "sikera-jr",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "original",
+    "sourceFile": "exec-f4b7b404-2f98-49fc-a937-0d1d2ea3ce05.png",
+    "sourceSha256": "794199b985688d46ca7fcb861331a9a108d46cf16d4f8a1b67fc4885178e494e",
+    "nativeSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-frota-fall",
+    "slug": "alexandre-frota",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-7ed03a09-4ff3-431f-9124-1332e39b6dfe.png",
+    "sourceSha256": "de050765810b7039175649ad987f8f16ad2a25917116af9b494a1373fe07ec5f",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of alexandre-frota, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sergio-moro-fall",
+    "slug": "sergio-moro",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-cc7e2ace-6d35-453a-8029-b922936b8c79.png",
+    "sourceSha256": "66200d7d40eb87fb4610d79e921059effdff88f73803dbd04177abf2bea28f92",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of sergio-moro, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "ines-brasil-fall",
+    "slug": "ines-brasil",
+    "action": "fall",
+    "grid": [
+      4,
+      3
+    ],
+    "frames": 12,
+    "sourceKind": "restored",
+    "sourceFile": "exec-d06e4bc4-794c-4dd0-aa66-3b96e191568e.png",
+    "sourceSha256": "254afc1ef0ee6b3187388e503d4de2f86e04ce33c1dc6d462da518de35b6041b",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact fall game animation of ines-brasil, 4 columns by 3 rows, 12 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 4x3 equal square cells on a 2048x1536 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "lula-phone",
+    "slug": "lula",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-33e97267-896e-40ec-bc83-b6d0c3c12f4a.png",
+    "sourceSha256": "12a182eb6eb648d02bb25138551d9a9ca77a53c8edb15b3ab5b53f5a56274337",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "bolsonaro-phone",
+    "slug": "bolsonaro",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-30949cff-32b5-404e-9be2-8d0afe5a92bb.png",
+    "sourceSha256": "cff3cddc9928caffa3dbb3673d02f2ee0b2e88140e533226fa15157a1b612bf9",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "clodovil-phone",
+    "slug": "clodovil",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-b9331430-4634-4d20-bb0d-7c467a1d8d40.png",
+    "sourceSha256": "6f8ec2c1b988c02b9f301a12f824abca7d1c2e24d1d251a6b622ef902c353fca",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "tiririca-phone",
+    "slug": "tiririca",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-6de61c15-0972-4386-b9ea-baeef47629c7.png",
+    "sourceSha256": "4cbfd19706778da86f5e85bd5ce201a6662996259021a33dd79fc5819a0a3dcf",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "sikera-jr-phone",
+    "slug": "sikera-jr",
+    "action": "phone",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "restored",
+    "sourceFile": "exec-ef5cb8a9-4c50-41ec-b0c0-ce35d83af4de.png",
+    "sourceSha256": "f2236deee7c3ae0244ab95199735d4cdc9e47126bac5e6cb11e975736cc21d22",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact phone game animation of sikera-jr, 2 columns by 2 rows, 4 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 2x2 equal square cells on a 2048x2048 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "alexandre-frota-phone",
+    "slug": "alexandre-frota",
+    "action": "phone",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "restored",
+    "sourceFile": "exec-64a0ff94-bb0c-4041-8c15-7ece997d46c0.png",
+    "sourceSha256": "3cc84f27821246e70162b6fc185ac89c3a7ad3fe3d4021a5deed55af7bf7806a",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the EDIT TARGET: the exact phone game animation of alexandre-frota, 2 columns by 2 rows, 4 frames in row-major order. Image 2 is ONLY the same character's original higher-detail identity/painting reference. Restore image 1 at higher resolution, preserving EVERY pose, facial expression, view direction, costume, hair, hand positions, body proportions, shadows, outlines, frame order and position within each equal cell. This is restoration, not a redesign. Match the reference's illustrated shading and consistent line thickness/color palette across ALL frames. Restore crisp smooth contours and painted details without inventing accessories, changing expressions, averaging distinct poses, duplicating frames or adding animation. Each frame must remain the SAME pose as its corresponding input cell. Output exactly 2x2 equal square cells on a 2048x2048 transparent canvas, no gutters, no grid or labels. Keep every full pose inside its cell including lying bodies/hands/feet; reconstruct any cropped tips minimally. Feet/ground contact and body anchors must be consistent with the input. Genuine transparent alpha; remove colored fringe/registration artifacts outside the character. No white/gray background, no new cast shadows. Preserve the same face/outfit painting across the sequence; only pose changes."
+  },
+  {
+    "id": "sergio-moro-phone",
+    "slug": "sergio-moro",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-6049745e-b7d4-4109-867a-c7428e312bcb.png",
+    "sourceSha256": "e33631d807ebab0d2397a71ab21e05c639766ddcb0cee64f3832f66c14b36510",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "ines-brasil-phone",
+    "slug": "ines-brasil",
+    "action": "phone",
+    "grid": [
+      1,
+      1
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-fb478891-fcff-4a7f-9211-8067eb6c03f2.png",
+    "sourceSha256": "5fd0c351ed4a5289e3ef50ca6abe2962044eff408244259dabe2031634a301f5",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "lula-safe-breach",
+    "slug": "lula",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-9563bb9b-7724-4559-a568-f33260c6050c.png",
+    "sourceSha256": "43638382548d6daeaa8c70a32fe74d0358317910b8a895443b591d4c1324ae1e",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "bolsonaro-safe-breach",
+    "slug": "bolsonaro",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-58178302-892e-410c-b134-a11952ad9ca5.png",
+    "sourceSha256": "27b6385713ff69858138244e4778ad3970cf3092ed42b069d305a8ef8ee151fa",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "clodovil-safe-breach",
+    "slug": "clodovil",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-978e95af-1023-453b-bae3-8bde8f600645.png",
+    "sourceSha256": "42cb74bb9ac0ed75c130f927acda2a2c9cf563c5ccc92d9707d216ed90e835ca",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "tiririca-safe-breach",
+    "slug": "tiririca",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-afbbf0c8-0913-4977-9628-b360ddcc86c6.png",
+    "sourceSha256": "29fd01b5497e724a136d673326d4422e43895ecfd12ffad5bb68ba8f3ff70da2",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "sikera-jr-safe-breach",
+    "slug": "sikera-jr",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-61b23e6b-d7d4-4e3c-9058-a09c5d6d577c.png",
+    "sourceSha256": "382f9d69239ca890f0d37c18475bf001c6a6d13c176eb8a83347908c02e78c08",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "alexandre-frota-safe-breach",
+    "slug": "alexandre-frota",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-8c4d7dd5-d3fb-4c13-b25b-f0e12a725a55.png",
+    "sourceSha256": "08b7a24cffbcc0bcf5c4c1e449a0560fd99d1d24ddce936ce37afb39178e1fa5",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "sergio-moro-safe-breach",
+    "slug": "sergio-moro",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-7e4cf4fc-9632-456b-a2ea-4df5db99bef5.png",
+    "sourceSha256": "37c0d70cb535289c3037ae8125fcefacd93a4c18f15a7a8897e919e16df3e42f",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "ines-brasil-safe-breach",
+    "slug": "ines-brasil",
+    "action": "safe-breach",
+    "grid": [
+      2,
+      2
+    ],
+    "frames": 4,
+    "sourceKind": "original",
+    "sourceFile": "exec-39b1e1e3-5331-4d37-9e03-84a3aaf4cf82.png",
+    "sourceSha256": "145e3bd5ce689e70940a70d65b8cd27c194dd8b196a34253a3925be32815c305",
+    "nativeSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "lula-safe-deposit",
+    "slug": "lula",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "lula-embolsando-8-quadros-corrigido.png",
+    "sourceSha256": "4a027654674707b25fb076469c8dd915913779ccdfe993ad1eba2eb3408a9b3e",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "bolsonaro-safe-deposit",
+    "slug": "bolsonaro",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-c90c9ef5-3f4a-4e5b-8709-a5bfa5f5efb0.png",
+    "sourceSha256": "15e3cc63053509c8186b56fc2551432a8f6c2b2b8bc7ac43e6b5e52883ae7561",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "clodovil-safe-deposit",
+    "slug": "clodovil",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-c7f38d5b-e0b4-4dfd-95c6-3b3c3df5ff60.png",
+    "sourceSha256": "397b6b57eca5661498c9ae17be020e6e5ec738d321e58356761c6864819698f0",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "tiririca-safe-deposit",
+    "slug": "tiririca",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-d4826f2e-23f4-4067-9af7-43119c638da8.png",
+    "sourceSha256": "b342989889a07ae66d825ea855ee0ae227b4a21071cee205c482b841546d2dd6",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "sikera-jr-safe-deposit",
+    "slug": "sikera-jr",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-36a44123-18ad-4759-88a8-658c975c871e.png",
+    "sourceSha256": "5f4f826f8d71f46a380ed99cf87edbcf1be015bc70fa75b308f5028a6e8406ef",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "alexandre-frota-safe-deposit",
+    "slug": "alexandre-frota",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-b39e0c02-1442-4c79-bb36-89f4172e1fda.png",
+    "sourceSha256": "4e88c8d75995fe076fb113e2fe6da67332602bf8f9a91b01ceed0ad4389ca529",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "sergio-moro-safe-deposit",
+    "slug": "sergio-moro",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-2c1ee8f8-2cd2-4a2e-a415-ebc4d669d115.png",
+    "sourceSha256": "2cc2fc627f0871e127bab616174eb7bf0ee0731ce79a7b0fe906b3d8f17b63d3",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "ines-brasil-safe-deposit",
+    "slug": "ines-brasil",
+    "action": "safe-deposit",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-7e499a23-0d3a-4956-a2a4-4c78a51d17f3.png",
+    "sourceSha256": "33a9462b23c2fd9a45c551aef97a89f14f8dd144798cbe1004e1caf8e054aa8b",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "lula-npc-robbery",
+    "slug": "lula",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-ccaee6a7-3b56-47e4-8af3-12b74cda09d7.png",
+    "sourceSha256": "a7099be9c19a4412b84d02ed76e1b3311f1938442a854043c24fe4d5f3842fc7",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "bolsonaro-npc-robbery",
+    "slug": "bolsonaro",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-7ab8d2ec-f12f-4154-aef5-fcb98d7f524b.png",
+    "sourceSha256": "48d522f63aaea9ed5259a7a361dc52196fec9cf0f89226f77f402e2ad71f047a",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "clodovil-npc-robbery",
+    "slug": "clodovil",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-0089ab21-b1a2-4251-bc3b-037f39d112eb.png",
+    "sourceSha256": "df2d84ae03ccc8e67de5514290e4b61463946bcb9e2137a60fc8975024852731",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "tiririca-npc-robbery",
+    "slug": "tiririca",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-bc63f739-ceb8-4932-a6e1-a03df57e5e80.png",
+    "sourceSha256": "0a6b001b7c0fae8f6701ce3737265127f99078b6bd45a3f593ac14d14ae437ed",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "sikera-jr-npc-robbery",
+    "slug": "sikera-jr",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-74c7b1c7-e38b-4251-a901-f393e890d5b2.png",
+    "sourceSha256": "f6039b49ea421540b9b8975a92fe6dedf02940b8a6a426dd56819e3de12ead7f",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "alexandre-frota-npc-robbery",
+    "slug": "alexandre-frota",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-e5feb4de-4b7a-43ab-852b-473ba0da3754.png",
+    "sourceSha256": "37e6a1ab4992ed697e997044531074f1c39e29cc11d508a388b675b1d654e9ed",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "sergio-moro-npc-robbery",
+    "slug": "sergio-moro",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-b1ea4c11-4036-4921-9cc9-530d5fe5f21b.png",
+    "sourceSha256": "1ccb41db349017cd5347ff2325e4a2e5cc19b06bffdcfb94600a770b6c79adf4",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  },
+  {
+    "id": "ines-brasil-npc-robbery",
+    "slug": "ines-brasil",
+    "action": "npc-robbery",
+    "grid": [
+      4,
+      2
+    ],
+    "frames": 8,
+    "sourceKind": "original",
+    "sourceFile": "exec-b90e8c34-2ffb-4448-8eab-c41db54cbe75.png",
+    "sourceSha256": "7de2a2377b8bdc070b6f593864326f2f441d1fe85feb093030db9709f96225c0",
+    "nativeSize": [
+      1774,
+      887
+    ]
+  }
+]

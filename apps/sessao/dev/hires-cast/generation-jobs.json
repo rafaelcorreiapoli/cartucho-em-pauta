@@ -1,0 +1,200 @@
+[
+  {
+    "id": "lula-fall",
+    "slug": "lula",
+    "action": "fall",
+    "input": "inputs/lula-fall.png",
+    "reference": "inputs/lula-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "clodovil-attack",
+    "slug": "clodovil",
+    "action": "attack",
+    "input": "inputs/clodovil-attack.png",
+    "reference": "inputs/clodovil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "clodovil-hit",
+    "slug": "clodovil",
+    "action": "hit",
+    "input": "inputs/clodovil-hit.png",
+    "reference": "inputs/clodovil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "clodovil-fall",
+    "slug": "clodovil",
+    "action": "fall",
+    "input": "inputs/clodovil-fall.png",
+    "reference": "inputs/clodovil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "tiririca-attack",
+    "slug": "tiririca",
+    "action": "attack",
+    "input": "inputs/tiririca-attack.png",
+    "reference": "inputs/tiririca-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "tiririca-hit",
+    "slug": "tiririca",
+    "action": "hit",
+    "input": "inputs/tiririca-hit.png",
+    "reference": "inputs/tiririca-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "tiririca-fall",
+    "slug": "tiririca",
+    "action": "fall",
+    "input": "inputs/tiririca-fall.png",
+    "reference": "inputs/tiririca-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "alexandre-frota-attack",
+    "slug": "alexandre-frota",
+    "action": "attack",
+    "input": "inputs/alexandre-frota-attack.png",
+    "reference": "inputs/alexandre-frota-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "alexandre-frota-hit",
+    "slug": "alexandre-frota",
+    "action": "hit",
+    "input": "inputs/alexandre-frota-hit.png",
+    "reference": "inputs/alexandre-frota-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "alexandre-frota-fall",
+    "slug": "alexandre-frota",
+    "action": "fall",
+    "input": "inputs/alexandre-frota-fall.png",
+    "reference": "inputs/alexandre-frota-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "sergio-moro-attack",
+    "slug": "sergio-moro",
+    "action": "attack",
+    "input": "inputs/sergio-moro-attack.png",
+    "reference": "inputs/sergio-moro-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "sergio-moro-hit",
+    "slug": "sergio-moro",
+    "action": "hit",
+    "input": "inputs/sergio-moro-hit.png",
+    "reference": "inputs/sergio-moro-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "sergio-moro-fall",
+    "slug": "sergio-moro",
+    "action": "fall",
+    "input": "inputs/sergio-moro-fall.png",
+    "reference": "inputs/sergio-moro-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "ines-brasil-attack",
+    "slug": "ines-brasil",
+    "action": "attack",
+    "input": "inputs/ines-brasil-attack.png",
+    "reference": "inputs/ines-brasil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "ines-brasil-hit",
+    "slug": "ines-brasil",
+    "action": "hit",
+    "input": "inputs/ines-brasil-hit.png",
+    "reference": "inputs/ines-brasil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "ines-brasil-fall",
+    "slug": "ines-brasil",
+    "action": "fall",
+    "input": "inputs/ines-brasil-fall.png",
+    "reference": "inputs/ines-brasil-reference.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "sikera-jr-phone",
+    "slug": "sikera-jr",
+    "action": "phone",
+    "input": "inputs/sikera-jr-phone.png",
+    "reference": "inputs/sikera-jr-reference.png",
+    "grid": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": "alexandre-frota-phone",
+    "slug": "alexandre-frota",
+    "action": "phone",
+    "input": "inputs/alexandre-frota-phone.png",
+    "reference": "inputs/alexandre-frota-reference.png",
+    "grid": [
+      2,
+      2
+    ]
+  }
+]

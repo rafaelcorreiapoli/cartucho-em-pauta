@@ -12,6 +12,13 @@ async (page) => {
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     async function compare(frame) {
       qa.render(structuredClone(frame));
+      // Optional atlases load asynchronously in the reference and capture scenes.
+      for (let attempt = 0; attempt < 100; attempt++) {
+        await wait(30);
+        if (qa.game.scene.scenes.every(scene => !scene.load.isLoading())) break;
+      }
+      if (qa.game.scene.scenes.some(scene => scene.load.isLoading())) throw new Error('Actor atlas loading did not settle');
+      qa.render(structuredClone(frame));
       await wait(180);
       const reference = await qa.referencePixels();
       const actual = await qa.pixels(photo);

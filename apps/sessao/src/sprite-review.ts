@@ -1,8 +1,9 @@
-import {spriteCatalog, spriteFrame, type SpriteClip} from './sprite-catalog';
+import {spriteCatalog, spriteFrame, spriteSubjectResolution, type SpriteClip} from './sprite-catalog';
 import {spriteFrameOffsetX} from './sprite-alignment';
 import {spriteImage, paintFrame, frameEdges} from './sprite-review-renderer';
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const resolution = element<HTMLSelectElement>('resolution');
 const pose = element<HTMLSelectElement>('pose');
 const direction = element<HTMLSelectElement>('direction');
 const frameInput = element<HTMLInputElement>('frame');
@@ -18,6 +19,7 @@ const play = element<HTMLButtonElement>('play');
 const error = element<HTMLParagraphElement>('error');
 const subjectId = (id: string | null) => id === 'lula-safe-breach-fit' ? 'lula-safe-breach-imagegen' : id;
 const params = new URLSearchParams(location.hash.slice(1));
+resolution.value = ['original', '128', '256', '512'].includes(params.get('resolution') ?? '') ? params.get('resolution')! : '128';
 let subject = spriteCatalog.find(subject => subject.id === subjectId(params.get('subject'))) ?? spriteCatalog[0];
 let clip = subject.clips.find(clip => clip.id === params.get('pose')) ?? subject.clips[0];
 let facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(params.get('direction'))) || 0));
@@ -39,16 +41,16 @@ try {
     }
   }
 } catch { /* A blocked or malformed local store must not block sprite inspection. */ }
-const reviewKey = () => `${subject.id}/${clip.id}`;
+const reviewKey = () => `${subject.id}/${clip.id}${subject.group !== 'Jogadores' || resolution.value === 'original' ? '' : `/${resolution.value}`}`;
 function options(select: HTMLSelectElement, items: {value: string; text: string}[]) {
   select.replaceChildren(...items.map(({value, text}) => new Option(text, value)));
 }
 function shareLocation() {
-  const values = new URLSearchParams({subject: subject.id, pose: clip.id, direction: String(facing), frame: String(frame)});
+  const values = new URLSearchParams({subject: subject.id, pose: clip.id, direction: String(facing), frame: String(frame), resolution: resolution.value});
   history.replaceState(null, '', `#${values}`);
 }
 function progress() {
-  const reviewed = subject.clips.filter(clip => reviews[`${subject.id}/${clip.id}`]?.status === 'approved').length;
+  const reviewed = subject.clips.filter(clip => reviews[`${subject.id}/${clip.id}${subject.group !== 'Jogadores' || resolution.value === 'original' ? '' : `/${resolution.value}`}`]?.status === 'approved').length;
   element('progress').textContent = `${reviewed} de ${subject.clips.length} poses aprovadas`;
 }
 function subjectList() {
@@ -113,6 +115,10 @@ async function loadPose() {
   }
 }
 async function showSubject() {
+  const poseId = clip.id;
+  subject = spriteSubjectResolution(subject, resolution.value);
+  clip = subject.clips.find(entry => entry.id === poseId) ?? subject.clips[0];
+  resolution.disabled = subject.group !== 'Jogadores';
   const current = ++generation;
   setError('');
   reference = undefined;
@@ -180,6 +186,7 @@ pose.onchange = () => {
   facing = Math.min(facing, clip.directions.length - 1); frame = 0;
   setError(''); void loadPose();
 };
+resolution.onchange = () => { void showSubject(); };
 direction.onchange = () => { facing = Number(direction.value); elapsed = 0; shareLocation(); };
 size.oninput = () => { element<HTMLOutputElement>('size-label').value = `${size.value} px`; };
 speed.onchange = () => { elapsed = 0; };
@@ -245,6 +252,7 @@ function render(time: number) {
 }
 window.addEventListener('hashchange', () => {
   const values = new URLSearchParams(location.hash.slice(1));
+  resolution.value = ['original', '128', '256', '512'].includes(values.get('resolution') ?? '') ? values.get('resolution')! : '128';
   subject = spriteCatalog.find(subject => subject.id === subjectId(values.get('subject'))) ?? spriteCatalog[0];
   clip = subject.clips.find(clip => clip.id === values.get('pose')) ?? subject.clips[0];
   facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(values.get('direction'))) || 0));

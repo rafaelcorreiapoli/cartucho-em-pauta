@@ -26,8 +26,8 @@ async (page) => {
   if (medium.key !== 'tiririca-walk-256' || requested.some(url => url.includes('-512'))) throw new Error('Incorrect 1440p tier');
   let release;
   const gate = new Promise(resolve => { release = resolve; });
-  await qaPage.route('**/assets/tiririca-walk-512.png', async route => { await gate; await route.continue(); });
-  const request512 = qaPage.waitForRequest('**/assets/tiririca-walk-512.png');
+  await qaPage.route('**/assets/characters-hd/tiririca-walk-512.webp', async route => { await gate; await route.continue(); });
+  const request512 = qaPage.waitForRequest('**/assets/characters-hd/tiririca-walk-512.webp');
   const pending = await render(9.3);
   await request512;
   if (pending.key !== 'tiririca-walk-256') throw new Error('Existing texture disappeared while upgrading');
@@ -43,8 +43,14 @@ async (page) => {
   }
   if (large.zoom !== 9.3) throw new Error('Adaptive texture modified the camera');
   if ((await render(2)).key !== 'players-expansion') throw new Error('Small viewport did not return to original texture');
-  if ((await render(9.3, {moving: false, phone: 'open'})).key !== 'tiririca-phone') throw new Error('Missing pose variant did not use original');
-  if ((await render(9.3, {character: 0})).key !== 'players') throw new Error('Character without variants was changed');
+  await render(9.3, {moving: false, phone: 'open'});
+  await qaPage.waitForFunction(() => window.qa.scene.textures.exists('tiririca-phone-512'));
+  if ((await render(9.3, {moving: false, phone: 'open'})).key !== 'tiririca-phone-512') throw new Error('Phone did not upgrade');
+  for (let character = 0; character < 8; character++) {
+    await render(9.3, {character});
+    await qaPage.waitForFunction(() => !window.qa.scene.load.isLoading());
+    if (!(await render(9.3, {character})).key.endsWith('-walk-512')) throw new Error(`Character ${character} did not upgrade`);
+  }
   await context.close();
 
   async function gameCase(width, height, density, expected, missing = false) {
@@ -54,7 +60,7 @@ async (page) => {
       const files = [];
       game.on('request', request => { if (/tiririca-walk-(256|512)/.test(request.url())) files.push(request.url()); });
       await game.addInitScript(() => localStorage.setItem('cartuchao.sessao.audio', JSON.stringify({muted: true})));
-      if (missing) await game.route('**/assets/tiririca-walk-256.png', route => route.fulfill({status: 404, body: 'QA missing optional texture'}));
+      if (missing) await game.route('**/assets/characters-hd/tiririca-walk-256.webp', route => route.fulfill({status: 404, body: 'QA missing optional texture'}));
       await game.goto(new URL('/', base).href);
       await game.getByRole('textbox', {name: 'Seu nick'}).fill(`Textura ${width} ${density}`);
       await game.getByRole('button', {name: 'Criar sala', exact: true}).click();
@@ -64,7 +70,7 @@ async (page) => {
       await game.getByRole('button', {name: 'Iniciar sessão', exact: true}).click();
       await game.locator('#session[data-phase="negotiation"]').waitFor();
       await game.locator('#asset-loading').waitFor({state: 'hidden'});
-      if (expected && !files.some(file => file.includes(`-${expected}`))) await game.waitForRequest(`**/assets/tiririca-walk-${expected}.png`);
+      if (expected && !files.some(file => file.includes(`-${expected}`))) await game.waitForRequest(`**/assets/characters-hd/tiririca-walk-${expected}.webp`);
       await game.waitForTimeout(600);
       if (!expected && files.length) throw new Error(`Small screen downloaded high sprites: ${files}`);
       if (expected && files.some(file => !file.includes(`-${expected}`))) throw new Error(`Downloaded an unneeded tier: ${files}`);

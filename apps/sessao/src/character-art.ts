@@ -4,11 +4,11 @@ import type {VisitorId} from './visitors';
 const originalCount = 3;
 
 export const characterSheets = [
-  {key:'players',path:'assets/sprites-hd.png'},
-  {key:'players-expansion',path:'assets/sprites-expansao.png'},
+  {key:'players',path:'assets/characters-hd/players-128.webp'},
+  {key:'players-expansion',path:'assets/characters-hd/players-expansion-128.webp'},
 ] as const;
 
-const characterSlugs:Record<(typeof NAMES)[number],string> = {
+export const characterSlugs:Record<(typeof NAMES)[number],string> = {
   Lula:'lula',
   Bolsonaro:'bolsonaro',
   Clodovil:'clodovil',
@@ -24,7 +24,7 @@ const fallFrameMs = 100;
 
 export const phoneSheets = Object.values(characterSlugs).map(character=>{
   const key = `${character}-phone`;
-  return {key,path:`assets/${key}.webp`};
+  return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
 export function phoneArt(character:number,time:number,reducedMotion:boolean) {
@@ -35,7 +35,7 @@ export function phoneArt(character:number,time:number,reducedMotion:boolean) {
 
 export const npcRobberySheets = Object.values(characterSlugs).map(skin=>{
   const key = `${skin}-npc-robbery`;
-  return {key,path:`assets/${key}.webp`};
+  return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
 export function npcRobberyArt(character:number,time:number,reducedMotion:boolean,actor:Motion & {direction:number},target:Motion & {direction:number}) {
@@ -49,7 +49,7 @@ export function npcRobberyArt(character:number,time:number,reducedMotion:boolean
 
 export const safeDepositSheets = Object.values(characterSlugs).map(skin=>{
   const key = `${skin}-safe-deposit`;
-  return {key,path:`assets/${key}.webp`};
+  return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
 export function safeDepositArt(character:number,time:number,reducedMotion:boolean) {
@@ -60,7 +60,7 @@ export function safeDepositArt(character:number,time:number,reducedMotion:boolea
 
 export const safeBreachSheets = Object.values(characterSlugs).map(character=>{
   const key = safeBreachKey(character);
-  return {key,path:`assets/${key}.webp`};
+  return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
 function safeBreachKey(skin:string) {
@@ -76,7 +76,7 @@ export function safeBreachArt(character:number,time:number,reducedMotion:boolean
 export const combatSheets = Object.values(characterSlugs).flatMap(character=>
   combatActions.map(action=>{
     const key = combatSheet(character,action);
-    return {key,path:`assets/${key}.webp`};
+    return {key,path:`assets/characters-hd/${key}-128.webp`};
   }),
 );
 

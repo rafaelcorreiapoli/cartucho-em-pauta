@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import {characterArt} from './character-art';
+import {characterArt, characterSlugs} from './character-art';
 import {NAMES} from './map';
 import type {VisitorId} from './visitors';
 import {spriteResolution, type SpriteResolution} from './sprite-resolution';
@@ -8,12 +8,13 @@ export const actorFrameWorldSize = 128 * .295;
 type Variant = {key: string; path: string; size: Exclude<SpriteResolution, 128>};
 // Only registered, shipped variants are requested. Walk variants have 3 rows × 4 frames.
 // Unique action texture keys can also register variants with identical frame ordering.
-export const actorTextureVariants: Readonly<Record<string, readonly Variant[] | undefined>> = {
-  'walk:Tiririca': [
-    {key: 'tiririca-walk-256', path: 'assets/tiririca-walk-256.png', size: 256},
-    {key: 'tiririca-walk-512', path: 'assets/tiririca-walk-512.png', size: 512},
-  ],
-};
+const castActions = ['walk', 'attack', 'hit', 'fall', 'phone', 'safe-breach', 'safe-deposit', 'npc-robbery'] as const;
+export const actorTextureVariants: Readonly<Record<string, readonly Variant[] | undefined>> = Object.fromEntries(
+  Object.entries(characterSlugs).flatMap(([name, slug]) => castActions.map(action => [
+    action === 'walk' ? `walk:${name}` : `${slug}-${action}`,
+    ([256, 512] as const).map(size => ({key: `${slug}-${action}-${size}`, path: `assets/characters-hd/${slug}-${action}-${size}.webp`, size})),
+  ])),
+);
 type Loads = {pending: Set<string>; failed: Set<string>};
 const loads = new WeakMap<Phaser.Game, Loads>();
 
