@@ -140,7 +140,7 @@ export type GameplayView = {
   offices?:OfficeView[]; ownOffice?:string; officeFurnishings?:OfficeFurniture[]; officeOptions?:OfficeOption[];
   officeStash?:{id:string;items:WorldItem[];level?:number}; officeDecor?:{id:string;kind:OfficeDecor}[];
   installationProgress?:{elapsed:number;duration:number};
-  officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; officeId:string; label:string; elapsed:number; duration:number};
+  officeChannel?:{kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'|'office-upgrade-door'|'office-upgrade-cabinet'|'office-upgrade-safe'; officeId:string; label:string; elapsed:number; duration:number};
   briefcaseTracking?:{seconds:number; markers:(Motion & {id:number})[]};
   concealmentSeconds?:number;
   binocularSeconds?:number;

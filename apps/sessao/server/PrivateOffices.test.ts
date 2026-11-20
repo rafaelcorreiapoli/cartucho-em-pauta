@@ -146,7 +146,8 @@ test.each([0,4])('office %i locks, permits exit and requires a separate cabinet 
   for (let level=2;level<=4;level++) {
     const upgrade = buy(owner,'cabinetLock');
     Object.assign(owner,home.cabinet);
-    expect(act(owner,'office-upgrade-cabinet',home.id,upgrade)).toBe(`Segurança nível ${level}.`);
+    expect(act(owner,'office-upgrade-cabinet',home.id,upgrade)).toBe('Reforço iniciado.');
+    tick(officeRules.reinforceMs);
   }
   Object.assign(owner,terminals.secretary.point);
   act(owner,'supply','secretary');
@@ -505,4 +506,31 @@ test('safe insurance only installs in the owners safe and explodes once before a
   expect(events.filter(event=>event.type==='safe-trap-triggered')).toHaveLength(1);
   Object.assign(owner,home.safe);
   expect(act(owner,'office-trap-safe',home.id,duplicate)).toContain('instalado');
+});
+
+test.each(['door','cabinet'] as const)('reinforcing a %s takes five seconds and preserves its kit when interrupted',target=>{
+  const {players:[owner],game,world,events,act,tick,buy} = setup();
+  const home = privateOffices[0];
+  const kit = buy(owner,target==='door' ? 'doorLock' : 'cabinetLock');
+  Object.assign(owner,target==='door' ? atDoor(home,true) : home.cabinet);
+  const action = target==='door' ? 'office-upgrade-door' : 'office-upgrade-cabinet';
+  expect(act(owner,action,home.id,kit)).toBe('Reforço iniciado.');
+  expect(game.view(owner,world).officeChannel).toMatchObject({kind:action,duration:5000,elapsed:0});
+  tick(2500);
+  expect(game.view(owner,world).officeChannel?.elapsed).toBe(2500);
+  owner.moving = true;
+  tick(1);
+  owner.moving = false;
+  expect(game.view(owner,world).officeChannel).toBeUndefined();
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(true);
+  expect(events.some(event=>event.type==='security-upgraded')).toBe(false);
+  expect(act(owner,action,home.id,kit)).toBe('Reforço iniciado.');
+  tick(4999);
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(true);
+  tick(1);
+  expect(game.view(owner,world).officeChannel).toBeUndefined();
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(false);
+  expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
+  tick(1000);
+  expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
 });

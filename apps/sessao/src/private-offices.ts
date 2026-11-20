@@ -29,7 +29,7 @@ export function depositingAtSafe(office:OfficeLayout,people:readonly (Motion & {
 }
 
 export const officeRules = {
-  safeLootFraction:1, cashMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],
+  safeLootFraction:1, cashMs:5000, reinforceMs:5000, stashSlots:4, maxSecurity:5, breachMs:30_000, breachTimes:[15_000,9000,5000],
 } as const;
 
 function lockTool(name:string, portrait:string, price:number, attack:number) {

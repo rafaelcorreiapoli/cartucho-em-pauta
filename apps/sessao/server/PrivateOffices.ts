@@ -5,7 +5,7 @@ import { officeDoorPoint, officeRules, privateOffices, type OfficeAction, type O
 type Target = 'door'|'cabinet'|'safe';
 type OfficeState = {layout:OfficeLayout; owner?:string; nick?:string; door:'open'|'closed'|'locked'; doorLevel:number; cabinetLevel:number; safeLevel:number;
   doorUntil:number; cabinetUntil:number; safeTrap?:number; doorBreachedBy?:string; cabinetBreachedBy?:string};
-export type Channel = {kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'; office:OfficeState; item:number;
+export type Channel = {kind:'office-cash'|'office-breach-safe'|'office-breach-door'|'office-breach-cabinet'|'office-upgrade-door'|'office-upgrade-cabinet'|'office-upgrade-safe'; office:OfficeState; item:number;
   started:number; ends:number; baseDuration:number; origin:Motion; level:number};
 
 export class PrivateOffices {
