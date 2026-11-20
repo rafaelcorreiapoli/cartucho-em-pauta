@@ -884,7 +884,7 @@ test('cloak purchased at technical support has server duration, item cooldown an
   game.act(alice,{kind:'equip',item:cloak.id},world);
   expect(game.act(alice,{kind:'use-cloak'},world)).toContain('recarga');
   world.now+=30_000;
-  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('ativa');
+  expect(game.act(alice,{kind:'use-cloak'},world)).toContain('ativo');
   alice.knockedOut=true;
   expect(game.cloakActive(alice,world.now)).toBe(false);
   alice.knockedOut=false;

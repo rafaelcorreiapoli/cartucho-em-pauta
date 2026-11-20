@@ -2778,22 +2778,19 @@
     "prompt": "Use case: identity-preserve restoration. Faithfully restore this exact Brazilian plenary curved wooden counter as a high-resolution transparent game asset. Preserve the complete front and curved ends, polished warm brown wood, three microphones at the same positions, green upholstered front panels with gold borders, centered Brazilian coat of arms, camera angle, perspective, proportions and silhouette. Reconstruct fine crisp woodgrain, microphone edges, gold trim and emblem details without changing the design, adding objects or changing colors. Smooth illustrated contours rather than pixelated stair steps. Output a wide roughly 2:1 composition, target 2048x1024 with genuinely transparent background. Keep the entire counter and every microphone inside the canvas with a small transparent margin. Remove any colored artifacts behind/above the counter; no neighboring furniture, no text, background, floor, grid or new shadows. This is the exact counter used in the game, not a new design."
   },
   {
-    "id": "capa-invisibilidade",
-    "original": "capa-invisibilidade.webp",
+    "id": "retrato-collant-invisibilidade",
+    "original": "retrato-collant-invisibilidade.webp",
     "kind": "image",
-    "sourceKind": "vector",
-    "sourceFile": "capa-invisibilidade.svg",
-    "sourceSha256": "6606d8c9015f2e8b0378250769bc22931cd949a06af4a127456984d6bc634f11",
-    "vectorViewBox": [
-      0,
-      0,
-      128,
-      128
+    "sourceKind": "generated",
+    "sourceFile": "exec-a89f6bb6-ea4b-479c-b79d-42598c8d8a02.png",
+    "sourceSha256": "b4f3cab01b1c75cb691bb98a0b7439813dd91824b5213391ea78dd4e5467be8b",
+    "nativeSize": [
+      1254,
+      1254
     ],
     "masterSize": [
-      1024,
-      1024
-    ],
-    "rasterizer": "Chromium Canvas2D at 1024x1024 from the repository SVG"
+      1254,
+      1254
+    ]
   }
 ]
