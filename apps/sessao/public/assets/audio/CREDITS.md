@@ -56,6 +56,7 @@ https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.
   Source: https://mixkit.co/free-sound-effects/cinematic/
   License: https://mixkit.co/license/modal/sfxFree/
   Original speed; emitted only into the finished game by the existing Vite audio plugin.
+  Also plays when the infiltrator's role is revealed at the start of a match.
 
 # Pane elétrica
 
