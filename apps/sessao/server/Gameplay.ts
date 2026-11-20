@@ -1892,6 +1892,9 @@ export class Gameplay {
     if (!('holder' in item.place) || item.place.holder!==id) return this.reject(player,world,'O objeto não está com você.');
     if (action.kind==='plant-mine') {
       if (data.kind!=='landMine' || !canStand(player.x,player.y)) return this.reject(player,world,'Não é possível instalar esta mina aqui.');
+      if (this.dialogues.nearbyNpcs(player).length || canReachObject(player,terminals.treasury.point)) {
+        return this.reject(player,world,'Não é possível implantar minas em áreas de interação com NPCs.');
+      }
       if ([...this.mines.values()].some(mine=>Math.hypot(player.x-mine.x,player.y-mine.y)<landMine.radius*2)) return this.reject(player,world,'Já existe uma mina muito próxima.');
       this.mines.set(data.id,{id:data.id,x:player.x,y:player.y,owner:id,armedAt:world.now+landMine.armingMs});
       this.remove(item);

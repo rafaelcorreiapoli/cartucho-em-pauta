@@ -1,5 +1,6 @@
 import {expect,test} from 'bun:test';
-import {assignHotbarSlot,emptyHotbar,pinPurchasedConsumable,reconcileHotbar} from './hotbar';
+import {consumableAction} from './gameplay';
+import {canPinToHotbar,assignHotbarSlot,emptyHotbar,pinPurchasedConsumable,reconcileHotbar} from './hotbar';
 
 test('a hotbar reference stays in its chosen slot regardless of bag order',()=>{
   const snack = {id:4,kind:'coxinha'} as const;
@@ -29,4 +30,13 @@ test('only consumables can remain pinned, including after inventory reconciliati
     expect(reconcileHotbar([5],[{id:5,kind}])).toEqual([undefined]);
   }
   expect(reconcileHotbar([5],[{id:5,kind:'coffee'}])).toEqual([5]);
+});
+
+test('the land mine can be pinned and its hotbar action plants the held mine',()=>{
+  const mine = {id:17,kind:'landMine'} as const;
+  expect(canPinToHotbar(mine)).toBe(true);
+  const slots = assignHotbarSlot(emptyHotbar(),2,mine.id);
+  expect(reconcileHotbar(slots,[mine])[2]).toBe(mine.id);
+  expect(consumableAction(mine)).toEqual({label:'Implantar no chão',action:{kind:'plant-mine',item:mine.id}});
+  expect(reconcileHotbar(slots,[])).toEqual(emptyHotbar());
 });
