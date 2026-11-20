@@ -1,8 +1,9 @@
+import type {Role} from './plenary';
 import type {FederalAudioStage} from './federal-patrol';
 import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/audio';
 
 const files = {
-  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', firstBlood:'first-blood.mp3',
+  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', cassationCaught:'cassacao-infiltrado.mp3', firstBlood:'first-blood.mp3',
   lobbyMusic:'corredores-de-brasilia.mp3',
   covertAffair:'covert-affair.mp3', spyGlass:'spy-glass.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
@@ -47,6 +48,8 @@ export class GameAudio {
   private lastFootIndex = 0;
   private lastCashCue = -Infinity;
   private federalEffect?:AudioBufferSourceNode;
+  private eliminationEffect?:AudioBufferSourceNode;
+  private revealingCassation = false;
 
   constructor() {
     this.preferences.subscribe(() => this.updateGain());
@@ -118,6 +121,9 @@ export class GameAudio {
   }
 
   leave() {
+    this.eliminationEffect?.stop();
+    this.eliminationEffect = undefined;
+    this.revealingCassation = false;
     this.playing = false;
     this.federalEffect?.stop();
     this.federalEffect = undefined;
@@ -150,6 +156,7 @@ export class GameAudio {
   }
 
   private startMusic() {
+    if (this.revealingCassation) return;
     const requested = this.score==='lobbyMusic' || isFinalScore(this.score) ? this.score :
       this.score==='cassationMusic' ? 'cassationMusic' : this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'covertAffair' : this.score;
     // Wait for the selected track instead of briefly playing a different one while loading.
@@ -212,6 +219,16 @@ export class GameAudio {
   federal(stage:FederalAudioStage) {
     this.federalEffect?.stop();
     this.federalEffect = stage==='cancelled' ? undefined : this.play(stage==='caught' ? 'federalCaught' : 'federalIsolation',.62,0,1);
+  }
+
+  cassationResult(role:Role|undefined) {
+    this.eliminationEffect?.stop();
+    this.eliminationEffect = undefined;
+    this.revealingCassation = role!==undefined;
+    if (role) {
+      this.stopMusic(.25);
+      this.eliminationEffect = this.play(role==='Infiltrado' ? 'cassationCaught' : 'federalIsolation',.7,0,1);
+    } else this.startMusic();
   }
 
   stationClick() { this.play('vote',.75,0,1.35); }

@@ -1,3 +1,5 @@
+import './cassation-result.css';
+import {CharacterPortrait} from './ui/character-portrait';
 import {sessionVerdict} from './session-verdict';
 import {DialogHeader} from './ui/dialog-header';
 import {useDialogKeys} from './ui/use-dialog-keys';
@@ -7,7 +9,7 @@ import { createRoot } from 'react-dom/client';
 import type { CSSProperties, ReactNode } from 'react';
 import type { ElectionView } from './elections';
 import {ElectionCandidateCard} from './ui/election-candidate-card';
-import type { PlenaryView } from './plenary';
+import type { CassationResultView, PlenaryView, Role } from './plenary';
 
 export function ElectionResult({result}:{result:NonNullable<ElectionView['result']>}) {
   return <ol className="election-candidates" role="list" aria-label="Classificação final">
@@ -83,37 +85,77 @@ export function ResultsContent({children,title="Resultados"}:{children:ReactNode
   </>;
 }
 
-export function CassationResult({text}:{text:string}) {
-  return <section><h3>Resultado da cassação</h3><p>{text}</p></section>;
+export function CassationResult({text,eliminated}:CassationResultView) {
+  const panel = useDialogKeys<HTMLElement>(()=>undefined,[
+    {name:'Continuar',activate:():void=>{panel.current?.closest('dialog')?.close();}},
+  ]);
+  if (!eliminated) return <section><h3>Resultado da cassação</h3><p>{text}</p></section>;
+  const infiltrator = eliminated.role==='Infiltrado';
+  return <section ref={panel} className="cassation-reveal" data-verdict={infiltrator ? 'caught' : 'mistake'}>
+    <div className="cassation-reveal-atmosphere" aria-hidden="true"/>
+    <p className="cassation-reveal-kicker">O Congresso decidiu</p>
+    <div className="cassation-reveal-stage">
+      <div className="cassation-reveal-face"><CharacterPortrait character={eliminated.character}/></div>
+      <div className="cassation-reveal-caption">
+        <p className="cassation-reveal-label">Mandato cassado</p>
+        <h2 id="cassation-reveal-name">{eliminated.name}</h2>
+        <p className="cassation-reveal-role">{infiltrator ? 'Era infiltrado.' : 'Não era infiltrado.'}</p>
+        <p className="cassation-reveal-detail">{text}</p>
+      </div>
+    </div>
+    <DialogDismiss className="cassation-reveal-continue">Continuar <span aria-hidden="true">→</span></DialogDismiss>
+  </section>;
 }
 
-export function mountResults(closeGameplay:()=>void) {
+export function mountResults(closeGameplay:()=>void,onReveal:(role:Role|undefined)=>void=()=>{}) {
   const dialog = document.querySelector<HTMLDialogElement>('#result-dialog')!;
   const finale = document.querySelector<HTMLDialogElement>('#session-finale')!;
+  const reveal = document.querySelector<HTMLDialogElement>('#cassation-reveal-dialog')!;
+  const revealRoot = createRoot(reveal);
   const finaleRoot = createRoot(finale);
   const root = createRoot(dialog);
+  let pendingFinale:PlenaryView|undefined;
+  const showFinale = (view:PlenaryView)=>{
+    for (const overlay of document.querySelectorAll<HTMLDialogElement>('dialog:modal')) overlay.close();
+    flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
+    finale.showModal();
+  };
+  const afterReveal = ()=>{
+    onReveal(undefined);
+    const view = pendingFinale;
+    pendingFinale = undefined;
+    if (view) showFinale(view);
+  };
+  reveal.addEventListener('close',afterReveal);
   return {
     render(view:PlenaryView, previous:PlenaryView | undefined) {
       const election = view.election?.result;
       const electionChanged = election && election.cycle!==previous?.election?.result?.cycle;
       const project = view.outcome;
       const projectChanged = project && project.round!==previous?.outcome?.round;
-      const cassation = previous?.cassation && !view.cassation && view.cassationResult;
+      const cassation = previous?.cassation && !view.cassation ? view.cassationResult : undefined;
       const finished = view.phase==='finished' && previous?.phase!=='finished';
-      if (finished) {
+      if (view.phase==='lobby') { pendingFinale = undefined; if (reveal.open) reveal.close(); }
+      if (cassation?.eliminated) {
+        if (finished) pendingFinale = view;
+        closeGameplay();
         for (const overlay of document.querySelectorAll<HTMLDialogElement>('dialog:modal')) overlay.close();
-        flushSync(()=>finaleRoot.render(<SessionResult {...view}/>));
-        finale.showModal();
+        flushSync(()=>revealRoot.render(<CassationResult key={previous?.cassation?.calledAt} {...cassation}/>));
+        onReveal(cassation.eliminated.role);
+        reveal.showModal();
+      } else if (finished) {
+        if (reveal.open) pendingFinale = view;
+        else showFinale(view);
       } else if (cassation) {
-        flushSync(()=>root.render(<ResultsContent><CassationResult text={cassation.text}/></ResultsContent>));
+        flushSync(()=>root.render(<ResultsContent><CassationResult {...cassation}/></ResultsContent>));
         if (!dialog.open) dialog.showModal();
-      } else if (electionChanged) {
+      } else if (electionChanged && !reveal.open) {
         flushSync(()=>root.render(<ResultsContent title="Resultados da Eleição"><ElectionResult result={election}/></ResultsContent>));
         closeGameplay();
         if (!dialog.open) dialog.showModal();
       }
-      return projectChanged ? project.passed ? 'approved' : 'rejected' : electionChanged || cassation ? 'election' : undefined;
+      return projectChanged ? project.passed ? 'approved' : 'rejected' : cassation?.eliminated ? undefined : electionChanged || cassation ? 'election' : undefined;
     },
-    destroy() { dialog.close(); finale.close(); root.unmount(); finaleRoot.unmount(); },
+    destroy() { pendingFinale = undefined; reveal.removeEventListener('close',afterReveal); reveal.close(); onReveal(undefined); dialog.close(); finale.close(); revealRoot.unmount(); root.unmount(); finaleRoot.unmount(); },
   };
 }

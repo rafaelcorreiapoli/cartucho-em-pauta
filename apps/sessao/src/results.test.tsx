@@ -158,3 +158,32 @@ test('solo collapse also tells the player they lost',()=>{
   const html = renderToStaticMarkup(<SessionResult role="Parlamentar" congressDestroyed stability={0}/>);
   expect(html).toContain('Você perdeu!');
 });
+
+test.each(['Infiltrado','Parlamentar'] as const)('cassation reveals only the eliminated %s and their portrait after the vote',role=>{
+  const players:Player[] = ['Rafa','Bia','Caio'].map((nick,character)=>({
+    id:String(character),nick,character,direction:0,moving:false,x:140,y:146,
+  }));
+  const ids = players.map(player=>player.id);
+  const match = new PlenaryMatch(1);
+  match.start(ids[0],players,0,()=>0);
+  const target = players[role==='Infiltrado' ? 0 : 1];
+  Reflect.set(match,'cassationReadyAt',0);
+  match.callCassation({...players[0],...stations.audit},50);
+  const open = 50+CASSATION_NOTICE_MS;
+  match.advance(open);
+  const ballot = match.view(ids[0],ids,open);
+  expect(ballot.cassationResult).toBeUndefined();
+  expect(ballot.cassation!.candidates.every(candidate=>!('role' in candidate))).toBe(true);
+  for (const player of players) if (player!==target) match.castCassation(player.id,target.id,open);
+  const end = open+HEARING_MS;
+  match.advance(end);
+  for (const id of ids) {
+    const view = match.view(id,ids,end);
+    expect(view.cassationResult?.eliminated).toEqual({id:target.id,name:target.nick,character:target.character,role});
+    const markup = renderToStaticMarkup(<CassationResult {...view.cassationResult!}/>);
+    expect(markup).toContain(`data-skin="${target.character}"`);
+    expect(markup).toContain(role==='Infiltrado' ? 'Era infiltrado.' : 'Não era infiltrado.');
+    expect(markup).toContain('Continuar');
+  }
+  expect(match.phase).toBe(role==='Infiltrado' ? 'finished' : 'negotiation');
+});

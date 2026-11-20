@@ -251,3 +251,35 @@ test('dramatic cassation cue uses effects volume and respects mute',()=>{
   audio.cue('cassationSummons');
   expect(sources).toHaveLength(1);
 });
+
+test.each(['Infiltrado','Parlamentar'] as const)('cassation uses a dedicated result effect for %s and suspends music until dismissal',role=>{
+  const {audio,sources,buffers} = fixture();
+  buffers.set('cassationCaught',{key:'cassationCaught',duration:4.44});
+  audio.setScore('cassationMusic');
+  expect(sources).toHaveLength(1);
+  audio.cassationResult(role);
+  const result = sources.at(-1)!;
+  expect(result.buffer).toBe(buffers.get(role==='Infiltrado' ? 'cassationCaught' : 'federalIsolation'));
+  expect(result.loop).toBe(false);
+  expect(sources[0].stopTimes).toHaveLength(1);
+  audio.setScore('victory');
+  audio.setCaloteDanger(undefined);
+  expect(sources).toHaveLength(2);
+  audio.cassationResult(undefined);
+  expect(result.stopTimes).toHaveLength(1);
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('victory'));
+  expect(sources).toHaveLength(3);
+});
+
+test('cassation result effects respect mute and are stopped when leaving the match',()=>{
+  const {audio,sources,buffers} = fixture();
+  buffers.set('cassationCaught',{key:'cassationCaught',duration:4.44});
+  audio.preferences.update({muted:true});
+  audio.cassationResult('Infiltrado');
+  expect(sources).toHaveLength(0);
+  audio.preferences.update({muted:false,sfxVolume:.5});
+  audio.cassationResult('Infiltrado');
+  expect(sources).toHaveLength(1);
+  audio.leave();
+  expect(sources[0].stopTimes).toHaveLength(1);
+});

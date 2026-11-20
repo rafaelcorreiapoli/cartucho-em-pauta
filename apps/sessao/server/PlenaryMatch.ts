@@ -337,7 +337,7 @@ export class PlenaryMatch {
   private cassationOpen = false;
   private readonly cassationVotes = new Map<string,string|null>();
   private readonly expelled = new Set<string>();
-  private cassationResult?:{text:string};
+  private cassationResult?:PlenaryView['cassationResult'];
   private readonly hearingImmunity = new Map<string,number>();
   private hearingResult?: string;
   private auditNotes = new Map<string,string>();
@@ -775,7 +775,11 @@ export class PlenaryMatch {
     this.election.leave(target,now);
     this.voteIntents.delete(target);
     this.refreshAgendaEligibility();
-    this.cassationResult = {text:`${this.economy.name(target)} perdeu o mandato com ${votes} votos.`};
+    const eliminated = this.finalRoster.find(person=>person.id===target);
+    this.cassationResult = {
+      text:`${this.economy.name(target)} perdeu o mandato com ${votes} votos.`,
+      eliminated:eliminated && {...eliminated},
+    };
     if (this.infiltrators.size && [...this.infiltrators].every(id=>!this.election.office(id))) {
       this.finish('Parlamentar','Todos os infiltrados foram eliminados.');
     }

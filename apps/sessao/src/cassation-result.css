@@ -1,0 +1,45 @@
+#cassation-reveal-dialog {
+  --party-display: ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  position: fixed; inset: 0; margin: 0; padding: 0; border: 0; border-radius: 0;
+  width: 100vw; max-width: none; height: 100dvh; max-height: none;
+  background: #090b0c; color: #f4eee1; overflow-y: auto;
+}
+#cassation-reveal-dialog::backdrop { background: #000; }
+.cassation-reveal {
+  --reveal-accent: #b8d9ba;
+  position: relative; isolation: isolate; min-height: 100%; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr auto; gap: 1.5rem;
+  padding: clamp(1.5rem,5vh,4rem) clamp(1.5rem,6vw,6rem);
+  background: radial-gradient(ellipse at 32% 50%,#26312d80,transparent 65%),#090b0c;
+}
+.cassation-reveal[data-verdict="mistake"] { --reveal-accent: #d6aa8d; background: radial-gradient(ellipse at 32% 50%,#36271f80,transparent 65%),#090b0c; }
+.cassation-reveal-atmosphere { position: absolute; inset: 0; z-index: -1; opacity: .025; background: repeating-linear-gradient(0deg,transparent 0 3px,#fff 3px 4px); pointer-events: none; }
+.cassation-reveal-kicker { margin: 0; font-size: .75rem; letter-spacing: .22em; text-transform: uppercase; color: #aaa89f; }
+.cassation-reveal-stage { width: min(58rem,100%); margin: auto; display: grid; grid-template-columns: minmax(0,256px) minmax(0,1fr); align-items: center; gap: clamp(1rem,4vw,5rem); }
+.cassation-reveal-face { justify-self: center; position: relative; }
+.cassation-reveal-face .portrait {
+  display: block; --portrait-size: min(34vw,48vh,256px); border: 0; border-radius: 0;
+  filter: grayscale(1) contrast(1.15);
+  mask-image: linear-gradient(#000 75%,transparent);
+  animation: cassation-face-enter .6s ease-out both, cassation-face-desaturate 4.8s .5s linear both;
+}
+.cassation-reveal-label { margin: 0 0 .8rem; color: #b5b2a8; font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; }
+.cassation-reveal h2 { margin: 0; font: 900 clamp(2.5rem,6vw,6rem)/.95 var(--party-display); letter-spacing: -.035em; overflow-wrap: anywhere; text-transform: uppercase; }
+.cassation-reveal-role { margin: 1.5rem 0 0; color: var(--reveal-accent); font: 700 clamp(1.3rem,2.8vw,2.5rem)/1.1 var(--party-display); animation: cassation-verdict-enter .8s 2.8s both; }
+.cassation-reveal-detail { max-width: 28rem; margin: 1rem 0 0; color: #aaa89f; line-height: 1.5; font-size: .9rem; animation: cassation-verdict-enter .8s 2.8s both; }
+.cassation-reveal form { justify-self: end; margin: 0; }
+.cassation-reveal-continue { display: flex; align-items: center; gap: 2.5rem; padding: .8rem 0; border: 0; border-bottom: 1px solid #77796f; border-radius: 0; background: transparent; color: #eee9dc; font: 700 .9rem var(--party-display); cursor: pointer; }
+.cassation-reveal-continue:hover { color: var(--reveal-accent); border-color: currentColor; }
+.cassation-reveal-continue:focus-visible { outline: 2px solid var(--reveal-accent); outline-offset: 6px; }
+@keyframes cassation-face-enter { from { opacity: 0; transform: scale(.88) translateY(1.2rem); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes cassation-face-desaturate { from { filter: grayscale(0) contrast(1); } to { filter: grayscale(1) contrast(1.15); } }
+@keyframes cassation-verdict-enter { from { opacity: 0; transform: translateY(.5rem); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 640px) {
+  .cassation-reveal { gap: 1rem; padding: 1.5rem; }
+  .cassation-reveal-stage { grid-template-columns: 1fr; gap: .6rem; text-align: center; }
+  .cassation-reveal-face .portrait { --portrait-size: min(64vw,32dvh,256px); }
+  .cassation-reveal h2 { font-size: clamp(2rem,10vw,3.8rem); }
+  .cassation-reveal-role { margin-top: 1rem; }
+  .cassation-reveal-detail { margin-inline: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .cassation-reveal-face .portrait,.cassation-reveal-role,.cassation-reveal-detail { animation: none; } }

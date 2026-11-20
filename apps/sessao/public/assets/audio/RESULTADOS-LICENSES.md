@@ -19,3 +19,10 @@ Baixados em 2026-11-20; servidos localmente.
 
 Músicas finais tocam uma vez, escolhidas pela facção do jogador; o coral toca
 uma vez por novo evento de resgate da Tesouraria, junto ao aviso visual.
+
+# Acerto na cassação
+
+- `cassacao-infiltrado.mp3`: FunWithSound, Success Fanfare Trumpets.mp3. CC0 1.0.
+  https://freesound.org/people/FunWithSound/sounds/456966/
+  Fonte: https://cdn.freesound.org/previews/456/456966_6456158-hq.mp3
+  Arquivo sem edição, aproximadamente 4,44 segundos. Exclusivo da revelação de um infiltrado cassado.
