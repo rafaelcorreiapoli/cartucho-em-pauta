@@ -27,7 +27,7 @@ test('calote HUD replaces stability, keeps the session clock and shows the serve
   expect(html).not.toContain('Estabilidade');
   expect(html).toContain('Orçamento público');
   expect(html).not.toContain('congress-meter-label');
-  expect(html).not.toContain('congress-emblem');
+  expect(html).toContain('congress-emblem');
   expect(html).toContain('Tempo até o calote');
   expect(html).toContain('17 s');
   expect(html).toContain('1:30');

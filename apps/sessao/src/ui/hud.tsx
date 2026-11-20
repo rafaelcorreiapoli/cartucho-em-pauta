@@ -65,13 +65,13 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
     <PayrollMetrics payroll={payroll}/>
   </div>;
   return <section className="congress-meter grid text-center" aria-label="Parlamento" data-game-mode={gameMode}>
-    {!calote && <><div className="congress-emblem" aria-hidden="true">
+    <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
         <path fill="currentColor" d="M39 2h6v25h-6zm9 0h6v25h-6zM2 26a16 11 0 0 1 32 0zm60-9h32a16 10 0 0 1-32 0zM0 28h96v2H0z"/>
       </svg>
     </div>
-    <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
-      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp></>}
+    {!calote && <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp>}
     <HudHelp as="div" aria-label={calote ? 'Como funciona o orçamento' : undefined} help={calote ? 'Orçamento público: zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida. Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
       <Laurel/>
       {calote ? <div className="calote-budget-wrap">
