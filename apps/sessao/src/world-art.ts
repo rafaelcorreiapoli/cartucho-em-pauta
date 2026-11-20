@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import {spriteOriginX} from './sprite-alignment';
 import {adaptiveWalkArt, adaptivePoseArt, actorFrameWorldSize} from './adaptive-character-art';
 import { federalPatrolRules, federalPatrolSheets, federalBreachArt } from './federal-patrol';
@@ -247,7 +247,7 @@ export function updateActorView(
   const spriteY = latest.carried ? y - 24 : y + (pose?.lungeY ?? -reach);
   const labelY = latest.carried ? y - 51 : y + 2;
   const glass = !!latest.cloaked && !latest.knockedOut && !latest.carried;
-  if (glass && scene.game.renderer.type===Phaser.WEBGL && !view.glassGlow) {
+  if (glass && 'gl' in scene.game.renderer && !view.glassGlow) {
     sprite.enableFilters();
     view.glassGlow = sprite.filters!.internal.addGlow(0xc4f5ff, 1.2, .8, 1, false, 10, 4);
   } else if (!glass && view.glassGlow) {

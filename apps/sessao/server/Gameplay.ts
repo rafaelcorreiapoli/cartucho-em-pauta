@@ -1076,7 +1076,7 @@ export class Gameplay {
     const visible = (point:Motion)=>sees({...position,barriers},point);
     return {center,camera,...this.photoWorldState({...player,...camera},world,visible),
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
-        ...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+        ...photoPerson(person),cloaked:this.cloakActive(person,world.now) ? true : undefined,cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
@@ -1087,9 +1087,9 @@ export class Gameplay {
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
-      .map(person=>({...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+      .map(person=>({...photoPerson(person),cloaked:this.cloakActive(person,world.now) ? true : undefined,cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
-        cloaked:this.cloakActive(person,world.now) ? true : undefined,pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
+        pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
