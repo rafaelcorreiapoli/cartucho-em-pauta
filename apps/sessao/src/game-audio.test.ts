@@ -17,7 +17,9 @@ function fixture() {
   Reflect.set(audio,'musicGain',gain());
   Reflect.set(audio,'effectsGain',gain());
   Reflect.set(audio,'playing',true);
-  const buffers = new Map(['music','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key}]));
+  Reflect.set(audio,'score','music');
+  Reflect.set(audio,'matchTrack','covertAffair');
+  const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key}]));
   Reflect.set(audio,'buffers',buffers);
   return {audio,sources,buffers};
 }
@@ -88,4 +90,47 @@ test('campaign applause plays as an effect and respects mute and SFX volume',()=
   audio.preferences.update({sfxVolume:.5});
   audio.cue('applause');
   expect(sources).toHaveLength(2);
+});
+
+test('lobby music is separate and a match keeps its random track across phases and danger',()=>{
+  const {audio,sources,buffers} = fixture();
+  const random = Math.random;
+  try {
+    for (const [index,track] of ['covertAffair','spyGlass'].entries()) {
+      audio.setScore('lobbyMusic');
+      expect(sources.at(-1)?.buffer).toBe(buffers.get('lobbyMusic'));
+      Math.random = ()=> (index+.5)/2;
+      audio.setScore('music');
+      expect(sources.at(-1)?.buffer).toBe(buffers.get(track));
+      expect(sources.at(-1)?.loop).toBe(true);
+      Math.random = ()=> .99;
+      const count = sources.length;
+      audio.setScore('music');
+      expect(sources).toHaveLength(count);
+      audio.setScore('hearingMusic');
+      expect(sources.at(-1)?.buffer).toBe(buffers.get('hearingMusic'));
+      audio.setScore('music');
+      expect(sources.at(-1)?.buffer).toBe(buffers.get(track));
+      audio.setCaloteDanger(5);
+      expect(sources.at(-1)?.buffer).toBe(buffers.get('caloteMusic'));
+      audio.setCaloteDanger(undefined);
+      expect(sources.at(-1)?.buffer).toBe(buffers.get(track));
+    }
+    audio.leave();
+    expect(Reflect.get(audio,'matchTrack')).toBeUndefined();
+    expect(Reflect.get(audio,'score')).toBe('lobbyMusic');
+  } finally { Math.random = random; }
+});
+
+test('a selected track still loading does not fall back to the old music',()=>{
+  const {audio,sources,buffers} = fixture();
+  audio.setScore('lobbyMusic');
+  buffers.delete('covertAffair');
+  Reflect.set(audio,'matchTrack','covertAffair');
+  audio.setScore('music');
+  expect(sources).toHaveLength(1);
+  expect(Reflect.get(audio,'music')).toBeUndefined();
+  buffers.set('covertAffair',{key:'covertAffair'});
+  Reflect.get(audio,'startMusic').call(audio);
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('covertAffair'));
 });
