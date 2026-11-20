@@ -10,7 +10,7 @@ import {cashAmount,minimumPartialDepositLot,type GameplayEvent, type ObjectKind}
 import { CRISIS_MISSION_STABILITY_LIMIT, doubleKnockoutWindowMs, agendaCounts, agendaCashTargets, agendaDurationMs, urgentCallMission, agendas, targetedAgendas, SAVINGS_MISSION_AMOUNT, CASH_HANDOVER_MISSION_AMOUNT, PIX_MISSION_AMOUNT, COFFEE_DELIVERY_RECIPIENTS, PUBLIC_MEETING_PEERS, LATE_CAMPAIGN_WINDOW_MS, AGENDA_TRANSFER_MIN, TARGET_TRANSFER_AMOUNT, CAMPAIGN_SPENDING_TARGET, NEW_PORTRAIT_MS, missionReward, type Agenda, type Contact, type Mission, type MissionReward, type PoliticsView } from '../src/politics';
 import { applyFacts, photoMissions } from './photo-missions';
 
-export type MissionSwapResult = 'swapped'|'used'|'unavailable';
+export type MissionSwapResult = 'swapped'|'insufficient'|'unavailable';
 
 export type AgendaAction = 'propaganda'|'discurso'|'votoNpc'|'leitura'|'responderCrise';
 
@@ -176,7 +176,7 @@ export class PersonalAgenda {
   private completed:Mission[] = [];
   private missionDeck:Agenda[];
   private nextMissionId = 0;
-  private swappedMissions = false;
+  private missionSwaps = 0;
   private savingsStartingWallet = 0;
   private callSamples = new Map<number,Map<string,number>>();
   private factsByMission = new Map<number,Map<string,Set<string>>>();
@@ -715,10 +715,9 @@ export class PersonalAgenda {
     if (this.missions.length<activeMissionCount) this.applyDraw(metrics,this.drawMissions(metrics,this.missions,initial));
   }
 
-  get missionSwapUsed() { return this.swappedMissions; }
+  get missionSwapPrice() { return this.missionSwaps; }
 
   swapMissions(metrics:AgendaMetrics):MissionSwapResult {
-    if (this.swappedMissions) return 'used';
     if (this.missions.length!==activeMissionCount) return 'unavailable';
     const draw = this.drawMissions(metrics,[],false,this.missions);
     if (draw.missions.length!==activeMissionCount) return 'unavailable';
@@ -727,7 +726,7 @@ export class PersonalAgenda {
       this.callSamples.delete(id);
     }
     this.applyDraw(metrics,draw);
-    this.swappedMissions = true;
+    this.missionSwaps++;
     return 'swapped';
   }
 

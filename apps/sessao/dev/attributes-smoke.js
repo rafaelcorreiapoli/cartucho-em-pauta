@@ -14,7 +14,9 @@ async page => {
   async function start(client,nick) {
     await client.getByRole('textbox',{name:'Seu nick'}).fill(nick);
     await client.getByRole('button',{name:'Criar sala'}).click();
+    await client.getByRole('button',{name:'Configurar partida',exact:true}).click();
     await client.locator('#parliamentarian-count [data-count="0"]').click();
+    if (await client.locator('dialog.match-settings').isVisible()) await client.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
     await client.getByRole('button',{name:'Iniciar sessão'}).click();
     await client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
     await client.locator('#session[data-phase="negotiation"]').waitFor();

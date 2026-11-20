@@ -91,6 +91,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
   function onActionKey(event:KeyboardEvent) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey ||
       event.metaKey || hudConsumesKeys(event.target)) return;
+    if (event.shiftKey) return;
     const equipmentAction = event.code==='Space' ? weaponControl.action :
       Object.values(equipmentControls).find(control=>event.code===`Key${control.key}`)?.action;
     if (equipmentAction) {

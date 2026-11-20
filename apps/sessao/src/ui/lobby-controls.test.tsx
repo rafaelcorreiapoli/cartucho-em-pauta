@@ -96,15 +96,22 @@ test('lobby shows confirmed grant, budget and duration choices to host and guest
   const ids = ['a','b','c','d','e','f'];
   for (const id of ['a','b']) {
     const html = renderToStaticMarkup(<LobbyControls state={lobbyControlsState({
-      ...match.view(id,ids,0),grantsEnabled:false,initialBudget:-50,matchMinutes:20,initialWallet:50,
+      ...match.view(id,ids,0),grantsEnabled:false,initialBudget:-5,matchMinutes:20,initialWallet:50,
     },id,true)} commands={commands}/>);
     expect(html).toContain('Aplicar verba');
     expect(html).toContain('aria-label="Patrimônio inicial"');
     expect(html).toContain('aria-pressed="true">50</button>');
     expect(html).toContain('aria-label="Orçamento inicial"');
     expect(html).toContain('aria-label="Tempo de jogo"');
-    expect(html).toContain('aria-pressed="true">-50</button>');
+    expect(html).toContain('aria-pressed="true">−R$ 50 mil</button>');
     expect(html).toContain('aria-pressed="true">20 min</button>');
     if (id==='b') expect(html).toContain('type="checkbox" disabled=""/> Aplicar verba');
   }
+});
+
+ test('positive starting budget displays fifty thousand instead of five hundred thousand',()=>{
+  const match = new PlenaryMatch(1);
+  const html = renderToStaticMarkup(<LobbyControls state={lobbyControlsState({...match.view('a',['a'],0),initialBudget:5},'a',true)} commands={commands}/>);
+  expect(html).toContain('aria-pressed="true">+R$ 50 mil</button>');
+  expect(html).not.toContain('500 mil');
 });

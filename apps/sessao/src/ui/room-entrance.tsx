@@ -4,6 +4,7 @@ import {NICK_LIMIT,nickHint,readNick} from '../nick';
 
 type Props = {
   initialNick:string;
+  invited?:boolean;
   roomCode:string;
   busy:boolean;
   message:string;
@@ -11,7 +12,7 @@ type Props = {
   nickRef:Ref<HTMLInputElement>;
 };
 
-export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRef}:Props) {
+export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRef,invited=false}:Props) {
   const form = useRef<HTMLFormElement>(null);
 
   function submit(join:boolean,tutorial=false) {
@@ -32,12 +33,12 @@ export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRe
       <label className="nick-field">Seu nick <input id="nick" name="nick" ref={nickRef} maxLength={NICK_LIMIT}
         autoComplete="nickname" placeholder="Como vão chamar você?" defaultValue={initialNick} required
         onInput={event=>event.currentTarget.setCustomValidity('')}/></label>
-      <button className="hud-button" id="create" type="button" disabled={busy} onClick={()=>submit(false)}>Criar sala</button>
-      <button className="hud-button hud-button--secondary" type="button" disabled={busy} onClick={()=>submit(false,true)}>Aprender a jogar</button>
-      <div className="join-fields">
+      {!invited && <><button className="hud-button" id="create" type="button" disabled={busy} onClick={()=>submit(false)}>Criar sala</button>
+      <button className="hud-button hud-button--secondary" type="button" disabled={busy} onClick={()=>submit(false,true)}>Aprender a jogar</button></>}
+      <div className={invited ? "join-fields join-invite" : "join-fields"}>
         <label>Código da sala <input key={roomCode} id="room-id" name="room-id" maxLength={64} autoComplete="off"
           defaultValue={roomCode} required/></label>
-        <button className="hud-button hud-button--secondary" type="submit" disabled={busy}>Entrar</button>
+        <button className={invited ? "hud-button" : "hud-button hud-button--secondary"} id="join" type="submit" disabled={busy}>Entrar</button>
       </div>
     </form>
     <p id="connection" role="status">{message}</p>
@@ -53,7 +54,7 @@ export function mountRoomEntrance(host:HTMLElement,initialNick:string,initialCod
   let message = '';
 
   function render() {
-    root.render(<RoomEntrance initialNick={initialNick} roomCode={roomCode} busy={busy}
+    root.render(<RoomEntrance initialNick={initialNick} invited={!!initialCode} roomCode={roomCode} busy={busy}
       message={message} onConnect={onConnect} nickRef={nickRef}/>);
   }
   render();

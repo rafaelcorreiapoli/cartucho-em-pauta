@@ -23,7 +23,7 @@ import {
   campaignPolicyMultiplier, energySavings, pingaProgram, bankAuditCost, policyDuration, type BillPolicies, type BillPolicy, type Action, type BillVote, type Impact, type Outcome, type Phase, type PlenaryView, type Role, type Vote,
 } from '../src/plenary';
 import {isolationRoom,localPerception,roomAt,type Player} from '../src/map';
-import { cassationFee } from '../src/npcs';
+import { cassationCooldownMs } from '../src/npcs';
 import { CRISIS_MISSION_STABILITY_LIMIT, CASSATION_POPULARITY, HEARING_MS, HEARING_IMMUNITY_MS, SUSPENSION_MS, TRADE_RADIUS, type Contact, type PoliticsAction } from '../src/politics';
 import type { RoomActivity, RoomActivityResult } from '../src/room-activities';
 import { PoliticalEconomy } from './PoliticalEconomy';
@@ -328,6 +328,7 @@ export class PlenaryMatch {
   private readonly filedDocuments = new Set<number>();
   private readonly studiedBills = new Map<number,Set<string>>();
   private hearingTarget?: string;
+  private cassationReadyAt = 0;
   private cassationAt?:number;
   private cassationCall?:{caller:string;calledAt:number};
   private cassationOpen = false;
@@ -383,6 +384,7 @@ export class PlenaryMatch {
     this.pausedGameTime = undefined;
     this.pausedDuration = 0;
     this.started = now;
+    this.cassationReadyAt = now+cassationCooldownMs;
     this.nextPayrollAt = now+payrollRules.interval;
     this.lastPayroll = undefined;
     this.fire.reset(now,random);
@@ -609,7 +611,7 @@ export class PlenaryMatch {
       payNpc:()=>false,
       hasEvidence:(id,kind)=>this.economy.hasEvidence(id,kind),
       callCassation:player=>current() ? this.callCassation(player,now) : 'Partida encerrada.',
-      missionSwapUsed:id=>current() && this.economy.missionSwapUsed(id),
+      missionSwapPrice:id=>current() ? this.economy.missionSwapPrice(id) : 0,
       swapMissions:id=>{
         if (!current() || this.phase!=='negotiation' || !this.canHandleObjects(id,now)) return 'unavailable';
         return this.economy.swapMissions(id);
@@ -691,8 +693,8 @@ export class PlenaryMatch {
     if (!this.canVoteInCassation(id)) return 'Você precisa de um mandato ativo para convocar.';
     if (this.popularity(id)<CASSATION_POPULARITY) return `Você precisa de ${CASSATION_POPULARITY} de popularidade.`;
     if (this.cassationElectorate().length<3) return 'São necessários pelo menos três eleitores elegíveis.';
-    if (!this.economy.spend(id,cassationFee)) return 'Saldo insuficiente para convocar cassação.';
-    this.cash.cassationFees += cassationFee;
+    if (now<this.cassationReadyAt) return `Cassação disponível em ${Math.ceil((this.cassationReadyAt-now)/1000)} s. Aguarde o primeiro minuto e o intervalo entre convocações.`;
+    this.cassationReadyAt = now+cassationCooldownMs;
     this.cassationAt = now+CASSATION_NOTICE_MS;
     this.cassationCall = {caller:id,calledAt:now};
     this.refreshAgendaEligibility(now);

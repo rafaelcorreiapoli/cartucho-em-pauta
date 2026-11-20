@@ -78,7 +78,9 @@ async page => {
     await guest.getByRole('textbox',{name:'Código da sala'}).fill(code);
     await guest.getByRole('button',{name:'Entrar',exact:true}).click();
     await guest.locator('#lobby-back').waitFor();
+    await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
     await page.locator('#parliamentarian-count [data-count="0"]').click();
+    if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
     await page.getByRole('button',{name:'Iniciar sessão'}).click();
     await Promise.all([page,guest].map(client=>client.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click()));
 

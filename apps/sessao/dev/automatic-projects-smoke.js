@@ -8,6 +8,7 @@ async page => {
   await page.setViewportSize({width:1280,height:720});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Projetos QA');
   await page.getByRole('button',{name:'Criar sala',exact:true}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   const room = new URL(await page.getByRole('textbox',{name:'Link da sala'}).inputValue()).searchParams.get('sala');
   await page.waitForFunction(()=>document.querySelector('[aria-label="Modo de jogo"] button[aria-pressed="true"]')?.textContent==='Calote');
   for (const name of ['Projetos automáticos','Câmera e fotos','Eleição para eliminação']) {
@@ -17,6 +18,7 @@ async page => {
     if (await page.getByRole('checkbox',{name,exact:true}).isChecked()) throw Error('Wrong default: '+name);
   }
   await page.getByRole('button',{name:'Nenhum visitante'}).click();
+  await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão',exact:true}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const history = page.locator('.automatic-projects-history');

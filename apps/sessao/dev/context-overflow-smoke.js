@@ -11,8 +11,10 @@ async page => {
   await page.setViewportSize({width:1280,height:720});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Contexto QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.locator('#parliamentarian-count [data-count="3"]').click();
   await page.locator('#parliamentarian-count [data-count="3"][aria-pressed="true"]').waitFor();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const more = page.getByRole('button',{name:'Mais ações'});
@@ -185,7 +187,9 @@ async page => {
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Armário QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.locator('#parliamentarian-count [data-count="0"]').click();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   await page.getByRole('button',{name:'Abrir armário',exact:true}).click();
@@ -208,7 +212,9 @@ async page => {
   await page.reload();
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Assinatura QA');
   await page.getByRole('button',{name:'Criar sala'}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.locator('#parliamentarian-count [data-count="0"]').click();
+  if (await page.locator('dialog.match-settings').isVisible()) await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão'}).click();
   await page.locator('#role-intro').getByRole('button',{name:'Entendi',exact:true}).click();
   const requestSignature = page.getByRole('button',{name:/^Pedir assinatura ·/});

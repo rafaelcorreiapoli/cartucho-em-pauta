@@ -146,7 +146,8 @@ test.each([0,4])('office %i locks, permits exit and requires a separate cabinet 
   for (let level=2;level<=4;level++) {
     const upgrade = buy(owner,'cabinetLock');
     Object.assign(owner,home.cabinet);
-    expect(act(owner,'office-upgrade-cabinet',home.id,upgrade)).toBe(`Segurança nível ${level}.`);
+    expect(act(owner,'office-upgrade-cabinet',home.id,upgrade)).toBe('Reforço iniciado.');
+    tick(officeRules.reinforceMs);
   }
   Object.assign(owner,terminals.secretary.point);
   act(owner,'supply','secretary');
@@ -463,4 +464,73 @@ test('tutorial advances after cashing a briefcase in the learners safe',()=>{
   expect(events.some(event=>matchesTutorialEvent(step,event))).toBe(false);
   tick(1);
   expect(events.some(event=>event.actor===owner.id && matchesTutorialEvent(step,event))).toBe(true);
+});
+
+test('safe insurance only installs in the owners safe and explodes once before any money is taken',()=>{
+  const {players:[owner,visitor],game,world,act,tick,buy,events} = setup();
+  const [home,foreign] = privateOffices;
+  const trap = buy(owner,'safeTrap');
+  const duplicate = buy(owner,'safeTrap');
+  Object.assign(owner,foreign.safe);
+  expect(act(owner,'office-trap-safe',foreign.id,trap)).toContain('próprio cofre');
+  Object.assign(owner,home.safe);
+  expect(game.view(owner,world).officeOptions?.some(option=>option.kind==='office-trap-safe')).toBe(true);
+  expect(act(owner,'office-trap-safe',home.id,trap)).toContain('instalado');
+  expect(act(owner,'office-trap-safe',home.id,duplicate)).toContain('já está protegido');
+  const tool = buy(visitor,'lockpick');
+  Object.assign(owner,{x:140,y:146});
+  Object.assign(visitor,home.safe);
+  let balance = 20;
+  let loots = 0;
+  world.lootWallet = ()=>{loots++; const amount=balance; balance=0; return amount;};
+  const messages:{id:string;text:string}[] = [];
+  world.feedback = (id,text)=>messages.push({id,text});
+  act(visitor,'office-breach-safe',home.id,tool);
+  tick(1000);
+  act(visitor,'office-cancel',home.id);
+  expect(visitor.knockedOut).not.toBe(true);
+  expect(messages).toEqual([]);
+  act(visitor,'office-breach-safe',home.id,tool);
+  tick(officeRules.breachTimes[0]);
+  expect(visitor.knockedOut).toBe(true);
+  expect(game.healthFraction(visitor,world.now)).toBe(0);
+  expect(loots).toBe(0);
+  expect(balance).toBe(20);
+  expect(game.view(visitor,world).inventory.some(item=>item.kind==='briefcase')).toBe(false);
+  expect(messages.filter(message=>message.id===owner.id)).toHaveLength(1);
+  expect(messages.map(message=>message.id).sort()).toEqual([owner.id,visitor.id].sort());
+  expect(messages.find(message=>message.id===owner.id)?.text).toContain('dinheiro está seguro');
+  expect(events.filter(event=>event.type==='safe-trap-triggered')).toHaveLength(1);
+  expect(events.some(event=>event.type==='safe-robbed')).toBe(false);
+  tick(1000);
+  expect(events.filter(event=>event.type==='safe-trap-triggered')).toHaveLength(1);
+  Object.assign(owner,home.safe);
+  expect(act(owner,'office-trap-safe',home.id,duplicate)).toContain('instalado');
+});
+
+test.each(['door','cabinet'] as const)('reinforcing a %s takes five seconds and preserves its kit when interrupted',target=>{
+  const {players:[owner],game,world,events,act,tick,buy} = setup();
+  const home = privateOffices[0];
+  const kit = buy(owner,target==='door' ? 'doorLock' : 'cabinetLock');
+  Object.assign(owner,target==='door' ? atDoor(home,true) : home.cabinet);
+  const action = target==='door' ? 'office-upgrade-door' : 'office-upgrade-cabinet';
+  expect(act(owner,action,home.id,kit)).toBe('Reforço iniciado.');
+  expect(game.view(owner,world).officeChannel).toMatchObject({kind:action,duration:5000,elapsed:0});
+  tick(2500);
+  expect(game.view(owner,world).officeChannel?.elapsed).toBe(2500);
+  owner.moving = true;
+  tick(1);
+  owner.moving = false;
+  expect(game.view(owner,world).officeChannel).toBeUndefined();
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(true);
+  expect(events.some(event=>event.type==='security-upgraded')).toBe(false);
+  expect(act(owner,action,home.id,kit)).toBe('Reforço iniciado.');
+  tick(4999);
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(true);
+  tick(1);
+  expect(game.view(owner,world).officeChannel).toBeUndefined();
+  expect(game.view(owner,world).inventory.some(item=>item.id===kit)).toBe(false);
+  expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
+  tick(1000);
+  expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
 });

@@ -448,7 +448,7 @@ test('the visible tip of the baton hits beyond the old range and misses beyond t
 
 
 const consumableCases:[keyof typeof foods,number,number][] = [
-  ['pizza',57,40], ['chocolates',62,40], ['condensedMilk',82,40],
+  ['pizza',57,40], ['chocolates',62,20], ['condensedMilk',82,40],
   ['coxinha',42,40], ['coffee',22,70], ['energyDrink',22,40], ['mortadellaRoll',47,50],
   ['lobster',100,40], ['picanha',92,40],
 ];
@@ -472,9 +472,15 @@ for (const [kind,hp,stamina] of consumableCases) {
     Object.assign(bob,npcs.snackVendor.interaction);
     const token = openShop(bob,'snackVendor');
     const buy = {kind:'shop-buy',target:kind,token} as const;
-    expect(game.act(bob,buy,world)).toBe('Compra guardada no inventário.');
-    expect(game.act(bob,buy,world)).toBe('Abra o catálogo do vendedor.');
-    expect(balance.get(bob.id)).toBeCloseTo(12-foods[kind].price,5);
+    if (['pizza','chocolates','coffee'].includes(kind)) {
+      expect(game.act(bob,buy,world)).toBe('Compra guardada no inventário.');
+      expect(game.act(bob,buy,world)).toBe('Abra o catálogo do vendedor.');
+      expect(balance.get(bob.id)).toBeCloseTo(12-foods[kind].price,5);
+    } else {
+      expect(game.act(bob,buy,world)).toBe('Produto indisponível.');
+      expect(balance.get(bob.id)).toBe(12);
+      game.giveTrainingItem(bob.id,kind);
+    }
     const [item] = game.view(bob,world).inventory;
     expect(item.kind).toBe(kind);
     const use = {kind:'use',item:item.id} as const;
@@ -620,9 +626,9 @@ test('first aid kits heal the owner once, cap healing and are kept at full healt
 test('identical snacks share a slot and support partial offers and drops',()=>{
   const {alice,bob,game,world,openShop,balance,events} = setup();
   Object.assign(alice,npcs.snackVendor.interaction);
-  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'coxinha',token:openShop(buyer,'snackVendor')},world);
+  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'chocolates',token:openShop(buyer,'snackVendor')},world);
   for (let index=0;index<5;index++) expect(buy(alice)).toBe('Compra guardada no inventário.');
-  expect(balance.get(alice.id)).toBe(9.5);
+  expect(balance.get(alice.id)).toBe(2);
   const inventory = (who:Player) => game.view(who,world).inventory;
   expect(inventory(alice)).toHaveLength(1);
   const {id:item} = inventory(alice)[0];
@@ -649,14 +655,14 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(bob)[0].quantity).toBe(3);
   const received = events.filter(event=>event.type==='item-received');
   expect(received).toEqual([expect.objectContaining({
-    actor:bob.id,target:alice.id,kind:'coxinha',inventoryItem:inventory(bob)[0].id,witnesses:[],
+    actor:bob.id,target:alice.id,kind:'chocolates',inventoryItem:inventory(bob)[0].id,witnesses:[],
   })]);
   expect(received[0].item).not.toBe(inventory(bob)[0].id);
 
 
   expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
   expect(inventory(alice)[0].quantity).toBe(1);
-  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind==='coxinha')!;
+  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind==='chocolates')!;
   expect(dropped.quantity).toBe(1);
   expect(game.act(bob,{kind:'collect',item:dropped.id},world)).toBe('Objeto recolhido.');
   expect(inventory(bob)[0].quantity).toBe(4);
@@ -741,15 +747,15 @@ test('the catalog and gameserver agree on purchases with a full inventory',()=>{
   openShop(alice,'snackVendor');
   const view = ()=>game.view(alice,world);
   const buy = (target:string)=>game.act(alice,{kind:'shop-buy',target,token:view().dialogue?.token},world);
-  expect(buy('coxinha')).toBe('Compra guardada no inventário.');
+  expect(buy('chocolates')).toBe('Compra guardada no inventário.');
   for (let slot=1;slot<INVENTORY_SLOTS;slot++) expect(buy('pizza')).toBe('Compra guardada no inventário.');
-  const slotFor = (kind:'baton'|'coxinha'|'pizza'|'binoculars'|'xray'|'megaphone')=>{
+  const slotFor = (kind:'baton'|'chocolates'|'pizza'|'binoculars'|'xray'|'megaphone')=>{
     const snapshot = view();
     return marketPurchaseSlot(kind,snapshot.inventory,snapshot.equipped ?? [],snapshot.dialogue?.direct!==false);
   };
-  expect(slotFor('coxinha')).toBe('inventory');
-  expect(buy('coxinha')).toBe('Compra guardada no inventário.');
-  expect(view().inventory.find(item=>item.kind==='coxinha')?.quantity).toBe(2);
+  expect(slotFor('chocolates')).toBe('inventory');
+  expect(buy('chocolates')).toBe('Compra guardada no inventário.');
+  expect(view().inventory.find(item=>item.kind==='chocolates')?.quantity).toBe(2);
   expect(slotFor('pizza')).toBeUndefined();
   expect(buy('pizza')).toBe('Inventário cheio.');
 

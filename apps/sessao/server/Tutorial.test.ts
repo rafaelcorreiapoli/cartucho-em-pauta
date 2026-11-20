@@ -13,6 +13,7 @@ test('training stays open and rejects projects and cassations',()=>{
   match.advance(100_000_000);
   expect(match.phase).toBe('negotiation');
   expect(match.canHandleObjects(player.id,100_000_000)).toBe(true);
+  Reflect.set(match,'cassationReadyAt',0); // This scenario tests the ballot, not its opening cooldown.
   expect(match.callCassation(player,100_000_000)).toContain('tutorial');
   expect(match.gameplayWorld([player],100_000_000,()=>true).projectFilingError?.(player.id,0)).toContain('tutorial');
 });

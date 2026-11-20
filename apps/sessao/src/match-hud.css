@@ -1128,3 +1128,4 @@ button.item-tile:active { transform: translateY(3px); }
 .mail-selected-attachment > .hud-button { display:flex; align-items:center; justify-content:center; gap:8px; }
 .mail-composer footer .action-key { inset:6px 6px auto auto; }
 #gameplay-dialog .mail-picker > header { display:grid; grid-template-columns:minmax(0,1fr); justify-content:stretch; gap:8px; }
+.photo-screen-flash { position:fixed; inset:0; z-index:10000; background:#fff; pointer-events:none; }

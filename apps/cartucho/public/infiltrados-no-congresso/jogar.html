@@ -21,5 +21,14 @@
   <main class="player" data-game="sessao">
     <iframe title="Infiltrados no Congresso" src="https://presidente-sessao-poc--brwars.netlify.app/" allow="fullscreen; autoplay; microphone" allowfullscreen></iframe>
   </main>
+  <script>
+    const room = new URLSearchParams(location.search).get('sala');
+    if (room) {
+      const game = document.querySelector('iframe');
+      const target = new URL(game.src);
+      target.searchParams.set('sala', room);
+      game.src = target.href;
+    }
+  </script>
 </body>
 </html>

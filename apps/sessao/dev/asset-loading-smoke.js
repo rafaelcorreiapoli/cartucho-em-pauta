@@ -30,6 +30,7 @@ async page => {
 
   await page.unroute(asset);
   await create.click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar como infiltrado'}).click();
   await page.locator('#session[data-phase="negotiation"]').waitFor();
   await loader.waitFor({state:'hidden'});
