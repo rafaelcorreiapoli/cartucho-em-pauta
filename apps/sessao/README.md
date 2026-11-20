@@ -403,3 +403,26 @@ por quadro), normalizada para grades de 1024×768 e 2048×1536. Portanto, a text
 serve para avaliar o ganho de detalhe, não é uma substituição fiel aprovada.
 Antes de usar na partida, produzir um master realmente maior, revisar identidade,
 baseline e transições e cobrir também combate, celular, cofre e demais animações.
+
+### Revisão de todos os personagens
+
+Abra `/sprites.html` no mesmo servidor ou build. O catálogo usa os registros de
+arte do jogo: jogadores (parado, caminhada, ataque, golpe, queda, celular,
+arrombamento de cofre, dinheiro e saque), visitantes (parado, caminhada, golpe e
+queda), Federal (parado, caminhada e arrombamento de porta) e poses dos NPCs fixos.
+Mostra somente direções existentes, identificando as espelhadas. Parado usa o
+primeiro quadro da caminhada, assim como no jogo. A grade expõe todos os quadros
+sem alinhar/recolorir artificialmente a arte, para revelar inconsistências.
+
+Selecione personagem, pose e direção; pause, avance quadro a quadro, reduza a
+velocidade ou sobreponha o quadro anterior. O controle Repetir pode ser desligado
+para inspecionar o fim das ações pontuais. Fundos claro, escuro, mapa e grade
+ajudam a revisar transparência e bordas. O link guarda personagem/pose/direção e
+o último quadro selecionado manualmente, permitindo compartilhar a seleção.
+
+Cada pose pode ser marcada como pendente, aprovada ou revisar, com observação.
+Essa revisão cobre todas as direções da pose e fica no localStorage deste
+navegador; não é compartilhada automaticamente. Exporte o JSON para compartilhar
+os registros. Não altera nem aprova automaticamente os assets do jogo. O
+laboratório do Tiririca continua separado: nitidez validada por Rafael; pintura,
+contornos, sombras e proporções entre quadros ainda precisam de consistência.

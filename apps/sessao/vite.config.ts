@@ -4,6 +4,6 @@ import { defineConfig } from 'vite';
 import { voiceLab } from './dev/voice-lab';
 
 export default defineConfig({
-  build: {rollupOptions: {input: {main: 'index.html', tiriricaResolution: 'tiririca-resolution.html'}}},
+  build: {rollupOptions: {input: {main: 'index.html', tiriricaResolution: 'tiririca-resolution.html', sprites: 'sprites.html'}}},
   plugins: [tailwindcss(), federalAudio(), ...(process.env.RVC_LAB_DIR ? [voiceLab(process.env.RVC_LAB_DIR)] : [])],
 });

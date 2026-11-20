@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infiltrados · revisão de sprites</title>
+<link rel="stylesheet" href="/src/sprite-review.css">
+<header><div><span class="eyebrow">INFILTRADOS / ARTES</span><h1>Revisão de sprites</h1></div><nav><a href="/tiririca-resolution.html">Teste de nitidez</a><button id="export">Exportar revisão</button></nav></header>
+<div class="layout">
+<aside aria-label="Personagens"><label for="search">Buscar personagem</label><input id="search" type="search" placeholder="Nome do personagem" autocomplete="off"><p id="total" class="muted"></p><div id="subjects"></div></aside>
+<main>
+<div class="subject-heading"><div><span id="group" class="eyebrow"></span><h2 id="name"></h2></div><span id="progress" class="muted"></span></div>
+<p class="intro">Compare contornos, pintura, sombras e proporções entre os quadros. As artes abaixo são as usadas no jogo; somente o teste de nitidez tem uma versão nova.</p>
+<section class="viewer" aria-label="Inspeção da pose">
+<div class="controls">
+<label>Pose<select id="pose"></select></label><label>Direção<select id="direction"></select></label>
+<label>Tamanho <output id="size-label">256 px</output><input id="size" type="range" min="96" max="384" value="256" step="16"></label>
+<label>Velocidade<select id="speed"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+<label>Fundo<select id="background"><option value="grid">Transparência</option><option value="dark">Escuro</option><option value="light">Claro</option><option value="green">Mapa</option></select></label>
+</div>
+<div id="preview" class="surface" data-background="grid"><canvas id="player" aria-label="Prévia animada da pose"></canvas></div>
+<div class="transport"><button id="previous" aria-label="Quadro anterior">Anterior</button><button id="play">Pausar</button><button id="next" aria-label="Próximo quadro">Próximo</button><label>Quadro <input id="frame" type="range" min="0" max="3" value="0"><output id="frame-label"></output></label><label class="check"><input id="onion" type="checkbox">Sobrepor quadro anterior</label><label class="check"><input id="repeat" type="checkbox" checked>Repetir</label></div>
+<p id="asset" class="muted"></p><p id="error" role="alert" hidden></p>
+<div class="review"><label>Revisão desta pose<select id="verdict"><option value="pending">Pendente</option><option value="approved">Aprovada</option><option value="revise">Revisar</option></select></label><label class="note">Observações<textarea id="note" rows="2" placeholder="Ex.: contorno do rosto muda no quadro 3"></textarea></label></div>
+<small id="save-status">Revisões salvas apenas neste navegador. Exporte para compartilhar.</small>
+</section>
+<section aria-label="Todas as poses"><div class="sheet-heading"><h2>Todas as poses e direções</h2><span class="muted">Clique em um quadro para inspecionar</span></div><div id="sheets"></div></section>
+</main></div>
+<script type="module" src="/src/sprite-review.ts"></script>
+</html>
