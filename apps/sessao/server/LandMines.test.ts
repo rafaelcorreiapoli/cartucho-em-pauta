@@ -108,7 +108,7 @@ function buyMine(game:Gameplay,owner:Player,world:GameplayWorld) {
 
 test('repeat purchases stack in the chosen hotbar slot and planting uses one mine with an independent ground id',()=>{
   const {game,world,events,owner,victim,item,plant} = setup();
-  let hotbar = assignHotbarSlot(emptyHotbar(),4,item.id);
+  let hotbar:readonly (number|undefined)[] = assignHotbarSlot(emptyHotbar(),4,item.id);
   for (let i=0;i<2;i++) {
     expect(buyMine(game,owner,world)).toBe('Compra guardada no inventário.');
     const purchase = events.filter(event=>event.type==='purchased').at(-1)!;
