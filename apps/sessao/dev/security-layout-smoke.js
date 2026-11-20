@@ -35,11 +35,11 @@ async page => {
     await terminal.getByText('Ao vivo',{exact:true}).waitFor();
     const bounds = await terminal.evaluate(dialog=>{
       const outer = dialog.getBoundingClientRect();
-      const console = dialog.querySelector('.security-console');
-      console.scrollTop = console.scrollHeight;
+      const channels = dialog.querySelector('.security-channels');
+      channels.scrollTop = channels.scrollHeight;
       const header = dialog.querySelector('header').getBoundingClientRect();
       return {top:outer.top,bottom:outer.bottom,left:outer.left,right:outer.right,
-        scroll:console.scrollTop,dialogOverflow:dialog.scrollHeight-dialog.clientHeight,headerTop:header.top};
+        scroll:channels.scrollTop,dialogOverflow:dialog.scrollHeight-dialog.clientHeight,headerTop:header.top};
     });
     if (bounds.top<0 || bounds.bottom>height || bounds.left<0 || bounds.right>width ||
         bounds.headerTop<bounds.top || bounds.dialogOverflow>1 || (height===360 && bounds.scroll===0)) {
@@ -73,6 +73,35 @@ async page => {
       return canvas?.width===width*4 && canvas?.height===height*4;
     },{width,height});
   }
+  // Camera changes must neither resize/reposition the modal nor move its image panel.
+  for (const [width,height] of [[1280,720],[800,360],[390,700]]) {
+    await page.setViewportSize({width,height});
+    const geometry=()=>coverage.evaluate(dialog=>{
+      const box=element=>{const {x,y,width,height}=element.getBoundingClientRect();return {x,y,width,height};};
+      const viewport=dialog.querySelector('.spy-viewport');
+      const canvas=viewport.querySelector('canvas');
+      const style=getComputedStyle(canvas);
+      return {dialog:box(dialog),viewport:box(viewport),canvas:box(canvas),fit:style.objectFit,position:style.objectPosition};
+    });
+    const before=await geometry();
+    for (const [label,cw,ch] of [['Biblioteca',132,127],['Tesouraria',266,122],['Corredor central',223,36],['Apoio Técnico',223,87]]) {
+      await coverage.getByRole('button',{name:label,exact:true}).click();
+      await page.waitForFunction(({cw,ch})=>{
+        const canvas=document.querySelector('#security-dialog canvas');
+        return canvas?.width===cw*4 && canvas?.height===ch*4;
+      },{cw,ch});
+      const after=await geometry();
+      for(const part of ['dialog','viewport']) for(const key of ['x','y','width','height']) {
+        if(Math.abs(after[part][key]-before[part][key])>1) throw Error(`Camera layout shifted: ${width}×${height}, ${label}, ${part}.${key}`);
+      }
+      if(after.fit!=='contain' || after.position!=='50% 50%') throw Error('Camera image is not contained and centered');
+      for(const axis of [['x','width'],['y','height']]) {
+        const [position,size]=axis;
+        if(Math.abs(after.canvas[position]+after.canvas[size]/2-after.viewport[position]-after.viewport[size]/2)>1) throw Error('Canvas is not centered in the image panel');
+      }
+    }
+  }
+  await page.setViewportSize({width:1280,height:720});
   await coverage.getByRole('button',{name:/Fechar terminal|Fechamento original alterado/}).click();
   await coverage.waitFor({state:'hidden'});
   await page.keyboard.press('v');
