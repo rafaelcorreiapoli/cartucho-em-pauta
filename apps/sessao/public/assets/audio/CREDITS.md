@@ -64,3 +64,8 @@ https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.
 Fonte: https://opengameart.org/content/electricity-game-sound-pack
 Arquivo original, sem edição (aproximadamente 2 segundos).
 Licença: CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/
+
+## Incêndio e extintor
+
+`fogo-continuo.wav` e `extintor.wav`: efeitos originais sintetizados para o jogo
+(ruído filtrado, crepitação e jato de extintor). Sem samples de terceiros.

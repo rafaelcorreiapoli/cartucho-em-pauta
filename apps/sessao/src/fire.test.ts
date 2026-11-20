@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {canActOnFire,extinguisherSpawns,fireRules,fireSites} from './fire';
+import {fireIntensity,canActOnFire,extinguisherSpawns,fireRules,fireSites} from './fire';
 import {canStand,furnishings,rooms} from './map';
 import {privateOffices} from './private-offices';
 
@@ -30,4 +30,20 @@ test('all green cabinets and private office cabinets are flammable targets',()=>
     expect(sites).toHaveLength(1);
     expect(sites[0].object).toBe('Armário');
   }
+});
+
+test('fire ambience grows near the source, stays within its room and ignores paused fires',()=>{
+  const site = 0;
+  const target = fireSites[site];
+  const fire = {site,remaining:1000,damage:2,paused:false};
+  expect(fireIntensity(target,[fire])).toBe(1);
+  const [left,top,width,height] = target.bounds;
+  const far = {x:left+width/2,y:top+height/2};
+  expect(fireIntensity(far,[fire])).toBeGreaterThan(0);
+  expect(fireIntensity(far,[fire])).toBeLessThan(1);
+  expect(fireIntensity(fireSites.find(other=>other.name!==target.name),[fire])).toBe(0);
+  expect(fireIntensity(target,[{...fire,paused:true}])).toBe(0);
+  expect(fireIntensity(undefined,[fire])).toBe(0);
+  expect(fireIntensity(target,[])).toBe(0);
+  expect(fireIntensity(target,[fire,fire])).toBe(1);
 });

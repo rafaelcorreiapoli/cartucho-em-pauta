@@ -6,7 +6,7 @@ import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallLight} from './visibility';
-import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
+import {canActOnFire,fireIntensity,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke,createExtinguishEffect,showSafeExplosion} from './fire-effects';
 import {powerOption,powerRules,type PowerAction} from './power';
 import { decorPoint, depositingAtSafe, officeDoorPoint, officeFixtures, privateOffices } from './private-offices';
@@ -50,7 +50,7 @@ const directions = new Map(Object.entries({
 }));
 
 export function createGame(parent: HTMLElement, ownId: string, send: (input: MovementInput) => void, footstep:(level:number,pan:number)=>void,
-  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void) {
+  combatSound:(cue:CombatCue,level:number,pan:number)=>void, interact:(action:GameplayAction)=>void, actOnFire:(action:FireCommand)=>void, actOnPower:(action:PowerAction)=>void, inspect:(id:number)=>void, openStash:()=>void, openSecurity:()=>void, loading:(progress:number)=>void, fireSound:(intensity:number)=>void = ()=>{}) {
   let players: Player[] = [];
   let worldSnapshot = projectWorldSnapshot();
   let phase:Phase = 'lobby';
@@ -510,6 +510,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         this.tutorialMarker.lineBetween(target.x+5,target.y-21,target.x,target.y-15);
       }
       const fires = plenaryView?.fires;
+      fireSound(fireIntensity(negotiating ? ownPlayer : undefined,fires));
       this.fuseSmoke(negotiating ? plenaryView?.fireInteraction?.smoke : undefined,reducedMotion.matches);
       this.roomFires.forEach((effect,site)=>{
         const active = negotiating && !!fires?.some(fire=>fire.site===site && !fire.paused);
@@ -807,6 +808,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
     },
     destroy() {
+      fireSound(0);
       fpsDebug.destroy();
       listeners.abort();
       resizeObserver?.disconnect();
