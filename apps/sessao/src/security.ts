@@ -10,7 +10,9 @@ export const securityCameras = [
   {id:'press',label:'Sala de Imprensa',x:870,y:193,area:[713,172,237,87]},
   {id:'library',label:'Biblioteca',x:395,y:495,area:roomBounds('Biblioteca')},
   {id:'protocol',label:'Protocolo',x:597,y:71,area:roomBounds('Protocolo')},
-  {id:'snacks',label:snackBar.name,x:922,y:304,area:snackBar.bounds},
+  {id:'snacks',label:snackBar.name,x:887,y:331,area:snackBar.bounds},
+  {id:'technical',label:'Apoio Técnico',x:591.5,y:215.5,area:roomBounds('Apoio Técnico')},
+  {id:'treasury',label:'Tesouraria',x:459,y:331,area:roomBounds('Tesouraria')},
 ] as const satisfies readonly (Motion & {id:string;label:string;area:Rect})[];
 
 export type SecurityCamera = typeof securityCameras[number];
@@ -28,5 +30,5 @@ export function canUseSecurityTerminal(player:Player) {
 }
 
 export function securityCameraSees(camera:SecurityCamera, origin:Motion, point:Motion) {
-  return inside(point,camera.area) && cameraSees(origin,point);
+  return cameraSees(origin,point,camera.area);
 }

@@ -21,12 +21,15 @@
             qa.game.events.once(Phaser.Core.Events.POST_RENDER, () => qa.game.renderer.snapshot(resolve)),
           );
           const canvas = document.createElement('canvas');
-          canvas.width = 608;
-          canvas.height = 512;
+          canvas.width = qa.game.canvas.width;
+          canvas.height = qa.game.canvas.height;
           canvas.getContext('2d').drawImage(image, 0, 0);
           return qa.pixels(canvas);
         },
         render(frame) {
+          const width=(frame.camera?.area?.[2] ?? 152)*4,height=(frame.camera?.area?.[3] ?? 128)*4;
+          qa.game.scale.resize(width,height);
+          qa.viewport.receive(frame);
           qa.world.render(frame, frame.time ?? 0, true);
           qa.scene.cameras.main.centerOn(frame.center.x, frame.center.y - 19);
           qa.renderer.draw(document.querySelector('#photo'), frame);

@@ -63,6 +63,18 @@ async page => {
     results.push({width,height,terminalScroll:bounds.scroll});
   }
   await page.setViewportSize({width:1280,height:720});
+  await page.getByRole('button',{name:'Consultar câmeras'}).click();
+  const coverage=page.getByRole('dialog',{name:'Sala de Segurança'});
+  for (const [label,width,height] of [['Apoio Técnico',223,87],['Tesouraria',266,122],['Lanchonete',126,122]]) {
+    await coverage.getByRole('button',{name:label==='Lanchonete' ? /Lanchonete|Rótulo original alterado/ : label,exact:true}).click();
+    await coverage.getByText('Ao vivo',{exact:true}).waitFor();
+    await page.waitForFunction(({width,height})=>{
+      const canvas=document.querySelector('#security-dialog canvas');
+      return canvas?.width===width*4 && canvas?.height===height*4;
+    },{width,height});
+  }
+  await coverage.getByRole('button',{name:/Fechar terminal|Fechamento original alterado/}).click();
+  await coverage.waitFor({state:'hidden'});
   await page.keyboard.press('v');
   const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});
   const viewport = surveillance.getByLabel('Visão ao vivo da câmera');

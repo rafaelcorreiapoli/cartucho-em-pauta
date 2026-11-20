@@ -637,7 +637,7 @@ button:where(:has(.action-key)) { position: relative; }
 .spy-viewport { aspect-ratio: 1; margin-bottom: .6rem; border: 1px solid #4b816a; background: #09120f; overflow: hidden; }
 .spy-viewport canvas { display: block; width: 100%; height: auto; }
 .security-console { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1rem; margin-top: 1rem; }
-#security-dialog .spy-viewport { width: min(100%, 48dvh); margin-inline: auto; }
+#security-dialog .spy-viewport { width: min(100%, calc(48dvh * var(--camera-aspect, 1))); margin-inline: auto; }
 #security-dialog .waiting-for-feed canvas { visibility: hidden; }
 @media (max-width: 520px) {
   .security-console { grid-template-columns: 1fr; }

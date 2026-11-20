@@ -634,7 +634,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(game.spyFrame(alice,world)?.people).toContainEqual(expect.objectContaining({id:watcher.id,moving:true}));
   Object.assign(watcher,{x:254,y:252,moving:false});
   alice.barriers = [[241,248,12,2]];
-  expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(bob.id);
+  expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).toContain(bob.id);
   alice.barriers = undefined;
   expect(game.spyAction(alice,{kind:'capture',channel:channel.id+1},world)).toBe('O canal da câmera mudou.');
   expect(game.photoView(alice.id,world.now).album).toEqual([]);
@@ -1131,4 +1131,18 @@ test('a photo captures open safe state independently of the people left in its c
   expect(photo.openSafes).toContain(office.id);
   bob.pocketing=false;
   expect(photo.openSafes).toContain(office.id);
+});
+
+test('institutional frames include the far side of a camera region and exclude adjacent rooms',()=>{
+  const {alice,bob,watcher,game,world}=setup();
+  const camera=securityCameras.find(camera=>camera.id==='treasury')!;
+  const [x,y,w,h]=camera.area;
+  Object.assign(bob,{x:x+5,y:y+h-5});
+  Object.assign(watcher,{x:x+w+1,y:y+h/2});
+  expect(Math.hypot(bob.x-camera.x,bob.y-camera.y)).toBeGreaterThan(70);
+  const frame=game.securityFrame(alice,camera,world);
+  expect(frame.camera?.area).toEqual(camera.area);
+  expect(frame.camera).toMatchObject({x:x+w/2,y:y+h/2});
+  expect(frame.people.map(person=>person.id)).toContain(bob.id);
+  expect(frame.people.map(person=>person.id)).not.toContain(watcher.id);
 });
