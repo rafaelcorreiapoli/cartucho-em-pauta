@@ -2712,5 +2712,20 @@
       1254,
       1254
     ]
+  },
+  {
+    "id": "capa-invisibilidade",
+    "original": "capa-invisibilidade.webp",
+    "kind": "image",
+    "sourceFile": "capa-invisibilidade.webp",
+    "sourceSha256": "0bf47cf2495d569f2c1d725481c1d7b9d2ba6694caaceb352b0aba1febeb530b",
+    "nativeSize": [
+      256,
+      256
+    ],
+    "masterSize": [
+      256,
+      256
+    ]
   }
 ]
