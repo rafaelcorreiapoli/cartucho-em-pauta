@@ -5,7 +5,7 @@ import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {NEGOTIATION_MS,stations,type Station} from '../plenary';
 import {ELECTION_RULES} from '../elections';
 import {money} from '../politics';
-import type {Player} from '../map';
+import {canStand,type Player} from '../map';
 import {ElectionStationActions,electionStationActions} from './election-station-actions';
 
 test('campaign controls match the current station, voice state and completed actions',()=>{
@@ -59,4 +59,13 @@ test('the HUD closes election station actions after the final renewal',()=>{
   expect(electionStationActions(view(),'press',false).actions).not.toContain('advertise');
   expect(electionStationActions(view(),'panel',false).actions).toEqual([]);
   expect(electionStationActions(view(),'tv',true).actions).toEqual([]);
+});
+
+test('speech is available behind the central microphone, not beside the dais',()=>{
+  const player:Player = {id:'a',nick:'Rafa',character:0,x:480,y:590,direction:0,moving:false};
+  const match = new PlenaryMatch(1);
+  expect(canStand(player.x,player.y)).toBe(true);
+  expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
+  expect(match.electionAction({...player,x:548,y:620},{kind:'speech'},1,false)).toBeUndefined();
+  expect(match.electionAction(player,{kind:'speech'},2,false)).toBeDefined();
 });
