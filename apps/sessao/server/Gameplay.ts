@@ -323,6 +323,10 @@ export class Gameplay {
 
   hasLuxuryDecoration() { return [...this.installations.values()].some(item=>isOfficeFurniture(item.kind)); }
 
+  hasSafeInsurance(id:string) {
+    return [...this.privateOffices.offices.values()].some(office=>office.owner===id && office.safeTrap!==undefined);
+  }
+
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
 
   ownsOfficeRoom(id:string,room:string) { return this.privateOffices.ownedBy(id)?.name===room; }
